@@ -57,12 +57,12 @@
     "@semantic-release/git": "^10.0.1",
     "@types/jest": "^29.5.12",
     "@types/react": "19.1.1",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "nitrogen": "0.30.0",
     "react": "19.1.1",
     "react-native": "0.82",
     "react-native-builder-bob": "^0.37.0",
     "react-native-nitro-modules": "0.30.0",
-    "conventional-changelog-conventionalcommits": "^9.1.0",
     "semantic-release": "^24.2.9",
     "typescript": "^5.8.3"
   },
@@ -118,5 +118,6 @@
         }
       ]
     ]
-  }
+  },
+  "packageManager": "yarn@4.10.2+sha512.0b0e54ad5381f0a35184957bd3ea44e37f5a4fb1960b903b0fb9a3c7c2c009190455c41ef2a1977b1dbd3b72c5f152da696e9c52e2bc78a011b6adea8ee73ba3"
 }
