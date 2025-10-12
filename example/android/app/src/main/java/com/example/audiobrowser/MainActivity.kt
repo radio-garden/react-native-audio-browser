@@ -1,4 +1,4 @@
-package com.reactnativeaudiobrowserexample
+package com.example.audiobrowser
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
