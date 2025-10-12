@@ -18,6 +18,10 @@ def isNewArchitectureEnabled() {
   return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
 }
 
+plugins {
+  id "com.ncorti.ktfmt.gradle" version "0.24.0"
+}
+
 apply plugin: "com.android.library"
 apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../nitrogen/generated/android/ReactNativeAudioBrowser+autolinking.gradle'
@@ -25,6 +29,14 @@ apply from: "./fix-prefab.gradle"
 
 if (isNewArchitectureEnabled()) {
   apply plugin: "com.facebook.react"
+}
+
+ktfmt {
+  googleStyle()
+}
+
+tasks.register("format") {
+  dependsOn "ktfmtFormat"
 }
 
 def getExtOrDefault(name) {

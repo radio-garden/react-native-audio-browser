@@ -8,11 +8,23 @@
   "react-native": "src/index",
   "source": "src/index",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "clean": "git clean -dfX",
+    "android:format": "cd example/android && ./gradlew :react-native-react-native-audio-browser:format",
+    "android:ide": "cd example/android && open -a 'Android Studio' .",
+    "android:logs": "react-native log-android",
+    "build": "yarn prepare",
+    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
+    "codegen": "nitrogen --logLevel=\"debug\" && yarn run build && node post-script.js",
+    "example": "yarn workspace example",
+    "ci:format": "prettier --check src",
+    "ci:lint": "eslint src --max-warnings=0",
+    "format": "prettier --write src",
+    "ios:format": "swiftformat ios --swiftversion 5.9",
+    "ios:ide": "cd example/ios && open ReactNativeAudioBrowserExample.xcworkspace",
+    "ios:rebuild": "cd example/ios && pod install && cd .. && yarn ios",
+    "lint": "eslint src --fix",
     "release": "semantic-release",
-    "build": "yarn run typecheck && bob build",
-    "codegen": "nitrogen --logLevel=\"debug\" && yarn run build && node post-script.js"
+    "test": "jest",
+    "types": "tsc --noEmit"
   },
   "keywords": [
     "react-native",
@@ -53,12 +65,20 @@
   },
   "devDependencies": {
     "@jamesacarr/eslint-formatter-github-actions": "^0.2.0",
+    "@react-native-community/cli": "15.0.0-alpha.2",
+    "@react-native/eslint-config": "^0.78.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/jest": "^29.5.12",
     "@types/react": "19.1.1",
     "conventional-changelog-conventionalcommits": "^9.1.0",
+    "del-cli": "^5.1.0",
+    "eslint": "^9.22.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "jest": "^29.7.0",
     "nitrogen": "0.30.0",
+    "prettier": "^3.0.3",
     "react": "19.1.1",
     "react-native": "0.82",
     "react-native-builder-bob": "^0.37.0",
@@ -119,5 +139,15 @@
       ]
     ]
   },
-  "packageManager": "yarn@4.10.2+sha512.0b0e54ad5381f0a35184957bd3ea44e37f5a4fb1960b903b0fb9a3c7c2c009190455c41ef2a1977b1dbd3b72c5f152da696e9c52e2bc78a011b6adea8ee73ba3"
+  "packageManager": "yarn@4.10.2+sha512.0b0e54ad5381f0a35184957bd3ea44e37f5a4fb1960b903b0fb9a3c7c2c009190455c41ef2a1977b1dbd3b72c5f152da696e9c52e2bc78a011b6adea8ee73ba3",
+  "engines": {
+    "node": ">=24"
+  },
+  "jest": {
+    "preset": "react-native",
+    "modulePathIgnorePatterns": [
+      "<rootDir>/example/node_modules",
+      "<rootDir>/lib/"
+    ]
+  }
 }
