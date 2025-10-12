@@ -1,7 +1,7 @@
 {
-  "name": "react-native-react-native-audio-browser",
+  "name": "react-native-audio-browser",
   "version": "0.1.0",
-  "description": "react-native-react-native-audio-browser is a react native package built with Nitro",
+  "description": "react-native-audio-browser is a react native package built with Nitro",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -28,7 +28,7 @@
   },
   "keywords": [
     "react-native",
-    "react-native-react-native-audio-browser"
+    "react-native-audio-browser"
   ],
   "files": [
     "src",
@@ -54,11 +54,11 @@
   "workspaces": [
     "example"
   ],
-  "repository": "https://github.com/puckey/react-native-react-native-audio-browser.git",
+  "repository": "https://github.com/puckey/react-native-audio-browser.git",
   "author": "puckey",
   "license": "MIT",
-  "bugs": "https://github.com/puckey/react-native-react-native-audio-browser/issues",
-  "homepage": "https://github.com/puckey/react-native-react-native-audio-browser#readme",
+  "bugs": "https://github.com/puckey/react-native-audio-browser/issues",
+  "homepage": "https://github.com/puckey/react-native-audio-browser#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -139,15 +139,5 @@
       ]
     ]
   },
-  "packageManager": "yarn@4.10.2+sha512.0b0e54ad5381f0a35184957bd3ea44e37f5a4fb1960b903b0fb9a3c7c2c009190455c41ef2a1977b1dbd3b72c5f152da696e9c52e2bc78a011b6adea8ee73ba3",
-  "engines": {
-    "node": ">=24"
-  },
-  "jest": {
-    "preset": "react-native",
-    "modulePathIgnorePatterns": [
-      "<rootDir>/example/node_modules",
-      "<rootDir>/lib/"
-    ]
-  }
+  "packageManager": "yarn@4.10.2+sha512.0b0e54ad5381f0a35184957bd3ea44e37f5a4fb1960b903b0fb9a3c7c2c009190455c41ef2a1977b1dbd3b72c5f152da696e9c52e2bc78a011b6adea8ee73ba3"
 }

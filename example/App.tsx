@@ -1,12 +1,12 @@
 import React from 'react';
 import {Text, View, StyleSheet } from 'react-native';
-import { ReactNativeAudioBrowser } from 'react-native-react-native-audio-browser';
+import { AudioBrowser } from 'react-native-audio-browser';
 
 function App(): React.JSX.Element {
   return (
     <View style={styles.container}>
         <Text style={styles.text}>
-        {ReactNativeAudioBrowser.sum(1, 2)}
+        {AudioBrowser.sum(1, 2)}
         </Text>
     </View>
   );

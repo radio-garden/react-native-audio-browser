@@ -1,21 +1,21 @@
 {
   "$schema": "https://nitro.margelo.com/nitro.schema.json",
   "cxxNamespace": [
-    "reactnativeaudiobrowser"
+    "audiobrowser"
   ],
   "ios": {
-    "iosModuleName": "ReactNativeAudioBrowser"
+    "iosModuleName": "AudioBrowser"
   },
   "android": {
     "androidNamespace": [
-      "reactnativeaudiobrowser"
+      "audiobrowser"
     ],
-    "androidCxxLibName": "ReactNativeAudioBrowser"
+    "androidCxxLibName": "AudioBrowser"
   },
   "autolinking": {
-    "ReactNativeAudioBrowser": {
-      "swift": "HybridReactNativeAudioBrowser",
-      "kotlin": "HybridReactNativeAudioBrowser"
+    "AudioBrowser": {
+      "swift": "HybridAudioBrowser",
+      "kotlin": "HybridAudioBrowser"
     }
   },
   "ignorePaths": [

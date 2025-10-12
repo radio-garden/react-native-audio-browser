@@ -1,5 +1,5 @@
 import { NitroModules } from 'react-native-nitro-modules'
-import type { ReactNativeAudioBrowser as ReactNativeAudioBrowserSpec } from './specs/react-native-audio-browser.nitro'
+import type { AudioBrowser as AudioBrowserSpec } from './specs/audio-browser.nitro'
 
-export const ReactNativeAudioBrowser =
-  NitroModules.createHybridObject<ReactNativeAudioBrowserSpec>('ReactNativeAudioBrowser')
+export const AudioBrowser =
+  NitroModules.createHybridObject<AudioBrowserSpec>('AudioBrowser')

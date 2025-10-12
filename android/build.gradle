@@ -24,15 +24,14 @@ plugins {
 
 apply plugin: "com.android.library"
 apply plugin: 'org.jetbrains.kotlin.android'
-apply from: '../nitrogen/generated/android/ReactNativeAudioBrowser+autolinking.gradle'
+apply from: '../nitrogen/generated/android/AudioBrowser+autolinking.gradle'
 apply from: "./fix-prefab.gradle"
 
 if (isNewArchitectureEnabled()) {
   apply plugin: "com.facebook.react"
 }
 
-ktfmt {
-  googleStyle()
+ktfmt {  googleStyle()
 }
 
 tasks.register("format") {
@@ -40,15 +39,15 @@ tasks.register("format") {
 }
 
 def getExtOrDefault(name) {
-  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["ReactNativeAudioBrowser_" + name]
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["AudioBrowser_" + name]
 }
 
 def getExtOrIntegerDefault(name) {
-  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["ReactNativeAudioBrowser_" + name]).toInteger()
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["AudioBrowser_" + name]).toInteger()
 }
 
 android {
-  namespace "com.reactnativeaudiobrowser"
+  namespace "com.audiobrowser"
 
   ndkVersion getExtOrDefault("ndkVersion")
   compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
@@ -154,7 +153,7 @@ dependencies {
 if (isNewArchitectureEnabled()) {
   react {
     jsRootDir = file("../src/")
-    libraryName = "ReactNativeAudioBrowser"
-    codegenJavaPackageName = "com.reactnativeaudiobrowser"
+    libraryName = "AudioBrowser"
+    codegenJavaPackageName = "com.audiobrowser"
   }
 }

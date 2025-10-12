@@ -16,7 +16,7 @@ const androidWorkaround = async () => {
  const androidOnLoadFile = path.join(
    process.cwd(),
    'nitrogen/generated/android',
-   'ReactNativeAudioBrowserOnLoad.cpp'
+   'AudioBrowserOnLoad.cpp'
  )
  
  

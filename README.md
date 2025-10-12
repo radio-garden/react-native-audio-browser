@@ -1,10 +1,10 @@
-# react-native-react-native-audio-browser
+# react-native-audio-browser
 
-react-native-react-native-audio-browser is a react native package built with Nitro
+react-native-audio-browser is a react native package built with Nitro
 
-[![Version](https://img.shields.io/npm/v/react-native-react-native-audio-browser.svg)](https://www.npmjs.com/package/react-native-react-native-audio-browser)
-[![Downloads](https://img.shields.io/npm/dm/react-native-react-native-audio-browser.svg)](https://www.npmjs.com/package/react-native-react-native-audio-browser)
-[![License](https://img.shields.io/npm/l/react-native-react-native-audio-browser.svg)](https://github.com/patrickkabwe/react-native-react-native-audio-browser/LICENSE)
+[![Version](https://img.shields.io/npm/v/react-native-audio-browser.svg)](https://www.npmjs.com/package/react-native-audio-browser)
+[![Downloads](https://img.shields.io/npm/dm/react-native-audio-browser.svg)](https://www.npmjs.com/package/react-native-audio-browser)
+[![License](https://img.shields.io/npm/l/react-native-audio-browser.svg)](https://github.com/patrickkabwe/react-native-audio-browser/LICENSE)
 
 ## Requirements
 
@@ -17,7 +17,7 @@ react-native-react-native-audio-browser is a react native package built with Nit
 ## Installation
 
 ```bash
-yarn add react-native-react-native-audio-browser react-native-nitro-modules
+yarn add react-native-audio-browser react-native-nitro-modules
 ```
 
 ## Credits
