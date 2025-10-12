@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+    ],
+    "deny": [
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(git commit:*--no-verify:*)"
+    ]
+  },
+  "includeCoAuthoredBy": false,
+  "env": {
+    "DISABLE_TELEMETRY": "1"
+  }
+}
