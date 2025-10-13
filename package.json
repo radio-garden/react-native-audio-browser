@@ -1,6 +1,7 @@
 {
   "name": "react-native-audio-browser",
   "version": "0.1.0",
+  "type": "module",
   "description": "react-native-audio-browser is a react native package built with Nitro",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -22,7 +23,7 @@
     "ios:format": "swiftformat ios --swiftversion 5.9",
     "ios:ide": "cd example/ios && open ReactNativeAudioBrowserExample.xcworkspace",
     "ios:rebuild": "cd example/ios && pod install && cd .. && yarn ios",
-    "lint": "eslint src --fix",
+    "lint": "eslint . --fix",
     "release": "semantic-release",
     "test": "jest",
     "types": "tsc --noEmit"
@@ -65,6 +66,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.4.0",
     "@jamesacarr/eslint-formatter-github-actions": "^0.2.0",
     "@react-native-community/cli": "15.0.0-alpha.2",
     "@react-native/eslint-config": "^0.78.0",
@@ -85,39 +87,14 @@
     "react-native-builder-bob": "^0.37.0",
     "react-native-nitro-modules": "0.30.0",
     "semantic-release": "^24.2.9",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.46.0"
   },
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
     "react-native-nitro-modules": "*"
   },
-  "eslintConfig": {
-    "root": true,
-    "extends": [
-      "@react-native",
-      "prettier"
-    ],
-    "plugins": [
-      "prettier"
-    ],
-    "rules": {
-      "prettier/prettier": [
-        "warn",
-        {
-          "quoteProps": "consistent",
-          "singleQuote": true,
-          "tabWidth": 2,
-          "trailingComma": "es5",
-          "useTabs": false
-        }
-      ]
-    }
-  },
-  "eslintIgnore": [
-    "node_modules/",
-    "lib/"
-  ],
   "prettier": {
     "quoteProps": "consistent",
     "singleQuote": true,
