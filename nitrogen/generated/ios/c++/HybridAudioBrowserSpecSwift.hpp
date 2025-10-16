@@ -12,9 +12,30 @@
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
+// Forward declaration of `BrowserTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `PlaybackProgress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `RepeatMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
-
-
+#include <string>
+#include "BrowserTrack.hpp"
+#include "BrowserLink.hpp"
+#include <variant>
+#include <optional>
+#include <vector>
+#include <NitroModules/Promise.hpp>
+#include "PlaybackProgress.hpp"
+#include "PlaybackError.hpp"
+#include "PlaybackState.hpp"
+#include "RepeatMode.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -57,13 +78,129 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Methods
-    inline double sum(double num1, double num2) override {
-      auto __result = _swiftPart.sum(std::forward<decltype(num1)>(num1), std::forward<decltype(num2)>(num2));
+    inline void navigate(const std::string& path) override {
+      auto __result = _swiftPart.navigate(path);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline std::variant<BrowserTrack, BrowserLink> getCurrentItem() override {
+      auto __result = _swiftPart.getCurrentItem();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline std::shared_ptr<Promise<std::vector<BrowserTrack>>> search(const std::string& query) override {
+      auto __result = _swiftPart.search(query);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void play() override {
+      auto __result = _swiftPart.play();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void pause() override {
+      auto __result = _swiftPart.pause();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void stop() override {
+      auto __result = _swiftPart.stop();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setVolume(double volume) override {
+      auto __result = _swiftPart.setVolume(std::forward<decltype(volume)>(volume));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline PlaybackProgress getPlaybackProgress() override {
+      auto __result = _swiftPart.getPlaybackProgress();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<PlaybackError> getPlaybackError() override {
+      auto __result = _swiftPart.getPlaybackError();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline PlaybackState getPlaybackState() override {
+      auto __result = _swiftPart.getPlaybackState();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void load(const BrowserTrack& track) override {
+      auto __result = _swiftPart.load(std::forward<decltype(track)>(track));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) override {
+      auto __result = _swiftPart.add(tracks, index);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline std::vector<BrowserTrack> getQueue() override {
+      auto __result = _swiftPart.getQueue();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<BrowserTrack> getCurrentTrack() override {
+      auto __result = _swiftPart.getCurrentTrack();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline double getCurrentIndex() override {
+      auto __result = _swiftPart.getCurrentIndex();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) override {
+      auto __result = _swiftPart.setQueue(tracks, startIndex);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void clear() override {
+      auto __result = _swiftPart.clear();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setRepeatMode(RepeatMode mode) override {
+      auto __result = _swiftPart.setRepeatMode(static_cast<int>(mode));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
 
   private:

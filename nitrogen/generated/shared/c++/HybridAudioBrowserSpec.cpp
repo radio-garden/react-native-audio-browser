@@ -14,7 +14,24 @@ namespace margelo::nitro::audiobrowser {
     HybridObject::loadHybridMethods();
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
-      prototype.registerHybridMethod("sum", &HybridAudioBrowserSpec::sum);
+      prototype.registerHybridMethod("navigate", &HybridAudioBrowserSpec::navigate);
+      prototype.registerHybridMethod("getCurrentItem", &HybridAudioBrowserSpec::getCurrentItem);
+      prototype.registerHybridMethod("search", &HybridAudioBrowserSpec::search);
+      prototype.registerHybridMethod("play", &HybridAudioBrowserSpec::play);
+      prototype.registerHybridMethod("pause", &HybridAudioBrowserSpec::pause);
+      prototype.registerHybridMethod("stop", &HybridAudioBrowserSpec::stop);
+      prototype.registerHybridMethod("setVolume", &HybridAudioBrowserSpec::setVolume);
+      prototype.registerHybridMethod("getPlaybackProgress", &HybridAudioBrowserSpec::getPlaybackProgress);
+      prototype.registerHybridMethod("getPlaybackError", &HybridAudioBrowserSpec::getPlaybackError);
+      prototype.registerHybridMethod("getPlaybackState", &HybridAudioBrowserSpec::getPlaybackState);
+      prototype.registerHybridMethod("load", &HybridAudioBrowserSpec::load);
+      prototype.registerHybridMethod("add", &HybridAudioBrowserSpec::add);
+      prototype.registerHybridMethod("getQueue", &HybridAudioBrowserSpec::getQueue);
+      prototype.registerHybridMethod("getCurrentTrack", &HybridAudioBrowserSpec::getCurrentTrack);
+      prototype.registerHybridMethod("getCurrentIndex", &HybridAudioBrowserSpec::getCurrentIndex);
+      prototype.registerHybridMethod("setQueue", &HybridAudioBrowserSpec::setQueue);
+      prototype.registerHybridMethod("clear", &HybridAudioBrowserSpec::clear);
+      prototype.registerHybridMethod("setRepeatMode", &HybridAudioBrowserSpec::setRepeatMode);
     });
   }
 

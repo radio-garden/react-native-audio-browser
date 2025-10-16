@@ -42,7 +42,75 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   // Methods
   @DoNotStrip
   @Keep
-  abstract fun sum(num1: Double, num2: Double): Double
+  abstract fun navigate(path: String): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getCurrentItem(): BrowserItem
+  
+  @DoNotStrip
+  @Keep
+  abstract fun search(query: String): Promise<Array<BrowserTrack>>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun play(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun pause(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun stop(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setVolume(volume: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getPlaybackProgress(): PlaybackProgress
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getPlaybackError(): PlaybackError?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getPlaybackState(): PlaybackState
+  
+  @DoNotStrip
+  @Keep
+  abstract fun load(track: BrowserTrack): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun add(tracks: Array<BrowserTrack>, index: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getQueue(): Array<BrowserTrack>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getCurrentTrack(): BrowserTrack?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getCurrentIndex(): Double
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setQueue(tracks: Array<BrowserTrack>, startIndex: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clear(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setRepeatMode(mode: RepeatMode): Unit
 
   private external fun initHybrid(): HybridData
 

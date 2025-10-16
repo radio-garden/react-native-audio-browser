@@ -3,8 +3,22 @@
 ## Architecture
 
 - Uses **Nitro Modules** most functionality can be sync / blocking in nature
+- Typescript: default to using types over interfaces
+- For user facing callbacks always work with a param object
 
-## Nitro Documentation
+## Nitro
+
+### Important Callback Behaviors
+
+**Callbacks work seamlessly across JS/native boundary:**
+- Functions can be passed directly as parameters (no registration needed)
+- Reference counting system holds strong references safely
+- Can be called multiple times and stored in memory
+- **Value-returning callbacks** become Promise<T> for thread safety
+- **Void callbacks** (`() => void`) stay synchronous on native side
+- **Sync<T> callbacks** are synchronous but dangerous (must call from JS thread only)
+
+### Documentation
 
 - [what-is-nitro.md](.claude/nitro/what-is-nitro.md) - Introduction and core concepts
 - [hybrid-objects.md](.claude/nitro/hybrid-objects.md) - Core HybridObject interface patterns and constraints

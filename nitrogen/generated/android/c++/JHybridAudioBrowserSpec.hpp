@@ -53,7 +53,24 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Methods
-    double sum(double num1, double num2) override;
+    void navigate(const std::string& path) override;
+    std::variant<BrowserTrack, BrowserLink> getCurrentItem() override;
+    std::shared_ptr<Promise<std::vector<BrowserTrack>>> search(const std::string& query) override;
+    void play() override;
+    void pause() override;
+    void stop() override;
+    void setVolume(double volume) override;
+    PlaybackProgress getPlaybackProgress() override;
+    std::optional<PlaybackError> getPlaybackError() override;
+    PlaybackState getPlaybackState() override;
+    void load(const BrowserTrack& track) override;
+    void add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) override;
+    std::vector<BrowserTrack> getQueue() override;
+    std::optional<BrowserTrack> getCurrentTrack() override;
+    double getCurrentIndex() override;
+    void setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) override;
+    void clear() override;
+    void setRepeatMode(RepeatMode mode) override;
 
   private:
     friend HybridBase;

@@ -13,6 +13,22 @@
 
 namespace margelo::nitro::audiobrowser::bridge::swift {
 
+  // pragma MARK: std::function<void(const std::vector<BrowserTrack>& /* result */)>
+  Func_void_std__vector_BrowserTrack_ create_Func_void_std__vector_BrowserTrack_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__vector_BrowserTrack_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::vector<BrowserTrack>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
+  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
+      swiftClosure.call(error);
+    };
+  }
+  
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
   std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
     AudioBrowser::HybridAudioBrowserSpec_cxx swiftPart = AudioBrowser::HybridAudioBrowserSpec_cxx::fromUnsafe(swiftUnsafePointer);

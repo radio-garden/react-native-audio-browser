@@ -8,14 +8,37 @@
 #pragma once
 
 // Forward declarations of C++ defined types
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `BrowserTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackProgress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
+// Forward declaration of `PlaybackState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `RepeatMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
 // Include C++ defined types
+#include "BrowserLink.hpp"
+#include "BrowserTrack.hpp"
 #include "HybridAudioBrowserSpec.hpp"
+#include "PlaybackError.hpp"
+#include "PlaybackProgress.hpp"
+#include "PlaybackState.hpp"
+#include "RepeatMode.hpp"
+#include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
 #include <exception>
 #include <memory>
+#include <optional>
+#include <string>
+#include <variant>
+#include <vector>
 
 // C++ helpers for Swift
 #include "AudioBrowser-Swift-Cxx-Bridge.hpp"

@@ -14,7 +14,7 @@
     "android:logs": "react-native log-android",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "nitrogen --logLevel=\"debug\" && yarn run build && node post-script.js",
+    "codegen": "nitrogen --logLevel=\"debug\" && yarn run build",
     "prepare": "bob build",
     "example": "yarn workspace example",
     "ci:format": "prettier --check src",

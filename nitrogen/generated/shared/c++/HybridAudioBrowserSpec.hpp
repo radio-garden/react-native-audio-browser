@@ -13,9 +13,30 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `BrowserTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `PlaybackProgress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `RepeatMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
-
-
+#include <string>
+#include "BrowserTrack.hpp"
+#include "BrowserLink.hpp"
+#include <variant>
+#include <vector>
+#include <NitroModules/Promise.hpp>
+#include "PlaybackProgress.hpp"
+#include "PlaybackError.hpp"
+#include <optional>
+#include "PlaybackState.hpp"
+#include "RepeatMode.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -48,7 +69,24 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Methods
-      virtual double sum(double num1, double num2) = 0;
+      virtual void navigate(const std::string& path) = 0;
+      virtual std::variant<BrowserTrack, BrowserLink> getCurrentItem() = 0;
+      virtual std::shared_ptr<Promise<std::vector<BrowserTrack>>> search(const std::string& query) = 0;
+      virtual void play() = 0;
+      virtual void pause() = 0;
+      virtual void stop() = 0;
+      virtual void setVolume(double volume) = 0;
+      virtual PlaybackProgress getPlaybackProgress() = 0;
+      virtual std::optional<PlaybackError> getPlaybackError() = 0;
+      virtual PlaybackState getPlaybackState() = 0;
+      virtual void load(const BrowserTrack& track) = 0;
+      virtual void add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) = 0;
+      virtual std::vector<BrowserTrack> getQueue() = 0;
+      virtual std::optional<BrowserTrack> getCurrentTrack() = 0;
+      virtual double getCurrentIndex() = 0;
+      virtual void setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) = 0;
+      virtual void clear() = 0;
+      virtual void setRepeatMode(RepeatMode mode) = 0;
 
     protected:
       // Hybrid Setup

@@ -16,7 +16,6 @@ export default typescriptEslint.config(
       '**/jest.config.js',
       '**/.prettierrc.js',
       '**/react-native.config.js',
-      '**/post-script.js',
       '**/release.config.cjs'
     ],
   },

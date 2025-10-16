@@ -33,7 +33,7 @@ int initialize(JavaVM* vm) {
     HybridObjectRegistry::registerHybridObjectConstructor(
       "AudioBrowser",
       []() -> std::shared_ptr<HybridObject> {
-        static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/audiobrowser/HybridAudioBrowser");
+        static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/margelo/nitro/audiobrowser/HybridAudioBrowser");
         auto instance = object.create();
         return instance->cthis()->shared();
       }

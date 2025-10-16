@@ -13,6 +13,15 @@ module.exports = {
     dependencies: {
         [pkg.name]: {
             root: path.join(__dirname, '..'),
+            platforms: {
+                android: {
+                    sourceDir: '../android/src/main/java',
+                    packageImportPath: 'import com.audiobrowser.AudioBrowserPackage;',
+                    libraryName: 'react-native-audio-browser',
+                    componentDescriptors: null,
+                    cmakeListsPath: null,
+                },
+            },
         },
     },
 }

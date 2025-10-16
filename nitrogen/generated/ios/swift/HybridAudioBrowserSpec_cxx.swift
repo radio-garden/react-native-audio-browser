@@ -110,14 +110,246 @@ open class HybridAudioBrowserSpec_cxx {
 
   // Methods
   @inline(__always)
-  public final func sum(num1: Double, num2: Double) -> bridge.Result_double_ {
+  public final func navigate(path: std.string) -> bridge.Result_void_ {
     do {
-      let __result = try self.__implementation.sum(num1: num1, num2: num2)
+      try self.__implementation.navigate(path: String(path))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getCurrentItem() -> bridge.Result_std__variant_BrowserTrack__BrowserLink__ {
+    do {
+      let __result = try self.__implementation.getCurrentItem()
+      let __resultCpp = { () -> bridge.std__variant_BrowserTrack__BrowserLink_ in
+        switch __result {
+          case .first(let __value):
+            return bridge.create_std__variant_BrowserTrack__BrowserLink_(__value)
+          case .second(let __value):
+            return bridge.create_std__variant_BrowserTrack__BrowserLink_(__value)
+        }
+      }().variant
+      return bridge.create_Result_std__variant_BrowserTrack__BrowserLink__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__variant_BrowserTrack__BrowserLink__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func search(query: std.string) -> bridge.Result_std__shared_ptr_Promise_std__vector_BrowserTrack____ {
+    do {
+      let __result = try self.__implementation.search(query: String(query))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__vector_BrowserTrack___ in
+        let __promise = bridge.create_std__shared_ptr_Promise_std__vector_BrowserTrack___()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__vector_BrowserTrack___(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve({ () -> bridge.std__vector_BrowserTrack_ in
+              var __vector = bridge.create_std__vector_BrowserTrack_(__result.count)
+              for __item in __result {
+                __vector.push_back(__item)
+              }
+              return __vector
+            }()) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_BrowserTrack____(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_BrowserTrack____(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func play() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.play()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func pause() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.pause()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func stop() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.stop()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setVolume(volume: Double) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setVolume(volume: volume)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getPlaybackProgress() -> bridge.Result_PlaybackProgress_ {
+    do {
+      let __result = try self.__implementation.getPlaybackProgress()
+      let __resultCpp = __result
+      return bridge.create_Result_PlaybackProgress_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_PlaybackProgress_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getPlaybackError() -> bridge.Result_std__optional_PlaybackError__ {
+    do {
+      let __result = try self.__implementation.getPlaybackError()
+      let __resultCpp = { () -> bridge.std__optional_PlaybackError_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_PlaybackError__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_PlaybackError__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getPlaybackState() -> bridge.Result_PlaybackState_ {
+    do {
+      let __result = try self.__implementation.getPlaybackState()
+      let __resultCpp = __result
+      return bridge.create_Result_PlaybackState_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_PlaybackState_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func load(track: BrowserTrack) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.load(track: track)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func add(tracks: bridge.std__vector_BrowserTrack_, index: bridge.std__optional_double_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.add(tracks: tracks.map({ __item in __item }), index: index.value)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getQueue() -> bridge.Result_std__vector_BrowserTrack__ {
+    do {
+      let __result = try self.__implementation.getQueue()
+      let __resultCpp = { () -> bridge.std__vector_BrowserTrack_ in
+        var __vector = bridge.create_std__vector_BrowserTrack_(__result.count)
+        for __item in __result {
+          __vector.push_back(__item)
+        }
+        return __vector
+      }()
+      return bridge.create_Result_std__vector_BrowserTrack__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__vector_BrowserTrack__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getCurrentTrack() -> bridge.Result_std__optional_BrowserTrack__ {
+    do {
+      let __result = try self.__implementation.getCurrentTrack()
+      let __resultCpp = { () -> bridge.std__optional_BrowserTrack_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_BrowserTrack_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_BrowserTrack__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_BrowserTrack__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getCurrentIndex() -> bridge.Result_double_ {
+    do {
+      let __result = try self.__implementation.getCurrentIndex()
       let __resultCpp = __result
       return bridge.create_Result_double_(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_double_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setQueue(tracks: bridge.std__vector_BrowserTrack_, startIndex: bridge.std__optional_double_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setQueue(tracks: tracks.map({ __item in __item }), startIndex: startIndex.value)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func clear() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.clear()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setRepeatMode(mode: Int32) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setRepeatMode(mode: margelo.nitro.audiobrowser.RepeatMode(rawValue: mode)!)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
 }

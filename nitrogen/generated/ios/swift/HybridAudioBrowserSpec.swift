@@ -14,7 +14,24 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   
 
   // Methods
-  func sum(num1: Double, num2: Double) throws -> Double
+  func navigate(path: String) throws -> Void
+  func getCurrentItem() throws -> BrowserItem
+  func search(query: String) throws -> Promise<[BrowserTrack]>
+  func play() throws -> Void
+  func pause() throws -> Void
+  func stop() throws -> Void
+  func setVolume(volume: Double) throws -> Void
+  func getPlaybackProgress() throws -> PlaybackProgress
+  func getPlaybackError() throws -> PlaybackError?
+  func getPlaybackState() throws -> PlaybackState
+  func load(track: BrowserTrack) throws -> Void
+  func add(tracks: [BrowserTrack], index: Double?) throws -> Void
+  func getQueue() throws -> [BrowserTrack]
+  func getCurrentTrack() throws -> BrowserTrack?
+  func getCurrentIndex() throws -> Double
+  func setQueue(tracks: [BrowserTrack], startIndex: Double?) throws -> Void
+  func clear() throws -> Void
+  func setRepeatMode(mode: RepeatMode) throws -> Void
 }
 
 /// See ``HybridAudioBrowserSpec``

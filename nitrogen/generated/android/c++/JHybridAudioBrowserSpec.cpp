@@ -7,9 +7,38 @@
 
 #include "JHybridAudioBrowserSpec.hpp"
 
+// Forward declaration of `BrowserTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `PlaybackProgress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `RepeatMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
-
-
+#include "BrowserTrack.hpp"
+#include "BrowserLink.hpp"
+#include <variant>
+#include "JBrowserItem.hpp"
+#include "JBrowserTrack.hpp"
+#include <string>
+#include <optional>
+#include "JBrowserLink.hpp"
+#include <vector>
+#include <NitroModules/Promise.hpp>
+#include <NitroModules/JPromise.hpp>
+#include "PlaybackProgress.hpp"
+#include "JPlaybackProgress.hpp"
+#include "PlaybackError.hpp"
+#include "JPlaybackError.hpp"
+#include "PlaybackState.hpp"
+#include "JPlaybackState.hpp"
+#include "RepeatMode.hpp"
+#include "JRepeatMode.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -37,10 +66,130 @@ namespace margelo::nitro::audiobrowser {
   
 
   // Methods
-  double JHybridAudioBrowserSpec::sum(double num1, double num2) {
-    static const auto method = javaClassStatic()->getMethod<double(double /* num1 */, double /* num2 */)>("sum");
-    auto __result = method(_javaPart, num1, num2);
+  void JHybridAudioBrowserSpec::navigate(const std::string& path) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("navigate");
+    method(_javaPart, jni::make_jstring(path));
+  }
+  std::variant<BrowserTrack, BrowserLink> JHybridAudioBrowserSpec::getCurrentItem() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserItem>()>("getCurrentItem");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  std::shared_ptr<Promise<std::vector<BrowserTrack>>> JHybridAudioBrowserSpec::search(const std::string& query) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* query */)>("search");
+    auto __result = method(_javaPart, jni::make_jstring(query));
+    return [&]() {
+      auto __promise = Promise<std::vector<BrowserTrack>>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<jni::JArrayClass<JBrowserTrack>>(__boxedResult);
+        __promise->resolve([&]() {
+          size_t __size = __result->size();
+          std::vector<BrowserTrack> __vector;
+          __vector.reserve(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            auto __element = __result->getElement(__i);
+            __vector.push_back(__element->toCpp());
+          }
+          return __vector;
+        }());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  void JHybridAudioBrowserSpec::play() {
+    static const auto method = javaClassStatic()->getMethod<void()>("play");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::pause() {
+    static const auto method = javaClassStatic()->getMethod<void()>("pause");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::stop() {
+    static const auto method = javaClassStatic()->getMethod<void()>("stop");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::setVolume(double volume) {
+    static const auto method = javaClassStatic()->getMethod<void(double /* volume */)>("setVolume");
+    method(_javaPart, volume);
+  }
+  PlaybackProgress JHybridAudioBrowserSpec::getPlaybackProgress() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlaybackProgress>()>("getPlaybackProgress");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  std::optional<PlaybackError> JHybridAudioBrowserSpec::getPlaybackError() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlaybackError>()>("getPlaybackError");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  PlaybackState JHybridAudioBrowserSpec::getPlaybackState() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlaybackState>()>("getPlaybackState");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  void JHybridAudioBrowserSpec::load(const BrowserTrack& track) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JBrowserTrack> /* track */)>("load");
+    method(_javaPart, JBrowserTrack::fromCpp(track));
+  }
+  void JHybridAudioBrowserSpec::add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JBrowserTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* index */)>("add");
+    method(_javaPart, [&]() {
+      size_t __size = tracks.size();
+      jni::local_ref<jni::JArrayClass<JBrowserTrack>> __array = jni::JArrayClass<JBrowserTrack>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = tracks[__i];
+        __array->setElement(__i, *JBrowserTrack::fromCpp(__element));
+      }
+      return __array;
+    }(), index.has_value() ? jni::JDouble::valueOf(index.value()) : nullptr);
+  }
+  std::vector<BrowserTrack> JHybridAudioBrowserSpec::getQueue() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JBrowserTrack>>()>("getQueue");
+    auto __result = method(_javaPart);
+    return [&]() {
+      size_t __size = __result->size();
+      std::vector<BrowserTrack> __vector;
+      __vector.reserve(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        auto __element = __result->getElement(__i);
+        __vector.push_back(__element->toCpp());
+      }
+      return __vector;
+    }();
+  }
+  std::optional<BrowserTrack> JHybridAudioBrowserSpec::getCurrentTrack() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserTrack>()>("getCurrentTrack");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  double JHybridAudioBrowserSpec::getCurrentIndex() {
+    static const auto method = javaClassStatic()->getMethod<double()>("getCurrentIndex");
+    auto __result = method(_javaPart);
     return __result;
+  }
+  void JHybridAudioBrowserSpec::setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JBrowserTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* startIndex */)>("setQueue");
+    method(_javaPart, [&]() {
+      size_t __size = tracks.size();
+      jni::local_ref<jni::JArrayClass<JBrowserTrack>> __array = jni::JArrayClass<JBrowserTrack>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = tracks[__i];
+        __array->setElement(__i, *JBrowserTrack::fromCpp(__element));
+      }
+      return __array;
+    }(), startIndex.has_value() ? jni::JDouble::valueOf(startIndex.value()) : nullptr);
+  }
+  void JHybridAudioBrowserSpec::clear() {
+    static const auto method = javaClassStatic()->getMethod<void()>("clear");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::setRepeatMode(RepeatMode mode) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRepeatMode> /* mode */)>("setRepeatMode");
+    method(_javaPart, JRepeatMode::fromCpp(mode));
   }
 
 } // namespace margelo::nitro::audiobrowser
