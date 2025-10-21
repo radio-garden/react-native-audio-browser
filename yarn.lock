@@ -6309,7 +6309,7 @@ __metadata:
     prettier: "npm:^3.0.3"
     react: "npm:19.1.1"
     react-native: "npm:0.82.0"
-    react-native-nitro-modules: "npm:0.30.0"
+    react-native-nitro-modules: "npm:0.31.1"
     react-native-safe-area-context: "npm:^5.5.2"
     typescript: "npm:^5.9.3"
   languageName: unknown
@@ -10062,18 +10062,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nitrogen@npm:0.30.0":
-  version: 0.30.0
-  resolution: "nitrogen@npm:0.30.0"
+"nitrogen@npm:0.31.1":
+  version: 0.31.1
+  resolution: "nitrogen@npm:0.31.1"
   dependencies:
     chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.30.0"
+    react-native-nitro-modules: "npm:^0.31.1"
     ts-morph: "npm:^27.0.0"
     yargs: "npm:^18.0.0"
     zod: "npm:^4.0.5"
   bin:
     nitrogen: lib/index.js
-  checksum: 10c0/41f72457247aa9e95cfedbce474a47f25ac02cd42e6a0c998262b6fe01f84b20d48fed8a9fbf41e65c9a1be81e87632ae08f63bd605f005300d12443a04c5e8d
+  checksum: 10c0/78249d631fe423e0f2f497c61e49be426200147ffc5b70e00ebee04b25d63a129df7392f1bc0a2a220cb3e4c47ce55288afd2fc851bde9260b8d338f12a33f20
   languageName: node
   linkType: hard
 
@@ -11347,12 +11347,12 @@ __metadata:
     eslint-config-prettier: "npm:^10.1.1"
     eslint-plugin-prettier: "npm:^5.2.3"
     jest: "npm:^29.7.0"
-    nitrogen: "npm:0.30.0"
+    nitrogen: "npm:0.31.1"
     prettier: "npm:^3.0.3"
     react: "npm:19.1.1"
     react-native: "npm:0.82"
     react-native-builder-bob: "npm:^0.37.0"
-    react-native-nitro-modules: "npm:0.30.0"
+    react-native-nitro-modules: "npm:0.31.1"
     semantic-release: "npm:^24.2.9"
     typescript: "npm:^5.8.3"
   peerDependencies:
@@ -11394,13 +11394,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.30.0, react-native-nitro-modules@npm:^0.30.0":
-  version: 0.30.0
-  resolution: "react-native-nitro-modules@npm:0.30.0"
+"react-native-nitro-modules@npm:0.31.1, react-native-nitro-modules@npm:^0.31.1":
+  version: 0.31.1
+  resolution: "react-native-nitro-modules@npm:0.31.1"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/880f9ca2e71fac3ebbe038aab9f50ee62879583f8f92b4d31adee6e401d60c23e9023f4144ae041ec1e04028fc41a74783f0db02d1d82758ba653efbfbfd8650
+  checksum: 10c0/c45646ef96ee43960b224c26eb5976b8724a0bb188148a09dd060751b55aaa00ba864447fd9f0d025a525dd5d96d4b5054de51aca3903a7bf11e54cff59e478f
   languageName: node
   linkType: hard
 
