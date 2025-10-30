@@ -23,10 +23,10 @@ data class PlaybackError
   constructor(
     @DoNotStrip
     @Keep
-    val error: String,
+    val code: String,
     @DoNotStrip
     @Keep
-    val errorCode: Double?
+    val message: String
   ) {
   /* main constructor */
 }

@@ -19,10 +19,10 @@ public extension RepeatMode {
     switch string {
       case "off":
         self = .off
-      case "queue":
-        self = .queue
       case "track":
         self = .track
+      case "queue":
+        self = .queue
       default:
         return nil
     }
@@ -35,10 +35,10 @@ public extension RepeatMode {
     switch self {
       case .off:
         return "off"
-      case .queue:
-        return "queue"
       case .track:
         return "track"
+      case .queue:
+        return "queue"
     }
   }
 }

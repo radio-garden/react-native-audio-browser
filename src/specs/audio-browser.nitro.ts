@@ -1,110 +1,135 @@
 import { type HybridObject } from 'react-native-nitro-modules';
-import type { BrowserItem, BrowserTrack } from '../../types/browser-nodes.ts';
 import type {
   PlaybackError,
-  PlaybackProgress,
   PlaybackState,
+  PlayerOptions,
+  PlayingState,
+  Progress,
   RepeatMode,
-} from '../../types/player.ts';
+  Track,
+} from '../features';
+
+type EmitterCallback<T> = (data: T) => void
+type EventEmitter<T> = (callback: EmitterCallback<T>) => () => void
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
-  /* Browser Methods: */
+  // MARK: init and config
+  setupPlayer(options: PlayerOptions): Promise<void>
+  // updateOptions(options: UpdateOptions): void
+  // getOptions(): UpdateOptions
 
-  // configure(config: BrowserConfig): void
+  // // MARK: events
+  // readonly onMetadataChapterReceived: EventEmitter<AudioMetadataReceivedEvent>
+  // readonly onMetadataCommonReceived: EventEmitter<AudioCommonMetadataReceivedEvent>
+  // readonly onMetadataTimedReceived: EventEmitter<AudioMetadataReceivedEvent>
+  // readonly onPlaybackActiveTrackChanged: EventEmitter<PlaybackActiveTrackChangedEvent>
+  // readonly onPlaybackError: EventEmitter<PlaybackErrorEvent>
+  // // readonly onPlaybackMetadata: EventEmitter<UnsafeObject>
+  // readonly onPlaybackPlayWhenReadyChanged: EventEmitter<PlaybackPlayWhenReadyChangedEvent>
+  // readonly onPlaybackPlayingState: EventEmitter<PlayingState>
+  // readonly onPlaybackProgressUpdated: EventEmitter<PlaybackProgressUpdatedEvent>
+  // readonly onPlaybackQueueEnded: EventEmitter<PlaybackQueueEndedEvent>
+  // readonly onPlaybackRepeatModeChanged: EventEmitter<RepeatModeChangedEvent>
+  // readonly onPlaybackState: EventEmitter<PlaybackState>
+  // readonly onRemoteBookmark: EventEmitter<void>
+  // readonly onRemoteDislike: EventEmitter<void>
+  // readonly onRemoteJumpBackward: EventEmitter<RemoteJumpBackwardEvent>
+  // readonly onRemoteJumpForward: EventEmitter<RemoteJumpForwardEvent>
+  // readonly onRemoteLike: EventEmitter<void>
+  // readonly onRemoteNext: EventEmitter<void>
+  // readonly onRemotePause: EventEmitter<void>
+  // readonly onRemotePlay: EventEmitter<void>
+  // readonly onRemotePlayId: EventEmitter<RemotePlayIdEvent>
+  // readonly onRemotePlaySearch: EventEmitter<RemotePlaySearchEvent>
+  // readonly onRemotePrevious: EventEmitter<void>
+  // readonly onRemoteSeek: EventEmitter<RemoteSeekEvent>
+  // readonly onRemoteSetRating: EventEmitter<RemoteSetRatingEvent>
+  // readonly onRemoteSkip: EventEmitter<RemoteSkipEvent>
+  // readonly onRemoteStop: EventEmitter<void>
+  // readonly onOptionsChanged: EventEmitter<Options>
 
-  /**
-   * Navigate to a specific path in the browser.
-   */
-  navigate(path: string): void
-
-  /**
-   * Get the current browser item being displayed.
-   */
-  getCurrentItem(): BrowserItem
-
-  /**
-   * Search for tracks using the configured search source.
-   */
-  search(query: string): Promise<BrowserTrack[]>
-
-  /* Player Methods: */
-
-  /**
-   * Sets the player to start playing as soon as a track is loaded and ready.
-   */
+  // MARK: player api
+  load(track: Track): void
+  reset(): void
   play(): void
-  /**
-   * Pauses playback, but leaves the current track loaded and ready to resume.
-   */
   pause(): void
-  /**
-   * Stops playback and stops loading the current track.
-   *
-   * To resume playback, `play()` must be called again, which will reload the
-   * current track and start playing from the beginning.
-   */
+  togglePlayback(): void
   stop(): void
-  /**
-   * Sets the player volume from 0.0 (silent) to 1.0 (full volume).
-   */
-  setVolume(volume: number): void
-  /**
-   * Returns the current playback progress information.
-   *
-   * @returns An object containing:
-   * - `position`: Current playback position in seconds (0.0 to duration)
-   * - `duration`: Total track duration in seconds (0.0 if unknown)
-   * - `buffered`: Amount of content buffered ahead in seconds (0.0 to duration)
-   */
-  getPlaybackProgress(): PlaybackProgress
-  /**
-   * Returns any current player error, or null if no error.
-   */
-  getPlaybackError(): PlaybackError | null
-  /**
-   * Returns the current playback state of the player.
-   *
-   * @returns The current state: 'idle' (no track), 'stopped' (track loaded, position reset),
-   * 'loading' (buffering), 'playing' (active playback), 'paused' (paused at position), or 'error' (playback failed)
-   */
+  setPlayWhenReady(playWhenReady: boolean): void
+  getPlayWhenReady(): boolean
+  seekTo(position: number): void
+  seekBy(offset: number): void
+  setVolume(level: number): void
+  getVolume(): number
+  setRate(rate: number): void
+  getRate(): number
+  getProgress(): Progress
   getPlaybackState(): PlaybackState
-  /**
-   * Loads the given track into the player, replacing the current track.
-   *
-   * @param track The track to load
-   */
-  load(track: BrowserTrack): void
-  /**
-   * Adds the given tracks to the queue.
-   *
-   * @param tracks The tracks to add to the queue
-   * @param index Optional position to insert the tracks. If not provided, tracks are added to the end of the queue.
-   */
-  add(tracks: BrowserTrack[], index?: number): void
-  /**
-   * Gets the current queue of tracks.
-   */
-  getQueue(): BrowserTrack[]
-  /**
-   * Gets the currently playing or loaded track.
-   *
-   * @returns The current track, or null if no track is loaded
-   */
-  getCurrentTrack(): BrowserTrack | null
-  /**
-   * Gets the index of the current track in the queue.
-   *
-   * @returns The zero-based index of the current track, or -1 if no track is current
-   */
-  getCurrentIndex(): number
-  /**
-   * Sets the queue to the given tracks, replacing any existing queue.
-   */
-  setQueue(tracks: BrowserTrack[], startIndex?: number): void
-  /**
-   * Clears the queue and stops playback.
-   */
-  clear(): void
+  getPlayingState(): PlayingState
+  getRepeatMode(): RepeatMode
   setRepeatMode(mode: RepeatMode): void
+  getPlaybackError(): PlaybackError | null
+  retry(): void
+
+  // MARK: playlist management
+  add(tracks: Track[], insertBeforeIndex?: number): void
+  move(fromIndex: number, toIndex: number): void
+  remove(indexes: number[]): void
+  removeUpcomingTracks(): void
+  skip(index: number, initialPosition?: number): void
+  skipToNext(initialPosition?: number): void
+  skipToPrevious(initialPosition?: number): void
+  // updateMetadataForTrack(trackIndex: number, metadata: TrackMetadataBase): void
+  // updateNowPlayingMetadata(metadata: TrackMetadataBase): void
+  setQueue(tracks: Track[]): void
+  getQueue(): Track[]
+  getTrack(index: number): Track | undefined
+  getActiveTrackIndex(): number | undefined
+  getActiveTrack(): Track | undefined
+
+  // MARK: Android methods
+  acquireWakeLock(): void
+  abandonWakeLock(): void
+
+  // MARK: Media Browser Methods:
+  readonly onGetItemRequest: EventEmitter<GetItemRequest>
+  resolveGetItemRequest(id: string, item: Track): void
+
+  readonly onGetChildrenRequest: EventEmitter<GetChildrenRequest>
+  resolveGetChildrenRequest(
+    requestId: string,
+    items: Track[],
+    totalChildrenCount: number
+  ): void
+
+  readonly onGetSearchResultRequest: EventEmitter<GetSearchResultRequest>
+  resolveSearchResultRequest(
+    requestId: string,
+    items: Track[],
+    totalMatchesCount: number
+  ): void
+
+  // Signal that JS side is ready to receive media browser events
+  setMediaBrowserReady(): void
+}
+
+type GetItemRequest = {
+  requestId: string
+  id: string
+}
+
+type GetChildrenRequest = {
+  requestId: string
+  id: string
+  page: number
+  pageSize: number
+}
+
+type GetSearchResultRequest = {
+  requestId: string
+  query: string
+  // extras?: UnsafeObject
+  page: number
+  pageSize: number
 }

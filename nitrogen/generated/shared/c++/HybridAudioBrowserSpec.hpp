@@ -13,30 +13,42 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `BrowserTrack` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
-// Forward declaration of `PlaybackProgress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
-// Forward declaration of `PlaybackError` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `GetItemRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
+// Forward declaration of `GetChildrenRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
+// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
+// Forward declaration of `PlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `Progress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+// Forward declaration of `PlayingState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 
-#include <string>
-#include "BrowserTrack.hpp"
-#include "BrowserLink.hpp"
-#include <variant>
-#include <vector>
+#include <functional>
 #include <NitroModules/Promise.hpp>
-#include "PlaybackProgress.hpp"
+#include "GetItemRequest.hpp"
+#include "GetChildrenRequest.hpp"
+#include "GetSearchResultRequest.hpp"
+#include "PlayerOptions.hpp"
+#include "Track.hpp"
+#include "Progress.hpp"
+#include "PlaybackState.hpp"
+#include "PlayingState.hpp"
+#include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
 #include <optional>
-#include "PlaybackState.hpp"
-#include "RepeatMode.hpp"
+#include <vector>
+#include <string>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -65,28 +77,52 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Properties
-      
+      virtual std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> getOnGetItemRequest() = 0;
+      virtual std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> getOnGetChildrenRequest() = 0;
+      virtual std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> getOnGetSearchResultRequest() = 0;
 
     public:
       // Methods
-      virtual void navigate(const std::string& path) = 0;
-      virtual std::variant<BrowserTrack, BrowserLink> getCurrentItem() = 0;
-      virtual std::shared_ptr<Promise<std::vector<BrowserTrack>>> search(const std::string& query) = 0;
+      virtual std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) = 0;
+      virtual void load(const Track& track) = 0;
+      virtual void reset() = 0;
       virtual void play() = 0;
       virtual void pause() = 0;
+      virtual void togglePlayback() = 0;
       virtual void stop() = 0;
-      virtual void setVolume(double volume) = 0;
-      virtual PlaybackProgress getPlaybackProgress() = 0;
-      virtual std::optional<PlaybackError> getPlaybackError() = 0;
+      virtual void setPlayWhenReady(bool playWhenReady) = 0;
+      virtual bool getPlayWhenReady() = 0;
+      virtual void seekTo(double position) = 0;
+      virtual void seekBy(double offset) = 0;
+      virtual void setVolume(double level) = 0;
+      virtual double getVolume() = 0;
+      virtual void setRate(double rate) = 0;
+      virtual double getRate() = 0;
+      virtual Progress getProgress() = 0;
       virtual PlaybackState getPlaybackState() = 0;
-      virtual void load(const BrowserTrack& track) = 0;
-      virtual void add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) = 0;
-      virtual std::vector<BrowserTrack> getQueue() = 0;
-      virtual std::optional<BrowserTrack> getCurrentTrack() = 0;
-      virtual double getCurrentIndex() = 0;
-      virtual void setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) = 0;
-      virtual void clear() = 0;
+      virtual PlayingState getPlayingState() = 0;
+      virtual RepeatMode getRepeatMode() = 0;
       virtual void setRepeatMode(RepeatMode mode) = 0;
+      virtual std::optional<PlaybackError> getPlaybackError() = 0;
+      virtual void retry() = 0;
+      virtual void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) = 0;
+      virtual void move(double fromIndex, double toIndex) = 0;
+      virtual void remove(const std::vector<double>& indexes) = 0;
+      virtual void removeUpcomingTracks() = 0;
+      virtual void skip(double index, std::optional<double> initialPosition) = 0;
+      virtual void skipToNext(std::optional<double> initialPosition) = 0;
+      virtual void skipToPrevious(std::optional<double> initialPosition) = 0;
+      virtual void setQueue(const std::vector<Track>& tracks) = 0;
+      virtual std::vector<Track> getQueue() = 0;
+      virtual std::optional<Track> getTrack(double index) = 0;
+      virtual std::optional<double> getActiveTrackIndex() = 0;
+      virtual std::optional<Track> getActiveTrack() = 0;
+      virtual void acquireWakeLock() = 0;
+      virtual void abandonWakeLock() = 0;
+      virtual void resolveGetItemRequest(const std::string& id, const Track& item) = 0;
+      virtual void resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) = 0;
+      virtual void resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) = 0;
+      virtual void setMediaBrowserReady() = 0;
 
     protected:
       // Hybrid Setup

@@ -8,30 +8,78 @@
 #pragma once
 
 // Forward declarations of C++ defined types
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
-// Forward declaration of `BrowserTrack` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
+// Forward declaration of `AndroidAudioContentType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
+// Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `GetChildrenRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
+// Forward declaration of `GetItemRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
+// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
+// Forward declaration of `IOSCategoryMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
+// Forward declaration of `IOSCategoryOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
+// Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `IOSCategory` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
+// Forward declaration of `PitchAlgorithm` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlaybackProgress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+// Forward declaration of `PlayingState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayingState; }
+// Forward declaration of `Progress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `RatingType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `RepeatMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `TrackType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackType; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
 
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
 // Include C++ defined types
-#include "BrowserLink.hpp"
-#include "BrowserTrack.hpp"
+#include "AndroidAudioContentType.hpp"
+#include "AndroidAudioOffloadSettings.hpp"
+#include "AndroidPlayerOptions.hpp"
+#include "GetChildrenRequest.hpp"
+#include "GetItemRequest.hpp"
+#include "GetSearchResultRequest.hpp"
 #include "HybridAudioBrowserSpec.hpp"
+#include "IOSCategory.hpp"
+#include "IOSCategoryMode.hpp"
+#include "IOSCategoryOptions.hpp"
+#include "IOSCategoryPolicy.hpp"
+#include "IOSPlayerOptions.hpp"
+#include "PitchAlgorithm.hpp"
 #include "PlaybackError.hpp"
-#include "PlaybackProgress.hpp"
+#include "PlaybackErrorEvent.hpp"
 #include "PlaybackState.hpp"
+#include "PlayingState.hpp"
+#include "Progress.hpp"
+#include "RatingType.hpp"
+#include "RepeatMode.hpp"
+#include "Track.hpp"
+#include "TrackType.hpp"
 #include <NitroModules/FastVectorCopy.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/PromiseHolder.hpp>
@@ -50,108 +98,38 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
  */
 namespace margelo::nitro::audiobrowser::bridge::swift {
 
-  // pragma MARK: std::optional<std::string>
+  // pragma MARK: std::shared_ptr<Promise<void>>
   /**
-   * Specialized version of `std::optional<std::string>`.
+   * Specialized version of `std::shared_ptr<Promise<void>>`.
    */
-  using std__optional_std__string_ = std::optional<std::string>;
-  inline std::optional<std::string> create_std__optional_std__string_(const std::string& value) noexcept {
-    return std::optional<std::string>(value);
+  using std__shared_ptr_Promise_void__ = std::shared_ptr<Promise<void>>;
+  inline std::shared_ptr<Promise<void>> create_std__shared_ptr_Promise_void__() noexcept {
+    return Promise<void>::create();
   }
-  inline bool has_value_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
-    return *optional;
+  inline PromiseHolder<void> wrap_std__shared_ptr_Promise_void__(std::shared_ptr<Promise<void>> promise) noexcept {
+    return PromiseHolder<void>(std::move(promise));
   }
   
-  // pragma MARK: std::optional<bool>
+  // pragma MARK: std::function<void()>
   /**
-   * Specialized version of `std::optional<bool>`.
+   * Specialized version of `std::function<void()>`.
    */
-  using std__optional_bool_ = std::optional<bool>;
-  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
-    return std::optional<bool>(value);
-  }
-  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::variant<BrowserTrack, BrowserLink>
+  using Func_void = std::function<void()>;
   /**
-   * Wrapper struct for `std::variant<BrowserTrack, BrowserLink>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
+   * Wrapper class for a `std::function<void()>`, this can be used from Swift.
    */
-  struct std__variant_BrowserTrack__BrowserLink_ {
-    std::variant<BrowserTrack, BrowserLink> variant;
-    std__variant_BrowserTrack__BrowserLink_(std::variant<BrowserTrack, BrowserLink> variant): variant(variant) { }
-    operator std::variant<BrowserTrack, BrowserLink>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline BrowserTrack get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline BrowserLink get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-  };
-  inline std__variant_BrowserTrack__BrowserLink_ create_std__variant_BrowserTrack__BrowserLink_(const BrowserTrack& value) noexcept {
-    return std__variant_BrowserTrack__BrowserLink_(value);
-  }
-  inline std__variant_BrowserTrack__BrowserLink_ create_std__variant_BrowserTrack__BrowserLink_(const BrowserLink& value) noexcept {
-    return std__variant_BrowserTrack__BrowserLink_(value);
-  }
-  
-  // pragma MARK: std::vector<BrowserTrack>
-  /**
-   * Specialized version of `std::vector<BrowserTrack>`.
-   */
-  using std__vector_BrowserTrack_ = std::vector<BrowserTrack>;
-  inline std::vector<BrowserTrack> create_std__vector_BrowserTrack_(size_t size) noexcept {
-    std::vector<BrowserTrack> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<std::vector<BrowserTrack>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::vector<BrowserTrack>>>`.
-   */
-  using std__shared_ptr_Promise_std__vector_BrowserTrack___ = std::shared_ptr<Promise<std::vector<BrowserTrack>>>;
-  inline std::shared_ptr<Promise<std::vector<BrowserTrack>>> create_std__shared_ptr_Promise_std__vector_BrowserTrack___() noexcept {
-    return Promise<std::vector<BrowserTrack>>::create();
-  }
-  inline PromiseHolder<std::vector<BrowserTrack>> wrap_std__shared_ptr_Promise_std__vector_BrowserTrack___(std::shared_ptr<Promise<std::vector<BrowserTrack>>> promise) noexcept {
-    return PromiseHolder<std::vector<BrowserTrack>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::vector<BrowserTrack>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::vector<BrowserTrack>&)>`.
-   */
-  using Func_void_std__vector_BrowserTrack_ = std::function<void(const std::vector<BrowserTrack>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::vector<BrowserTrack>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__vector_BrowserTrack__Wrapper final {
+  class Func_void_Wrapper final {
   public:
-    explicit Func_void_std__vector_BrowserTrack__Wrapper(std::function<void(const std::vector<BrowserTrack>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<BrowserTrack>& /* result */)>>(std::move(func))) {}
-    inline void call(std::vector<BrowserTrack> result) const noexcept {
-      _function->operator()(result);
+    explicit Func_void_Wrapper(std::function<void()>&& func): _function(std::make_unique<std::function<void()>>(std::move(func))) {}
+    inline void call() const noexcept {
+      _function->operator()();
     }
   private:
-    std::unique_ptr<std::function<void(const std::vector<BrowserTrack>& /* result */)>> _function;
+    std::unique_ptr<std::function<void()>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_std__vector_BrowserTrack_ create_Func_void_std__vector_BrowserTrack_(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__vector_BrowserTrack__Wrapper wrap_Func_void_std__vector_BrowserTrack_(Func_void_std__vector_BrowserTrack_ value) noexcept {
-    return Func_void_std__vector_BrowserTrack__Wrapper(std::move(value));
+  Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_Wrapper wrap_Func_void(Func_void value) noexcept {
+    return Func_void_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
@@ -191,6 +169,212 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
+  // pragma MARK: std::optional<bool>
+  /**
+   * Specialized version of `std::optional<bool>`.
+   */
+  using std__optional_bool_ = std::optional<bool>;
+  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
+    return std::optional<bool>(value);
+  }
+  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<bool, AndroidAudioOffloadSettings>
+  /**
+   * Wrapper struct for `std::variant<bool, AndroidAudioOffloadSettings>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_bool__AndroidAudioOffloadSettings_ {
+    std::variant<bool, AndroidAudioOffloadSettings> variant;
+    std__variant_bool__AndroidAudioOffloadSettings_(std::variant<bool, AndroidAudioOffloadSettings> variant): variant(variant) { }
+    operator std::variant<bool, AndroidAudioOffloadSettings>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline bool get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline AndroidAudioOffloadSettings get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_bool__AndroidAudioOffloadSettings_ create_std__variant_bool__AndroidAudioOffloadSettings_(bool value) noexcept {
+    return std__variant_bool__AndroidAudioOffloadSettings_(value);
+  }
+  inline std__variant_bool__AndroidAudioOffloadSettings_ create_std__variant_bool__AndroidAudioOffloadSettings_(const AndroidAudioOffloadSettings& value) noexcept {
+    return std__variant_bool__AndroidAudioOffloadSettings_(value);
+  }
+  
+  // pragma MARK: std::optional<AndroidPlayerOptions>
+  /**
+   * Specialized version of `std::optional<AndroidPlayerOptions>`.
+   */
+  using std__optional_AndroidPlayerOptions_ = std::optional<AndroidPlayerOptions>;
+  inline std::optional<AndroidPlayerOptions> create_std__optional_AndroidPlayerOptions_(const AndroidPlayerOptions& value) noexcept {
+    return std::optional<AndroidPlayerOptions>(value);
+  }
+  inline bool has_value_std__optional_AndroidPlayerOptions_(const std::optional<AndroidPlayerOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline AndroidPlayerOptions get_std__optional_AndroidPlayerOptions_(const std::optional<AndroidPlayerOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<IOSCategory>
+  /**
+   * Specialized version of `std::optional<IOSCategory>`.
+   */
+  using std__optional_IOSCategory_ = std::optional<IOSCategory>;
+  inline std::optional<IOSCategory> create_std__optional_IOSCategory_(const IOSCategory& value) noexcept {
+    return std::optional<IOSCategory>(value);
+  }
+  inline bool has_value_std__optional_IOSCategory_(const std::optional<IOSCategory>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSCategory get_std__optional_IOSCategory_(const std::optional<IOSCategory>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<IOSCategoryMode>
+  /**
+   * Specialized version of `std::optional<IOSCategoryMode>`.
+   */
+  using std__optional_IOSCategoryMode_ = std::optional<IOSCategoryMode>;
+  inline std::optional<IOSCategoryMode> create_std__optional_IOSCategoryMode_(const IOSCategoryMode& value) noexcept {
+    return std::optional<IOSCategoryMode>(value);
+  }
+  inline bool has_value_std__optional_IOSCategoryMode_(const std::optional<IOSCategoryMode>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSCategoryMode get_std__optional_IOSCategoryMode_(const std::optional<IOSCategoryMode>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<IOSCategoryOptions>
+  /**
+   * Specialized version of `std::vector<IOSCategoryOptions>`.
+   */
+  using std__vector_IOSCategoryOptions_ = std::vector<IOSCategoryOptions>;
+  inline std::vector<IOSCategoryOptions> copy_std__vector_IOSCategoryOptions_(const IOSCategoryOptions* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
+    return margelo::nitro::FastVectorCopy<IOSCategoryOptions>(data, size);
+  }
+  inline const IOSCategoryOptions* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_IOSCategoryOptions_(const std::vector<IOSCategoryOptions>& vector) noexcept {
+    return vector.data();
+  }
+  
+  // pragma MARK: std::optional<std::vector<IOSCategoryOptions>>
+  /**
+   * Specialized version of `std::optional<std::vector<IOSCategoryOptions>>`.
+   */
+  using std__optional_std__vector_IOSCategoryOptions__ = std::optional<std::vector<IOSCategoryOptions>>;
+  inline std::optional<std::vector<IOSCategoryOptions>> create_std__optional_std__vector_IOSCategoryOptions__(const std::vector<IOSCategoryOptions>& value) noexcept {
+    return std::optional<std::vector<IOSCategoryOptions>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_IOSCategoryOptions__(const std::optional<std::vector<IOSCategoryOptions>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<IOSCategoryOptions> get_std__optional_std__vector_IOSCategoryOptions__(const std::optional<std::vector<IOSCategoryOptions>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<IOSCategoryPolicy>
+  /**
+   * Specialized version of `std::optional<IOSCategoryPolicy>`.
+   */
+  using std__optional_IOSCategoryPolicy_ = std::optional<IOSCategoryPolicy>;
+  inline std::optional<IOSCategoryPolicy> create_std__optional_IOSCategoryPolicy_(const IOSCategoryPolicy& value) noexcept {
+    return std::optional<IOSCategoryPolicy>(value);
+  }
+  inline bool has_value_std__optional_IOSCategoryPolicy_(const std::optional<IOSCategoryPolicy>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSCategoryPolicy get_std__optional_IOSCategoryPolicy_(const std::optional<IOSCategoryPolicy>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<IOSPlayerOptions>
+  /**
+   * Specialized version of `std::optional<IOSPlayerOptions>`.
+   */
+  using std__optional_IOSPlayerOptions_ = std::optional<IOSPlayerOptions>;
+  inline std::optional<IOSPlayerOptions> create_std__optional_IOSPlayerOptions_(const IOSPlayerOptions& value) noexcept {
+    return std::optional<IOSPlayerOptions>(value);
+  }
+  inline bool has_value_std__optional_IOSPlayerOptions_(const std::optional<IOSPlayerOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSPlayerOptions get_std__optional_IOSPlayerOptions_(const std::optional<IOSPlayerOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::string>
+  /**
+   * Specialized version of `std::optional<std::string>`.
+   */
+  using std__optional_std__string_ = std::optional<std::string>;
+  inline std::optional<std::string> create_std__optional_std__string_(const std::string& value) noexcept {
+    return std::optional<std::string>(value);
+  }
+  inline bool has_value_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<TrackType>
+  /**
+   * Specialized version of `std::optional<TrackType>`.
+   */
+  using std__optional_TrackType_ = std::optional<TrackType>;
+  inline std::optional<TrackType> create_std__optional_TrackType_(const TrackType& value) noexcept {
+    return std::optional<TrackType>(value);
+  }
+  inline bool has_value_std__optional_TrackType_(const std::optional<TrackType>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline TrackType get_std__optional_TrackType_(const std::optional<TrackType>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<PitchAlgorithm>
+  /**
+   * Specialized version of `std::optional<PitchAlgorithm>`.
+   */
+  using std__optional_PitchAlgorithm_ = std::optional<PitchAlgorithm>;
+  inline std::optional<PitchAlgorithm> create_std__optional_PitchAlgorithm_(const PitchAlgorithm& value) noexcept {
+    return std::optional<PitchAlgorithm>(value);
+  }
+  inline bool has_value_std__optional_PitchAlgorithm_(const std::optional<PitchAlgorithm>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PitchAlgorithm get_std__optional_PitchAlgorithm_(const std::optional<PitchAlgorithm>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<RatingType>
+  /**
+   * Specialized version of `std::optional<RatingType>`.
+   */
+  using std__optional_RatingType_ = std::optional<RatingType>;
+  inline std::optional<RatingType> create_std__optional_RatingType_(const RatingType& value) noexcept {
+    return std::optional<RatingType>(value);
+  }
+  inline bool has_value_std__optional_RatingType_(const std::optional<RatingType>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline RatingType get_std__optional_RatingType_(const std::optional<RatingType>& optional) noexcept {
+    return *optional;
+  }
+  
   // pragma MARK: std::optional<PlaybackError>
   /**
    * Specialized version of `std::optional<PlaybackError>`.
@@ -206,19 +390,226 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<BrowserTrack>
+  // pragma MARK: std::optional<PlaybackErrorEvent>
   /**
-   * Specialized version of `std::optional<BrowserTrack>`.
+   * Specialized version of `std::optional<PlaybackErrorEvent>`.
    */
-  using std__optional_BrowserTrack_ = std::optional<BrowserTrack>;
-  inline std::optional<BrowserTrack> create_std__optional_BrowserTrack_(const BrowserTrack& value) noexcept {
-    return std::optional<BrowserTrack>(value);
+  using std__optional_PlaybackErrorEvent_ = std::optional<PlaybackErrorEvent>;
+  inline std::optional<PlaybackErrorEvent> create_std__optional_PlaybackErrorEvent_(const PlaybackErrorEvent& value) noexcept {
+    return std::optional<PlaybackErrorEvent>(value);
   }
-  inline bool has_value_std__optional_BrowserTrack_(const std::optional<BrowserTrack>& optional) noexcept {
+  inline bool has_value_std__optional_PlaybackErrorEvent_(const std::optional<PlaybackErrorEvent>& optional) noexcept {
     return optional.has_value();
   }
-  inline BrowserTrack get_std__optional_BrowserTrack_(const std::optional<BrowserTrack>& optional) noexcept {
+  inline PlaybackErrorEvent get_std__optional_PlaybackErrorEvent_(const std::optional<PlaybackErrorEvent>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::vector<Track>
+  /**
+   * Specialized version of `std::vector<Track>`.
+   */
+  using std__vector_Track_ = std::vector<Track>;
+  inline std::vector<Track> create_std__vector_Track_(size_t size) noexcept {
+    std::vector<Track> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::vector<double>
+  /**
+   * Specialized version of `std::vector<double>`.
+   */
+  using std__vector_double_ = std::vector<double>;
+  inline std::vector<double> copy_std__vector_double_(const double* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
+    return margelo::nitro::FastVectorCopy<double>(data, size);
+  }
+  inline const double* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_double_(const std::vector<double>& vector) noexcept {
+    return vector.data();
+  }
+  
+  // pragma MARK: std::optional<Track>
+  /**
+   * Specialized version of `std::optional<Track>`.
+   */
+  using std__optional_Track_ = std::optional<Track>;
+  inline std::optional<Track> create_std__optional_Track_(const Track& value) noexcept {
+    return std::optional<Track>(value);
+  }
+  inline bool has_value_std__optional_Track_(const std::optional<Track>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline Track get_std__optional_Track_(const std::optional<Track>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const GetItemRequest& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const GetItemRequest&)>`.
+   */
+  using Func_void_GetItemRequest = std::function<void(const GetItemRequest& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const GetItemRequest& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_GetItemRequest_Wrapper final {
+  public:
+    explicit Func_void_GetItemRequest_Wrapper(std::function<void(const GetItemRequest& /* data */)>&& func): _function(std::make_unique<std::function<void(const GetItemRequest& /* data */)>>(std::move(func))) {}
+    inline void call(GetItemRequest data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const GetItemRequest& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_GetItemRequest create_Func_void_GetItemRequest(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_GetItemRequest_Wrapper wrap_Func_void_GetItemRequest(Func_void_GetItemRequest value) noexcept {
+    return Func_void_GetItemRequest_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest&)>&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ = std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& / * data * /)>& / * callback * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper(std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::function<void()>>> call(std::function<void(const GetItemRequest& /* data */)> callback) const noexcept {
+      auto __result = _function->operator()(callback);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper wrap_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::function<void()>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::function<void()>>>`.
+   */
+  using std__shared_ptr_Promise_std__function_void_____ = std::shared_ptr<Promise<std::function<void()>>>;
+  inline std::shared_ptr<Promise<std::function<void()>>> create_std__shared_ptr_Promise_std__function_void_____() noexcept {
+    return Promise<std::function<void()>>::create();
+  }
+  inline PromiseHolder<std::function<void()>> wrap_std__shared_ptr_Promise_std__function_void_____(std::shared_ptr<Promise<std::function<void()>>> promise) noexcept {
+    return PromiseHolder<std::function<void()>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::function<void()>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::function<void()>&)>`.
+   */
+  using Func_void_std__function_void___ = std::function<void(const std::function<void()>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::function<void()>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__function_void____Wrapper final {
+  public:
+    explicit Func_void_std__function_void____Wrapper(std::function<void(const std::function<void()>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::function<void()>& /* result */)>>(std::move(func))) {}
+    inline void call(std::function<void()> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::function<void()>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__function_void___ create_Func_void_std__function_void___(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__function_void____Wrapper wrap_Func_void_std__function_void___(Func_void_std__function_void___ value) noexcept {
+    return Func_void_std__function_void____Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const GetChildrenRequest& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const GetChildrenRequest&)>`.
+   */
+  using Func_void_GetChildrenRequest = std::function<void(const GetChildrenRequest& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const GetChildrenRequest& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_GetChildrenRequest_Wrapper final {
+  public:
+    explicit Func_void_GetChildrenRequest_Wrapper(std::function<void(const GetChildrenRequest& /* data */)>&& func): _function(std::make_unique<std::function<void(const GetChildrenRequest& /* data */)>>(std::move(func))) {}
+    inline void call(GetChildrenRequest data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const GetChildrenRequest& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_GetChildrenRequest create_Func_void_GetChildrenRequest(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_GetChildrenRequest_Wrapper wrap_Func_void_GetChildrenRequest(Func_void_GetChildrenRequest value) noexcept {
+    return Func_void_GetChildrenRequest_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest&)>&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ = std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& / * data * /)>& / * callback * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper(std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::function<void()>>> call(std::function<void(const GetChildrenRequest& /* data */)> callback) const noexcept {
+      auto __result = _function->operator()(callback);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper wrap_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const GetSearchResultRequest& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const GetSearchResultRequest&)>`.
+   */
+  using Func_void_GetSearchResultRequest = std::function<void(const GetSearchResultRequest& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const GetSearchResultRequest& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_GetSearchResultRequest_Wrapper final {
+  public:
+    explicit Func_void_GetSearchResultRequest_Wrapper(std::function<void(const GetSearchResultRequest& /* data */)>&& func): _function(std::make_unique<std::function<void(const GetSearchResultRequest& /* data */)>>(std::move(func))) {}
+    inline void call(GetSearchResultRequest data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const GetSearchResultRequest& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_GetSearchResultRequest create_Func_void_GetSearchResultRequest(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_GetSearchResultRequest_Wrapper wrap_Func_void_GetSearchResultRequest(Func_void_GetSearchResultRequest value) noexcept {
+    return Func_void_GetSearchResultRequest_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest&)>&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ = std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& / * data * /)>& / * callback * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper(std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::function<void()>>> call(std::function<void(const GetSearchResultRequest& /* data */)> callback) const noexcept {
+      auto __result = _function->operator()(callback);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper wrap_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
@@ -233,6 +624,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   using std__weak_ptr_HybridAudioBrowserSpec_ = std::weak_ptr<HybridAudioBrowserSpec>;
   inline std__weak_ptr_HybridAudioBrowserSpec_ weakify_std__shared_ptr_HybridAudioBrowserSpec_(const std::shared_ptr<HybridAudioBrowserSpec>& strong) noexcept { return strong; }
   
+  // pragma MARK: Result<std::shared_ptr<Promise<void>>>
+  using Result_std__shared_ptr_Promise_void___ = Result<std::shared_ptr<Promise<void>>>;
+  inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::shared_ptr<Promise<void>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<void>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<void>>>::withError(error);
+  }
+  
   // pragma MARK: Result<void>
   using Result_void_ = Result<void>;
   inline Result_void_ create_Result_void_() noexcept {
@@ -242,31 +642,58 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Result<void>::withError(error);
   }
   
-  // pragma MARK: Result<std::variant<BrowserTrack, BrowserLink>>
-  using Result_std__variant_BrowserTrack__BrowserLink__ = Result<std::variant<BrowserTrack, BrowserLink>>;
-  inline Result_std__variant_BrowserTrack__BrowserLink__ create_Result_std__variant_BrowserTrack__BrowserLink__(const std::variant<BrowserTrack, BrowserLink>& value) noexcept {
-    return Result<std::variant<BrowserTrack, BrowserLink>>::withValue(value);
+  // pragma MARK: Result<bool>
+  using Result_bool_ = Result<bool>;
+  inline Result_bool_ create_Result_bool_(bool value) noexcept {
+    return Result<bool>::withValue(std::move(value));
   }
-  inline Result_std__variant_BrowserTrack__BrowserLink__ create_Result_std__variant_BrowserTrack__BrowserLink__(const std::exception_ptr& error) noexcept {
-    return Result<std::variant<BrowserTrack, BrowserLink>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<BrowserTrack>>>>
-  using Result_std__shared_ptr_Promise_std__vector_BrowserTrack____ = Result<std::shared_ptr<Promise<std::vector<BrowserTrack>>>>;
-  inline Result_std__shared_ptr_Promise_std__vector_BrowserTrack____ create_Result_std__shared_ptr_Promise_std__vector_BrowserTrack____(const std::shared_ptr<Promise<std::vector<BrowserTrack>>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<std::vector<BrowserTrack>>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_std__vector_BrowserTrack____ create_Result_std__shared_ptr_Promise_std__vector_BrowserTrack____(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<std::vector<BrowserTrack>>>>::withError(error);
+  inline Result_bool_ create_Result_bool_(const std::exception_ptr& error) noexcept {
+    return Result<bool>::withError(error);
   }
   
-  // pragma MARK: Result<PlaybackProgress>
-  using Result_PlaybackProgress_ = Result<PlaybackProgress>;
-  inline Result_PlaybackProgress_ create_Result_PlaybackProgress_(const PlaybackProgress& value) noexcept {
-    return Result<PlaybackProgress>::withValue(value);
+  // pragma MARK: Result<double>
+  using Result_double_ = Result<double>;
+  inline Result_double_ create_Result_double_(double value) noexcept {
+    return Result<double>::withValue(std::move(value));
   }
-  inline Result_PlaybackProgress_ create_Result_PlaybackProgress_(const std::exception_ptr& error) noexcept {
-    return Result<PlaybackProgress>::withError(error);
+  inline Result_double_ create_Result_double_(const std::exception_ptr& error) noexcept {
+    return Result<double>::withError(error);
+  }
+  
+  // pragma MARK: Result<Progress>
+  using Result_Progress_ = Result<Progress>;
+  inline Result_Progress_ create_Result_Progress_(const Progress& value) noexcept {
+    return Result<Progress>::withValue(value);
+  }
+  inline Result_Progress_ create_Result_Progress_(const std::exception_ptr& error) noexcept {
+    return Result<Progress>::withError(error);
+  }
+  
+  // pragma MARK: Result<PlaybackState>
+  using Result_PlaybackState_ = Result<PlaybackState>;
+  inline Result_PlaybackState_ create_Result_PlaybackState_(const PlaybackState& value) noexcept {
+    return Result<PlaybackState>::withValue(value);
+  }
+  inline Result_PlaybackState_ create_Result_PlaybackState_(const std::exception_ptr& error) noexcept {
+    return Result<PlaybackState>::withError(error);
+  }
+  
+  // pragma MARK: Result<PlayingState>
+  using Result_PlayingState_ = Result<PlayingState>;
+  inline Result_PlayingState_ create_Result_PlayingState_(const PlayingState& value) noexcept {
+    return Result<PlayingState>::withValue(value);
+  }
+  inline Result_PlayingState_ create_Result_PlayingState_(const std::exception_ptr& error) noexcept {
+    return Result<PlayingState>::withError(error);
+  }
+  
+  // pragma MARK: Result<RepeatMode>
+  using Result_RepeatMode_ = Result<RepeatMode>;
+  inline Result_RepeatMode_ create_Result_RepeatMode_(RepeatMode value) noexcept {
+    return Result<RepeatMode>::withValue(std::move(value));
+  }
+  inline Result_RepeatMode_ create_Result_RepeatMode_(const std::exception_ptr& error) noexcept {
+    return Result<RepeatMode>::withError(error);
   }
   
   // pragma MARK: Result<std::optional<PlaybackError>>
@@ -278,40 +705,31 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Result<std::optional<PlaybackError>>::withError(error);
   }
   
-  // pragma MARK: Result<PlaybackState>
-  using Result_PlaybackState_ = Result<PlaybackState>;
-  inline Result_PlaybackState_ create_Result_PlaybackState_(PlaybackState value) noexcept {
-    return Result<PlaybackState>::withValue(std::move(value));
+  // pragma MARK: Result<std::vector<Track>>
+  using Result_std__vector_Track__ = Result<std::vector<Track>>;
+  inline Result_std__vector_Track__ create_Result_std__vector_Track__(const std::vector<Track>& value) noexcept {
+    return Result<std::vector<Track>>::withValue(value);
   }
-  inline Result_PlaybackState_ create_Result_PlaybackState_(const std::exception_ptr& error) noexcept {
-    return Result<PlaybackState>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::vector<BrowserTrack>>
-  using Result_std__vector_BrowserTrack__ = Result<std::vector<BrowserTrack>>;
-  inline Result_std__vector_BrowserTrack__ create_Result_std__vector_BrowserTrack__(const std::vector<BrowserTrack>& value) noexcept {
-    return Result<std::vector<BrowserTrack>>::withValue(value);
-  }
-  inline Result_std__vector_BrowserTrack__ create_Result_std__vector_BrowserTrack__(const std::exception_ptr& error) noexcept {
-    return Result<std::vector<BrowserTrack>>::withError(error);
+  inline Result_std__vector_Track__ create_Result_std__vector_Track__(const std::exception_ptr& error) noexcept {
+    return Result<std::vector<Track>>::withError(error);
   }
   
-  // pragma MARK: Result<std::optional<BrowserTrack>>
-  using Result_std__optional_BrowserTrack__ = Result<std::optional<BrowserTrack>>;
-  inline Result_std__optional_BrowserTrack__ create_Result_std__optional_BrowserTrack__(const std::optional<BrowserTrack>& value) noexcept {
-    return Result<std::optional<BrowserTrack>>::withValue(value);
+  // pragma MARK: Result<std::optional<Track>>
+  using Result_std__optional_Track__ = Result<std::optional<Track>>;
+  inline Result_std__optional_Track__ create_Result_std__optional_Track__(const std::optional<Track>& value) noexcept {
+    return Result<std::optional<Track>>::withValue(value);
   }
-  inline Result_std__optional_BrowserTrack__ create_Result_std__optional_BrowserTrack__(const std::exception_ptr& error) noexcept {
-    return Result<std::optional<BrowserTrack>>::withError(error);
+  inline Result_std__optional_Track__ create_Result_std__optional_Track__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<Track>>::withError(error);
   }
   
-  // pragma MARK: Result<double>
-  using Result_double_ = Result<double>;
-  inline Result_double_ create_Result_double_(double value) noexcept {
-    return Result<double>::withValue(std::move(value));
+  // pragma MARK: Result<std::optional<double>>
+  using Result_std__optional_double__ = Result<std::optional<double>>;
+  inline Result_std__optional_double__ create_Result_std__optional_double__(std::optional<double> value) noexcept {
+    return Result<std::optional<double>>::withValue(std::move(value));
   }
-  inline Result_double_ create_Result_double_(const std::exception_ptr& error) noexcept {
-    return Result<double>::withError(error);
+  inline Result_std__optional_double__ create_Result_std__optional_double__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<double>>::withError(error);
   }
 
 } // namespace margelo::nitro::audiobrowser::bridge::swift

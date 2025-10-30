@@ -1,0 +1,218 @@
+package com.doublesymmetry.trackplayer.util
+
+import android.os.Bundle
+import androidx.media3.common.Player
+import androidx.media3.session.CommandButton
+import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionCommands
+import com.doublesymmetry.trackplayer.TrackPlayer
+import com.doublesymmetry.trackplayer.option.PlayerCapability
+import timber.log.Timber
+
+/**
+ * MediaSession manager that handles command configuration and execution.
+ *
+ * Responsibilities:
+ * - Maps player capabilities to MediaSession commands and notification layouts
+ * - Updates MediaSession configuration and applies changes immediately
+ * - Builds connection results for new MediaSession controllers
+ * - Handles execution of custom MediaSession commands (jump actions)
+ * - Maintains proper separation between global capabilities and notification-specific controls
+ *
+ * Initializes with sensible defaults: all global capabilities enabled, essential notification
+ * controls only.
+ */
+class MediaSessionManager {
+
+  companion object {
+    private const val CUSTOM_ACTION_JUMP_BACKWARD = "JUMP_BACKWARD"
+    private const val CUSTOM_ACTION_JUMP_FORWARD = "JUMP_FORWARD"
+  }
+
+  /** Current player commands configuration */
+  var playerCommands: Player.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+    private set
+
+  /** Current session commands configuration */
+  lateinit var sessionCommands: SessionCommands
+    private set
+
+  /** Current custom layout configuration */
+  lateinit var customLayout: List<CommandButton>
+    private set
+
+  init {
+    // Initialize with defaults:
+    // - Allow all capabilities globally (for full external controller support)
+    // - Limit notification capabilities to essential controls
+    val defaultNotificationCapabilities =
+      listOf(
+        PlayerCapability.PLAY,
+        PlayerCapability.PAUSE,
+        PlayerCapability.SKIP_TO_NEXT,
+        PlayerCapability.SKIP_TO_PREVIOUS,
+        PlayerCapability.SEEK_TO,
+      )
+
+    updatePlayerCommands(PlayerCapability.entries) // All capabilities for external controllers
+    updateSessionCommandsAndLayout(defaultNotificationCapabilities)
+  }
+
+  /**
+   * Updates MediaSession configuration and applies changes immediately
+   *
+   * @param mediaSession The MediaSession to configure
+   * @param capabilities Global capabilities that enable commands for ALL MediaSession controllers
+   *   (Bluetooth, Android Auto, lock screen, notification, etc.).
+   * @param notificationCapabilities Capabilities that control which buttons appear in notifications
+   *   only. When null, defaults to capabilities. Empty list disables all notification buttons.
+   *
+   * Manager initializes with defaults: all global capabilities, limited notification capabilities.
+   */
+  fun updateMediaSession(
+    mediaSession: MediaSession,
+    capabilities: List<PlayerCapability>,
+    notificationCapabilities: List<PlayerCapability>?,
+  ) {
+    // Update internal configuration
+    updatePlayerCommands(capabilities)
+    val effectiveNotificationCapabilities = notificationCapabilities ?: capabilities
+    updateSessionCommandsAndLayout(effectiveNotificationCapabilities)
+
+    // Apply configuration to MediaSession notification controller
+    mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
+      mediaSession.setCustomLayout(controllerInfo, customLayout)
+      mediaSession.setAvailableCommands(controllerInfo, sessionCommands, playerCommands)
+    }
+  }
+
+  /**
+   * Builds a MediaSession ConnectionResult with current command configuration
+   *
+   * @param session The MediaSession to build the result for
+   * @return Configured ConnectionResult with current commands and layout
+   */
+  fun buildConnectionResult(session: MediaSession): MediaSession.ConnectionResult {
+    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+      .setCustomLayout(customLayout)
+      .setAvailableSessionCommands(sessionCommands)
+      .setAvailablePlayerCommands(playerCommands)
+      .build()
+  }
+
+  /**
+   * Handles custom MediaSession commands
+   *
+   * @param command The custom command to handle
+   * @param player The TrackPlayer instance to execute commands on
+   * @return true if command was handled, false otherwise
+   */
+  fun handleCustomCommand(command: SessionCommand, player: TrackPlayer): Boolean {
+    Timber.d("onCustomCommand: action=${command.customAction}")
+
+    return when (command.customAction) {
+      CUSTOM_ACTION_JUMP_BACKWARD -> {
+        Timber.d("Executing jump backward command")
+        player.forwardingPlayer.seekBack()
+        true
+      }
+      CUSTOM_ACTION_JUMP_FORWARD -> {
+        Timber.d("Executing jump forward command")
+        player.forwardingPlayer.seekForward()
+        true
+      }
+      else -> {
+        Timber.w("Received unexpected custom command: ${command.customAction}")
+        false
+      }
+    }
+  }
+
+  private fun updatePlayerCommands(capabilities: List<PlayerCapability>) {
+    val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+
+    // Commands to remove - start with always-disabled commands
+    val disabledCommands =
+      mutableSetOf<@Player.Command Int>(
+        // Always filter out direct media item commands to avoid dual-command confusion
+        // This forces MediaSession to only use the "smart" commands we can control via capabilities
+        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+      )
+
+    // Only disable jump commands if global capabilities are not present
+    // This preserves them for external controllers (Bluetooth, Android Auto, etc.)
+    if (!capabilities.contains(PlayerCapability.JUMP_FORWARD)) {
+      disabledCommands.add(Player.COMMAND_SEEK_FORWARD)
+    }
+    if (!capabilities.contains(PlayerCapability.JUMP_BACKWARD)) {
+      disabledCommands.add(Player.COMMAND_SEEK_BACK)
+    }
+
+    // Check each capability and add commands to remove if not enabled
+    val hasPlayPause =
+      capabilities.any { it == PlayerCapability.PLAY || it == PlayerCapability.PAUSE }
+    if (!hasPlayPause) {
+      disabledCommands.add(Player.COMMAND_PLAY_PAUSE)
+    }
+
+    if (!capabilities.contains(PlayerCapability.STOP)) {
+      disabledCommands.add(Player.COMMAND_STOP)
+    }
+
+    if (!capabilities.contains(PlayerCapability.SEEK_TO)) {
+      disabledCommands.add(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+    }
+
+    if (!capabilities.contains(PlayerCapability.SKIP_TO_NEXT)) {
+      disabledCommands.add(Player.COMMAND_SEEK_TO_NEXT)
+    }
+
+    if (!capabilities.contains(PlayerCapability.SKIP_TO_PREVIOUS)) {
+      disabledCommands.add(Player.COMMAND_SEEK_TO_PREVIOUS)
+    }
+
+    // Remove disabled commands from the builder
+    disabledCommands.forEach { command ->
+      playerCommandsBuilder.remove(command)
+      Timber.d("Removed command: $command")
+    }
+
+    playerCommands = playerCommandsBuilder.build()
+  }
+
+  private fun updateSessionCommandsAndLayout(notificationCapabilities: List<PlayerCapability>) {
+    val customLayoutButtons = mutableListOf<CommandButton>()
+    val sessionCommandsBuilder =
+      MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+
+    // Create custom command buttons for jump commands (required for notification visibility)
+    if (notificationCapabilities.contains(PlayerCapability.JUMP_BACKWARD)) {
+      val jumpBackCommand = SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
+      customLayoutButtons.add(
+        CommandButton.Builder()
+          .setDisplayName("Jump Backward")
+          .setSessionCommand(jumpBackCommand)
+          .setIconResId(androidx.media3.session.R.drawable.media3_icon_skip_back)
+          .build()
+      )
+      sessionCommandsBuilder.add(jumpBackCommand)
+    }
+
+    if (notificationCapabilities.contains(PlayerCapability.JUMP_FORWARD)) {
+      val jumpForwardCommand = SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
+      customLayoutButtons.add(
+        CommandButton.Builder()
+          .setDisplayName("Jump Forward")
+          .setSessionCommand(jumpForwardCommand)
+          .setIconResId(androidx.media3.session.R.drawable.media3_icon_skip_forward)
+          .build()
+      )
+      sessionCommandsBuilder.add(jumpForwardCommand)
+    }
+
+    sessionCommands = sessionCommandsBuilder.build()
+    customLayout = customLayoutButtons
+  }
+}

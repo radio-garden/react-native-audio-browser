@@ -12,29 +12,81 @@
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
-// Forward declaration of `BrowserTrack` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
-// Forward declaration of `PlaybackProgress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
+// Forward declaration of `GetItemRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
+// Forward declaration of `GetChildrenRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
+// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
+// Forward declaration of `PlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
+// Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `AndroidAudioContentType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
+// Forward declaration of `IOSPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
+// Forward declaration of `IOSCategory` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSCategoryMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
+// Forward declaration of `IOSCategoryOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
+// Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `TrackType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackType; }
+// Forward declaration of `PitchAlgorithm` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
+// Forward declaration of `RatingType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `Progress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `PlaybackState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+// Forward declaration of `State` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class State; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `PlayingState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
-#include <string>
-#include "BrowserTrack.hpp"
-#include "BrowserLink.hpp"
-#include <variant>
-#include <optional>
-#include <vector>
+#include <functional>
 #include <NitroModules/Promise.hpp>
-#include "PlaybackProgress.hpp"
-#include "PlaybackError.hpp"
+#include "GetItemRequest.hpp"
+#include <string>
+#include "GetChildrenRequest.hpp"
+#include "GetSearchResultRequest.hpp"
+#include "PlayerOptions.hpp"
+#include <optional>
+#include "AndroidPlayerOptions.hpp"
+#include "AndroidAudioOffloadSettings.hpp"
+#include <variant>
+#include "AndroidAudioContentType.hpp"
+#include "IOSPlayerOptions.hpp"
+#include "IOSCategory.hpp"
+#include "IOSCategoryMode.hpp"
+#include "IOSCategoryOptions.hpp"
+#include <vector>
+#include "IOSCategoryPolicy.hpp"
+#include "Track.hpp"
+#include "TrackType.hpp"
+#include "PitchAlgorithm.hpp"
+#include "RatingType.hpp"
+#include "Progress.hpp"
 #include "PlaybackState.hpp"
+#include "State.hpp"
+#include "PlaybackErrorEvent.hpp"
+#include "PlaybackError.hpp"
+#include "PlayingState.hpp"
 #include "RepeatMode.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
@@ -74,31 +126,40 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    
+    inline std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> getOnGetItemRequest() noexcept override {
+      auto __result = _swiftPart.getOnGetItemRequest();
+      return __result;
+    }
+    inline std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> getOnGetChildrenRequest() noexcept override {
+      auto __result = _swiftPart.getOnGetChildrenRequest();
+      return __result;
+    }
+    inline std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> getOnGetSearchResultRequest() noexcept override {
+      auto __result = _swiftPart.getOnGetSearchResultRequest();
+      return __result;
+    }
 
   public:
     // Methods
-    inline void navigate(const std::string& path) override {
-      auto __result = _swiftPart.navigate(path);
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-    }
-    inline std::variant<BrowserTrack, BrowserLink> getCurrentItem() override {
-      auto __result = _swiftPart.getCurrentItem();
+    inline std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) override {
+      auto __result = _swiftPart.setupPlayer(std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline std::shared_ptr<Promise<std::vector<BrowserTrack>>> search(const std::string& query) override {
-      auto __result = _swiftPart.search(query);
+    inline void load(const Track& track) override {
+      auto __result = _swiftPart.load(std::forward<decltype(track)>(track));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
-      auto __value = std::move(__result.value());
-      return __value;
+    }
+    inline void reset() override {
+      auto __result = _swiftPart.reset();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline void play() override {
       auto __result = _swiftPart.play();
@@ -112,28 +173,74 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void togglePlayback() override {
+      auto __result = _swiftPart.togglePlayback();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline void stop() override {
       auto __result = _swiftPart.stop();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void setVolume(double volume) override {
-      auto __result = _swiftPart.setVolume(std::forward<decltype(volume)>(volume));
+    inline void setPlayWhenReady(bool playWhenReady) override {
+      auto __result = _swiftPart.setPlayWhenReady(std::forward<decltype(playWhenReady)>(playWhenReady));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline PlaybackProgress getPlaybackProgress() override {
-      auto __result = _swiftPart.getPlaybackProgress();
+    inline bool getPlayWhenReady() override {
+      auto __result = _swiftPart.getPlayWhenReady();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline std::optional<PlaybackError> getPlaybackError() override {
-      auto __result = _swiftPart.getPlaybackError();
+    inline void seekTo(double position) override {
+      auto __result = _swiftPart.seekTo(std::forward<decltype(position)>(position));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void seekBy(double offset) override {
+      auto __result = _swiftPart.seekBy(std::forward<decltype(offset)>(offset));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setVolume(double level) override {
+      auto __result = _swiftPart.setVolume(std::forward<decltype(level)>(level));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline double getVolume() override {
+      auto __result = _swiftPart.getVolume();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setRate(double rate) override {
+      auto __result = _swiftPart.setRate(std::forward<decltype(rate)>(rate));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline double getRate() override {
+      auto __result = _swiftPart.getRate();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline Progress getProgress() override {
+      auto __result = _swiftPart.getProgress();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
@@ -148,19 +255,91 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void load(const BrowserTrack& track) override {
-      auto __result = _swiftPart.load(std::forward<decltype(track)>(track));
+    inline PlayingState getPlayingState() override {
+      auto __result = _swiftPart.getPlayingState();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline RepeatMode getRepeatMode() override {
+      auto __result = _swiftPart.getRepeatMode();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setRepeatMode(RepeatMode mode) override {
+      auto __result = _swiftPart.setRepeatMode(static_cast<int>(mode));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) override {
-      auto __result = _swiftPart.add(tracks, index);
+    inline std::optional<PlaybackError> getPlaybackError() override {
+      auto __result = _swiftPart.getPlaybackError();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void retry() override {
+      auto __result = _swiftPart.retry();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline std::vector<BrowserTrack> getQueue() override {
+    inline void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) override {
+      auto __result = _swiftPart.add(tracks, insertBeforeIndex);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void move(double fromIndex, double toIndex) override {
+      auto __result = _swiftPart.move(std::forward<decltype(fromIndex)>(fromIndex), std::forward<decltype(toIndex)>(toIndex));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void remove(const std::vector<double>& indexes) override {
+      auto __result = _swiftPart.remove(indexes);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void removeUpcomingTracks() override {
+      auto __result = _swiftPart.removeUpcomingTracks();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void skip(double index, std::optional<double> initialPosition) override {
+      auto __result = _swiftPart.skip(std::forward<decltype(index)>(index), initialPosition);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void skipToNext(std::optional<double> initialPosition) override {
+      auto __result = _swiftPart.skipToNext(initialPosition);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void skipToPrevious(std::optional<double> initialPosition) override {
+      auto __result = _swiftPart.skipToPrevious(initialPosition);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setQueue(const std::vector<Track>& tracks) override {
+      auto __result = _swiftPart.setQueue(tracks);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline std::vector<Track> getQueue() override {
       auto __result = _swiftPart.getQueue();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
@@ -168,36 +347,62 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline std::optional<BrowserTrack> getCurrentTrack() override {
-      auto __result = _swiftPart.getCurrentTrack();
+    inline std::optional<Track> getTrack(double index) override {
+      auto __result = _swiftPart.getTrack(std::forward<decltype(index)>(index));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline double getCurrentIndex() override {
-      auto __result = _swiftPart.getCurrentIndex();
+    inline std::optional<double> getActiveTrackIndex() override {
+      auto __result = _swiftPart.getActiveTrackIndex();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) override {
-      auto __result = _swiftPart.setQueue(tracks, startIndex);
+    inline std::optional<Track> getActiveTrack() override {
+      auto __result = _swiftPart.getActiveTrack();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void acquireWakeLock() override {
+      auto __result = _swiftPart.acquireWakeLock();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void clear() override {
-      auto __result = _swiftPart.clear();
+    inline void abandonWakeLock() override {
+      auto __result = _swiftPart.abandonWakeLock();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void setRepeatMode(RepeatMode mode) override {
-      auto __result = _swiftPart.setRepeatMode(static_cast<int>(mode));
+    inline void resolveGetItemRequest(const std::string& id, const Track& item) override {
+      auto __result = _swiftPart.resolveGetItemRequest(id, std::forward<decltype(item)>(item));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) override {
+      auto __result = _swiftPart.resolveGetChildrenRequest(requestId, items, std::forward<decltype(totalChildrenCount)>(totalChildrenCount));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) override {
+      auto __result = _swiftPart.resolveSearchResultRequest(requestId, items, std::forward<decltype(totalMatchesCount)>(totalMatchesCount));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setMediaBrowserReady() override {
+      auto __result = _swiftPart.setMediaBrowserReady();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

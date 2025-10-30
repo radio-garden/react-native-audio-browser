@@ -37,20 +37,45 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   }
 
   // Properties
+  abstract val onGetItemRequest: (callback: (data: GetItemRequest) -> Unit) -> Promise<() -> Unit>
   
+  private val onGetItemRequest_cxx: Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______java(onGetItemRequest)
+    }
+  
+  abstract val onGetChildrenRequest: (callback: (data: GetChildrenRequest) -> Unit) -> Promise<() -> Unit>
+  
+  private val onGetChildrenRequest_cxx: Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______java(onGetChildrenRequest)
+    }
+  
+  abstract val onGetSearchResultRequest: (callback: (data: GetSearchResultRequest) -> Unit) -> Promise<() -> Unit>
+  
+  private val onGetSearchResultRequest_cxx: Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______java(onGetSearchResultRequest)
+    }
 
   // Methods
   @DoNotStrip
   @Keep
-  abstract fun navigate(path: String): Unit
+  abstract fun setupPlayer(options: PlayerOptions): Promise<Unit>
   
   @DoNotStrip
   @Keep
-  abstract fun getCurrentItem(): BrowserItem
+  abstract fun load(track: Track): Unit
   
   @DoNotStrip
   @Keep
-  abstract fun search(query: String): Promise<Array<BrowserTrack>>
+  abstract fun reset(): Unit
   
   @DoNotStrip
   @Keep
@@ -62,19 +87,47 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun togglePlayback(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun stop(): Unit
   
   @DoNotStrip
   @Keep
-  abstract fun setVolume(volume: Double): Unit
+  abstract fun setPlayWhenReady(playWhenReady: Boolean): Unit
   
   @DoNotStrip
   @Keep
-  abstract fun getPlaybackProgress(): PlaybackProgress
+  abstract fun getPlayWhenReady(): Boolean
   
   @DoNotStrip
   @Keep
-  abstract fun getPlaybackError(): PlaybackError?
+  abstract fun seekTo(position: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun seekBy(offset: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setVolume(level: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getVolume(): Double
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setRate(rate: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getRate(): Double
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getProgress(): Progress
   
   @DoNotStrip
   @Keep
@@ -82,35 +135,95 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun load(track: BrowserTrack): Unit
+  abstract fun getPlayingState(): PlayingState
   
   @DoNotStrip
   @Keep
-  abstract fun add(tracks: Array<BrowserTrack>, index: Double?): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun getQueue(): Array<BrowserTrack>
-  
-  @DoNotStrip
-  @Keep
-  abstract fun getCurrentTrack(): BrowserTrack?
-  
-  @DoNotStrip
-  @Keep
-  abstract fun getCurrentIndex(): Double
-  
-  @DoNotStrip
-  @Keep
-  abstract fun setQueue(tracks: Array<BrowserTrack>, startIndex: Double?): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun clear(): Unit
+  abstract fun getRepeatMode(): RepeatMode
   
   @DoNotStrip
   @Keep
   abstract fun setRepeatMode(mode: RepeatMode): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getPlaybackError(): PlaybackError?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun retry(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun add(tracks: Array<Track>, insertBeforeIndex: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun move(fromIndex: Double, toIndex: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun remove(indexes: DoubleArray): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun removeUpcomingTracks(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun skip(index: Double, initialPosition: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun skipToNext(initialPosition: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun skipToPrevious(initialPosition: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setQueue(tracks: Array<Track>): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getQueue(): Array<Track>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getTrack(index: Double): Track?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getActiveTrackIndex(): Double?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getActiveTrack(): Track?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun acquireWakeLock(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun abandonWakeLock(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun resolveGetItemRequest(id: String, item: Track): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun resolveGetChildrenRequest(requestId: String, items: Array<Track>, totalChildrenCount: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun resolveSearchResultRequest(requestId: String, items: Array<Track>, totalMatchesCount: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setMediaBrowserReady(): Unit
 
   private external fun initHybrid(): HybridData
 

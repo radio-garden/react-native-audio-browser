@@ -26,7 +26,6 @@
 
 
 #include <string>
-#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,12 +34,12 @@ namespace margelo::nitro::audiobrowser {
    */
   struct PlaybackError {
   public:
-    std::string error     SWIFT_PRIVATE;
-    std::optional<double> errorCode     SWIFT_PRIVATE;
+    std::string code     SWIFT_PRIVATE;
+    std::string message     SWIFT_PRIVATE;
 
   public:
     PlaybackError() = default;
-    explicit PlaybackError(std::string error, std::optional<double> errorCode): error(error), errorCode(errorCode) {}
+    explicit PlaybackError(std::string code, std::string message): code(code), message(message) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -53,14 +52,14 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::PlaybackError fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::PlaybackError(
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "error")),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "errorCode"))
+        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "code")),
+        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "message"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PlaybackError& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, "error", JSIConverter<std::string>::toJSI(runtime, arg.error));
-      obj.setProperty(runtime, "errorCode", JSIConverter<std::optional<double>>::toJSI(runtime, arg.errorCode));
+      obj.setProperty(runtime, "code", JSIConverter<std::string>::toJSI(runtime, arg.code));
+      obj.setProperty(runtime, "message", JSIConverter<std::string>::toJSI(runtime, arg.message));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -71,8 +70,8 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "error"))) return false;
-      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "errorCode"))) return false;
+      if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "code"))) return false;
+      if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "message"))) return false;
       return true;
     }
   };

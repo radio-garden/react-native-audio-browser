@@ -10,12 +10,21 @@
 #include <fbjni/fbjni.h>
 #include "PlaybackState.hpp"
 
+#include "JPlaybackError.hpp"
+#include "JPlaybackErrorEvent.hpp"
+#include "JState.hpp"
+#include "PlaybackError.hpp"
+#include "PlaybackErrorEvent.hpp"
+#include "State.hpp"
+#include <optional>
+#include <string>
+
 namespace margelo::nitro::audiobrowser {
 
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "PlaybackState" and the the Kotlin enum "PlaybackState".
+   * The C++ JNI bridge between the C++ struct "PlaybackState" and the the Kotlin data class "PlaybackState".
    */
   struct JPlaybackState final: public jni::JavaClass<JPlaybackState> {
   public:
@@ -23,48 +32,32 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     /**
-     * Convert this Java/Kotlin-based enum to the C++ enum PlaybackState.
+     * Convert this Java/Kotlin-based struct to the C++ struct PlaybackState by copying all values to C++.
      */
     [[maybe_unused]]
     [[nodiscard]]
     PlaybackState toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldOrdinal = clazz->getField<int>("value");
-      int ordinal = this->getFieldValue(fieldOrdinal);
-      return static_cast<PlaybackState>(ordinal);
+      static const auto fieldState = clazz->getField<JState>("state");
+      jni::local_ref<JState> state = this->getFieldValue(fieldState);
+      static const auto fieldError = clazz->getField<JPlaybackErrorEvent>("error");
+      jni::local_ref<JPlaybackErrorEvent> error = this->getFieldValue(fieldError);
+      return PlaybackState(
+        state->toCpp(),
+        error != nullptr ? std::make_optional(error->toCpp()) : std::nullopt
+      );
     }
 
   public:
     /**
-     * Create a Java/Kotlin-based enum with the given C++ enum's value.
+     * Create a Java/Kotlin-based struct by copying all values from the given C++ struct to Java.
      */
     [[maybe_unused]]
-    static jni::alias_ref<JPlaybackState> fromCpp(PlaybackState value) {
-      static const auto clazz = javaClassStatic();
-      static const auto fieldIDLE = clazz->getStaticField<JPlaybackState>("IDLE");
-      static const auto fieldSTOPPED = clazz->getStaticField<JPlaybackState>("STOPPED");
-      static const auto fieldLOADING = clazz->getStaticField<JPlaybackState>("LOADING");
-      static const auto fieldPLAYING = clazz->getStaticField<JPlaybackState>("PLAYING");
-      static const auto fieldPAUSED = clazz->getStaticField<JPlaybackState>("PAUSED");
-      static const auto fieldERROR = clazz->getStaticField<JPlaybackState>("ERROR");
-      
-      switch (value) {
-        case PlaybackState::IDLE:
-          return clazz->getStaticFieldValue(fieldIDLE);
-        case PlaybackState::STOPPED:
-          return clazz->getStaticFieldValue(fieldSTOPPED);
-        case PlaybackState::LOADING:
-          return clazz->getStaticFieldValue(fieldLOADING);
-        case PlaybackState::PLAYING:
-          return clazz->getStaticFieldValue(fieldPLAYING);
-        case PlaybackState::PAUSED:
-          return clazz->getStaticFieldValue(fieldPAUSED);
-        case PlaybackState::ERROR:
-          return clazz->getStaticFieldValue(fieldERROR);
-        default:
-          std::string stringValue = std::to_string(static_cast<int>(value));
-          throw std::invalid_argument("Invalid enum value (" + stringValue + "!");
-      }
+    static jni::local_ref<JPlaybackState::javaobject> fromCpp(const PlaybackState& value) {
+      return newInstance(
+        JState::fromCpp(value.state),
+        value.error.has_value() ? JPlaybackErrorEvent::fromCpp(value.error.value()) : nullptr
+      );
     }
   };
 

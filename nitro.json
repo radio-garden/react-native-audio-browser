@@ -14,8 +14,8 @@
   },
   "autolinking": {
     "AudioBrowser": {
-      "swift": "HybridAudioBrowser",
-      "kotlin": "HybridAudioBrowser"
+      "swift": "AudioBrowserModule",
+      "kotlin": "AudioBrowserModule"
     }
   },
   "ignorePaths": [

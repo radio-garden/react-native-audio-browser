@@ -13,11 +13,11 @@
 
 namespace margelo::nitro::audiobrowser::bridge::swift {
 
-  // pragma MARK: std::function<void(const std::vector<BrowserTrack>& /* result */)>
-  Func_void_std__vector_BrowserTrack_ create_Func_void_std__vector_BrowserTrack_(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_std__vector_BrowserTrack_::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::vector<BrowserTrack>& result) mutable -> void {
-      swiftClosure.call(result);
+  // pragma MARK: std::function<void()>
+  Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)]() mutable -> void {
+      swiftClosure.call();
     };
   }
   
@@ -26,6 +26,65 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     auto swiftClosure = AudioBrowser::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
       swiftClosure.call(error);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const GetItemRequest& /* data */)>
+  Func_void_GetItemRequest create_Func_void_GetItemRequest(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_GetItemRequest::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const GetItemRequest& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>
+  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::function<void(const GetItemRequest& /* data */)>& callback) mutable -> std::shared_ptr<Promise<std::function<void()>>> {
+      auto __result = swiftClosure.call(callback);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::function<void()>& /* result */)>
+  Func_void_std__function_void___ create_Func_void_std__function_void___(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__function_void___::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::function<void()>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const GetChildrenRequest& /* data */)>
+  Func_void_GetChildrenRequest create_Func_void_GetChildrenRequest(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_GetChildrenRequest::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const GetChildrenRequest& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>
+  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::function<void(const GetChildrenRequest& /* data */)>& callback) mutable -> std::shared_ptr<Promise<std::function<void()>>> {
+      auto __result = swiftClosure.call(callback);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<void(const GetSearchResultRequest& /* data */)>
+  Func_void_GetSearchResultRequest create_Func_void_GetSearchResultRequest(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_GetSearchResultRequest::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const GetSearchResultRequest& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>
+  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::function<void(const GetSearchResultRequest& /* data */)>& callback) mutable -> std::shared_ptr<Promise<std::function<void()>>> {
+      auto __result = swiftClosure.call(callback);
+      return __result;
     };
   }
   

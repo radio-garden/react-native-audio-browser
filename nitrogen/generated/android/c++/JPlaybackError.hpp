@@ -10,7 +10,6 @@
 #include <fbjni/fbjni.h>
 #include "PlaybackError.hpp"
 
-#include <optional>
 #include <string>
 
 namespace margelo::nitro::audiobrowser {
@@ -32,13 +31,13 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     PlaybackError toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldError = clazz->getField<jni::JString>("error");
-      jni::local_ref<jni::JString> error = this->getFieldValue(fieldError);
-      static const auto fieldErrorCode = clazz->getField<jni::JDouble>("errorCode");
-      jni::local_ref<jni::JDouble> errorCode = this->getFieldValue(fieldErrorCode);
+      static const auto fieldCode = clazz->getField<jni::JString>("code");
+      jni::local_ref<jni::JString> code = this->getFieldValue(fieldCode);
+      static const auto fieldMessage = clazz->getField<jni::JString>("message");
+      jni::local_ref<jni::JString> message = this->getFieldValue(fieldMessage);
       return PlaybackError(
-        error->toStdString(),
-        errorCode != nullptr ? std::make_optional(errorCode->value()) : std::nullopt
+        code->toStdString(),
+        message->toStdString()
       );
     }
 
@@ -49,8 +48,8 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::local_ref<JPlaybackError::javaobject> fromCpp(const PlaybackError& value) {
       return newInstance(
-        jni::make_jstring(value.error),
-        value.errorCode.has_value() ? jni::JDouble::valueOf(value.errorCode.value()) : nullptr
+        jni::make_jstring(value.code),
+        jni::make_jstring(value.message)
       );
     }
   };

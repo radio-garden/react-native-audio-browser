@@ -11,27 +11,51 @@ import NitroModules
 /// See ``HybridAudioBrowserSpec``
 public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   // Properties
-  
+  var onGetItemRequest: (_ callback: (_ data: GetItemRequest) -> Void) -> Promise<() -> Void> { get }
+  var onGetChildrenRequest: (_ callback: (_ data: GetChildrenRequest) -> Void) -> Promise<() -> Void> { get }
+  var onGetSearchResultRequest: (_ callback: (_ data: GetSearchResultRequest) -> Void) -> Promise<() -> Void> { get }
 
   // Methods
-  func navigate(path: String) throws -> Void
-  func getCurrentItem() throws -> BrowserItem
-  func search(query: String) throws -> Promise<[BrowserTrack]>
+  func setupPlayer(options: PlayerOptions) throws -> Promise<Void>
+  func load(track: Track) throws -> Void
+  func reset() throws -> Void
   func play() throws -> Void
   func pause() throws -> Void
+  func togglePlayback() throws -> Void
   func stop() throws -> Void
-  func setVolume(volume: Double) throws -> Void
-  func getPlaybackProgress() throws -> PlaybackProgress
-  func getPlaybackError() throws -> PlaybackError?
+  func setPlayWhenReady(playWhenReady: Bool) throws -> Void
+  func getPlayWhenReady() throws -> Bool
+  func seekTo(position: Double) throws -> Void
+  func seekBy(offset: Double) throws -> Void
+  func setVolume(level: Double) throws -> Void
+  func getVolume() throws -> Double
+  func setRate(rate: Double) throws -> Void
+  func getRate() throws -> Double
+  func getProgress() throws -> Progress
   func getPlaybackState() throws -> PlaybackState
-  func load(track: BrowserTrack) throws -> Void
-  func add(tracks: [BrowserTrack], index: Double?) throws -> Void
-  func getQueue() throws -> [BrowserTrack]
-  func getCurrentTrack() throws -> BrowserTrack?
-  func getCurrentIndex() throws -> Double
-  func setQueue(tracks: [BrowserTrack], startIndex: Double?) throws -> Void
-  func clear() throws -> Void
+  func getPlayingState() throws -> PlayingState
+  func getRepeatMode() throws -> RepeatMode
   func setRepeatMode(mode: RepeatMode) throws -> Void
+  func getPlaybackError() throws -> PlaybackError?
+  func retry() throws -> Void
+  func add(tracks: [Track], insertBeforeIndex: Double?) throws -> Void
+  func move(fromIndex: Double, toIndex: Double) throws -> Void
+  func remove(indexes: [Double]) throws -> Void
+  func removeUpcomingTracks() throws -> Void
+  func skip(index: Double, initialPosition: Double?) throws -> Void
+  func skipToNext(initialPosition: Double?) throws -> Void
+  func skipToPrevious(initialPosition: Double?) throws -> Void
+  func setQueue(tracks: [Track]) throws -> Void
+  func getQueue() throws -> [Track]
+  func getTrack(index: Double) throws -> Track?
+  func getActiveTrackIndex() throws -> Double?
+  func getActiveTrack() throws -> Track?
+  func acquireWakeLock() throws -> Void
+  func abandonWakeLock() throws -> Void
+  func resolveGetItemRequest(id: String, item: Track) throws -> Void
+  func resolveGetChildrenRequest(requestId: String, items: [Track], totalChildrenCount: Double) throws -> Void
+  func resolveSearchResultRequest(requestId: String, items: [Track], totalMatchesCount: Double) throws -> Void
+  func setMediaBrowserReady() throws -> Void
 }
 
 /// See ``HybridAudioBrowserSpec``

@@ -5,52 +5,54 @@
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
 
+import NitroModules
+
 /**
- * Represents the JS union `PlaybackState`, backed by a C++ enum.
+ * Represents an instance of `PlaybackState`, backed by a C++ struct.
  */
 public typealias PlaybackState = margelo.nitro.audiobrowser.PlaybackState
 
 public extension PlaybackState {
-  /**
-   * Get a PlaybackState for the given String value, or
-   * return `nil` if the given value was invalid/unknown.
-   */
-  init?(fromString string: String) {
-    switch string {
-      case "idle":
-        self = .idle
-      case "stopped":
-        self = .stopped
-      case "loading":
-        self = .loading
-      case "playing":
-        self = .playing
-      case "paused":
-        self = .paused
-      case "error":
-        self = .error
-      default:
-        return nil
-    }
-  }
+  private typealias bridge = margelo.nitro.audiobrowser.bridge.swift
 
   /**
-   * Get the String value this PlaybackState represents.
+   * Create a new instance of `PlaybackState`.
    */
-  var stringValue: String {
-    switch self {
-      case .idle:
-        return "idle"
-      case .stopped:
-        return "stopped"
-      case .loading:
-        return "loading"
-      case .playing:
-        return "playing"
-      case .paused:
-        return "paused"
-      case .error:
-        return "error"
+  init(state: State, error: PlaybackErrorEvent?) {
+    self.init(state, { () -> bridge.std__optional_PlaybackErrorEvent_ in
+      if let __unwrappedValue = error {
+        return bridge.create_std__optional_PlaybackErrorEvent_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
+  }
+
+  var state: State {
+    @inline(__always)
+    get {
+      return self.__state
+    }
+    @inline(__always)
+    set {
+      self.__state = newValue
+    }
+  }
+  
+  var error: PlaybackErrorEvent? {
+    @inline(__always)
+    get {
+      return self.__error.value
+    }
+    @inline(__always)
+    set {
+      self.__error = { () -> bridge.std__optional_PlaybackErrorEvent_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_PlaybackErrorEvent_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
     }
   }
 }

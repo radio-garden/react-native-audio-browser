@@ -18,41 +18,29 @@ public extension PlaybackError {
   /**
    * Create a new instance of `PlaybackError`.
    */
-  init(error: String, errorCode: Double?) {
-    self.init(std.string(error), { () -> bridge.std__optional_double_ in
-      if let __unwrappedValue = errorCode {
-        return bridge.create_std__optional_double_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }())
+  init(code: String, message: String) {
+    self.init(std.string(code), std.string(message))
   }
 
-  var error: String {
+  var code: String {
     @inline(__always)
     get {
-      return String(self.__error)
+      return String(self.__code)
     }
     @inline(__always)
     set {
-      self.__error = std.string(newValue)
+      self.__code = std.string(newValue)
     }
   }
   
-  var errorCode: Double? {
+  var message: String {
     @inline(__always)
     get {
-      return self.__errorCode.value
+      return String(self.__message)
     }
     @inline(__always)
     set {
-      self.__errorCode = { () -> bridge.std__optional_double_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_double_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
+      self.__message = std.string(newValue)
     }
   }
 }

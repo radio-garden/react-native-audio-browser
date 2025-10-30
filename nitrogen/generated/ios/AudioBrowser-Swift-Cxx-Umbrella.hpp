@@ -8,32 +8,84 @@
 #pragma once
 
 // Forward declarations of C++ defined types
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
-// Forward declaration of `BrowserTrack` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserTrack; }
+// Forward declaration of `AndroidAudioContentType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
+// Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `GetChildrenRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
+// Forward declaration of `GetItemRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
+// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
+// Forward declaration of `IOSCategoryMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
+// Forward declaration of `IOSCategoryOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
+// Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `IOSCategory` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
+// Forward declaration of `PitchAlgorithm` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlaybackProgress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackProgress; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+// Forward declaration of `PlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
+// Forward declaration of `PlayingState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayingState; }
+// Forward declaration of `Progress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `RatingType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RatingType; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `State` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class State; }
+// Forward declaration of `TrackType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackType; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
 
 // Include C++ defined types
-#include "BrowserLink.hpp"
-#include "BrowserTrack.hpp"
+#include "AndroidAudioContentType.hpp"
+#include "AndroidAudioOffloadSettings.hpp"
+#include "AndroidPlayerOptions.hpp"
+#include "GetChildrenRequest.hpp"
+#include "GetItemRequest.hpp"
+#include "GetSearchResultRequest.hpp"
 #include "HybridAudioBrowserSpec.hpp"
+#include "IOSCategory.hpp"
+#include "IOSCategoryMode.hpp"
+#include "IOSCategoryOptions.hpp"
+#include "IOSCategoryPolicy.hpp"
+#include "IOSPlayerOptions.hpp"
+#include "PitchAlgorithm.hpp"
 #include "PlaybackError.hpp"
-#include "PlaybackProgress.hpp"
+#include "PlaybackErrorEvent.hpp"
 #include "PlaybackState.hpp"
+#include "PlayerOptions.hpp"
+#include "PlayingState.hpp"
+#include "Progress.hpp"
+#include "RatingType.hpp"
 #include "RepeatMode.hpp"
+#include "State.hpp"
+#include "Track.hpp"
+#include "TrackType.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>

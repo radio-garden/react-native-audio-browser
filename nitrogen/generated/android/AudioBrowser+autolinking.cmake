@@ -36,7 +36,7 @@ target_sources(
   ../nitrogen/generated/shared/c++/HybridAudioBrowserSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
-  ../nitrogen/generated/android/c++/JBrowserItem.cpp
+  ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
 )
 
 # From node_modules/react-native/ReactAndroid/cmake-utils/folly-flags.cmake

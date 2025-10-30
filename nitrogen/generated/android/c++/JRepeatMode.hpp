@@ -42,16 +42,16 @@ namespace margelo::nitro::audiobrowser {
     static jni::alias_ref<JRepeatMode> fromCpp(RepeatMode value) {
       static const auto clazz = javaClassStatic();
       static const auto fieldOFF = clazz->getStaticField<JRepeatMode>("OFF");
-      static const auto fieldQUEUE = clazz->getStaticField<JRepeatMode>("QUEUE");
       static const auto fieldTRACK = clazz->getStaticField<JRepeatMode>("TRACK");
+      static const auto fieldQUEUE = clazz->getStaticField<JRepeatMode>("QUEUE");
       
       switch (value) {
         case RepeatMode::OFF:
           return clazz->getStaticFieldValue(fieldOFF);
-        case RepeatMode::QUEUE:
-          return clazz->getStaticFieldValue(fieldQUEUE);
         case RepeatMode::TRACK:
           return clazz->getStaticFieldValue(fieldTRACK);
+        case RepeatMode::QUEUE:
+          return clazz->getStaticFieldValue(fieldQUEUE);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

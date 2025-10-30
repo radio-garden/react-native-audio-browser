@@ -49,28 +49,52 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    
+    std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> getOnGetItemRequest() override;
+    std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> getOnGetChildrenRequest() override;
+    std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> getOnGetSearchResultRequest() override;
 
   public:
     // Methods
-    void navigate(const std::string& path) override;
-    std::variant<BrowserTrack, BrowserLink> getCurrentItem() override;
-    std::shared_ptr<Promise<std::vector<BrowserTrack>>> search(const std::string& query) override;
+    std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) override;
+    void load(const Track& track) override;
+    void reset() override;
     void play() override;
     void pause() override;
+    void togglePlayback() override;
     void stop() override;
-    void setVolume(double volume) override;
-    PlaybackProgress getPlaybackProgress() override;
-    std::optional<PlaybackError> getPlaybackError() override;
+    void setPlayWhenReady(bool playWhenReady) override;
+    bool getPlayWhenReady() override;
+    void seekTo(double position) override;
+    void seekBy(double offset) override;
+    void setVolume(double level) override;
+    double getVolume() override;
+    void setRate(double rate) override;
+    double getRate() override;
+    Progress getProgress() override;
     PlaybackState getPlaybackState() override;
-    void load(const BrowserTrack& track) override;
-    void add(const std::vector<BrowserTrack>& tracks, std::optional<double> index) override;
-    std::vector<BrowserTrack> getQueue() override;
-    std::optional<BrowserTrack> getCurrentTrack() override;
-    double getCurrentIndex() override;
-    void setQueue(const std::vector<BrowserTrack>& tracks, std::optional<double> startIndex) override;
-    void clear() override;
+    PlayingState getPlayingState() override;
+    RepeatMode getRepeatMode() override;
     void setRepeatMode(RepeatMode mode) override;
+    std::optional<PlaybackError> getPlaybackError() override;
+    void retry() override;
+    void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) override;
+    void move(double fromIndex, double toIndex) override;
+    void remove(const std::vector<double>& indexes) override;
+    void removeUpcomingTracks() override;
+    void skip(double index, std::optional<double> initialPosition) override;
+    void skipToNext(std::optional<double> initialPosition) override;
+    void skipToPrevious(std::optional<double> initialPosition) override;
+    void setQueue(const std::vector<Track>& tracks) override;
+    std::vector<Track> getQueue() override;
+    std::optional<Track> getTrack(double index) override;
+    std::optional<double> getActiveTrackIndex() override;
+    std::optional<Track> getActiveTrack() override;
+    void acquireWakeLock() override;
+    void abandonWakeLock() override;
+    void resolveGetItemRequest(const std::string& id, const Track& item) override;
+    void resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) override;
+    void resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) override;
+    void setMediaBrowserReady() override;
 
   private:
     friend HybridBase;

@@ -7,11 +7,6 @@
 
 #pragma once
 
-#if __has_include(<NitroModules/NitroHash.hpp>)
-#include <NitroModules/NitroHash.hpp>
-#else
-#error NitroModules cannot be found! Are you sure you installed NitroModules properly?
-#endif
 #if __has_include(<NitroModules/JSIConverter.hpp>)
 #include <NitroModules/JSIConverter.hpp>
 #else
@@ -22,70 +17,67 @@
 #else
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
+#if __has_include(<NitroModules/JSIHelpers.hpp>)
+#include <NitroModules/JSIHelpers.hpp>
+#else
+#error NitroModules cannot be found! Are you sure you installed NitroModules properly?
+#endif
+
+// Forward declaration of `State` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class State; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
+
+#include "State.hpp"
+#include "PlaybackErrorEvent.hpp"
+#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 
   /**
-   * An enum which can be represented as a JavaScript union (PlaybackState).
+   * A struct which can be represented as a JavaScript object (PlaybackState).
    */
-  enum class PlaybackState {
-    IDLE      SWIFT_NAME(idle) = 0,
-    STOPPED      SWIFT_NAME(stopped) = 1,
-    LOADING      SWIFT_NAME(loading) = 2,
-    PLAYING      SWIFT_NAME(playing) = 3,
-    PAUSED      SWIFT_NAME(paused) = 4,
-    ERROR      SWIFT_NAME(error) = 5,
-  } CLOSED_ENUM;
+  struct PlaybackState {
+  public:
+    State state     SWIFT_PRIVATE;
+    std::optional<PlaybackErrorEvent> error     SWIFT_PRIVATE;
+
+  public:
+    PlaybackState() = default;
+    explicit PlaybackState(State state, std::optional<PlaybackErrorEvent> error): state(state), error(error) {}
+  };
 
 } // namespace margelo::nitro::audiobrowser
 
 namespace margelo::nitro {
 
-  // C++ PlaybackState <> JS PlaybackState (union)
+  // C++ PlaybackState <> JS PlaybackState (object)
   template <>
   struct JSIConverter<margelo::nitro::audiobrowser::PlaybackState> final {
     static inline margelo::nitro::audiobrowser::PlaybackState fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
-      std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
-      switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("idle"): return margelo::nitro::audiobrowser::PlaybackState::IDLE;
-        case hashString("stopped"): return margelo::nitro::audiobrowser::PlaybackState::STOPPED;
-        case hashString("loading"): return margelo::nitro::audiobrowser::PlaybackState::LOADING;
-        case hashString("playing"): return margelo::nitro::audiobrowser::PlaybackState::PLAYING;
-        case hashString("paused"): return margelo::nitro::audiobrowser::PlaybackState::PAUSED;
-        case hashString("error"): return margelo::nitro::audiobrowser::PlaybackState::ERROR;
-        default: [[unlikely]]
-          throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum PlaybackState - invalid value!");
-      }
+      jsi::Object obj = arg.asObject(runtime);
+      return margelo::nitro::audiobrowser::PlaybackState(
+        JSIConverter<margelo::nitro::audiobrowser::State>::fromJSI(runtime, obj.getProperty(runtime, "state")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackErrorEvent>>::fromJSI(runtime, obj.getProperty(runtime, "error"))
+      );
     }
-    static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::PlaybackState arg) {
-      switch (arg) {
-        case margelo::nitro::audiobrowser::PlaybackState::IDLE: return JSIConverter<std::string>::toJSI(runtime, "idle");
-        case margelo::nitro::audiobrowser::PlaybackState::STOPPED: return JSIConverter<std::string>::toJSI(runtime, "stopped");
-        case margelo::nitro::audiobrowser::PlaybackState::LOADING: return JSIConverter<std::string>::toJSI(runtime, "loading");
-        case margelo::nitro::audiobrowser::PlaybackState::PLAYING: return JSIConverter<std::string>::toJSI(runtime, "playing");
-        case margelo::nitro::audiobrowser::PlaybackState::PAUSED: return JSIConverter<std::string>::toJSI(runtime, "paused");
-        case margelo::nitro::audiobrowser::PlaybackState::ERROR: return JSIConverter<std::string>::toJSI(runtime, "error");
-        default: [[unlikely]]
-          throw std::invalid_argument("Cannot convert PlaybackState to JS - invalid value: "
-                                    + std::to_string(static_cast<int>(arg)) + "!");
-      }
+    static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PlaybackState& arg) {
+      jsi::Object obj(runtime);
+      obj.setProperty(runtime, "state", JSIConverter<margelo::nitro::audiobrowser::State>::toJSI(runtime, arg.state));
+      obj.setProperty(runtime, "error", JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackErrorEvent>>::toJSI(runtime, arg.error));
+      return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
-      if (!value.isString()) {
+      if (!value.isObject()) {
         return false;
       }
-      std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
-      switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("idle"):
-        case hashString("stopped"):
-        case hashString("loading"):
-        case hashString("playing"):
-        case hashString("paused"):
-        case hashString("error"):
-          return true;
-        default:
-          return false;
+      jsi::Object obj = value.getObject(runtime);
+      if (!nitro::isPlainObject(runtime, obj)) {
+        return false;
       }
+      if (!JSIConverter<margelo::nitro::audiobrowser::State>::canConvert(runtime, obj.getProperty(runtime, "state"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackErrorEvent>>::canConvert(runtime, obj.getProperty(runtime, "error"))) return false;
+      return true;
     }
   };
 
