@@ -1,4 +1,4 @@
-import TrackPlayer from '../NativeTrackPlayer'
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
 import resolveAssetSource from '../utils/resolveAssetSource'
 
 // MARK: - Types

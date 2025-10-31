@@ -1,5 +1,6 @@
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-import TrackPlayer from '../NativeTrackPlayer';
+;
 
 export type PlaybackError = {
   code: string;

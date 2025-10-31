@@ -1,5 +1,6 @@
-import TrackPlayer from '../NativeTrackPlayer';
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
+;
 
 // MARK: - Types
 

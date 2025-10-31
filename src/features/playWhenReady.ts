@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 
-import TrackPlayer from '../NativeTrackPlayer';
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
+;
 
 /**
  * Event data for when playWhenReady changes.

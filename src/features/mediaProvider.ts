@@ -1,5 +1,6 @@
-import TrackPlayer from '../NativeTrackPlayer';
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
 import { resolveTrackAssets, type Track } from './queue';
+;
 
 // https://developer.android.com/training/cars/media/create-media-browser/content-styles
 

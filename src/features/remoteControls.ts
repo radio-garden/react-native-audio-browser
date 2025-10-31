@@ -1,4 +1,4 @@
-import TrackPlayer from '../NativeTrackPlayer'
+import { AudioBrowser } from '../NativeAudioBrowser'
 import { pause, play, seekBy, seekTo, stop } from './playback'
 import { skipToNext, skipToPrevious } from './queue'
 
@@ -72,7 +72,7 @@ export interface RemoteSkipEvent {
 // Custom handlers can override the defaults using handleRemote* functions
 
 // Basic playback controls
-TrackPlayer.onRemotePlay(() => {
+AudioBrowser.onRemotePlay(() => {
   const customHandler = customHandlers.get('play')
   if (customHandler) {
     customHandler()
@@ -81,7 +81,7 @@ TrackPlayer.onRemotePlay(() => {
   }
 })
 
-TrackPlayer.onRemotePause(() => {
+AudioBrowser.onRemotePause(() => {
   const customHandler = customHandlers.get('pause')
   if (customHandler) {
     customHandler()
@@ -90,7 +90,7 @@ TrackPlayer.onRemotePause(() => {
   }
 })
 
-TrackPlayer.onRemoteNext(() => {
+AudioBrowser.onRemoteNext(() => {
   const customHandler = customHandlers.get('next')
   if (customHandler) {
     customHandler()
@@ -99,7 +99,7 @@ TrackPlayer.onRemoteNext(() => {
   }
 })
 
-TrackPlayer.onRemotePrevious(() => {
+AudioBrowser.onRemotePrevious(() => {
   const customHandler = customHandlers.get('previous')
   if (customHandler) {
     customHandler()
@@ -108,7 +108,7 @@ TrackPlayer.onRemotePrevious(() => {
   }
 })
 
-TrackPlayer.onRemoteStop(() => {
+AudioBrowser.onRemoteStop(() => {
   const customHandler = customHandlers.get('stop')
   if (customHandler) {
     customHandler()
@@ -118,7 +118,7 @@ TrackPlayer.onRemoteStop(() => {
 })
 
 // Seek controls
-TrackPlayer.onRemoteSeek((event: any) => {
+AudioBrowser.onRemoteSeek((event: any) => {
   const customHandler = customHandlers.get('seek')
   if (customHandler) {
     customHandler(event)
@@ -127,7 +127,7 @@ TrackPlayer.onRemoteSeek((event: any) => {
   }
 })
 
-TrackPlayer.onRemoteJumpForward((event: any) => {
+AudioBrowser.onRemoteJumpForward((event: any) => {
   const customHandler = customHandlers.get('jumpForward')
   if (customHandler) {
     customHandler(event)
@@ -136,7 +136,7 @@ TrackPlayer.onRemoteJumpForward((event: any) => {
   }
 })
 
-TrackPlayer.onRemoteJumpBackward((event: any) => {
+AudioBrowser.onRemoteJumpBackward((event: any) => {
   const customHandler = customHandlers.get('jumpBackward')
   if (customHandler) {
     customHandler(event)
@@ -266,7 +266,7 @@ export function handleRemoteJumpBackward(
  * @returns Cleanup function to unsubscribe
  */
 export function onRemoteBookmark(callback: () => void): () => void {
-  return TrackPlayer.onRemoteBookmark(callback).remove
+  return AudioBrowser.onRemoteBookmark(callback).remove
 }
 
 /**
@@ -275,7 +275,7 @@ export function onRemoteBookmark(callback: () => void): () => void {
  * @returns Cleanup function to unsubscribe
  */
 export function onRemoteDislike(callback: () => void): () => void {
-  return TrackPlayer.onRemoteDislike(callback).remove
+  return AudioBrowser.onRemoteDislike(callback).remove
 }
 
 /**
@@ -286,7 +286,7 @@ export function onRemoteDislike(callback: () => void): () => void {
 export function onRemoteJumpBackward(
   callback: (event: RemoteJumpBackwardEvent) => void
 ): () => void {
-  return TrackPlayer.onRemoteJumpBackward(callback as () => void).remove
+  return AudioBrowser.onRemoteJumpBackward(callback as () => void).remove
 }
 
 /**
@@ -297,7 +297,7 @@ export function onRemoteJumpBackward(
 export function onRemoteJumpForward(
   callback: (event: RemoteJumpForwardEvent) => void
 ): () => void {
-  return TrackPlayer.onRemoteJumpForward(callback as () => void).remove
+  return AudioBrowser.onRemoteJumpForward(callback as () => void).remove
 }
 
 /**
@@ -306,7 +306,7 @@ export function onRemoteJumpForward(
  * @returns Cleanup function to unsubscribe
  */
 export function onRemoteLike(callback: () => void): () => void {
-  return TrackPlayer.onRemoteLike(callback).remove
+  return AudioBrowser.onRemoteLike(callback).remove
 }
 
 /**
@@ -315,7 +315,7 @@ export function onRemoteLike(callback: () => void): () => void {
  * @returns Cleanup function to unsubscribe
  */
 export function onRemoteNext(callback: () => void): () => void {
-  return TrackPlayer.onRemoteNext(callback).remove
+  return AudioBrowser.onRemoteNext(callback).remove
 }
 
 /**
@@ -324,7 +324,7 @@ export function onRemoteNext(callback: () => void): () => void {
  * @returns Cleanup function to unsubscribe
  */
 export function onRemotePause(callback: () => void): () => void {
-  return TrackPlayer.onRemotePause(callback).remove
+  return AudioBrowser.onRemotePause(callback).remove
 }
 
 /**
@@ -333,7 +333,7 @@ export function onRemotePause(callback: () => void): () => void {
  * @returns Cleanup function to unsubscribe
  */
 export function onRemotePlay(callback: () => void): () => void {
-  return TrackPlayer.onRemotePlay(callback).remove
+  return AudioBrowser.onRemotePlay(callback).remove
 }
 
 /**
@@ -344,7 +344,7 @@ export function onRemotePlay(callback: () => void): () => void {
 export function onRemotePlayId(
   callback: (event: RemotePlayIdEvent) => void
 ): () => void {
-  return TrackPlayer.onRemotePlayId(callback as () => void).remove
+  return AudioBrowser.onRemotePlayId(callback as () => void).remove
 }
 
 /**
@@ -355,7 +355,7 @@ export function onRemotePlayId(
 export function onRemotePlaySearch(
   callback: (event: RemotePlaySearchEvent) => void
 ): () => void {
-  return TrackPlayer.onRemotePlaySearch(callback as () => void).remove
+  return AudioBrowser.onRemotePlaySearch(callback as () => void).remove
 }
 
 /**
@@ -364,7 +364,7 @@ export function onRemotePlaySearch(
  * @returns Cleanup function to unsubscribe
  */
 export function onRemotePrevious(callback: () => void): () => void {
-  return TrackPlayer.onRemotePrevious(callback).remove
+  return AudioBrowser.onRemotePrevious(callback).remove
 }
 
 /**
@@ -375,7 +375,7 @@ export function onRemotePrevious(callback: () => void): () => void {
 export function onRemoteSeek(
   callback: (event: RemoteSeekEvent) => void
 ): () => void {
-  return TrackPlayer.onRemoteSeek(callback as () => void).remove
+  return AudioBrowser.onRemoteSeek(callback as () => void).remove
 }
 
 /**
@@ -386,7 +386,7 @@ export function onRemoteSeek(
 export function onRemoteSetRating(
   callback: (event: RemoteSetRatingEvent) => void
 ): () => void {
-  return TrackPlayer.onRemoteSetRating(callback as () => void).remove
+  return AudioBrowser.onRemoteSetRating(callback as () => void).remove
 }
 
 /**
@@ -397,7 +397,7 @@ export function onRemoteSetRating(
 export function onRemoteSkip(
   callback: (event: RemoteSkipEvent) => void
 ): () => void {
-  return TrackPlayer.onRemoteSkip(callback as () => void).remove
+  return AudioBrowser.onRemoteSkip(callback as () => void).remove
 }
 
 /**
@@ -406,5 +406,5 @@ export function onRemoteSkip(
  * @returns Cleanup function to unsubscribe
  */
 export function onRemoteStop(callback: () => void): () => void {
-  return TrackPlayer.onRemoteStop(callback).remove
+  return AudioBrowser.onRemoteStop(callback).remove
 }

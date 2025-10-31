@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-import TrackPlayer from '../NativeTrackPlayer';
 import { onPlaybackState } from './playbackState';
+;
 
 // MARK: - Types
 

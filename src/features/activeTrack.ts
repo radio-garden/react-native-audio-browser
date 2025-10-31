@@ -1,5 +1,5 @@
 
-import TrackPlayer from '../NativeTrackPlayer';
+import { AudioBrowser } from '../NativeAudioBrowser';
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
 import type { Track } from './queue';
 
@@ -35,7 +35,7 @@ export interface PlaybackActiveTrackChangedEvent {
  * Gets the active track or undefined if there is no current track.
  */
 export function getActiveTrack(): Track | undefined {
-  return (TrackPlayer.getActiveTrack() as Track) ?? undefined;
+  return AudioBrowser.getActiveTrack() ?? undefined;
 }
 
 /**
@@ -43,7 +43,7 @@ export function getActiveTrack(): Track | undefined {
  * current track.
  */
 export function getActiveTrackIndex(): number | undefined {
-  return TrackPlayer.getActiveTrackIndex() ?? undefined;
+  return AudioBrowser.getActiveTrackIndex() ?? undefined;
 }
 
 // MARK: - Event Callbacks
@@ -67,8 +67,10 @@ export function getActiveTrackIndex(): number | undefined {
 export function onActiveTrackChanged(
   callback: (event: PlaybackActiveTrackChangedEvent) => void,
 ): () => void {
-  return TrackPlayer.onPlaybackActiveTrackChanged(callback as () => void)
-    .remove;
+  // TODO: Implement event subscription when AudioBrowser events are available
+  // return AudioBrowser.onPlaybackActiveTrackChanged(callback);
+  console.warn('onActiveTrackChanged: Event subscription not yet implemented');
+  return () => {}; // Return empty cleanup function for now
 }
 
 // MARK: - Hooks

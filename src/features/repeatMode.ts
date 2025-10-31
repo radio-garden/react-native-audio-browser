@@ -1,5 +1,5 @@
-import TrackPlayer from '../NativeTrackPlayer';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
+import { AudioBrowser } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
 // MARK: - Types
 
@@ -10,7 +10,7 @@ import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
  * - `'track'`: Repeats the current track infinitely during ongoing playback.
  * - `'queue'`: Repeats the entire queue infinitely.
  */
-export type RepeatMode = 'off' | 'track' | 'queue';
+export type RepeatMode = 'off' | 'track' | 'queue'
 
 // MARK: - Getters
 
@@ -18,7 +18,7 @@ export type RepeatMode = 'off' | 'track' | 'queue';
  * Gets the current repeat mode.
  */
 export function getRepeatMode(): RepeatMode {
-  return TrackPlayer.getRepeatMode() as RepeatMode;
+  return AudioBrowser.getRepeatMode()
 }
 
 /**
@@ -26,14 +26,14 @@ export function getRepeatMode(): RepeatMode {
  * @param repeatMode - The repeat mode to set
  */
 export function setRepeatMode(repeatMode: RepeatMode) {
-  TrackPlayer.setRepeatMode(repeatMode);
+  AudioBrowser.setRepeatMode(repeatMode)
 }
 
 // MARK: - Event Callbacks
 
 export interface RepeatModeChangedEvent {
   /** The new repeat mode */
-  repeatMode: RepeatMode;
+  repeatMode: RepeatMode
 }
 
 /**
@@ -42,9 +42,9 @@ export interface RepeatModeChangedEvent {
  * @returns Cleanup function to unsubscribe
  */
 export function onRepeatModeChanged(
-  callback: (event: RepeatModeChangedEvent) => void,
+  callback: (event: RepeatModeChangedEvent) => void
 ): () => void {
-  return TrackPlayer.onPlaybackRepeatModeChanged(callback as () => void).remove;
+  return AudioBrowser.onPlaybackRepeatModeChanged(callback as () => void).remove
 }
 
 // MARK: - Hooks
@@ -54,9 +54,5 @@ export function onRepeatModeChanged(
  * @returns The current repeat mode
  */
 export function useRepeatMode(): RepeatMode {
-  return useUpdatedNativeValue(
-    getRepeatMode,
-    onRepeatModeChanged,
-    'repeatMode',
-  );
+  return useUpdatedNativeValue(getRepeatMode, onRepeatModeChanged, 'repeatMode')
 }

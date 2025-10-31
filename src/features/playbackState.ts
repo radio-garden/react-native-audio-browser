@@ -1,6 +1,6 @@
-import TrackPlayer from '../NativeTrackPlayer'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
-import type { PlaybackErrorEvent } from './errors'
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
+import type { PlaybackError } from './errors';
 
 // MARK: - Types
 
@@ -36,7 +36,7 @@ export type State =
 
 export type PlaybackState = {
   state: State
-  error?: PlaybackErrorEvent
+  error?: PlaybackError
 }
 
 // MARK: - Getters

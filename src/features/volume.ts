@@ -1,4 +1,5 @@
-import TrackPlayer from '../NativeTrackPlayer';
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
+;
 
 // MARK: - Getters
 
