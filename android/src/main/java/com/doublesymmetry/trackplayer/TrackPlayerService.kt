@@ -21,6 +21,7 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import com.audiobrowser.BuildConfig
 import com.doublesymmetry.trackplayer.model.AppKilledPlaybackBehavior
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions

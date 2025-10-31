@@ -3,6 +3,8 @@ package com.doublesymmetry.trackplayer.model
 import com.doublesymmetry.trackplayer.option.AudioContentType
 import com.doublesymmetry.trackplayer.option.PlayerWakeMode
 import com.facebook.react.bridge.ReadableMap
+import com.margelo.nitro.audiobrowser.PlayerOptions
+import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 
 /**
  * Audio offload preferences for power-efficient playback. When this object exists, offload is
@@ -113,6 +115,44 @@ data class PlayerSetupOptions(
                 "audioOffload must be a boolean or object, got: ${audioOffloadValue.type}"
               )
           }
+      }
+    }
+  }
+
+  fun updateFromNitro(options: PlayerOptions) {
+    // Cross-platform audio engine options
+    options.minBuffer?.let { minBuffer = it }
+
+    // Android-specific options
+    options.android?.let { android ->
+      maxBuffer = android.maxBuffer
+      playBuffer = android.playBuffer
+      rebufferBuffer = android.rebufferBuffer
+      backBuffer = android.backBuffer
+      maxCacheSize = android.maxCacheSize
+      handleAudioBecomingNoisy = android.handleAudioBecomingNoisy
+      
+      // Convert audio content type
+      audioContentType = when (android.audioContentType) {
+        com.margelo.nitro.audiobrowser.AndroidAudioContentType.MUSIC -> AudioContentType.MUSIC
+        com.margelo.nitro.audiobrowser.AndroidAudioContentType.SPEECH -> AudioContentType.SPEECH
+        com.margelo.nitro.audiobrowser.AndroidAudioContentType.SONIFICATION -> AudioContentType.SONIFICATION
+        com.margelo.nitro.audiobrowser.AndroidAudioContentType.MOVIE -> AudioContentType.MOVIE
+        com.margelo.nitro.audiobrowser.AndroidAudioContentType.UNKNOWN -> AudioContentType.UNKNOWN
+      }
+      
+      // Convert audio offload options
+      audioOffload = when (android.audioOffload) {
+        is Variant_Boolean_AndroidAudioOffloadSettings.First -> {
+          if (android.audioOffload.value) AudioOffloadOptions() else null
+        }
+        is Variant_Boolean_AndroidAudioOffloadSettings.Second -> {
+          val settings = android.audioOffload.value
+          AudioOffloadOptions(
+            gaplessSupportRequired = settings.gaplessSupportRequired ?: false,
+            rateChangeSupportRequired = settings.rateChangeSupportRequired ?: false
+          )
+        }
       }
     }
   }

@@ -14,6 +14,8 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.Track as NitroTrack
+import com.margelo.nitro.audiobrowser.TrackType
 
 class Track
 private constructor(
@@ -119,6 +121,41 @@ private constructor(
     )
   }
 
+  fun toNitro(): NitroTrack {
+    // Convert MediaType to Nitro TrackType
+    val trackType = when (type) {
+      MediaType.DEFAULT -> TrackType.DEFAULT
+      MediaType.DASH -> TrackType.DASH
+      MediaType.HLS -> TrackType.HLS
+      MediaType.SMOOTH_STREAMING -> TrackType.SMOOTHSTREAMING
+    }
+
+    // Get description from original bundle if it exists
+    val description = originalItem.getString("description")
+    val isLiveStream = if (originalItem.containsKey("isLiveStream")) {
+      originalItem.getBoolean("isLiveStream")
+    } else null
+
+    return NitroTrack(
+      mediaId = mediaId,
+      url = url ?: uri?.toString() ?: "",
+      type = trackType,
+      userAgent = userAgent,
+      contentType = contentType,
+      pitchAlgorithm = null, // TODO: Convert if needed
+      title = title,
+      album = album,
+      artist = artist,
+      duration = duration,
+      artwork = artwork,
+      description = description,
+      genre = genre,
+      date = date,
+      rating = null, // TODO: Convert rating if needed
+      isLiveStream = isLiveStream
+    )
+  }
+
   companion object {
     fun fromMediaItem(item: MediaItem): Track {
       return item.localConfiguration!!.tag as Track
@@ -182,6 +219,73 @@ private constructor(
         duration = if (map.hasKey("duration")) map.getDouble("duration") else null,
         rating = BundleUtils.getRating(map, "rating", ratingType),
         mediaId = map.getString("mediaId"),
+        originalItem = originalBundle,
+      )
+    }
+
+    fun fromNitro(nitroTrack: NitroTrack, context: Context): Track {
+      // Convert Nitro TrackType to MediaType
+      val mediaType = when (nitroTrack.type) {
+        TrackType.DEFAULT -> MediaType.DEFAULT
+        TrackType.DASH -> MediaType.DASH
+        TrackType.HLS -> MediaType.HLS
+        TrackType.SMOOTHSTREAMING -> MediaType.SMOOTH_STREAMING
+        null -> MediaType.DEFAULT
+      }
+
+      // Create a temporary bundle to use existing URI resolution logic
+      val tempBundle = Bundle().apply {
+        putString("url", nitroTrack.url)
+        nitroTrack.artwork?.let { putString("artwork", it) }
+      }
+      val tempMap = Arguments.fromBundle(tempBundle)
+
+      // Use existing logic for resource ID and URI resolution
+      val resourceId = BundleUtils.getRawResourceId(context, tempMap, "url")
+      val uri = if (resourceId == 0) {
+        BundleUtils.getUri(context, tempMap, "url")
+      } else {
+        Uri.Builder()
+          .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+          .path(resourceId.toString())
+          .build()
+      }
+
+      // Create a basic Bundle to store the original data
+      val originalBundle = Bundle().apply {
+        putString("url", nitroTrack.url)
+        nitroTrack.mediaId?.let { putString("mediaId", it) }
+        nitroTrack.type?.let { putString("type", it.name.lowercase()) }
+        nitroTrack.userAgent?.let { putString("userAgent", it) }
+        nitroTrack.contentType?.let { putString("contentType", it) }
+        nitroTrack.title?.let { putString("title", it) }
+        nitroTrack.artist?.let { putString("artist", it) }
+        nitroTrack.album?.let { putString("album", it) }
+        nitroTrack.artwork?.let { putString("artwork", it) }
+        nitroTrack.description?.let { putString("description", it) }
+        nitroTrack.genre?.let { putString("genre", it) }
+        nitroTrack.date?.let { putString("date", it) }
+        nitroTrack.duration?.let { putDouble("duration", it) }
+        nitroTrack.isLiveStream?.let { putBoolean("isLiveStream", it) }
+      }
+
+      return Track(
+        url = nitroTrack.url,
+        uri = uri,
+        resourceId = if (resourceId == 0) null else resourceId,
+        type = mediaType,
+        contentType = nitroTrack.contentType,
+        userAgent = nitroTrack.userAgent,
+        headers = null, // Nitro Track doesn't have headers field
+        title = nitroTrack.title,
+        artist = nitroTrack.artist,
+        album = nitroTrack.album,
+        artwork = BundleUtils.getUri(context, tempMap, "artwork")?.toString(),
+        date = nitroTrack.date,
+        genre = nitroTrack.genre,
+        duration = nitroTrack.duration,
+        rating = null, // TODO: Convert nitroTrack.rating to Rating if needed
+        mediaId = nitroTrack.mediaId,
         originalItem = originalBundle,
       )
     }

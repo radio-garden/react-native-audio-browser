@@ -91,45 +91,4 @@ export interface AudioBrowser
   // MARK: Android methods
   acquireWakeLock(): void
   abandonWakeLock(): void
-
-  // MARK: Media Browser Methods:
-  readonly onGetItemRequest: EventEmitter<GetItemRequest>
-  resolveGetItemRequest(id: string, item: Track): void
-
-  readonly onGetChildrenRequest: EventEmitter<GetChildrenRequest>
-  resolveGetChildrenRequest(
-    requestId: string,
-    items: Track[],
-    totalChildrenCount: number
-  ): void
-
-  readonly onGetSearchResultRequest: EventEmitter<GetSearchResultRequest>
-  resolveSearchResultRequest(
-    requestId: string,
-    items: Track[],
-    totalMatchesCount: number
-  ): void
-
-  // Signal that JS side is ready to receive media browser events
-  setMediaBrowserReady(): void
-}
-
-type GetItemRequest = {
-  requestId: string
-  id: string
-}
-
-type GetChildrenRequest = {
-  requestId: string
-  id: string
-  page: number
-  pageSize: number
-}
-
-type GetSearchResultRequest = {
-  requestId: string
-  query: string
-  // extras?: UnsafeObject
-  page: number
-  pageSize: number
 }

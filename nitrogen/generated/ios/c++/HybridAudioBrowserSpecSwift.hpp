@@ -12,12 +12,6 @@
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
-// Forward declaration of `GetItemRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
-// Forward declaration of `GetChildrenRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
-// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `PlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
 // Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
@@ -50,8 +44,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 namespace margelo::nitro::audiobrowser { struct PlaybackState; }
 // Forward declaration of `State` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class State; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `PlayingState` to properly resolve imports.
@@ -59,12 +51,7 @@ namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
-#include <functional>
 #include <NitroModules/Promise.hpp>
-#include "GetItemRequest.hpp"
-#include <string>
-#include "GetChildrenRequest.hpp"
-#include "GetSearchResultRequest.hpp"
 #include "PlayerOptions.hpp"
 #include <optional>
 #include "AndroidPlayerOptions.hpp"
@@ -78,13 +65,13 @@ namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 #include <vector>
 #include "IOSCategoryPolicy.hpp"
 #include "Track.hpp"
+#include <string>
 #include "TrackType.hpp"
 #include "PitchAlgorithm.hpp"
 #include "RatingType.hpp"
 #include "Progress.hpp"
 #include "PlaybackState.hpp"
 #include "State.hpp"
-#include "PlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlayingState.hpp"
 #include "RepeatMode.hpp"
@@ -126,18 +113,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    inline std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> getOnGetItemRequest() noexcept override {
-      auto __result = _swiftPart.getOnGetItemRequest();
-      return __result;
-    }
-    inline std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> getOnGetChildrenRequest() noexcept override {
-      auto __result = _swiftPart.getOnGetChildrenRequest();
-      return __result;
-    }
-    inline std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> getOnGetSearchResultRequest() noexcept override {
-      auto __result = _swiftPart.getOnGetSearchResultRequest();
-      return __result;
-    }
+    
 
   public:
     // Methods
@@ -379,30 +355,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void abandonWakeLock() override {
       auto __result = _swiftPart.abandonWakeLock();
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-    }
-    inline void resolveGetItemRequest(const std::string& id, const Track& item) override {
-      auto __result = _swiftPart.resolveGetItemRequest(id, std::forward<decltype(item)>(item));
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-    }
-    inline void resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) override {
-      auto __result = _swiftPart.resolveGetChildrenRequest(requestId, items, std::forward<decltype(totalChildrenCount)>(totalChildrenCount));
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-    }
-    inline void resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) override {
-      auto __result = _swiftPart.resolveSearchResultRequest(requestId, items, std::forward<decltype(totalMatchesCount)>(totalMatchesCount));
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-    }
-    inline void setMediaBrowserReady() override {
-      auto __result = _swiftPart.setMediaBrowserReady();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

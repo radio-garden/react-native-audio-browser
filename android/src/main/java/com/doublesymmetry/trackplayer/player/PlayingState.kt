@@ -2,6 +2,7 @@ package com.doublesymmetry.trackplayer.player
 
 import com.doublesymmetry.trackplayer.event.PlaybackPlayingStateEvent
 import com.doublesymmetry.trackplayer.model.State
+import com.margelo.nitro.audiobrowser.PlayingState
 
 /** Manages the playing state (playing and buffering flags) and notifies when they change. */
 class PlayingState(private val onChange: (PlaybackPlayingStateEvent) -> Unit) {
@@ -23,7 +24,7 @@ class PlayingState(private val onChange: (PlaybackPlayingStateEvent) -> Unit) {
     }
   }
 
-  fun toEvent(): PlaybackPlayingStateEvent {
-    return PlaybackPlayingStateEvent(playing, buffering)
+  fun toNitro(): PlayingState {
+    return PlayingState(playing, buffering)
   }
 }

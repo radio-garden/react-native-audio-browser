@@ -49,9 +49,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> getOnGetItemRequest() override;
-    std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> getOnGetChildrenRequest() override;
-    std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> getOnGetSearchResultRequest() override;
+    
 
   public:
     // Methods
@@ -91,10 +89,6 @@ namespace margelo::nitro::audiobrowser {
     std::optional<Track> getActiveTrack() override;
     void acquireWakeLock() override;
     void abandonWakeLock() override;
-    void resolveGetItemRequest(const std::string& id, const Track& item) override;
-    void resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) override;
-    void resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) override;
-    void setMediaBrowserReady() override;
 
   private:
     friend HybridBase;

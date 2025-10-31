@@ -11,10 +11,8 @@
 #include "PlaybackState.hpp"
 
 #include "JPlaybackError.hpp"
-#include "JPlaybackErrorEvent.hpp"
 #include "JState.hpp"
 #include "PlaybackError.hpp"
-#include "PlaybackErrorEvent.hpp"
 #include "State.hpp"
 #include <optional>
 #include <string>
@@ -40,8 +38,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldState = clazz->getField<JState>("state");
       jni::local_ref<JState> state = this->getFieldValue(fieldState);
-      static const auto fieldError = clazz->getField<JPlaybackErrorEvent>("error");
-      jni::local_ref<JPlaybackErrorEvent> error = this->getFieldValue(fieldError);
+      static const auto fieldError = clazz->getField<JPlaybackError>("error");
+      jni::local_ref<JPlaybackError> error = this->getFieldValue(fieldError);
       return PlaybackState(
         state->toCpp(),
         error != nullptr ? std::make_optional(error->toCpp()) : std::nullopt
@@ -56,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
     static jni::local_ref<JPlaybackState::javaobject> fromCpp(const PlaybackState& value) {
       return newInstance(
         JState::fromCpp(value.state),
-        value.error.has_value() ? JPlaybackErrorEvent::fromCpp(value.error.value()) : nullptr
+        value.error.has_value() ? JPlaybackError::fromCpp(value.error.value()) : nullptr
       );
     }
   };

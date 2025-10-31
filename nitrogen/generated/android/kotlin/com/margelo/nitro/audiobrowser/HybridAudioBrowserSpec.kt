@@ -37,32 +37,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   }
 
   // Properties
-  abstract val onGetItemRequest: (callback: (data: GetItemRequest) -> Unit) -> Promise<() -> Unit>
   
-  private val onGetItemRequest_cxx: Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______java(onGetItemRequest)
-    }
-  
-  abstract val onGetChildrenRequest: (callback: (data: GetChildrenRequest) -> Unit) -> Promise<() -> Unit>
-  
-  private val onGetChildrenRequest_cxx: Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______java(onGetChildrenRequest)
-    }
-  
-  abstract val onGetSearchResultRequest: (callback: (data: GetSearchResultRequest) -> Unit) -> Promise<() -> Unit>
-  
-  private val onGetSearchResultRequest_cxx: Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______java(onGetSearchResultRequest)
-    }
 
   // Methods
   @DoNotStrip
@@ -208,22 +183,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun abandonWakeLock(): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun resolveGetItemRequest(id: String, item: Track): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun resolveGetChildrenRequest(requestId: String, items: Array<Track>, totalChildrenCount: Double): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun resolveSearchResultRequest(requestId: String, items: Array<Track>, totalMatchesCount: Double): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun setMediaBrowserReady(): Unit
 
   private external fun initHybrid(): HybridData
 

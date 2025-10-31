@@ -11,9 +11,7 @@ import NitroModules
 /// See ``HybridAudioBrowserSpec``
 public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   // Properties
-  var onGetItemRequest: (_ callback: (_ data: GetItemRequest) -> Void) -> Promise<() -> Void> { get }
-  var onGetChildrenRequest: (_ callback: (_ data: GetChildrenRequest) -> Void) -> Promise<() -> Void> { get }
-  var onGetSearchResultRequest: (_ callback: (_ data: GetSearchResultRequest) -> Void) -> Promise<() -> Void> { get }
+  
 
   // Methods
   func setupPlayer(options: PlayerOptions) throws -> Promise<Void>
@@ -52,10 +50,6 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getActiveTrack() throws -> Track?
   func acquireWakeLock() throws -> Void
   func abandonWakeLock() throws -> Void
-  func resolveGetItemRequest(id: String, item: Track) throws -> Void
-  func resolveGetChildrenRequest(requestId: String, items: [Track], totalChildrenCount: Double) throws -> Void
-  func resolveSearchResultRequest(requestId: String, items: [Track], totalMatchesCount: Double) throws -> Void
-  func setMediaBrowserReady() throws -> Void
 }
 
 /// See ``HybridAudioBrowserSpec``

@@ -16,13 +16,6 @@
 #include <NitroModules/HybridObjectRegistry.hpp>
 
 #include "JHybridAudioBrowserSpec.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____.hpp"
-#include "JFunc_void.hpp"
-#include "JFunc_void_GetItemRequest.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____.hpp"
-#include "JFunc_void_GetChildrenRequest.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____.hpp"
-#include "JFunc_void_GetSearchResultRequest.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::audiobrowser {
@@ -35,13 +28,6 @@ int initialize(JavaVM* vm) {
   return facebook::jni::initialize(vm, [] {
     // Register native JNI methods
     margelo::nitro::audiobrowser::JHybridAudioBrowserSpec::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_GetItemRequest_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_GetChildrenRequest_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_GetSearchResultRequest_cxx::registerNatives();
 
     // Register Nitro Hybrid Objects
     HybridObjectRegistry::registerHybridObjectConstructor(

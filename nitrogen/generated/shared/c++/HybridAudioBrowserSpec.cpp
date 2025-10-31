@@ -14,9 +14,6 @@ namespace margelo::nitro::audiobrowser {
     HybridObject::loadHybridMethods();
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
-      prototype.registerHybridGetter("onGetItemRequest", &HybridAudioBrowserSpec::getOnGetItemRequest);
-      prototype.registerHybridGetter("onGetChildrenRequest", &HybridAudioBrowserSpec::getOnGetChildrenRequest);
-      prototype.registerHybridGetter("onGetSearchResultRequest", &HybridAudioBrowserSpec::getOnGetSearchResultRequest);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioBrowserSpec::setupPlayer);
       prototype.registerHybridMethod("load", &HybridAudioBrowserSpec::load);
       prototype.registerHybridMethod("reset", &HybridAudioBrowserSpec::reset);
@@ -53,10 +50,6 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getActiveTrack", &HybridAudioBrowserSpec::getActiveTrack);
       prototype.registerHybridMethod("acquireWakeLock", &HybridAudioBrowserSpec::acquireWakeLock);
       prototype.registerHybridMethod("abandonWakeLock", &HybridAudioBrowserSpec::abandonWakeLock);
-      prototype.registerHybridMethod("resolveGetItemRequest", &HybridAudioBrowserSpec::resolveGetItemRequest);
-      prototype.registerHybridMethod("resolveGetChildrenRequest", &HybridAudioBrowserSpec::resolveGetChildrenRequest);
-      prototype.registerHybridMethod("resolveSearchResultRequest", &HybridAudioBrowserSpec::resolveSearchResultRequest);
-      prototype.registerHybridMethod("setMediaBrowserReady", &HybridAudioBrowserSpec::setMediaBrowserReady);
     });
   }
 

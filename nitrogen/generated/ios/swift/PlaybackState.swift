@@ -18,10 +18,10 @@ public extension PlaybackState {
   /**
    * Create a new instance of `PlaybackState`.
    */
-  init(state: State, error: PlaybackErrorEvent?) {
-    self.init(state, { () -> bridge.std__optional_PlaybackErrorEvent_ in
+  init(state: State, error: PlaybackError?) {
+    self.init(state, { () -> bridge.std__optional_PlaybackError_ in
       if let __unwrappedValue = error {
-        return bridge.create_std__optional_PlaybackErrorEvent_(__unwrappedValue)
+        return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -39,16 +39,16 @@ public extension PlaybackState {
     }
   }
   
-  var error: PlaybackErrorEvent? {
+  var error: PlaybackError? {
     @inline(__always)
     get {
       return self.__error.value
     }
     @inline(__always)
     set {
-      self.__error = { () -> bridge.std__optional_PlaybackErrorEvent_ in
+      self.__error = { () -> bridge.std__optional_PlaybackError_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_PlaybackErrorEvent_(__unwrappedValue)
+          return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
         } else {
           return .init()
         }

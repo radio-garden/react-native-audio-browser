@@ -14,12 +14,6 @@ namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
 // Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
-// Forward declaration of `GetChildrenRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
-// Forward declaration of `GetItemRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
-// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -34,8 +28,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
 // Forward declaration of `PitchAlgorithm` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
@@ -61,9 +53,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AndroidAudioContentType.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidPlayerOptions.hpp"
-#include "GetChildrenRequest.hpp"
-#include "GetItemRequest.hpp"
-#include "GetSearchResultRequest.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
@@ -72,7 +61,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSPlayerOptions.hpp"
 #include "PitchAlgorithm.hpp"
 #include "PlaybackError.hpp"
-#include "PlaybackErrorEvent.hpp"
 #include "PlaybackState.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
@@ -390,21 +378,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<PlaybackErrorEvent>
-  /**
-   * Specialized version of `std::optional<PlaybackErrorEvent>`.
-   */
-  using std__optional_PlaybackErrorEvent_ = std::optional<PlaybackErrorEvent>;
-  inline std::optional<PlaybackErrorEvent> create_std__optional_PlaybackErrorEvent_(const PlaybackErrorEvent& value) noexcept {
-    return std::optional<PlaybackErrorEvent>(value);
-  }
-  inline bool has_value_std__optional_PlaybackErrorEvent_(const std::optional<PlaybackErrorEvent>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline PlaybackErrorEvent get_std__optional_PlaybackErrorEvent_(const std::optional<PlaybackErrorEvent>& optional) noexcept {
-    return *optional;
-  }
-  
   // pragma MARK: std::vector<Track>
   /**
    * Specialized version of `std::vector<Track>`.
@@ -441,175 +414,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Track get_std__optional_Track_(const std::optional<Track>& optional) noexcept {
     return *optional;
-  }
-  
-  // pragma MARK: std::function<void(const GetItemRequest& /* data */)>
-  /**
-   * Specialized version of `std::function<void(const GetItemRequest&)>`.
-   */
-  using Func_void_GetItemRequest = std::function<void(const GetItemRequest& /* data */)>;
-  /**
-   * Wrapper class for a `std::function<void(const GetItemRequest& / * data * /)>`, this can be used from Swift.
-   */
-  class Func_void_GetItemRequest_Wrapper final {
-  public:
-    explicit Func_void_GetItemRequest_Wrapper(std::function<void(const GetItemRequest& /* data */)>&& func): _function(std::make_unique<std::function<void(const GetItemRequest& /* data */)>>(std::move(func))) {}
-    inline void call(GetItemRequest data) const noexcept {
-      _function->operator()(data);
-    }
-  private:
-    std::unique_ptr<std::function<void(const GetItemRequest& /* data */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_GetItemRequest create_Func_void_GetItemRequest(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_GetItemRequest_Wrapper wrap_Func_void_GetItemRequest(Func_void_GetItemRequest value) noexcept {
-    return Func_void_GetItemRequest_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>
-  /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest&)>&)>`.
-   */
-  using Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ = std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& / * data * /)>& / * callback * /)>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper(std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::function<void()>>> call(std::function<void(const GetItemRequest& /* data */)> callback) const noexcept {
-      auto __result = _function->operator()(callback);
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper wrap_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<std::function<void()>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::function<void()>>>`.
-   */
-  using std__shared_ptr_Promise_std__function_void_____ = std::shared_ptr<Promise<std::function<void()>>>;
-  inline std::shared_ptr<Promise<std::function<void()>>> create_std__shared_ptr_Promise_std__function_void_____() noexcept {
-    return Promise<std::function<void()>>::create();
-  }
-  inline PromiseHolder<std::function<void()>> wrap_std__shared_ptr_Promise_std__function_void_____(std::shared_ptr<Promise<std::function<void()>>> promise) noexcept {
-    return PromiseHolder<std::function<void()>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::function<void()>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::function<void()>&)>`.
-   */
-  using Func_void_std__function_void___ = std::function<void(const std::function<void()>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::function<void()>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__function_void____Wrapper final {
-  public:
-    explicit Func_void_std__function_void____Wrapper(std::function<void(const std::function<void()>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::function<void()>& /* result */)>>(std::move(func))) {}
-    inline void call(std::function<void()> result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const std::function<void()>& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_std__function_void___ create_Func_void_std__function_void___(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__function_void____Wrapper wrap_Func_void_std__function_void___(Func_void_std__function_void___ value) noexcept {
-    return Func_void_std__function_void____Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::function<void(const GetChildrenRequest& /* data */)>
-  /**
-   * Specialized version of `std::function<void(const GetChildrenRequest&)>`.
-   */
-  using Func_void_GetChildrenRequest = std::function<void(const GetChildrenRequest& /* data */)>;
-  /**
-   * Wrapper class for a `std::function<void(const GetChildrenRequest& / * data * /)>`, this can be used from Swift.
-   */
-  class Func_void_GetChildrenRequest_Wrapper final {
-  public:
-    explicit Func_void_GetChildrenRequest_Wrapper(std::function<void(const GetChildrenRequest& /* data */)>&& func): _function(std::make_unique<std::function<void(const GetChildrenRequest& /* data */)>>(std::move(func))) {}
-    inline void call(GetChildrenRequest data) const noexcept {
-      _function->operator()(data);
-    }
-  private:
-    std::unique_ptr<std::function<void(const GetChildrenRequest& /* data */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_GetChildrenRequest create_Func_void_GetChildrenRequest(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_GetChildrenRequest_Wrapper wrap_Func_void_GetChildrenRequest(Func_void_GetChildrenRequest value) noexcept {
-    return Func_void_GetChildrenRequest_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>
-  /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest&)>&)>`.
-   */
-  using Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ = std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& / * data * /)>& / * callback * /)>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper(std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::function<void()>>> call(std::function<void(const GetChildrenRequest& /* data */)> callback) const noexcept {
-      auto __result = _function->operator()(callback);
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper wrap_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::function<void(const GetSearchResultRequest& /* data */)>
-  /**
-   * Specialized version of `std::function<void(const GetSearchResultRequest&)>`.
-   */
-  using Func_void_GetSearchResultRequest = std::function<void(const GetSearchResultRequest& /* data */)>;
-  /**
-   * Wrapper class for a `std::function<void(const GetSearchResultRequest& / * data * /)>`, this can be used from Swift.
-   */
-  class Func_void_GetSearchResultRequest_Wrapper final {
-  public:
-    explicit Func_void_GetSearchResultRequest_Wrapper(std::function<void(const GetSearchResultRequest& /* data */)>&& func): _function(std::make_unique<std::function<void(const GetSearchResultRequest& /* data */)>>(std::move(func))) {}
-    inline void call(GetSearchResultRequest data) const noexcept {
-      _function->operator()(data);
-    }
-  private:
-    std::unique_ptr<std::function<void(const GetSearchResultRequest& /* data */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_GetSearchResultRequest create_Func_void_GetSearchResultRequest(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_GetSearchResultRequest_Wrapper wrap_Func_void_GetSearchResultRequest(Func_void_GetSearchResultRequest value) noexcept {
-    return Func_void_GetSearchResultRequest_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>
-  /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest&)>&)>`.
-   */
-  using Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ = std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& / * data * /)>& / * callback * /)>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper(std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::function<void()>>> call(std::function<void(const GetSearchResultRequest& /* data */)> callback) const noexcept {
-      auto __result = _function->operator()(callback);
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper wrap_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>

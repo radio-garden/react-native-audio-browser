@@ -7,20 +7,12 @@
 
 #include "JHybridAudioBrowserSpec.hpp"
 
-// Forward declaration of `GetItemRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
-// Forward declaration of `GetChildrenRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
-// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackState; }
 // Forward declaration of `State` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class State; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `PlayingState` to properly resolve imports.
@@ -54,34 +46,18 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 
-#include <functional>
 #include <NitroModules/Promise.hpp>
-#include "GetItemRequest.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____.hpp"
 #include <NitroModules/JPromise.hpp>
-#include "JFunc_void.hpp"
-#include "JFunc_void_GetItemRequest.hpp"
-#include "JGetItemRequest.hpp"
-#include <string>
-#include "GetChildrenRequest.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____.hpp"
-#include "JFunc_void_GetChildrenRequest.hpp"
-#include "JGetChildrenRequest.hpp"
-#include "GetSearchResultRequest.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____.hpp"
-#include "JFunc_void_GetSearchResultRequest.hpp"
-#include "JGetSearchResultRequest.hpp"
 #include "Progress.hpp"
 #include "JProgress.hpp"
 #include "PlaybackState.hpp"
 #include "JPlaybackState.hpp"
 #include "State.hpp"
 #include "JState.hpp"
-#include "PlaybackErrorEvent.hpp"
-#include <optional>
-#include "JPlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
+#include <optional>
 #include "JPlaybackError.hpp"
+#include <string>
 #include "PlayingState.hpp"
 #include "JPlayingState.hpp"
 #include "RepeatMode.hpp"
@@ -139,51 +115,7 @@ namespace margelo::nitro::audiobrowser {
   }
 
   // Properties
-  std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> JHybridAudioBrowserSpec::getOnGetItemRequest() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____::javaobject>()>("getOnGetItemRequest_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> {
-      if (__result->isInstanceOf(JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data______cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::function<void(const GetItemRequest& /* data */)> callback) -> std::shared_ptr<Promise<std::function<void()>>> {
-          return __resultRef->invoke(callback);
-        };
-      }
-    }();
-  }
-  std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> JHybridAudioBrowserSpec::getOnGetChildrenRequest() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____::javaobject>()>("getOnGetChildrenRequest_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> {
-      if (__result->isInstanceOf(JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data______cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::function<void(const GetChildrenRequest& /* data */)> callback) -> std::shared_ptr<Promise<std::function<void()>>> {
-          return __resultRef->invoke(callback);
-        };
-      }
-    }();
-  }
-  std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> JHybridAudioBrowserSpec::getOnGetSearchResultRequest() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____::javaobject>()>("getOnGetSearchResultRequest_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> {
-      if (__result->isInstanceOf(JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data______cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::function<void(const GetSearchResultRequest& /* data */)> callback) -> std::shared_ptr<Promise<std::function<void()>>> {
-          return __resultRef->invoke(callback);
-        };
-      }
-    }();
-  }
+  
 
   // Methods
   std::shared_ptr<Promise<void>> JHybridAudioBrowserSpec::setupPlayer(const PlayerOptions& options) {
@@ -381,38 +313,6 @@ namespace margelo::nitro::audiobrowser {
   }
   void JHybridAudioBrowserSpec::abandonWakeLock() {
     static const auto method = javaClassStatic()->getMethod<void()>("abandonWakeLock");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::resolveGetItemRequest(const std::string& id, const Track& item) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* id */, jni::alias_ref<JTrack> /* item */)>("resolveGetItemRequest");
-    method(_javaPart, jni::make_jstring(id), JTrack::fromCpp(item));
-  }
-  void JHybridAudioBrowserSpec::resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* requestId */, jni::alias_ref<jni::JArrayClass<JTrack>> /* items */, double /* totalChildrenCount */)>("resolveGetChildrenRequest");
-    method(_javaPart, jni::make_jstring(requestId), [&]() {
-      size_t __size = items.size();
-      jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
-      for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = items[__i];
-        __array->setElement(__i, *JTrack::fromCpp(__element));
-      }
-      return __array;
-    }(), totalChildrenCount);
-  }
-  void JHybridAudioBrowserSpec::resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* requestId */, jni::alias_ref<jni::JArrayClass<JTrack>> /* items */, double /* totalMatchesCount */)>("resolveSearchResultRequest");
-    method(_javaPart, jni::make_jstring(requestId), [&]() {
-      size_t __size = items.size();
-      jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
-      for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = items[__i];
-        __array->setElement(__i, *JTrack::fromCpp(__element));
-      }
-      return __array;
-    }(), totalMatchesCount);
-  }
-  void JHybridAudioBrowserSpec::setMediaBrowserReady() {
-    static const auto method = javaClassStatic()->getMethod<void()>("setMediaBrowserReady");
     method(_javaPart);
   }
 

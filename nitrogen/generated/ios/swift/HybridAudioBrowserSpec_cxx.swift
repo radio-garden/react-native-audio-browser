@@ -106,35 +106,7 @@ open class HybridAudioBrowserSpec_cxx {
   }
 
   // Properties
-  public final var onGetItemRequest: bridge.Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____ in
-        let __closureWrapper = Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(self.__implementation.onGetItemRequest)
-        return bridge.create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetItemRequest_____data_____(__closureWrapper.toUnsafe())
-      }()
-    }
-  }
   
-  public final var onGetChildrenRequest: bridge.Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____ in
-        let __closureWrapper = Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(self.__implementation.onGetChildrenRequest)
-        return bridge.create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetChildrenRequest_____data_____(__closureWrapper.toUnsafe())
-      }()
-    }
-  }
-  
-  public final var onGetSearchResultRequest: bridge.Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____ in
-        let __closureWrapper = Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(self.__implementation.onGetSearchResultRequest)
-        return bridge.create_Func_std__shared_ptr_Promise_std__function_void______std__function_void_const_GetSearchResultRequest_____data_____(__closureWrapper.toUnsafe())
-      }()
-    }
-  }
 
   // Methods
   @inline(__always)
@@ -580,50 +552,6 @@ open class HybridAudioBrowserSpec_cxx {
   public final func abandonWakeLock() -> bridge.Result_void_ {
     do {
       try self.__implementation.abandonWakeLock()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func resolveGetItemRequest(id: std.string, item: Track) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.resolveGetItemRequest(id: String(id), item: item)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func resolveGetChildrenRequest(requestId: std.string, items: bridge.std__vector_Track_, totalChildrenCount: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.resolveGetChildrenRequest(requestId: String(requestId), items: items.map({ __item in __item }), totalChildrenCount: totalChildrenCount)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func resolveSearchResultRequest(requestId: std.string, items: bridge.std__vector_Track_, totalMatchesCount: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.resolveSearchResultRequest(requestId: String(requestId), items: items.map({ __item in __item }), totalMatchesCount: totalMatchesCount)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func setMediaBrowserReady() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.setMediaBrowserReady()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

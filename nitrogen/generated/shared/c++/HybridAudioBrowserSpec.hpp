@@ -13,12 +13,6 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `GetItemRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
-// Forward declaration of `GetChildrenRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
-// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `PlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -34,11 +28,7 @@ namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 
-#include <functional>
 #include <NitroModules/Promise.hpp>
-#include "GetItemRequest.hpp"
-#include "GetChildrenRequest.hpp"
-#include "GetSearchResultRequest.hpp"
 #include "PlayerOptions.hpp"
 #include "Track.hpp"
 #include "Progress.hpp"
@@ -48,7 +38,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "PlaybackError.hpp"
 #include <optional>
 #include <vector>
-#include <string>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -77,9 +66,7 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Properties
-      virtual std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetItemRequest& /* data */)>& /* callback */)> getOnGetItemRequest() = 0;
-      virtual std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetChildrenRequest& /* data */)>& /* callback */)> getOnGetChildrenRequest() = 0;
-      virtual std::function<std::shared_ptr<Promise<std::function<void()>>>(const std::function<void(const GetSearchResultRequest& /* data */)>& /* callback */)> getOnGetSearchResultRequest() = 0;
+      
 
     public:
       // Methods
@@ -119,10 +106,6 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<Track> getActiveTrack() = 0;
       virtual void acquireWakeLock() = 0;
       virtual void abandonWakeLock() = 0;
-      virtual void resolveGetItemRequest(const std::string& id, const Track& item) = 0;
-      virtual void resolveGetChildrenRequest(const std::string& requestId, const std::vector<Track>& items, double totalChildrenCount) = 0;
-      virtual void resolveSearchResultRequest(const std::string& requestId, const std::vector<Track>& items, double totalMatchesCount) = 0;
-      virtual void setMediaBrowserReady() = 0;
 
     protected:
       // Hybrid Setup

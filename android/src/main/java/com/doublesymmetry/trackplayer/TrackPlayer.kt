@@ -28,13 +28,10 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import com.doublesymmetry.trackplayer.event.ControllerConnectedEvent
-import com.doublesymmetry.trackplayer.event.ControllerDisconnectedEvent
 import com.doublesymmetry.trackplayer.event.PlaybackActiveTrackChangedEvent
 import com.doublesymmetry.trackplayer.event.PlaybackError
 import com.doublesymmetry.trackplayer.event.PlaybackErrorEvent
 import com.doublesymmetry.trackplayer.event.PlaybackPlayWhenReadyChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackPlayingStateEvent
 import com.doublesymmetry.trackplayer.event.PlaybackProgressUpdatedEvent
 import com.doublesymmetry.trackplayer.event.PlaybackQueueEndedEvent
 import com.doublesymmetry.trackplayer.event.PlaybackRepeatModeChangedEvent
@@ -213,8 +210,8 @@ class TrackPlayer(
     return PlaybackState(playerState, playbackError)
   }
 
-  fun getPlayingState(): PlaybackPlayingStateEvent {
-    return playingState.toEvent()
+  fun getPlayingState(): PlayingState {
+    return playingState
   }
 
   internal fun emitActiveTrackChanged(lastPosition: Double) {
@@ -269,18 +266,18 @@ class TrackPlayer(
   internal fun onControllerConnected(
     controllerData: com.doublesymmetry.trackplayer.event.EventControllerConnection
   ) {
-    val event =
-      ControllerConnectedEvent(
-        `package` = controllerData.packageName,
-        isMediaNotificationController = controllerData.isMediaNotificationController,
-        isAutomotiveController = controllerData.isAutomotiveController,
-        isAutoCompanionController = controllerData.isAutoCompanionController,
-      )
-    callbacks?.onControllerConnected(event)
+//    val event =
+//      ControllerConnectedEvent(
+//        `package` = controllerData.packageName,
+//        isMediaNotificationController = controllerData.isMediaNotificationController,
+//        isAutomotiveController = controllerData.isAutomotiveController,
+//        isAutoCompanionController = controllerData.isAutoCompanionController,
+//      )
+//    callbacks?.onControllerConnected(event)
   }
 
   internal fun onControllerDisconnected(packageName: String) {
-    callbacks?.onControllerDisconnected(ControllerDisconnectedEvent(`package` = packageName))
+//    callbacks?.onControllerDisconnected(ControllerDisconnectedEvent(`package` = packageName))
   }
 
   internal fun onRatingChanged(rating: Any) {

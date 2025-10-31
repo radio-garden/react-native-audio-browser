@@ -25,11 +25,11 @@
 
 // Forward declaration of `State` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class State; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 
 #include "State.hpp"
-#include "PlaybackErrorEvent.hpp"
+#include "PlaybackError.hpp"
 #include <optional>
 
 namespace margelo::nitro::audiobrowser {
@@ -40,11 +40,11 @@ namespace margelo::nitro::audiobrowser {
   struct PlaybackState {
   public:
     State state     SWIFT_PRIVATE;
-    std::optional<PlaybackErrorEvent> error     SWIFT_PRIVATE;
+    std::optional<PlaybackError> error     SWIFT_PRIVATE;
 
   public:
     PlaybackState() = default;
-    explicit PlaybackState(State state, std::optional<PlaybackErrorEvent> error): state(state), error(error) {}
+    explicit PlaybackState(State state, std::optional<PlaybackError> error): state(state), error(error) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -58,13 +58,13 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::PlaybackState(
         JSIConverter<margelo::nitro::audiobrowser::State>::fromJSI(runtime, obj.getProperty(runtime, "state")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackErrorEvent>>::fromJSI(runtime, obj.getProperty(runtime, "error"))
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackError>>::fromJSI(runtime, obj.getProperty(runtime, "error"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PlaybackState& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "state", JSIConverter<margelo::nitro::audiobrowser::State>::toJSI(runtime, arg.state));
-      obj.setProperty(runtime, "error", JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackErrorEvent>>::toJSI(runtime, arg.error));
+      obj.setProperty(runtime, "error", JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackError>>::toJSI(runtime, arg.error));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -76,7 +76,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<margelo::nitro::audiobrowser::State>::canConvert(runtime, obj.getProperty(runtime, "state"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackErrorEvent>>::canConvert(runtime, obj.getProperty(runtime, "error"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackError>>::canConvert(runtime, obj.getProperty(runtime, "error"))) return false;
       return true;
     }
   };

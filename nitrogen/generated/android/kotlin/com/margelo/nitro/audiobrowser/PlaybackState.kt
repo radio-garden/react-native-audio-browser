@@ -26,7 +26,7 @@ data class PlaybackState
     val state: State,
     @DoNotStrip
     @Keep
-    val error: PlaybackErrorEvent?
+    val error: PlaybackError?
   ) {
   /* main constructor */
 }

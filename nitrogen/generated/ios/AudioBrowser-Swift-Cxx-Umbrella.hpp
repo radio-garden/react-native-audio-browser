@@ -14,12 +14,6 @@ namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
 // Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
-// Forward declaration of `GetChildrenRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetChildrenRequest; }
-// Forward declaration of `GetItemRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetItemRequest; }
-// Forward declaration of `GetSearchResultRequest` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct GetSearchResultRequest; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -34,8 +28,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
 // Forward declaration of `PitchAlgorithm` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
@@ -61,9 +53,6 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 #include "AndroidAudioContentType.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidPlayerOptions.hpp"
-#include "GetChildrenRequest.hpp"
-#include "GetItemRequest.hpp"
-#include "GetSearchResultRequest.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
@@ -72,7 +61,6 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 #include "IOSPlayerOptions.hpp"
 #include "PitchAlgorithm.hpp"
 #include "PlaybackError.hpp"
-#include "PlaybackErrorEvent.hpp"
 #include "PlaybackState.hpp"
 #include "PlayerOptions.hpp"
 #include "PlayingState.hpp"
@@ -85,7 +73,6 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
 #include <exception>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
