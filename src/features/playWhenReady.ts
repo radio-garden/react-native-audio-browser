@@ -1,15 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback } from 'react'
 
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-;
-
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 /**
  * Event data for when playWhenReady changes.
  */
 export interface PlaybackPlayWhenReadyChangedEvent {
   /** Whether the player will play when ready */
-  playWhenReady: boolean;
+  playWhenReady: boolean
 }
 
 // MARK: - Getters
@@ -18,7 +16,7 @@ export interface PlaybackPlayWhenReadyChangedEvent {
  * Gets whether the player will play automatically when it is ready to do so.
  */
 export function getPlayWhenReady(): boolean {
-  return TrackPlayer.getPlayWhenReady();
+  return TrackPlayer.getPlayWhenReady()
 }
 
 // MARK: - Setters
@@ -29,7 +27,7 @@ export function getPlayWhenReady(): boolean {
  * or `pause()` when `playWhenReady = false`.
  */
 export function setPlayWhenReady(playWhenReady: boolean): void {
-  TrackPlayer.setPlayWhenReady(playWhenReady);
+  TrackPlayer.setPlayWhenReady(playWhenReady)
 }
 
 // MARK: - Event Callbacks
@@ -40,10 +38,10 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
  * @returns Cleanup function to unsubscribe
  */
 export function onPlayWhenReadyChanged(
-  callback: (event: PlaybackPlayWhenReadyChangedEvent) => void,
+  callback: (event: PlaybackPlayWhenReadyChangedEvent) => void
 ): () => void {
   return TrackPlayer.onPlaybackPlayWhenReadyChanged(callback as () => void)
-    .remove;
+    .remove
 }
 
 // MARK: - Hooks
@@ -56,8 +54,8 @@ export function usePlayWhenReady(): boolean {
   const subscribe = useCallback(
     (callback: (event: PlaybackPlayWhenReadyChangedEvent) => void) =>
       onPlayWhenReadyChanged(callback),
-    [],
-  );
+    []
+  )
 
-  return useUpdatedNativeValue(getPlayWhenReady, subscribe, 'playWhenReady');
+  return useUpdatedNativeValue(getPlayWhenReady, subscribe, 'playWhenReady')
 }

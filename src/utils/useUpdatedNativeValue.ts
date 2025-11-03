@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 
 /**
  * Generic hook for values that are fetched from native and updated via callbacks.
@@ -11,16 +11,16 @@ import { useEffect, useState } from 'react';
 export function useUpdatedNativeValue<T, E = T>(
   getter: () => T,
   subscribe: (callback: (event: E) => void) => () => void,
-  eventKey?: keyof E,
+  eventKey?: keyof E
 ): T {
-  const [value, setValue] = useState(() => getter());
+  const [value, setValue] = useState(() => getter())
 
   useEffect(() => {
     return subscribe((event) => {
-      const newValue = eventKey !== undefined ? event[eventKey] : event;
-      setValue(newValue as T);
-    });
-  }, [subscribe, eventKey]);
+      const newValue = eventKey !== undefined ? event[eventKey] : event
+      setValue(newValue as T)
+    })
+  }, [subscribe, eventKey])
 
-  return value;
+  return value
 }

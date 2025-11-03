@@ -1,8 +1,8 @@
-import { Platform } from 'react-native';
+import { Platform } from 'react-native'
 
-import { AudioBrowser } from '../NativeAudioBrowser';
+import { AudioBrowser } from '../NativeAudioBrowser'
 
-const isAndroid = Platform.OS === 'android';
+const isAndroid = Platform.OS === 'android'
 
 // MARK: - Types
 
@@ -29,7 +29,7 @@ export type AndroidAudioContentType =
   | 'speech'
   | 'sonification'
   | 'movie'
-  | 'unknown';
+  | 'unknown'
 
 /**
  * IOSCategory options:
@@ -57,7 +57,7 @@ export type IOSCategory =
   | 'multiRoute'
   | 'ambient'
   | 'soloAmbient'
-  | 'record';
+  | 'record'
 
 /**
  * IOSCategoryMode options:
@@ -97,7 +97,7 @@ export type IOSCategoryMode =
   | 'videoChat'
   | 'videoRecording'
   | 'voiceChat'
-  | 'voicePrompt';
+  | 'voicePrompt'
 
 /**
  * IOSCategoryOptions options:
@@ -132,7 +132,7 @@ export type IOSCategoryOptions =
   | 'allowBluetooth'
   | 'allowBluetoothA2DP'
   | 'allowAirPlay'
-  | 'defaultToSpeaker';
+  | 'defaultToSpeaker'
 
 /**
  * IOSCategoryPolicy options:
@@ -143,7 +143,7 @@ export type IOSCategoryOptions =
  * - `'longFormVideo'`: See
  *   https://developer.apple.com/documentation/avfoundation/avaudiosession/routesharingpolicy/longformvideo
  */
-export type IOSCategoryPolicy = 'default' | 'longFormAudio' | 'longFormVideo';
+export type IOSCategoryPolicy = 'default' | 'longFormAudio' | 'longFormVideo'
 
 export interface AndroidAudioOffloadSettings {
   /**
@@ -151,14 +151,14 @@ export interface AndroidAudioOffloadSettings {
    * Enables smooth transitions between tracks without silence gaps.
    * @default true
    */
-  gaplessSupportRequired?: boolean;
+  gaplessSupportRequired?: boolean
 
   /**
    * Whether playback rate change support is required for offload.
    * Enables variable playback speeds (0.5x, 1.25x, 2x, etc.) during offload.
    * @default true
    */
-  rateChangeSupportRequired?: boolean;
+  rateChangeSupportRequired?: boolean
 }
 
 export interface AndroidPlayerOptions {
@@ -177,7 +177,7 @@ export interface AndroidPlayerOptions {
    *
    * @see https://developer.android.com/media/media3/exoplayer/track-selection#audioOffload
    */
-  audioOffload: boolean | AndroidAudioOffloadSettings;
+  audioOffload: boolean | AndroidAudioOffloadSettings
 
   /**
    * Maximum duration of media that the player will attempt to buffer in seconds.
@@ -186,7 +186,7 @@ export interface AndroidPlayerOptions {
    * @throws Will throw if max buffer is lower than min buffer.
    * @default 50
    */
-  maxBuffer: number;
+  maxBuffer: number
 
   /**
    * Duration in seconds that should be kept in the buffer behind the current
@@ -194,7 +194,7 @@ export interface AndroidPlayerOptions {
    *
    * @default 0
    */
-  backBuffer: number;
+  backBuffer: number
 
   /**
    * Duration of media in seconds that must be buffered for playback to start or
@@ -202,7 +202,7 @@ export interface AndroidPlayerOptions {
    *
    * @default 2.5
    */
-  playBuffer: number;
+  playBuffer: number
 
   /**
    * Duration of media in seconds that must be buffered for playback to resume
@@ -213,14 +213,14 @@ export interface AndroidPlayerOptions {
    *
    * @default playBuffer * 1.6
    */
-  rebufferBuffer: number;
+  rebufferBuffer: number
 
   /**
    * Maximum cache size in kilobytes.
    *
    * @default 0
    */
-  maxCacheSize: number;
+  maxCacheSize: number
 
   /**
    * The audio content type indicates to the android system how
@@ -232,7 +232,7 @@ export interface AndroidPlayerOptions {
    *
    * @default AndroidAudioContentType.Music
    */
-  audioContentType: AndroidAudioContentType;
+  audioContentType: AndroidAudioContentType
 
   /**
    * Whether the player should automatically pause when audio becomes noisy
@@ -240,7 +240,7 @@ export interface AndroidPlayerOptions {
    *
    * @default true
    */
-  handleAudioBecomingNoisy: boolean;
+  handleAudioBecomingNoisy: boolean
 }
 
 export interface IOSPlayerOptions {
@@ -248,7 +248,7 @@ export interface IOSPlayerOptions {
    * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
    * for iOS. Sets on `play()`.
    */
-  category?: IOSCategory;
+  category?: IOSCategory
 
   /**
    * The audio session mode, together with the audio session category,
@@ -259,19 +259,19 @@ export interface IOSPlayerOptions {
    *
    * See https://developer.apple.com/documentation/avfoundation/avaudiosession/1616508-mode
    */
-  categoryMode?: IOSCategoryMode;
+  categoryMode?: IOSCategoryMode
 
   /**
    * [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616503-categoryoptions) for iOS.
    * Sets on `play()`.
    */
-  categoryOptions?: IOSCategoryOptions[];
+  categoryOptions?: IOSCategoryOptions[]
 
   /**
    * [AVAudioSession.RouteSharingPolicy](https://developer.apple.com/documentation/AVFAudio/AVAudioSession/RouteSharingPolicy-swift.enum) for iOS.
    * Sets on `play()`.
    */
-  categoryPolicy?: IOSCategoryPolicy;
+  categoryPolicy?: IOSCategoryPolicy
 }
 
 export interface PlayerOptions {
@@ -283,17 +283,17 @@ export interface PlayerOptions {
    * @throws Will throw on Android if min buffer is higher than max buffer.
    * @default 50
    */
-  minBuffer?: number;
+  minBuffer?: number
 
   /** Android-specific configuration options for setup */
-  android?: AndroidPlayerOptions;
+  android?: AndroidPlayerOptions
   /** iOS-specific configuration options for setup */
-  ios?: IOSPlayerOptions;
+  ios?: IOSPlayerOptions
   /**
    * Indicates whether the player should automatically update now playing metadata data in control center / notification.
    * Defaults to `true`.
    */
-  autoUpdateMetadata?: boolean;
+  autoUpdateMetadata?: boolean
 }
 
 // MARK: - Lifecycle
@@ -304,7 +304,7 @@ export interface PlayerOptions {
  * @see https://rntp.dev/docs/api/functions/lifecycle
  */
 export async function setupPlayer(options: PlayerOptions = {}): Promise<void> {
-  return AudioBrowser.setupPlayer(options);
+  return AudioBrowser.setupPlayer(options)
 }
 
 // MARK: - Android-specific
@@ -313,14 +313,14 @@ export async function setupPlayer(options: PlayerOptions = {}): Promise<void> {
  * Acquires the wake lock of MusicService (Android only).
  */
 export function acquireWakeLock() {
-  if (!isAndroid) return;
-  AudioBrowser.acquireWakeLock();
+  if (!isAndroid) return
+  AudioBrowser.acquireWakeLock()
 }
 
 /**
  * Abandons the wake lock of MusicService (Android only).
  */
 export function abandonWakeLock() {
-  if (!isAndroid) return;
-  AudioBrowser.abandonWakeLock();
+  if (!isAndroid) return
+  AudioBrowser.abandonWakeLock()
 }

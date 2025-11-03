@@ -1,7 +1,7 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-import type { RatingType } from './metadata';
-import type { RepeatMode } from './repeatMode';
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import type { RatingType } from './metadata'
+import type { RepeatMode } from './repeatMode'
 
 // MARK: - Types
 

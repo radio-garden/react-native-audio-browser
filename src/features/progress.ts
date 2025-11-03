@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-import { onPlaybackState } from './playbackState';
-;
-
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { onPlaybackState } from './playbackState'
 // MARK: - Types
 
 export interface Progress {
@@ -12,15 +10,15 @@ export interface Progress {
    * The playback position of the current track in seconds.
    * See https://rntp.dev/docs/api/functions/player#getposition
    **/
-  position: number;
+  position: number
   /** The duration of the current track in seconds.
    * See https://rntp.dev/docs/api/functions/player#getduration
    **/
-  duration: number;
+  duration: number
   /**
    * The buffered position of the current track in seconds.
    **/
-  buffered: number;
+  buffered: number
 }
 
 /**
@@ -28,7 +26,7 @@ export interface Progress {
  */
 export interface PlaybackProgressUpdatedEvent extends Progress {
   /** The current track index */
-  track: number;
+  track: number
 }
 
 // MARK: - Getters
@@ -39,7 +37,7 @@ export interface PlaybackProgressUpdatedEvent extends Progress {
  * duration in seconds.
  */
 export function getProgress(): Progress {
-  return TrackPlayer.getProgress() as Progress;
+  return TrackPlayer.getProgress() as Progress
 }
 
 // MARK: - Event Callbacks
@@ -50,9 +48,9 @@ export function getProgress(): Progress {
  * @returns Cleanup function to unsubscribe
  */
 export function onProgressUpdated(
-  callback: (event: PlaybackProgressUpdatedEvent) => void,
+  callback: (event: PlaybackProgressUpdatedEvent) => void
 ): () => void {
-  return TrackPlayer.onPlaybackProgressUpdated(callback as () => void).remove;
+  return TrackPlayer.onPlaybackProgressUpdated(callback as () => void).remove
 }
 
 // MARK: - Hooks
@@ -64,7 +62,7 @@ export function onProgressUpdated(
  * @returns The current playback progress
  */
 export function useProgress(): Progress {
-  return useUpdatedNativeValue(getProgress, onProgressUpdated);
+  return useUpdatedNativeValue(getProgress, onProgressUpdated)
 }
 
 /**
@@ -80,46 +78,46 @@ export function usePolledProgress(updateInterval = 1000): Progress {
     position: 0,
     duration: 0,
     buffered: 0,
-  });
+  })
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
 
     const update = () => {
       try {
-        const { position, duration, buffered } = getProgress();
-        if (!mounted) return;
+        const { position, duration, buffered } = getProgress()
+        if (!mounted) return
 
         setState((currentState) =>
           position === currentState.position &&
           duration === currentState.duration &&
           buffered === currentState.buffered
             ? currentState
-            : { position, duration, buffered },
-        );
+            : { position, duration, buffered }
+        )
       } catch {
         // Ignore failures (e.g., before setup)
       }
-    };
+    }
 
     // Update immediately on playback state changes
-    const unsubscribeState = onPlaybackState(update);
+    const unsubscribeState = onPlaybackState(update)
 
     const poll = () => {
-      update();
-      if (!mounted) return;
+      update()
+      if (!mounted) return
       setTimeout(() => {
-        if (mounted) poll();
-      }, updateInterval);
-    };
+        if (mounted) poll()
+      }, updateInterval)
+    }
 
-    poll();
+    poll()
 
     return () => {
-      mounted = false;
-      unsubscribeState();
-    };
-  }, [updateInterval]);
+      mounted = false
+      unsubscribeState()
+    }
+  }, [updateInterval])
 
-  return state;
+  return state
 }

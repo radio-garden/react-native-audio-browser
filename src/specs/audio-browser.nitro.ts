@@ -1,4 +1,4 @@
-import { type HybridObject } from 'react-native-nitro-modules';
+import { type HybridObject } from 'react-native-nitro-modules'
 import type {
   PlaybackError,
   PlaybackState,
@@ -7,7 +7,7 @@ import type {
   Progress,
   RepeatMode,
   Track,
-} from '../features';
+} from '../features'
 
 type EmitterCallback<T> = (data: T) => void
 type EventEmitter<T> = (callback: EmitterCallback<T>) => () => void

@@ -1,16 +1,15 @@
-
-import { AudioBrowser } from '../NativeAudioBrowser';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-import type { Track } from './queue';
+import { AudioBrowser } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import type { Track } from './queue'
 
 /**
  * Event data for the active track.
  */
 export interface PlaybackActiveTrackEvent {
   /** The active track index or undefined if there is no active track. */
-  index?: number;
+  index?: number
   /** The active track or undefined if there is no active track. */
-  track?: Track;
+  track?: Track
 }
 
 /**
@@ -18,15 +17,15 @@ export interface PlaybackActiveTrackEvent {
  */
 export interface PlaybackActiveTrackChangedEvent {
   /** The index of previously active track. */
-  lastIndex?: number;
+  lastIndex?: number
   /** The previously active track or undefined when there wasn't a previously active track. */
-  lastTrack?: Track;
+  lastTrack?: Track
   /** The position of the previously active track in seconds. */
-  lastPosition: number;
+  lastPosition: number
   /** The newly active track index or undefined if there is no longer an active track. */
-  index?: number;
+  index?: number
   /** The newly active track or undefined if there is no longer an active track. */
-  track?: Track;
+  track?: Track
 }
 
 // MARK: - Getters
@@ -35,7 +34,7 @@ export interface PlaybackActiveTrackChangedEvent {
  * Gets the active track or undefined if there is no current track.
  */
 export function getActiveTrack(): Track | undefined {
-  return AudioBrowser.getActiveTrack() ?? undefined;
+  return AudioBrowser.getActiveTrack() ?? undefined
 }
 
 /**
@@ -43,7 +42,7 @@ export function getActiveTrack(): Track | undefined {
  * current track.
  */
 export function getActiveTrackIndex(): number | undefined {
-  return AudioBrowser.getActiveTrackIndex() ?? undefined;
+  return AudioBrowser.getActiveTrackIndex() ?? undefined
 }
 
 // MARK: - Event Callbacks
@@ -65,12 +64,12 @@ export function getActiveTrackIndex(): number | undefined {
  * @returns Cleanup function to unsubscribe
  */
 export function onActiveTrackChanged(
-  callback: (event: PlaybackActiveTrackChangedEvent) => void,
+  callback: (event: PlaybackActiveTrackChangedEvent) => void
 ): () => void {
   // TODO: Implement event subscription when AudioBrowser events are available
   // return AudioBrowser.onPlaybackActiveTrackChanged(callback);
-  console.warn('onActiveTrackChanged: Event subscription not yet implemented');
-  return () => {}; // Return empty cleanup function for now
+  console.warn('onActiveTrackChanged: Event subscription not yet implemented')
+  return () => {} // Return empty cleanup function for now
 }
 
 // MARK: - Hooks
@@ -80,5 +79,5 @@ export function onActiveTrackChanged(
  * @returns The current active track or undefined
  */
 export function useActiveTrack(): Track | undefined {
-  return useUpdatedNativeValue(getActiveTrack, onActiveTrackChanged, 'track');
+  return useUpdatedNativeValue(getActiveTrack, onActiveTrackChanged, 'track')
 }

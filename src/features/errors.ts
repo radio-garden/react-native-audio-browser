@@ -1,17 +1,15 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-;
-
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 export type PlaybackError = {
-  code: string;
-  message: string;
-};
+  code: string
+  message: string
+}
 
 /**
  * Emitted when a playback error occurs.
  */
 export interface PlaybackErrorEvent {
-  error?: PlaybackError;
+  error?: PlaybackError
 }
 
 // MARK: - Getters
@@ -21,9 +19,9 @@ export interface PlaybackErrorEvent {
  * @returns The current error or undefined if there is no error
  */
 export function getPlaybackError(): PlaybackError | undefined {
-  const error = TrackPlayer.getPlaybackError();
-  if (!error) return undefined;
-  return error as PlaybackError;
+  const error = TrackPlayer.getPlaybackError()
+  if (!error) return undefined
+  return error as PlaybackError
 }
 
 // MARK: - Event Callbacks
@@ -34,9 +32,9 @@ export function getPlaybackError(): PlaybackError | undefined {
  * @returns Cleanup function to unsubscribe
  */
 export function onPlaybackError(
-  callback: (event: PlaybackErrorEvent) => void,
+  callback: (event: PlaybackErrorEvent) => void
 ): () => void {
-  return TrackPlayer.onPlaybackError(callback as () => void).remove;
+  return TrackPlayer.onPlaybackError(callback as () => void).remove
 }
 
 // MARK: - Hooks
@@ -46,5 +44,5 @@ export function onPlaybackError(
  * @returns The current playback error or undefined
  */
 export function usePlaybackError(): PlaybackError | undefined {
-  return useUpdatedNativeValue(getPlaybackError, onPlaybackError, 'error');
+  return useUpdatedNativeValue(getPlaybackError, onPlaybackError, 'error')
 }

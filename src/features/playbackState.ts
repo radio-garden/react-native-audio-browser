@@ -1,6 +1,6 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser';
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue';
-import type { PlaybackError } from './errors';
+import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import type { PlaybackError } from './errors'
 
 // MARK: - Types
 
