@@ -19,6 +19,7 @@ import androidx.media3.session.SessionResult
 import androidx.media3.session.legacy.RatingCompat
 import android.os.Bundle
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Metadata
 import androidx.media3.common.Rating
 import androidx.media3.session.MediaLibraryService
 import com.google.common.collect.ImmutableList
@@ -43,12 +44,14 @@ import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toMillisecon
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
 import com.doublesymmetry.trackplayer.model.AppKilledPlaybackBehavior
 import com.doublesymmetry.trackplayer.model.AudioOffloadOptions
+import com.doublesymmetry.trackplayer.model.CommonMetadata
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
 import com.doublesymmetry.trackplayer.model.PlaybackState
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.doublesymmetry.trackplayer.model.RatingType
 import com.doublesymmetry.trackplayer.model.State
+import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.doublesymmetry.trackplayer.model.Track
 import com.doublesymmetry.trackplayer.option.PlayerRepeatMode
 import com.doublesymmetry.trackplayer.player.MediaFactory
@@ -118,58 +121,74 @@ class TrackPlayer(
 
     // Intercept playback controls and dispatch to callbacks or fall back to default behavior
     override fun play() {
-      callbacks?.onRemotePlay() ?: super.play()
+      if (callbacks?.handleRemotePlay() != true) {
+        super.play()
+      }
     }
 
     override fun pause() {
-      callbacks?.onRemotePause() ?: super.pause()
+      if (callbacks?.handleRemotePause() != true) {
+        super.pause()
+      }
     }
 
     override fun seekToNext() {
       Timber.d("InterceptingPlayer.seekToNext() called")
-      callbacks?.onRemoteNext() ?: super.seekToNext()
+      if (callbacks?.handleRemoteNext() != true) {
+        super.seekToNext()
+      }
     }
 
     override fun seekToNextMediaItem() {
       Timber.d("InterceptingPlayer.seekToNextMediaItem() called")
-      callbacks?.onRemoteNext() ?: super.seekToNextMediaItem()
+      if (callbacks?.handleRemoteNext() != true) {
+        super.seekToNextMediaItem()
+      }
     }
 
     override fun seekToPrevious() {
       Timber.d("InterceptingPlayer.seekToPrevious() called")
-      callbacks?.onRemotePrevious() ?: super.seekToPrevious()
+      if (callbacks?.handleRemotePrevious() != true) {
+        super.seekToPrevious()
+      }
     }
 
     override fun seekToPreviousMediaItem() {
       Timber.d("InterceptingPlayer.seekToPreviousMediaItem() called")
-      callbacks?.onRemotePrevious() ?: super.seekToPreviousMediaItem()
+      if (callbacks?.handleRemotePrevious() != true) {
+        super.seekToPreviousMediaItem()
+      }
     }
 
     override fun seekForward() {
       Timber.d("InterceptingPlayer.seekForward() called")
-      callbacks?.let {
-        it.onRemoteJumpForward(RemoteJumpForwardEvent(interval = options.forwardJumpInterval))
-      } ?: super.seekForward()
+      if (callbacks?.handleRemoteJumpForward(RemoteJumpForwardEvent(interval = options.forwardJumpInterval)) != true) {
+        super.seekForward()
+      }
     }
 
     override fun seekBack() {
-      callbacks?.let {
-        it.onRemoteJumpBackward(RemoteJumpBackwardEvent(interval = options.backwardJumpInterval))
-      } ?: super.seekBack()
+      if (callbacks?.handleRemoteJumpBackward(RemoteJumpBackwardEvent(interval = options.backwardJumpInterval)) != true) {
+        super.seekBack()
+      }
     }
 
     override fun stop() {
-      callbacks?.onRemoteStop() ?: super.stop()
+      if (callbacks?.handleRemoteStop() != true) {
+        super.stop()
+      }
     }
 
     override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
-      callbacks?.let { it.onRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) }
-        ?: super.seekTo(mediaItemIndex, positionMs)
+      if (callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) != true) {
+        super.seekTo(mediaItemIndex, positionMs)
+      }
     }
 
     override fun seekTo(positionMs: Long) {
-      callbacks?.let { it.onRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) }
-        ?: super.seekTo(positionMs)
+      if (callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) != true) {
+        super.seekTo(positionMs)
+      }
     }
   }
 
@@ -230,9 +249,9 @@ class TrackPlayer(
     lastIndex = currentIndex
   }
 
-  internal fun onTimedMetadata(metadata: androidx.media3.common.Metadata) {
-    callbacks?.onMetadataTimedReceived(metadata)
-
+  internal fun onTimedMetadata(metadata: Metadata) {
+//    callbacks?.onMetadataTimedReceived(metadata)
+//
     // Parse playback metadata from different formats
     val playbackMetadata =
       PlaybackMetadata.Companion.fromId3Metadata(metadata)
@@ -240,13 +259,13 @@ class TrackPlayer(
         ?: PlaybackMetadata.Companion.fromVorbisComment(metadata)
         ?: PlaybackMetadata.Companion.fromQuickTime(metadata)
 
-    callbacks?.onPlaybackMetadata(playbackMetadata)
+    playbackMetadata?.let {
+      callbacks?.onPlaybackMetadata(it)
+    }
   }
 
-  internal fun onCommonMetadata(mediaMetadata: androidx.media3.common.MediaMetadata) {
-    val metadata = MetadataAdapter.Companion.mapFromMediaMetadata(mediaMetadata)
-    // Safe cast: Arguments.createMap() returns WritableMap which extends ReadableMap
-    (metadata as? WritableMap)?.let { callbacks?.onMetadataCommonReceived(it) }
+  internal fun onCommonMetadata(mediaMetadata: MediaMetadata) {
+      callbacks?.onMetadataCommonReceived(MetadataAdapter.audioMetadataFromMediaMetadata(mediaMetadata))
   }
 
   internal fun onPlayWhenReadyChanged(playWhenReady: Boolean, pausedBecauseReachedEnd: Boolean) {
@@ -284,7 +303,7 @@ class TrackPlayer(
     if (rating is androidx.media3.common.Rating) {
       RatingType.fromString(rating.toString())?.let { ratingType ->
         val event = RemoteSetRatingEvent(rating = ratingType)
-        callbacks?.onRemoteSetRating(event)
+        callbacks?.handleRemoteSetRating(event)
       } ?: Timber.w("Failed to convert rating: $rating")
     }
   }

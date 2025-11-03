@@ -1,4 +1,5 @@
 import { AudioBrowser } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
 // MARK: - Types
@@ -41,11 +42,9 @@ export interface RepeatModeChangedEvent {
  * @param callback - Called when repeat mode changes
  * @returns Cleanup function to unsubscribe
  */
-export function onRepeatModeChanged(
-  callback: (event: RepeatModeChangedEvent) => void
-): () => void {
-  return AudioBrowser.onPlaybackRepeatModeChanged(callback as () => void).remove
-}
+export const onRepeatModeChanged = LazyEmitter.emitterize(
+  AudioBrowser.onPlaybackRepeatModeChanged
+)
 
 // MARK: - Hooks
 

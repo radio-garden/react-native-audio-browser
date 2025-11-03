@@ -3,6 +3,7 @@ package com.doublesymmetry.trackplayer.event
 import com.doublesymmetry.trackplayer.model.Track
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent as NitroPlaybackActiveTrackChangedEvent
 
 /** Event data for when the active track changes. */
 data class PlaybackActiveTrackChangedEvent(
@@ -25,5 +26,15 @@ data class PlaybackActiveTrackChangedEvent(
       index?.let { putInt("index", it) }
       track?.let { putMap("track", it.toBridge()) }
     }
+  }
+
+  fun toNitro(): NitroPlaybackActiveTrackChangedEvent {
+    return NitroPlaybackActiveTrackChangedEvent(
+      lastIndex = lastIndex?.toDouble(),
+      lastTrack = lastTrack?.toNitro(),
+      lastPosition = lastPosition,
+      index = index?.toDouble(),
+      track = track?.toNitro()
+    )
   }
 }

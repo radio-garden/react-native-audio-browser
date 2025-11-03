@@ -1,4 +1,5 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { RatingType } from './metadata'
 import type { RepeatMode } from './repeatMode'
@@ -53,10 +54,10 @@ export type AppKilledPlaybackBehavior =
  */
 export interface Options {
   /** Android-specific configuration options with resolved defaults (only present on Android) */
-  android?: AndroidUpdateOptions
+  android?: AndroidOptions
 
   /** iOS-specific configuration options with resolved defaults (only present on iOS) */
-  ios?: IOSUpdateOptions
+  ios?: IOSOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
@@ -98,7 +99,7 @@ export interface FeedbackOptions {
   title: string
 }
 
-export interface AndroidUpdateOptions {
+export interface AndroidOptions {
   /**
    * Whether the audio playback notification is also removed when the playback
    * stops. **If `stoppingAppPausesPlayback` is set to false, this will be
@@ -141,7 +142,73 @@ export interface AndroidUpdateOptions {
   notificationCapabilities: Capability[] | null
 }
 
+export interface AndroidUpdateOptions {
+  /**
+   * Whether the audio playback notification is also removed when the playback
+   * stops. **If `stoppingAppPausesPlayback` is set to false, this will be
+   * ignored.**
+   */
+  appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
+
+  /**
+   * Whether to automatically skip silent audio segments during playback.
+   * When enabled, the player will detect and skip over periods of silence.
+   *
+   * @default false
+   */
+  skipSilence?: boolean
+
+  /**
+   * Whether shuffle mode is enabled for queue playback.
+   * When enabled, tracks will be played in random order.
+   *
+   * @default false
+   */
+  shuffle?: boolean
+
+  /**
+   * The rating type to use for ratings.
+   * Determines how star ratings and thumbs up/down are handled.
+   */
+  ratingType?: RatingType
+
+  /**
+   * Android-specific capabilities that control which buttons appear in
+   * notifications only. This does NOT affect other controllers like
+   * Bluetooth, Android Auto, or lock screen.
+   *
+   * When null, defaults to the global capabilities.
+   * Use an empty array to show no notification buttons.
+   *
+   * @platform android
+   */
+  notificationCapabilities?: Capability[] | null
+}
+
 export interface IOSUpdateOptions {
+  /**
+   * Configuration for the like/heart button in iOS control center.
+   * Only available on iOS.
+   * @default { isActive: false, title: "Like" }
+   */
+  likeOptions?: FeedbackOptions
+
+  /**
+   * Configuration for the dislike button in iOS control center.
+   * Only available on iOS.
+   * @default { isActive: false, title: "Dislike" }
+   */
+  dislikeOptions?: FeedbackOptions
+
+  /**
+   * Configuration for the bookmark button in iOS control center.
+   * Only available on iOS.
+   * @default { isActive: false, title: "Bookmark" }
+   */
+  bookmarkOptions?: FeedbackOptions
+}
+
+export interface IOSOptions {
   /**
    * Configuration for the like/heart button in iOS control center.
    * Only available on iOS.
@@ -194,10 +261,10 @@ export interface IOSUpdateOptions {
  */
 export interface UpdateOptions {
   /** Android-specific configuration options */
-  android?: Partial<AndroidUpdateOptions>
+  android?: AndroidUpdateOptions
 
   /** iOS-specific configuration options */
-  ios?: Partial<IOSUpdateOptions>
+  ios?: IOSUpdateOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
@@ -270,11 +337,9 @@ export function getOptions(): Options {
  * @param callback - Called when the player options change
  * @returns Cleanup function to unsubscribe
  */
-export function onOptionsChanged(
-  callback: (options: Options) => void
-): () => void {
-  return TrackPlayer.onOptionsChanged(callback as () => void).remove
-}
+export const onOptionsChanged = LazyEmitter.emitterize<Options>(
+  (cb) => (TrackPlayer.onOptionsChanged = cb)
+)
 
 // MARK: - Hooks
 

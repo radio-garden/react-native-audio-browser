@@ -6,6 +6,11 @@ import com.doublesymmetry.trackplayer.model.AppKilledPlaybackBehavior
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.UpdateOptions
+import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
+import com.margelo.nitro.audiobrowser.Capability as NitroCapability
+import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
+import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior as NitroAppKilledPlaybackBehavior
 
 /**
  * Update options for the TrackPlayer that can be changed at runtime. These options control player
@@ -34,106 +39,85 @@ data class PlayerUpdateOptions(
   var skipSilence: Boolean = false,
   var shuffle: Boolean = false,
 ) {
+  fun updateFromNitro(options: UpdateOptions) {
+    // Update jump intervals
+    options.forwardJumpInterval?.let { forwardJumpInterval = it }
+    options.backwardJumpInterval?.let { backwardJumpInterval = it }
+    options.progressUpdateEventInterval?.let { progressUpdateEventInterval = it }
 
-  fun updateFromBridge(map: ReadableMap?) {
-    if (map == null) return
+    // Update capabilities
+    options.capabilities?.let { nitroCaps ->
+      capabilities = nitroCaps.map { PlayerCapability.fromNitro(it) }
+    }
 
-    if (map.hasKey("forwardJumpInterval")) {
-      forwardJumpInterval = map.getDouble("forwardJumpInterval")
-    }
-    if (map.hasKey("backwardJumpInterval")) {
-      backwardJumpInterval = map.getDouble("backwardJumpInterval")
-    }
-    if (map.hasKey("progressUpdateEventInterval")) {
-      progressUpdateEventInterval =
-        if (map.isNull("progressUpdateEventInterval")) {
-          null
-        } else {
-          map.getDouble("progressUpdateEventInterval")
+    // Update Android-specific options
+    options.android?.let { androidOptions ->
+      // Convert rating type
+      ratingType = when (androidOptions.ratingType) {
+        NitroRatingType.HEART -> RatingType.HEART
+        NitroRatingType.THUMBS_UP_DOWN -> RatingType.THUMBS_UP_DOWN
+        NitroRatingType._3_STARS -> RatingType.THREE_STARS
+        NitroRatingType._4_STARS -> RatingType.FOUR_STARS
+        NitroRatingType._5_STARS -> RatingType.FIVE_STARS
+        NitroRatingType.PERCENTAGE -> RatingType.PERCENTAGE
+          null -> null
+      }
+
+      // Convert app killed playback behavior
+      androidOptions.appKilledPlaybackBehavior?.let {
+        appKilledPlaybackBehavior = when (it) {
+          NitroAppKilledPlaybackBehavior.CONTINUE_PLAYBACK -> AppKilledPlaybackBehavior.CONTINUE_PLAYBACK
+          NitroAppKilledPlaybackBehavior.PAUSE_PLAYBACK -> AppKilledPlaybackBehavior.PAUSE_PLAYBACK
+          NitroAppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION
         }
-    }
+      }
 
-    map.getArray("capabilities")?.let { arr ->
-      capabilities =
-        (0 until arr.size()).mapNotNull { index ->
-          val value = arr.getString(index) ?: return@mapNotNull null
-          PlayerCapability.fromString(value)
-            ?: throw IllegalArgumentException("Invalid capability value: $value")
-        }
-    }
+      // Update boolean options
+      skipSilence = androidOptions.skipSilence ?: skipSilence
+      shuffle = androidOptions.shuffle ?: shuffle
 
-    // Android-specific runtime options (all under android.*)
-    val androidMap = if (map.hasKey("android")) map.getMap("android") else null
-    androidMap?.let { android ->
-      if (android.hasKey("ratingType")) {
-        ratingType = android.getString("ratingType")?.let { RatingType.fromString(it) }
-      }
-      if (android.hasKey("appKilledPlaybackBehavior")) {
-        appKilledPlaybackBehavior = android.getString("appKilledPlaybackBehavior")?.let {
-          AppKilledPlaybackBehavior.values().find { enum -> enum.string == it }
-        } ?: AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION
-      }
-      if (android.hasKey("skipSilence")) {
-        skipSilence = android.getBoolean("skipSilence")
-      }
-      if (android.hasKey("shuffle")) {
-        shuffle = android.getBoolean("shuffle")
-      }
-      if (android.hasKey("notificationCapabilities")) {
-        notificationCapabilities =
-          if (android.isNull("notificationCapabilities")) {
-            null // Explicitly set to null - reset to default behavior
-          } else {
-            android.getArray("notificationCapabilities")?.let { arr ->
-              (0 until arr.size()).mapNotNull { index ->
-                val value = arr.getString(index) ?: return@mapNotNull null
-                PlayerCapability.fromString(value)
-                  ?: throw IllegalArgumentException("Invalid notificationCapability value: $value")
-              }
-            }
-          }
-      }
+      // Convert notification capabilities
+      notificationCapabilities = androidOptions.notificationCapabilities?.map { PlayerCapability.fromNitro(it) }
     }
   }
 
-  fun toBridge(): WritableMap {
-    val result = Arguments.createMap()
+  fun toNitro(): UpdateOptions {
+    // Convert capabilities
+    val nitroCapabilities = capabilities.map { it.toNitro() }.toTypedArray()
 
-    // Add jump intervals (always include these core values)
-    result.putDouble("forwardJumpInterval", forwardJumpInterval)
-    result.putDouble("backwardJumpInterval", backwardJumpInterval)
+    // Convert notification capabilities
+    val nitroNotificationCapabilities = notificationCapabilities?.map { it.toNitro() }?.toTypedArray()
 
-    // Add progress update interval (always include, null means disabled)
-    val interval = progressUpdateEventInterval
-    if (interval != null) {
-      result.putDouble("progressUpdateEventInterval", interval)
-    } else {
-      result.putNull("progressUpdateEventInterval")
-    }
+    // Create Android options
+    val androidOptions = AndroidUpdateOptions(
+      appKilledPlaybackBehavior = when (appKilledPlaybackBehavior) {
+        AppKilledPlaybackBehavior.CONTINUE_PLAYBACK -> NitroAppKilledPlaybackBehavior.CONTINUE_PLAYBACK
+        AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> NitroAppKilledPlaybackBehavior.PAUSE_PLAYBACK
+        AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> NitroAppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION
+      },
+      skipSilence = skipSilence,
+      shuffle = shuffle,
+      ratingType = ratingType?.let { rating ->
+        when (rating) {
+          RatingType.HEART -> NitroRatingType.HEART
+          RatingType.THUMBS_UP_DOWN -> NitroRatingType.THUMBS_UP_DOWN
+          RatingType.THREE_STARS -> NitroRatingType._3_STARS
+          RatingType.FOUR_STARS -> NitroRatingType._4_STARS
+          RatingType.FIVE_STARS -> NitroRatingType._5_STARS
+          RatingType.PERCENTAGE -> NitroRatingType.PERCENTAGE
+        }
+      },
+      notificationCapabilities = nitroNotificationCapabilities
+    )
 
-    // Add capabilities (always include, even if empty)
-    val capabilitiesArray = Arguments.createArray()
-    capabilities.forEach { cap -> capabilitiesArray.pushString(cap.string) }
-    result.putArray("capabilities", capabilitiesArray)
-
-    // Add Android-specific options (always included since appKilledPlaybackBehavior is always present)
-    val androidOptions = Arguments.createMap()
-
-    ratingType?.let { androidOptions.putString("ratingType", it.string) }
-    androidOptions.putString("appKilledPlaybackBehavior", appKilledPlaybackBehavior.string)
-    androidOptions.putBoolean("skipSilence", skipSilence)
-    androidOptions.putBoolean("shuffle", shuffle)
-
-    // Add notification capabilities under android namespace if set
-    notificationCapabilities?.let { caps ->
-      val notificationCapsArray = Arguments.createArray()
-      caps.forEach { cap -> notificationCapsArray.pushString(cap.string) }
-      androidOptions.putArray("notificationCapabilities", notificationCapsArray)
-    }
-
-    result.putMap("android", androidOptions)
-
-    return result
+    return UpdateOptions(
+      android = androidOptions,
+      ios = null, // iOS options not handled in this class
+      forwardJumpInterval = forwardJumpInterval,
+      backwardJumpInterval = backwardJumpInterval,
+      progressUpdateEventInterval = progressUpdateEventInterval,
+      capabilities = nitroCapabilities
+    )
   }
 
 }

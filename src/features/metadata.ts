@@ -1,4 +1,5 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import resolveAssetSource from '../utils/resolveAssetSource'
 
 // MARK: - Types
@@ -43,66 +44,21 @@ export interface NowPlayingMetadata extends TrackMetadataBase {
   elapsedTime?: number
 }
 
-/**
- * Standardized common metadata field names that raw metadata keys can map to.
- */
-export enum CommonMetadataKey {
-  Title = 'title',
-  Artist = 'artist',
-  AlbumName = 'albumName',
-  Genre = 'genre',
-  CreationDate = 'creationDate',
-}
-
-/**
- * Metadata key spaces (namespaces) that identify the format or source of metadata.
- */
-export enum MetadataKeySpace {
-  /** ID3 metadata (MP3 files) */
-  ID3 = 'org.id3',
-  /** ICY metadata (streaming audio) */
-  ICY = 'icy',
-  /** Vorbis comments (OGG/FLAC files) */
-  Vorbis = 'org.vorbis',
-  /** QuickTime/MP4/M4A metadata */
-  QuickTime = 'com.apple.quicktime',
-}
-
-/**
- * Represents a raw metadata entry from timed or chapter metadata events.
- * Only available in AudioMetadata, not in AudioCommonMetadata.
- */
-export interface RawEntry {
-  /**
-   * The common key that maps to standardized metadata fields.
-   * Might be undefined if the key doesn't map to a common field.
-   */
-  commonKey?: CommonMetadataKey
-  /**
-   * The key space/namespace for the metadata that identifies the format or source.
-   * Might be undefined for some metadata formats.
-   */
-  keySpace?: MetadataKeySpace
-  /**
-   * The time position for timed metadata entries in seconds.
-   * Might be undefined for non-timed metadata.
-   */
-  time?: number
-  // /**
-  //  * The metadata value. Can be string, number, boolean, or other types depending on the metadata.
-  //  */
-  // value?: unknown;
-  /**
-   * The metadata key identifier (e.g., "TIT2", "StreamTitle", "TITLE").
-   */
-  key: string
+export interface PlaybackMetadata {
+  source: string
+  title?: string
+  url?: string
+  artist?: string
+  album?: string
+  date?: string
+  genre?: string
 }
 
 /**
  * An object representing the common metadata received for a track.
  * This is used for common metadata events which do not include raw metadata.
  */
-export interface AudioCommonMetadata {
+export interface AudioMetadata {
   title?: string
   artist?: string
   albumTitle?: string
@@ -118,18 +74,7 @@ export interface AudioCommonMetadata {
   mediaType?: string
   creationDate?: string
   creationYear?: string
-}
-
-/**
- * An extension of AudioCommonMetadata that includes the raw metadata.
- * This is used for timed and chapter metadata events which include access to raw metadata entries.
- */
-export interface AudioMetadata extends AudioCommonMetadata {
-  /**
-   * The raw metadata that was used to populate. May contain other non common keys. May be empty.
-   * Only available in timed and chapter metadata events, not in common metadata events.
-   */
-  raw: RawEntry[]
+  url?: string
 }
 
 /**
@@ -138,7 +83,7 @@ export interface AudioMetadata extends AudioCommonMetadata {
  * Available on both iOS and Android.
  */
 export interface AudioCommonMetadataReceivedEvent {
-  metadata: AudioCommonMetadata
+  metadata: AudioMetadata
 }
 
 /**
@@ -204,39 +149,27 @@ export function updateNowPlayingMetadata(metadata: NowPlayingMetadata): void {
  * @param callback - Called when chapter metadata is received
  * @returns Cleanup function to unsubscribe
  */
-export function onMetadataChapterReceived(
-  callback: (event: AudioMetadataReceivedEvent) => void
-): () => void {
-  return TrackPlayer.onMetadataChapterReceived(callback as () => void).remove
-}
+export const onMetadataChapterReceived =
+  LazyEmitter.emitterize<AudioMetadataReceivedEvent>(
+    (cb) => (TrackPlayer.onMetadataChapterReceived = cb)
+  )
 
 /**
  * Subscribes to common metadata events.
  * @param callback - Called when common (static) metadata is received
  * @returns Cleanup function to unsubscribe
  */
-export function onMetadataCommonReceived(
-  callback: (event: AudioCommonMetadataReceivedEvent) => void
-): () => void {
-  return TrackPlayer.onMetadataCommonReceived(callback as () => void).remove
-}
+export const onMetadataCommonReceived =
+  LazyEmitter.emitterize<AudioCommonMetadataReceivedEvent>(
+    (cb) => (TrackPlayer.onMetadataCommonReceived = cb)
+  )
 
 /**
  * Subscribes to timed metadata events.
  * @param callback - Called when timed metadata is received
  * @returns Cleanup function to unsubscribe
  */
-export function onMetadataTimedReceived(
-  callback: (event: AudioMetadataReceivedEvent) => void
-): () => void {
-  return TrackPlayer.onMetadataTimedReceived(callback as () => void).remove
-}
-
-/**
- * Subscribes to playback metadata events.
- * @param callback - Called when playback metadata is received
- * @returns Cleanup function to unsubscribe
- */
-export function onPlaybackMetadata(callback: () => void): () => void {
-  return TrackPlayer.onPlaybackMetadata(callback).remove
-}
+export const onMetadataTimedReceived =
+  LazyEmitter.emitterize<AudioMetadataReceivedEvent>(
+    (cb) => (TrackPlayer.onMetadataTimedReceived = cb)
+  )

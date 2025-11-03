@@ -1,6 +1,7 @@
 package com.doublesymmetry.trackplayer.option
 
 import androidx.media3.common.C
+import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 
 enum class AudioContentType {
   MUSIC,
@@ -19,15 +20,24 @@ enum class AudioContentType {
     }
   }
 
+  fun toNitro(): AndroidAudioContentType {
+    return when (this) {
+      MUSIC -> AndroidAudioContentType.MUSIC
+      SPEECH -> AndroidAudioContentType.SPEECH
+      SONIFICATION -> AndroidAudioContentType.SONIFICATION
+      MOVIE -> AndroidAudioContentType.MOVIE
+      UNKNOWN -> AndroidAudioContentType.UNKNOWN
+    }
+  }
+
   companion object {
-    fun fromString(value: String): AudioContentType {
-      return when (value.lowercase()) {
-        "music" -> MUSIC
-        "speech" -> SPEECH
-        "sonification" -> SONIFICATION
-        "movie" -> MOVIE
-        "unknown" -> UNKNOWN
-        else -> throw IllegalArgumentException("Unknown audio content type: $value")
+    fun fromNitro(value: AndroidAudioContentType): AudioContentType {
+      return when (value) {
+        AndroidAudioContentType.MUSIC -> MUSIC
+        AndroidAudioContentType.SPEECH -> SPEECH
+        AndroidAudioContentType.SONIFICATION -> SONIFICATION
+        AndroidAudioContentType.MOVIE -> MOVIE
+        AndroidAudioContentType.UNKNOWN -> UNKNOWN
       }
     }
   }

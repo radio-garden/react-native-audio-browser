@@ -1,4 +1,5 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import resolveAssetSource from '../utils/resolveAssetSource'
 import type { TrackMetadataBase } from './metadata'
 
@@ -37,6 +38,16 @@ export interface Track extends TrackMetadataBase {
 export type AddTrack = Track & {
   url: string | ResourceObject
   artwork?: string | ResourceObject
+}
+
+/**
+ * Event data for when the playback queue has ended.
+ */
+export interface PlaybackQueueEndedEvent {
+  /** The index of the active track when the playback queue ended. */
+  track: number
+  /** The playback position in seconds of the active track when the playback queue ended. */
+  position: number
 }
 
 // MARK: - Helpers
@@ -208,8 +219,6 @@ export function getQueue(): Track[] {
  * @param callback - Called when playback has paused due to reaching the end of the queue
  * @returns Cleanup function to unsubscribe
  */
-export function onQueueEnded(
-  callback: (event: PlaybackQueueEndedEvent) => void
-): () => void {
-  return TrackPlayer.onPlaybackQueueEnded(callback as () => void).remove
-}
+export const onQueueEnded = LazyEmitter.emitterize<PlaybackQueueEndedEvent>(
+  (cb) => (TrackPlayer.onPlaybackQueueEnded = cb)
+)

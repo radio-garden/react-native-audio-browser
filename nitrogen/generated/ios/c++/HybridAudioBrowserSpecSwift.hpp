@@ -12,6 +12,70 @@
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
+// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
+// Forward declaration of `AudioMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
+// Forward declaration of `PlaybackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
+// Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `TrackType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackType; }
+// Forward declaration of `PitchAlgorithm` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
+// Forward declaration of `RatingType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
+// Forward declaration of `PlaybackError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
+// Forward declaration of `PlayingState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayingState; }
+// Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
+// Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
+// Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
+// Forward declaration of `RepeatMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `PlaybackState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+// Forward declaration of `State` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class State; }
+// Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
+// Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
+// Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
+// Forward declaration of `RemoteSeekEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
+// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
+// Forward declaration of `RemoteSkipEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
+// Forward declaration of `Options` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `AndroidOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
+// Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `Capability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
+// Forward declaration of `FeedbackOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `PlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
 // Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
@@ -30,51 +94,66 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
-// Forward declaration of `Track` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `TrackType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackType; }
-// Forward declaration of `PitchAlgorithm` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `UpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
+// Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
+// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
-// Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackState; }
-// Forward declaration of `State` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class State; }
-// Forward declaration of `PlaybackError` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlayingState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlayingState; }
-// Forward declaration of `RepeatMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
+#include "AudioMetadataReceivedEvent.hpp"
+#include <functional>
+#include "AudioMetadata.hpp"
+#include <vector>
+#include <string>
+#include <optional>
+#include "AudioCommonMetadataReceivedEvent.hpp"
+#include "PlaybackMetadata.hpp"
+#include "PlaybackActiveTrackChangedEvent.hpp"
+#include "Track.hpp"
+#include "TrackType.hpp"
+#include "PitchAlgorithm.hpp"
+#include "RatingType.hpp"
+#include "PlaybackErrorEvent.hpp"
+#include "PlaybackError.hpp"
+#include "PlaybackPlayWhenReadyChangedEvent.hpp"
+#include "PlayingState.hpp"
+#include "PlaybackProgressUpdatedEvent.hpp"
+#include "PlaybackQueueEndedEvent.hpp"
+#include "RepeatModeChangedEvent.hpp"
+#include "RepeatMode.hpp"
+#include "PlaybackState.hpp"
+#include "State.hpp"
+#include "RemoteJumpBackwardEvent.hpp"
+#include "RemoteJumpForwardEvent.hpp"
+#include "RemotePlayIdEvent.hpp"
+#include "RemotePlaySearchEvent.hpp"
+#include "RemoteSeekEvent.hpp"
+#include "RemoteSetRatingEvent.hpp"
+#include <variant>
+#include "RemoteSkipEvent.hpp"
+#include "Options.hpp"
+#include "AndroidOptions.hpp"
+#include "AppKilledPlaybackBehavior.hpp"
+#include "Capability.hpp"
+#include "IOSOptions.hpp"
+#include "FeedbackOptions.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PlayerOptions.hpp"
-#include <optional>
 #include "AndroidPlayerOptions.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
-#include <variant>
 #include "AndroidAudioContentType.hpp"
 #include "IOSPlayerOptions.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
-#include <vector>
 #include "IOSCategoryPolicy.hpp"
-#include "Track.hpp"
-#include <string>
-#include "TrackType.hpp"
-#include "PitchAlgorithm.hpp"
-#include "RatingType.hpp"
+#include "UpdateOptions.hpp"
+#include "AndroidUpdateOptions.hpp"
+#include "IOSUpdateOptions.hpp"
 #include "Progress.hpp"
-#include "PlaybackState.hpp"
-#include "State.hpp"
-#include "PlaybackError.hpp"
-#include "PlayingState.hpp"
-#include "RepeatMode.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -113,12 +192,326 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    
+    inline std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataChapterReceived() noexcept override {
+      auto __result = _swiftPart.getOnMetadataChapterReceived();
+      return __result;
+    }
+    inline void setOnMetadataChapterReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataChapterReceived) noexcept override {
+      _swiftPart.setOnMetadataChapterReceived(onMetadataChapterReceived);
+    }
+    inline std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)> getOnMetadataCommonReceived() noexcept override {
+      auto __result = _swiftPart.getOnMetadataCommonReceived();
+      return __result;
+    }
+    inline void setOnMetadataCommonReceived(const std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>& onMetadataCommonReceived) noexcept override {
+      _swiftPart.setOnMetadataCommonReceived(onMetadataCommonReceived);
+    }
+    inline std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataTimedReceived() noexcept override {
+      auto __result = _swiftPart.getOnMetadataTimedReceived();
+      return __result;
+    }
+    inline void setOnMetadataTimedReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataTimedReceived) noexcept override {
+      _swiftPart.setOnMetadataTimedReceived(onMetadataTimedReceived);
+    }
+    inline std::function<void(const PlaybackMetadata& /* data */)> getOnPlaybackMetadata() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackMetadata();
+      return __result;
+    }
+    inline void setOnPlaybackMetadata(const std::function<void(const PlaybackMetadata& /* data */)>& onPlaybackMetadata) noexcept override {
+      _swiftPart.setOnPlaybackMetadata(onPlaybackMetadata);
+    }
+    inline std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)> getOnPlaybackActiveTrackChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackActiveTrackChanged();
+      return __result;
+    }
+    inline void setOnPlaybackActiveTrackChanged(const std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>& onPlaybackActiveTrackChanged) noexcept override {
+      _swiftPart.setOnPlaybackActiveTrackChanged(onPlaybackActiveTrackChanged);
+    }
+    inline std::function<void(const PlaybackErrorEvent& /* data */)> getOnPlaybackError() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackError();
+      return __result;
+    }
+    inline void setOnPlaybackError(const std::function<void(const PlaybackErrorEvent& /* data */)>& onPlaybackError) noexcept override {
+      _swiftPart.setOnPlaybackError(onPlaybackError);
+    }
+    inline std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)> getOnPlaybackPlayWhenReadyChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackPlayWhenReadyChanged();
+      return __result;
+    }
+    inline void setOnPlaybackPlayWhenReadyChanged(const std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>& onPlaybackPlayWhenReadyChanged) noexcept override {
+      _swiftPart.setOnPlaybackPlayWhenReadyChanged(onPlaybackPlayWhenReadyChanged);
+    }
+    inline std::function<void(const PlayingState& /* data */)> getOnPlaybackPlayingState() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackPlayingState();
+      return __result;
+    }
+    inline void setOnPlaybackPlayingState(const std::function<void(const PlayingState& /* data */)>& onPlaybackPlayingState) noexcept override {
+      _swiftPart.setOnPlaybackPlayingState(onPlaybackPlayingState);
+    }
+    inline std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> getOnPlaybackProgressUpdated() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackProgressUpdated();
+      return __result;
+    }
+    inline void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) noexcept override {
+      _swiftPart.setOnPlaybackProgressUpdated(onPlaybackProgressUpdated);
+    }
+    inline std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackQueueEnded();
+      return __result;
+    }
+    inline void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) noexcept override {
+      _swiftPart.setOnPlaybackQueueEnded(onPlaybackQueueEnded);
+    }
+    inline std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackRepeatModeChanged();
+      return __result;
+    }
+    inline void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) noexcept override {
+      _swiftPart.setOnPlaybackRepeatModeChanged(onPlaybackRepeatModeChanged);
+    }
+    inline std::function<void(const PlaybackState& /* data */)> getOnPlaybackStateChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackStateChanged();
+      return __result;
+    }
+    inline void setOnPlaybackStateChanged(const std::function<void(const PlaybackState& /* data */)>& onPlaybackStateChanged) noexcept override {
+      _swiftPart.setOnPlaybackStateChanged(onPlaybackStateChanged);
+    }
+    inline std::function<void()> getOnRemoteBookmark() noexcept override {
+      auto __result = _swiftPart.getOnRemoteBookmark();
+      return __result;
+    }
+    inline void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) noexcept override {
+      _swiftPart.setOnRemoteBookmark(onRemoteBookmark);
+    }
+    inline std::function<void()> getOnRemoteDislike() noexcept override {
+      auto __result = _swiftPart.getOnRemoteDislike();
+      return __result;
+    }
+    inline void setOnRemoteDislike(const std::function<void()>& onRemoteDislike) noexcept override {
+      _swiftPart.setOnRemoteDislike(onRemoteDislike);
+    }
+    inline std::function<void(const RemoteJumpBackwardEvent& /* event */)> getOnRemoteJumpBackward() noexcept override {
+      auto __result = _swiftPart.getOnRemoteJumpBackward();
+      return __result;
+    }
+    inline void setOnRemoteJumpBackward(const std::function<void(const RemoteJumpBackwardEvent& /* event */)>& onRemoteJumpBackward) noexcept override {
+      _swiftPart.setOnRemoteJumpBackward(onRemoteJumpBackward);
+    }
+    inline std::function<void(const RemoteJumpForwardEvent& /* event */)> getOnRemoteJumpForward() noexcept override {
+      auto __result = _swiftPart.getOnRemoteJumpForward();
+      return __result;
+    }
+    inline void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) noexcept override {
+      _swiftPart.setOnRemoteJumpForward(onRemoteJumpForward);
+    }
+    inline std::function<void()> getOnRemoteLike() noexcept override {
+      auto __result = _swiftPart.getOnRemoteLike();
+      return __result;
+    }
+    inline void setOnRemoteLike(const std::function<void()>& onRemoteLike) noexcept override {
+      _swiftPart.setOnRemoteLike(onRemoteLike);
+    }
+    inline std::function<void()> getOnRemoteNext() noexcept override {
+      auto __result = _swiftPart.getOnRemoteNext();
+      return __result;
+    }
+    inline void setOnRemoteNext(const std::function<void()>& onRemoteNext) noexcept override {
+      _swiftPart.setOnRemoteNext(onRemoteNext);
+    }
+    inline std::function<void()> getOnRemotePause() noexcept override {
+      auto __result = _swiftPart.getOnRemotePause();
+      return __result;
+    }
+    inline void setOnRemotePause(const std::function<void()>& onRemotePause) noexcept override {
+      _swiftPart.setOnRemotePause(onRemotePause);
+    }
+    inline std::function<void()> getOnRemotePlay() noexcept override {
+      auto __result = _swiftPart.getOnRemotePlay();
+      return __result;
+    }
+    inline void setOnRemotePlay(const std::function<void()>& onRemotePlay) noexcept override {
+      _swiftPart.setOnRemotePlay(onRemotePlay);
+    }
+    inline std::function<void(const RemotePlayIdEvent& /* event */)> getOnRemotePlayId() noexcept override {
+      auto __result = _swiftPart.getOnRemotePlayId();
+      return __result;
+    }
+    inline void setOnRemotePlayId(const std::function<void(const RemotePlayIdEvent& /* event */)>& onRemotePlayId) noexcept override {
+      _swiftPart.setOnRemotePlayId(onRemotePlayId);
+    }
+    inline std::function<void(const RemotePlaySearchEvent& /* event */)> getOnRemotePlaySearch() noexcept override {
+      auto __result = _swiftPart.getOnRemotePlaySearch();
+      return __result;
+    }
+    inline void setOnRemotePlaySearch(const std::function<void(const RemotePlaySearchEvent& /* event */)>& onRemotePlaySearch) noexcept override {
+      _swiftPart.setOnRemotePlaySearch(onRemotePlaySearch);
+    }
+    inline std::function<void()> getOnRemotePrevious() noexcept override {
+      auto __result = _swiftPart.getOnRemotePrevious();
+      return __result;
+    }
+    inline void setOnRemotePrevious(const std::function<void()>& onRemotePrevious) noexcept override {
+      _swiftPart.setOnRemotePrevious(onRemotePrevious);
+    }
+    inline std::function<void(const RemoteSeekEvent& /* event */)> getOnRemoteSeek() noexcept override {
+      auto __result = _swiftPart.getOnRemoteSeek();
+      return __result;
+    }
+    inline void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) noexcept override {
+      _swiftPart.setOnRemoteSeek(onRemoteSeek);
+    }
+    inline std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() noexcept override {
+      auto __result = _swiftPart.getOnRemoteSetRating();
+      return __result;
+    }
+    inline void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) noexcept override {
+      _swiftPart.setOnRemoteSetRating(onRemoteSetRating);
+    }
+    inline std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() noexcept override {
+      auto __result = _swiftPart.getOnRemoteSkip();
+      return __result;
+    }
+    inline void setOnRemoteSkip(const std::function<void(const RemoteSkipEvent& /* event */)>& onRemoteSkip) noexcept override {
+      _swiftPart.setOnRemoteSkip(onRemoteSkip);
+    }
+    inline std::function<void()> getOnRemoteStop() noexcept override {
+      auto __result = _swiftPart.getOnRemoteStop();
+      return __result;
+    }
+    inline void setOnRemoteStop(const std::function<void()>& onRemoteStop) noexcept override {
+      _swiftPart.setOnRemoteStop(onRemoteStop);
+    }
+    inline std::function<void(const Options& /* event */)> getOnOptionsChanged() noexcept override {
+      auto __result = _swiftPart.getOnOptionsChanged();
+      return __result;
+    }
+    inline void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) noexcept override {
+      _swiftPart.setOnOptionsChanged(onOptionsChanged);
+    }
+    inline std::optional<std::function<void()>> getHandleRemoteBookmark() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteBookmark();
+      return __result;
+    }
+    inline void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) noexcept override {
+      _swiftPart.setHandleRemoteBookmark(handleRemoteBookmark);
+    }
+    inline std::optional<std::function<void()>> getHandleRemoteDislike() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteDislike();
+      return __result;
+    }
+    inline void setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) noexcept override {
+      _swiftPart.setHandleRemoteDislike(handleRemoteDislike);
+    }
+    inline std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> getHandleRemoteJumpBackward() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteJumpBackward();
+      return __result;
+    }
+    inline void setHandleRemoteJumpBackward(const std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>& handleRemoteJumpBackward) noexcept override {
+      _swiftPart.setHandleRemoteJumpBackward(handleRemoteJumpBackward);
+    }
+    inline std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>> getHandleRemoteJumpForward() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteJumpForward();
+      return __result;
+    }
+    inline void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) noexcept override {
+      _swiftPart.setHandleRemoteJumpForward(handleRemoteJumpForward);
+    }
+    inline std::optional<std::function<void()>> getHandleRemoteLike() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteLike();
+      return __result;
+    }
+    inline void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) noexcept override {
+      _swiftPart.setHandleRemoteLike(handleRemoteLike);
+    }
+    inline std::optional<std::function<void()>> getHandleRemoteNext() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteNext();
+      return __result;
+    }
+    inline void setHandleRemoteNext(const std::optional<std::function<void()>>& handleRemoteNext) noexcept override {
+      _swiftPart.setHandleRemoteNext(handleRemoteNext);
+    }
+    inline std::optional<std::function<void()>> getHandleRemotePause() noexcept override {
+      auto __result = _swiftPart.getHandleRemotePause();
+      return __result;
+    }
+    inline void setHandleRemotePause(const std::optional<std::function<void()>>& handleRemotePause) noexcept override {
+      _swiftPart.setHandleRemotePause(handleRemotePause);
+    }
+    inline std::optional<std::function<void()>> getHandleRemotePlay() noexcept override {
+      auto __result = _swiftPart.getHandleRemotePlay();
+      return __result;
+    }
+    inline void setHandleRemotePlay(const std::optional<std::function<void()>>& handleRemotePlay) noexcept override {
+      _swiftPart.setHandleRemotePlay(handleRemotePlay);
+    }
+    inline std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>> getHandleRemotePlayId() noexcept override {
+      auto __result = _swiftPart.getHandleRemotePlayId();
+      return __result;
+    }
+    inline void setHandleRemotePlayId(const std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>& handleRemotePlayId) noexcept override {
+      _swiftPart.setHandleRemotePlayId(handleRemotePlayId);
+    }
+    inline std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>> getHandleRemotePlaySearch() noexcept override {
+      auto __result = _swiftPart.getHandleRemotePlaySearch();
+      return __result;
+    }
+    inline void setHandleRemotePlaySearch(const std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>& handleRemotePlaySearch) noexcept override {
+      _swiftPart.setHandleRemotePlaySearch(handleRemotePlaySearch);
+    }
+    inline std::optional<std::function<void()>> getHandleRemotePrevious() noexcept override {
+      auto __result = _swiftPart.getHandleRemotePrevious();
+      return __result;
+    }
+    inline void setHandleRemotePrevious(const std::optional<std::function<void()>>& handleRemotePrevious) noexcept override {
+      _swiftPart.setHandleRemotePrevious(handleRemotePrevious);
+    }
+    inline std::optional<std::function<void(const RemoteSeekEvent& /* event */)>> getHandleRemoteSeek() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteSeek();
+      return __result;
+    }
+    inline void setHandleRemoteSeek(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& handleRemoteSeek) noexcept override {
+      _swiftPart.setHandleRemoteSeek(handleRemoteSeek);
+    }
+    inline std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> getHandleRemoteSetRating() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteSetRating();
+      return __result;
+    }
+    inline void setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) noexcept override {
+      _swiftPart.setHandleRemoteSetRating(handleRemoteSetRating);
+    }
+    inline std::optional<std::function<void()>> getHandleRemoteSkip() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteSkip();
+      return __result;
+    }
+    inline void setHandleRemoteSkip(const std::optional<std::function<void()>>& handleRemoteSkip) noexcept override {
+      _swiftPart.setHandleRemoteSkip(handleRemoteSkip);
+    }
+    inline std::optional<std::function<void()>> getHandleRemoteStop() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteStop();
+      return __result;
+    }
+    inline void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) noexcept override {
+      _swiftPart.setHandleRemoteStop(handleRemoteStop);
+    }
 
   public:
     // Methods
     inline std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) override {
       auto __result = _swiftPart.setupPlayer(std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void updateOptions(const UpdateOptions& options) override {
+      auto __result = _swiftPart.updateOptions(std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline UpdateOptions getOptions() override {
+      auto __result = _swiftPart.getOptions();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

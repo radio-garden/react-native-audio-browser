@@ -2,6 +2,8 @@ package com.doublesymmetry.trackplayer.event
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.PlaybackErrorEvent as NitroPlaybackErrorEvent
+import com.margelo.nitro.audiobrowser.PlaybackError as NitroPlaybackError
 
 /**
  * Event data for playback error. Matches TypeScript interface: { error?: { code: string, message:
@@ -27,5 +29,16 @@ data class PlaybackErrorEvent(
         )
       }
     }
+  }
+
+  fun toNitro(): NitroPlaybackErrorEvent {
+    return NitroPlaybackErrorEvent(
+      error = error?.let { err ->
+        NitroPlaybackError(
+          code = err.code,
+          message = err.message
+        )
+      }
+    )
   }
 }

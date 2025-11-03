@@ -10,6 +10,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import androidx.media3.session.legacy.RatingCompat
+import com.margelo.nitro.NitroModules
 import com.doublesymmetry.trackplayer.TrackPlayerService
 import com.doublesymmetry.trackplayer.TrackPlayerCallbacks
 import com.doublesymmetry.trackplayer.event.PlaybackActiveTrackChangedEvent
@@ -25,7 +26,6 @@ import com.doublesymmetry.trackplayer.event.RemoteSeekEvent
 import com.doublesymmetry.trackplayer.event.RemoteSetRatingEvent
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
-import com.doublesymmetry.trackplayer.model.PlaybackState
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.doublesymmetry.trackplayer.model.Track
@@ -39,7 +39,13 @@ import com.margelo.nitro.audiobrowser.PlaybackError as NitroPlaybackError
 import com.margelo.nitro.audiobrowser.PlayerOptions as NitroPlayerOptions
 import com.margelo.nitro.audiobrowser.PlayingState as NitroPlayingState
 import com.margelo.nitro.audiobrowser.Progress as NitroProgress
-import com.margelo.nitro.audiobrowser.PlaybackState as NitroPlaybackState
+import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent as NitroPlaybackActiveTrackChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackErrorEvent as NitroPlaybackErrorEvent
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent as NitroPlaybackPlayWhenReadyChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent as NitroPlaybackProgressUpdatedEvent
+import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent as NitroPlaybackQueueEndedEvent
+import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent as NitroRepeatModeChangedEvent
 import com.margelo.nitro.audiobrowser.RepeatMode as NitroRepeatMode
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
@@ -54,19 +60,90 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import android.os.Handler
+import android.os.Looper
+import com.margelo.nitro.audiobrowser.AudioCommonMetadataReceivedEvent
+import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent
+import com.margelo.nitro.audiobrowser.Options
+import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
+import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
+import com.margelo.nitro.audiobrowser.RemoteSkipEvent
+import com.doublesymmetry.trackplayer.model.CommonMetadata
+import com.doublesymmetry.trackplayer.model.TimedMetadata
+import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.UpdateOptions
 
 @Keep
 @DoNotStrip
-class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
-    
+class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
+
     private lateinit var browser: MediaBrowser
     private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
     private var setupOptions = PlayerSetupOptions()
     private val mainScope = MainScope()
     private var connectedService: TrackPlayerService? = null
-    private val context = applicationContext ?: throw IllegalStateException("Application context not set")
+    private val context = NitroModules.applicationContext
+        ?: throw IllegalStateException("NitroModules.applicationContext is null")
+
     @SuppressLint("RestrictedApi")
-    private val trackFactory = TrackFactory(context) { connectedService?.player?.ratingType ?: RatingCompat.RATING_NONE }
+    private val trackFactory =
+        TrackFactory(context) { connectedService?.player?.ratingType ?: RatingCompat.RATING_NONE }
+
+    // MARK: callbacks
+    override var onPlaybackStateChanged: (data: PlaybackState) -> Unit = { }
+    override var onRemoteBookmark: () -> Unit = { }
+    override var onRemoteDislike: () -> Unit = { }
+    override var onRemoteJumpBackward: (com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent) -> Unit =
+        { }
+    override var onRemoteJumpForward: (com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent) -> Unit =
+        { }
+    override var onRemoteLike: () -> Unit = { }
+    override var onRemoteNext: () -> Unit = { }
+    override var onRemotePause: () -> Unit = { }
+    override var onMetadataChapterReceived: (AudioMetadataReceivedEvent) -> Unit = { }
+    override var onMetadataCommonReceived: (AudioCommonMetadataReceivedEvent) -> Unit = { }
+    override var onMetadataTimedReceived: (AudioMetadataReceivedEvent) -> Unit = { }
+    override var onPlaybackMetadata: (com.margelo.nitro.audiobrowser.PlaybackMetadata) -> Unit = { }
+    override var onPlaybackActiveTrackChanged: (data: NitroPlaybackActiveTrackChangedEvent) -> Unit =
+        { }
+    override var onPlaybackError: (data: NitroPlaybackErrorEvent) -> Unit = { }
+    override var onPlaybackPlayWhenReadyChanged: (data: NitroPlaybackPlayWhenReadyChangedEvent) -> Unit =
+        { }
+    override var onPlaybackPlayingState: (data: NitroPlayingState) -> Unit = { }
+    override var onPlaybackProgressUpdated: (data: NitroPlaybackProgressUpdatedEvent) -> Unit = { }
+    override var onPlaybackQueueEnded: (data: NitroPlaybackQueueEndedEvent) -> Unit = { }
+    override var onPlaybackRepeatModeChanged: (data: NitroRepeatModeChangedEvent) -> Unit = { }
+    override var onRemotePlay: (() -> Unit) = { }
+    override var onRemotePlayId: (RemotePlayIdEvent) -> Unit = { }
+    override var onRemotePlaySearch: (RemotePlaySearchEvent) -> Unit = { }
+    override var onRemotePrevious: () -> Unit = { }
+    override var onRemoteSeek: (com.margelo.nitro.audiobrowser.RemoteSeekEvent) -> Unit = { }
+    override var onRemoteSetRating: (com.margelo.nitro.audiobrowser.RemoteSetRatingEvent) -> Unit =
+        { }
+    override var onRemoteSkip: (RemoteSkipEvent) -> Unit = { }
+    override var onRemoteStop: () -> Unit = { }
+    override var onOptionsChanged: (Options) -> Unit = { }
+
+    // MARK: handlers
+    override var handleRemoteBookmark: (() -> Unit)? = null
+    override var handleRemoteDislike: (() -> Unit)? = null
+    override var handleRemoteJumpBackward: ((com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent) -> Unit)? =
+        null
+    override var handleRemoteJumpForward: ((com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent) -> Unit)? =
+        null
+    override var handleRemoteLike: (() -> Unit)? = null
+    override var handleRemoteNext: (() -> Unit)? = null
+    override var handleRemotePause: (() -> Unit)? = null
+    override var handleRemotePlay: (() -> Unit)? = null
+    override var handleRemotePlayId: ((RemotePlayIdEvent) -> Unit)? = null
+    override var handleRemotePlaySearch: ((RemotePlaySearchEvent) -> Unit)? = null
+    override var handleRemotePrevious: (() -> Unit)? = null
+    override var handleRemoteSeek: ((com.margelo.nitro.audiobrowser.RemoteSeekEvent) -> Unit)? =
+        null
+    override var handleRemoteSetRating: ((com.margelo.nitro.audiobrowser.RemoteSetRatingEvent) -> Unit)? =
+        null
+    override var handleRemoteSkip: (() -> Unit)? = null
+    override var handleRemoteStop: (() -> Unit)? = null
 
     init {
         // Auto-bind to service if it's already running
@@ -74,9 +151,9 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
             try {
                 Timber.d("Attempting to auto-bind to existing TrackPlayerService from AudioBrowserModule")
                 val intent = Intent(context, TrackPlayerService::class.java)
-                val bound = context.bindService(intent, this@AudioBrowserModule, Context.BIND_AUTO_CREATE)
+                val bound = context.bindService(intent, this@AudioBrowser, Context.BIND_AUTO_CREATE)
                 Timber.d("Auto-bind result: $bound")
-                
+
                 if (!bound) {
                     Timber.w("Failed to bind to TrackPlayerService - service may not be running")
                 }
@@ -85,8 +162,9 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
             }
         }
     }
+
     override fun setupPlayer(options: NitroPlayerOptions): Promise<Unit> {
-        return Promise.async {
+        return Promise.async(mainScope) {
             // Convert Nitro PlayerOptions to TrackPlayer setup options
             setupOptions.updateFromNitro(options)
 
@@ -100,7 +178,7 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
                 Timber.d("Binding to TrackPlayerService")
                 val bound = context.bindService(
                     Intent(context, TrackPlayerService::class.java),
-                    this@AudioBrowserModule,
+                    this@AudioBrowser,
                     Context.BIND_AUTO_CREATE
                 )
 
@@ -112,6 +190,17 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
                 }
             }
         }
+    }
+
+    override fun updateOptions(options: UpdateOptions) {
+        val currentOptions = player.getOptions()
+        val updatedOptions = currentOptions.copy()
+        updatedOptions.updateFromNitro(options)
+        player.applyOptions(updatedOptions)
+    }
+
+    override fun getOptions(): UpdateOptions {
+        return player.getOptions().toNitro()
     }
 
     private var setupPromise: ((Unit) -> Unit)? = null
@@ -126,20 +215,20 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
         player.clear()
     }
 
-    override fun play() = runBlockingOnMain { 
-        player.play() 
+    override fun play() = runBlockingOnMain {
+        player.play()
     }
 
-    override fun pause() = runBlockingOnMain { 
-        player.pause() 
+    override fun pause() = runBlockingOnMain {
+        player.pause()
     }
 
-    override fun togglePlayback() = runBlockingOnMain { 
-        player.togglePlayback() 
+    override fun togglePlayback() = runBlockingOnMain {
+        player.togglePlayback()
     }
 
-    override fun stop() = runBlockingOnMain { 
-        player.stop() 
+    override fun stop() = runBlockingOnMain {
+        player.stop()
     }
 
     override fun setPlayWhenReady(playWhenReady: Boolean) = runBlockingOnMain {
@@ -182,7 +271,7 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
         )
     }
 
-    override fun getPlaybackState(): NitroPlaybackState = runBlockingOnMain {
+    override fun getPlaybackState(): PlaybackState = runBlockingOnMain {
         player.getPlaybackState().toNitro()
     }
 
@@ -230,7 +319,7 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
 
     override fun skip(index: Double, initialPosition: Double?) = runBlockingOnMain {
         player.skipTo(index.toInt())
-        
+
         if (initialPosition != null && initialPosition >= 0) {
             player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
         }
@@ -238,7 +327,7 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
 
     override fun skipToNext(initialPosition: Double?) = runBlockingOnMain {
         player.next()
-        
+
         if (initialPosition != null && initialPosition >= 0) {
             player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
         }
@@ -246,7 +335,7 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
 
     override fun skipToPrevious(initialPosition: Double?) = runBlockingOnMain {
         player.previous()
-        
+
         if (initialPosition != null && initialPosition >= 0) {
             player.seekTo((initialPosition * 1000).toLong(), TimeUnit.MILLISECONDS)
         }
@@ -292,154 +381,213 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
                 player.setCallbacks(callbacks)
                 player.setup(setupOptions)
             }
-            
-            val sessionToken = SessionToken(context, ComponentName(context, TrackPlayerService::class.java))
+
+            val sessionToken =
+                SessionToken(context, ComponentName(context, TrackPlayerService::class.java))
             mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
-            
+
             setupPromise?.invoke(Unit)
             setupPromise = null
         }
     }
-    
+
     override fun onServiceDisconnected(name: ComponentName) {
         mainScope.coroutineContext.cancelChildren()
         mediaBrowserFuture = null
         connectedService = null
         Timber.d("AudioBrowserModule.onServiceDisconnected()")
     }
-    
+
     private fun launchInScope(block: suspend () -> Unit) {
         mainScope.launch { block() }
     }
-    
+
     private fun <T> runBlockingOnMain(block: suspend () -> T): T {
         return runBlocking(mainScope.coroutineContext) { block() }
     }
-    
+
     private val service: TrackPlayerService
         get() = connectedService ?: throw Exception("Player not initialized")
-        
+
     private val player
         get() = service.player
-    
-    companion object {
-        // Static context holder for Nitro modules
-        @JvmStatic
-        var applicationContext: Context? = null
-            private set
 
-        @JvmStatic
-        fun setApplicationContext(context: Context) {
-            applicationContext = context.applicationContext
-        }
-    }
 
     val callbacks =
         object : TrackPlayerCallbacks {
-            override fun onPlaybackState(state: PlaybackState) {
-//                emitOnPlaybackState(state.toBridge())
+            override fun onPlaybackState(state: com.doublesymmetry.trackplayer.model.PlaybackState) {
+                onPlaybackStateChanged(state.toNitro())
             }
 
             override fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent) {
-//                emitOnPlaybackActiveTrackChanged(event.toBridge())
+                onPlaybackActiveTrackChanged(event.toNitro())
             }
 
             override fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent) {
-//                emitOnPlaybackProgressUpdated(event.toBridge())
+                onPlaybackProgressUpdated(event.toNitro())
             }
 
             override fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent) {
-//                emitOnPlaybackPlayWhenReadyChanged(event.toBridge())
+                onPlaybackPlayWhenReadyChanged(event.toNitro())
             }
 
             override fun onPlaybackPlayingState(event: PlaybackPlayingStateEvent) {
-//                emitOnPlaybackPlayingState(event.toBridge())
+                onPlaybackPlayingState(event.toNitro())
             }
 
             override fun onPlaybackQueueEnded(event: PlaybackQueueEndedEvent) {
-//                emitOnPlaybackQueueEnded(event.toBridge())
+                onPlaybackQueueEnded(event.toNitro())
             }
 
             override fun onPlaybackRepeatModeChanged(event: PlaybackRepeatModeChangedEvent) {
-//                emitOnPlaybackRepeatModeChanged(event.toBridge())
+                onPlaybackRepeatModeChanged(event.toNitro())
             }
 
             override fun onPlaybackError(event: PlaybackErrorEvent) {
-//                emitOnPlaybackError(event.toBridge())
+                onPlaybackError(event.toNitro())
             }
 
-            override fun onMetadataCommonReceived(metadata: WritableMap) {
-//                emitOnMetadataCommonReceived(Arguments.createMap().apply { putMap("metadata", metadata) })
+            override fun onMetadataCommonReceived(metadata: AudioMetadata) {
+                onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
+
             }
 
-            override fun onMetadataTimedReceived(metadata: Metadata) {
-//                emitOnMetadataTimedReceived(
-//                    Arguments.createMap().let {
-//                        it.putArray(
-//                            "metadata",
-//                            Arguments.createArray().apply {
-//                                MetadataAdapter.Companion.fromMetadata(metadata).forEach { item -> pushMap(item) }
-//                            },
-//                        )
-//                        it
-//                    }
-//                )
+            override fun onMetadataTimedReceived(metadata: TimedMetadata) {
+                onMetadataTimedReceived(metadata.toNitro())
             }
 
-            override fun onPlaybackMetadata(metadata: PlaybackMetadata?) {
-//                metadata?.let {
-//                    emitOnPlaybackMetadata(
-//                        Arguments.createMap().apply {
-//                            putString("source", it.source)
-//                            putString("title", it.title)
-//                            putString("url", it.url)
-//                            putString("artist", it.artist)
-//                            putString("album", it.album)
-//                            putString("date", it.date)
-//                            putString("genre", it.genre)
-//                        }
-//                    )
-//                }
+            override fun onPlaybackMetadata(metadata: PlaybackMetadata) {
+                onPlaybackMetadata(metadata.toNitro())
             }
 
-            override fun onRemotePlay() {
-//                emitOnRemotePlay(Arguments.createMap())
+            override fun handleRemotePlay(): Boolean {
+                val handled = handleRemotePlay?.let {
+                    it.invoke()
+                    true
+                } ?: false
+
+                // Defer notification until after play operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemotePlay()
+                }
+
+                return handled
             }
 
-            override fun onRemotePause() {
-//                emitOnRemotePause(Arguments.createMap())
+            override fun handleRemotePause(): Boolean {
+                val handled = handleRemotePause?.let {
+                    it.invoke()
+                    true
+                } ?: false
+
+                // Defer notification until after pause operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemotePause()
+                }
+
+                return handled
             }
 
-            override fun onRemoteStop() {
-//                emitOnRemoteStop(Arguments.createMap())
+            override fun handleRemoteStop(): Boolean {
+                val handled = handleRemoteStop?.let {
+                    it.invoke()
+                    true
+                } ?: false
+
+                // Defer notification until after stop operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemoteStop()
+                }
+
+                return handled
             }
 
-            override fun onRemoteNext() {
-                Timber.d("onRemoteNext called - emitting event to JavaScript")
-//                emitOnRemoteNext(Arguments.createMap())
+            override fun handleRemoteNext(): Boolean {
+                val handled = handleRemoteNext?.let {
+                    it.invoke()
+                    true
+                } ?: false
+
+                // Defer notification until after next operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemoteNext()
+                }
+
+                return handled
             }
 
-            override fun onRemotePrevious() {
-                Timber.d("onRemotePrevious called - emitting event to JavaScript")
-//                emitOnRemotePrevious(Arguments.createMap())
+            override fun handleRemotePrevious(): Boolean {
+                val handled = handleRemotePrevious?.let {
+                    it.invoke()
+                    true
+                } ?: false
+
+                // Defer notification until after previous operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemotePrevious()
+                }
+
+                return handled
             }
 
-            override fun onRemoteJumpForward(event: RemoteJumpForwardEvent) {
-                Timber.d("onRemoteJumpForward called - emitting event to JavaScript")
-//                emitOnRemoteJumpForward(event.toBridge())
+            override fun handleRemoteJumpForward(event: RemoteJumpForwardEvent): Boolean {
+                val nitroEvent = event.toNitro()
+                val handled = handleRemoteJumpForward?.let {
+                    it.invoke(nitroEvent)
+                    true
+                } ?: false
+
+                // Defer notification until after jump forward operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemoteJumpForward(nitroEvent)
+                }
+
+                return handled
             }
 
-            override fun onRemoteJumpBackward(event: RemoteJumpBackwardEvent) {
-                Timber.d("onRemoteJumpBackward called - emitting event to JavaScript")
-//                emitOnRemoteJumpBackward(event.toBridge())
+            override fun handleRemoteJumpBackward(event: RemoteJumpBackwardEvent): Boolean {
+                val nitroEvent = event.toNitro()
+                val handled = handleRemoteJumpBackward?.let {
+                    it.invoke(nitroEvent)
+                    true
+                } ?: false
+
+                // Defer notification until after jump backward operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemoteJumpBackward(nitroEvent)
+                }
+
+                return handled
             }
 
-            override fun onRemoteSeek(event: RemoteSeekEvent) {
-//                emitOnRemoteSeek(event.toBridge())
+            override fun handleRemoteSeek(event: RemoteSeekEvent): Boolean {
+                val nitroEvent = event.toNitro()
+                val handled = handleRemoteSeek?.let {
+                    it.invoke(nitroEvent)
+                    true
+                } ?: false
+
+                // Defer notification until after seek operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemoteSeek(nitroEvent)
+                }
+
+                return handled
             }
 
-            override fun onRemoteSetRating(event: RemoteSetRatingEvent) {
-//                emitOnRemoteSetRating(event.toBridge())
+            override fun handleRemoteSetRating(event: RemoteSetRatingEvent): Boolean {
+                val nitroEvent = event.toNitro()
+                val handled = handleRemoteSetRating?.let {
+                    it.invoke(nitroEvent)
+                    true
+                } ?: false
+
+                // Defer notification until after set rating operation completes
+                Handler(Looper.getMainLooper()).post {
+                    onRemoteSetRating(nitroEvent)
+                }
+
+                return handled
             }
 
 
@@ -448,7 +596,12 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
             }
 
             // Media browser callbacks
-            override fun onGetChildrenRequest(requestId: String, parentId: String, page: Int, pageSize: Int) {
+            override fun onGetChildrenRequest(
+                requestId: String,
+                parentId: String,
+                page: Int,
+                pageSize: Int
+            ) {
 //                emitGetChildrenRequest(requestId, parentId, page, pageSize)
             }
 
@@ -456,7 +609,11 @@ class AudioBrowserModule: HybridAudioBrowserSpec(), ServiceConnection {
 //                emitGetItemRequest(requestId, mediaId)
             }
 
-            override fun onSearchRequest(requestId: String, query: String, extras: Map<String, Any>?) {
+            override fun onSearchRequest(
+                requestId: String,
+                query: String,
+                extras: Map<String, Any>?
+            ) {
 //                val extrasMap = extras?.let { map ->
 //                    Arguments.createMap().apply {
 //                        map.forEach { (key, value) ->

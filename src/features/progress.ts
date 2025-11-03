@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import { onPlaybackState } from './playbackState'
+
 // MARK: - Types
 
 export interface Progress {
@@ -37,7 +39,7 @@ export interface PlaybackProgressUpdatedEvent extends Progress {
  * duration in seconds.
  */
 export function getProgress(): Progress {
-  return TrackPlayer.getProgress() as Progress
+  return TrackPlayer.getProgress()
 }
 
 // MARK: - Event Callbacks
@@ -47,11 +49,10 @@ export function getProgress(): Progress {
  * @param callback - Called periodically with playback progress updates
  * @returns Cleanup function to unsubscribe
  */
-export function onProgressUpdated(
-  callback: (event: PlaybackProgressUpdatedEvent) => void
-): () => void {
-  return TrackPlayer.onPlaybackProgressUpdated(callback as () => void).remove
-}
+export const onProgressUpdated =
+  LazyEmitter.emitterize<PlaybackProgressUpdatedEvent>(
+    (cb) => (TrackPlayer.onPlaybackProgressUpdated = cb)
+  )
 
 // MARK: - Hooks
 

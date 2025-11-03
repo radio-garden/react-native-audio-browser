@@ -2,6 +2,7 @@ package com.doublesymmetry.trackplayer.event
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.PlayingState as NitroPlayingState
 
 /** Event data for playing state (playing and buffering flags). */
 data class PlaybackPlayingStateEvent(
@@ -15,5 +16,12 @@ data class PlaybackPlayingStateEvent(
       putBoolean("playing", playing)
       putBoolean("buffering", buffering)
     }
+  }
+
+  fun toNitro(): NitroPlayingState {
+    return NitroPlayingState(
+      playing = playing,
+      buffering = buffering
+    )
   }
 }

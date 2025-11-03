@@ -14,7 +14,7 @@
     "android:logs": "react-native log-android",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "nitrogen --logLevel=\"debug\" && yarn run build",
+    "codegen": "nitrogen --logLevel=\"debug\" && node post-script.cjs && yarn run build",
     "prepare": "bob build",
     "example": "yarn workspace example",
     "ci:format": "prettier --check src",
@@ -85,7 +85,7 @@
     "react": "19.1.1",
     "react-native": "0.82",
     "react-native-builder-bob": "^0.37.0",
-    "react-native-nitro-modules": "0.30.0",
+    "react-native-nitro-modules": "0.31.4",
     "semantic-release": "^24.2.9",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.46.0"

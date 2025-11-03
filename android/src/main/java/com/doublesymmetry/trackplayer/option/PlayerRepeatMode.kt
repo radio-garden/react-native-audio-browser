@@ -3,10 +3,10 @@ package com.doublesymmetry.trackplayer.option
 import androidx.media3.common.Player
 import com.margelo.nitro.audiobrowser.RepeatMode as NitroRepeatMode
 
-enum class PlayerRepeatMode(val string: String) {
-  OFF("off"),
-  TRACK("track"),
-  QUEUE("queue");
+enum class PlayerRepeatMode {
+  OFF,
+  TRACK,
+  QUEUE;
 
   /**
    * Converts this PlayerRepeatMode to the corresponding Media3 Player repeat mode
@@ -19,9 +19,6 @@ enum class PlayerRepeatMode(val string: String) {
     }
   }
 
-  /**
-   * Converts this PlayerRepeatMode to Nitro RepeatMode
-   */
   fun toNitro(): NitroRepeatMode = when (this) {
     OFF -> NitroRepeatMode.OFF
     TRACK -> NitroRepeatMode.TRACK
@@ -29,9 +26,6 @@ enum class PlayerRepeatMode(val string: String) {
   }
 
   companion object {
-    fun fromString(value: String): PlayerRepeatMode? {
-      return entries.find { it.string == value }
-    }
 
     /**
      * Converts a Media3 Player repeat mode to PlayerRepeatMode
@@ -44,9 +38,6 @@ enum class PlayerRepeatMode(val string: String) {
       }
     }
 
-    /**
-     * Converts Nitro RepeatMode to PlayerRepeatMode
-     */
     fun fromNitro(nitroMode: NitroRepeatMode): PlayerRepeatMode = when (nitroMode) {
       NitroRepeatMode.OFF -> OFF
       NitroRepeatMode.TRACK -> TRACK

@@ -11,10 +11,54 @@ import NitroModules
 /// See ``HybridAudioBrowserSpec``
 public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   // Properties
-  
+  var onMetadataChapterReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
+  var onMetadataCommonReceived: (_ event: AudioCommonMetadataReceivedEvent) -> Void { get set }
+  var onMetadataTimedReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
+  var onPlaybackMetadata: (_ data: PlaybackMetadata) -> Void { get set }
+  var onPlaybackActiveTrackChanged: (_ data: PlaybackActiveTrackChangedEvent) -> Void { get set }
+  var onPlaybackError: (_ data: PlaybackErrorEvent) -> Void { get set }
+  var onPlaybackPlayWhenReadyChanged: (_ data: PlaybackPlayWhenReadyChangedEvent) -> Void { get set }
+  var onPlaybackPlayingState: (_ data: PlayingState) -> Void { get set }
+  var onPlaybackProgressUpdated: (_ data: PlaybackProgressUpdatedEvent) -> Void { get set }
+  var onPlaybackQueueEnded: (_ data: PlaybackQueueEndedEvent) -> Void { get set }
+  var onPlaybackRepeatModeChanged: (_ data: RepeatModeChangedEvent) -> Void { get set }
+  var onPlaybackStateChanged: (_ data: PlaybackState) -> Void { get set }
+  var onRemoteBookmark: () -> Void { get set }
+  var onRemoteDislike: () -> Void { get set }
+  var onRemoteJumpBackward: (_ event: RemoteJumpBackwardEvent) -> Void { get set }
+  var onRemoteJumpForward: (_ event: RemoteJumpForwardEvent) -> Void { get set }
+  var onRemoteLike: () -> Void { get set }
+  var onRemoteNext: () -> Void { get set }
+  var onRemotePause: () -> Void { get set }
+  var onRemotePlay: () -> Void { get set }
+  var onRemotePlayId: (_ event: RemotePlayIdEvent) -> Void { get set }
+  var onRemotePlaySearch: (_ event: RemotePlaySearchEvent) -> Void { get set }
+  var onRemotePrevious: () -> Void { get set }
+  var onRemoteSeek: (_ event: RemoteSeekEvent) -> Void { get set }
+  var onRemoteSetRating: (_ event: RemoteSetRatingEvent) -> Void { get set }
+  var onRemoteSkip: (_ event: RemoteSkipEvent) -> Void { get set }
+  var onRemoteStop: () -> Void { get set }
+  var onOptionsChanged: (_ event: Options) -> Void { get set }
+  var handleRemoteBookmark: (() -> Void)? { get set }
+  var handleRemoteDislike: (() -> Void)? { get set }
+  var handleRemoteJumpBackward: ((_ event: RemoteJumpBackwardEvent) -> Void)? { get set }
+  var handleRemoteJumpForward: ((_ event: RemoteJumpForwardEvent) -> Void)? { get set }
+  var handleRemoteLike: (() -> Void)? { get set }
+  var handleRemoteNext: (() -> Void)? { get set }
+  var handleRemotePause: (() -> Void)? { get set }
+  var handleRemotePlay: (() -> Void)? { get set }
+  var handleRemotePlayId: ((_ event: RemotePlayIdEvent) -> Void)? { get set }
+  var handleRemotePlaySearch: ((_ event: RemotePlaySearchEvent) -> Void)? { get set }
+  var handleRemotePrevious: (() -> Void)? { get set }
+  var handleRemoteSeek: ((_ event: RemoteSeekEvent) -> Void)? { get set }
+  var handleRemoteSetRating: ((_ event: RemoteSetRatingEvent) -> Void)? { get set }
+  var handleRemoteSkip: (() -> Void)? { get set }
+  var handleRemoteStop: (() -> Void)? { get set }
 
   // Methods
   func setupPlayer(options: PlayerOptions) throws -> Promise<Void>
+  func updateOptions(options: UpdateOptions) throws -> Void
+  func getOptions() throws -> UpdateOptions
   func load(track: Track) throws -> Void
   func reset() throws -> Void
   func play() throws -> Void

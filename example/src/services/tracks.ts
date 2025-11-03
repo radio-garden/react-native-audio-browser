@@ -1,21 +1,21 @@
 import { type Track } from 'react-native-audio-browser';
 import playlistData from '../assets/data/playlist.json';
-// @ts-expect-error – sure we can import this
-import localTrack from '../assets/resources/pure.m4a';
-// @ts-expect-error – sure we can import this
-import localArtwork from '../assets/resources/artwork.jpg';
+// // @ts-expect-error – sure we can import this
+// import localTrack from '../assets/resources/pure.m4a';
+// // @ts-expect-error – sure we can import this
+// import localArtwork from '../assets/resources/artwork.jpg';
 
 export const tracks: Track[] = [
   ...(playlistData as Track[]),
-  {
-    url: localTrack,
-    title: 'Pure (Demo)',
-    artist: 'David Chavez',
-    artwork: localArtwork,
-    duration: 28,
-    // Custom data
-    data: {
-      mood: 'calm',
-    },
-  },
+  // {
+  //   url: localTrack,
+  //   title: 'Pure (Demo)',
+  //   artist: 'David Chavez',
+  //   artwork: localArtwork,
+  //   duration: 28,
+  //   // Custom data
+  //   data: {
+  //     mood: 'calm',
+  //   },
+  // },
 ];

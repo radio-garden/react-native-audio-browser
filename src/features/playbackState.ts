@@ -1,4 +1,5 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { PlaybackError } from './errors'
 
@@ -56,11 +57,9 @@ export function getPlaybackState(): PlaybackState {
  * @param callback - Called when the playback state changes
  * @returns Cleanup function to unsubscribe
  */
-export function onPlaybackState(
-  callback: (state: PlaybackState) => void
-): () => void {
-  return TrackPlayer.onPlaybackState(callback as () => void).remove
-}
+export const onPlaybackState = LazyEmitter.emitterize<PlaybackState>(
+  (cb) => (TrackPlayer.onPlaybackStateChanged = cb)
+)
 
 // MARK: - Hooks
 

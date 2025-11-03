@@ -2,6 +2,7 @@ package com.doublesymmetry.trackplayer.event
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent as NitroRemoteJumpForwardEvent
 
 /** Event data for remote jump forward command. */
 data class RemoteJumpForwardEvent(
@@ -10,5 +11,9 @@ data class RemoteJumpForwardEvent(
 ) {
   fun toBridge(): WritableMap {
     return Arguments.createMap().apply { putDouble("interval", interval) }
+  }
+
+  fun toNitro(): NitroRemoteJumpForwardEvent {
+    return NitroRemoteJumpForwardEvent(interval = interval)
   }
 }

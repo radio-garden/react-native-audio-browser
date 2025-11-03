@@ -1,7 +1,9 @@
 import { useCallback } from 'react'
 
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+
 /**
  * Event data for when playWhenReady changes.
  */
@@ -37,12 +39,10 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
  * @param callback - Called when playWhenReady changes
  * @returns Cleanup function to unsubscribe
  */
-export function onPlayWhenReadyChanged(
-  callback: (event: PlaybackPlayWhenReadyChangedEvent) => void
-): () => void {
-  return TrackPlayer.onPlaybackPlayWhenReadyChanged(callback as () => void)
-    .remove
-}
+export const onPlayWhenReadyChanged =
+  LazyEmitter.emitterize<PlaybackPlayWhenReadyChangedEvent>(
+    (cb) => (TrackPlayer.onPlaybackPlayWhenReadyChanged = cb)
+  )
 
 // MARK: - Hooks
 

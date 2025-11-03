@@ -1,7 +1,7 @@
 package com.doublesymmetry.trackplayer.model
 
-enum class AppKilledPlaybackBehavior(val string: String) {
-  CONTINUE_PLAYBACK("continue-playback"),
-  PAUSE_PLAYBACK("pause-playback"),
-  STOP_PLAYBACK_AND_REMOVE_NOTIFICATION("stop-playback-and-remove-notification"),
+enum class AppKilledPlaybackBehavior {
+  CONTINUE_PLAYBACK,
+  PAUSE_PLAYBACK,
+  STOP_PLAYBACK_AND_REMOVE_NOTIFICATION,
 }

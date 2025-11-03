@@ -1,4 +1,5 @@
 import { AudioBrowser } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { Track } from './queue'
 
@@ -63,14 +64,10 @@ export function getActiveTrackIndex(): number | undefined {
  * @param callback - Called when the active track changes
  * @returns Cleanup function to unsubscribe
  */
-export function onActiveTrackChanged(
-  callback: (event: PlaybackActiveTrackChangedEvent) => void
-): () => void {
-  // TODO: Implement event subscription when AudioBrowser events are available
-  // return AudioBrowser.onPlaybackActiveTrackChanged(callback);
-  console.warn('onActiveTrackChanged: Event subscription not yet implemented')
-  return () => {} // Return empty cleanup function for now
-}
+export const onActiveTrackChanged =
+  LazyEmitter.emitterize<PlaybackActiveTrackChangedEvent>(
+    (cb) => (AudioBrowser.onPlaybackActiveTrackChanged = cb)
+  )
 
 // MARK: - Hooks
 

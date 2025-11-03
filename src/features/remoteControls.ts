@@ -1,10 +1,5 @@
 import { AudioBrowser } from '../NativeAudioBrowser'
-import { pause, play, seekBy, seekTo, stop } from './playback'
-import { skipToNext, skipToPrevious } from './queue'
-
-// MARK: - Handlers State
-
-const customHandlers = new Map<string, any>()
+import { LazyEmitter } from '../utils/LazyEmitter'
 
 // MARK: - Event Interfaces
 
@@ -72,78 +67,78 @@ export interface RemoteSkipEvent {
 // Custom handlers can override the defaults using handleRemote* functions
 
 // Basic playback controls
-AudioBrowser.onRemotePlay(() => {
-  const customHandler = customHandlers.get('play')
-  if (customHandler) {
-    customHandler()
-  } else {
-    play()
-  }
-})
+// AudioBrowser.onRemotePlay(() => {
+//   const customHandler = customHandlers.get('play')
+//   if (customHandler) {
+//     customHandler()
+//   } else {
+//     play()
+//   }
+// })
 
-AudioBrowser.onRemotePause(() => {
-  const customHandler = customHandlers.get('pause')
-  if (customHandler) {
-    customHandler()
-  } else {
-    pause()
-  }
-})
+// AudioBrowser.onRemotePause(() => {
+//   const customHandler = customHandlers.get('pause')
+//   if (customHandler) {
+//     customHandler()
+//   } else {
+//     pause()
+//   }
+// })
 
-AudioBrowser.onRemoteNext(() => {
-  const customHandler = customHandlers.get('next')
-  if (customHandler) {
-    customHandler()
-  } else {
-    skipToNext()
-  }
-})
+// AudioBrowser.onRemoteNext(() => {
+//   const customHandler = customHandlers.get('next')
+//   if (customHandler) {
+//     customHandler()
+//   } else {
+//     skipToNext()
+//   }
+// })
 
-AudioBrowser.onRemotePrevious(() => {
-  const customHandler = customHandlers.get('previous')
-  if (customHandler) {
-    customHandler()
-  } else {
-    skipToPrevious()
-  }
-})
+// AudioBrowser.onRemotePrevious(() => {
+//   const customHandler = customHandlers.get('previous')
+//   if (customHandler) {
+//     customHandler()
+//   } else {
+//     skipToPrevious()
+//   }
+// })
 
-AudioBrowser.onRemoteStop(() => {
-  const customHandler = customHandlers.get('stop')
-  if (customHandler) {
-    customHandler()
-  } else {
-    stop()
-  }
-})
+// AudioBrowser.onRemoteStop(() => {
+//   const customHandler = customHandlers.get('stop')
+//   if (customHandler) {
+//     customHandler()
+//   } else {
+//     stop()
+//   }
+// })
 
-// Seek controls
-AudioBrowser.onRemoteSeek((event: any) => {
-  const customHandler = customHandlers.get('seek')
-  if (customHandler) {
-    customHandler(event)
-  } else {
-    seekTo(event.position)
-  }
-})
+// // Seek controls
+// AudioBrowser.onRemoteSeek((event: any) => {
+//   const customHandler = customHandlers.get('seek')
+//   if (customHandler) {
+//     customHandler(event)
+//   } else {
+//     seekTo(event.position)
+//   }
+// })
 
-AudioBrowser.onRemoteJumpForward((event: any) => {
-  const customHandler = customHandlers.get('jumpForward')
-  if (customHandler) {
-    customHandler(event)
-  } else {
-    seekBy(event.interval)
-  }
-})
+// AudioBrowser.onRemoteJumpForward((event: any) => {
+//   const customHandler = customHandlers.get('jumpForward')
+//   if (customHandler) {
+//     customHandler(event)
+//   } else {
+//     seekBy(event.interval)
+//   }
+// })
 
-AudioBrowser.onRemoteJumpBackward((event: any) => {
-  const customHandler = customHandlers.get('jumpBackward')
-  if (customHandler) {
-    customHandler(event)
-  } else {
-    seekBy(-event.interval)
-  }
-})
+// AudioBrowser.onRemoteJumpBackward((event: any) => {
+//   const customHandler = customHandlers.get('jumpBackward')
+//   if (customHandler) {
+//     customHandler(event)
+//   } else {
+//     seekBy(-event.interval)
+//   }
+// })
 
 // MARK: - Handler Override Functions
 //
@@ -153,104 +148,72 @@ AudioBrowser.onRemoteJumpBackward((event: any) => {
 
 /**
  * Sets a custom handler for remote play events, overriding the default behavior.
- * @param callback - Called when the user presses the play button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the play button. Pass undefined to disable.
  */
-export function handleRemotePlay(callback: () => void): () => void {
-  customHandlers.set('play', callback)
-  return () => {
-    customHandlers.delete('play')
-  }
+export function handleRemotePlay(callback: (() => void) | undefined) {
+  AudioBrowser.handleRemotePlay = callback
 }
 
 /**
  * Sets a custom handler for remote pause events, overriding the default behavior.
- * @param callback - Called when the user presses the pause button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the pause button. Pass undefined to disable.
  */
-export function handleRemotePause(callback: () => void): () => void {
-  customHandlers.set('pause', callback)
-  return () => {
-    customHandlers.delete('pause')
-  }
+export function handleRemotePause(callback: (() => void) | undefined) {
+  AudioBrowser.handleRemotePause = callback
 }
 
 /**
  * Sets a custom handler for remote next events, overriding the default behavior.
- * @param callback - Called when the user presses the next track button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the next track button. Pass undefined to disable.
  */
-export function handleRemoteNext(callback: () => void): () => void {
-  customHandlers.set('next', callback)
-  return () => {
-    customHandlers.delete('next')
-  }
+export function handleRemoteNext(callback: (() => void) | undefined) {
+  AudioBrowser.handleRemoteNext = callback
 }
 
 /**
  * Sets a custom handler for remote previous events, overriding the default behavior.
- * @param callback - Called when the user presses the previous track button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the previous track button. Pass undefined to disable.
  */
-export function handleRemotePrevious(callback: () => void): () => void {
-  customHandlers.set('previous', callback)
-  return () => {
-    customHandlers.delete('previous')
-  }
+export function handleRemotePrevious(callback: (() => void) | undefined) {
+  AudioBrowser.handleRemotePrevious = callback
 }
 
 /**
  * Sets a custom handler for remote stop events, overriding the default behavior.
- * @param callback - Called when the user presses the stop button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the stop button. Pass undefined to disable.
  */
-export function handleRemoteStop(callback: () => void): () => void {
-  customHandlers.set('stop', callback)
-  return () => {
-    customHandlers.delete('stop')
-  }
+export function handleRemoteStop(callback: (() => void) | undefined) {
+  AudioBrowser.handleRemoteStop = callback
 }
 
 /**
  * Sets a custom handler for remote seek events, overriding the default behavior.
- * @param callback - Called when the user changes the position of the timeline
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user changes the position of the timeline. Pass undefined to disable.
  */
 export function handleRemoteSeek(
-  callback: (event: RemoteSeekEvent) => void
-): () => void {
-  customHandlers.set('seek', callback)
-  return () => {
-    customHandlers.delete('seek')
-  }
+  callback: ((event: RemoteSeekEvent) => void) | undefined
+) {
+  AudioBrowser.handleRemoteSeek = callback
 }
 
 /**
  * Sets a custom handler for remote jump forward events, overriding the default behavior.
- * @param callback - Called when the user presses the jump forward button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the jump forward button. Pass undefined to disable.
  */
 export function handleRemoteJumpForward(
-  callback: (event: RemoteJumpForwardEvent) => void
-): () => void {
-  customHandlers.set('jumpForward', callback)
-  return () => {
-    customHandlers.delete('jumpForward')
-  }
+  callback: ((event: RemoteJumpForwardEvent) => void) | undefined
+) {
+  AudioBrowser.handleRemoteJumpForward = callback
 }
 
 /**
  * Sets a custom handler for remote jump backward events, overriding the default behavior.
- * @param callback - Called when the user presses the jump backward button
- * @returns Cleanup function to restore default behavior
+ * @param callback - Called when the user presses the jump backward button. Pass undefined to disable.
  */
 export function handleRemoteJumpBackward(
-  callback: (event: RemoteJumpBackwardEvent) => void
-): () => void {
-  customHandlers.set('jumpBackward', callback)
-  return () => {
-    customHandlers.delete('jumpBackward')
-  }
+  callback: ((event: RemoteJumpBackwardEvent) => void) | undefined
+) {
+  AudioBrowser.handleRemoteJumpBackward = callback
 }
 
 // MARK: - Event Callbacks (for listening/debugging only)
@@ -265,146 +228,134 @@ export function handleRemoteJumpBackward(
  * @param callback - Called when the user presses the bookmark button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteBookmark(callback: () => void): () => void {
-  return AudioBrowser.onRemoteBookmark(callback).remove
-}
+export const onRemoteBookmark = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemoteBookmark = cb)
+)
 
 /**
  * Subscribes to remote dislike events (iOS only).
  * @param callback - Called when the user presses the dislike button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteDislike(callback: () => void): () => void {
-  return AudioBrowser.onRemoteDislike(callback).remove
-}
+export const onRemoteDislike = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemoteDislike = cb)
+)
 
 /**
  * Subscribes to remote jump backward events.
  * @param callback - Called when the user presses the jump backward button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteJumpBackward(
-  callback: (event: RemoteJumpBackwardEvent) => void
-): () => void {
-  return AudioBrowser.onRemoteJumpBackward(callback as () => void).remove
-}
+export const onRemoteJumpBackward =
+  LazyEmitter.emitterize<RemoteJumpBackwardEvent>(
+    (cb) => (AudioBrowser.onRemoteJumpBackward = cb)
+  )
 
 /**
  * Subscribes to remote jump forward events.
  * @param callback - Called when the user presses the jump forward button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteJumpForward(
-  callback: (event: RemoteJumpForwardEvent) => void
-): () => void {
-  return AudioBrowser.onRemoteJumpForward(callback as () => void).remove
-}
+export const onRemoteJumpForward =
+  LazyEmitter.emitterize<RemoteJumpForwardEvent>(
+    (cb) => (AudioBrowser.onRemoteJumpForward = cb)
+  )
 
 /**
  * Subscribes to remote like events (iOS only).
  * @param callback - Called when the user presses the like button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteLike(callback: () => void): () => void {
-  return AudioBrowser.onRemoteLike(callback).remove
-}
+export const onRemoteLike = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemoteLike = cb)
+)
 
 /**
  * Subscribes to remote next events.
  * @param callback - Called when the user presses the next track button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteNext(callback: () => void): () => void {
-  return AudioBrowser.onRemoteNext(callback).remove
-}
+export const onRemoteNext = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemoteNext = cb)
+)
 
 /**
  * Subscribes to remote pause events.
  * @param callback - Called when the user presses the pause button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemotePause(callback: () => void): () => void {
-  return AudioBrowser.onRemotePause(callback).remove
-}
+export const onRemotePause = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemotePause = cb)
+)
 
 /**
  * Subscribes to remote play events.
  * @param callback - Called when the user presses the play button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemotePlay(callback: () => void): () => void {
-  return AudioBrowser.onRemotePlay(callback).remove
-}
+export const onRemotePlay = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemotePlay = cb)
+)
 
 /**
  * Subscribes to remote play ID events (Android only).
  * @param callback - Called when the user selects a track from an external device
  * @returns Cleanup function to unsubscribe
  */
-export function onRemotePlayId(
-  callback: (event: RemotePlayIdEvent) => void
-): () => void {
-  return AudioBrowser.onRemotePlayId(callback as () => void).remove
-}
+export const onRemotePlayId = LazyEmitter.emitterize<RemotePlayIdEvent>(
+  (cb) => (AudioBrowser.onRemotePlayId = cb)
+)
 
 /**
  * Subscribes to remote play search events (Android only).
  * @param callback - Called when the user searches for a track (usually voice search)
  * @returns Cleanup function to unsubscribe
  */
-export function onRemotePlaySearch(
-  callback: (event: RemotePlaySearchEvent) => void
-): () => void {
-  return AudioBrowser.onRemotePlaySearch(callback as () => void).remove
-}
+export const onRemotePlaySearch = LazyEmitter.emitterize<RemotePlaySearchEvent>(
+  (cb) => (AudioBrowser.onRemotePlaySearch = cb)
+)
 
 /**
  * Subscribes to remote previous events.
  * @param callback - Called when the user presses the previous track button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemotePrevious(callback: () => void): () => void {
-  return AudioBrowser.onRemotePrevious(callback).remove
-}
+export const onRemotePrevious = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemotePrevious = cb)
+)
 
 /**
  * Subscribes to remote seek events.
  * @param callback - Called when the user changes the position of the timeline
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteSeek(
-  callback: (event: RemoteSeekEvent) => void
-): () => void {
-  return AudioBrowser.onRemoteSeek(callback as () => void).remove
-}
+export const onRemoteSeek = LazyEmitter.emitterize<RemoteSeekEvent>(
+  (cb) => (AudioBrowser.onRemoteSeek = cb)
+)
 
 /**
  * Subscribes to remote set rating events.
  * @param callback - Called when the user changes the rating for the track remotely
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteSetRating(
-  callback: (event: RemoteSetRatingEvent) => void
-): () => void {
-  return AudioBrowser.onRemoteSetRating(callback as () => void).remove
-}
+export const onRemoteSetRating = LazyEmitter.emitterize<RemoteSetRatingEvent>(
+  (cb) => (AudioBrowser.onRemoteSetRating = cb)
+)
 
 /**
  * Subscribes to remote skip events (Android only).
  * @param callback - Called when the user presses the skip button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteSkip(
-  callback: (event: RemoteSkipEvent) => void
-): () => void {
-  return AudioBrowser.onRemoteSkip(callback as () => void).remove
-}
+export const onRemoteSkip = LazyEmitter.emitterize<RemoteSkipEvent>(
+  (cb) => (AudioBrowser.onRemoteSkip = cb)
+)
 
 /**
  * Subscribes to remote stop events.
  * @param callback - Called when the user presses the stop button
  * @returns Cleanup function to unsubscribe
  */
-export function onRemoteStop(callback: () => void): () => void {
-  return AudioBrowser.onRemoteStop(callback).remove
-}
+export const onRemoteStop = LazyEmitter.emitterize<void>(
+  (cb) => (AudioBrowser.onRemoteStop = cb)
+)

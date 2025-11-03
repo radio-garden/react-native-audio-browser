@@ -32,17 +32,3 @@ enum class State {
   ERROR,
 }
 
-val State.bridge: String
-  get() {
-    return when (this) {
-      State.LOADING -> "loading"
-      State.READY -> "ready"
-      State.BUFFERING -> "buffering"
-      State.PAUSED -> "paused"
-      State.PLAYING -> "playing"
-      State.NONE -> "none"
-      State.ENDED -> "ended"
-      State.ERROR -> "error"
-      State.STOPPED -> "stopped"
-    }
-  }

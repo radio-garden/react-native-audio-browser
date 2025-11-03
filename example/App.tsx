@@ -12,7 +12,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import TrackPlayer, { useActiveTrack } from 'react-native-audio-browser';
+import {
+  useActiveTrack
+} from 'react-native-audio-browser';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActionSheet,
@@ -22,9 +24,9 @@ import {
   Progress,
   Spacer,
   TrackInfo,
-} from './components';
-import { useSetupPlayer } from './hooks/usePlayer';
-import { installListeners, tracks } from './services';
+} from './src/components';
+import { useSetupPlayer } from './src/hooks/usePlayer';
+import { installListeners, tracks } from './src/services';
 
 installListeners();
 
@@ -32,17 +34,17 @@ const tracksWithIds = tracks.map((track, index) => ({
   ...track,
   mediaId: `${index}`,
 }));
-TrackPlayer.registerMediaBrowser({
-  async get({ id }) {
-    return tracksWithIds.find(item => item.mediaId === id);
-  },
-  async list() {
-    return {
-      children: tracksWithIds,
-      total: tracksWithIds.length,
-    };
-  },
-});
+// TrackPlayer.registerMediaBrowser({
+//   async get({ id }) {
+//     return tracksWithIds.find(item => item.mediaId === id);
+//   },
+//   async list() {
+//     return {
+//       children: tracksWithIds,
+//       total: tracksWithIds.length,
+//     };
+//   },
+// });
 
 export default function App() {
   const isPlayerReady = useSetupPlayer();

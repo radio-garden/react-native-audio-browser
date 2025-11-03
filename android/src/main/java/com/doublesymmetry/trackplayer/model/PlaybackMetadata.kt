@@ -1,6 +1,7 @@
 package com.doublesymmetry.trackplayer.model
 
 import androidx.media3.common.Metadata
+import com.margelo.nitro.audiobrowser.PlaybackMetadata as NitroPlaybackMetadata
 import androidx.media3.container.MdtaMetadataEntry
 import androidx.media3.extractor.metadata.icy.IcyHeaders
 import androidx.media3.extractor.metadata.icy.IcyInfo
@@ -212,5 +213,17 @@ data class PlaybackMetadata(
         )
       else null
     }
+  }
+
+  fun toNitro(): NitroPlaybackMetadata {
+    return NitroPlaybackMetadata(
+      source = source,
+      title = title,
+      url = url,
+      artist = artist,
+      album = album,
+      date = date,
+      genre = genre
+    )
   }
 }

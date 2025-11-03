@@ -72,11 +72,6 @@ private constructor(
       .build()
   }
 
-  fun toBridge(): WritableMap {
-    // Return the original item to preserve custom fields
-    return Arguments.fromBundle(originalItem) ?: Arguments.createMap()
-  }
-
   fun updateMetadata(
     title: String? = this.title,
     artist: String? = this.artist,
@@ -123,12 +118,7 @@ private constructor(
 
   fun toNitro(): NitroTrack {
     // Convert MediaType to Nitro TrackType
-    val trackType = when (type) {
-      MediaType.DEFAULT -> TrackType.DEFAULT
-      MediaType.DASH -> TrackType.DASH
-      MediaType.HLS -> TrackType.HLS
-      MediaType.SMOOTH_STREAMING -> TrackType.SMOOTHSTREAMING
-    }
+    val trackType = type.toNitro()
 
     // Get description from original bundle if it exists
     val description = originalItem.getString("description")
@@ -225,13 +215,7 @@ private constructor(
 
     fun fromNitro(nitroTrack: NitroTrack, context: Context): Track {
       // Convert Nitro TrackType to MediaType
-      val mediaType = when (nitroTrack.type) {
-        TrackType.DEFAULT -> MediaType.DEFAULT
-        TrackType.DASH -> MediaType.DASH
-        TrackType.HLS -> MediaType.HLS
-        TrackType.SMOOTHSTREAMING -> MediaType.SMOOTH_STREAMING
-        null -> MediaType.DEFAULT
-      }
+      val mediaType = nitroTrack.type?.let { MediaType.fromNitro(it) } ?: MediaType.DEFAULT
 
       // Create a temporary bundle to use existing URI resolution logic
       val tempBundle = Bundle().apply {

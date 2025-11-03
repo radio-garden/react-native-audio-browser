@@ -1,53 +1,90 @@
 import { type HybridObject } from 'react-native-nitro-modules'
-import type {
-  PlaybackError,
-  PlaybackState,
-  PlayerOptions,
-  PlayingState,
-  Progress,
-  RepeatMode,
-  Track,
-} from '../features'
 
-type EmitterCallback<T> = (data: T) => void
-type EventEmitter<T> = (callback: EmitterCallback<T>) => () => void
+import type { PlaybackActiveTrackChangedEvent } from '../features/activeTrack'
+import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'
+import type {
+  AudioCommonMetadataReceivedEvent,
+  AudioMetadataReceivedEvent,
+  PlaybackMetadata,
+} from '../features/metadata'
+import type { Options, UpdateOptions } from '../features/options'
+import type { PlaybackState } from '../features/playbackState'
+import type { PlayerOptions } from '../features/player'
+import type { PlayingState } from '../features/playingState'
+import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playWhenReady'
+import type {
+  PlaybackProgressUpdatedEvent,
+  Progress,
+} from '../features/progress'
+import type { PlaybackQueueEndedEvent, Track } from '../features/queue'
+import type {
+  RemoteJumpBackwardEvent,
+  RemoteJumpForwardEvent,
+  RemotePlayIdEvent,
+  RemotePlaySearchEvent,
+  RemoteSeekEvent,
+  RemoteSetRatingEvent,
+  RemoteSkipEvent,
+} from '../features/remoteControls'
+import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
   // MARK: init and config
   setupPlayer(options: PlayerOptions): Promise<void>
-  // updateOptions(options: UpdateOptions): void
-  // getOptions(): UpdateOptions
+  updateOptions(options: UpdateOptions): void
+  getOptions(): UpdateOptions
 
   // // MARK: events
-  // readonly onMetadataChapterReceived: EventEmitter<AudioMetadataReceivedEvent>
-  // readonly onMetadataCommonReceived: EventEmitter<AudioCommonMetadataReceivedEvent>
-  // readonly onMetadataTimedReceived: EventEmitter<AudioMetadataReceivedEvent>
-  // readonly onPlaybackActiveTrackChanged: EventEmitter<PlaybackActiveTrackChangedEvent>
-  // readonly onPlaybackError: EventEmitter<PlaybackErrorEvent>
-  // // readonly onPlaybackMetadata: EventEmitter<UnsafeObject>
-  // readonly onPlaybackPlayWhenReadyChanged: EventEmitter<PlaybackPlayWhenReadyChangedEvent>
-  // readonly onPlaybackPlayingState: EventEmitter<PlayingState>
-  // readonly onPlaybackProgressUpdated: EventEmitter<PlaybackProgressUpdatedEvent>
-  // readonly onPlaybackQueueEnded: EventEmitter<PlaybackQueueEndedEvent>
-  // readonly onPlaybackRepeatModeChanged: EventEmitter<RepeatModeChangedEvent>
-  // readonly onPlaybackState: EventEmitter<PlaybackState>
-  // readonly onRemoteBookmark: EventEmitter<void>
-  // readonly onRemoteDislike: EventEmitter<void>
-  // readonly onRemoteJumpBackward: EventEmitter<RemoteJumpBackwardEvent>
-  // readonly onRemoteJumpForward: EventEmitter<RemoteJumpForwardEvent>
-  // readonly onRemoteLike: EventEmitter<void>
-  // readonly onRemoteNext: EventEmitter<void>
-  // readonly onRemotePause: EventEmitter<void>
-  // readonly onRemotePlay: EventEmitter<void>
-  // readonly onRemotePlayId: EventEmitter<RemotePlayIdEvent>
-  // readonly onRemotePlaySearch: EventEmitter<RemotePlaySearchEvent>
-  // readonly onRemotePrevious: EventEmitter<void>
-  // readonly onRemoteSeek: EventEmitter<RemoteSeekEvent>
-  // readonly onRemoteSetRating: EventEmitter<RemoteSetRatingEvent>
-  // readonly onRemoteSkip: EventEmitter<RemoteSkipEvent>
-  // readonly onRemoteStop: EventEmitter<void>
-  // readonly onOptionsChanged: EventEmitter<Options>
+  onMetadataChapterReceived: (event: AudioMetadataReceivedEvent) => void
+  onMetadataCommonReceived: (event: AudioCommonMetadataReceivedEvent) => void
+  onMetadataTimedReceived: (event: AudioMetadataReceivedEvent) => void
+  onPlaybackMetadata: (data: PlaybackMetadata) => void
+  onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) => void
+  onPlaybackError: (data: PlaybackErrorEvent) => void
+  onPlaybackPlayWhenReadyChanged: (
+    data: PlaybackPlayWhenReadyChangedEvent
+  ) => void
+  onPlaybackPlayingState: (data: PlayingState) => void
+  onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
+  onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
+  onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
+  onPlaybackStateChanged: (data: PlaybackState) => void
+  onRemoteBookmark: () => void
+  onRemoteDislike: () => void
+  onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void
+  onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void
+  onRemoteLike: () => void
+  onRemoteNext: () => void
+  onRemotePause: () => void
+  onRemotePlay: () => void
+  onRemotePlayId: (event: RemotePlayIdEvent) => void
+  onRemotePlaySearch: (event: RemotePlaySearchEvent) => void
+  onRemotePrevious: () => void
+  onRemoteSeek: (event: RemoteSeekEvent) => void
+  onRemoteSetRating: (event: RemoteSetRatingEvent) => void
+  onRemoteSkip: (event: RemoteSkipEvent) => void
+  onRemoteStop: () => void
+  onOptionsChanged: (event: Options) => void
+
+  // MARK: remote handlers
+  handleRemoteBookmark: (() => void) | undefined
+  handleRemoteDislike: (() => void) | undefined
+  handleRemoteJumpBackward:
+    | ((event: RemoteJumpBackwardEvent) => void)
+    | undefined
+  handleRemoteJumpForward: ((event: RemoteJumpForwardEvent) => void) | undefined
+  handleRemoteLike: (() => void) | undefined
+  handleRemoteNext: (() => void) | undefined
+  handleRemotePause: (() => void) | undefined
+  handleRemotePlay: (() => void) | undefined
+  handleRemotePlayId: ((event: RemotePlayIdEvent) => void) | undefined
+  handleRemotePlaySearch: ((event: RemotePlaySearchEvent) => void) | undefined
+  handleRemotePrevious: (() => void) | undefined
+  handleRemoteSeek: ((event: RemoteSeekEvent) => void) | undefined
+  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined
+  handleRemoteSkip: (() => void) | undefined
+  handleRemoteStop: (() => void) | undefined
 
   // MARK: player api
   load(track: Track): void

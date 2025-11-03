@@ -12,8 +12,24 @@
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `AndroidOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
+// Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
+// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
+// Forward declaration of `AudioMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `Capability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `FeedbackOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -24,12 +40,30 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 // Forward declaration of `IOSCategory` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `IOSPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
+// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `Options` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `PitchAlgorithm` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
+// Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
+// Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
+// Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
+// Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackState; }
 // Forward declaration of `PlayingState` to properly resolve imports.
@@ -38,12 +72,32 @@ namespace margelo::nitro::audiobrowser { struct PlayingState; }
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `RatingType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
+// Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
+// Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
+// Forward declaration of `RemoteSeekEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
+// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
+// Forward declaration of `RemoteSkipEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
+// Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `State` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class State; }
 // Forward declaration of `TrackType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackType; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `UpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
@@ -52,22 +106,49 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 // Include C++ defined types
 #include "AndroidAudioContentType.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
+#include "AndroidOptions.hpp"
 #include "AndroidPlayerOptions.hpp"
+#include "AndroidUpdateOptions.hpp"
+#include "AppKilledPlaybackBehavior.hpp"
+#include "AudioCommonMetadataReceivedEvent.hpp"
+#include "AudioMetadata.hpp"
+#include "AudioMetadataReceivedEvent.hpp"
+#include "Capability.hpp"
+#include "FeedbackOptions.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "IOSOptions.hpp"
 #include "IOSPlayerOptions.hpp"
+#include "IOSUpdateOptions.hpp"
+#include "Options.hpp"
 #include "PitchAlgorithm.hpp"
+#include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
+#include "PlaybackErrorEvent.hpp"
+#include "PlaybackMetadata.hpp"
+#include "PlaybackPlayWhenReadyChangedEvent.hpp"
+#include "PlaybackProgressUpdatedEvent.hpp"
+#include "PlaybackQueueEndedEvent.hpp"
 #include "PlaybackState.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
 #include "RatingType.hpp"
+#include "RemoteJumpBackwardEvent.hpp"
+#include "RemoteJumpForwardEvent.hpp"
+#include "RemotePlayIdEvent.hpp"
+#include "RemotePlaySearchEvent.hpp"
+#include "RemoteSeekEvent.hpp"
+#include "RemoteSetRatingEvent.hpp"
+#include "RemoteSkipEvent.hpp"
 #include "RepeatMode.hpp"
+#include "RepeatModeChangedEvent.hpp"
+#include "State.hpp"
 #include "Track.hpp"
 #include "TrackType.hpp"
+#include "UpdateOptions.hpp"
 #include <NitroModules/FastVectorCopy.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/PromiseHolder.hpp>
@@ -303,6 +384,108 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
+  // pragma MARK: std::optional<AppKilledPlaybackBehavior>
+  /**
+   * Specialized version of `std::optional<AppKilledPlaybackBehavior>`.
+   */
+  using std__optional_AppKilledPlaybackBehavior_ = std::optional<AppKilledPlaybackBehavior>;
+  inline std::optional<AppKilledPlaybackBehavior> create_std__optional_AppKilledPlaybackBehavior_(const AppKilledPlaybackBehavior& value) noexcept {
+    return std::optional<AppKilledPlaybackBehavior>(value);
+  }
+  inline bool has_value_std__optional_AppKilledPlaybackBehavior_(const std::optional<AppKilledPlaybackBehavior>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline AppKilledPlaybackBehavior get_std__optional_AppKilledPlaybackBehavior_(const std::optional<AppKilledPlaybackBehavior>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<RatingType>
+  /**
+   * Specialized version of `std::optional<RatingType>`.
+   */
+  using std__optional_RatingType_ = std::optional<RatingType>;
+  inline std::optional<RatingType> create_std__optional_RatingType_(const RatingType& value) noexcept {
+    return std::optional<RatingType>(value);
+  }
+  inline bool has_value_std__optional_RatingType_(const std::optional<RatingType>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline RatingType get_std__optional_RatingType_(const std::optional<RatingType>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<Capability>
+  /**
+   * Specialized version of `std::vector<Capability>`.
+   */
+  using std__vector_Capability_ = std::vector<Capability>;
+  inline std::vector<Capability> copy_std__vector_Capability_(const Capability* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
+    return margelo::nitro::FastVectorCopy<Capability>(data, size);
+  }
+  inline const Capability* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_Capability_(const std::vector<Capability>& vector) noexcept {
+    return vector.data();
+  }
+  
+  // pragma MARK: std::optional<std::vector<Capability>>
+  /**
+   * Specialized version of `std::optional<std::vector<Capability>>`.
+   */
+  using std__optional_std__vector_Capability__ = std::optional<std::vector<Capability>>;
+  inline std::optional<std::vector<Capability>> create_std__optional_std__vector_Capability__(const std::vector<Capability>& value) noexcept {
+    return std::optional<std::vector<Capability>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<Capability> get_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<AndroidUpdateOptions>
+  /**
+   * Specialized version of `std::optional<AndroidUpdateOptions>`.
+   */
+  using std__optional_AndroidUpdateOptions_ = std::optional<AndroidUpdateOptions>;
+  inline std::optional<AndroidUpdateOptions> create_std__optional_AndroidUpdateOptions_(const AndroidUpdateOptions& value) noexcept {
+    return std::optional<AndroidUpdateOptions>(value);
+  }
+  inline bool has_value_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline AndroidUpdateOptions get_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<FeedbackOptions>
+  /**
+   * Specialized version of `std::optional<FeedbackOptions>`.
+   */
+  using std__optional_FeedbackOptions_ = std::optional<FeedbackOptions>;
+  inline std::optional<FeedbackOptions> create_std__optional_FeedbackOptions_(const FeedbackOptions& value) noexcept {
+    return std::optional<FeedbackOptions>(value);
+  }
+  inline bool has_value_std__optional_FeedbackOptions_(const std::optional<FeedbackOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline FeedbackOptions get_std__optional_FeedbackOptions_(const std::optional<FeedbackOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<IOSUpdateOptions>
+  /**
+   * Specialized version of `std::optional<IOSUpdateOptions>`.
+   */
+  using std__optional_IOSUpdateOptions_ = std::optional<IOSUpdateOptions>;
+  inline std::optional<IOSUpdateOptions> create_std__optional_IOSUpdateOptions_(const IOSUpdateOptions& value) noexcept {
+    return std::optional<IOSUpdateOptions>(value);
+  }
+  inline bool has_value_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSUpdateOptions get_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
+    return *optional;
+  }
+  
   // pragma MARK: std::optional<std::string>
   /**
    * Specialized version of `std::optional<std::string>`.
@@ -316,6 +499,83 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::vector<AudioMetadata>
+  /**
+   * Specialized version of `std::vector<AudioMetadata>`.
+   */
+  using std__vector_AudioMetadata_ = std::vector<AudioMetadata>;
+  inline std::vector<AudioMetadata> create_std__vector_AudioMetadata_(size_t size) noexcept {
+    std::vector<AudioMetadata> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::function<void(const AudioMetadataReceivedEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const AudioMetadataReceivedEvent&)>`.
+   */
+  using Func_void_AudioMetadataReceivedEvent = std::function<void(const AudioMetadataReceivedEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const AudioMetadataReceivedEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_AudioMetadataReceivedEvent_Wrapper final {
+  public:
+    explicit Func_void_AudioMetadataReceivedEvent_Wrapper(std::function<void(const AudioMetadataReceivedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const AudioMetadataReceivedEvent& /* event */)>>(std::move(func))) {}
+    inline void call(AudioMetadataReceivedEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const AudioMetadataReceivedEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_AudioMetadataReceivedEvent create_Func_void_AudioMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_AudioMetadataReceivedEvent_Wrapper wrap_Func_void_AudioMetadataReceivedEvent(Func_void_AudioMetadataReceivedEvent value) noexcept {
+    return Func_void_AudioMetadataReceivedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const AudioCommonMetadataReceivedEvent&)>`.
+   */
+  using Func_void_AudioCommonMetadataReceivedEvent = std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const AudioCommonMetadataReceivedEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_AudioCommonMetadataReceivedEvent_Wrapper final {
+  public:
+    explicit Func_void_AudioCommonMetadataReceivedEvent_Wrapper(std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>>(std::move(func))) {}
+    inline void call(AudioCommonMetadataReceivedEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_AudioCommonMetadataReceivedEvent create_Func_void_AudioCommonMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_AudioCommonMetadataReceivedEvent_Wrapper wrap_Func_void_AudioCommonMetadataReceivedEvent(Func_void_AudioCommonMetadataReceivedEvent value) noexcept {
+    return Func_void_AudioCommonMetadataReceivedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackMetadata& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackMetadata&)>`.
+   */
+  using Func_void_PlaybackMetadata = std::function<void(const PlaybackMetadata& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackMetadata& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackMetadata_Wrapper final {
+  public:
+    explicit Func_void_PlaybackMetadata_Wrapper(std::function<void(const PlaybackMetadata& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackMetadata& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackMetadata data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackMetadata& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackMetadata create_Func_void_PlaybackMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackMetadata_Wrapper wrap_Func_void_PlaybackMetadata(Func_void_PlaybackMetadata value) noexcept {
+    return Func_void_PlaybackMetadata_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<TrackType>
@@ -348,19 +608,41 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<RatingType>
+  // pragma MARK: std::optional<Track>
   /**
-   * Specialized version of `std::optional<RatingType>`.
+   * Specialized version of `std::optional<Track>`.
    */
-  using std__optional_RatingType_ = std::optional<RatingType>;
-  inline std::optional<RatingType> create_std__optional_RatingType_(const RatingType& value) noexcept {
-    return std::optional<RatingType>(value);
+  using std__optional_Track_ = std::optional<Track>;
+  inline std::optional<Track> create_std__optional_Track_(const Track& value) noexcept {
+    return std::optional<Track>(value);
   }
-  inline bool has_value_std__optional_RatingType_(const std::optional<RatingType>& optional) noexcept {
+  inline bool has_value_std__optional_Track_(const std::optional<Track>& optional) noexcept {
     return optional.has_value();
   }
-  inline RatingType get_std__optional_RatingType_(const std::optional<RatingType>& optional) noexcept {
+  inline Track get_std__optional_Track_(const std::optional<Track>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackActiveTrackChangedEvent&)>`.
+   */
+  using Func_void_PlaybackActiveTrackChangedEvent = std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackActiveTrackChangedEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackActiveTrackChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_PlaybackActiveTrackChangedEvent_Wrapper(std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackActiveTrackChangedEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackActiveTrackChangedEvent create_Func_void_PlaybackActiveTrackChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackActiveTrackChangedEvent_Wrapper wrap_Func_void_PlaybackActiveTrackChangedEvent(Func_void_PlaybackActiveTrackChangedEvent value) noexcept {
+    return Func_void_PlaybackActiveTrackChangedEvent_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<PlaybackError>
@@ -375,6 +657,500 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline PlaybackError get_std__optional_PlaybackError_(const std::optional<PlaybackError>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackErrorEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackErrorEvent&)>`.
+   */
+  using Func_void_PlaybackErrorEvent = std::function<void(const PlaybackErrorEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackErrorEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackErrorEvent_Wrapper final {
+  public:
+    explicit Func_void_PlaybackErrorEvent_Wrapper(std::function<void(const PlaybackErrorEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackErrorEvent& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackErrorEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackErrorEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackErrorEvent create_Func_void_PlaybackErrorEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackErrorEvent_Wrapper wrap_Func_void_PlaybackErrorEvent(Func_void_PlaybackErrorEvent value) noexcept {
+    return Func_void_PlaybackErrorEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackPlayWhenReadyChangedEvent&)>`.
+   */
+  using Func_void_PlaybackPlayWhenReadyChangedEvent = std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackPlayWhenReadyChangedEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackPlayWhenReadyChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_PlaybackPlayWhenReadyChangedEvent_Wrapper(std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackPlayWhenReadyChangedEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackPlayWhenReadyChangedEvent create_Func_void_PlaybackPlayWhenReadyChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackPlayWhenReadyChangedEvent_Wrapper wrap_Func_void_PlaybackPlayWhenReadyChangedEvent(Func_void_PlaybackPlayWhenReadyChangedEvent value) noexcept {
+    return Func_void_PlaybackPlayWhenReadyChangedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const PlayingState& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlayingState&)>`.
+   */
+  using Func_void_PlayingState = std::function<void(const PlayingState& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlayingState& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlayingState_Wrapper final {
+  public:
+    explicit Func_void_PlayingState_Wrapper(std::function<void(const PlayingState& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlayingState& /* data */)>>(std::move(func))) {}
+    inline void call(PlayingState data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlayingState& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlayingState create_Func_void_PlayingState(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlayingState_Wrapper wrap_Func_void_PlayingState(Func_void_PlayingState value) noexcept {
+    return Func_void_PlayingState_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackProgressUpdatedEvent&)>`.
+   */
+  using Func_void_PlaybackProgressUpdatedEvent = std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackProgressUpdatedEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackProgressUpdatedEvent_Wrapper final {
+  public:
+    explicit Func_void_PlaybackProgressUpdatedEvent_Wrapper(std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackProgressUpdatedEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackProgressUpdatedEvent create_Func_void_PlaybackProgressUpdatedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackProgressUpdatedEvent_Wrapper wrap_Func_void_PlaybackProgressUpdatedEvent(Func_void_PlaybackProgressUpdatedEvent value) noexcept {
+    return Func_void_PlaybackProgressUpdatedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackQueueEndedEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackQueueEndedEvent&)>`.
+   */
+  using Func_void_PlaybackQueueEndedEvent = std::function<void(const PlaybackQueueEndedEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackQueueEndedEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackQueueEndedEvent_Wrapper final {
+  public:
+    explicit Func_void_PlaybackQueueEndedEvent_Wrapper(std::function<void(const PlaybackQueueEndedEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackQueueEndedEvent& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackQueueEndedEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackQueueEndedEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackQueueEndedEvent create_Func_void_PlaybackQueueEndedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackQueueEndedEvent_Wrapper wrap_Func_void_PlaybackQueueEndedEvent(Func_void_PlaybackQueueEndedEvent value) noexcept {
+    return Func_void_PlaybackQueueEndedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RepeatModeChangedEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const RepeatModeChangedEvent&)>`.
+   */
+  using Func_void_RepeatModeChangedEvent = std::function<void(const RepeatModeChangedEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RepeatModeChangedEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_RepeatModeChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_RepeatModeChangedEvent_Wrapper(std::function<void(const RepeatModeChangedEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const RepeatModeChangedEvent& /* data */)>>(std::move(func))) {}
+    inline void call(RepeatModeChangedEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RepeatModeChangedEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RepeatModeChangedEvent create_Func_void_RepeatModeChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RepeatModeChangedEvent_Wrapper wrap_Func_void_RepeatModeChangedEvent(Func_void_RepeatModeChangedEvent value) noexcept {
+    return Func_void_RepeatModeChangedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackState& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const PlaybackState&)>`.
+   */
+  using Func_void_PlaybackState = std::function<void(const PlaybackState& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PlaybackState& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_PlaybackState_Wrapper final {
+  public:
+    explicit Func_void_PlaybackState_Wrapper(std::function<void(const PlaybackState& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackState& /* data */)>>(std::move(func))) {}
+    inline void call(PlaybackState data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PlaybackState& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PlaybackState create_Func_void_PlaybackState(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PlaybackState_Wrapper wrap_Func_void_PlaybackState(Func_void_PlaybackState value) noexcept {
+    return Func_void_PlaybackState_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RemoteJumpBackwardEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemoteJumpBackwardEvent&)>`.
+   */
+  using Func_void_RemoteJumpBackwardEvent = std::function<void(const RemoteJumpBackwardEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemoteJumpBackwardEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemoteJumpBackwardEvent_Wrapper final {
+  public:
+    explicit Func_void_RemoteJumpBackwardEvent_Wrapper(std::function<void(const RemoteJumpBackwardEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemoteJumpBackwardEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemoteJumpBackwardEvent create_Func_void_RemoteJumpBackwardEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemoteJumpBackwardEvent_Wrapper wrap_Func_void_RemoteJumpBackwardEvent(Func_void_RemoteJumpBackwardEvent value) noexcept {
+    return Func_void_RemoteJumpBackwardEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RemoteJumpForwardEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemoteJumpForwardEvent&)>`.
+   */
+  using Func_void_RemoteJumpForwardEvent = std::function<void(const RemoteJumpForwardEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemoteJumpForwardEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemoteJumpForwardEvent_Wrapper final {
+  public:
+    explicit Func_void_RemoteJumpForwardEvent_Wrapper(std::function<void(const RemoteJumpForwardEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemoteJumpForwardEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemoteJumpForwardEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemoteJumpForwardEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemoteJumpForwardEvent create_Func_void_RemoteJumpForwardEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemoteJumpForwardEvent_Wrapper wrap_Func_void_RemoteJumpForwardEvent(Func_void_RemoteJumpForwardEvent value) noexcept {
+    return Func_void_RemoteJumpForwardEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RemotePlayIdEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemotePlayIdEvent&)>`.
+   */
+  using Func_void_RemotePlayIdEvent = std::function<void(const RemotePlayIdEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemotePlayIdEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemotePlayIdEvent_Wrapper final {
+  public:
+    explicit Func_void_RemotePlayIdEvent_Wrapper(std::function<void(const RemotePlayIdEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemotePlayIdEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemotePlayIdEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemotePlayIdEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemotePlayIdEvent create_Func_void_RemotePlayIdEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemotePlayIdEvent_Wrapper wrap_Func_void_RemotePlayIdEvent(Func_void_RemotePlayIdEvent value) noexcept {
+    return Func_void_RemotePlayIdEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RemotePlaySearchEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemotePlaySearchEvent&)>`.
+   */
+  using Func_void_RemotePlaySearchEvent = std::function<void(const RemotePlaySearchEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemotePlaySearchEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemotePlaySearchEvent_Wrapper final {
+  public:
+    explicit Func_void_RemotePlaySearchEvent_Wrapper(std::function<void(const RemotePlaySearchEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemotePlaySearchEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemotePlaySearchEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemotePlaySearchEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemotePlaySearchEvent create_Func_void_RemotePlaySearchEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemotePlaySearchEvent_Wrapper wrap_Func_void_RemotePlaySearchEvent(Func_void_RemotePlaySearchEvent value) noexcept {
+    return Func_void_RemotePlaySearchEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RemoteSeekEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemoteSeekEvent&)>`.
+   */
+  using Func_void_RemoteSeekEvent = std::function<void(const RemoteSeekEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemoteSeekEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemoteSeekEvent_Wrapper final {
+  public:
+    explicit Func_void_RemoteSeekEvent_Wrapper(std::function<void(const RemoteSeekEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemoteSeekEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemoteSeekEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemoteSeekEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemoteSeekEvent create_Func_void_RemoteSeekEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemoteSeekEvent_Wrapper wrap_Func_void_RemoteSeekEvent(Func_void_RemoteSeekEvent value) noexcept {
+    return Func_void_RemoteSeekEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::variant<std::string, double>
+  /**
+   * Wrapper struct for `std::variant<std::string, double>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_std__string__double_ {
+    std::variant<std::string, double> variant;
+    std__variant_std__string__double_(std::variant<std::string, double> variant): variant(variant) { }
+    operator std::variant<std::string, double>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline std::string get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline double get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_std__string__double_ create_std__variant_std__string__double_(const std::string& value) noexcept {
+    return std__variant_std__string__double_(value);
+  }
+  inline std__variant_std__string__double_ create_std__variant_std__string__double_(double value) noexcept {
+    return std__variant_std__string__double_(value);
+  }
+  
+  // pragma MARK: std::function<void(const RemoteSetRatingEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemoteSetRatingEvent&)>`.
+   */
+  using Func_void_RemoteSetRatingEvent = std::function<void(const RemoteSetRatingEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemoteSetRatingEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemoteSetRatingEvent_Wrapper final {
+  public:
+    explicit Func_void_RemoteSetRatingEvent_Wrapper(std::function<void(const RemoteSetRatingEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemoteSetRatingEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemoteSetRatingEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemoteSetRatingEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemoteSetRatingEvent create_Func_void_RemoteSetRatingEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemoteSetRatingEvent_Wrapper wrap_Func_void_RemoteSetRatingEvent(Func_void_RemoteSetRatingEvent value) noexcept {
+    return Func_void_RemoteSetRatingEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const RemoteSkipEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemoteSkipEvent&)>`.
+   */
+  using Func_void_RemoteSkipEvent = std::function<void(const RemoteSkipEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemoteSkipEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemoteSkipEvent_Wrapper final {
+  public:
+    explicit Func_void_RemoteSkipEvent_Wrapper(std::function<void(const RemoteSkipEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemoteSkipEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemoteSkipEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemoteSkipEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemoteSkipEvent create_Func_void_RemoteSkipEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemoteSkipEvent_Wrapper wrap_Func_void_RemoteSkipEvent(Func_void_RemoteSkipEvent value) noexcept {
+    return Func_void_RemoteSkipEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<AndroidOptions>
+  /**
+   * Specialized version of `std::optional<AndroidOptions>`.
+   */
+  using std__optional_AndroidOptions_ = std::optional<AndroidOptions>;
+  inline std::optional<AndroidOptions> create_std__optional_AndroidOptions_(const AndroidOptions& value) noexcept {
+    return std::optional<AndroidOptions>(value);
+  }
+  inline bool has_value_std__optional_AndroidOptions_(const std::optional<AndroidOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline AndroidOptions get_std__optional_AndroidOptions_(const std::optional<AndroidOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<IOSOptions>
+  /**
+   * Specialized version of `std::optional<IOSOptions>`.
+   */
+  using std__optional_IOSOptions_ = std::optional<IOSOptions>;
+  inline std::optional<IOSOptions> create_std__optional_IOSOptions_(const IOSOptions& value) noexcept {
+    return std::optional<IOSOptions>(value);
+  }
+  inline bool has_value_std__optional_IOSOptions_(const std::optional<IOSOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSOptions get_std__optional_IOSOptions_(const std::optional<IOSOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const Options& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const Options&)>`.
+   */
+  using Func_void_Options = std::function<void(const Options& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const Options& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_Options_Wrapper final {
+  public:
+    explicit Func_void_Options_Wrapper(std::function<void(const Options& /* event */)>&& func): _function(std::make_unique<std::function<void(const Options& /* event */)>>(std::move(func))) {}
+    inline void call(Options event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const Options& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_Options create_Func_void_Options(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_Options_Wrapper wrap_Func_void_Options(Func_void_Options value) noexcept {
+    return Func_void_Options_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::function<void()>>
+  /**
+   * Specialized version of `std::optional<std::function<void()>>`.
+   */
+  using std__optional_std__function_void____ = std::optional<std::function<void()>>;
+  inline std::optional<std::function<void()>> create_std__optional_std__function_void____(const std::function<void()>& value) noexcept {
+    return std::optional<std::function<void()>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void____(const std::optional<std::function<void()>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void()> get_std__optional_std__function_void____(const std::optional<std::function<void()>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemoteJumpBackwardEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______ = std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> create_std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______(const std::function<void(const RemoteJumpBackwardEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______(const std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemoteJumpBackwardEvent& /* event */)> get_std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______(const std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemoteJumpForwardEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______ = std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>> create_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemoteJumpForwardEvent& /* event */)> get_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemotePlayIdEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemotePlayIdEvent_____event______ = std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>> create_std__optional_std__function_void_const_RemotePlayIdEvent_____event______(const std::function<void(const RemotePlayIdEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemotePlayIdEvent_____event______(const std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemotePlayIdEvent& /* event */)> get_std__optional_std__function_void_const_RemotePlayIdEvent_____event______(const std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemotePlaySearchEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemotePlaySearchEvent_____event______ = std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>> create_std__optional_std__function_void_const_RemotePlaySearchEvent_____event______(const std::function<void(const RemotePlaySearchEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemotePlaySearchEvent_____event______(const std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemotePlaySearchEvent& /* event */)> get_std__optional_std__function_void_const_RemotePlaySearchEvent_____event______(const std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemoteSeekEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemoteSeekEvent_____event______ = std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemoteSeekEvent& /* event */)>> create_std__optional_std__function_void_const_RemoteSeekEvent_____event______(const std::function<void(const RemoteSeekEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemoteSeekEvent_____event______(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemoteSeekEvent& /* event */)> get_std__optional_std__function_void_const_RemoteSeekEvent_____event______(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemoteSetRatingEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemoteSetRatingEvent_____event______ = std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> create_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(const std::function<void(const RemoteSetRatingEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemoteSetRatingEvent& /* event */)> get_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& optional) noexcept {
     return *optional;
   }
   
@@ -399,21 +1175,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline const double* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_double_(const std::vector<double>& vector) noexcept {
     return vector.data();
-  }
-  
-  // pragma MARK: std::optional<Track>
-  /**
-   * Specialized version of `std::optional<Track>`.
-   */
-  using std__optional_Track_ = std::optional<Track>;
-  inline std::optional<Track> create_std__optional_Track_(const Track& value) noexcept {
-    return std::optional<Track>(value);
-  }
-  inline bool has_value_std__optional_Track_(const std::optional<Track>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline Track get_std__optional_Track_(const std::optional<Track>& optional) noexcept {
-    return *optional;
   }
   
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
@@ -444,6 +1205,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_void_ create_Result_void_(const std::exception_ptr& error) noexcept {
     return Result<void>::withError(error);
+  }
+  
+  // pragma MARK: Result<UpdateOptions>
+  using Result_UpdateOptions_ = Result<UpdateOptions>;
+  inline Result_UpdateOptions_ create_Result_UpdateOptions_(const UpdateOptions& value) noexcept {
+    return Result<UpdateOptions>::withValue(value);
+  }
+  inline Result_UpdateOptions_ create_Result_UpdateOptions_(const std::exception_ptr& error) noexcept {
+    return Result<UpdateOptions>::withError(error);
   }
   
   // pragma MARK: Result<bool>

@@ -2,6 +2,7 @@ package com.doublesymmetry.trackplayer.event
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.RemoteSeekEvent as NitroRemoteSeekEvent
 
 /** Event data for remote seek command. */
 data class RemoteSeekEvent(
@@ -10,5 +11,9 @@ data class RemoteSeekEvent(
 ) {
   fun toBridge(): WritableMap {
     return Arguments.createMap().apply { putDouble("position", position) }
+  }
+
+  fun toNitro(): NitroRemoteSeekEvent {
+    return NitroRemoteSeekEvent(position = position)
   }
 }

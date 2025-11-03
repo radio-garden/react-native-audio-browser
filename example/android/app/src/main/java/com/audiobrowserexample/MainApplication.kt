@@ -22,6 +22,12 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // Force AudioBrowserPackage to load and execute static block
+    try {
+      Class.forName("com.audiobrowser.AudioBrowserPackage")
+    } catch (e: Exception) {
+      android.util.Log.e("MainApplication", "Failed to load AudioBrowserPackage", e)
+    }
     loadReactNative(this)
   }
 }

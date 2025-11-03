@@ -12,10 +12,12 @@ import com.doublesymmetry.trackplayer.event.RemoteJumpBackwardEvent
 import com.doublesymmetry.trackplayer.event.RemoteJumpForwardEvent
 import com.doublesymmetry.trackplayer.event.RemoteSeekEvent
 import com.doublesymmetry.trackplayer.event.RemoteSetRatingEvent
+import com.doublesymmetry.trackplayer.model.CommonMetadata
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
 import com.doublesymmetry.trackplayer.model.PlaybackState
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
-import com.facebook.react.bridge.WritableMap
+import com.doublesymmetry.trackplayer.model.TimedMetadata
+import com.margelo.nitro.audiobrowser.AudioMetadata
 
 /** Callbacks for all player events. */
 interface TrackPlayerCallbacks {
@@ -37,31 +39,30 @@ interface TrackPlayerCallbacks {
   fun onPlaybackError(event: PlaybackErrorEvent)
 
   // Metadata events
-  fun onMetadataCommonReceived(metadata: WritableMap)
+  fun onMetadataCommonReceived(metadata: AudioMetadata)
 
-  fun onMetadataTimedReceived(metadata: Metadata)
+  fun onMetadataTimedReceived(metadata: TimedMetadata)
 
-  fun onPlaybackMetadata(metadata: PlaybackMetadata?)
+  fun onPlaybackMetadata(metadata: PlaybackMetadata)
 
   // Remote control events
-  fun onRemotePlay()
+  fun handleRemotePlay(): Boolean
 
-  fun onRemotePause()
+  fun handleRemotePause(): Boolean
 
-  fun onRemoteStop()
+  fun handleRemoteStop(): Boolean
 
-  fun onRemoteNext()
+  fun handleRemoteNext(): Boolean
 
-  fun onRemotePrevious()
+  fun handleRemotePrevious(): Boolean
 
-  fun onRemoteJumpForward(event: RemoteJumpForwardEvent)
+  fun handleRemoteJumpForward(event: RemoteJumpForwardEvent): Boolean
 
-  fun onRemoteJumpBackward(event: RemoteJumpBackwardEvent)
+  fun handleRemoteJumpBackward(event: RemoteJumpBackwardEvent): Boolean
 
-  fun onRemoteSeek(event: RemoteSeekEvent)
+  fun handleRemoteSeek(event: RemoteSeekEvent): Boolean
 
-  fun onRemoteSetRating(event: RemoteSetRatingEvent)
-
+  fun handleRemoteSetRating(event: RemoteSetRatingEvent): Boolean
 
   // Configuration events
   fun onOptionsChanged(options: PlayerUpdateOptions)

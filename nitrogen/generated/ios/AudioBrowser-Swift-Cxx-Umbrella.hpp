@@ -12,8 +12,24 @@
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `AndroidOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
+// Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
+// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
+// Forward declaration of `AudioMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `Capability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `FeedbackOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -24,12 +40,30 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 // Forward declaration of `IOSCategory` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `IOSPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
+// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `Options` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `PitchAlgorithm` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
+// Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
+// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
+// Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
+// Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
+// Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackState; }
 // Forward declaration of `PlayerOptions` to properly resolve imports.
@@ -40,6 +74,22 @@ namespace margelo::nitro::audiobrowser { struct PlayingState; }
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `RatingType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
+// Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
+// Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
+// Forward declaration of `RemoteSeekEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
+// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
+// Forward declaration of `RemoteSkipEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
+// Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 // Forward declaration of `State` to properly resolve imports.
@@ -48,31 +98,60 @@ namespace margelo::nitro::audiobrowser { enum class State; }
 namespace margelo::nitro::audiobrowser { enum class TrackType; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `UpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 
 // Include C++ defined types
 #include "AndroidAudioContentType.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
+#include "AndroidOptions.hpp"
 #include "AndroidPlayerOptions.hpp"
+#include "AndroidUpdateOptions.hpp"
+#include "AppKilledPlaybackBehavior.hpp"
+#include "AudioCommonMetadataReceivedEvent.hpp"
+#include "AudioMetadata.hpp"
+#include "AudioMetadataReceivedEvent.hpp"
+#include "Capability.hpp"
+#include "FeedbackOptions.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "IOSOptions.hpp"
 #include "IOSPlayerOptions.hpp"
+#include "IOSUpdateOptions.hpp"
+#include "Options.hpp"
 #include "PitchAlgorithm.hpp"
+#include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
+#include "PlaybackErrorEvent.hpp"
+#include "PlaybackMetadata.hpp"
+#include "PlaybackPlayWhenReadyChangedEvent.hpp"
+#include "PlaybackProgressUpdatedEvent.hpp"
+#include "PlaybackQueueEndedEvent.hpp"
 #include "PlaybackState.hpp"
 #include "PlayerOptions.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
 #include "RatingType.hpp"
+#include "RemoteJumpBackwardEvent.hpp"
+#include "RemoteJumpForwardEvent.hpp"
+#include "RemotePlayIdEvent.hpp"
+#include "RemotePlaySearchEvent.hpp"
+#include "RemoteSeekEvent.hpp"
+#include "RemoteSetRatingEvent.hpp"
+#include "RemoteSkipEvent.hpp"
 #include "RepeatMode.hpp"
+#include "RepeatModeChangedEvent.hpp"
 #include "State.hpp"
 #include "Track.hpp"
 #include "TrackType.hpp"
+#include "UpdateOptions.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>

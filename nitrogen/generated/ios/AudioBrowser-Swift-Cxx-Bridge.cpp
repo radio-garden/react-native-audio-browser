@@ -29,6 +29,158 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const AudioMetadataReceivedEvent& /* event */)>
+  Func_void_AudioMetadataReceivedEvent create_Func_void_AudioMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_AudioMetadataReceivedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const AudioMetadataReceivedEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>
+  Func_void_AudioCommonMetadataReceivedEvent create_Func_void_AudioCommonMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_AudioCommonMetadataReceivedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const AudioCommonMetadataReceivedEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackMetadata& /* data */)>
+  Func_void_PlaybackMetadata create_Func_void_PlaybackMetadata(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackMetadata::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackMetadata& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>
+  Func_void_PlaybackActiveTrackChangedEvent create_Func_void_PlaybackActiveTrackChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackActiveTrackChangedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackActiveTrackChangedEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackErrorEvent& /* data */)>
+  Func_void_PlaybackErrorEvent create_Func_void_PlaybackErrorEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackErrorEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackErrorEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>
+  Func_void_PlaybackPlayWhenReadyChangedEvent create_Func_void_PlaybackPlayWhenReadyChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackPlayWhenReadyChangedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackPlayWhenReadyChangedEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlayingState& /* data */)>
+  Func_void_PlayingState create_Func_void_PlayingState(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlayingState::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlayingState& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>
+  Func_void_PlaybackProgressUpdatedEvent create_Func_void_PlaybackProgressUpdatedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackProgressUpdatedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackProgressUpdatedEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackQueueEndedEvent& /* data */)>
+  Func_void_PlaybackQueueEndedEvent create_Func_void_PlaybackQueueEndedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackQueueEndedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackQueueEndedEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RepeatModeChangedEvent& /* data */)>
+  Func_void_RepeatModeChangedEvent create_Func_void_RepeatModeChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RepeatModeChangedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RepeatModeChangedEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PlaybackState& /* data */)>
+  Func_void_PlaybackState create_Func_void_PlaybackState(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_PlaybackState::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PlaybackState& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemoteJumpBackwardEvent& /* event */)>
+  Func_void_RemoteJumpBackwardEvent create_Func_void_RemoteJumpBackwardEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemoteJumpBackwardEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemoteJumpBackwardEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemoteJumpForwardEvent& /* event */)>
+  Func_void_RemoteJumpForwardEvent create_Func_void_RemoteJumpForwardEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemoteJumpForwardEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemoteJumpForwardEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemotePlayIdEvent& /* event */)>
+  Func_void_RemotePlayIdEvent create_Func_void_RemotePlayIdEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemotePlayIdEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemotePlayIdEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemotePlaySearchEvent& /* event */)>
+  Func_void_RemotePlaySearchEvent create_Func_void_RemotePlaySearchEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemotePlaySearchEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemotePlaySearchEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemoteSeekEvent& /* event */)>
+  Func_void_RemoteSeekEvent create_Func_void_RemoteSeekEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemoteSeekEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemoteSeekEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemoteSetRatingEvent& /* event */)>
+  Func_void_RemoteSetRatingEvent create_Func_void_RemoteSetRatingEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemoteSetRatingEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemoteSetRatingEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const RemoteSkipEvent& /* event */)>
+  Func_void_RemoteSkipEvent create_Func_void_RemoteSkipEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_RemoteSkipEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RemoteSkipEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const Options& /* event */)>
+  Func_void_Options create_Func_void_Options(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_Options::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const Options& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
   std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
     AudioBrowser::HybridAudioBrowserSpec_cxx swiftPart = AudioBrowser::HybridAudioBrowserSpec_cxx::fromUnsafe(swiftUnsafePointer);

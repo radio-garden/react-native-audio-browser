@@ -2,6 +2,7 @@ package com.doublesymmetry.trackplayer.event
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent as NitroPlaybackProgressUpdatedEvent
 
 /** Event data for playback progress updates. */
 data class PlaybackProgressUpdatedEvent(
@@ -21,5 +22,14 @@ data class PlaybackProgressUpdatedEvent(
       putDouble("buffered", buffered)
       putInt("track", track)
     }
+  }
+
+  fun toNitro(): NitroPlaybackProgressUpdatedEvent {
+    return NitroPlaybackProgressUpdatedEvent(
+      position = position,
+      duration = duration,
+      buffered = buffered,
+      track = track.toDouble()
+    )
   }
 }

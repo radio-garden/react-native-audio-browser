@@ -1,4 +1,7 @@
+import * as AudioBrowser from './features'
+
 export * from './features'
 export * from './NativeAudioBrowser'
-import * as AudioBrowser from './features'
+export { LazyEmitter } from './utils/LazyEmitter'
+
 export default AudioBrowser

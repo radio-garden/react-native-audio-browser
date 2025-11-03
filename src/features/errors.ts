@@ -1,5 +1,7 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+
 export type PlaybackError = {
   code: string
   message: string
@@ -20,8 +22,7 @@ export interface PlaybackErrorEvent {
  */
 export function getPlaybackError(): PlaybackError | undefined {
   const error = TrackPlayer.getPlaybackError()
-  if (!error) return undefined
-  return error as PlaybackError
+  return error ?? undefined
 }
 
 // MARK: - Event Callbacks
@@ -31,11 +32,9 @@ export function getPlaybackError(): PlaybackError | undefined {
  * @param callback - Called when a playback error occurs
  * @returns Cleanup function to unsubscribe
  */
-export function onPlaybackError(
-  callback: (event: PlaybackErrorEvent) => void
-): () => void {
-  return TrackPlayer.onPlaybackError(callback as () => void).remove
-}
+export const onPlaybackError = LazyEmitter.emitterize<PlaybackErrorEvent>(
+  (cb) => (TrackPlayer.onPlaybackError = cb)
+)
 
 // MARK: - Hooks
 

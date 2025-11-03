@@ -2849,6 +2849,38 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-vector-icons/common@npm:^12.3.0":
+  version: 12.3.1
+  resolution: "@react-native-vector-icons/common@npm:12.3.1"
+  dependencies:
+    find-up: "npm:^7.0.0"
+    picocolors: "npm:^1.1.1"
+    plist: "npm:^3.1.0"
+  peerDependencies:
+    "@react-native-vector-icons/get-image": ^12.2.0
+    react: "*"
+    react-native: "*"
+  peerDependenciesMeta:
+    "@react-native-vector-icons/get-image":
+      optional: true
+  bin:
+    rnvi-update-plist: lib/commonjs/scripts/updatePlist.js
+  checksum: 10c0/de85366e0f14c79bc04a31400293b655fba526647343a4181d00538ef4c07e733e2ba3105728a01ece3cc6f99a95bcc9b90672edf63c5dcfc0766cfdd2eb7d80
+  languageName: node
+  linkType: hard
+
+"@react-native-vector-icons/fontawesome6@npm:^12.0.1":
+  version: 12.2.0
+  resolution: "@react-native-vector-icons/fontawesome6@npm:12.2.0"
+  dependencies:
+    "@react-native-vector-icons/common": "npm:^12.3.0"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/c9bcb55b4ff5400b7eb365272346401d3763f566bba7a4066e5e29f07140a12c20bd68de381524459ed5a3b7db84f894432b79d6b09280010deecc61bf691e57
+  languageName: node
+  linkType: hard
+
 "@react-native/assets-registry@npm:0.82.0":
   version: 0.82.0
   resolution: "@react-native/assets-registry@npm:0.82.0"
@@ -3932,6 +3964,13 @@ __metadata:
   version: 9.3.1
   resolution: "@vscode/sudo-prompt@npm:9.3.1"
   checksum: 10c0/680f0c0d16303bf2f7b28fda83a3e6725e75a593461521460a56365af0ca619595e2b6dcc56b1fa4ba24f8be4030fb1b015c31a92773c09ca55c49da89490e38
+  languageName: node
+  linkType: hard
+
+"@xmldom/xmldom@npm:^0.8.8":
+  version: 0.8.11
+  resolution: "@xmldom/xmldom@npm:0.8.11"
+  checksum: 10c0/e768623de72c95d3dae6b5da8e33dda0d81665047811b5498d23a328d45b13feb5536fe921d0308b96a4a8dd8addf80b1f6ef466508051c0b581e63e0dc74ed5
   languageName: node
   linkType: hard
 
@@ -6312,6 +6351,7 @@ __metadata:
     "@react-native-community/cli": "npm:20.0.0"
     "@react-native-community/cli-platform-android": "npm:20.0.0"
     "@react-native-community/cli-platform-ios": "npm:20.0.0"
+    "@react-native-vector-icons/fontawesome6": "npm:^12.0.1"
     "@react-native/babel-preset": "npm:0.82.0"
     "@react-native/eslint-config": "npm:0.82.0"
     "@react-native/metro-config": "npm:0.82.0"
@@ -6323,7 +6363,7 @@ __metadata:
     prettier: "npm:^3.0.3"
     react: "npm:19.1.1"
     react-native: "npm:0.82.0"
-    react-native-nitro-modules: "npm:0.30.0"
+    react-native-nitro-modules: "npm:0.31.4"
     react-native-safe-area-context: "npm:^5.5.2"
     typescript: "npm:^5.9.3"
   languageName: unknown
@@ -6634,6 +6674,17 @@ __metadata:
     locate-path: "npm:^6.0.0"
     path-exists: "npm:^4.0.0"
   checksum: 10c0/062c5a83a9c02f53cdd6d175a37ecf8f87ea5bbff1fdfb828f04bfa021441bc7583e8ebc0872a4c1baab96221fb8a8a275a19809fb93fbc40bd69ec35634069a
+  languageName: node
+  linkType: hard
+
+"find-up@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "find-up@npm:7.0.0"
+  dependencies:
+    locate-path: "npm:^7.2.0"
+    path-exists: "npm:^5.0.0"
+    unicorn-magic: "npm:^0.1.0"
+  checksum: 10c0/e6ee3e6154560bc0ab3bc3b7d1348b31513f9bdf49a5dd2e952495427d559fa48cdf33953e85a309a323898b43fa1bfbc8b80c880dfc16068384783034030008
   languageName: node
   linkType: hard
 
@@ -9024,6 +9075,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"locate-path@npm:^7.2.0":
+  version: 7.2.0
+  resolution: "locate-path@npm:7.2.0"
+  dependencies:
+    p-locate: "npm:^6.0.0"
+  checksum: 10c0/139e8a7fe11cfbd7f20db03923cacfa5db9e14fa14887ea121345597472b4a63c1a42a8a5187defeeff6acf98fd568da7382aa39682d38f0af27433953a97751
+  languageName: node
+  linkType: hard
+
 "lodash-es@npm:^4.17.21":
   version: 4.17.21
   resolution: "lodash-es@npm:4.17.21"
@@ -10681,6 +10741,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"p-limit@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "p-limit@npm:4.0.0"
+  dependencies:
+    yocto-queue: "npm:^1.0.0"
+  checksum: 10c0/a56af34a77f8df2ff61ddfb29431044557fcbcb7642d5a3233143ebba805fc7306ac1d448de724352861cb99de934bc9ab74f0d16fe6a5460bdbdf938de875ad
+  languageName: node
+  linkType: hard
+
 "p-locate@npm:^2.0.0":
   version: 2.0.0
   resolution: "p-locate@npm:2.0.0"
@@ -10714,6 +10783,15 @@ __metadata:
   dependencies:
     p-limit: "npm:^3.0.2"
   checksum: 10c0/2290d627ab7903b8b70d11d384fee714b797f6040d9278932754a6860845c4d3190603a0772a663c8cb5a7b21d1b16acb3a6487ebcafa9773094edc3dfe6009a
+  languageName: node
+  linkType: hard
+
+"p-locate@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "p-locate@npm:6.0.0"
+  dependencies:
+    p-limit: "npm:^4.0.0"
+  checksum: 10c0/d72fa2f41adce59c198270aa4d3c832536c87a1806e0f69dffb7c1a7ca998fb053915ca833d90f166a8c082d3859eabfed95f01698a3214c20df6bb8de046312
   languageName: node
   linkType: hard
 
@@ -10942,6 +11020,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"path-exists@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "path-exists@npm:5.0.0"
+  checksum: 10c0/b170f3060b31604cde93eefdb7392b89d832dfbc1bed717c9718cbe0f230c1669b7e75f87e19901da2250b84d092989a0f9e44d2ef41deb09aa3ad28e691a40a
+  languageName: node
+  linkType: hard
+
 "path-is-absolute@npm:^1.0.0":
   version: 1.0.1
   resolution: "path-is-absolute@npm:1.0.1"
@@ -11047,6 +11132,17 @@ __metadata:
   dependencies:
     find-up: "npm:^3.0.0"
   checksum: 10c0/ecb60e1f8e1f611c0bdf1a0b6a474d6dfb51185567dc6f29cdef37c8d480ecba5362e006606bb290519bbb6f49526c403fabea93c3090c20368d98bb90c999ab
+  languageName: node
+  linkType: hard
+
+"plist@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "plist@npm:3.1.0"
+  dependencies:
+    "@xmldom/xmldom": "npm:^0.8.8"
+    base64-js: "npm:^1.5.1"
+    xmlbuilder: "npm:^15.1.1"
+  checksum: 10c0/db19ba50faafc4103df8e79bcd6b08004a56db2a9dd30b3e5c8b0ef30398ef44344a674e594d012c8fc39e539a2b72cb58c60a76b4b4401cbbc7c8f6b028d93d
   languageName: node
   linkType: hard
 
@@ -11367,7 +11463,7 @@ __metadata:
     react: "npm:19.1.1"
     react-native: "npm:0.82"
     react-native-builder-bob: "npm:^0.37.0"
-    react-native-nitro-modules: "npm:0.30.0"
+    react-native-nitro-modules: "npm:0.31.4"
     semantic-release: "npm:^24.2.9"
     typescript: "npm:^5.8.3"
     typescript-eslint: "npm:^8.46.0"
@@ -11410,7 +11506,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.30.0, react-native-nitro-modules@npm:^0.30.0":
+"react-native-nitro-modules@npm:0.31.4":
+  version: 0.31.4
+  resolution: "react-native-nitro-modules@npm:0.31.4"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/42fd2cc0d7f2bb913e8d757437f3aed3e123d46c79a6aecb6240e868731a0d9ba8fe097b493dc01050a2e2436cf96e978eb5b021b8f14ef0f8445f9e74e59095
+  languageName: node
+  linkType: hard
+
+"react-native-nitro-modules@npm:^0.30.0":
   version: 0.30.0
   resolution: "react-native-nitro-modules@npm:0.30.0"
   peerDependencies:
@@ -13594,6 +13700,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"xmlbuilder@npm:^15.1.1":
+  version: 15.1.1
+  resolution: "xmlbuilder@npm:15.1.1"
+  checksum: 10c0/665266a8916498ff8d82b3d46d3993913477a254b98149ff7cff060d9b7cc0db7cf5a3dae99aed92355254a808c0e2e3ec74ad1b04aa1061bdb8dfbea26c18b8
+  languageName: node
+  linkType: hard
+
 "xtend@npm:~4.0.1":
   version: 4.0.2
   resolution: "xtend@npm:4.0.2"
@@ -13743,6 +13856,13 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: 10c0/dceb44c28578b31641e13695d200d34ec4ab3966a5729814d5445b194933c096b7ced71494ce53a0e8820685d1d010df8b2422e5bf2cdea7e469d97ffbea306f
+  languageName: node
+  linkType: hard
+
+"yocto-queue@npm:^1.0.0":
+  version: 1.2.1
+  resolution: "yocto-queue@npm:1.2.1"
+  checksum: 10c0/5762caa3d0b421f4bdb7a1926b2ae2189fc6e4a14469258f183600028eb16db3e9e0306f46e8ebf5a52ff4b81a881f22637afefbef5399d6ad440824e9b27f9f
   languageName: node
   linkType: hard
 

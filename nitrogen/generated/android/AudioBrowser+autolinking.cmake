@@ -36,6 +36,7 @@ target_sources(
   ../nitrogen/generated/shared/c++/HybridAudioBrowserSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
+  ../nitrogen/generated/android/c++/JVariant_String_Double.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
 )
 

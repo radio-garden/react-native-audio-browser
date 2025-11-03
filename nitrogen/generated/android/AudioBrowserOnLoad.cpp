@@ -16,6 +16,26 @@
 #include <NitroModules/HybridObjectRegistry.hpp>
 
 #include "JHybridAudioBrowserSpec.hpp"
+#include "JFunc_void_AudioMetadataReceivedEvent.hpp"
+#include "JFunc_void_AudioCommonMetadataReceivedEvent.hpp"
+#include "JFunc_void_PlaybackMetadata.hpp"
+#include "JFunc_void_PlaybackActiveTrackChangedEvent.hpp"
+#include "JFunc_void_PlaybackErrorEvent.hpp"
+#include "JFunc_void_PlaybackPlayWhenReadyChangedEvent.hpp"
+#include "JFunc_void_PlayingState.hpp"
+#include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
+#include "JFunc_void_PlaybackQueueEndedEvent.hpp"
+#include "JFunc_void_RepeatModeChangedEvent.hpp"
+#include "JFunc_void_PlaybackState.hpp"
+#include "JFunc_void.hpp"
+#include "JFunc_void_RemoteJumpBackwardEvent.hpp"
+#include "JFunc_void_RemoteJumpForwardEvent.hpp"
+#include "JFunc_void_RemotePlayIdEvent.hpp"
+#include "JFunc_void_RemotePlaySearchEvent.hpp"
+#include "JFunc_void_RemoteSeekEvent.hpp"
+#include "JFunc_void_RemoteSetRatingEvent.hpp"
+#include "JFunc_void_RemoteSkipEvent.hpp"
+#include "JFunc_void_Options.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::audiobrowser {
@@ -28,12 +48,32 @@ int initialize(JavaVM* vm) {
   return facebook::jni::initialize(vm, [] {
     // Register native JNI methods
     margelo::nitro::audiobrowser::JHybridAudioBrowserSpec::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_AudioMetadataReceivedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_AudioCommonMetadataReceivedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackMetadata_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackActiveTrackChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackErrorEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlayingState_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackProgressUpdatedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackQueueEndedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RepeatModeChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_PlaybackState_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemoteJumpBackwardEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemoteJumpForwardEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemotePlayIdEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemotePlaySearchEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemoteSeekEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemoteSetRatingEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemoteSkipEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_Options_cxx::registerNatives();
 
     // Register Nitro Hybrid Objects
     HybridObjectRegistry::registerHybridObjectConstructor(
       "AudioBrowser",
       []() -> std::shared_ptr<HybridObject> {
-        static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/margelo/nitro/audiobrowser/AudioBrowserModule");
+        static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/audiobrowser/AudioBrowser");
         auto instance = object.create();
         return instance->cthis()->shared();
       }

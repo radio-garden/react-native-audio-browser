@@ -1,6 +1,6 @@
-import Slider from '@react-native-community/slider';
+// import Slider from '@react-native-community/slider';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import TrackPlayer, { usePolledProgress } from 'react-native-audio-browser';
+import { usePolledProgress } from 'react-native-audio-browser';
 import { Spacer } from './Spacer';
 
 export function Progress({ live }: { live?: boolean }) {
@@ -15,7 +15,7 @@ export function Progress({ live }: { live?: boolean }) {
         <Text style={styles.liveText}>Live Stream</Text>
       ) : (
         <View>
-          <Slider
+          {/* <Slider
             tapToSeek
             style={{ ...styles.slider, width: progressBarWidth }}
             value={position}
@@ -25,7 +25,7 @@ export function Progress({ live }: { live?: boolean }) {
             minimumTrackTintColor="#FFD479"
             maximumTrackTintColor="#FFFFFF"
             onSlidingComplete={TrackPlayer.seekTo}
-          />
+          /> */}
           <View style={styles.labelContainer}>
             <Text style={styles.labelText}>{formatSeconds(position)}</Text>
             <Spacer mode={'expand'} />
