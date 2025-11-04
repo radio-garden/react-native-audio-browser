@@ -1,6 +1,5 @@
 package com.audiobrowser
 
-import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -8,7 +7,6 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
-import androidx.media3.session.legacy.RatingCompat
 import com.margelo.nitro.NitroModules
 import com.doublesymmetry.trackplayer.TrackPlayerService
 import com.doublesymmetry.trackplayer.TrackPlayerCallbacks
@@ -398,170 +396,170 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     val callbacks =
         object : TrackPlayerCallbacks {
             override fun onPlaybackState(state: PlaybackState) {
-                onPlaybackStateChanged(state)
+                this@AudioBrowser.onPlaybackStateChanged(state)
             }
 
             override fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent) {
-                onPlaybackActiveTrackChanged(event)
+                this@AudioBrowser.onPlaybackActiveTrackChanged(event)
             }
 
             override fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent) {
-                onPlaybackProgressUpdated(event)
+                this@AudioBrowser.onPlaybackProgressUpdated(event)
             }
 
             override fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent) {
-                onPlaybackPlayWhenReadyChanged(event)
+                this@AudioBrowser.onPlaybackPlayWhenReadyChanged(event)
             }
 
             override fun onPlaybackPlayingState(event: PlayingState) {
-                onPlaybackPlayingState(event)
+                this@AudioBrowser.onPlaybackPlayingState(event)
             }
 
             override fun onPlaybackQueueEnded(event: PlaybackQueueEndedEvent) {
-                onPlaybackQueueEnded(event)
+                this@AudioBrowser.onPlaybackQueueEnded(event)
             }
 
             override fun onPlaybackRepeatModeChanged(event: RepeatMode) {
-                onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event))
+                this@AudioBrowser.onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event))
             }
 
             override fun onPlaybackError(error: PlaybackError?) {
-                onPlaybackError(error)
+                this@AudioBrowser.onPlaybackError(PlaybackErrorEvent(error))
             }
 
             override fun onMetadataCommonReceived(metadata: AudioMetadata) {
-                onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
+                this@AudioBrowser.onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
             }
 
             override fun onMetadataTimedReceived(metadata: TimedMetadata) {
-                onMetadataTimedReceived(metadata.toNitro())
+                this@AudioBrowser.onMetadataTimedReceived(metadata.toNitro())
             }
 
             override fun onPlaybackMetadata(metadata: PlaybackMetadata) {
-                onPlaybackMetadata(metadata.toNitro())
+                this@AudioBrowser.onPlaybackMetadata(metadata.toNitro())
             }
 
             override fun handleRemotePlay(): Boolean {
-                val handled = handleRemotePlay?.let {
+                val handled = this@AudioBrowser.handleRemotePlay?.let {
                     it.invoke()
                     true
                 } ?: false
 
                 // Defer notification until after play operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemotePlay()
+                    this@AudioBrowser.onRemotePlay()
                 }
 
                 return handled
             }
 
             override fun handleRemotePause(): Boolean {
-                val handled = handleRemotePause?.let {
+                val handled = this@AudioBrowser.handleRemotePause?.let {
                     it.invoke()
                     true
                 } ?: false
 
                 // Defer notification until after pause operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemotePause()
+                    this@AudioBrowser.onRemotePause()
                 }
 
                 return handled
             }
 
             override fun handleRemoteStop(): Boolean {
-                val handled = handleRemoteStop?.let {
+                val handled = this@AudioBrowser.handleRemoteStop?.let {
                     it.invoke()
                     true
                 } ?: false
 
                 // Defer notification until after stop operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteStop()
+                    this@AudioBrowser.onRemoteStop()
                 }
 
                 return handled
             }
 
             override fun handleRemoteNext(): Boolean {
-                val handled = handleRemoteNext?.let {
+                val handled = this@AudioBrowser.handleRemoteNext?.let {
                     it.invoke()
                     true
                 } ?: false
 
                 // Defer notification until after next operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteNext()
+                    this@AudioBrowser.onRemoteNext()
                 }
 
                 return handled
             }
 
             override fun handleRemotePrevious(): Boolean {
-                val handled = handleRemotePrevious?.let {
+                val handled = this@AudioBrowser.handleRemotePrevious?.let {
                     it.invoke()
                     true
                 } ?: false
 
                 // Defer notification until after previous operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemotePrevious()
+                    this@AudioBrowser.onRemotePrevious()
                 }
 
                 return handled
             }
 
             override fun handleRemoteJumpForward(event: RemoteJumpForwardEvent): Boolean {
-                val handled = handleRemoteJumpForward?.let {
+                val handled = this@AudioBrowser.handleRemoteJumpForward?.let {
                     it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after jump forward operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteJumpForward(event)
+                    this@AudioBrowser.onRemoteJumpForward(event)
                 }
 
                 return handled
             }
 
             override fun handleRemoteJumpBackward(event: RemoteJumpBackwardEvent): Boolean {
-                val handled = handleRemoteJumpBackward?.let {
+                val handled = this@AudioBrowser.handleRemoteJumpBackward?.let {
                     it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after jump backward operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteJumpBackward(event)
+                    this@AudioBrowser.onRemoteJumpBackward(event)
                 }
 
                 return handled
             }
 
             override fun handleRemoteSeek(event: RemoteSeekEvent): Boolean {
-                val handled = handleRemoteSeek?.let {
+                val handled = this@AudioBrowser.handleRemoteSeek?.let {
                     it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after seek operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteSeek(event)
+                    this@AudioBrowser.onRemoteSeek(event)
                 }
 
                 return handled
             }
 
             override fun handleRemoteSetRating(event: RemoteSetRatingEvent): Boolean {
-                val handled = handleRemoteSetRating?.let {
+                val handled = this@AudioBrowser.handleRemoteSetRating?.let {
                     it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after set rating operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteSetRating(event)
+                    this@AudioBrowser.onRemoteSetRating(event)
                 }
 
                 return handled
