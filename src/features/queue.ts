@@ -21,6 +21,7 @@ export type ResourceObject = number
 export interface Track extends TrackMetadataBase {
   mediaId?: string
   url?: string
+  isLiveStream?: boolean
 }
 
 /**
