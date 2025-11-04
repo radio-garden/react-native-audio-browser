@@ -1,5 +1,6 @@
 package com.doublesymmetry.trackplayer
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -22,6 +23,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.Rating
 import androidx.media3.session.MediaLibraryService
+import com.doublesymmetry.trackplayer.util.RepeatModeFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -29,42 +31,38 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import com.doublesymmetry.trackplayer.event.PlaybackActiveTrackChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackError
-import com.doublesymmetry.trackplayer.event.PlaybackErrorEvent
-import com.doublesymmetry.trackplayer.event.PlaybackPlayWhenReadyChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackProgressUpdatedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackQueueEndedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackRepeatModeChangedEvent
-import com.doublesymmetry.trackplayer.event.RemoteJumpBackwardEvent
-import com.doublesymmetry.trackplayer.event.RemoteJumpForwardEvent
-import com.doublesymmetry.trackplayer.event.RemoteSeekEvent
-import com.doublesymmetry.trackplayer.event.RemoteSetRatingEvent
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
+import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
+import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
+import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
+import com.margelo.nitro.audiobrowser.RemoteSeekEvent
+import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toMilliseconds
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
-import com.doublesymmetry.trackplayer.model.AppKilledPlaybackBehavior
 import com.doublesymmetry.trackplayer.model.AudioOffloadOptions
-import com.doublesymmetry.trackplayer.model.CommonMetadata
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
-import com.doublesymmetry.trackplayer.model.PlaybackState
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.doublesymmetry.trackplayer.model.RatingType
-import com.doublesymmetry.trackplayer.model.State
-import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.doublesymmetry.trackplayer.model.Track
-import com.doublesymmetry.trackplayer.option.PlayerRepeatMode
+import com.margelo.nitro.audiobrowser.RepeatMode
 import com.doublesymmetry.trackplayer.player.MediaFactory
 import com.doublesymmetry.trackplayer.player.PlaybackProgressUpdateManager
 import com.doublesymmetry.trackplayer.player.PlayerListener
-import com.doublesymmetry.trackplayer.player.PlayingState
+import com.margelo.nitro.audiobrowser.PlayingState as PlayingState
 import com.doublesymmetry.trackplayer.util.MediaSessionManager
 import com.doublesymmetry.trackplayer.util.MetadataAdapter
 import com.doublesymmetry.trackplayer.util.PlayerCache
-import com.facebook.react.bridge.WritableMap
+import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.State
 import java.util.concurrent.TimeUnit
 import timber.log.Timber
 
+@SuppressLint("RestrictedApi")
 class TrackPlayer(
   internal val context: Context,
 ) {
@@ -73,7 +71,7 @@ class TrackPlayer(
     get() = options.appKilledPlaybackBehavior
   private var options = PlayerUpdateOptions()
   private var callbacks: TrackPlayerCallbacks? = null
-  private lateinit var mediaSession: androidx.media3.session.MediaSession
+  private lateinit var mediaSession: MediaSession
   private val commandManager = MediaSessionManager()
 
   // Media browser functionality
@@ -203,15 +201,13 @@ class TrackPlayer(
           position = position.toSeconds(),
           duration = duration.toSeconds(),
           buffered = bufferedPosition.toSeconds(),
-          track = index,
+          track = index.toDouble(),
         )
       callbacks?.onPlaybackProgressUpdated(event)
     }
   }
 
-  internal val playingState: PlayingState by lazy {
-    PlayingState { event -> this.callbacks?.onPlaybackPlayingState(event) }
-  }
+  internal var playingState: PlayingState = PlayingState(false, false)
 
   val currentTrack: Track?
     get() = exoPlayer.currentMediaItem?.let { Track.fromMediaItem(it) }
@@ -236,11 +232,11 @@ class TrackPlayer(
   internal fun emitActiveTrackChanged(lastPosition: Double) {
     val event =
       PlaybackActiveTrackChangedEvent(
-        lastIndex = lastIndex,
-        lastTrack = lastTrack,
+        lastIndex = lastIndex?.toDouble(),
+        lastTrack = lastTrack?.toNitro(),
         lastPosition = lastPosition,
-        index = currentIndex,
-        track = currentTrack,
+        index = currentIndex?.toDouble(),
+        track = currentTrack?.toNitro(),
       )
     callbacks?.onPlaybackActiveTrackChanged(event)
 
@@ -270,33 +266,15 @@ class TrackPlayer(
 
   internal fun onPlayWhenReadyChanged(playWhenReady: Boolean, pausedBecauseReachedEnd: Boolean) {
     callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady))
-    playingState.update(playWhenReady, playerState)
+    val newPlayingState = derivePlayingState(playWhenReady, playerState)
+    if (newPlayingState != playingState) {
+      playingState = newPlayingState
+      callbacks?.onPlaybackPlayingState(playingState)
+    }
   }
 
-  internal fun onPlaybackError(playbackError: com.doublesymmetry.trackplayer.event.PlaybackError) {
-    val event =
-      PlaybackErrorEvent(
-        code = playbackError.code ?: "UNKNOWN_ERROR",
-        message = playbackError.message ?: "An unknown error occurred",
-      )
-    callbacks?.onPlaybackError(event)
-  }
-
-  internal fun onControllerConnected(
-    controllerData: com.doublesymmetry.trackplayer.event.EventControllerConnection
-  ) {
-//    val event =
-//      ControllerConnectedEvent(
-//        `package` = controllerData.packageName,
-//        isMediaNotificationController = controllerData.isMediaNotificationController,
-//        isAutomotiveController = controllerData.isAutomotiveController,
-//        isAutoCompanionController = controllerData.isAutoCompanionController,
-//      )
-//    callbacks?.onControllerConnected(event)
-  }
-
-  internal fun onControllerDisconnected(packageName: String) {
-//    callbacks?.onControllerDisconnected(ControllerDisconnectedEvent(`package` = packageName))
+  internal fun onPlaybackError(playbackError: PlaybackError) {
+    callbacks?.onPlaybackError(playbackError)
   }
 
   internal fun onRatingChanged(rating: Any) {
@@ -342,16 +320,16 @@ class TrackPlayer(
 
   var ratingType: Int = RatingCompat.RATING_NONE
 
-  var repeatMode: PlayerRepeatMode
-    get() = PlayerRepeatMode.fromMedia3(exoPlayer.repeatMode)
+  var repeatMode: RepeatMode
+    get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
     internal set(value) {
       val oldValue = repeatMode
-      exoPlayer.repeatMode = value.toMedia3()
+      exoPlayer.repeatMode = RepeatModeFactory.toMedia3(value)
 
       // Emit event if value changed
       if (oldValue != value) {
         callbacks?.onPlaybackRepeatModeChanged(
-          PlaybackRepeatModeChangedEvent(repeatMode = value)
+        repeatMode
         )
       }
     }
@@ -494,7 +472,7 @@ class TrackPlayer(
       // Initial setup - create player listener and emit initial state
       playerListener = PlayerListener(this)
       forwardingPlayer.addListener(playerListener)
-      callbacks?.onPlaybackState(PlaybackState(State.NONE))
+      callbacks?.onPlaybackState(PlaybackState(State.NONE, null))
     } else {
       // Re-setup - re-add listener and update MediaSession
       forwardingPlayer.addListener(playerListener)
@@ -734,9 +712,9 @@ class TrackPlayer(
       playerState = state
 
       // Clear error when transitioning away from error state
-      if (oldState == State.ERROR && state != State.ERROR) {
+      if (oldState == State.ERROR) {
         playbackError = null
-        callbacks?.onPlaybackError(PlaybackErrorEvent())
+        callbacks?.onPlaybackError(null)
       }
 
       val playbackState = PlaybackState(state, playbackError)
@@ -747,13 +725,17 @@ class TrackPlayer(
       // changes
       if (state == State.ENDED && isLastTrack) {
         currentIndex?.let { index ->
-          val event = PlaybackQueueEndedEvent(track = index, position = position.toSeconds())
+          val event = PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
         }
       }
 
       progressUpdateManager.onPlaybackStateChanged(state)
-      playingState.update(playWhenReady, state)
+      val newPlayingState = derivePlayingState(playWhenReady, state)
+      if (newPlayingState != playingState) {
+        playingState = newPlayingState
+        callbacks?.onPlaybackPlayingState(playingState)
+      }
     }
   }
 
@@ -1128,5 +1110,18 @@ class TrackPlayer(
    */
   fun resolveSearchRequest(requestId: String, items: List<MediaItem>, totalMatchesCount: Int) {
     pendingSearchRequests.remove(requestId)?.set(items)
+  }
+
+  /**
+   * Derives a PlayingState from playWhenReady and state.
+   *
+   * @param playWhenReady Whether the player wants to play when ready
+   * @param state The current player state
+   * @return A PlayingState representing the current playing/buffering status
+   */
+  private fun derivePlayingState(playWhenReady: Boolean, state: State): PlayingState {
+    val playing = playWhenReady && !(state == State.ERROR || state == State.ENDED || state == State.NONE)
+    val buffering = playWhenReady && (state == State.LOADING || state == State.BUFFERING)
+    return PlayingState(playing, buffering)
   }
 }

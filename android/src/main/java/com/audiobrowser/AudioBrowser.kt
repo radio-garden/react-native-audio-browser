@@ -6,47 +6,36 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import androidx.media3.common.Metadata
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import androidx.media3.session.legacy.RatingCompat
 import com.margelo.nitro.NitroModules
 import com.doublesymmetry.trackplayer.TrackPlayerService
 import com.doublesymmetry.trackplayer.TrackPlayerCallbacks
-import com.doublesymmetry.trackplayer.event.PlaybackActiveTrackChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackErrorEvent
-import com.doublesymmetry.trackplayer.event.PlaybackPlayWhenReadyChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackPlayingStateEvent
-import com.doublesymmetry.trackplayer.event.PlaybackProgressUpdatedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackQueueEndedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackRepeatModeChangedEvent
-import com.doublesymmetry.trackplayer.event.RemoteJumpBackwardEvent
-import com.doublesymmetry.trackplayer.event.RemoteJumpForwardEvent
-import com.doublesymmetry.trackplayer.event.RemoteSeekEvent
-import com.doublesymmetry.trackplayer.event.RemoteSetRatingEvent
+import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
+import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
+import com.margelo.nitro.audiobrowser.RemoteSeekEvent
+import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.doublesymmetry.trackplayer.model.Track
 import com.doublesymmetry.trackplayer.model.TrackFactory
-import com.doublesymmetry.trackplayer.option.PlayerRepeatMode
-import com.facebook.react.bridge.WritableMap
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.Track as NitroTrack
-import com.margelo.nitro.audiobrowser.PlaybackError as NitroPlaybackError
-import com.margelo.nitro.audiobrowser.PlayerOptions as NitroPlayerOptions
-import com.margelo.nitro.audiobrowser.PlayingState as NitroPlayingState
-import com.margelo.nitro.audiobrowser.Progress as NitroProgress
+import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlayerOptions
+import com.margelo.nitro.audiobrowser.PlayingState
+import com.margelo.nitro.audiobrowser.Progress
 import com.margelo.nitro.audiobrowser.PlaybackState
-import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent as NitroPlaybackActiveTrackChangedEvent
-import com.margelo.nitro.audiobrowser.PlaybackErrorEvent as NitroPlaybackErrorEvent
-import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent as NitroPlaybackPlayWhenReadyChangedEvent
-import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent as NitroPlaybackProgressUpdatedEvent
-import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent as NitroPlaybackQueueEndedEvent
-import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent as NitroRepeatModeChangedEvent
-import com.margelo.nitro.audiobrowser.RepeatMode as NitroRepeatMode
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackErrorEvent
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
+import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
+import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.MainScope
@@ -68,9 +57,9 @@ import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
 import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSkipEvent
-import com.doublesymmetry.trackplayer.model.CommonMetadata
 import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
 import com.margelo.nitro.audiobrowser.UpdateOptions
 
 @Keep
@@ -104,15 +93,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     override var onMetadataCommonReceived: (AudioCommonMetadataReceivedEvent) -> Unit = { }
     override var onMetadataTimedReceived: (AudioMetadataReceivedEvent) -> Unit = { }
     override var onPlaybackMetadata: (com.margelo.nitro.audiobrowser.PlaybackMetadata) -> Unit = { }
-    override var onPlaybackActiveTrackChanged: (data: NitroPlaybackActiveTrackChangedEvent) -> Unit =
+    override var onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) -> Unit =
         { }
-    override var onPlaybackError: (data: NitroPlaybackErrorEvent) -> Unit = { }
-    override var onPlaybackPlayWhenReadyChanged: (data: NitroPlaybackPlayWhenReadyChangedEvent) -> Unit =
+    override var onPlaybackError: (data: PlaybackErrorEvent) -> Unit = { }
+    override var onPlaybackPlayWhenReadyChanged: (data: PlaybackPlayWhenReadyChangedEvent) -> Unit =
         { }
-    override var onPlaybackPlayingState: (data: NitroPlayingState) -> Unit = { }
-    override var onPlaybackProgressUpdated: (data: NitroPlaybackProgressUpdatedEvent) -> Unit = { }
-    override var onPlaybackQueueEnded: (data: NitroPlaybackQueueEndedEvent) -> Unit = { }
-    override var onPlaybackRepeatModeChanged: (data: NitroRepeatModeChangedEvent) -> Unit = { }
+    override var onPlaybackPlayingState: (data: PlayingState) -> Unit = { }
+    override var onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) -> Unit = { }
+    override var onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) -> Unit = { }
+    override var onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) -> Unit = { }
     override var onRemotePlay: (() -> Unit) = { }
     override var onRemotePlayId: (RemotePlayIdEvent) -> Unit = { }
     override var onRemotePlaySearch: (RemotePlaySearchEvent) -> Unit = { }
@@ -163,7 +152,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
     }
 
-    override fun setupPlayer(options: NitroPlayerOptions): Promise<Unit> {
+    override fun setupPlayer(options: PlayerOptions): Promise<Unit> {
         return Promise.async(mainScope) {
             // Convert Nitro PlayerOptions to TrackPlayer setup options
             setupOptions.updateFromNitro(options)
@@ -263,8 +252,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         player.playbackSpeed.toDouble()
     }
 
-    override fun getProgress(): NitroProgress = runBlockingOnMain {
-        NitroProgress(
+    override fun getProgress(): Progress = runBlockingOnMain {
+        Progress(
             duration = player.duration.toSeconds(),
             position = player.position.toSeconds(),
             buffered = player.bufferedPosition.toSeconds()
@@ -272,23 +261,23 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
 
     override fun getPlaybackState(): PlaybackState = runBlockingOnMain {
-        player.getPlaybackState().toNitro()
+        player.getPlaybackState()
     }
 
-    override fun getPlayingState(): NitroPlayingState = runBlockingOnMain {
-        player.getPlayingState().toNitro()
+    override fun getPlayingState(): PlayingState = runBlockingOnMain {
+        player.getPlayingState()
     }
 
-    override fun getRepeatMode(): NitroRepeatMode = runBlockingOnMain {
-        player.repeatMode.toNitro()
+    override fun getRepeatMode(): RepeatMode = runBlockingOnMain {
+        player.repeatMode
     }
 
-    override fun setRepeatMode(mode: NitroRepeatMode) = runBlockingOnMain {
-        player.repeatMode = PlayerRepeatMode.fromNitro(mode)
+    override fun setRepeatMode(mode: RepeatMode) = runBlockingOnMain {
+        player.repeatMode = mode
     }
 
-    override fun getPlaybackError(): NitroPlaybackError? = runBlockingOnMain {
-        player.playbackError?.toNitro()
+    override fun getPlaybackError(): PlaybackError? = runBlockingOnMain {
+        player.playbackError
     }
 
     override fun retry() = runBlockingOnMain {
@@ -415,41 +404,40 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     val callbacks =
         object : TrackPlayerCallbacks {
-            override fun onPlaybackState(state: com.doublesymmetry.trackplayer.model.PlaybackState) {
-                onPlaybackStateChanged(state.toNitro())
+            override fun onPlaybackState(state: PlaybackState) {
+                onPlaybackStateChanged(state)
             }
 
             override fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent) {
-                onPlaybackActiveTrackChanged(event.toNitro())
+                onPlaybackActiveTrackChanged(event)
             }
 
             override fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent) {
-                onPlaybackProgressUpdated(event.toNitro())
+                onPlaybackProgressUpdated(event)
             }
 
             override fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent) {
-                onPlaybackPlayWhenReadyChanged(event.toNitro())
+                onPlaybackPlayWhenReadyChanged(event)
             }
 
-            override fun onPlaybackPlayingState(event: PlaybackPlayingStateEvent) {
-                onPlaybackPlayingState(event.toNitro())
+            override fun onPlaybackPlayingState(event: PlayingState) {
+                onPlaybackPlayingState(event)
             }
 
             override fun onPlaybackQueueEnded(event: PlaybackQueueEndedEvent) {
-                onPlaybackQueueEnded(event.toNitro())
+                onPlaybackQueueEnded(event)
             }
 
-            override fun onPlaybackRepeatModeChanged(event: PlaybackRepeatModeChangedEvent) {
-                onPlaybackRepeatModeChanged(event.toNitro())
+            override fun onPlaybackRepeatModeChanged(event: RepeatMode) {
+                onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event))
             }
 
-            override fun onPlaybackError(event: PlaybackErrorEvent) {
-                onPlaybackError(event.toNitro())
+            override fun onPlaybackError(error: PlaybackError?) {
+                onPlaybackError(error)
             }
 
             override fun onMetadataCommonReceived(metadata: AudioMetadata) {
                 onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
-
             }
 
             override fun onMetadataTimedReceived(metadata: TimedMetadata) {
@@ -531,60 +519,56 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             }
 
             override fun handleRemoteJumpForward(event: RemoteJumpForwardEvent): Boolean {
-                val nitroEvent = event.toNitro()
                 val handled = handleRemoteJumpForward?.let {
-                    it.invoke(nitroEvent)
+                    it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after jump forward operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteJumpForward(nitroEvent)
+                    onRemoteJumpForward(event)
                 }
 
                 return handled
             }
 
             override fun handleRemoteJumpBackward(event: RemoteJumpBackwardEvent): Boolean {
-                val nitroEvent = event.toNitro()
                 val handled = handleRemoteJumpBackward?.let {
-                    it.invoke(nitroEvent)
+                    it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after jump backward operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteJumpBackward(nitroEvent)
+                    onRemoteJumpBackward(event)
                 }
 
                 return handled
             }
 
             override fun handleRemoteSeek(event: RemoteSeekEvent): Boolean {
-                val nitroEvent = event.toNitro()
                 val handled = handleRemoteSeek?.let {
-                    it.invoke(nitroEvent)
+                    it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after seek operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteSeek(nitroEvent)
+                    onRemoteSeek(event)
                 }
 
                 return handled
             }
 
             override fun handleRemoteSetRating(event: RemoteSetRatingEvent): Boolean {
-                val nitroEvent = event.toNitro()
                 val handled = handleRemoteSetRating?.let {
-                    it.invoke(nitroEvent)
+                    it.invoke(event)
                     true
                 } ?: false
 
                 // Defer notification until after set rating operation completes
                 Handler(Looper.getMainLooper()).post {
-                    onRemoteSetRating(nitroEvent)
+                    onRemoteSetRating(event)
                 }
 
                 return handled

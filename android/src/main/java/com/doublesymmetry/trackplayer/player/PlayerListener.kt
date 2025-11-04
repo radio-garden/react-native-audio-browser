@@ -6,9 +6,9 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import com.doublesymmetry.trackplayer.TrackPlayer
-import com.doublesymmetry.trackplayer.event.PlaybackError
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
-import com.doublesymmetry.trackplayer.model.State
+import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.State
 import java.util.Locale
 
 class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
@@ -80,7 +80,7 @@ class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
             }
           if (state != null && state != trackPlayer.playerState) {
             // Clear error when recovering from ERROR state to a successful state
-            if (trackPlayer.playerState == State.ERROR && state != State.ERROR) {
+            if (trackPlayer.playerState == State.ERROR) {
               trackPlayer.playbackError = null
             }
             trackPlayer.setPlayerState(state)
@@ -117,7 +117,7 @@ class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
           .replace("ERROR_CODE_", "")
           .lowercase(Locale.getDefault())
           .replace("_", "-"),
-        error.message,
+        error.message ?: "An unknown error occurred",
       )
     trackPlayer.onPlaybackError(playbackError)
     trackPlayer.playbackError = playbackError

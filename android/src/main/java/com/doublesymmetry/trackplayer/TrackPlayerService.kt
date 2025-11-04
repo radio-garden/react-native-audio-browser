@@ -22,7 +22,6 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.audiobrowser.BuildConfig
-import com.doublesymmetry.trackplayer.model.AppKilledPlaybackBehavior
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.facebook.react.bridge.Arguments
@@ -31,6 +30,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.system.exitProcess

@@ -1,16 +1,10 @@
 package com.doublesymmetry.trackplayer.model
 
 import com.doublesymmetry.trackplayer.option.PlayerCapability
-import com.doublesymmetry.trackplayer.option.PlayerRepeatMode
-import com.doublesymmetry.trackplayer.model.AppKilledPlaybackBehavior
-import com.facebook.react.bridge.Arguments
-import com.facebook.react.bridge.ReadableMap
-import com.facebook.react.bridge.WritableMap
 import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
-import com.margelo.nitro.audiobrowser.Capability as NitroCapability
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
-import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior as NitroAppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 
 /**
  * Update options for the TrackPlayer that can be changed at runtime. These options control player
@@ -65,11 +59,7 @@ data class PlayerUpdateOptions(
 
       // Convert app killed playback behavior
       androidOptions.appKilledPlaybackBehavior?.let {
-        appKilledPlaybackBehavior = when (it) {
-          NitroAppKilledPlaybackBehavior.CONTINUE_PLAYBACK -> AppKilledPlaybackBehavior.CONTINUE_PLAYBACK
-          NitroAppKilledPlaybackBehavior.PAUSE_PLAYBACK -> AppKilledPlaybackBehavior.PAUSE_PLAYBACK
-          NitroAppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION
-        }
+        appKilledPlaybackBehavior = it
       }
 
       // Update boolean options
@@ -90,11 +80,7 @@ data class PlayerUpdateOptions(
 
     // Create Android options
     val androidOptions = AndroidUpdateOptions(
-      appKilledPlaybackBehavior = when (appKilledPlaybackBehavior) {
-        AppKilledPlaybackBehavior.CONTINUE_PLAYBACK -> NitroAppKilledPlaybackBehavior.CONTINUE_PLAYBACK
-        AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> NitroAppKilledPlaybackBehavior.PAUSE_PLAYBACK
-        AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION -> NitroAppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION
-      },
+      appKilledPlaybackBehavior = appKilledPlaybackBehavior,
       skipSilence = skipSilence,
       shuffle = shuffle,
       ratingType = ratingType?.let { rating ->

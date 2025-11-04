@@ -1,23 +1,21 @@
 package com.doublesymmetry.trackplayer
 
-import androidx.media3.common.Metadata
-import com.doublesymmetry.trackplayer.event.PlaybackActiveTrackChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackErrorEvent
-import com.doublesymmetry.trackplayer.event.PlaybackPlayWhenReadyChangedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackPlayingStateEvent
-import com.doublesymmetry.trackplayer.event.PlaybackProgressUpdatedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackQueueEndedEvent
-import com.doublesymmetry.trackplayer.event.PlaybackRepeatModeChangedEvent
-import com.doublesymmetry.trackplayer.event.RemoteJumpBackwardEvent
-import com.doublesymmetry.trackplayer.event.RemoteJumpForwardEvent
-import com.doublesymmetry.trackplayer.event.RemoteSeekEvent
-import com.doublesymmetry.trackplayer.event.RemoteSetRatingEvent
-import com.doublesymmetry.trackplayer.model.CommonMetadata
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
-import com.doublesymmetry.trackplayer.model.PlaybackState
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
+import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
+import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.PlayingState
+import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
+import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
+import com.margelo.nitro.audiobrowser.RemoteSeekEvent
+import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
+import com.margelo.nitro.audiobrowser.RepeatMode
 
 /** Callbacks for all player events. */
 interface TrackPlayerCallbacks {
@@ -30,13 +28,13 @@ interface TrackPlayerCallbacks {
 
   fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent)
 
-  fun onPlaybackPlayingState(event: PlaybackPlayingStateEvent)
+  fun onPlaybackPlayingState(event: PlayingState)
 
   fun onPlaybackQueueEnded(event: PlaybackQueueEndedEvent)
 
-  fun onPlaybackRepeatModeChanged(event: PlaybackRepeatModeChangedEvent)
+  fun onPlaybackRepeatModeChanged(event: RepeatMode)
 
-  fun onPlaybackError(event: PlaybackErrorEvent)
+  fun onPlaybackError(error: PlaybackError?)
 
   // Metadata events
   fun onMetadataCommonReceived(metadata: AudioMetadata)

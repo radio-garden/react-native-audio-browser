@@ -1,10 +1,10 @@
 package com.doublesymmetry.trackplayer.player
 
-import com.doublesymmetry.trackplayer.model.State
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.margelo.nitro.audiobrowser.State
 
 class PlaybackProgressUpdateManager(private val onProgressUpdate: () -> Unit) {
   private val scope = MainScope()
