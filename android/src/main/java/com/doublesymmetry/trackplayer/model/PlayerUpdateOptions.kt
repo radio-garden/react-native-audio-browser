@@ -6,8 +6,7 @@ import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.NitroUpdateOptions
-import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NitroNull
-import com.margelo.nitro.audiobrowser.Variant_Double_NitroNull
+import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NullSentinel
 import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
 
 /**
@@ -73,13 +72,13 @@ data class PlayerUpdateOptions(
 
             androidOptions.notificationCapabilities?.let { variant ->
                 notificationCapabilities = when (variant) {
-                    is Variant_Array_Capability__NitroNull.First -> variant.value.map {
+                    is Variant_Array_Capability__NullSentinel.First -> variant.value.map {
                         PlayerCapability.fromNitro(
                             it
                         )
                     }
 
-                    is Variant_Array_Capability__NitroNull.Second -> null
+                    is Variant_Array_Capability__NullSentinel.Second -> null
                 }
             }
         }
