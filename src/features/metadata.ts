@@ -30,15 +30,8 @@ export interface TrackMetadataBase {
   mediaId?: string
   /** The track genre */
   genre?: string
-  /** The track release date in [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) */
-  date?: string
   /** The track rating */
   rating?: Rating
-  /**
-   * (iOS only) Whether the track is presented in the control center as being
-   * live
-   **/
-  isLiveStream?: boolean
 }
 
 export interface NowPlayingMetadata extends TrackMetadataBase {

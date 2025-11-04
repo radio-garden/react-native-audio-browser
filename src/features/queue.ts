@@ -1,6 +1,5 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
-import resolveAssetSource from '../utils/resolveAssetSource'
 import type { TrackMetadataBase } from './metadata'
 
 // MARK: - Types
@@ -21,23 +20,7 @@ export type ResourceObject = number
 
 export interface Track extends TrackMetadataBase {
   mediaId?: string
-  url: string
-  type?: TrackType
-  /** The user agent HTTP header */
-  userAgent?: string
-  /** Mime type of the media file */
-  contentType?: string
-  /** (iOS only) The pitch algorithm to apply to the sound. */
-  pitchAlgorithm?: PitchAlgorithm
-  // // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // headers?: { [key: string]: any }
-  // /** Custom user data attached to the track */
-  // data?: Record<string, any>
-}
-
-export type AddTrack = Track & {
-  url: string | ResourceObject
-  artwork?: string | ResourceObject
+  url?: string
 }
 
 /**
@@ -48,30 +31,6 @@ export interface PlaybackQueueEndedEvent {
   track: number
   /** The playback position in seconds of the active track when the playback queue ended. */
   position: number
-}
-
-// MARK: - Helpers
-
-function resolveImportedAssetOrPath(pathOrAsset: string | number | undefined) {
-  return pathOrAsset === undefined
-    ? undefined
-    : typeof pathOrAsset === 'string'
-      ? pathOrAsset
-      : resolveImportedAsset(pathOrAsset)
-}
-
-function resolveImportedAsset(id?: number) {
-  return id
-    ? ((resolveAssetSource(id) as { uri: string } | null) ?? undefined)
-    : undefined
-}
-
-export function resolveTrackAssets(track: AddTrack) {
-  return {
-    ...track,
-    url: resolveImportedAssetOrPath(track.url),
-    artwork: resolveImportedAssetOrPath(track.artwork),
-  }
 }
 
 /**
@@ -92,21 +51,18 @@ export interface PlaybackQueueEndedEvent {
  * @param insertBeforeIndex - (Optional) The index to insert the tracks before.
  * By default the tracks will be added to the end of the queue.
  */
-export function add(tracks: AddTrack[], insertBeforeIndex?: number): void
+export function add(tracks: Track[], insertBeforeIndex?: number): void
 /**
  * Adds a track to the queue.
  * @param track - The track to add to the queue.
  * @param insertBeforeIndex - (Optional) The index to insert the track before.
  * By default the track will be added to the end of the queue.
  */
-export function add(track: AddTrack, insertBeforeIndex?: number): void
-export function add(
-  tracks: AddTrack | AddTrack[],
-  insertBeforeIndex = -1
-): void {
+export function add(track: Track, insertBeforeIndex?: number): void
+export function add(tracks: Track | Track[], insertBeforeIndex = -1): void {
   const addTracks = Array.isArray(tracks) ? tracks : [tracks]
   if (addTracks.length > 0) {
-    TrackPlayer.add(addTracks.map(resolveTrackAssets), insertBeforeIndex)
+    TrackPlayer.add(addTracks, insertBeforeIndex)
   }
 }
 
@@ -115,7 +71,7 @@ export function add(
  * @param track - The track to load.
  */
 export function load(track: Track): void {
-  TrackPlayer.load(resolveTrackAssets(track))
+  TrackPlayer.load(track)
 }
 
 /**
@@ -191,7 +147,7 @@ export function skipToPrevious(initialPosition?: number): void {
  * @param tracks - The tracks to set as the queue.
  */
 export function setQueue(tracks: Track[]): void {
-  TrackPlayer.setQueue(tracks.map(resolveTrackAssets))
+  TrackPlayer.setQueue(tracks)
 }
 
 // MARK: - Getters

@@ -20,11 +20,9 @@ import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
-import com.doublesymmetry.trackplayer.model.Track
-import com.doublesymmetry.trackplayer.model.TrackFactory
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
-import com.margelo.nitro.audiobrowser.Track as NitroTrack
+import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlayerOptions
 import com.margelo.nitro.audiobrowser.PlayingState
@@ -74,10 +72,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     private var connectedService: TrackPlayerService? = null
     private val context = NitroModules.applicationContext
         ?: throw IllegalStateException("NitroModules.applicationContext is null")
-
-    @SuppressLint("RestrictedApi")
-    private val trackFactory =
-        TrackFactory(context) { connectedService?.player?.ratingType ?: RatingCompat.RATING_NONE }
 
     // MARK: callbacks
     override var onPlaybackStateChanged: (data: PlaybackState) -> Unit = { }
@@ -195,8 +189,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     private var setupPromise: ((Unit) -> Unit)? = null
 
-    override fun load(track: NitroTrack): Unit = runBlockingOnMain {
-        player.load(Track.fromNitro(track, context))
+    override fun load(track: Track): Unit = runBlockingOnMain {
+        player.load(track)
     }
 
     override fun reset() = runBlockingOnMain {
@@ -286,12 +280,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
 
     override fun add(
-        tracks: Array<NitroTrack>,
+        tracks: Array<Track>,
         insertBeforeIndex: Double?
     ) = runBlockingOnMain {
         val inputIndex = insertBeforeIndex?.toInt() ?: -1
-        val internalTracks = tracks.map { Track.fromNitro(it, context) }
-        player.add(internalTracks, inputIndex)
+        player.add(tracks, inputIndex)
     }
 
     override fun move(fromIndex: Double, toIndex: Double) = runBlockingOnMain {
@@ -331,19 +324,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
     }
 
-    override fun setQueue(tracks: Array<NitroTrack>) = runBlockingOnMain {
+    override fun setQueue(tracks: Array<Track>) = runBlockingOnMain {
         player.clear()
-        val internalTracks = tracks.map { Track.fromNitro(it, context) }
-        player.add(internalTracks)
+        player.add(tracks)
     }
 
-    override fun getQueue(): Array<NitroTrack> = runBlockingOnMain {
-        player.tracks.map { it.toNitro() }.toTypedArray()
+    override fun getQueue(): Array<Track> = runBlockingOnMain {
+        player.tracks
     }
 
-    override fun getTrack(index: Double): NitroTrack? = runBlockingOnMain {
+    override fun getTrack(index: Double): Track? = runBlockingOnMain {
         try {
-            player.getTrack(index.toInt()).toNitro()
+            player.getTrack(index.toInt())
         } catch (e: IllegalArgumentException) {
             null
         }
@@ -353,8 +345,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         player.currentIndex?.toDouble()
     }
 
-    override fun getActiveTrack(): NitroTrack? = runBlockingOnMain {
-        player.currentTrack?.toNitro()
+    override fun getActiveTrack(): Track? = runBlockingOnMain {
+        player.currentTrack
     }
 
     override fun acquireWakeLock() = runBlockingOnMain {
