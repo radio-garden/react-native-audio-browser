@@ -646,7 +646,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun updateOptions(options: UpdateOptions): Unit
+  abstract fun updateOptions(options: NitroUpdateOptions): Unit
   
   @DoNotStrip
   @Keep

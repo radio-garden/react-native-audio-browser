@@ -38,6 +38,8 @@ target_sources(
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
   ../nitrogen/generated/android/c++/JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
+  ../nitrogen/generated/android/c++/JVariant_Array_Capability__NullSentinel.cpp
+  ../nitrogen/generated/android/c++/JVariant_Double_NullSentinel.cpp
 )
 
 # From node_modules/react-native/ReactAndroid/cmake-utils/folly-flags.cmake

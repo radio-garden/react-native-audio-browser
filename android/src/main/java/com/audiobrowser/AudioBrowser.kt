@@ -59,6 +59,7 @@ import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSkipEvent
 import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.NitroUpdateOptions
 import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
 import com.margelo.nitro.audiobrowser.UpdateOptions
 
@@ -181,10 +182,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
     }
 
-    override fun updateOptions(options: UpdateOptions) {
+    override fun updateOptions(options: NitroUpdateOptions) {
         val currentOptions = player.getOptions()
         val updatedOptions = currentOptions.copy()
-        updatedOptions.updateFromNitro(options)
+        updatedOptions.updateFromBridge(options)
         player.applyOptions(updatedOptions)
     }
 

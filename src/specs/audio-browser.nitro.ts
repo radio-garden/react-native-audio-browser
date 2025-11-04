@@ -7,7 +7,11 @@ import type {
   AudioMetadataReceivedEvent,
   PlaybackMetadata,
 } from '../features/metadata'
-import type { Options, UpdateOptions } from '../features/options'
+import type {
+  NitroUpdateOptions,
+  Options,
+  UpdateOptions,
+} from '../features/options'
 import type { PlaybackState } from '../features/playbackState'
 import type { PlayerOptions } from '../features/player'
 import type { PlayingState } from '../features/playingState'
@@ -32,7 +36,7 @@ export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
   // MARK: init and config
   setupPlayer(options: PlayerOptions): Promise<void>
-  updateOptions(options: UpdateOptions): void
+  updateOptions(options: NitroUpdateOptions): void
   getOptions(): UpdateOptions
 
   // // MARK: events

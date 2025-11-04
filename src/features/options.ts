@@ -1,5 +1,6 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
+import { NullSentinel, wrapNullSentinel } from '../utils/null-sentinel'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { RatingType } from './metadata'
 import type { RepeatMode } from './repeatMode'
@@ -185,6 +186,14 @@ export interface AndroidUpdateOptions {
   notificationCapabilities?: Capability[] | null
 }
 
+export interface NitroAndroidUpdateOptions {
+  appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
+  skipSilence?: boolean
+  shuffle?: boolean
+  ratingType?: RatingType
+  notificationCapabilities?: Capability[] | NullSentinel
+}
+
 export interface IOSUpdateOptions {
   /**
    * Configuration for the like/heart button in iOS control center.
@@ -280,9 +289,39 @@ export interface UpdateOptions {
 
   /**
    * How often progress events are emitted in seconds.
-   * @default 1
+   * When null, progress events are disabled.
+   * @default null
    */
-  progressUpdateEventInterval?: number
+  progressUpdateEventInterval?: number | null
+
+  capabilities?: Capability[]
+}
+
+export interface NitroUpdateOptions {
+  /** Android-specific configuration options */
+  android?: NitroAndroidUpdateOptions
+
+  /** iOS-specific configuration options */
+  ios?: IOSUpdateOptions
+
+  /**
+   * Jump forward interval in seconds when using jump forward controls.
+   * @default 15
+   */
+  forwardJumpInterval?: number
+
+  /**
+   * Jump backward interval in seconds when using jump backward controls.
+   * @default 15
+   */
+  backwardJumpInterval?: number
+
+  /**
+   * How often progress events are emitted in seconds.
+   * When null, progress events are disabled.
+   * @default null
+   */
+  progressUpdateEventInterval?: number | NullSentinel
 
   capabilities?: Capability[]
 }
@@ -308,7 +347,21 @@ export interface UpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
-  TrackPlayer.updateOptions(options)
+  TrackPlayer.updateOptions({
+    ...options,
+    android: options.android
+      ? {
+          ...options.android,
+          notificationCapabilities: wrapNullSentinel(
+            options.android.notificationCapabilities
+          ),
+        }
+      : undefined,
+    ios: options.ios ? { ...options.ios } : undefined,
+    progressUpdateEventInterval: wrapNullSentinel(
+      options.progressUpdateEventInterval
+    ),
+  })
 }
 
 // MARK: - Getters
