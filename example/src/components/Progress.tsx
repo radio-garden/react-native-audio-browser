@@ -1,5 +1,5 @@
 // import Slider from '@react-native-community/slider';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { usePolledProgress } from 'react-native-audio-browser';
 import { Spacer } from './Spacer';
 
@@ -7,7 +7,7 @@ export function Progress({ live }: { live?: boolean }) {
   const { position, duration } = usePolledProgress();
 
   // This is a workaround since the slider component only takes absolute widths
-  const progressBarWidth = Dimensions.get('window').width * 0.92;
+  // const progressBarWidth = Dimensions.get('window').width * 0.92;
 
   return (
     <View style={styles.container}>
@@ -23,7 +23,7 @@ export function Progress({ live }: { live?: boolean }) {
             maximumValue={duration}
             thumbTintColor="#FFD479"
             minimumTrackTintColor="#FFD479"
-            maximumTrackTintColor="#FFFFFF"
+            maximumTrackTintColor="white"
             onSlidingComplete={TrackPlayer.seekTo}
           /> */}
           <View style={styles.labelContainer}>

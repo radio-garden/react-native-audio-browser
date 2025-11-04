@@ -12,9 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  useActiveTrack
-} from 'react-native-audio-browser';
+import { useActiveTrack } from 'react-native-audio-browser';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActionSheet,
@@ -26,25 +24,9 @@ import {
   TrackInfo,
 } from './src/components';
 import { useSetupPlayer } from './src/hooks/usePlayer';
-import { installListeners, tracks } from './src/services';
+import { installListeners } from './src/services';
 
 installListeners();
-
-const tracksWithIds = tracks.map((track, index) => ({
-  ...track,
-  mediaId: `${index}`,
-}));
-// TrackPlayer.registerMediaBrowser({
-//   async get({ id }) {
-//     return tracksWithIds.find(item => item.mediaId === id);
-//   },
-//   async list() {
-//     return {
-//       children: tracksWithIds,
-//       total: tracksWithIds.length,
-//     };
-//   },
-// });
 
 export default function App() {
   const isPlayerReady = useSetupPlayer();
@@ -67,15 +49,15 @@ function Player() {
   const [actionsVisible, setActionsVisible] = useState(false);
 
   useEffect(() => {
-    function deepLinkHandler(data: { url: string }) {
-      console.log('deepLinkHandler', data.url);
-    }
-
     // This event will be fired when the app is already open and the notification is clicked
-    const subscription = Linking.addEventListener('url', deepLinkHandler);
+    const subscription = Linking.addEventListener('url', data => {
+      console.log('deepLinkHandler', data.url);
+    });
 
     // When you launch the closed app from the notification or any other link
-    Linking.getInitialURL().then(url => console.log('getInitialURL', url));
+    Linking.getInitialURL()
+      .then(url => console.log('getInitialURL', url))
+      .catch(console.error);
 
     return () => {
       subscription.remove();

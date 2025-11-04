@@ -27,15 +27,15 @@ export function useSetupPlayer() {
       ],
       progressUpdateEventInterval: 1,
     });
-    void TrackPlayer.setupPlayer()
-      .catch(error => {
-        console.error('Error in setupPlayer:', error);
-      })
+    TrackPlayer.setupPlayer()
       .then(() => {
         setPlayerReady(true);
         if (TrackPlayer.getQueue().length <= 0) {
           TrackPlayer.setQueue(tracks);
         }
+      })
+      .catch(error => {
+        console.error('Error in setupPlayer:', error);
       });
   }, []);
   return playerReady;

@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a84ff',
   },
   segmentText: {
-    color: '#ffffff',
+    color: 'white',
     fontSize: 13,
     fontWeight: '400',
   },
