@@ -23,8 +23,14 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 namespace margelo::nitro::audiobrowser { enum class TrackType; }
 // Forward declaration of `PitchAlgorithm` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
+// Forward declaration of `HeartRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct HeartRating; }
+// Forward declaration of `ThumbsRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `StarRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct StarRating; }
+// Forward declaration of `PercentageRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
@@ -57,14 +63,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
 // Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -73,6 +71,8 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `RatingType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RatingType; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
@@ -130,8 +130,16 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 #include "JTrackType.hpp"
 #include "PitchAlgorithm.hpp"
 #include "JPitchAlgorithm.hpp"
-#include "RatingType.hpp"
-#include "JRatingType.hpp"
+#include "HeartRating.hpp"
+#include "ThumbsRating.hpp"
+#include "StarRating.hpp"
+#include "PercentageRating.hpp"
+#include <variant>
+#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
+#include "JHeartRating.hpp"
+#include "JThumbsRating.hpp"
+#include "JStarRating.hpp"
+#include "JPercentageRating.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "JFunc_void_PlaybackErrorEvent.hpp"
 #include "JPlaybackErrorEvent.hpp"
@@ -178,16 +186,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 #include "RemoteSetRatingEvent.hpp"
 #include "JFunc_void_RemoteSetRatingEvent.hpp"
 #include "JRemoteSetRatingEvent.hpp"
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
-#include <variant>
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "JHeartRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JStarRating.hpp"
-#include "JPercentageRating.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JRemoteSkipEvent.hpp"
@@ -198,6 +196,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 #include "JAndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
+#include "RatingType.hpp"
+#include "JRatingType.hpp"
 #include "Capability.hpp"
 #include "JCapability.hpp"
 #include "IOSOptions.hpp"

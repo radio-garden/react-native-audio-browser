@@ -620,6 +620,62 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
+  // pragma MARK: std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>
+  /**
+   * Wrapper struct for `std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ {
+    std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant;
+    std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant): variant(variant) { }
+    operator std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline HeartRating get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline ThumbsRating get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+    inline StarRating get_2() const noexcept {
+      return std::get<2>(variant);
+    }
+    inline PercentageRating get_3() const noexcept {
+      return std::get<3>(variant);
+    }
+  };
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const HeartRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const ThumbsRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const StarRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const PercentageRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>
+  /**
+   * Specialized version of `std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>`.
+   */
+  using std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ = std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>;
+  inline std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>& value) noexcept {
+    return std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> get_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>& optional) noexcept {
+    return *optional;
+  }
+  
   // pragma MARK: std::optional<Track>
   /**
    * Specialized version of `std::optional<Track>`.
@@ -934,47 +990,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_RemoteSeekEvent create_Func_void_RemoteSeekEvent(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_RemoteSeekEvent_Wrapper wrap_Func_void_RemoteSeekEvent(Func_void_RemoteSeekEvent value) noexcept {
     return Func_void_RemoteSeekEvent_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>
-  /**
-   * Wrapper struct for `std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
-   */
-  struct std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ {
-    std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant;
-    std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant): variant(variant) { }
-    operator std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline HeartRating get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline ThumbsRating get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-    inline StarRating get_2() const noexcept {
-      return std::get<2>(variant);
-    }
-    inline PercentageRating get_3() const noexcept {
-      return std::get<3>(variant);
-    }
-  };
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const HeartRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const ThumbsRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const StarRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const PercentageRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
   }
   
   // pragma MARK: std::function<void(const RemoteSetRatingEvent& /* event */)>

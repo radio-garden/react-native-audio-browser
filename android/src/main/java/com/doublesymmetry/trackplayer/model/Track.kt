@@ -9,13 +9,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
 import com.doublesymmetry.trackplayer.util.BundleUtils
+import com.doublesymmetry.trackplayer.util.RatingFactory
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
-import com.facebook.react.bridge.WritableMap
 import com.margelo.nitro.audiobrowser.Track as NitroTrack
-import com.margelo.nitro.audiobrowser.TrackType
 
 class Track
 private constructor(
@@ -268,7 +267,7 @@ private constructor(
         date = nitroTrack.date,
         genre = nitroTrack.genre,
         duration = nitroTrack.duration,
-        rating = null, // TODO: Convert nitroTrack.rating to Rating if needed
+        rating = nitroTrack.rating?.let { RatingFactory.bridgeToMedia3(it) },
         mediaId = nitroTrack.mediaId,
         originalItem = originalBundle,
       )

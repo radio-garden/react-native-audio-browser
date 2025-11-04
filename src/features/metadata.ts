@@ -1,6 +1,7 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import resolveAssetSource from '../utils/resolveAssetSource'
+import type { Rating } from './rating'
 
 // MARK: - Types
 
@@ -32,7 +33,7 @@ export interface TrackMetadataBase {
   /** The track release date in [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) */
   date?: string
   /** The track rating */
-  rating?: RatingType
+  rating?: Rating
   /**
    * (iOS only) Whether the track is presented in the control center as being
    * live

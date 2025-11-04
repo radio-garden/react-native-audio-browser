@@ -277,12 +277,11 @@ class TrackPlayer(
     callbacks?.onPlaybackError(playbackError)
   }
 
-  internal fun onRatingChanged(rating: Rating) {
-        val convertedRating = RatingFactory.convertRatingToVariant(rating)
-        if (convertedRating != null) {
-            val event = RemoteSetRatingEvent(convertedRating)
-            callbacks?.handleRemoteSetRating(event)
-        }
+  internal fun onSetRating(rating: Rating) {
+    RatingFactory.media3ToBridge(rating)?.let {
+      val event = RemoteSetRatingEvent(it)
+      callbacks?.handleRemoteSetRating(event)
+    }
   }
 
   var playWhenReady: Boolean
@@ -910,7 +909,7 @@ class TrackPlayer(
       controller: MediaSession.ControllerInfo,
       rating: Rating,
     ): ListenableFuture<SessionResult> {
-      onRatingChanged(rating)
+      onSetRating(rating)
       return super.onSetRating(session, controller, rating)
     }
 

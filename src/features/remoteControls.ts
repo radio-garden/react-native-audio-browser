@@ -1,5 +1,11 @@
 import { AudioBrowser } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
+import type {
+  HeartRating,
+  PercentageRating,
+  StarRating,
+  ThumbsRating,
+} from './rating'
 
 // MARK: - Event Interfaces
 
@@ -43,22 +49,6 @@ export interface RemotePlaySearchEvent {
 export interface RemoteSeekEvent {
   /** The position to seek to in seconds */
   position: number
-}
-
-export interface HeartRating {
-  hasHeart: boolean
-}
-
-export interface ThumbsRating {
-  isThumbsUp: boolean
-}
-
-export interface StarRating {
-  stars: number
-}
-
-export interface PercentageRating {
-  percentage: number
 }
 
 /**

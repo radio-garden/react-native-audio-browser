@@ -10,16 +10,24 @@
 #include <fbjni/fbjni.h>
 #include "PlaybackActiveTrackChangedEvent.hpp"
 
+#include "HeartRating.hpp"
+#include "JHeartRating.hpp"
+#include "JPercentageRating.hpp"
 #include "JPitchAlgorithm.hpp"
-#include "JRatingType.hpp"
+#include "JStarRating.hpp"
+#include "JThumbsRating.hpp"
 #include "JTrack.hpp"
 #include "JTrackType.hpp"
+#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
+#include "PercentageRating.hpp"
 #include "PitchAlgorithm.hpp"
-#include "RatingType.hpp"
+#include "StarRating.hpp"
+#include "ThumbsRating.hpp"
 #include "Track.hpp"
 #include "TrackType.hpp"
 #include <optional>
 #include <string>
+#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 

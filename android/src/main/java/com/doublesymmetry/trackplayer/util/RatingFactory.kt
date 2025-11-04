@@ -12,7 +12,7 @@ import com.margelo.nitro.audiobrowser.ThumbsRating
 import com.margelo.nitro.audiobrowser.Variant_HeartRating_ThumbsRating_StarRating_PercentageRating
 
 object RatingFactory {
-    fun convertRatingToVariant(rating: Rating): Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? {
+    fun media3ToBridge(rating: Rating): Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? {
         return when (rating) {
             is Media3HeartRating -> {
                 if (rating.isRated) {
@@ -21,6 +21,7 @@ object RatingFactory {
                     )
                 } else null
             }
+
             is Media3ThumbRating -> {
                 if (rating.isRated) {
                     Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.create(
@@ -28,6 +29,7 @@ object RatingFactory {
                     )
                 } else null
             }
+
             is Media3StarRating -> {
                 if (rating.isRated) {
                     Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.create(
@@ -35,6 +37,7 @@ object RatingFactory {
                     )
                 } else null
             }
+
             is Media3PercentRating -> {
                 if (rating.isRated) {
                     Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.create(
@@ -42,7 +45,30 @@ object RatingFactory {
                     )
                 } else null
             }
+
             else -> null
         }
     }
+
+    fun bridgeToMedia3(rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating): Rating? {
+        return when (rating) {
+            is Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.First -> Media3HeartRating(
+                rating.value.hasHeart
+            )
+
+            is Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.Second -> Media3ThumbRating(
+                rating.value.isThumbsUp
+            )
+
+            is Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.Third -> Media3StarRating(
+                5,
+                rating.value.stars.toFloat()
+            )
+
+            is Variant_HeartRating_ThumbsRating_StarRating_PercentageRating.Fourth -> Media3PercentRating(
+                rating.value.percentage.toFloat()
+            )
+        }
+    }
+
 }

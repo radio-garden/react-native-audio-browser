@@ -10,14 +10,22 @@
 #include <fbjni/fbjni.h>
 #include "Track.hpp"
 
+#include "HeartRating.hpp"
+#include "JHeartRating.hpp"
+#include "JPercentageRating.hpp"
 #include "JPitchAlgorithm.hpp"
-#include "JRatingType.hpp"
+#include "JStarRating.hpp"
+#include "JThumbsRating.hpp"
 #include "JTrackType.hpp"
+#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
+#include "PercentageRating.hpp"
 #include "PitchAlgorithm.hpp"
-#include "RatingType.hpp"
+#include "StarRating.hpp"
+#include "ThumbsRating.hpp"
 #include "TrackType.hpp"
 #include <optional>
 #include <string>
+#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -66,8 +74,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> genre = this->getFieldValue(fieldGenre);
       static const auto fieldDate = clazz->getField<jni::JString>("date");
       jni::local_ref<jni::JString> date = this->getFieldValue(fieldDate);
-      static const auto fieldRating = clazz->getField<JRatingType>("rating");
-      jni::local_ref<JRatingType> rating = this->getFieldValue(fieldRating);
+      static const auto fieldRating = clazz->getField<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>("rating");
+      jni::local_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating> rating = this->getFieldValue(fieldRating);
       static const auto fieldIsLiveStream = clazz->getField<jni::JBoolean>("isLiveStream");
       jni::local_ref<jni::JBoolean> isLiveStream = this->getFieldValue(fieldIsLiveStream);
       return Track(
@@ -111,7 +119,7 @@ namespace margelo::nitro::audiobrowser {
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,
         value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr,
         value.date.has_value() ? jni::make_jstring(value.date.value()) : nullptr,
-        value.rating.has_value() ? JRatingType::fromCpp(value.rating.value()) : nullptr,
+        value.rating.has_value() ? JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating.value()) : nullptr,
         value.isLiveStream.has_value() ? jni::JBoolean::valueOf(value.isLiveStream.value()) : nullptr
       );
     }

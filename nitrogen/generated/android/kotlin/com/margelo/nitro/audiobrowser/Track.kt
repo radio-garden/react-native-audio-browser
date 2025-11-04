@@ -65,7 +65,7 @@ data class Track
     val date: String?,
     @DoNotStrip
     @Keep
-    val rating: RatingType?,
+    val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?,
     @DoNotStrip
     @Keep
     val isLiveStream: Boolean?
