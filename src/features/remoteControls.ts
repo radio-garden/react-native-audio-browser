@@ -45,12 +45,27 @@ export interface RemoteSeekEvent {
   position: number
 }
 
+export interface HeartRating {
+  hasHeart: boolean
+}
+
+export interface ThumbsRating {
+  isThumbsUp: boolean
+}
+
+export interface StarRating {
+  stars: number
+}
+
+export interface PercentageRating {
+  percentage: number
+}
+
 /**
  * Remote set rating event.
  */
 export interface RemoteSetRatingEvent {
-  /** The rating value */
-  rating: number | string
+  rating: HeartRating | ThumbsRating | StarRating | PercentageRating
 }
 
 /**

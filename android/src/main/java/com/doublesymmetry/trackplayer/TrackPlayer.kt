@@ -24,6 +24,8 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.Rating
 import androidx.media3.session.MediaLibraryService
 import com.doublesymmetry.trackplayer.util.RepeatModeFactory
+import com.doublesymmetry.trackplayer.util.RatingFactory
+import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -37,14 +39,12 @@ import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toMilliseconds
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
 import com.doublesymmetry.trackplayer.model.AudioOffloadOptions
 import com.doublesymmetry.trackplayer.model.PlaybackMetadata
 import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
-import com.doublesymmetry.trackplayer.model.RatingType
 import com.doublesymmetry.trackplayer.model.Track
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.doublesymmetry.trackplayer.player.MediaFactory
@@ -277,13 +277,12 @@ class TrackPlayer(
     callbacks?.onPlaybackError(playbackError)
   }
 
-  internal fun onRatingChanged(rating: Any) {
-    if (rating is androidx.media3.common.Rating) {
-      RatingType.fromString(rating.toString())?.let { ratingType ->
-        val event = RemoteSetRatingEvent(rating = ratingType)
-        callbacks?.handleRemoteSetRating(event)
-      } ?: Timber.w("Failed to convert rating: $rating")
-    }
+  internal fun onRatingChanged(rating: Rating) {
+        val convertedRating = RatingFactory.convertRatingToVariant(rating)
+        if (convertedRating != null) {
+            val event = RemoteSetRatingEvent(convertedRating)
+            callbacks?.handleRemoteSetRating(event)
+        }
   }
 
   var playWhenReady: Boolean

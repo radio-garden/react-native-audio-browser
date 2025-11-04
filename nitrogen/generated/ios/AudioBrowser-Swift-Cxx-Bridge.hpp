@@ -30,6 +30,8 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `HeartRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -48,6 +50,8 @@ namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `PercentageRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `PitchAlgorithm` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
@@ -90,8 +94,12 @@ namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `StarRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `State` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class State; }
+// Forward declaration of `ThumbsRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
 // Forward declaration of `TrackType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackType; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -115,6 +123,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AudioMetadataReceivedEvent.hpp"
 #include "Capability.hpp"
 #include "FeedbackOptions.hpp"
+#include "HeartRating.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
@@ -124,6 +133,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSPlayerOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "Options.hpp"
+#include "PercentageRating.hpp"
 #include "PitchAlgorithm.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
@@ -145,7 +155,9 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "RemoteSkipEvent.hpp"
 #include "RepeatMode.hpp"
 #include "RepeatModeChangedEvent.hpp"
+#include "StarRating.hpp"
 #include "State.hpp"
+#include "ThumbsRating.hpp"
 #include "Track.hpp"
 #include "TrackType.hpp"
 #include "UpdateOptions.hpp"
@@ -924,33 +936,45 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RemoteSeekEvent_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<std::string, double>
+  // pragma MARK: std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>
   /**
-   * Wrapper struct for `std::variant<std::string, double>`.
+   * Wrapper struct for `std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_std__string__double_ {
-    std::variant<std::string, double> variant;
-    std__variant_std__string__double_(std::variant<std::string, double> variant): variant(variant) { }
-    operator std::variant<std::string, double>() const noexcept {
+  struct std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ {
+    std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant;
+    std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant): variant(variant) { }
+    operator std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
       return variant.index();
     }
-    inline std::string get_0() const noexcept {
+    inline HeartRating get_0() const noexcept {
       return std::get<0>(variant);
     }
-    inline double get_1() const noexcept {
+    inline ThumbsRating get_1() const noexcept {
       return std::get<1>(variant);
     }
+    inline StarRating get_2() const noexcept {
+      return std::get<2>(variant);
+    }
+    inline PercentageRating get_3() const noexcept {
+      return std::get<3>(variant);
+    }
   };
-  inline std__variant_std__string__double_ create_std__variant_std__string__double_(const std::string& value) noexcept {
-    return std__variant_std__string__double_(value);
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const HeartRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
   }
-  inline std__variant_std__string__double_ create_std__variant_std__string__double_(double value) noexcept {
-    return std__variant_std__string__double_(value);
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const ThumbsRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const StarRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const PercentageRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
   }
   
   // pragma MARK: std::function<void(const RemoteSetRatingEvent& /* event */)>

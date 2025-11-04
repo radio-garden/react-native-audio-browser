@@ -10,8 +10,15 @@
 #include <fbjni/fbjni.h>
 #include "RemoteSetRatingEvent.hpp"
 
-#include "JVariant_String_Double.hpp"
-#include <string>
+#include "HeartRating.hpp"
+#include "JHeartRating.hpp"
+#include "JPercentageRating.hpp"
+#include "JStarRating.hpp"
+#include "JThumbsRating.hpp"
+#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
+#include "PercentageRating.hpp"
+#include "StarRating.hpp"
+#include "ThumbsRating.hpp"
 #include <variant>
 
 namespace margelo::nitro::audiobrowser {
@@ -33,8 +40,8 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     RemoteSetRatingEvent toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldRating = clazz->getField<JVariant_String_Double>("rating");
-      jni::local_ref<JVariant_String_Double> rating = this->getFieldValue(fieldRating);
+      static const auto fieldRating = clazz->getField<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>("rating");
+      jni::local_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating> rating = this->getFieldValue(fieldRating);
       return RemoteSetRatingEvent(
         rating->toCpp()
       );
@@ -47,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::local_ref<JRemoteSetRatingEvent::javaobject> fromCpp(const RemoteSetRatingEvent& value) {
       return newInstance(
-        JVariant_String_Double::fromCpp(value.rating)
+        JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating)
       );
     }
   };

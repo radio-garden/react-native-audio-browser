@@ -62,6 +62,14 @@ namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
 // Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
+// Forward declaration of `HeartRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct HeartRating; }
+// Forward declaration of `ThumbsRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `StarRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct StarRating; }
+// Forward declaration of `PercentageRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -132,6 +140,10 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
 #include "RemoteSetRatingEvent.hpp"
+#include "HeartRating.hpp"
+#include "ThumbsRating.hpp"
+#include "StarRating.hpp"
+#include "PercentageRating.hpp"
 #include <variant>
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"

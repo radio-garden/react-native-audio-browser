@@ -23,9 +23,19 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `HeartRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct HeartRating; }
+// Forward declaration of `ThumbsRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `StarRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct StarRating; }
+// Forward declaration of `PercentageRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 
-
-#include <string>
+#include "HeartRating.hpp"
+#include "ThumbsRating.hpp"
+#include "StarRating.hpp"
+#include "PercentageRating.hpp"
 #include <variant>
 
 namespace margelo::nitro::audiobrowser {
@@ -35,11 +45,11 @@ namespace margelo::nitro::audiobrowser {
    */
   struct RemoteSetRatingEvent {
   public:
-    std::variant<std::string, double> rating     SWIFT_PRIVATE;
+    std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> rating     SWIFT_PRIVATE;
 
   public:
     RemoteSetRatingEvent() = default;
-    explicit RemoteSetRatingEvent(std::variant<std::string, double> rating): rating(rating) {}
+    explicit RemoteSetRatingEvent(std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> rating): rating(rating) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -52,12 +62,12 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RemoteSetRatingEvent fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::RemoteSetRatingEvent(
-        JSIConverter<std::variant<std::string, double>>::fromJSI(runtime, obj.getProperty(runtime, "rating"))
+        JSIConverter<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>::fromJSI(runtime, obj.getProperty(runtime, "rating"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::RemoteSetRatingEvent& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, "rating", JSIConverter<std::variant<std::string, double>>::toJSI(runtime, arg.rating));
+      obj.setProperty(runtime, "rating", JSIConverter<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>::toJSI(runtime, arg.rating));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -68,7 +78,7 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::variant<std::string, double>>::canConvert(runtime, obj.getProperty(runtime, "rating"))) return false;
+      if (!JSIConverter<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>::canConvert(runtime, obj.getProperty(runtime, "rating"))) return false;
       return true;
     }
   };

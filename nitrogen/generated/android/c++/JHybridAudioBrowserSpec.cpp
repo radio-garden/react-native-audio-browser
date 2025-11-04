@@ -57,6 +57,14 @@ namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
 // Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
+// Forward declaration of `HeartRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct HeartRating; }
+// Forward declaration of `ThumbsRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `StarRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct StarRating; }
+// Forward declaration of `PercentageRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -170,8 +178,16 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 #include "RemoteSetRatingEvent.hpp"
 #include "JFunc_void_RemoteSetRatingEvent.hpp"
 #include "JRemoteSetRatingEvent.hpp"
+#include "HeartRating.hpp"
+#include "ThumbsRating.hpp"
+#include "StarRating.hpp"
+#include "PercentageRating.hpp"
 #include <variant>
-#include "JVariant_String_Double.hpp"
+#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
+#include "JHeartRating.hpp"
+#include "JThumbsRating.hpp"
+#include "JStarRating.hpp"
+#include "JPercentageRating.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JRemoteSkipEvent.hpp"

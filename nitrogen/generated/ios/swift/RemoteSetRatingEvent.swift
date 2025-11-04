@@ -18,29 +18,39 @@ public extension RemoteSetRatingEvent {
   /**
    * Create a new instance of `RemoteSetRatingEvent`.
    */
-  init(rating: Variant_String_Double) {
-    self.init({ () -> bridge.std__variant_std__string__double_ in
+  init(rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating) {
+    self.init({ () -> bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ in
       switch rating {
         case .first(let __value):
-          return bridge.create_std__variant_std__string__double_(std.string(__value))
+          return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
         case .second(let __value):
-          return bridge.create_std__variant_std__string__double_(__value)
+          return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
+        case .third(let __value):
+          return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
+        case .fourth(let __value):
+          return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
       }
     }().variant)
   }
 
-  var rating: Variant_String_Double {
+  var rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating {
     @inline(__always)
     get {
-      return { () -> Variant_String_Double in
-        let __variant = bridge.std__variant_std__string__double_(self.__rating)
+      return { () -> Variant_HeartRating_ThumbsRating_StarRating_PercentageRating in
+        let __variant = bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(self.__rating)
         switch __variant.index() {
           case 0:
             let __actual = __variant.get_0()
-            return .first(String(__actual))
+            return .first(__actual)
           case 1:
             let __actual = __variant.get_1()
             return .second(__actual)
+          case 2:
+            let __actual = __variant.get_2()
+            return .third(__actual)
+          case 3:
+            let __actual = __variant.get_3()
+            return .fourth(__actual)
           default:
             fatalError("Variant can never have index \(__variant.index())!")
         }
@@ -48,12 +58,16 @@ public extension RemoteSetRatingEvent {
     }
     @inline(__always)
     set {
-      self.__rating = { () -> bridge.std__variant_std__string__double_ in
+      self.__rating = { () -> bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ in
         switch newValue {
           case .first(let __value):
-            return bridge.create_std__variant_std__string__double_(std.string(__value))
+            return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
           case .second(let __value):
-            return bridge.create_std__variant_std__string__double_(__value)
+            return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
+          case .third(let __value):
+            return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
+          case .fourth(let __value):
+            return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
         }
       }().variant
     }
