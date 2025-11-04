@@ -2,21 +2,13 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import type { Track } from 'react-native-audio-browser';
 
 export function TrackInfo({ track }: { track?: Track }) {
-  // @ts-ignore
-  const imageUri = track?.artwork?.uri || track?.artwork;
+  const imageUri = track?.artwork;
 
   return (
     <View style={styles.container}>
       <Image style={styles.artwork} source={{ uri: imageUri }} />
       <Text style={styles.titleText}>{track?.title}</Text>
       <Text style={styles.artistText}>{track?.artist}</Text>
-      {track?.data ? (
-        <View style={styles.customData}>
-          <Text style={styles.dataText}>
-            Data: {JSON.stringify(track.data)}
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
 }

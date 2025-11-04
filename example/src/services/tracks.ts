@@ -1,21 +1,50 @@
 import { type Track } from 'react-native-audio-browser';
-import playlistData from '../assets/data/playlist.json';
-// // @ts-expect-error – sure we can import this
-// import localTrack from '../assets/resources/pure.m4a';
-// // @ts-expect-error – sure we can import this
-// import localArtwork from '../assets/resources/artwork.jpg';
 
 export const tracks: Track[] = [
-  ...(playlistData as Track[]),
-  // {
-  //   url: localTrack,
-  //   title: 'Pure (Demo)',
-  //   artist: 'David Chavez',
-  //   artwork: localArtwork,
-  //   duration: 28,
-  //   // Custom data
-  //   data: {
-  //     mood: 'calm',
-  //   },
-  // },
+  {
+    url: 'https://radio.garden/api/ara/content/listen/EFZafC9V/channel.mp3',
+    title: '538 Classics',
+  },
+  {
+    url: 'https://rntp.dev/example/Soul%20Searching.mp3',
+    title: 'Soul Searching (Demo)',
+    artist: 'David Chavez',
+    artwork: 'https://rntp.dev/example/Soul%20Searching.jpeg',
+    duration: 77,
+  },
+  {
+    url: 'https://rntp.dev/example/Lullaby%20(Demo).mp3',
+    title: 'Lullaby (Demo)',
+    artist: 'David Chavez',
+    artwork: 'https://rntp.dev/example/Lullaby%20(Demo).jpeg',
+    duration: 71,
+  },
+  {
+    url: 'https://rntp.dev/example/Rhythm%20City%20(Demo).mp3',
+    title: 'Rhythm City (Demo)',
+    artist: 'David Chavez',
+    artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
+    duration: 106,
+  },
+  {
+    url: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
+    title: 'Whip',
+    artist: 'prazkhanal',
+    artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg',
+  },
+  {
+    url: 'https://ais-sa5.cdnstream1.com/b75154_128mp3',
+    title: 'Smooth Jazz 24/7',
+    artist: 'New York, NY',
+    artwork: 'https://rntp.dev/example/smooth-jazz-24-7.jpeg',
+    isLiveStream: true,
+  },
+  {
+    url: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
+    title: 'Chapters',
+  },
+  {
+    url: 'https://kut.streamguys1.com/kutx-app.aac?listenerId=123456784123',
+    title: 'KUTX',
+  },
 ];
