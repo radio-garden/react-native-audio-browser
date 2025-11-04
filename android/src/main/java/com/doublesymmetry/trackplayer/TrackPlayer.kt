@@ -23,6 +23,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.Rating
 import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.SessionError
 import com.doublesymmetry.trackplayer.util.RepeatModeFactory
 import com.doublesymmetry.trackplayer.util.RatingFactory
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
@@ -58,6 +59,7 @@ import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.RatingType
 import com.margelo.nitro.audiobrowser.State
 import com.margelo.nitro.audiobrowser.Track
 import java.util.concurrent.TimeUnit
@@ -317,7 +319,7 @@ class TrackPlayer(
   val isPlaying
     get() = exoPlayer.isPlaying
 
-  var ratingType: Int = RatingCompat.RATING_NONE
+  var ratingType: RatingType = RatingType.NONE
 
   var repeatMode: RepeatMode
     get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
@@ -793,7 +795,7 @@ class TrackPlayer(
     }
 
     if (ratingTypeChanged) {
-      options.ratingType?.let { ratingType = it.compat }
+      options.ratingType?.let { ratingType = it }
     }
 
     if (shuffleChanged) {
@@ -976,7 +978,7 @@ class TrackPlayer(
           if (item != null) {
             LibraryResult.ofItem(item, null)
           } else {
-            LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+            LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
           }
         },
         MoreExecutors.directExecutor(),
