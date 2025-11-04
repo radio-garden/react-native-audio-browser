@@ -1,10 +1,10 @@
 import { Children, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import TrackPlayer, {
-    type AppKilledPlaybackBehavior,
-    type RepeatMode,
-    useOptions,
-    useRepeatMode,
+  type AppKilledPlaybackBehavior,
+  type RepeatMode,
+  useOptions,
+  useRepeatMode,
 } from 'react-native-audio-browser';
 import SegmentedControl from './SegmentedControl';
 import { Spacer } from './Spacer';
@@ -41,9 +41,7 @@ export function OptionSheet() {
               value: 'stop-playback-and-remove-notification',
             },
           ]}
-          value={
-            currentOptions.android.appKilledPlaybackBehavior
-          }
+          value={currentOptions.android.appKilledPlaybackBehavior}
           onSelect={(appKilledPlaybackBehavior: AppKilledPlaybackBehavior) => {
             TrackPlayer.updateOptions({
               android: {
@@ -63,7 +61,7 @@ export function OptionSheet() {
           { label: '30s', value: 30 },
         ]}
         value={currentOptions.backwardJumpInterval}
-        onSelect={(jumpInterval) => {
+        onSelect={jumpInterval => {
           TrackPlayer.updateOptions({
             backwardJumpInterval: jumpInterval,
             forwardJumpInterval: jumpInterval,
@@ -123,7 +121,7 @@ function Options<T>({
   value: T;
   onSelect: (value: T) => void;
 }) {
-  const selectedIndex = options.findIndex((opt) => opt.value === value);
+  const selectedIndex = options.findIndex(opt => opt.value === value);
 
   return (
     <OptionStack vertical={true}>
@@ -131,9 +129,9 @@ function Options<T>({
       <Spacer />
       <SegmentedControl
         appearance={'dark'}
-        values={options.map((opt) => opt.label)}
+        values={options.map(opt => opt.label)}
         selectedIndex={selectedIndex}
-        onChange={(index) => {
+        onChange={index => {
           const newValue = options[index]?.value;
           if (newValue !== undefined) {
             onSelect(newValue);

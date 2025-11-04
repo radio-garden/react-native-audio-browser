@@ -1,9 +1,9 @@
 import Icon from '@react-native-vector-icons/fontawesome6';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import TrackPlayer, { usePlayingState } from 'react-native-audio-browser';
 
@@ -14,9 +14,7 @@ export function PlayPauseButton() {
       {buffering ? (
         <ActivityIndicator />
       ) : (
-        <TouchableWithoutFeedback
-          onPress={TrackPlayer.togglePlayback}
-        >
+        <TouchableWithoutFeedback onPress={TrackPlayer.togglePlayback}>
           <Icon
             name={playing ? 'pause' : 'play'}
             size={48}
