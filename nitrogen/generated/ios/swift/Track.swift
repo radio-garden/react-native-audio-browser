@@ -18,34 +18,22 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(mediaId: String?, url: String, type: TrackType?, userAgent: String?, contentType: String?, pitchAlgorithm: PitchAlgorithm?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, genre: String?, date: String?, rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?, isLiveStream: Bool?) {
+  init(mediaId: String?, url: String?, isLiveStream: Bool?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, genre: String?, rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = mediaId {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }(), std.string(url), { () -> bridge.std__optional_TrackType_ in
-      if let __unwrappedValue = type {
-        return bridge.create_std__optional_TrackType_(__unwrappedValue)
-      } else {
-        return .init()
-      }
     }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = userAgent {
+      if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = contentType {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_PitchAlgorithm_ in
-      if let __unwrappedValue = pitchAlgorithm {
-        return bridge.create_std__optional_PitchAlgorithm_(__unwrappedValue)
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = isLiveStream {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -91,12 +79,6 @@ public extension Track {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = date {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
     }(), { () -> bridge.std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ in
       if let __unwrappedValue = rating {
         return bridge.create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__({ () -> bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ in
@@ -111,12 +93,6 @@ public extension Track {
               return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
           }
         }().variant)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = isLiveStream {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -147,40 +123,12 @@ public extension Track {
     }
   }
   
-  var url: String {
-    @inline(__always)
-    get {
-      return String(self.__url)
-    }
-    @inline(__always)
-    set {
-      self.__url = std.string(newValue)
-    }
-  }
-  
-  var type: TrackType? {
-    @inline(__always)
-    get {
-      return self.__type.value
-    }
-    @inline(__always)
-    set {
-      self.__type = { () -> bridge.std__optional_TrackType_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_TrackType_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var userAgent: String? {
+  var url: String? {
     @inline(__always)
     get {
       return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__userAgent) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__userAgent)
+        if bridge.has_value_std__optional_std__string_(self.__url) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__url)
           return String(__unwrapped)
         } else {
           return nil
@@ -189,7 +137,7 @@ public extension Track {
     }
     @inline(__always)
     set {
-      self.__userAgent = { () -> bridge.std__optional_std__string_ in
+      self.__url = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
@@ -199,40 +147,16 @@ public extension Track {
     }
   }
   
-  var contentType: String? {
+  var isLiveStream: Bool? {
     @inline(__always)
     get {
-      return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__contentType) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__contentType)
-          return String(__unwrapped)
-        } else {
-          return nil
-        }
-      }()
+      return self.__isLiveStream.value
     }
     @inline(__always)
     set {
-      self.__contentType = { () -> bridge.std__optional_std__string_ in
+      self.__isLiveStream = { () -> bridge.std__optional_bool_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var pitchAlgorithm: PitchAlgorithm? {
-    @inline(__always)
-    get {
-      return self.__pitchAlgorithm.value
-    }
-    @inline(__always)
-    set {
-      self.__pitchAlgorithm = { () -> bridge.std__optional_PitchAlgorithm_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_PitchAlgorithm_(__unwrappedValue)
+          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -401,30 +325,6 @@ public extension Track {
     }
   }
   
-  var date: String? {
-    @inline(__always)
-    get {
-      return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__date) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__date)
-          return String(__unwrapped)
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__date = { () -> bridge.std__optional_std__string_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
   var rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? {
     @inline(__always)
     get {
@@ -471,23 +371,6 @@ public extension Track {
                 return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
             }
           }().variant)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var isLiveStream: Bool? {
-    @inline(__always)
-    get {
-      return self.__isLiveStream.value
-    }
-    @inline(__always)
-    set {
-      self.__isLiveStream = { () -> bridge.std__optional_bool_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }

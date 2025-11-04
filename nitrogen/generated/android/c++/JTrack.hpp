@@ -13,16 +13,12 @@
 #include "HeartRating.hpp"
 #include "JHeartRating.hpp"
 #include "JPercentageRating.hpp"
-#include "JPitchAlgorithm.hpp"
 #include "JStarRating.hpp"
 #include "JThumbsRating.hpp"
-#include "JTrackType.hpp"
 #include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
 #include "PercentageRating.hpp"
-#include "PitchAlgorithm.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
-#include "TrackType.hpp"
 #include <optional>
 #include <string>
 #include <variant>
@@ -50,14 +46,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> mediaId = this->getFieldValue(fieldMediaId);
       static const auto fieldUrl = clazz->getField<jni::JString>("url");
       jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
-      static const auto fieldType = clazz->getField<JTrackType>("type");
-      jni::local_ref<JTrackType> type = this->getFieldValue(fieldType);
-      static const auto fieldUserAgent = clazz->getField<jni::JString>("userAgent");
-      jni::local_ref<jni::JString> userAgent = this->getFieldValue(fieldUserAgent);
-      static const auto fieldContentType = clazz->getField<jni::JString>("contentType");
-      jni::local_ref<jni::JString> contentType = this->getFieldValue(fieldContentType);
-      static const auto fieldPitchAlgorithm = clazz->getField<JPitchAlgorithm>("pitchAlgorithm");
-      jni::local_ref<JPitchAlgorithm> pitchAlgorithm = this->getFieldValue(fieldPitchAlgorithm);
+      static const auto fieldIsLiveStream = clazz->getField<jni::JBoolean>("isLiveStream");
+      jni::local_ref<jni::JBoolean> isLiveStream = this->getFieldValue(fieldIsLiveStream);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldAlbum = clazz->getField<jni::JString>("album");
@@ -72,19 +62,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> description = this->getFieldValue(fieldDescription);
       static const auto fieldGenre = clazz->getField<jni::JString>("genre");
       jni::local_ref<jni::JString> genre = this->getFieldValue(fieldGenre);
-      static const auto fieldDate = clazz->getField<jni::JString>("date");
-      jni::local_ref<jni::JString> date = this->getFieldValue(fieldDate);
       static const auto fieldRating = clazz->getField<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>("rating");
       jni::local_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating> rating = this->getFieldValue(fieldRating);
-      static const auto fieldIsLiveStream = clazz->getField<jni::JBoolean>("isLiveStream");
-      jni::local_ref<jni::JBoolean> isLiveStream = this->getFieldValue(fieldIsLiveStream);
       return Track(
         mediaId != nullptr ? std::make_optional(mediaId->toStdString()) : std::nullopt,
-        url->toStdString(),
-        type != nullptr ? std::make_optional(type->toCpp()) : std::nullopt,
-        userAgent != nullptr ? std::make_optional(userAgent->toStdString()) : std::nullopt,
-        contentType != nullptr ? std::make_optional(contentType->toStdString()) : std::nullopt,
-        pitchAlgorithm != nullptr ? std::make_optional(pitchAlgorithm->toCpp()) : std::nullopt,
+        url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
+        isLiveStream != nullptr ? std::make_optional(static_cast<bool>(isLiveStream->value())) : std::nullopt,
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
         album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
         artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
@@ -92,9 +75,7 @@ namespace margelo::nitro::audiobrowser {
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
         description != nullptr ? std::make_optional(description->toStdString()) : std::nullopt,
         genre != nullptr ? std::make_optional(genre->toStdString()) : std::nullopt,
-        date != nullptr ? std::make_optional(date->toStdString()) : std::nullopt,
-        rating != nullptr ? std::make_optional(rating->toCpp()) : std::nullopt,
-        isLiveStream != nullptr ? std::make_optional(static_cast<bool>(isLiveStream->value())) : std::nullopt
+        rating != nullptr ? std::make_optional(rating->toCpp()) : std::nullopt
       );
     }
 
@@ -106,11 +87,8 @@ namespace margelo::nitro::audiobrowser {
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
       return newInstance(
         value.mediaId.has_value() ? jni::make_jstring(value.mediaId.value()) : nullptr,
-        jni::make_jstring(value.url),
-        value.type.has_value() ? JTrackType::fromCpp(value.type.value()) : nullptr,
-        value.userAgent.has_value() ? jni::make_jstring(value.userAgent.value()) : nullptr,
-        value.contentType.has_value() ? jni::make_jstring(value.contentType.value()) : nullptr,
-        value.pitchAlgorithm.has_value() ? JPitchAlgorithm::fromCpp(value.pitchAlgorithm.value()) : nullptr,
+        value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
+        value.isLiveStream.has_value() ? jni::JBoolean::valueOf(value.isLiveStream.value()) : nullptr,
         value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
         value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
         value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
@@ -118,9 +96,7 @@ namespace margelo::nitro::audiobrowser {
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,
         value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr,
-        value.date.has_value() ? jni::make_jstring(value.date.value()) : nullptr,
-        value.rating.has_value() ? JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating.value()) : nullptr,
-        value.isLiveStream.has_value() ? jni::JBoolean::valueOf(value.isLiveStream.value()) : nullptr
+        value.rating.has_value() ? JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating.value()) : nullptr
       );
     }
   };

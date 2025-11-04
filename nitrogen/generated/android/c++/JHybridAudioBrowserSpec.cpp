@@ -19,10 +19,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `TrackType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackType; }
-// Forward declaration of `PitchAlgorithm` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -105,6 +101,12 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `NitroUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroUpdateOptions; }
+// Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NullSentinel` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
@@ -126,10 +128,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 #include "JPlaybackActiveTrackChangedEvent.hpp"
 #include "Track.hpp"
 #include "JTrack.hpp"
-#include "TrackType.hpp"
-#include "JTrackType.hpp"
-#include "PitchAlgorithm.hpp"
-#include "JPitchAlgorithm.hpp"
 #include "HeartRating.hpp"
 #include "ThumbsRating.hpp"
 #include "StarRating.hpp"
@@ -233,6 +231,14 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 #include "JIOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "JIOSCategoryPolicy.hpp"
+#include "NitroUpdateOptions.hpp"
+#include "JNitroUpdateOptions.hpp"
+#include "NitroAndroidUpdateOptions.hpp"
+#include "JNitroAndroidUpdateOptions.hpp"
+#include "NullSentinel.hpp"
+#include "JVariant_Array_Capability__NullSentinel.hpp"
+#include "JNullSentinel.hpp"
+#include "JVariant_Double_NullSentinel.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -1091,9 +1097,9 @@ namespace margelo::nitro::audiobrowser {
       return __promise;
     }();
   }
-  void JHybridAudioBrowserSpec::updateOptions(const UpdateOptions& options) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JUpdateOptions> /* options */)>("updateOptions");
-    method(_javaPart, JUpdateOptions::fromCpp(options));
+  void JHybridAudioBrowserSpec::updateOptions(const NitroUpdateOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JNitroUpdateOptions> /* options */)>("updateOptions");
+    method(_javaPart, JNitroUpdateOptions::fromCpp(options));
   }
   UpdateOptions JHybridAudioBrowserSpec::getOptions() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JUpdateOptions>()>("getOptions");

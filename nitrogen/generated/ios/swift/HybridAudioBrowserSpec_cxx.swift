@@ -1139,7 +1139,7 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func updateOptions(options: UpdateOptions) -> bridge.Result_void_ {
+  public final func updateOptions(options: NitroUpdateOptions) -> bridge.Result_void_ {
     do {
       try self.__implementation.updateOptions(options: options)
       return bridge.create_Result_void_()

@@ -53,6 +53,8 @@ namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `PlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
+// Forward declaration of `NitroUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroUpdateOptions; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -87,6 +89,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include <optional>
 #include <NitroModules/Promise.hpp>
 #include "PlayerOptions.hpp"
+#include "NitroUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
 #include "Track.hpp"
 #include "Progress.hpp"
@@ -211,7 +214,7 @@ namespace margelo::nitro::audiobrowser {
     public:
       // Methods
       virtual std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) = 0;
-      virtual void updateOptions(const UpdateOptions& options) = 0;
+      virtual void updateOptions(const NitroUpdateOptions& options) = 0;
       virtual UpdateOptions getOptions() = 0;
       virtual void load(const Track& track) = 0;
       virtual void reset() = 0;

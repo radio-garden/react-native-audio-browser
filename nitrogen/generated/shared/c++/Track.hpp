@@ -23,10 +23,6 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `TrackType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackType; }
-// Forward declaration of `PitchAlgorithm` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -38,8 +34,6 @@ namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 
 #include <string>
 #include <optional>
-#include "TrackType.hpp"
-#include "PitchAlgorithm.hpp"
 #include "HeartRating.hpp"
 #include "ThumbsRating.hpp"
 #include "StarRating.hpp"
@@ -54,11 +48,8 @@ namespace margelo::nitro::audiobrowser {
   struct Track {
   public:
     std::optional<std::string> mediaId     SWIFT_PRIVATE;
-    std::string url     SWIFT_PRIVATE;
-    std::optional<TrackType> type     SWIFT_PRIVATE;
-    std::optional<std::string> userAgent     SWIFT_PRIVATE;
-    std::optional<std::string> contentType     SWIFT_PRIVATE;
-    std::optional<PitchAlgorithm> pitchAlgorithm     SWIFT_PRIVATE;
+    std::optional<std::string> url     SWIFT_PRIVATE;
+    std::optional<bool> isLiveStream     SWIFT_PRIVATE;
     std::optional<std::string> title     SWIFT_PRIVATE;
     std::optional<std::string> album     SWIFT_PRIVATE;
     std::optional<std::string> artist     SWIFT_PRIVATE;
@@ -66,13 +57,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::string> artwork     SWIFT_PRIVATE;
     std::optional<std::string> description     SWIFT_PRIVATE;
     std::optional<std::string> genre     SWIFT_PRIVATE;
-    std::optional<std::string> date     SWIFT_PRIVATE;
     std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> rating     SWIFT_PRIVATE;
-    std::optional<bool> isLiveStream     SWIFT_PRIVATE;
 
   public:
     Track() = default;
-    explicit Track(std::optional<std::string> mediaId, std::string url, std::optional<TrackType> type, std::optional<std::string> userAgent, std::optional<std::string> contentType, std::optional<PitchAlgorithm> pitchAlgorithm, std::optional<std::string> title, std::optional<std::string> album, std::optional<std::string> artist, std::optional<double> duration, std::optional<std::string> artwork, std::optional<std::string> description, std::optional<std::string> genre, std::optional<std::string> date, std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> rating, std::optional<bool> isLiveStream): mediaId(mediaId), url(url), type(type), userAgent(userAgent), contentType(contentType), pitchAlgorithm(pitchAlgorithm), title(title), album(album), artist(artist), duration(duration), artwork(artwork), description(description), genre(genre), date(date), rating(rating), isLiveStream(isLiveStream) {}
+    explicit Track(std::optional<std::string> mediaId, std::optional<std::string> url, std::optional<bool> isLiveStream, std::optional<std::string> title, std::optional<std::string> album, std::optional<std::string> artist, std::optional<double> duration, std::optional<std::string> artwork, std::optional<std::string> description, std::optional<std::string> genre, std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> rating): mediaId(mediaId), url(url), isLiveStream(isLiveStream), title(title), album(album), artist(artist), duration(duration), artwork(artwork), description(description), genre(genre), rating(rating) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -86,11 +75,8 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::Track(
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "mediaId")),
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "url")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackType>>::fromJSI(runtime, obj.getProperty(runtime, "type")),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "userAgent")),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "contentType")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::PitchAlgorithm>>::fromJSI(runtime, obj.getProperty(runtime, "pitchAlgorithm")),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "url")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "isLiveStream")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "title")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "album")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artist")),
@@ -98,19 +84,14 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artwork")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "description")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "genre")),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "date")),
-        JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::fromJSI(runtime, obj.getProperty(runtime, "rating")),
-        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "isLiveStream"))
+        JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::fromJSI(runtime, obj.getProperty(runtime, "rating"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::Track& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "mediaId", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.mediaId));
-      obj.setProperty(runtime, "url", JSIConverter<std::string>::toJSI(runtime, arg.url));
-      obj.setProperty(runtime, "type", JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackType>>::toJSI(runtime, arg.type));
-      obj.setProperty(runtime, "userAgent", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.userAgent));
-      obj.setProperty(runtime, "contentType", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.contentType));
-      obj.setProperty(runtime, "pitchAlgorithm", JSIConverter<std::optional<margelo::nitro::audiobrowser::PitchAlgorithm>>::toJSI(runtime, arg.pitchAlgorithm));
+      obj.setProperty(runtime, "url", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.url));
+      obj.setProperty(runtime, "isLiveStream", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.isLiveStream));
       obj.setProperty(runtime, "title", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, "album", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.album));
       obj.setProperty(runtime, "artist", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artist));
@@ -118,9 +99,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "artwork", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artwork));
       obj.setProperty(runtime, "description", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.description));
       obj.setProperty(runtime, "genre", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.genre));
-      obj.setProperty(runtime, "date", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.date));
       obj.setProperty(runtime, "rating", JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::toJSI(runtime, arg.rating));
-      obj.setProperty(runtime, "isLiveStream", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.isLiveStream));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -132,11 +111,8 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "mediaId"))) return false;
-      if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "url"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackType>>::canConvert(runtime, obj.getProperty(runtime, "type"))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "userAgent"))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "contentType"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PitchAlgorithm>>::canConvert(runtime, obj.getProperty(runtime, "pitchAlgorithm"))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "url"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "isLiveStream"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "title"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "album"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artist"))) return false;
@@ -144,9 +120,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artwork"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "description"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "genre"))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "date"))) return false;
       if (!JSIConverter<std::optional<std::variant<margelo::nitro::audiobrowser::HeartRating, margelo::nitro::audiobrowser::ThumbsRating, margelo::nitro::audiobrowser::StarRating, margelo::nitro::audiobrowser::PercentageRating>>>::canConvert(runtime, obj.getProperty(runtime, "rating"))) return false;
-      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "isLiveStream"))) return false;
       return true;
     }
   };

@@ -24,10 +24,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `TrackType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackType; }
-// Forward declaration of `PitchAlgorithm` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -102,12 +98,18 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `NitroUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroUpdateOptions; }
+// Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NullSentinel` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NullSentinel; }
+// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
-// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 
@@ -121,8 +123,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "PlaybackMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "Track.hpp"
-#include "TrackType.hpp"
-#include "PitchAlgorithm.hpp"
 #include "HeartRating.hpp"
 #include "ThumbsRating.hpp"
 #include "StarRating.hpp"
@@ -162,9 +162,12 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "NitroUpdateOptions.hpp"
+#include "NitroAndroidUpdateOptions.hpp"
+#include "NullSentinel.hpp"
+#include "IOSUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"
-#include "IOSUpdateOptions.hpp"
 #include "Progress.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
@@ -516,7 +519,7 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void updateOptions(const UpdateOptions& options) override {
+    inline void updateOptions(const NitroUpdateOptions& options) override {
       auto __result = _swiftPart.updateOptions(std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());

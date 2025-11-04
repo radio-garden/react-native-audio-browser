@@ -26,19 +26,10 @@ data class Track
     val mediaId: String?,
     @DoNotStrip
     @Keep
-    val url: String,
+    val url: String?,
     @DoNotStrip
     @Keep
-    val type: TrackType?,
-    @DoNotStrip
-    @Keep
-    val userAgent: String?,
-    @DoNotStrip
-    @Keep
-    val contentType: String?,
-    @DoNotStrip
-    @Keep
-    val pitchAlgorithm: PitchAlgorithm?,
+    val isLiveStream: Boolean?,
     @DoNotStrip
     @Keep
     val title: String?,
@@ -62,13 +53,7 @@ data class Track
     val genre: String?,
     @DoNotStrip
     @Keep
-    val date: String?,
-    @DoNotStrip
-    @Keep
-    val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?,
-    @DoNotStrip
-    @Keep
-    val isLiveStream: Boolean?
+    val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?
   ) {
   /* main constructor */
 }

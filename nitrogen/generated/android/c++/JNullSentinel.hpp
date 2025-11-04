@@ -31,10 +31,10 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     NullSentinel toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldNitroNull = clazz->getField<jboolean>("nitroNull");
-      jboolean nitroNull = this->getFieldValue(fieldNitroNull);
+      static const auto fieldNullSentinel = clazz->getField<jboolean>("nullSentinel");
+      jboolean nullSentinel = this->getFieldValue(fieldNullSentinel);
       return NullSentinel(
-        static_cast<bool>(nitroNull)
+        static_cast<bool>(nullSentinel)
       );
     }
 
@@ -45,7 +45,7 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::local_ref<JNullSentinel::javaobject> fromCpp(const NullSentinel& value) {
       return newInstance(
-        value.nitroNull
+        value.nullSentinel
       );
     }
   };

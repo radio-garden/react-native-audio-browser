@@ -17,10 +17,6 @@
 #include "Track.hpp"
 #include "JTrack.hpp"
 #include <string>
-#include "TrackType.hpp"
-#include "JTrackType.hpp"
-#include "PitchAlgorithm.hpp"
-#include "JPitchAlgorithm.hpp"
 #include "HeartRating.hpp"
 #include "ThumbsRating.hpp"
 #include "StarRating.hpp"

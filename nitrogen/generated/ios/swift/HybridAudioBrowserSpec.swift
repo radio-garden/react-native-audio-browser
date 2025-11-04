@@ -57,7 +57,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
 
   // Methods
   func setupPlayer(options: PlayerOptions) throws -> Promise<Void>
-  func updateOptions(options: UpdateOptions) throws -> Void
+  func updateOptions(options: NitroUpdateOptions) throws -> Void
   func getOptions() throws -> UpdateOptions
   func load(track: Track) throws -> Void
   func reset() throws -> Void

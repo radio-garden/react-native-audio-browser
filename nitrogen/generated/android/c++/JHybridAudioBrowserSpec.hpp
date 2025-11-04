@@ -139,7 +139,7 @@ namespace margelo::nitro::audiobrowser {
   public:
     // Methods
     std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) override;
-    void updateOptions(const UpdateOptions& options) override;
+    void updateOptions(const NitroUpdateOptions& options) override;
     UpdateOptions getOptions() override;
     void load(const Track& track) override;
     void reset() override;

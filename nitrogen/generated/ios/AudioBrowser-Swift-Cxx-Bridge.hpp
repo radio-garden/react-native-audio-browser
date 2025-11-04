@@ -48,12 +48,14 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NullSentinel` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
-// Forward declaration of `PitchAlgorithm` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -100,8 +102,6 @@ namespace margelo::nitro::audiobrowser { struct StarRating; }
 namespace margelo::nitro::audiobrowser { enum class State; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `TrackType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackType; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
@@ -132,9 +132,10 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSOptions.hpp"
 #include "IOSPlayerOptions.hpp"
 #include "IOSUpdateOptions.hpp"
+#include "NitroAndroidUpdateOptions.hpp"
+#include "NullSentinel.hpp"
 #include "Options.hpp"
 #include "PercentageRating.hpp"
-#include "PitchAlgorithm.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
@@ -159,7 +160,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "State.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
-#include "TrackType.hpp"
 #include "UpdateOptions.hpp"
 #include <NitroModules/FastVectorCopy.hpp>
 #include <NitroModules/Promise.hpp>
@@ -438,33 +438,62 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector.data();
   }
   
-  // pragma MARK: std::optional<std::vector<Capability>>
+  // pragma MARK: std::variant<std::vector<Capability>, NullSentinel>
   /**
-   * Specialized version of `std::optional<std::vector<Capability>>`.
+   * Wrapper struct for `std::variant<std::vector<Capability>, NullSentinel>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
    */
-  using std__optional_std__vector_Capability__ = std::optional<std::vector<Capability>>;
-  inline std::optional<std::vector<Capability>> create_std__optional_std__vector_Capability__(const std::vector<Capability>& value) noexcept {
-    return std::optional<std::vector<Capability>>(value);
+  struct std__variant_std__vector_Capability___NullSentinel_ {
+    std::variant<std::vector<Capability>, NullSentinel> variant;
+    std__variant_std__vector_Capability___NullSentinel_(std::variant<std::vector<Capability>, NullSentinel> variant): variant(variant) { }
+    operator std::variant<std::vector<Capability>, NullSentinel>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline std::vector<Capability> get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline NullSentinel get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_std__vector_Capability___NullSentinel_ create_std__variant_std__vector_Capability___NullSentinel_(const std::vector<Capability>& value) noexcept {
+    return std__variant_std__vector_Capability___NullSentinel_(value);
   }
-  inline bool has_value_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+  inline std__variant_std__vector_Capability___NullSentinel_ create_std__variant_std__vector_Capability___NullSentinel_(const NullSentinel& value) noexcept {
+    return std__variant_std__vector_Capability___NullSentinel_(value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<std::vector<Capability>, NullSentinel>>
+  /**
+   * Specialized version of `std::optional<std::variant<std::vector<Capability>, NullSentinel>>`.
+   */
+  using std__optional_std__variant_std__vector_Capability___NullSentinel__ = std::optional<std::variant<std::vector<Capability>, NullSentinel>>;
+  inline std::optional<std::variant<std::vector<Capability>, NullSentinel>> create_std__optional_std__variant_std__vector_Capability___NullSentinel__(const std::variant<std::vector<Capability>, NullSentinel>& value) noexcept {
+    return std::optional<std::variant<std::vector<Capability>, NullSentinel>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_std__vector_Capability___NullSentinel__(const std::optional<std::variant<std::vector<Capability>, NullSentinel>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::vector<Capability> get_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+  inline std::variant<std::vector<Capability>, NullSentinel> get_std__optional_std__variant_std__vector_Capability___NullSentinel__(const std::optional<std::variant<std::vector<Capability>, NullSentinel>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::optional<AndroidUpdateOptions>
+  // pragma MARK: std::optional<NitroAndroidUpdateOptions>
   /**
-   * Specialized version of `std::optional<AndroidUpdateOptions>`.
+   * Specialized version of `std::optional<NitroAndroidUpdateOptions>`.
    */
-  using std__optional_AndroidUpdateOptions_ = std::optional<AndroidUpdateOptions>;
-  inline std::optional<AndroidUpdateOptions> create_std__optional_AndroidUpdateOptions_(const AndroidUpdateOptions& value) noexcept {
-    return std::optional<AndroidUpdateOptions>(value);
+  using std__optional_NitroAndroidUpdateOptions_ = std::optional<NitroAndroidUpdateOptions>;
+  inline std::optional<NitroAndroidUpdateOptions> create_std__optional_NitroAndroidUpdateOptions_(const NitroAndroidUpdateOptions& value) noexcept {
+    return std::optional<NitroAndroidUpdateOptions>(value);
   }
-  inline bool has_value_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
+  inline bool has_value_std__optional_NitroAndroidUpdateOptions_(const std::optional<NitroAndroidUpdateOptions>& optional) noexcept {
     return optional.has_value();
   }
-  inline AndroidUpdateOptions get_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
+  inline NitroAndroidUpdateOptions get_std__optional_NitroAndroidUpdateOptions_(const std::optional<NitroAndroidUpdateOptions>& optional) noexcept {
     return *optional;
   }
   
@@ -495,6 +524,80 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline IOSUpdateOptions get_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<double, NullSentinel>
+  /**
+   * Wrapper struct for `std::variant<double, NullSentinel>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_double__NullSentinel_ {
+    std::variant<double, NullSentinel> variant;
+    std__variant_double__NullSentinel_(std::variant<double, NullSentinel> variant): variant(variant) { }
+    operator std::variant<double, NullSentinel>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline double get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline NullSentinel get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_double__NullSentinel_ create_std__variant_double__NullSentinel_(double value) noexcept {
+    return std__variant_double__NullSentinel_(value);
+  }
+  inline std__variant_double__NullSentinel_ create_std__variant_double__NullSentinel_(const NullSentinel& value) noexcept {
+    return std__variant_double__NullSentinel_(value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<double, NullSentinel>>
+  /**
+   * Specialized version of `std::optional<std::variant<double, NullSentinel>>`.
+   */
+  using std__optional_std__variant_double__NullSentinel__ = std::optional<std::variant<double, NullSentinel>>;
+  inline std::optional<std::variant<double, NullSentinel>> create_std__optional_std__variant_double__NullSentinel__(const std::variant<double, NullSentinel>& value) noexcept {
+    return std::optional<std::variant<double, NullSentinel>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_double__NullSentinel__(const std::optional<std::variant<double, NullSentinel>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<double, NullSentinel> get_std__optional_std__variant_double__NullSentinel__(const std::optional<std::variant<double, NullSentinel>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::vector<Capability>>
+  /**
+   * Specialized version of `std::optional<std::vector<Capability>>`.
+   */
+  using std__optional_std__vector_Capability__ = std::optional<std::vector<Capability>>;
+  inline std::optional<std::vector<Capability>> create_std__optional_std__vector_Capability__(const std::vector<Capability>& value) noexcept {
+    return std::optional<std::vector<Capability>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<Capability> get_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<AndroidUpdateOptions>
+  /**
+   * Specialized version of `std::optional<AndroidUpdateOptions>`.
+   */
+  using std__optional_AndroidUpdateOptions_ = std::optional<AndroidUpdateOptions>;
+  inline std::optional<AndroidUpdateOptions> create_std__optional_AndroidUpdateOptions_(const AndroidUpdateOptions& value) noexcept {
+    return std::optional<AndroidUpdateOptions>(value);
+  }
+  inline bool has_value_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline AndroidUpdateOptions get_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
     return *optional;
   }
   
@@ -588,36 +691,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_PlaybackMetadata create_Func_void_PlaybackMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_PlaybackMetadata_Wrapper wrap_Func_void_PlaybackMetadata(Func_void_PlaybackMetadata value) noexcept {
     return Func_void_PlaybackMetadata_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::optional<TrackType>
-  /**
-   * Specialized version of `std::optional<TrackType>`.
-   */
-  using std__optional_TrackType_ = std::optional<TrackType>;
-  inline std::optional<TrackType> create_std__optional_TrackType_(const TrackType& value) noexcept {
-    return std::optional<TrackType>(value);
-  }
-  inline bool has_value_std__optional_TrackType_(const std::optional<TrackType>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline TrackType get_std__optional_TrackType_(const std::optional<TrackType>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<PitchAlgorithm>
-  /**
-   * Specialized version of `std::optional<PitchAlgorithm>`.
-   */
-  using std__optional_PitchAlgorithm_ = std::optional<PitchAlgorithm>;
-  inline std::optional<PitchAlgorithm> create_std__optional_PitchAlgorithm_(const PitchAlgorithm& value) noexcept {
-    return std::optional<PitchAlgorithm>(value);
-  }
-  inline bool has_value_std__optional_PitchAlgorithm_(const std::optional<PitchAlgorithm>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline PitchAlgorithm get_std__optional_PitchAlgorithm_(const std::optional<PitchAlgorithm>& optional) noexcept {
-    return *optional;
   }
   
   // pragma MARK: std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>

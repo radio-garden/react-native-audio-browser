@@ -48,12 +48,16 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NitroUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroUpdateOptions; }
+// Forward declaration of `NullSentinel` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
-// Forward declaration of `PitchAlgorithm` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PitchAlgorithm; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -102,8 +106,6 @@ namespace margelo::nitro::audiobrowser { struct StarRating; }
 namespace margelo::nitro::audiobrowser { enum class State; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `TrackType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class TrackType; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
@@ -130,9 +132,11 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IOSOptions.hpp"
 #include "IOSPlayerOptions.hpp"
 #include "IOSUpdateOptions.hpp"
+#include "NitroAndroidUpdateOptions.hpp"
+#include "NitroUpdateOptions.hpp"
+#include "NullSentinel.hpp"
 #include "Options.hpp"
 #include "PercentageRating.hpp"
-#include "PitchAlgorithm.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
@@ -158,7 +162,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "State.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
-#include "TrackType.hpp"
 #include "UpdateOptions.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>

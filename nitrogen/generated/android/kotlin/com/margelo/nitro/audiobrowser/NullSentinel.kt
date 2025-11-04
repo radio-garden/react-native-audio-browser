@@ -23,7 +23,7 @@ data class NullSentinel
   constructor(
     @DoNotStrip
     @Keep
-    val nitroNull: Boolean
+    val nullSentinel: Boolean
   ) {
   /* main constructor */
 }
