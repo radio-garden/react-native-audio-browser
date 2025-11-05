@@ -17,7 +17,6 @@ import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
-import androidx.media3.session.legacy.RatingCompat
 import android.os.Bundle
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
@@ -213,7 +212,7 @@ class TrackPlayer(
   internal var playingState: PlayingState = PlayingState(false, false)
 
   val currentTrack: Track?
-    get() = exoPlayer.currentMediaItem?.let { TrackFactory.media3ToBridge(it) }
+    get() = exoPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
 
   private var lastTrack: Track? = null
   private var lastIndex: Int? = null
@@ -352,7 +351,7 @@ class TrackPlayer(
 
   val tracks: Array<Track>
     get() = (0 until exoPlayer.mediaItemCount).map { index ->
-      TrackFactory.media3ToBridge(exoPlayer.getMediaItemAt(index))
+      TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index))
     }.toTypedArray()
 
   val isLastTrack: Boolean
@@ -370,7 +369,7 @@ class TrackPlayer(
         "Track index $index is out of bounds (size: ${exoPlayer.mediaItemCount})"
       )
     }
-    return TrackFactory.media3ToBridge(exoPlayer.getMediaItemAt(index))
+    return TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index))
   }
 
   var skipSilence: Boolean
@@ -512,7 +511,7 @@ class TrackPlayer(
    * @param track The [Track] to add.
    */
   fun add(track: Track) {
-    val mediaItem = TrackFactory.bridgeToMedia3(track)
+    val mediaItem = TrackFactory.toMedia3(track)
     exoPlayer.addMediaItem(mediaItem)
     exoPlayer.prepare()
   }
@@ -524,7 +523,7 @@ class TrackPlayer(
    * @param tracks The [Track]s to add.
    */
   fun add(tracks: Array<Track>) {
-    val mediaItems = TrackFactory.bridgeToMedia3(tracks)
+    val mediaItems = TrackFactory.toMedia3(tracks)
     exoPlayer.addMediaItems(mediaItems.toList())
     exoPlayer.prepare()
   }
@@ -539,7 +538,7 @@ class TrackPlayer(
   fun add(tracks: Array<Track>, atIndex: Int) {
     validateInsertIndex(atIndex)
     val index = if (atIndex == -1) exoPlayer.mediaItemCount else atIndex
-    val mediaItems = tracks.map { TrackFactory.bridgeToMedia3(it) }
+    val mediaItems = tracks.map { TrackFactory.toMedia3(it) }
     exoPlayer.addMediaItems(index, mediaItems)
     exoPlayer.prepare()
   }
@@ -621,7 +620,7 @@ class TrackPlayer(
    */
   fun replaceTrack(index: Int, track: Track) {
     validateIndex(index)
-    exoPlayer.replaceMediaItem(index, TrackFactory.bridgeToMedia3(track))
+    exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
   }
 
   /** Removes all the upcoming tracks, if any (the ones returned by [next]). */
@@ -1036,7 +1035,7 @@ class TrackPlayer(
 
       try {
         clear()
-        add(TrackFactory.media3ToBridge(resolvedItems))
+        add(TrackFactory.fromMedia3(resolvedItems))
         skipTo(startIndex)
         seekTo(startPositionMs, TimeUnit.MILLISECONDS)
         play()

@@ -1,6 +1,5 @@
 package com.doublesymmetry.trackplayer.util
 
-import android.media.browse.MediaBrowser
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -8,19 +7,20 @@ import com.margelo.nitro.audiobrowser.Track
 
 object TrackFactory {
 
-    fun media3ToBridge(mediaItems: List<MediaItem>): Array<Track> {
-        return mediaItems.map { media3ToBridge(it) }.toTypedArray()
+    fun fromMedia3(mediaItems: List<MediaItem>): Array<Track> {
+        return mediaItems.map { fromMedia3(it) }.toTypedArray()
     }
 
-    fun media3ToBridge(mediaItem: MediaItem): Track {
+    fun fromMedia3(mediaItem: MediaItem): Track {
         return mediaItem.localConfiguration!!.tag as Track
     }
 
-    fun bridgeToMedia3(tracks: Array<Track>): List<MediaItem> {
-        return tracks.map { bridgeToMedia3(it) }
+    fun toMedia3(tracks: Array<Track>): List<MediaItem> {
+        return tracks.map { toMedia3(it) }
     }
-    fun bridgeToMedia3(track: Track): MediaItem {
-        var playable = track.url != null
+    fun toMedia3(track: Track): MediaItem {
+        // TODO: this needs to be reconsidered:
+        val playable = track.url != null
         val mediaMetadata =
             MediaMetadata.Builder()
                 .setTitle(track.title)
