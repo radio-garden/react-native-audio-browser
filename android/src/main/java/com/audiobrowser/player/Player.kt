@@ -324,15 +324,7 @@ class Player(
   var repeatMode: RepeatMode
     get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
     internal set(value) {
-      val oldValue = repeatMode
       exoPlayer.repeatMode = RepeatModeFactory.toMedia3(value)
-
-      // Emit event if value changed
-      if (oldValue != value) {
-        callbacks?.onPlaybackRepeatModeChanged(
-        repeatMode
-        )
-      }
     }
 
   val currentIndex: Int?

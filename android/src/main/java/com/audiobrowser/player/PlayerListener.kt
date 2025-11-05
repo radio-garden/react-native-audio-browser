@@ -6,6 +6,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.util.RepeatModeFactory
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
@@ -121,5 +122,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.onPlaybackError(playbackError)
     player.playbackError = playbackError
     player.setPlaybackState(PlaybackState.ERROR)
+  }
+
+  override fun onRepeatModeChanged(repeatMode: Int) {
+    player.callbacks?.onPlaybackRepeatModeChanged(
+      RepeatModeFactory.fromMedia3(repeatMode)
+    )
   }
 }
