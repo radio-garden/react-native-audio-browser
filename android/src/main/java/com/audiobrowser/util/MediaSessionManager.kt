@@ -1,12 +1,12 @@
 package com.audiobrowser.util
 
 import android.os.Bundle
-import androidx.media3.common.Player as Media3Player
+import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionCommands
-import com.audiobrowser.Player
+import com.audiobrowser.player.Player
 import com.audiobrowser.option.PlayerCapability
 import timber.log.Timber
 
@@ -31,7 +31,7 @@ class MediaSessionManager {
   }
 
   /** Current player commands configuration */
-  var playerCommands: Media3Player.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+  var playerCommands: MediaPlayer.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
     private set
 
   /** Current session commands configuration */
@@ -108,7 +108,7 @@ class MediaSessionManager {
    * @param player The TrackPlayer instance to execute commands on
    * @return true if command was handled, false otherwise
    */
-  fun handleCustomCommand(command: SessionCommand, player: com.audiobrowser.Player): Boolean {
+  fun handleCustomCommand(command: SessionCommand, player: Player): Boolean {
     Timber.d("onCustomCommand: action=${command.customAction}")
 
     return when (command.customAction) {
@@ -134,43 +134,43 @@ class MediaSessionManager {
 
     // Commands to remove - start with always-disabled commands
     val disabledCommands =
-      mutableSetOf<@Media3Player.Command Int>(
+      mutableSetOf<@MediaPlayer.Command Int>(
         // Always filter out direct media item commands to avoid dual-command confusion
         // This forces MediaSession to only use the "smart" commands we can control via capabilities
-        Media3Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-        Media3Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+        MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
       )
 
     // Only disable jump commands if global capabilities are not present
     // This preserves them for external controllers (Bluetooth, Android Auto, etc.)
     if (!capabilities.contains(PlayerCapability.JUMP_FORWARD)) {
-      disabledCommands.add(Media3Player.COMMAND_SEEK_FORWARD)
+      disabledCommands.add(MediaPlayer.COMMAND_SEEK_FORWARD)
     }
     if (!capabilities.contains(PlayerCapability.JUMP_BACKWARD)) {
-      disabledCommands.add(Media3Player.COMMAND_SEEK_BACK)
+      disabledCommands.add(MediaPlayer.COMMAND_SEEK_BACK)
     }
 
     // Check each capability and add commands to remove if not enabled
     val hasPlayPause =
       capabilities.any { it == PlayerCapability.PLAY || it == PlayerCapability.PAUSE }
     if (!hasPlayPause) {
-      disabledCommands.add(Media3Player.COMMAND_PLAY_PAUSE)
+      disabledCommands.add(MediaPlayer.COMMAND_PLAY_PAUSE)
     }
 
     if (!capabilities.contains(PlayerCapability.STOP)) {
-      disabledCommands.add(Media3Player.COMMAND_STOP)
+      disabledCommands.add(MediaPlayer.COMMAND_STOP)
     }
 
     if (!capabilities.contains(PlayerCapability.SEEK_TO)) {
-      disabledCommands.add(Media3Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+      disabledCommands.add(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
     }
 
     if (!capabilities.contains(PlayerCapability.SKIP_TO_NEXT)) {
-      disabledCommands.add(Media3Player.COMMAND_SEEK_TO_NEXT)
+      disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_NEXT)
     }
 
     if (!capabilities.contains(PlayerCapability.SKIP_TO_PREVIOUS)) {
-      disabledCommands.add(Media3Player.COMMAND_SEEK_TO_PREVIOUS)
+      disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
     }
 
     // Remove disabled commands from the builder

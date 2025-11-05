@@ -1,72 +1,68 @@
-package com.audiobrowser
+package com.audiobrowser.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Metadata
+import androidx.media3.common.Rating
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.LibraryResult
-import androidx.media3.session.MediaLibraryService.LibraryParams
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
-import android.os.Bundle
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.Metadata
-import androidx.media3.common.Rating
-import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.SessionError
-import com.audiobrowser.util.RepeatModeFactory
-import com.audiobrowser.util.RatingFactory
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
-import com.google.common.collect.ImmutableList
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
-import com.google.common.util.concurrent.SettableFuture
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
-import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
-import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
-import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
-import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
-import com.margelo.nitro.audiobrowser.RemoteSeekEvent
+import androidx.media3.session.SessionResult
+import com.audiobrowser.Callbacks
 import com.audiobrowser.extension.NumberExt.Companion.toMilliseconds
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.AudioOffloadOptions
 import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.margelo.nitro.audiobrowser.RepeatMode
-import com.audiobrowser.player.MediaFactory
-import com.audiobrowser.player.PlaybackProgressUpdateManager
-import com.audiobrowser.player.PlayerListener
-import com.margelo.nitro.audiobrowser.PlayingState as PlayingState
 import com.audiobrowser.util.MediaSessionManager
 import com.audiobrowser.util.MetadataAdapter
 import com.audiobrowser.util.PlayerCache
+import com.audiobrowser.util.RatingFactory
+import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
+import com.google.common.util.concurrent.SettableFuture
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
-import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
-import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.Playback
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
+import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
+import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.RatingType
+import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
+import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
+import com.margelo.nitro.audiobrowser.RemoteSeekEvent
+import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
+import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
-import java.util.concurrent.TimeUnit
 import timber.log.Timber
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 @SuppressLint("RestrictedApi")
 class Player(
-  internal val context: Context,
+    internal val context: Context,
 ) {
 
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
@@ -78,12 +74,13 @@ class Player(
 
   // Media browser functionality
   private val pendingGetItemRequests = ConcurrentHashMap<String, SettableFuture<MediaItem?>>()
-  private val pendingGetChildrenRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
+  private val pendingGetChildrenRequests =
+      ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   private val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   private var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
 
   lateinit var exoPlayer: ExoPlayer
-  lateinit var forwardingPlayer: Player
+  lateinit var forwardingPlayer: androidx.media3.common.Player
 
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
@@ -108,9 +105,9 @@ class Player(
     }
 
     override fun setMediaItems(
-      mediaItems: MutableList<MediaItem>,
-      startIndex: Int,
-      startPositionMs: Long,
+        mediaItems: MutableList<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long,
     ) {
       return super.setMediaItems(mediaItems, startIndex, startPositionMs)
     }
@@ -133,35 +130,35 @@ class Player(
     }
 
     override fun seekToNext() {
-      Timber.d("InterceptingPlayer.seekToNext() called")
+      Timber.Forest.d("InterceptingPlayer.seekToNext() called")
       if (callbacks?.handleRemoteNext() != true) {
         super.seekToNext()
       }
     }
 
     override fun seekToNextMediaItem() {
-      Timber.d("InterceptingPlayer.seekToNextMediaItem() called")
+      Timber.Forest.d("InterceptingPlayer.seekToNextMediaItem() called")
       if (callbacks?.handleRemoteNext() != true) {
         super.seekToNextMediaItem()
       }
     }
 
     override fun seekToPrevious() {
-      Timber.d("InterceptingPlayer.seekToPrevious() called")
+      Timber.Forest.d("InterceptingPlayer.seekToPrevious() called")
       if (callbacks?.handleRemotePrevious() != true) {
         super.seekToPrevious()
       }
     }
 
     override fun seekToPreviousMediaItem() {
-      Timber.d("InterceptingPlayer.seekToPreviousMediaItem() called")
+      Timber.Forest.d("InterceptingPlayer.seekToPreviousMediaItem() called")
       if (callbacks?.handleRemotePrevious() != true) {
         super.seekToPreviousMediaItem()
       }
     }
 
     override fun seekForward() {
-      Timber.d("InterceptingPlayer.seekForward() called")
+      Timber.Forest.d("InterceptingPlayer.seekForward() called")
       if (callbacks?.handleRemoteJumpForward(RemoteJumpForwardEvent(interval = options.forwardJumpInterval)) != true) {
         super.seekForward()
       }
@@ -199,12 +196,12 @@ class Player(
     PlaybackProgressUpdateManager {
       val index = currentIndex ?: return@PlaybackProgressUpdateManager
       val event =
-        PlaybackProgressUpdatedEvent(
-          position = position.toSeconds(),
-          duration = duration.toSeconds(),
-          buffered = bufferedPosition.toSeconds(),
-          track = index.toDouble(),
-        )
+          PlaybackProgressUpdatedEvent(
+              position = position.toSeconds(),
+              duration = duration.toSeconds(),
+              buffered = bufferedPosition.toSeconds(),
+              track = index.toDouble(),
+          )
       callbacks?.onPlaybackProgressUpdated(event)
     }
   }
@@ -233,13 +230,13 @@ class Player(
 
   internal fun emitActiveTrackChanged(lastPosition: Double) {
     val event =
-      PlaybackActiveTrackChangedEvent(
-        lastIndex = lastIndex?.toDouble(),
-        lastTrack = lastTrack,
-        lastPosition = lastPosition,
-        index = currentIndex?.toDouble(),
-        track = currentTrack,
-      )
+        PlaybackActiveTrackChangedEvent(
+            lastIndex = lastIndex?.toDouble(),
+            lastTrack = lastTrack,
+            lastPosition = lastPosition,
+            index = currentIndex?.toDouble(),
+            track = currentTrack,
+        )
     callbacks?.onPlaybackActiveTrackChanged(event)
 
     // Update last track info for next transition
@@ -263,7 +260,7 @@ class Player(
   }
 
   internal fun onCommonMetadata(mediaMetadata: MediaMetadata) {
-      callbacks?.onMetadataCommonReceived(MetadataAdapter.audioMetadataFromMediaMetadata(mediaMetadata))
+      callbacks?.onMetadataCommonReceived(MetadataAdapter.Companion.audioMetadataFromMediaMetadata(mediaMetadata))
   }
 
   internal fun onPlayWhenReadyChanged(playWhenReady: Boolean, pausedBecauseReachedEnd: Boolean) {
@@ -400,14 +397,14 @@ class Player(
    * This method can be called multiple times to change setup options.
    */
   fun setup(setupOptions: PlayerSetupOptions) {
-    Timber.d("Setting up player with new options")
+    Timber.Forest.d("Setting up player with new options")
 
     val isInitialSetup = !::exoPlayer.isInitialized
 
     if (!isInitialSetup) {
       forwardingPlayer.removeListener(playerListener)
       exoPlayer.release()
-      Timber.d("Player cleanup completed")
+      Timber.Forest.d("Player cleanup completed")
     }
 
     // Update cache if needed
@@ -479,7 +476,7 @@ class Player(
 
       // Update MediaSession with new forwardingPlayer reference if MediaSession exists
       if (::mediaSession.isInitialized) {
-        Timber.d("Updating MediaSession with new forwardingPlayer reference")
+        Timber.Forest.d("Updating MediaSession with new forwardingPlayer reference")
         mediaSession.player = forwardingPlayer
       }
 
@@ -724,7 +721,8 @@ class Player(
       // changes
       if (state == PlaybackState.ENDED && isLastTrack) {
         currentIndex?.let { index ->
-          val event = PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
+          val event =
+              PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
         }
       }
@@ -837,7 +835,7 @@ class Player(
     return this.callbacks
   }
 
-  fun setMediaSession(mediaSession: androidx.media3.session.MediaSession) {
+  fun setMediaSession(mediaSession: MediaSession) {
     this.mediaSession = mediaSession
   }
 
@@ -888,38 +886,38 @@ class Player(
    */
   private inner class MediaSessionCallback : MediaLibraryService.MediaLibrarySession.Callback {
     override fun onConnect(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
     ): MediaSession.ConnectionResult {
-      Timber.d("MediaSession connect: ${controller.packageName}")
+      Timber.Forest.d("MediaSession connect: ${controller.packageName}")
       return commandManager.buildConnectionResult(session)
     }
 
     override fun onCustomCommand(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      command: SessionCommand,
-      args: Bundle,
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        command: SessionCommand,
+        args: Bundle,
     ): ListenableFuture<SessionResult> {
       commandManager.handleCustomCommand(command, this@Player)
       return super.onCustomCommand(session, controller, command, args)
     }
 
     override fun onSetRating(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      rating: Rating,
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        rating: Rating,
     ): ListenableFuture<SessionResult> {
       onSetRating(rating)
       return super.onSetRating(session, controller, rating)
     }
 
     override fun onGetLibraryRoot(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      params: LibraryParams?,
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<MediaItem>> {
-      Timber.d("onGetLibraryRoot: { package: ${browser.packageName} }")
+      Timber.Forest.d("onGetLibraryRoot: { package: ${browser.packageName} }")
       return Futures.immediateFuture(
         LibraryResult.ofItem(
           MediaItem.Builder()
@@ -938,14 +936,14 @@ class Player(
     }
 
     override fun onGetChildren(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      parentId: String,
-      page: Int,
-      pageSize: Int,
-      params: LibraryParams?,
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        parentId: String,
+        page: Int,
+        pageSize: Int,
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-      Timber.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize }")
+      Timber.Forest.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize }")
       val requestId = UUID.randomUUID().toString()
       val future = SettableFuture.create<List<MediaItem>>()
       // Store the future for later resolution
@@ -960,11 +958,11 @@ class Player(
     }
 
     override fun onGetItem(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      mediaId: String,
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        mediaId: String,
     ): ListenableFuture<LibraryResult<MediaItem>> {
-      Timber.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
+      Timber.Forest.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
       val requestId = UUID.randomUUID().toString()
       val future = SettableFuture.create<MediaItem?>()
       // Store the future for later resolution
@@ -985,12 +983,12 @@ class Player(
     }
 
     override fun onSearch(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      query: String,
-      params: LibraryParams?,
+        session: MediaLibraryService.MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<Void>> {
-      Timber.d("onSearch: ${browser.packageName}, query = $query")
+      Timber.Forest.d("onSearch: ${browser.packageName}, query = $query")
       // Emit event to JavaScript via callbacks for search initiation
       val requestId = UUID.randomUUID().toString()
       val extrasMap = params?.extras?.let { bundle ->
@@ -1011,13 +1009,13 @@ class Player(
     }
 
     override fun onSetMediaItems(
-      mediaSession: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      mediaItems: MutableList<MediaItem>,
-      startIndex: Int,
-      startPositionMs: Long,
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        mediaItems: MutableList<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-      Timber.d(
+      Timber.Forest.d(
         "onSetMediaItems: ${controller.packageName}, mediaId=${mediaItems[0].mediaId}, uri=${mediaItems[0].localConfiguration?.uri}, title=${mediaItems[0].mediaMetadata.title}"
       )
 
@@ -1025,10 +1023,10 @@ class Player(
         val mediaId = mediaItem.mediaId
         val fullMediaItem = mediaItemById[mediaId]
         if (fullMediaItem != null) {
-          Timber.d("Found full MediaItem for mediaId: $mediaId")
+          Timber.Forest.d("Found full MediaItem for mediaId: $mediaId")
           fullMediaItem
         } else {
-          Timber.d("No full MediaItem found for mediaId: $mediaId, using original")
+          Timber.Forest.d("No full MediaItem found for mediaId: $mediaId, using original")
           mediaItem
         }
       }
@@ -1040,7 +1038,7 @@ class Player(
         seekTo(startPositionMs, TimeUnit.MILLISECONDS)
         play()
       } catch (e: Exception) {
-        Timber.e(e, "Error in onSetMediaItems")
+        Timber.Forest.e(e, "Error in onSetMediaItems")
       }
 
       return Futures.immediateFuture(
@@ -1064,7 +1062,7 @@ class Player(
     // Store MediaItem in lookup map for later use in onAddMediaItems/onSetMediaItems
     mediaItem.mediaId.let { mediaId ->
       mediaItemById[mediaId] = mediaItem
-      Timber.d("Stored single MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}")
+      Timber.Forest.d("Stored single MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}")
     }
     pendingGetItemRequests.remove(requestId)?.set(mediaItem)
   }
@@ -1077,26 +1075,26 @@ class Player(
    * @param totalChildrenCount The total number of children (unused but maintained for compatibility)
    */
   fun resolveGetChildrenRequest(
-    requestId: String,
-    items: List<MediaItem>,
-    totalChildrenCount: Int,
+      requestId: String,
+      items: List<MediaItem>,
+      totalChildrenCount: Int,
   ) {
-    Timber.d(
+    Timber.Forest.d(
       "resolveGetChildrenRequest: requestId=$requestId, itemCount=${items.size}"
     )
     // Store MediaItems in lookup map for later use in onAddMediaItems/onSetMediaItems
     items.forEach { mediaItem ->
       mediaItem.mediaId?.let { mediaId ->
         mediaItemById[mediaId] = mediaItem
-        Timber.d("Stored MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}")
+        Timber.Forest.d("Stored MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}")
       }
     }
     val future = pendingGetChildrenRequests.remove(requestId)
     if (future != null) {
       future.set(items)
-      Timber.d("Resolved future for requestId=$requestId with ${items.size} items")
+      Timber.Forest.d("Resolved future for requestId=$requestId with ${items.size} items")
     } else {
-      Timber.w("No pending future found for requestId=$requestId")
+      Timber.Forest.w("No pending future found for requestId=$requestId")
     }
   }
 

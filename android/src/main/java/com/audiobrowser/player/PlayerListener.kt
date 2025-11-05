@@ -4,21 +4,20 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player as Media3Player
-import com.audiobrowser.Player
+import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 
-class PlayerListener(private val trackPlayer: Player) : Media3Player.Listener {
+class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   /** Called when there is metadata associated with the current playback time. */
   override fun onMetadata(metadata: Metadata) {
-    trackPlayer.onTimedMetadata(metadata)
+    player.onTimedMetadata(metadata)
   }
 
   override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-    trackPlayer.onCommonMetadata(mediaMetadata)
+    player.onCommonMetadata(mediaMetadata)
   }
 
   /**
@@ -27,11 +26,11 @@ class PlayerListener(private val trackPlayer: Player) : Media3Player.Listener {
    * removed.
    */
   override fun onPositionDiscontinuity(
-    oldPosition: Media3Player.PositionInfo,
-    newPosition: Media3Player.PositionInfo,
+    oldPosition: MediaPlayer.PositionInfo,
+    newPosition: MediaPlayer.PositionInfo,
     reason: Int,
   ) {
-    trackPlayer.oldPosition = oldPosition.positionMs
+    player.oldPosition = oldPosition.positionMs
     // Position discontinuity events are not currently exposed to callbacks
   }
 
@@ -41,16 +40,16 @@ class PlayerListener(private val trackPlayer: Player) : Media3Player.Listener {
    * non-empty or empty as a consequence of a playlist change.
    */
   override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-    val lastPosition = trackPlayer.oldPosition.toSeconds()
+    val lastPosition = player.oldPosition.toSeconds()
     // Audio item transition events are not currently exposed to callbacks
     // Emit active track changed event with last track info
-    trackPlayer.emitActiveTrackChanged(lastPosition)
+    player.emitActiveTrackChanged(lastPosition)
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-    val pausedBecauseReachedEnd = reason == Media3Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM
-    trackPlayer.onPlayWhenReadyChanged(playWhenReady, pausedBecauseReachedEnd)
+    val pausedBecauseReachedEnd = reason == MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM
+    player.onPlayWhenReadyChanged(playWhenReady, pausedBecauseReachedEnd)
   }
 
   /**
@@ -58,52 +57,52 @@ class PlayerListener(private val trackPlayer: Player) : Media3Player.Listener {
    * events that occurred together. It's always called after the callbacks that correspond to the
    * individual events.
    */
-  override fun onEvents(player: Media3Player, events: Media3Player.Events) {
+  override fun onEvents(media3Player: MediaPlayer, events: MediaPlayer.Events) {
     // Note that it is necessary to set `playerState` in order, since each mutation fires an
     // event.
     for (i in 0 until events.size()) {
       when (events[i]) {
-        Media3Player.EVENT_PLAYBACK_STATE_CHANGED -> {
+        MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED -> {
           val state =
-            when (player.playbackState) {
-              Media3Player.STATE_BUFFERING -> PlaybackState.BUFFERING
-              Media3Player.STATE_READY -> PlaybackState.READY
-              Media3Player.STATE_IDLE ->
+            when (media3Player.playbackState) {
+              MediaPlayer.STATE_BUFFERING -> PlaybackState.BUFFERING
+              MediaPlayer.STATE_READY -> PlaybackState.READY
+              MediaPlayer.STATE_IDLE ->
                 // Avoid transitioning to idle from error or stopped
                 if (
-                  trackPlayer.playbackState == PlaybackState.ERROR || trackPlayer.playbackState == PlaybackState.STOPPED
+                  player.playbackState == PlaybackState.ERROR || player.playbackState == PlaybackState.STOPPED
                 )
                   null
                 else PlaybackState.NONE
-              Media3Player.STATE_ENDED -> if (player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
+              MediaPlayer.STATE_ENDED -> if (media3Player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
               else -> null // noop
             }
-          if (state != null && state != trackPlayer.playbackState) {
+          if (state != null && state != player.playbackState) {
             // Clear error when recovering from ERROR state to a successful state
-            if (trackPlayer.playbackState == PlaybackState.ERROR) {
-              trackPlayer.playbackError = null
+            if (player.playbackState == PlaybackState.ERROR) {
+              player.playbackError = null
             }
-            trackPlayer.setPlaybackState(state)
+            player.setPlaybackState(state)
           }
         }
-        Media3Player.EVENT_MEDIA_ITEM_TRANSITION -> {
-          trackPlayer.playbackError = null
-          if (trackPlayer.currentTrack != null) {
-            trackPlayer.setPlaybackState(PlaybackState.LOADING)
-            if (trackPlayer.isPlaying) {
-              trackPlayer.setPlaybackState(PlaybackState.READY)
-              trackPlayer.setPlaybackState(PlaybackState.PLAYING)
+        MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION -> {
+          player.playbackError = null
+          if (player.currentTrack != null) {
+            player.setPlaybackState(PlaybackState.LOADING)
+            if (player.isPlaying) {
+              player.setPlaybackState(PlaybackState.READY)
+              player.setPlaybackState(PlaybackState.PLAYING)
             }
           }
         }
-        Media3Player.EVENT_PLAY_WHEN_READY_CHANGED -> {
-          if (!player.playWhenReady && trackPlayer.playbackState != PlaybackState.STOPPED) {
-            trackPlayer.setPlaybackState(PlaybackState.PAUSED)
+        MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED -> {
+          if (!player.playWhenReady && player.playbackState != PlaybackState.STOPPED) {
+            player.setPlaybackState(PlaybackState.PAUSED)
           }
         }
-        Media3Player.EVENT_IS_PLAYING_CHANGED -> {
+        MediaPlayer.EVENT_IS_PLAYING_CHANGED -> {
           if (player.isPlaying) {
-            trackPlayer.setPlaybackState(PlaybackState.PLAYING)
+            player.setPlaybackState(PlaybackState.PLAYING)
           }
         }
       }
@@ -119,8 +118,8 @@ class PlayerListener(private val trackPlayer: Player) : Media3Player.Listener {
           .replace("_", "-"),
         error.message ?: "An unknown error occurred",
       )
-    trackPlayer.onPlaybackError(playbackError)
-    trackPlayer.playbackError = playbackError
-    trackPlayer.setPlaybackState(PlaybackState.ERROR)
+    player.onPlaybackError(playbackError)
+    player.playbackError = playbackError
+    player.setPlaybackState(PlaybackState.ERROR)
   }
 }

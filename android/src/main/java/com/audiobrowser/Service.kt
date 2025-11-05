@@ -16,6 +16,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.player.Player
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import kotlin.system.exitProcess
 import kotlinx.coroutines.MainScope
