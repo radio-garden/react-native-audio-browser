@@ -68,5 +68,5 @@ export const onPlaybackChanged = LazyEmitter.emitterize<Playback>(
  * @returns The current playback state
  */
 export function usePlayback(): Playback {
-  return useUpdatedNativeValue(getPlayback, onPlaybackChange)
+  return useUpdatedNativeValue(getPlayback, onPlaybackChanged)
 }
