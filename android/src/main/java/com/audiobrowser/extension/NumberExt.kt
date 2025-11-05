@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.extension
+package com.audiobrowser.extension
 
 class NumberExt {
   companion object {

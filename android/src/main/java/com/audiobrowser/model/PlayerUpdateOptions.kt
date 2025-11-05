@@ -1,6 +1,6 @@
-package com.doublesymmetry.trackplayer.model
+package com.audiobrowser.model
 
-import com.doublesymmetry.trackplayer.option.PlayerCapability
+import com.audiobrowser.option.PlayerCapability
 import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType

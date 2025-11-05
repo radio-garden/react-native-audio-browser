@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer
+package com.audiobrowser
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -23,8 +23,8 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.Rating
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.SessionError
-import com.doublesymmetry.trackplayer.util.RepeatModeFactory
-import com.doublesymmetry.trackplayer.util.RatingFactory
+import com.audiobrowser.util.RepeatModeFactory
+import com.audiobrowser.util.RatingFactory
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -39,21 +39,21 @@ import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
-import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toMilliseconds
-import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
-import com.doublesymmetry.trackplayer.model.AudioOffloadOptions
-import com.doublesymmetry.trackplayer.model.PlaybackMetadata
-import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
-import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
+import com.audiobrowser.extension.NumberExt.Companion.toMilliseconds
+import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.model.AudioOffloadOptions
+import com.audiobrowser.model.PlaybackMetadata
+import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.model.PlayerUpdateOptions
 import com.margelo.nitro.audiobrowser.RepeatMode
-import com.doublesymmetry.trackplayer.player.MediaFactory
-import com.doublesymmetry.trackplayer.player.PlaybackProgressUpdateManager
-import com.doublesymmetry.trackplayer.player.PlayerListener
+import com.audiobrowser.player.MediaFactory
+import com.audiobrowser.player.PlaybackProgressUpdateManager
+import com.audiobrowser.player.PlayerListener
 import com.margelo.nitro.audiobrowser.PlayingState as PlayingState
-import com.doublesymmetry.trackplayer.util.MediaSessionManager
-import com.doublesymmetry.trackplayer.util.MetadataAdapter
-import com.doublesymmetry.trackplayer.util.PlayerCache
-import com.doublesymmetry.trackplayer.util.TrackFactory
+import com.audiobrowser.util.MediaSessionManager
+import com.audiobrowser.util.MetadataAdapter
+import com.audiobrowser.util.PlayerCache
+import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -65,14 +65,14 @@ import java.util.concurrent.TimeUnit
 import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
-class TrackPlayer(
+class AudioBrowserPlayer(
   internal val context: Context,
 ) {
 
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
   private var options = PlayerUpdateOptions()
-  private var callbacks: TrackPlayerCallbacks? = null
+  private var callbacks: AudioBrowserCallbacks? = null
   private lateinit var mediaSession: MediaSession
   private val commandManager = MediaSessionManager()
 
@@ -824,7 +824,7 @@ class TrackPlayer(
    *
    * @param callbacks The callbacks to set, or null to clear callbacks
    */
-  fun setCallbacks(callbacks: TrackPlayerCallbacks?) {
+  fun setCallbacks(callbacks: AudioBrowserCallbacks?) {
     this.callbacks = callbacks
   }
 
@@ -833,7 +833,7 @@ class TrackPlayer(
    *
    * @return The current callbacks, or null if none are set
    */
-  fun getCallbacks(): TrackPlayerCallbacks? {
+  fun getCallbacks(): AudioBrowserCallbacks? {
     return this.callbacks
   }
 
@@ -901,7 +901,7 @@ class TrackPlayer(
       command: SessionCommand,
       args: Bundle,
     ): ListenableFuture<SessionResult> {
-      commandManager.handleCustomCommand(command, this@TrackPlayer)
+      commandManager.handleCustomCommand(command, this@AudioBrowserPlayer)
       return super.onCustomCommand(session, controller, command, args)
     }
 

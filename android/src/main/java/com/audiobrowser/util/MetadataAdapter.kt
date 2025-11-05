@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.util
+package com.audiobrowser.util
 
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
@@ -9,8 +9,8 @@ import androidx.media3.extractor.metadata.id3.ChapterFrame
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.id3.UrlLinkFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
-import com.doublesymmetry.trackplayer.model.MetadataEntry
-import com.doublesymmetry.trackplayer.model.TimedMetadata
+import com.audiobrowser.model.MetadataEntry
+import com.audiobrowser.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import timber.log.Timber
 

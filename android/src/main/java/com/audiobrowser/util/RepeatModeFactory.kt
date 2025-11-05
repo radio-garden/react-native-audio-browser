@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.util
+package com.audiobrowser.util
 
 import androidx.media3.common.Player
 import com.margelo.nitro.audiobrowser.RepeatMode

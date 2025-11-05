@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.util
+package com.audiobrowser.util
 
 import android.os.Bundle
 import androidx.media3.common.Player
@@ -6,8 +6,8 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionCommands
-import com.doublesymmetry.trackplayer.TrackPlayer
-import com.doublesymmetry.trackplayer.option.PlayerCapability
+import com.audiobrowser.AudioBrowserPlayer
+import com.audiobrowser.option.PlayerCapability
 import timber.log.Timber
 
 /**
@@ -108,7 +108,7 @@ class MediaSessionManager {
    * @param player The TrackPlayer instance to execute commands on
    * @return true if command was handled, false otherwise
    */
-  fun handleCustomCommand(command: SessionCommand, player: TrackPlayer): Boolean {
+  fun handleCustomCommand(command: SessionCommand, player: AudioBrowserPlayer): Boolean {
     Timber.d("onCustomCommand: action=${command.customAction}")
 
     return when (command.customAction) {

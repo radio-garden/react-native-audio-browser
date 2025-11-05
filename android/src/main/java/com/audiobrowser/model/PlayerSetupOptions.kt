@@ -1,7 +1,7 @@
-package com.doublesymmetry.trackplayer.model
+package com.audiobrowser.model
 
-import com.doublesymmetry.trackplayer.option.AudioContentType
-import com.doublesymmetry.trackplayer.option.PlayerWakeMode
+import com.audiobrowser.option.AudioContentType
+import com.audiobrowser.option.PlayerWakeMode
 import com.facebook.react.bridge.ReadableMap
 import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.PlayerOptions

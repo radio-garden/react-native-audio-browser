@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.model
+package com.audiobrowser.model
 
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent

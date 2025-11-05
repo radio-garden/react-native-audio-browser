@@ -8,16 +8,16 @@ import android.os.IBinder
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import com.margelo.nitro.NitroModules
-import com.doublesymmetry.trackplayer.TrackPlayerService
-import com.doublesymmetry.trackplayer.TrackPlayerCallbacks
+import com.audiobrowser.AudioBrowserService
+import com.audiobrowser.AudioBrowserCallbacks
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
-import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
-import com.doublesymmetry.trackplayer.model.PlaybackMetadata
-import com.doublesymmetry.trackplayer.model.PlayerSetupOptions
-import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
+import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.model.PlaybackMetadata
+import com.audiobrowser.model.PlayerSetupOptions
+import com.audiobrowser.model.PlayerUpdateOptions
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.Track
@@ -52,7 +52,7 @@ import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
 import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSkipEvent
-import com.doublesymmetry.trackplayer.model.TimedMetadata
+import com.audiobrowser.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.NitroUpdateOptions
 import com.margelo.nitro.audiobrowser.Playback
@@ -62,13 +62,12 @@ import com.margelo.nitro.audiobrowser.UpdateOptions
 @Keep
 @DoNotStrip
 class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
-
     private lateinit var browser: MediaBrowser
     private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
     private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
     private var setupOptions = PlayerSetupOptions()
     private val mainScope = MainScope()
-    private var connectedService: TrackPlayerService? = null
+    private var connectedService: AudioBrowserService? = null
     private val context = NitroModules.applicationContext
         ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
@@ -132,16 +131,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         // Auto-bind to service if it's already running
         launchInScope {
             try {
-                Timber.d("Attempting to auto-bind to existing TrackPlayerService from AudioBrowserModule")
-                val intent = Intent(context, TrackPlayerService::class.java)
+                Timber.d("Attempting to auto-bind to existing AudioBrowserService from AudioBrowserModule")
+                val intent = Intent(context, AudioBrowserService::class.java)
                 val bound = context.bindService(intent, this@AudioBrowser, Context.BIND_AUTO_CREATE)
                 Timber.d("Auto-bind result: $bound")
 
                 if (!bound) {
-                    Timber.w("Failed to bind to TrackPlayerService - service may not be running")
+                    Timber.w("Failed to bind to AudioBrowserService - service may not be running")
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to auto-bind to TrackPlayerService during initialization")
+                Timber.e(e, "Failed to auto-bind to AudioBrowserService during initialization")
             }
         }
     }
@@ -158,15 +157,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
             // Service not connected yet, bind to service
             suspendCoroutine<Unit> { continuation ->
-                Timber.d("Binding to TrackPlayerService")
+                Timber.d("Binding to AudioBrowserService")
                 val bound = context.bindService(
-                    Intent(context, TrackPlayerService::class.java),
+                    Intent(context, AudioBrowserService::class.java),
                     this@AudioBrowser,
                     Context.BIND_AUTO_CREATE
                 )
 
                 if (!bound) {
-                    continuation.resumeWithException(RuntimeException("Failed to bind to TrackPlayerService"))
+                    continuation.resumeWithException(RuntimeException("Failed to bind to AudioBrowserService"))
                 } else {
                     // Service will resolve the promise in onServiceConnected
                     setupPromise = { continuation.resume(Unit) }
@@ -359,14 +358,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
         launchInScope {
-            connectedService = (serviceBinder as TrackPlayerService.LocalBinder).service.apply {
+            connectedService = (serviceBinder as AudioBrowserService.LocalBinder).service.apply {
                 player.setCallbacks(callbacks)
                 player.applyOptions(updateOptions)
                 player.setup(setupOptions)
             }
 
             val sessionToken =
-                SessionToken(context, ComponentName(context, TrackPlayerService::class.java))
+                SessionToken(context, ComponentName(context, AudioBrowserService::class.java))
             mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
 
             setupPromise?.invoke(Unit)
@@ -389,7 +388,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         return runBlocking(mainScope.coroutineContext) { block() }
     }
 
-    private val service: TrackPlayerService
+    private val service: AudioBrowserService
         get() = connectedService ?: throw Exception("Player not initialized")
 
     private val player
@@ -397,7 +396,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
 
     val callbacks =
-        object : TrackPlayerCallbacks {
+        object : AudioBrowserCallbacks {
             override fun onPlaybackChanged(playback: Playback) {
                 this@AudioBrowser.onPlaybackChanged(playback)
             }

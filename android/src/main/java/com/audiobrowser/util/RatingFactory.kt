@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.util
+package com.audiobrowser.util
 
 import androidx.media3.common.Rating
 import androidx.media3.common.HeartRating as Media3HeartRating

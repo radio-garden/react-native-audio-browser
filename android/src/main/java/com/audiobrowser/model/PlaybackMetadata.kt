@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.model
+package com.audiobrowser.model
 
 import androidx.media3.common.Metadata
 import com.margelo.nitro.audiobrowser.PlaybackMetadata as NitroPlaybackMetadata

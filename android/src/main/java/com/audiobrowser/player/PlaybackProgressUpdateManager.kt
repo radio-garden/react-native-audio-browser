@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.player
+package com.audiobrowser.player
 
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope

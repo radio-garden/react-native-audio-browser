@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.player
+package com.audiobrowser.player
 
 import android.content.ContentResolver
 import android.content.Context

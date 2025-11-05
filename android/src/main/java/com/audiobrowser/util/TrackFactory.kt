@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.util
+package com.audiobrowser.util
 
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem

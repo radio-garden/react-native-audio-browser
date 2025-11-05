@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.option
+package com.audiobrowser.option
 
 import com.margelo.nitro.audiobrowser.Capability as NitroCapability
 

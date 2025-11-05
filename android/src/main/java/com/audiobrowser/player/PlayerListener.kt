@@ -1,17 +1,17 @@
-package com.doublesymmetry.trackplayer.player
+package com.audiobrowser.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import com.doublesymmetry.trackplayer.TrackPlayer
-import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.AudioBrowserPlayer
+import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 
-class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
+class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Listener {
   /** Called when there is metadata associated with the current playback time. */
   override fun onMetadata(metadata: Metadata) {
     trackPlayer.onTimedMetadata(metadata)

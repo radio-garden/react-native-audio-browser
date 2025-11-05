@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.util
+package com.audiobrowser.util
 
 import android.content.Context
 import androidx.media3.database.DatabaseProvider

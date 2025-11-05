@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer.option
+package com.audiobrowser.option
 
 /** Configuration for cache properties of player. */
 data class CacheConfig(

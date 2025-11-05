@@ -1,4 +1,4 @@
-package com.doublesymmetry.trackplayer
+package com.audiobrowser
 
 import android.content.Intent
 import android.os.Binder
@@ -8,14 +8,14 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.jstasks.HeadlessJsTaskConfig
 import timber.log.Timber
 
-class TrackPlayerHeadlessTaskService : HeadlessJsTaskService() {
+class AudioBrowserHeadlessTaskService : HeadlessJsTaskService() {
 
   /**
-   * Local binder for service binding. This allows the main TrackPlayerService to bind to this
+   * Local binder for service binding. This allows the main AudioBrowserService to bind to this
    * headless service and control its lifecycle.
    */
   inner class LocalBinder : Binder() {
-    fun getService() = this@TrackPlayerHeadlessTaskService
+    fun getService() = this@AudioBrowserHeadlessTaskService
   }
 
   private val binder = LocalBinder()

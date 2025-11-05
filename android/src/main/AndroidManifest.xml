@@ -9,7 +9,7 @@
     <application>
         <!-- Audio Browser Service -->
         <service
-            android:name="com.doublesymmetry.trackplayer.TrackPlayerService"
+            android:name="com.audiobrowser.AudioBrowserService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">
