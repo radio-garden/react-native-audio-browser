@@ -31,6 +31,7 @@ import com.audiobrowser.model.AudioOffloadOptions
 import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.audiobrowser.util.MetadataAdapter
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.RepeatModeFactory
@@ -459,7 +460,7 @@ class Player(
     val audioAttributes =
       AudioAttributes.Builder()
         .setUsage(C.USAGE_MEDIA)
-        .setContentType(setupOptions.audioContentType.toMedia3())
+        .setContentType(AndroidAudioContentTypeFactory.toMedia3(setupOptions.audioContentType))
         .build()
     exoPlayer.setAudioAttributes(audioAttributes, true)
 

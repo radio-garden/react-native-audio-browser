@@ -1,7 +1,8 @@
 package com.audiobrowser.model
 
-import com.audiobrowser.option.AudioContentType
 import com.audiobrowser.option.PlayerWakeMode
+import com.audiobrowser.util.AndroidAudioContentTypeFactory
+import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.PlayerOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 
@@ -21,7 +22,7 @@ data class AudioOffloadOptions(
 data class PlayerSetupOptions(
   // Cross-platform audio engine buffer options
   var minBuffer: Double? = null,
-  var audioContentType: AudioContentType = AudioContentType.MUSIC,
+  var audioContentType: AndroidAudioContentType = AndroidAudioContentType.MUSIC,
 
   // Android-specific options (all under android.* in JS)
   var maxBuffer: Double? = null,
@@ -45,9 +46,7 @@ data class PlayerSetupOptions(
       backBuffer = android.backBuffer
       maxCacheSize = android.maxCacheSize
       handleAudioBecomingNoisy = android.handleAudioBecomingNoisy
-
-      // Convert audio content type
-      audioContentType = AudioContentType.fromNitro(android.audioContentType)
+      audioContentType = android.audioContentType
 
       // Convert audio offload options
       audioOffload = when (android.audioOffload) {
