@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useActiveTrack } from 'react-native-audio-browser';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { configurePlayer } from 'src/services/configure';
 import {
   ActionSheet,
   Button,
@@ -24,6 +23,7 @@ import {
   Spacer,
   TrackInfo,
 } from './src/components';
+import { configurePlayer } from './src/services/configure';
 import { useSetupPlayer } from './src/services/usePlayer';
 
 configurePlayer();
