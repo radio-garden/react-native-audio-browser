@@ -11,6 +11,9 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.Rating
 import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.database.DatabaseProvider
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -30,7 +33,6 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.MediaSessionManager
 import com.audiobrowser.util.MetadataAdapter
-import com.audiobrowser.util.PlayerCache
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
@@ -56,6 +58,7 @@ import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
 import timber.log.Timber
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -78,7 +81,6 @@ class Player(
       ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   private val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   private var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
-
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
 
@@ -407,11 +409,13 @@ class Player(
       Timber.Forest.d("Player cleanup completed")
     }
 
-    // Update cache if needed
     if (setupOptions.maxCacheSize > 0) {
-      cache = PlayerCache.initCache(context, setupOptions.maxCacheSize.toLong())
+      cache = SimpleCache(
+          File(context.cacheDir, "RNAB"),
+          LeastRecentlyUsedCacheEvictor(setupOptions.maxCacheSize.toLong() * 1000), // kb to bytes
+          StandaloneDatabaseProvider(context),
+      )
     } else {
-      // Release existing cache if maxCacheSize is 0
       cache?.release()
       cache = null
     }
@@ -1121,4 +1125,5 @@ class Player(
     val buffering = playWhenReady && (state == PlaybackState.LOADING || state == PlaybackState.BUFFERING)
     return PlayingState(playing, buffering)
   }
+
 }
