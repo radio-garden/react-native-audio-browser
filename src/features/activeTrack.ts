@@ -4,16 +4,6 @@ import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
 /**
- * Event data for the active track.
- */
-export interface PlaybackActiveTrackEvent {
-  /** The active track index or undefined if there is no active track. */
-  index?: number
-  /** The active track or undefined if there is no active track. */
-  track?: Track
-}
-
-/**
  * Event data for when the active track changes.
  */
 export interface PlaybackActiveTrackChangedEvent {
