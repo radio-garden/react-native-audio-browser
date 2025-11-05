@@ -1,12 +1,12 @@
 import Icon from '@react-native-vector-icons/fontawesome6';
 import { StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
-import TrackPlayer from 'react-native-audio-browser';
+import AudioBrowser from 'react-native-audio-browser';
 
 import { PlaybackError } from './PlaybackError';
 import { PlayPauseButton } from './PlayPauseButton';
 
-const performSkipToNext = () => TrackPlayer.skipToNext();
-const performSkipToPrevious = () => TrackPlayer.skipToPrevious();
+const performSkipToNext = () => AudioBrowser.skipToNext();
+const performSkipToPrevious = () => AudioBrowser.skipToPrevious();
 
 export function PlayerControls() {
   return (

@@ -5,7 +5,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import TrackPlayer, { usePlayingState } from 'react-native-audio-browser';
+import AudioBrowser, { usePlayingState } from 'react-native-audio-browser';
 
 export function PlayPauseButton() {
   const { playing, buffering } = usePlayingState();
@@ -14,7 +14,7 @@ export function PlayPauseButton() {
       {buffering ? (
         <ActivityIndicator />
       ) : (
-        <TouchableWithoutFeedback onPress={TrackPlayer.togglePlayback}>
+        <TouchableWithoutFeedback onPress={AudioBrowser.togglePlayback}>
           <Icon
             name={playing ? 'pause' : 'play'}
             size={48}

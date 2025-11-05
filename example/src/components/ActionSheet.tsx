@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet } from 'react-native';
-import TrackPlayer from 'react-native-audio-browser';
+import AudioBrowser from 'react-native-audio-browser';
 import { Button } from './Button';
 import { Spacer } from './Spacer';
 
@@ -11,7 +11,7 @@ export function ActionSheet() {
         title="Update Notification Metadata Randomly"
         onPress={() => {
           const randomTitle = Math.random().toString(36).substring(7);
-          TrackPlayer.updateNowPlayingMetadata({
+          AudioBrowser.updateNowPlayingMetadata({
             title: `Random: ${randomTitle}`,
             artwork: `https://random.imagecdn.app/800/800?dummy=${Date.now()}`,
           });
@@ -21,10 +21,10 @@ export function ActionSheet() {
       <Button
         title="Update Current Track Metadata Randomly"
         onPress={() => {
-          const currentTrackIndex = TrackPlayer.getActiveTrackIndex();
+          const currentTrackIndex = AudioBrowser.getActiveTrackIndex();
           if (currentTrackIndex !== undefined) {
             const randomTitle = Math.random().toString(36).substring(7);
-            TrackPlayer.updateMetadataForTrack(currentTrackIndex, {
+            AudioBrowser.updateMetadataForTrack(currentTrackIndex, {
               title: `Random: ${randomTitle}`,
               artwork: `https://random.imagecdn.app/800/800?dummy=${Date.now()}`,
               duration: Math.floor(Math.random() * 300), // 0-300 seconds
@@ -33,7 +33,7 @@ export function ActionSheet() {
         }}
         type="primary"
       />
-      <Button title="Reset" onPress={TrackPlayer.reset} type="primary" />
+      <Button title="Reset" onPress={AudioBrowser.reset} type="primary" />
     </ScrollView>
   );
 }

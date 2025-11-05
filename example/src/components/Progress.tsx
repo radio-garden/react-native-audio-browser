@@ -24,7 +24,7 @@ export function Progress({ live }: { live?: boolean }) {
             thumbTintColor="#FFD479"
             minimumTrackTintColor="#FFD479"
             maximumTrackTintColor="white"
-            onSlidingComplete={TrackPlayer.seekTo}
+            onSlidingComplete={AudioBrowser.seekTo}
           /> */}
           <View style={styles.labelContainer}>
             <Text style={styles.labelText}>{formatSeconds(position)}</Text>

@@ -87,9 +87,9 @@ class Player(
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
    *
-   * This class blocks all external media item modifications to delegate control to RNTP. These
+   * This class blocks all external media item modifications to delegate control to RNAB. These
    * overrides prevent media controllers (like Android Auto, notifications) from directly modifying
-   * the queue, ensuring all queue changes go through the RNTP API for proper state management and
+   * the queue, ensuring all queue changes go through the RNAB API for proper state management and
    * event handling.
    */
   private inner class InterceptingPlayer(player: ExoPlayer) : ForwardingPlayer(player) {
@@ -454,7 +454,7 @@ class Player(
         .setMediaSourceFactory(MediaFactory(context, cache))
         .setWakeMode(setupOptions.wakeMode.toMedia3())
         .setLoadControl(loadControl)
-        .setName("rntp")
+        .setName("AudioBrowser")
         .build()
     val audioAttributes =
       AudioAttributes.Builder()
@@ -876,7 +876,7 @@ class Player(
   }
 
   /**
-   * Gets the MediaSessionCallback for this TrackPlayer.
+   * Gets the MediaSessionCallback for this AudioBrowser.
    *
    * @return MediaLibrarySession.Callback instance
    */
@@ -886,7 +886,7 @@ class Player(
 
   /**
    * MediaLibrarySession callback that handles all media session interactions.
-   * All logic is handled directly by the TrackPlayer.
+   * All logic is handled directly by the AudioBrowser.
    */
   private inner class MediaSessionCallback : MediaLibraryService.MediaLibrarySession.Callback {
     override fun onConnect(

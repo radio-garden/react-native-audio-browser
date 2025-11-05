@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import TrackPlayer from 'react-native-audio-browser';
+import AudioBrowser from 'react-native-audio-browser';
 import { tracks } from './tracks';
 
 export function useSetupPlayer() {
   const [playerReady, setPlayerReady] = useState(false);
   useEffect(() => {
-    TrackPlayer.setupPlayer()
+    AudioBrowser.setupPlayer()
       .then(() => {
         setPlayerReady(true);
-        if (TrackPlayer.getQueue().length <= 0) {
-          TrackPlayer.setQueue(tracks);
+        if (AudioBrowser.getQueue().length <= 0) {
+          AudioBrowser.setQueue(tracks);
         }
       })
       .catch(error => {

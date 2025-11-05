@@ -1,6 +1,6 @@
 import { Children, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import TrackPlayer, {
+import AudioBrowser, {
   type AppKilledPlaybackBehavior,
   type RepeatMode,
   useOptions,
@@ -23,7 +23,7 @@ export function OptionSheet() {
         ]}
         value={currentRepeatMode}
         onSelect={(repeatMode: RepeatMode) => {
-          TrackPlayer.setRepeatMode(repeatMode);
+          AudioBrowser.setRepeatMode(repeatMode);
         }}
       />
       <Spacer />
@@ -43,7 +43,7 @@ export function OptionSheet() {
           ]}
           value={currentOptions.android.appKilledPlaybackBehavior}
           onSelect={(appKilledPlaybackBehavior: AppKilledPlaybackBehavior) => {
-            TrackPlayer.updateOptions({
+            AudioBrowser.updateOptions({
               android: {
                 appKilledPlaybackBehavior,
               },
@@ -62,7 +62,7 @@ export function OptionSheet() {
         ]}
         value={currentOptions.backwardJumpInterval}
         onSelect={jumpInterval => {
-          TrackPlayer.updateOptions({
+          AudioBrowser.updateOptions({
             backwardJumpInterval: jumpInterval,
             forwardJumpInterval: jumpInterval,
           });

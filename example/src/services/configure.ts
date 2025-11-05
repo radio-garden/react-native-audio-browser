@@ -1,7 +1,7 @@
-import TrackPlayer from 'react-native-audio-browser';
+import AudioBrowser from 'react-native-audio-browser';
 
 export function configurePlayer() {
-  TrackPlayer.updateOptions({
+  AudioBrowser.updateOptions({
     android: {
       appKilledPlaybackBehavior: 'stop-playback-and-remove-notification',
       notificationCapabilities: [
@@ -25,25 +25,25 @@ export function configurePlayer() {
 
   // If you want to override the default behavior, use handleRemote* functions:
   // Example: Override the default pause behavior
-  TrackPlayer.handleRemotePause(() => {
+  AudioBrowser.handleRemotePause(() => {
     console.log('Event.RemotePause');
-    TrackPlayer.pause();
+    AudioBrowser.pause();
   });
 
   // If you just want to log events without overriding default behavior, use on* functions:
-  TrackPlayer.onRemotePlay(() => {
+  AudioBrowser.onRemotePlay(() => {
     console.log('Event.RemotePlay');
   });
 
-  TrackPlayer.onMetadataChapterReceived(event => {
+  AudioBrowser.onMetadataChapterReceived(event => {
     console.log('onMetadataChapterReceived', event);
   });
 
-  TrackPlayer.onMetadataTimedReceived(event => {
+  AudioBrowser.onMetadataTimedReceived(event => {
     console.log('onMetadataTimedReceived', event);
   });
 
-  TrackPlayer.onMetadataCommonReceived(event => {
+  AudioBrowser.onMetadataCommonReceived(event => {
     console.log('onMetadataCommonReceived', event);
   });
 }

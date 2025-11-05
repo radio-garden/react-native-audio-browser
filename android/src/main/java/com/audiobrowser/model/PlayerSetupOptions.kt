@@ -2,8 +2,6 @@ package com.audiobrowser.model
 
 import com.audiobrowser.option.AudioContentType
 import com.audiobrowser.option.PlayerWakeMode
-import com.facebook.react.bridge.ReadableMap
-import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.PlayerOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 
@@ -17,7 +15,7 @@ data class AudioOffloadOptions(
 )
 
 /**
- * Setup options for the TrackPlayer that are applied once during player initialization. These
+ * Setup options for the AudioBrowser that are applied once during player initialization. These
  * options configure the audio engine and system-level behavior.
  */
 data class PlayerSetupOptions(
@@ -35,7 +33,7 @@ data class PlayerSetupOptions(
   var wakeMode: PlayerWakeMode = PlayerWakeMode.NONE,
   var audioOffload: AudioOffloadOptions? = null,
 ) {
-  fun updateFromNitro(options: PlayerOptions) {
+  fun update(options: PlayerOptions) {
     // Cross-platform audio engine options
     options.minBuffer?.let { minBuffer = it }
 

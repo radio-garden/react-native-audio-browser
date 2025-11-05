@@ -71,9 +71,9 @@ class Service : MediaLibraryService() {
         object : Timber.Tree() {
           override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
             if (priority >= Log.WARN) {
-              Log.println(priority, tag ?: "TrackPlayer", message)
+              Log.println(priority, tag ?: "AudioBrowser", message)
               t?.let { throwable ->
-                Log.println(priority, tag ?: "TrackPlayer", throwable.toString())
+                Log.println(priority, tag ?: "AudioBrowser", throwable.toString())
               }
             }
           }
@@ -87,7 +87,7 @@ class Service : MediaLibraryService() {
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         // Add the Uri data so apps can identify that it was a notification click
-        data = "trackplayer://notification.click".toUri()
+        data = "audiobrowser://notification.click".toUri()
         action = Intent.ACTION_VIEW
       }
     mediaSession =

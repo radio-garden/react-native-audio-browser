@@ -10,7 +10,7 @@ import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NullSentinel
 import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
 
 /**
- * Update options for the TrackPlayer that can be changed at runtime. These options control player
+ * Update options for the AudioBrowser that can be changed at runtime. These options control player
  * behavior and capabilities that can be modified during playback.
  */
 data class PlayerUpdateOptions(

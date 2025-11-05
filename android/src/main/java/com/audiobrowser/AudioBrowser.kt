@@ -145,8 +145,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     override fun setupPlayer(options: PlayerOptions): Promise<Unit> {
         return Promise.async(mainScope) {
-            // Convert Nitro PlayerOptions to TrackPlayer setup options
-            setupOptions.updateFromNitro(options)
+            setupOptions.update(options)
 
             connectedService?.let {
                 it.player.setup(setupOptions)

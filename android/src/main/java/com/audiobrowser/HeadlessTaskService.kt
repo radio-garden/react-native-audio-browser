@@ -21,9 +21,9 @@ class HeadlessTaskService : HeadlessJsTaskService() {
   private val binder = LocalBinder()
 
   override fun getTaskConfig(intent: Intent?): HeadlessJsTaskConfig {
-    Timber.d("TrackPlayerHeadlessTaskService creating task config")
+    Timber.d("creating task config")
     return HeadlessJsTaskConfig(
-      TASK_KEY,
+      "AudioBrowser",
       Arguments.createMap(),
       0, // No timeout
       true, // Allow running in foreground
@@ -31,33 +31,30 @@ class HeadlessTaskService : HeadlessJsTaskService() {
   }
 
   override fun onBind(intent: Intent): IBinder {
-    Timber.d("TrackPlayerHeadlessTaskService onBind - starting headless task")
+    Timber.d("starting headless task")
     // Start the headless task when bound
     startTask(getTaskConfig(intent))
     return binder
   }
 
   override fun onCreate() {
-    Timber.d("TrackPlayerHeadlessTaskService onCreate")
+    Timber.d("onCreate")
     super.onCreate()
   }
 
   override fun onDestroy() {
-    Timber.d("TrackPlayerHeadlessTaskService onDestroy")
+    Timber.d("onDestroy")
     super.onDestroy()
   }
 
   override fun onHeadlessJsTaskFinish(taskId: Int) {
-    Timber.d("TrackPlayerHeadlessTaskService task finished: $taskId")
+    Timber.d("task finished: $taskId")
     // Empty implementation prevents service termination
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    Timber.d("TrackPlayerHeadlessTaskService onStartCommand")
+    Timber.d("onStartCommand")
     return super.onStartCommand(intent, flags, startId)
   }
 
-  companion object {
-    const val TASK_KEY = "TrackPlayer"
-  }
 }

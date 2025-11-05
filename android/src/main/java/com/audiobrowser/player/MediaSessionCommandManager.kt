@@ -104,7 +104,7 @@ class MediaSessionCommandManager {
    * Handles custom MediaSession commands
    *
    * @param command The custom command to handle
-   * @param player The TrackPlayer instance to execute commands on
+   * @param player The AudioBrowser instance to execute commands on
    * @return true if command was handled, false otherwise
    */
   fun handleCustomCommand(command: SessionCommand, player: Player): Boolean {
