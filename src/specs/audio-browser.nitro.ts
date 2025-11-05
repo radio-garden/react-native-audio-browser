@@ -12,7 +12,7 @@ import type {
   Options,
   UpdateOptions,
 } from '../features/options'
-import type { PlaybackState } from '../features/playbackState'
+import type { Playback } from '../features/playbackState'
 import type { PlayerOptions } from '../features/player'
 import type { PlayingState } from '../features/playingState'
 import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playWhenReady'
@@ -54,7 +54,7 @@ export interface AudioBrowser
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
-  onPlaybackStateChanged: (data: PlaybackState) => void
+  onPlaybackChanged: (data: Playback) => void
   onRemoteBookmark: () => void
   onRemoteDislike: () => void
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void
@@ -107,7 +107,7 @@ export interface AudioBrowser
   setRate(rate: number): void
   getRate(): number
   getProgress(): Progress
-  getPlaybackState(): PlaybackState
+  getPlayback(): Playback
   getPlayingState(): PlayingState
   getRepeatMode(): RepeatMode
   setRepeatMode(mode: RepeatMode): void

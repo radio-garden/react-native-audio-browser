@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { nativeAudioBrowser } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
-import { onPlaybackState } from './playbackState'
+import { onPlaybackChanged } from './playbackState'
 
 // MARK: - Types
 
@@ -101,7 +101,7 @@ export function usePolledProgress(updateInterval = 1000): Progress {
     }
 
     // Update immediately on playback state changes
-    const unsubscribeState = onPlaybackState(update)
+    const unsubscribeState = onPlaybackChanged(update)
 
     const poll = () => {
       update()

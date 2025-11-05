@@ -6,7 +6,7 @@ import type { PlaybackError } from './errors'
 // MARK: - Types
 
 /**
- * State options:
+ * PlaybackState options:
  * - `'none'`: Indicates that the player is idle (initial state, or no track
  *   loaded)
  * - `'ready'`: Indicates that the player has loaded a track and is ready to
@@ -24,7 +24,7 @@ import type { PlaybackError } from './errors'
  * - `'ended'`: Indicates that playback stopped due to the end of the queue
  *   being reached.
  */
-export type State =
+export type PlaybackState =
   | 'none'
   | 'ready'
   | 'playing'
@@ -35,19 +35,19 @@ export type State =
   | 'error'
   | 'ended'
 
-export type PlaybackState = {
-  state: State
+export type Playback = {
+  state: PlaybackState
   error?: PlaybackError
 }
 
 // MARK: - Getters
 
 /**
- * Gets the playback state of the player.
+ * Gets the playback state and error (if any) of the player.
  * @see https://rntp.dev/docs/api/constants/state
  */
-export function getPlaybackState(): PlaybackState {
-  return nativeAudioBrowser.getPlaybackState()
+export function getPlayback(): Playback {
+  return nativeAudioBrowser.getPlayback()
 }
 
 // MARK: - Event Callbacks
@@ -57,8 +57,8 @@ export function getPlaybackState(): PlaybackState {
  * @param callback - Called when the playback state changes
  * @returns Cleanup function to unsubscribe
  */
-export const onPlaybackState = LazyEmitter.emitterize<PlaybackState>(
-  (cb) => (nativeAudioBrowser.onPlaybackStateChanged = cb)
+export const onPlaybackChanged = LazyEmitter.emitterize<Playback>(
+  (cb) => (nativeAudioBrowser.onPlaybackChanged = cb)
 )
 
 // MARK: - Hooks
@@ -67,6 +67,6 @@ export const onPlaybackState = LazyEmitter.emitterize<PlaybackState>(
  * Hook that returns the current playback state and updates when it changes.
  * @returns The current playback state
  */
-export function usePlaybackState(): PlaybackState {
-  return useUpdatedNativeValue(getPlaybackState, onPlaybackState)
+export function usePlayback(): Playback {
+  return useUpdatedNativeValue(getPlayback, onPlaybackChange)
 }
