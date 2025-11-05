@@ -9,7 +9,6 @@
 
 export * from './activeTrack'
 export * from './errors'
-export * from './mediaProvider'
 export * from './metadata'
 export * from './options'
 export * from './playback'
