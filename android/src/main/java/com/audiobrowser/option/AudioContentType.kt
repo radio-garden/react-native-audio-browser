@@ -20,16 +20,6 @@ enum class AudioContentType {
     }
   }
 
-  fun toNitro(): AndroidAudioContentType {
-    return when (this) {
-      MUSIC -> AndroidAudioContentType.MUSIC
-      SPEECH -> AndroidAudioContentType.SPEECH
-      SONIFICATION -> AndroidAudioContentType.SONIFICATION
-      MOVIE -> AndroidAudioContentType.MOVIE
-      UNKNOWN -> AndroidAudioContentType.UNKNOWN
-    }
-  }
-
   companion object {
     fun fromNitro(value: AndroidAudioContentType): AudioContentType {
       return when (value) {
