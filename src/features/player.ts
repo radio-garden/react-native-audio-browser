@@ -161,7 +161,94 @@ export interface AndroidAudioOffloadSettings {
   rateChangeSupportRequired?: boolean
 }
 
-export interface AndroidPlayerOptions {
+/**
+ * AndroidWakeMode options:
+ * - `'none'`: No wake locks are held. The device may go to sleep during playback.
+ * - `'local'`: Holds a PowerManager.WakeLock during playback to prevent CPU sleep.
+ *   Suitable for local media playback with the screen off.
+ * - `'network'`: Holds both PowerManager.WakeLock and WifiManager.WifiLock during playback.
+ *   Suitable for streaming media over WiFi with the screen off.
+ */
+export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
+
+export type PartialAndroidSetupPlayerOptions = {
+  audioOffload: boolean | AndroidAudioOffloadSettings
+
+  /**
+   * Maximum duration of media that the player will attempt to buffer in ms.
+   * Max buffer may not be lower than min buffer.
+   *
+   * @throws Will throw if max buffer is lower than min buffer.
+   * @default 50000
+   */
+  maxBuffer?: number
+
+  /**
+   * Duration in ms that should be kept in the buffer behind the current
+   * playhead time.
+   *
+   * @default 0
+   */
+  backBuffer?: number
+
+  /**
+   * Duration of media in ms that must be buffered for playback to start or
+   * resume following a user action such as a seek.
+   *
+   * @default 2500
+   */
+  playBuffer?: number
+
+  /**
+   * Duration of media in ms that must be buffered for playback to resume
+   * after a rebuffer (when the buffer runs empty during playback).
+   *
+   * When not specified, defaults to playBuffer * 2 (maintaining ExoPlayer's
+   * default ratio). Should be >= playBuffer for optimal behavior.
+   *
+   * @default playBuffer * 2
+   */
+  rebufferBuffer?: number
+
+  /**
+   * Maximum cache size in MB.
+   *
+   * @default 0
+   */
+  maxCacheSize?: number
+
+  /**
+   * The audio content type indicates to the android system how
+   * you intend to use audio in your app.
+   *
+   * With `audioContentType: AndroidAudioContentType.Speech`, the audio will be
+   * paused during short interruptions, such as when a message arrives.
+   * Otherwise the playback volume is reduced while the notification is playing.
+   *
+   * @default AndroidAudioContentType.Music
+   */
+  audioContentType?: AndroidAudioContentType
+
+  /**
+   * Whether the player should automatically pause when audio becomes noisy
+   * (e.g., when headphones are unplugged).
+   *
+   * @default true
+   */
+  handleAudioBecomingNoisy?: boolean
+
+  /**
+   * Wake mode for the player to use.
+   *
+   * Determines whether wake locks are held to keep the CPU and/or
+   * WiFi active during playback.
+   *
+   * @default 'none'
+   */
+  wakeMode?: AndroidPlayerWakeMode
+}
+
+export interface AndroidSetupPlayerOptions {
   /**
    * Audio offload configuration for power-efficient playback.
    *
@@ -241,9 +328,19 @@ export interface AndroidPlayerOptions {
    * @default true
    */
   handleAudioBecomingNoisy: boolean
+
+  /**
+   * Wake mode for the player to use.
+   *
+   * Determines whether wake locks are held to keep the CPU and/or
+   * WiFi active during playback.
+   *
+   * @default 'none'
+   */
+  wakeMode: AndroidPlayerWakeMode
 }
 
-export interface IOSPlayerOptions {
+export interface PartialIOSSetupPlayerOptions {
   /**
    * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
    * for iOS. Sets on `play()`.
@@ -274,7 +371,38 @@ export interface IOSPlayerOptions {
   categoryPolicy?: IOSCategoryPolicy
 }
 
-export interface PlayerOptions {
+export interface IOSSetupPlayerOptions {
+  /**
+   * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
+   * for iOS. Sets on `play()`.
+   */
+  category?: IOSCategory
+
+  /**
+   * The audio session mode, together with the audio session category,
+   * indicates to the system how you intend to use audio in your app. You can use
+   * a mode to configure the audio system for specific use cases such as video
+   * recording, voice or video chat, or audio analysis.
+   * Sets on `play()`.
+   *
+   * See https://developer.apple.com/documentation/avfoundation/avaudiosession/1616508-mode
+   */
+  categoryMode?: IOSCategoryMode
+
+  /**
+   * [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616503-categoryoptions) for iOS.
+   * Sets on `play()`.
+   */
+  categoryOptions?: IOSCategoryOptions[]
+
+  /**
+   * [AVAudioSession.RouteSharingPolicy](https://developer.apple.com/documentation/AVFAudio/AVAudioSession/RouteSharingPolicy-swift.enum) for iOS.
+   * Sets on `play()`.
+   */
+  categoryPolicy?: IOSCategoryPolicy
+}
+
+export interface PartialSetupPlayerOptions {
   /**
    * Minimum duration of media that the player will attempt to buffer in seconds.
    *
@@ -286,14 +414,36 @@ export interface PlayerOptions {
   minBuffer?: number
 
   /** Android-specific configuration options for setup */
-  android?: AndroidPlayerOptions
+  android?: PartialAndroidSetupPlayerOptions
   /** iOS-specific configuration options for setup */
-  ios?: IOSPlayerOptions
+  ios?: PartialIOSSetupPlayerOptions
   /**
    * Indicates whether the player should automatically update now playing metadata data in control center / notification.
    * Defaults to `true`.
    */
   autoUpdateMetadata?: boolean
+}
+
+export interface PlayerOptions {
+  /**
+   * Minimum duration of media that the player will attempt to buffer in seconds.
+   *
+   * Supported on Android & iOS.
+   *
+   * @throws Will throw on Android if min buffer is higher than max buffer.
+   * @default 50
+   */
+  minBuffer: number
+
+  /** Android-specific configuration options for setup */
+  android?: AndroidSetupPlayerOptions
+  /** iOS-specific configuration options for setup */
+  ios?: PartialIOSSetupPlayerOptions
+  /**
+   * Indicates whether the player should automatically update now playing metadata data in control center / notification.
+   * Defaults to `true`.
+   */
+  autoUpdateMetadata: boolean
 }
 
 // MARK: - Lifecycle
@@ -303,24 +453,10 @@ export interface PlayerOptions {
  * @param options - The options to initialize the player with.
  * @see https://rntp.dev/docs/api/functions/lifecycle
  */
-export async function setupPlayer(options: PlayerOptions = {}): Promise<void> {
+export async function setupPlayer(
+  options: PartialSetupPlayerOptions = {}
+): Promise<void> {
   return nativeAudioBrowser.setupPlayer(options)
 }
 
 // MARK: - Android-specific
-
-/**
- * Acquires the wake lock of MusicService (Android only).
- */
-export function acquireWakeLock() {
-  if (!isAndroid) return
-  nativeAudioBrowser.acquireWakeLock()
-}
-
-/**
- * Abandons the wake lock of MusicService (Android only).
- */
-export function abandonWakeLock() {
-  if (!isAndroid) return
-  nativeAudioBrowser.abandonWakeLock()
-}

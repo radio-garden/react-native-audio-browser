@@ -1,14 +1,11 @@
 package com.audiobrowser
 
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
-import android.os.PowerManager
 import android.util.Log
 import androidx.annotation.MainThread
 import androidx.core.net.toUri
@@ -39,21 +36,6 @@ class Service : MediaLibraryService() {
     }
 
 
-  @SuppressLint("WakelockTimeout")
-  fun acquireWakeLock() {
-    if (wakeLock?.isHeld == true) return
-    wakeLock =
-      (getSystemService(Context.POWER_SERVICE) as PowerManager)
-        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Service::class.java.canonicalName)
-        .apply {
-          setReferenceCounted(false)
-          acquire()
-        }
-  }
-
-  fun abandonWakeLock() {
-    wakeLock?.release()
-  }
 
   override fun onCreate() {
     super.onCreate()
@@ -199,13 +181,6 @@ class Service : MediaLibraryService() {
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
-    // Release wake lock if held
-    wakeLock?.let {
-      if (it.isHeld) {
-        it.release()
-      }
-    }
-
     Timber.d("Releasing media session and destroying player")
     if (::mediaSession.isInitialized) {
       mediaSession.release()
@@ -236,8 +211,4 @@ class Service : MediaLibraryService() {
     val service = this@Service
   }
 
-  companion object {
-    // Wake lock management
-    @Volatile private var wakeLock: PowerManager.WakeLock? = null
-  }
 }

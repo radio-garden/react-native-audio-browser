@@ -300,7 +300,7 @@ export interface UpdateOptions {
   capabilities?: Capability[]
 }
 
-export interface NitroUpdateOptions {
+export interface NativeUpdateOptions {
   /** Android-specific configuration options */
   android?: NitroAndroidUpdateOptions
 

@@ -8,12 +8,12 @@ import type {
   PlaybackMetadata,
 } from '../features/metadata'
 import type {
-  NitroUpdateOptions,
+  NativeUpdateOptions,
   Options,
   UpdateOptions,
 } from '../features/options'
 import type { Playback } from '../features/playbackState'
-import type { PlayerOptions } from '../features/player'
+import type { PartialSetupPlayerOptions } from '../features/player'
 import type { PlayingState } from '../features/playingState'
 import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playWhenReady'
 import type {
@@ -36,8 +36,8 @@ import type { Track } from '../types'
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
   // MARK: init and config
-  setupPlayer(options: PlayerOptions): Promise<void>
-  updateOptions(options: NitroUpdateOptions): void
+  setupPlayer(options: PartialSetupPlayerOptions): Promise<void>
+  updateOptions(options: NativeUpdateOptions): void
   getOptions(): UpdateOptions
 
   // // MARK: events
@@ -131,6 +131,4 @@ export interface AudioBrowser
   getActiveTrack(): Track | undefined
 
   // MARK: Android methods
-  acquireWakeLock(): void
-  abandonWakeLock(): void
 }

@@ -20,7 +20,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.PlaybackError
-import com.margelo.nitro.audiobrowser.PlayerOptions
 import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.Progress
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
@@ -52,7 +51,8 @@ import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSkipEvent
 import com.audiobrowser.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
-import com.margelo.nitro.audiobrowser.NitroUpdateOptions
+import com.margelo.nitro.audiobrowser.NativeUpdateOptions
+import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
 import com.margelo.nitro.audiobrowser.UpdateOptions
@@ -143,7 +143,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
     }
 
-    override fun setupPlayer(options: PlayerOptions): Promise<Unit> {
+    override fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit> {
         return Promise.async(mainScope) {
             setupOptions.update(options)
 
@@ -171,7 +171,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
     }
 
-    override fun updateOptions(options: NitroUpdateOptions) {
+    override fun updateOptions(options: NativeUpdateOptions) {
         updateOptions.updateFromBridge(options)
         // Only update the options if the service is around
         connectedService?.let {
@@ -345,13 +345,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         player.currentTrack
     }
 
-    override fun acquireWakeLock() = runBlockingOnMain {
-        service.acquireWakeLock()
-    }
-
-    override fun abandonWakeLock() = runBlockingOnMain {
-        service.abandonWakeLock()
-    }
 
     override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
         launchInScope {

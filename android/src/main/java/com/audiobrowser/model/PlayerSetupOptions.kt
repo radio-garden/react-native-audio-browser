@@ -1,9 +1,10 @@
 package com.audiobrowser.model
 
-import com.audiobrowser.option.PlayerWakeMode
+import androidx.media3.exoplayer.DefaultLoadControl
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.margelo.nitro.audiobrowser.AndroidAudioContentType
-import com.margelo.nitro.audiobrowser.PlayerOptions
+import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
+import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 
 /**
@@ -21,44 +22,61 @@ data class AudioOffloadOptions(
  */
 data class PlayerSetupOptions(
   // Cross-platform audio engine buffer options
-  var minBuffer: Double? = null,
+  var minBuffer: Double = DefaultLoadControl.DEFAULT_MIN_BUFFER_MS.toDouble(),
   var audioContentType: AndroidAudioContentType = AndroidAudioContentType.MUSIC,
 
   // Android-specific options (all under android.* in JS)
-  var maxBuffer: Double? = null,
-  var playBuffer: Double? = null,
+  var maxBuffer: Double = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS.toDouble(),
+  var playBuffer: Double = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS.toDouble(),
   var rebufferBuffer: Double? = null,
-  var backBuffer: Double? = null,
+  var backBuffer: Double = DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS.toDouble(),
   var maxCacheSize: Double = 0.0,
   var handleAudioBecomingNoisy: Boolean = true,
-  var wakeMode: PlayerWakeMode = PlayerWakeMode.NONE,
+  var wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
   var audioOffload: AudioOffloadOptions? = null,
 ) {
-  fun update(options: PlayerOptions) {
+  fun update(options: PartialSetupPlayerOptions) {
     // Cross-platform audio engine options
     options.minBuffer?.let { minBuffer = it }
 
     // Android-specific options
     options.android?.let { android ->
-      maxBuffer = android.maxBuffer
-      playBuffer = android.playBuffer
-      rebufferBuffer = android.rebufferBuffer
-      backBuffer = android.backBuffer
-      maxCacheSize = android.maxCacheSize
-      handleAudioBecomingNoisy = android.handleAudioBecomingNoisy
-      audioContentType = android.audioContentType
-
-      // Convert audio offload options
-      audioOffload = when (android.audioOffload) {
-        is Variant_Boolean_AndroidAudioOffloadSettings.First -> {
-          if (android.audioOffload.value) AudioOffloadOptions() else null
-        }
-        is Variant_Boolean_AndroidAudioOffloadSettings.Second -> {
-          val settings = android.audioOffload.value
-          AudioOffloadOptions(
-            gaplessSupportRequired = settings.gaplessSupportRequired ?: false,
-            rateChangeSupportRequired = settings.rateChangeSupportRequired ?: false
-          )
+      android.maxBuffer?.let {
+        maxBuffer = it
+      }
+      android.playBuffer?.let {
+        playBuffer = it
+      }
+      android.rebufferBuffer?.let {
+        rebufferBuffer = it
+      }
+      android.backBuffer?.let {
+        backBuffer = it
+      }
+      android.maxCacheSize?.let {
+        maxCacheSize = it
+      }
+      android.handleAudioBecomingNoisy?.let {
+        handleAudioBecomingNoisy = it
+      }
+      android.audioContentType?.let {
+        audioContentType = it
+      }
+      android.wakeMode?.let {
+        wakeMode = it
+      }
+      android.audioOffload?.let {
+        audioOffload = when (android.audioOffload) {
+          is Variant_Boolean_AndroidAudioOffloadSettings.First -> {
+            if (android.audioOffload.value) AudioOffloadOptions() else null
+          }
+          is Variant_Boolean_AndroidAudioOffloadSettings.Second -> {
+            val settings = android.audioOffload.value
+            AudioOffloadOptions(
+              gaplessSupportRequired = settings.gaplessSupportRequired ?: false,
+              rateChangeSupportRequired = settings.rateChangeSupportRequired ?: false
+            )
+          }
         }
       }
     }

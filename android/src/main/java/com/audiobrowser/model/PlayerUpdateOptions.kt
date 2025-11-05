@@ -5,7 +5,7 @@ import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.Capability
-import com.margelo.nitro.audiobrowser.NitroUpdateOptions
+import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NullSentinel
 import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
 
@@ -36,7 +36,7 @@ data class PlayerUpdateOptions(
     var skipSilence: Boolean = false,
     var shuffle: Boolean = false,
 ) {
-    fun updateFromBridge(options: NitroUpdateOptions) {
+    fun updateFromBridge(options: NativeUpdateOptions) {
         options.forwardJumpInterval?.let { forwardJumpInterval = it }
         options.backwardJumpInterval?.let { backwardJumpInterval = it }
         options.progressUpdateEventInterval?.let { variant ->

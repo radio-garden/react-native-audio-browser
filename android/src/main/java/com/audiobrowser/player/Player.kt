@@ -41,6 +41,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
@@ -425,24 +426,14 @@ class Player(
     val renderer = DefaultRenderersFactory(context)
     renderer.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
     val loadControl = run {
-      val multiplier =
-        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS.toDouble() /
-          DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS.toDouble()
-      val minBuffer =
-        setupOptions.minBuffer?.toMilliseconds()?.toInt()?.takeIf { it != 0 }
-          ?: DefaultLoadControl.DEFAULT_MIN_BUFFER_MS
-      val maxBuffer =
-        setupOptions.maxBuffer?.toMilliseconds()?.toInt()?.takeIf { it != 0 }
-          ?: DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
-      val playBuffer =
-        setupOptions.playBuffer?.toMilliseconds()?.toInt()?.takeIf { it != 0 }
-          ?: DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+      val minBuffer = setupOptions.minBuffer.toInt()
+      val maxBuffer = setupOptions.maxBuffer.toInt()
+      val playBuffer = setupOptions.playBuffer.toInt()
+      val defaultRebufferMultiplier = 2; // DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS / DEFAULT_BUFFER_FOR_PLAYBACK_MS
       val playAfterRebuffer =
-        setupOptions.rebufferBuffer?.toMilliseconds()?.toInt()?.takeIf { it != 0 }
-          ?: (playBuffer * multiplier).toInt()
+        setupOptions.rebufferBuffer?.toInt() ?: (playBuffer * defaultMultiplier)
       val backBuffer =
-        setupOptions.backBuffer?.toMilliseconds()?.toInt()?.takeIf { it != 0 }
-          ?: DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS
+        setupOptions.backBuffer.toInt()
       DefaultLoadControl.Builder()
         .setBufferDurationsMs(minBuffer, maxBuffer, playBuffer, playAfterRebuffer)
         .setBackBuffer(backBuffer, false)
@@ -453,7 +444,11 @@ class Player(
         .setRenderersFactory(renderer)
         .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
         .setMediaSourceFactory(MediaFactory(context, cache))
-        .setWakeMode(setupOptions.wakeMode.toMedia3())
+        .setWakeMode(when (setupOptions.wakeMode) {
+            AndroidPlayerWakeMode.NONE -> C.WAKE_MODE_NONE
+            AndroidPlayerWakeMode.LOCAL -> C.WAKE_MODE_LOCAL
+            AndroidPlayerWakeMode.NETWORK -> C.WAKE_MODE_NETWORK
+        })
         .setLoadControl(loadControl)
         .setName("AudioBrowser")
         .build()
