@@ -1,6 +1,6 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
-import { NullSentinel, wrapNullSentinel } from '../utils/null-sentinel'
+import { type NullSentinel, wrapNullSentinel } from '../utils/null-sentinel'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { RatingType } from './metadata'
 import type { RepeatMode } from './repeatMode'
@@ -347,7 +347,7 @@ export interface NitroUpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
-  TrackPlayer.updateOptions({
+  nativeAudioBrowser.updateOptions({
     ...options,
     android: options.android
       ? {
@@ -380,7 +380,7 @@ export function updateOptions(options: UpdateOptions): void {
  * ```
  */
 export function getOptions(): Options {
-  return TrackPlayer.getOptions() as Options
+  return nativeAudioBrowser.getOptions() as Options
 }
 
 // MARK: - Event Callbacks
@@ -391,7 +391,7 @@ export function getOptions(): Options {
  * @returns Cleanup function to unsubscribe
  */
 export const onOptionsChanged = LazyEmitter.emitterize<Options>(
-  (cb) => (TrackPlayer.onOptionsChanged = cb)
+  (cb) => (nativeAudioBrowser.onOptionsChanged = cb)
 )
 
 // MARK: - Hooks

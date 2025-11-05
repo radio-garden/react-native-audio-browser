@@ -8,7 +8,7 @@ type Callback<T> = (arg: T) => void
  *
  * @example
  * ```typescript
- * let emitter = new LazyEmitter(TrackPlayer.onPlaybackStateChanged)
+ * let emitter = new LazyEmitter(nativeAudioBrowser.onPlaybackStateChanged)
  *
  * function onPlaybackState(callback: (state: PlaybackState) => void) {
  *   return emitter.addListener(callback)

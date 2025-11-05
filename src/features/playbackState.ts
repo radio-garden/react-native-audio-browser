@@ -1,4 +1,4 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { PlaybackError } from './errors'
@@ -18,8 +18,8 @@ import type { PlaybackError } from './errors'
  * - `'buffering'`: Indicates that the player is currently loading more data
  *   before it can continue playing or is ready to start playing.
  * - `'error'`: Indicates that playback of the current item failed. Call
- *   `TrackPlayer.getError()` to get more information on the type of error that
- *   occurred. Call `TrackPlayer.retry()` or `TrackPlayer.play()` to try to play
+ *   `AudioBrowser.getError()` to get more information on the type of error that
+ *   occurred. Call `AudioBrowser.retry()` or `AudioBrowser.play()` to try to play
  *   the item again.
  * - `'ended'`: Indicates that playback stopped due to the end of the queue
  *   being reached.
@@ -47,7 +47,7 @@ export type PlaybackState = {
  * @see https://rntp.dev/docs/api/constants/state
  */
 export function getPlaybackState(): PlaybackState {
-  return TrackPlayer.getPlaybackState()
+  return nativeAudioBrowser.getPlaybackState()
 }
 
 // MARK: - Event Callbacks
@@ -58,7 +58,7 @@ export function getPlaybackState(): PlaybackState {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlaybackState = LazyEmitter.emitterize<PlaybackState>(
-  (cb) => (TrackPlayer.onPlaybackStateChanged = cb)
+  (cb) => (nativeAudioBrowser.onPlaybackStateChanged = cb)
 )
 
 // MARK: - Hooks

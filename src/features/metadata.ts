@@ -1,4 +1,4 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import type { Rating } from './rating'
 
@@ -99,7 +99,7 @@ export interface AudioMetadataReceivedEvent {
  */
 export const onMetadataChapterReceived =
   LazyEmitter.emitterize<AudioMetadataReceivedEvent>(
-    (cb) => (TrackPlayer.onMetadataChapterReceived = cb)
+    (cb) => (nativeAudioBrowser.onMetadataChapterReceived = cb)
   )
 
 /**
@@ -109,7 +109,7 @@ export const onMetadataChapterReceived =
  */
 export const onMetadataCommonReceived =
   LazyEmitter.emitterize<AudioCommonMetadataReceivedEvent>(
-    (cb) => (TrackPlayer.onMetadataCommonReceived = cb)
+    (cb) => (nativeAudioBrowser.onMetadataCommonReceived = cb)
   )
 
 /**
@@ -119,5 +119,5 @@ export const onMetadataCommonReceived =
  */
 export const onMetadataTimedReceived =
   LazyEmitter.emitterize<AudioMetadataReceivedEvent>(
-    (cb) => (TrackPlayer.onMetadataTimedReceived = cb)
+    (cb) => (nativeAudioBrowser.onMetadataTimedReceived = cb)
   )

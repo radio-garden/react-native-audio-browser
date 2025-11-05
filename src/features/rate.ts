@@ -1,4 +1,4 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 // MARK: - Getters
 
 /**
@@ -6,7 +6,7 @@ import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
  * regular speed and 2 would be double speed etc.
  */
 export function getRate(): number {
-  return TrackPlayer.getRate()
+  return nativeAudioBrowser.getRate()
 }
 
 // MARK: - Setters
@@ -17,5 +17,5 @@ export function getRate(): number {
  * 1 would be regular speed, 2 would be double speed etc.
  */
 export function setRate(rate: number): void {
-  TrackPlayer.setRate(rate)
+  nativeAudioBrowser.setRate(rate)
 }

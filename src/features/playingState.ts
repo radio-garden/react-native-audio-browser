@@ -1,4 +1,4 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
@@ -15,7 +15,7 @@ export type PlayingState = {
  * Gets the playing state (playing and buffering flags).
  */
 export function getPlayingState(): PlayingState {
-  return TrackPlayer.getPlayingState()
+  return nativeAudioBrowser.getPlayingState()
 }
 
 // MARK: - Event Callbacks
@@ -26,7 +26,7 @@ export function getPlayingState(): PlayingState {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlayingState = LazyEmitter.emitterize<PlayingState>(
-  (cb) => (TrackPlayer.onPlaybackPlayingState = cb)
+  (cb) => (nativeAudioBrowser.onPlaybackPlayingState = cb)
 )
 
 // MARK: - Hooks

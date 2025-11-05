@@ -1,4 +1,4 @@
-import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 
 // MARK: - Playback Controls
 
@@ -6,42 +6,42 @@ import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
  * Resets the player stopping the current track and clearing the queue.
  */
 export function reset(): void {
-  TrackPlayer.reset()
+  nativeAudioBrowser.reset()
 }
 
 /**
  * Plays or resumes the current track.
  */
 export function play(): void {
-  TrackPlayer.play()
+  nativeAudioBrowser.play()
 }
 
 /**
  * Pauses the current track.
  */
 export function pause(): void {
-  TrackPlayer.pause()
+  nativeAudioBrowser.pause()
 }
 
 /**
  * Toggles playback between play and pause.
  */
 export function togglePlayback(): void {
-  TrackPlayer.togglePlayback()
+  nativeAudioBrowser.togglePlayback()
 }
 
 /**
  * Stops the current track.
  */
 export function stop(): void {
-  TrackPlayer.stop()
+  nativeAudioBrowser.stop()
 }
 
 /**
  * Retries the current item when the playback state is `State.Error`.
  */
 export function retry(): void {
-  TrackPlayer.retry()
+  nativeAudioBrowser.retry()
 }
 
 /**
@@ -49,7 +49,7 @@ export function retry(): void {
  * @param position - The position to seek to in seconds.
  */
 export function seekTo(position: number): void {
-  TrackPlayer.seekTo(position)
+  nativeAudioBrowser.seekTo(position)
 }
 
 /**
@@ -57,5 +57,5 @@ export function seekTo(position: number): void {
  * @param offset - The time offset to seek by in seconds.
  */
 export function seekBy(offset: number): void {
-  TrackPlayer.seekBy(offset)
+  nativeAudioBrowser.seekBy(offset)
 }

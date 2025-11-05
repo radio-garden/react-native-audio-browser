@@ -1,6 +1,6 @@
 import { Platform } from 'react-native'
 
-import { AudioBrowser } from '../NativeAudioBrowser'
+import { nativeAudioBrowser } from '../NativeAudioBrowser'
 
 const isAndroid = Platform.OS === 'android'
 
@@ -304,7 +304,7 @@ export interface PlayerOptions {
  * @see https://rntp.dev/docs/api/functions/lifecycle
  */
 export async function setupPlayer(options: PlayerOptions = {}): Promise<void> {
-  return AudioBrowser.setupPlayer(options)
+  return nativeAudioBrowser.setupPlayer(options)
 }
 
 // MARK: - Android-specific
@@ -314,7 +314,7 @@ export async function setupPlayer(options: PlayerOptions = {}): Promise<void> {
  */
 export function acquireWakeLock() {
   if (!isAndroid) return
-  AudioBrowser.acquireWakeLock()
+  nativeAudioBrowser.acquireWakeLock()
 }
 
 /**
@@ -322,5 +322,5 @@ export function acquireWakeLock() {
  */
 export function abandonWakeLock() {
   if (!isAndroid) return
-  AudioBrowser.abandonWakeLock()
+  nativeAudioBrowser.abandonWakeLock()
 }
