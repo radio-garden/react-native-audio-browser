@@ -12,6 +12,7 @@ export type RatingType =
   | '4-stars'
   | '5-stars'
   | 'percentage'
+  | 'none'
 
 export interface TrackMetadataBase {
   /** The track title */
