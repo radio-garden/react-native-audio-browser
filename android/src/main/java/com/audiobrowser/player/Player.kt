@@ -31,7 +31,6 @@ import com.audiobrowser.model.AudioOffloadOptions
 import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.audiobrowser.util.MediaSessionManager
 import com.audiobrowser.util.MetadataAdapter
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.RepeatModeFactory
@@ -73,7 +72,7 @@ class Player(
   private var options = PlayerUpdateOptions()
   private var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
-  private val commandManager = MediaSessionManager()
+  private val commandManager = MediaSessionCommandManager()
 
   // Media browser functionality
   private val pendingGetItemRequests = ConcurrentHashMap<String, SettableFuture<MediaItem?>>()
@@ -81,6 +80,7 @@ class Player(
       ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   private val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   private var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
+
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
 

@@ -1,12 +1,11 @@
-package com.audiobrowser.util
+package com.audiobrowser.player
 
 import android.os.Bundle
-import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
+import androidx.media3.session.R
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionCommands
-import com.audiobrowser.player.Player
 import com.audiobrowser.option.PlayerCapability
 import timber.log.Timber
 
@@ -23,7 +22,7 @@ import timber.log.Timber
  * Initializes with sensible defaults: all global capabilities enabled, essential notification
  * controls only.
  */
-class MediaSessionManager {
+class MediaSessionCommandManager {
 
   companion object {
     private const val CUSTOM_ACTION_JUMP_BACKWARD = "JUMP_BACKWARD"
@@ -31,7 +30,7 @@ class MediaSessionManager {
   }
 
   /** Current player commands configuration */
-  var playerCommands: MediaPlayer.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+  var playerCommands: androidx.media3.common.Player.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
     private set
 
   /** Current session commands configuration */
@@ -71,9 +70,9 @@ class MediaSessionManager {
    * Manager initializes with defaults: all global capabilities, limited notification capabilities.
    */
   fun updateMediaSession(
-    mediaSession: MediaSession,
-    capabilities: List<PlayerCapability>,
-    notificationCapabilities: List<PlayerCapability>?,
+      mediaSession: MediaSession,
+      capabilities: List<PlayerCapability>,
+      notificationCapabilities: List<PlayerCapability>?,
   ) {
     // Update internal configuration
     updatePlayerCommands(capabilities)
@@ -109,21 +108,21 @@ class MediaSessionManager {
    * @return true if command was handled, false otherwise
    */
   fun handleCustomCommand(command: SessionCommand, player: Player): Boolean {
-    Timber.d("onCustomCommand: action=${command.customAction}")
+    Timber.Forest.d("onCustomCommand: action=${command.customAction}")
 
     return when (command.customAction) {
       CUSTOM_ACTION_JUMP_BACKWARD -> {
-        Timber.d("Executing jump backward command")
+        Timber.Forest.d("Executing jump backward command")
         player.forwardingPlayer.seekBack()
         true
       }
       CUSTOM_ACTION_JUMP_FORWARD -> {
-        Timber.d("Executing jump forward command")
+        Timber.Forest.d("Executing jump forward command")
         player.forwardingPlayer.seekForward()
         true
       }
       else -> {
-        Timber.w("Received unexpected custom command: ${command.customAction}")
+        Timber.Forest.w("Received unexpected custom command: ${command.customAction}")
         false
       }
     }
@@ -134,49 +133,49 @@ class MediaSessionManager {
 
     // Commands to remove - start with always-disabled commands
     val disabledCommands =
-      mutableSetOf<@MediaPlayer.Command Int>(
+      mutableSetOf<@androidx.media3.common.Player.Command Int>(
         // Always filter out direct media item commands to avoid dual-command confusion
         // This forces MediaSession to only use the "smart" commands we can control via capabilities
-        MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-        MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+        androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
       )
 
     // Only disable jump commands if global capabilities are not present
     // This preserves them for external controllers (Bluetooth, Android Auto, etc.)
     if (!capabilities.contains(PlayerCapability.JUMP_FORWARD)) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_FORWARD)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
     }
     if (!capabilities.contains(PlayerCapability.JUMP_BACKWARD)) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_BACK)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_SEEK_BACK)
     }
 
     // Check each capability and add commands to remove if not enabled
     val hasPlayPause =
       capabilities.any { it == PlayerCapability.PLAY || it == PlayerCapability.PAUSE }
     if (!hasPlayPause) {
-      disabledCommands.add(MediaPlayer.COMMAND_PLAY_PAUSE)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_PLAY_PAUSE)
     }
 
     if (!capabilities.contains(PlayerCapability.STOP)) {
-      disabledCommands.add(MediaPlayer.COMMAND_STOP)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_STOP)
     }
 
     if (!capabilities.contains(PlayerCapability.SEEK_TO)) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
     }
 
     if (!capabilities.contains(PlayerCapability.SKIP_TO_NEXT)) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_NEXT)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT)
     }
 
     if (!capabilities.contains(PlayerCapability.SKIP_TO_PREVIOUS)) {
-      disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
+      disabledCommands.add(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS)
     }
 
     // Remove disabled commands from the builder
     disabledCommands.forEach { command ->
       playerCommandsBuilder.remove(command)
-      Timber.d("Removed command: $command")
+      Timber.Forest.d("Removed command: $command")
     }
 
     playerCommands = playerCommandsBuilder.build()
@@ -194,7 +193,7 @@ class MediaSessionManager {
         CommandButton.Builder()
           .setDisplayName("Jump Backward")
           .setSessionCommand(jumpBackCommand)
-          .setIconResId(androidx.media3.session.R.drawable.media3_icon_skip_back)
+          .setIconResId(R.drawable.media3_icon_skip_back)
           .build()
       )
       sessionCommandsBuilder.add(jumpBackCommand)
@@ -206,7 +205,7 @@ class MediaSessionManager {
         CommandButton.Builder()
           .setDisplayName("Jump Forward")
           .setSessionCommand(jumpForwardCommand)
-          .setIconResId(androidx.media3.session.R.drawable.media3_icon_skip_forward)
+          .setIconResId(R.drawable.media3_icon_skip_forward)
           .build()
       )
       sessionCommandsBuilder.add(jumpForwardCommand)
