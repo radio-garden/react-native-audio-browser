@@ -87,7 +87,7 @@ class Service : MediaLibraryService() {
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         // Add the Uri data so apps can identify that it was a notification click
-        data = "audiobrowser://notification.click".toUri()
+        data = "audiobrowser://notification".toUri()
         action = Intent.ACTION_VIEW
       }
     mediaSession =
