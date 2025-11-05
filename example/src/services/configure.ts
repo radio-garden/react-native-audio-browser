@@ -23,6 +23,8 @@ export function configurePlayer() {
     ],
   });
 
+  AudioBrowser.setRepeatMode('queue');
+
   // If you want to override the default behavior, use handleRemote* functions:
   // Example: Override the default pause behavior
   AudioBrowser.handleRemotePause(() => {
