@@ -1,10 +1,10 @@
 package com.audiobrowser.model
 
-import com.audiobrowser.option.PlayerCapability
 import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.NitroUpdateOptions
 import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NullSentinel
 import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
@@ -20,15 +20,15 @@ data class PlayerUpdateOptions(
     var progressUpdateEventInterval: Double? = null,
 
     // Rating and capabilities
-    var capabilities: List<PlayerCapability> =
+    var capabilities: List<Capability> =
         listOf(
-            PlayerCapability.PLAY,
-            PlayerCapability.PAUSE,
-            PlayerCapability.SKIP_TO_NEXT,
-            PlayerCapability.SKIP_TO_PREVIOUS,
-            PlayerCapability.SEEK_TO,
+            Capability.PLAY,
+            Capability.PAUSE,
+            Capability.SKIP_TO_NEXT,
+            Capability.SKIP_TO_PREVIOUS,
+            Capability.SEEK_TO,
         ),
-    var notificationCapabilities: List<PlayerCapability>? = null,
+    var notificationCapabilities: List<Capability>? = null,
 
     // Android-specific runtime options (all under android.* in JS)
     var ratingType: NitroRatingType? = null,
@@ -47,7 +47,7 @@ data class PlayerUpdateOptions(
         }
 
         options.capabilities?.let { nitroCaps ->
-            capabilities = nitroCaps.map { PlayerCapability.fromNitro(it) }
+            capabilities = nitroCaps.toList()
         }
 
         // Update Android-specific options
@@ -72,11 +72,7 @@ data class PlayerUpdateOptions(
 
             androidOptions.notificationCapabilities?.let { variant ->
                 notificationCapabilities = when (variant) {
-                    is Variant_Array_Capability__NullSentinel.First -> variant.value.map {
-                        PlayerCapability.fromNitro(
-                            it
-                        )
-                    }
+                    is Variant_Array_Capability__NullSentinel.First -> variant.value.toList()
 
                     is Variant_Array_Capability__NullSentinel.Second -> null
                 }
@@ -86,11 +82,11 @@ data class PlayerUpdateOptions(
 
     fun toNitro(): UpdateOptions {
         // Convert capabilities
-        val nitroCapabilities = capabilities.map { it.toNitro() }.toTypedArray()
+        val nitroCapabilities = capabilities.toTypedArray()
 
         // Convert notification capabilities
         val nitroNotificationCapabilities =
-            notificationCapabilities?.map { it.toNitro() }?.toTypedArray()
+            notificationCapabilities?.toTypedArray()
 
         // Create Android options
         val androidOptions = AndroidUpdateOptions(

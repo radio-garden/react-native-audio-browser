@@ -27,5 +27,8 @@ enum class Capability(@DoNotStrip @Keep val value: Int) {
   SKIP_TO_PREVIOUS(8),
   JUMP_FORWARD(9),
   JUMP_BACKWARD(10),
-  SET_RATING(11);
+  SET_RATING(11),
+  LIKE(12),
+  DISLIKE(13),
+  BOOKMARK(14);
 }

@@ -53,6 +53,9 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldJUMP_FORWARD = clazz->getStaticField<JCapability>("JUMP_FORWARD");
       static const auto fieldJUMP_BACKWARD = clazz->getStaticField<JCapability>("JUMP_BACKWARD");
       static const auto fieldSET_RATING = clazz->getStaticField<JCapability>("SET_RATING");
+      static const auto fieldLIKE = clazz->getStaticField<JCapability>("LIKE");
+      static const auto fieldDISLIKE = clazz->getStaticField<JCapability>("DISLIKE");
+      static const auto fieldBOOKMARK = clazz->getStaticField<JCapability>("BOOKMARK");
       
       switch (value) {
         case Capability::PLAY:
@@ -79,6 +82,12 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(fieldJUMP_BACKWARD);
         case Capability::SET_RATING:
           return clazz->getStaticFieldValue(fieldSET_RATING);
+        case Capability::LIKE:
+          return clazz->getStaticFieldValue(fieldLIKE);
+        case Capability::DISLIKE:
+          return clazz->getStaticFieldValue(fieldDISLIKE);
+        case Capability::BOOKMARK:
+          return clazz->getStaticFieldValue(fieldBOOKMARK);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

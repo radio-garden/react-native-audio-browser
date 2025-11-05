@@ -41,6 +41,9 @@ namespace margelo::nitro::audiobrowser {
     JUMP_FORWARD      SWIFT_NAME(jumpForward) = 9,
     JUMP_BACKWARD      SWIFT_NAME(jumpBackward) = 10,
     SET_RATING      SWIFT_NAME(setRating) = 11,
+    LIKE      SWIFT_NAME(like) = 12,
+    DISLIKE      SWIFT_NAME(dislike) = 13,
+    BOOKMARK      SWIFT_NAME(bookmark) = 14,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -65,6 +68,9 @@ namespace margelo::nitro {
         case hashString("jump-forward"): return margelo::nitro::audiobrowser::Capability::JUMP_FORWARD;
         case hashString("jump-backward"): return margelo::nitro::audiobrowser::Capability::JUMP_BACKWARD;
         case hashString("set-rating"): return margelo::nitro::audiobrowser::Capability::SET_RATING;
+        case hashString("like"): return margelo::nitro::audiobrowser::Capability::LIKE;
+        case hashString("dislike"): return margelo::nitro::audiobrowser::Capability::DISLIKE;
+        case hashString("bookmark"): return margelo::nitro::audiobrowser::Capability::BOOKMARK;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum Capability - invalid value!");
       }
@@ -83,6 +89,9 @@ namespace margelo::nitro {
         case margelo::nitro::audiobrowser::Capability::JUMP_FORWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-forward");
         case margelo::nitro::audiobrowser::Capability::JUMP_BACKWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-backward");
         case margelo::nitro::audiobrowser::Capability::SET_RATING: return JSIConverter<std::string>::toJSI(runtime, "set-rating");
+        case margelo::nitro::audiobrowser::Capability::LIKE: return JSIConverter<std::string>::toJSI(runtime, "like");
+        case margelo::nitro::audiobrowser::Capability::DISLIKE: return JSIConverter<std::string>::toJSI(runtime, "dislike");
+        case margelo::nitro::audiobrowser::Capability::BOOKMARK: return JSIConverter<std::string>::toJSI(runtime, "bookmark");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert Capability to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -106,6 +115,9 @@ namespace margelo::nitro {
         case hashString("jump-forward"):
         case hashString("jump-backward"):
         case hashString("set-rating"):
+        case hashString("like"):
+        case hashString("dislike"):
+        case hashString("bookmark"):
           return true;
         default:
           return false;

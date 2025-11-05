@@ -20,6 +20,9 @@ export type Capability =
   | 'jump-forward'
   | 'jump-backward'
   | 'set-rating'
+  | 'like'
+  | 'dislike'
+  | 'bookmark'
 
 /**
  * AppKilledPlaybackBehavior options:
