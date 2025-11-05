@@ -15,7 +15,6 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import com.audiobrowser.BuildConfig
 import com.audiobrowser.model.PlayerSetupOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import kotlin.system.exitProcess
@@ -24,8 +23,8 @@ import kotlinx.coroutines.cancel
 import timber.log.Timber
 
 @MainThread
-class AudioBrowserService : MediaLibraryService() {
-  lateinit var player: AudioBrowserPlayer
+class Service : MediaLibraryService() {
+  lateinit var player: Player
   private val binder = LocalBinder()
   private val scope = MainScope()
   private lateinit var mediaSession: MediaLibrarySession
@@ -44,7 +43,7 @@ class AudioBrowserService : MediaLibraryService() {
     if (wakeLock?.isHeld == true) return
     wakeLock =
       (getSystemService(Context.POWER_SERVICE) as PowerManager)
-        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, AudioBrowserService::class.java.canonicalName)
+        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Service::class.java.canonicalName)
         .apply {
           setReferenceCounted(false)
           acquire()
@@ -81,7 +80,7 @@ class AudioBrowserService : MediaLibraryService() {
       )
     }
 
-    player = AudioBrowserPlayer(this)
+    player = Player(this)
     player.setup(PlayerSetupOptions())
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
@@ -105,7 +104,7 @@ class AudioBrowserService : MediaLibraryService() {
     player.setMediaSession(mediaSession)
 
     // Bind headless service once at startup for JS task execution
-    val headlessIntent = Intent(applicationContext, AudioBrowserHeadlessTaskService::class.java)
+    val headlessIntent = Intent(applicationContext, HeadlessTaskService::class.java)
     bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
   }
 
@@ -233,7 +232,7 @@ class AudioBrowserService : MediaLibraryService() {
   }
 
   inner class LocalBinder : Binder() {
-    val service = this@AudioBrowserService
+    val service = this@Service
   }
 
   companion object {

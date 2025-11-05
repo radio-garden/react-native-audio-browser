@@ -9,7 +9,7 @@
     <application>
         <!-- Audio Browser Service -->
         <service
-            android:name="com.audiobrowser.AudioBrowserService"
+            android:name="com.audiobrowser.Service"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">

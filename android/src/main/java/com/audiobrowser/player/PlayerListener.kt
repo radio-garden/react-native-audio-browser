@@ -4,14 +4,14 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
-import com.audiobrowser.AudioBrowserPlayer
+import androidx.media3.common.Player as Media3Player
+import com.audiobrowser.Player
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 
-class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Listener {
+class PlayerListener(private val trackPlayer: Player) : Media3Player.Listener {
   /** Called when there is metadata associated with the current playback time. */
   override fun onMetadata(metadata: Metadata) {
     trackPlayer.onTimedMetadata(metadata)
@@ -27,8 +27,8 @@ class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Liste
    * removed.
    */
   override fun onPositionDiscontinuity(
-    oldPosition: Player.PositionInfo,
-    newPosition: Player.PositionInfo,
+    oldPosition: Media3Player.PositionInfo,
+    newPosition: Media3Player.PositionInfo,
     reason: Int,
   ) {
     trackPlayer.oldPosition = oldPosition.positionMs
@@ -49,7 +49,7 @@ class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Liste
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-    val pausedBecauseReachedEnd = reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM
+    val pausedBecauseReachedEnd = reason == Media3Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM
     trackPlayer.onPlayWhenReadyChanged(playWhenReady, pausedBecauseReachedEnd)
   }
 
@@ -58,24 +58,24 @@ class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Liste
    * events that occurred together. It's always called after the callbacks that correspond to the
    * individual events.
    */
-  override fun onEvents(player: Player, events: Player.Events) {
+  override fun onEvents(player: Media3Player, events: Media3Player.Events) {
     // Note that it is necessary to set `playerState` in order, since each mutation fires an
     // event.
     for (i in 0 until events.size()) {
       when (events[i]) {
-        Player.EVENT_PLAYBACK_STATE_CHANGED -> {
+        Media3Player.EVENT_PLAYBACK_STATE_CHANGED -> {
           val state =
             when (player.playbackState) {
-              Player.STATE_BUFFERING -> PlaybackState.BUFFERING
-              Player.STATE_READY -> PlaybackState.READY
-              Player.STATE_IDLE ->
+              Media3Player.STATE_BUFFERING -> PlaybackState.BUFFERING
+              Media3Player.STATE_READY -> PlaybackState.READY
+              Media3Player.STATE_IDLE ->
                 // Avoid transitioning to idle from error or stopped
                 if (
                   trackPlayer.playbackState == PlaybackState.ERROR || trackPlayer.playbackState == PlaybackState.STOPPED
                 )
                   null
                 else PlaybackState.NONE
-              Player.STATE_ENDED -> if (player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
+              Media3Player.STATE_ENDED -> if (player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
               else -> null // noop
             }
           if (state != null && state != trackPlayer.playbackState) {
@@ -86,7 +86,7 @@ class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Liste
             trackPlayer.setPlaybackState(state)
           }
         }
-        Player.EVENT_MEDIA_ITEM_TRANSITION -> {
+        Media3Player.EVENT_MEDIA_ITEM_TRANSITION -> {
           trackPlayer.playbackError = null
           if (trackPlayer.currentTrack != null) {
             trackPlayer.setPlaybackState(PlaybackState.LOADING)
@@ -96,12 +96,12 @@ class PlayerListener(private val trackPlayer: AudioBrowserPlayer) : Player.Liste
             }
           }
         }
-        Player.EVENT_PLAY_WHEN_READY_CHANGED -> {
+        Media3Player.EVENT_PLAY_WHEN_READY_CHANGED -> {
           if (!player.playWhenReady && trackPlayer.playbackState != PlaybackState.STOPPED) {
             trackPlayer.setPlaybackState(PlaybackState.PAUSED)
           }
         }
-        Player.EVENT_IS_PLAYING_CHANGED -> {
+        Media3Player.EVENT_IS_PLAYING_CHANGED -> {
           if (player.isPlaying) {
             trackPlayer.setPlaybackState(PlaybackState.PLAYING)
           }

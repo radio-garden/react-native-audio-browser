@@ -65,14 +65,14 @@ import java.util.concurrent.TimeUnit
 import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
-class AudioBrowserPlayer(
+class Player(
   internal val context: Context,
 ) {
 
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
   private var options = PlayerUpdateOptions()
-  private var callbacks: AudioBrowserCallbacks? = null
+  private var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   private val commandManager = MediaSessionManager()
 
@@ -824,7 +824,7 @@ class AudioBrowserPlayer(
    *
    * @param callbacks The callbacks to set, or null to clear callbacks
    */
-  fun setCallbacks(callbacks: AudioBrowserCallbacks?) {
+  fun setCallbacks(callbacks: Callbacks?) {
     this.callbacks = callbacks
   }
 
@@ -833,7 +833,7 @@ class AudioBrowserPlayer(
    *
    * @return The current callbacks, or null if none are set
    */
-  fun getCallbacks(): AudioBrowserCallbacks? {
+  fun getCallbacks(): Callbacks? {
     return this.callbacks
   }
 
@@ -901,7 +901,7 @@ class AudioBrowserPlayer(
       command: SessionCommand,
       args: Bundle,
     ): ListenableFuture<SessionResult> {
-      commandManager.handleCustomCommand(command, this@AudioBrowserPlayer)
+      commandManager.handleCustomCommand(command, this@Player)
       return super.onCustomCommand(session, controller, command, args)
     }
 

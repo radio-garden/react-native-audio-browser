@@ -8,8 +8,6 @@ import android.os.IBinder
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import com.margelo.nitro.NitroModules
-import com.audiobrowser.AudioBrowserService
-import com.audiobrowser.AudioBrowserCallbacks
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
@@ -67,7 +65,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
     private var setupOptions = PlayerSetupOptions()
     private val mainScope = MainScope()
-    private var connectedService: AudioBrowserService? = null
+    private var connectedService: Service? = null
     private val context = NitroModules.applicationContext
         ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
@@ -132,7 +130,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         launchInScope {
             try {
                 Timber.d("Attempting to auto-bind to existing AudioBrowserService from AudioBrowserModule")
-                val intent = Intent(context, AudioBrowserService::class.java)
+                val intent = Intent(context, Service::class.java)
                 val bound = context.bindService(intent, this@AudioBrowser, Context.BIND_AUTO_CREATE)
                 Timber.d("Auto-bind result: $bound")
 
@@ -159,7 +157,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             suspendCoroutine<Unit> { continuation ->
                 Timber.d("Binding to AudioBrowserService")
                 val bound = context.bindService(
-                    Intent(context, AudioBrowserService::class.java),
+                    Intent(context, Service::class.java),
                     this@AudioBrowser,
                     Context.BIND_AUTO_CREATE
                 )
@@ -358,14 +356,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
         launchInScope {
-            connectedService = (serviceBinder as AudioBrowserService.LocalBinder).service.apply {
+            connectedService = (serviceBinder as Service.LocalBinder).service.apply {
                 player.setCallbacks(callbacks)
                 player.applyOptions(updateOptions)
                 player.setup(setupOptions)
             }
 
             val sessionToken =
-                SessionToken(context, ComponentName(context, AudioBrowserService::class.java))
+                SessionToken(context, ComponentName(context, Service::class.java))
             mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
 
             setupPromise?.invoke(Unit)
@@ -388,7 +386,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         return runBlocking(mainScope.coroutineContext) { block() }
     }
 
-    private val service: AudioBrowserService
+    private val service: Service
         get() = connectedService ?: throw Exception("Player not initialized")
 
     private val player
@@ -396,7 +394,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
 
     val callbacks =
-        object : AudioBrowserCallbacks {
+        object : Callbacks {
             override fun onPlaybackChanged(playback: Playback) {
                 this@AudioBrowser.onPlaybackChanged(playback)
             }

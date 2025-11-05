@@ -18,7 +18,7 @@ import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 
 /** Callbacks for all player events. */
-interface AudioBrowserCallbacks {
+interface Callbacks {
   // Playback state events
   fun onPlaybackChanged(playback: Playback)
 
