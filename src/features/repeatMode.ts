@@ -42,9 +42,10 @@ export interface RepeatModeChangedEvent {
  * @param callback - Called when repeat mode changes
  * @returns Cleanup function to unsubscribe
  */
-export const onRepeatModeChanged = LazyEmitter.emitterize(
-  AudioBrowser.onPlaybackRepeatModeChanged
-)
+export const onRepeatModeChanged =
+  LazyEmitter.emitterize<RepeatModeChangedEvent>(
+    (cb) => (AudioBrowser.onPlaybackRepeatModeChanged = cb)
+  )
 
 // MARK: - Hooks
 
