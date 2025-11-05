@@ -51,10 +51,10 @@ namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
-// Forward declaration of `PlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
-// Forward declaration of `NitroUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NitroUpdateOptions; }
+// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
+// Forward declaration of `NativeUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -88,8 +88,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "Options.hpp"
 #include <optional>
 #include <NitroModules/Promise.hpp>
-#include "PlayerOptions.hpp"
-#include "NitroUpdateOptions.hpp"
+#include "PartialSetupPlayerOptions.hpp"
+#include "NativeUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
 #include "Track.hpp"
 #include "Progress.hpp"
@@ -213,8 +213,8 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Methods
-      virtual std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) = 0;
-      virtual void updateOptions(const NitroUpdateOptions& options) = 0;
+      virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
+      virtual void updateOptions(const NativeUpdateOptions& options) = 0;
       virtual UpdateOptions getOptions() = 0;
       virtual void load(const Track& track) = 0;
       virtual void reset() = 0;
@@ -249,8 +249,6 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<Track> getTrack(double index) = 0;
       virtual std::optional<double> getActiveTrackIndex() = 0;
       virtual std::optional<Track> getActiveTrack() = 0;
-      virtual void acquireWakeLock() = 0;
-      virtual void abandonWakeLock() = 0;
 
     protected:
       // Hybrid Setup

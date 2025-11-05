@@ -14,8 +14,8 @@ namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
 // Forward declaration of `AndroidOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
-// Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
@@ -44,8 +44,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
-// Forward declaration of `IOSPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
@@ -54,6 +52,10 @@ namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
+// Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
@@ -115,7 +117,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AndroidAudioContentType.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidOptions.hpp"
-#include "AndroidPlayerOptions.hpp"
+#include "AndroidPlayerWakeMode.hpp"
 #include "AndroidUpdateOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "AudioCommonMetadataReceivedEvent.hpp"
@@ -130,11 +132,12 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
-#include "IOSPlayerOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NullSentinel.hpp"
 #include "Options.hpp"
+#include "PartialAndroidSetupPlayerOptions.hpp"
+#include "PartialIOSSetupPlayerOptions.hpp"
 #include "PercentageRating.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
@@ -294,18 +297,48 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__AndroidAudioOffloadSettings_(value);
   }
   
-  // pragma MARK: std::optional<AndroidPlayerOptions>
+  // pragma MARK: std::optional<AndroidAudioContentType>
   /**
-   * Specialized version of `std::optional<AndroidPlayerOptions>`.
+   * Specialized version of `std::optional<AndroidAudioContentType>`.
    */
-  using std__optional_AndroidPlayerOptions_ = std::optional<AndroidPlayerOptions>;
-  inline std::optional<AndroidPlayerOptions> create_std__optional_AndroidPlayerOptions_(const AndroidPlayerOptions& value) noexcept {
-    return std::optional<AndroidPlayerOptions>(value);
+  using std__optional_AndroidAudioContentType_ = std::optional<AndroidAudioContentType>;
+  inline std::optional<AndroidAudioContentType> create_std__optional_AndroidAudioContentType_(const AndroidAudioContentType& value) noexcept {
+    return std::optional<AndroidAudioContentType>(value);
   }
-  inline bool has_value_std__optional_AndroidPlayerOptions_(const std::optional<AndroidPlayerOptions>& optional) noexcept {
+  inline bool has_value_std__optional_AndroidAudioContentType_(const std::optional<AndroidAudioContentType>& optional) noexcept {
     return optional.has_value();
   }
-  inline AndroidPlayerOptions get_std__optional_AndroidPlayerOptions_(const std::optional<AndroidPlayerOptions>& optional) noexcept {
+  inline AndroidAudioContentType get_std__optional_AndroidAudioContentType_(const std::optional<AndroidAudioContentType>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<AndroidPlayerWakeMode>
+  /**
+   * Specialized version of `std::optional<AndroidPlayerWakeMode>`.
+   */
+  using std__optional_AndroidPlayerWakeMode_ = std::optional<AndroidPlayerWakeMode>;
+  inline std::optional<AndroidPlayerWakeMode> create_std__optional_AndroidPlayerWakeMode_(const AndroidPlayerWakeMode& value) noexcept {
+    return std::optional<AndroidPlayerWakeMode>(value);
+  }
+  inline bool has_value_std__optional_AndroidPlayerWakeMode_(const std::optional<AndroidPlayerWakeMode>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline AndroidPlayerWakeMode get_std__optional_AndroidPlayerWakeMode_(const std::optional<AndroidPlayerWakeMode>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<PartialAndroidSetupPlayerOptions>
+  /**
+   * Specialized version of `std::optional<PartialAndroidSetupPlayerOptions>`.
+   */
+  using std__optional_PartialAndroidSetupPlayerOptions_ = std::optional<PartialAndroidSetupPlayerOptions>;
+  inline std::optional<PartialAndroidSetupPlayerOptions> create_std__optional_PartialAndroidSetupPlayerOptions_(const PartialAndroidSetupPlayerOptions& value) noexcept {
+    return std::optional<PartialAndroidSetupPlayerOptions>(value);
+  }
+  inline bool has_value_std__optional_PartialAndroidSetupPlayerOptions_(const std::optional<PartialAndroidSetupPlayerOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PartialAndroidSetupPlayerOptions get_std__optional_PartialAndroidSetupPlayerOptions_(const std::optional<PartialAndroidSetupPlayerOptions>& optional) noexcept {
     return *optional;
   }
   
@@ -381,18 +414,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<IOSPlayerOptions>
+  // pragma MARK: std::optional<PartialIOSSetupPlayerOptions>
   /**
-   * Specialized version of `std::optional<IOSPlayerOptions>`.
+   * Specialized version of `std::optional<PartialIOSSetupPlayerOptions>`.
    */
-  using std__optional_IOSPlayerOptions_ = std::optional<IOSPlayerOptions>;
-  inline std::optional<IOSPlayerOptions> create_std__optional_IOSPlayerOptions_(const IOSPlayerOptions& value) noexcept {
-    return std::optional<IOSPlayerOptions>(value);
+  using std__optional_PartialIOSSetupPlayerOptions_ = std::optional<PartialIOSSetupPlayerOptions>;
+  inline std::optional<PartialIOSSetupPlayerOptions> create_std__optional_PartialIOSSetupPlayerOptions_(const PartialIOSSetupPlayerOptions& value) noexcept {
+    return std::optional<PartialIOSSetupPlayerOptions>(value);
   }
-  inline bool has_value_std__optional_IOSPlayerOptions_(const std::optional<IOSPlayerOptions>& optional) noexcept {
+  inline bool has_value_std__optional_PartialIOSSetupPlayerOptions_(const std::optional<PartialIOSSetupPlayerOptions>& optional) noexcept {
     return optional.has_value();
   }
-  inline IOSPlayerOptions get_std__optional_IOSPlayerOptions_(const std::optional<IOSPlayerOptions>& optional) noexcept {
+  inline PartialIOSSetupPlayerOptions get_std__optional_PartialIOSSetupPlayerOptions_(const std::optional<PartialIOSSetupPlayerOptions>& optional) noexcept {
     return *optional;
   }
   

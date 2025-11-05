@@ -17,6 +17,8 @@ public extension RatingType {
    */
   init?(fromString string: String) {
     switch string {
+      case "none":
+        self = .none
       case "heart":
         self = .heart
       case "thumbs-up-down":
@@ -29,8 +31,6 @@ public extension RatingType {
         self = .5Stars
       case "percentage":
         self = .percentage
-      case "none":
-        self = .none
       default:
         return nil
     }
@@ -41,6 +41,8 @@ public extension RatingType {
    */
   var stringValue: String {
     switch self {
+      case .none:
+        return "none"
       case .heart:
         return "heart"
       case .thumbsUpDown:
@@ -53,8 +55,6 @@ public extension RatingType {
         return "5-stars"
       case .percentage:
         return "percentage"
-      case .none:
-        return "none"
     }
   }
 }

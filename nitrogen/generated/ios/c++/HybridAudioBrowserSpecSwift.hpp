@@ -80,16 +80,18 @@ namespace margelo::nitro::audiobrowser { enum class Capability; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
-// Forward declaration of `PlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
-// Forward declaration of `AndroidPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidPlayerOptions; }
+// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
+// Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
 // Forward declaration of `AndroidAudioContentType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
-// Forward declaration of `IOSPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IOSPlayerOptions; }
+// Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
+// Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 // Forward declaration of `IOSCategory` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -98,8 +100,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
-// Forward declaration of `NitroUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NitroUpdateOptions; }
+// Forward declaration of `NativeUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NullSentinel` to properly resolve imports.
@@ -153,16 +155,17 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include <NitroModules/Promise.hpp>
-#include "PlayerOptions.hpp"
-#include "AndroidPlayerOptions.hpp"
+#include "PartialSetupPlayerOptions.hpp"
+#include "PartialAndroidSetupPlayerOptions.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidAudioContentType.hpp"
-#include "IOSPlayerOptions.hpp"
+#include "AndroidPlayerWakeMode.hpp"
+#include "PartialIOSSetupPlayerOptions.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
-#include "NitroUpdateOptions.hpp"
+#include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NullSentinel.hpp"
 #include "IOSUpdateOptions.hpp"
@@ -511,7 +514,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Methods
-    inline std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) override {
+    inline std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override {
       auto __result = _swiftPart.setupPlayer(std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
@@ -519,7 +522,7 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void updateOptions(const NitroUpdateOptions& options) override {
+    inline void updateOptions(const NativeUpdateOptions& options) override {
       auto __result = _swiftPart.updateOptions(std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
@@ -754,18 +757,6 @@ namespace margelo::nitro::audiobrowser {
       }
       auto __value = std::move(__result.value());
       return __value;
-    }
-    inline void acquireWakeLock() override {
-      auto __result = _swiftPart.acquireWakeLock();
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-    }
-    inline void abandonWakeLock() override {
-      auto __result = _swiftPart.abandonWakeLock();
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
     }
 
   private:

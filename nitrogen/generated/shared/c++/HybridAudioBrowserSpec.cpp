@@ -136,8 +136,6 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getTrack", &HybridAudioBrowserSpec::getTrack);
       prototype.registerHybridMethod("getActiveTrackIndex", &HybridAudioBrowserSpec::getActiveTrackIndex);
       prototype.registerHybridMethod("getActiveTrack", &HybridAudioBrowserSpec::getActiveTrack);
-      prototype.registerHybridMethod("acquireWakeLock", &HybridAudioBrowserSpec::acquireWakeLock);
-      prototype.registerHybridMethod("abandonWakeLock", &HybridAudioBrowserSpec::abandonWakeLock);
     });
   }
 

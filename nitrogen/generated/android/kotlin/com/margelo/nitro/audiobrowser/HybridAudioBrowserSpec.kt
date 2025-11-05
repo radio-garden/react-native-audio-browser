@@ -642,11 +642,11 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   // Methods
   @DoNotStrip
   @Keep
-  abstract fun setupPlayer(options: PlayerOptions): Promise<Unit>
+  abstract fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit>
   
   @DoNotStrip
   @Keep
-  abstract fun updateOptions(options: NitroUpdateOptions): Unit
+  abstract fun updateOptions(options: NativeUpdateOptions): Unit
   
   @DoNotStrip
   @Keep
@@ -783,14 +783,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getActiveTrack(): Track?
-  
-  @DoNotStrip
-  @Keep
-  abstract fun acquireWakeLock(): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun abandonWakeLock(): Unit
 
   private external fun initHybrid(): HybridData
 

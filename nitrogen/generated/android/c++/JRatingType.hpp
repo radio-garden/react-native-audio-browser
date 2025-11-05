@@ -41,15 +41,17 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::alias_ref<JRatingType> fromCpp(RatingType value) {
       static const auto clazz = javaClassStatic();
+      static const auto fieldNONE = clazz->getStaticField<JRatingType>("NONE");
       static const auto fieldHEART = clazz->getStaticField<JRatingType>("HEART");
       static const auto fieldTHUMBS_UP_DOWN = clazz->getStaticField<JRatingType>("THUMBS_UP_DOWN");
       static const auto field_3_STARS = clazz->getStaticField<JRatingType>("_3_STARS");
       static const auto field_4_STARS = clazz->getStaticField<JRatingType>("_4_STARS");
       static const auto field_5_STARS = clazz->getStaticField<JRatingType>("_5_STARS");
       static const auto fieldPERCENTAGE = clazz->getStaticField<JRatingType>("PERCENTAGE");
-      static const auto fieldNONE = clazz->getStaticField<JRatingType>("NONE");
       
       switch (value) {
+        case RatingType::NONE:
+          return clazz->getStaticFieldValue(fieldNONE);
         case RatingType::HEART:
           return clazz->getStaticFieldValue(fieldHEART);
         case RatingType::THUMBS_UP_DOWN:
@@ -62,8 +64,6 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(field_5_STARS);
         case RatingType::PERCENTAGE:
           return clazz->getStaticFieldValue(fieldPERCENTAGE);
-        case RatingType::NONE:
-          return clazz->getStaticFieldValue(fieldNONE);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

@@ -56,8 +56,8 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var handleRemoteStop: (() -> Void)? { get set }
 
   // Methods
-  func setupPlayer(options: PlayerOptions) throws -> Promise<Void>
-  func updateOptions(options: NitroUpdateOptions) throws -> Void
+  func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
+  func updateOptions(options: NativeUpdateOptions) throws -> Void
   func getOptions() throws -> UpdateOptions
   func load(track: Track) throws -> Void
   func reset() throws -> Void
@@ -92,8 +92,6 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
-  func acquireWakeLock() throws -> Void
-  func abandonWakeLock() throws -> Void
 }
 
 /// See ``HybridAudioBrowserSpec``

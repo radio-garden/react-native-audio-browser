@@ -1120,7 +1120,7 @@ open class HybridAudioBrowserSpec_cxx {
 
   // Methods
   @inline(__always)
-  public final func setupPlayer(options: PlayerOptions) -> bridge.Result_std__shared_ptr_Promise_void___ {
+  public final func setupPlayer(options: PartialSetupPlayerOptions) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
       let __result = try self.__implementation.setupPlayer(options: options)
       let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
@@ -1139,7 +1139,7 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func updateOptions(options: NitroUpdateOptions) -> bridge.Result_void_ {
+  public final func updateOptions(options: NativeUpdateOptions) -> bridge.Result_void_ {
     do {
       try self.__implementation.updateOptions(options: options)
       return bridge.create_Result_void_()
@@ -1567,28 +1567,6 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__optional_Track__(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func acquireWakeLock() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.acquireWakeLock()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func abandonWakeLock() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.abandonWakeLock()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
 }

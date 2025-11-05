@@ -138,8 +138,8 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Methods
-    std::shared_ptr<Promise<void>> setupPlayer(const PlayerOptions& options) override;
-    void updateOptions(const NitroUpdateOptions& options) override;
+    std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override;
+    void updateOptions(const NativeUpdateOptions& options) override;
     UpdateOptions getOptions() override;
     void load(const Track& track) override;
     void reset() override;
@@ -174,8 +174,6 @@ namespace margelo::nitro::audiobrowser {
     std::optional<Track> getTrack(double index) override;
     std::optional<double> getActiveTrackIndex() override;
     std::optional<Track> getActiveTrack() override;
-    void acquireWakeLock() override;
-    void abandonWakeLock() override;
 
   private:
     friend HybridBase;

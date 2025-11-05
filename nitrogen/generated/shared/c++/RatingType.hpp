@@ -29,13 +29,13 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (RatingType).
    */
   enum class RatingType {
-    HEART      SWIFT_NAME(heart) = 0,
-    THUMBS_UP_DOWN      SWIFT_NAME(thumbsUpDown) = 1,
-    _3_STARS      SWIFT_NAME(3Stars) = 2,
-    _4_STARS      SWIFT_NAME(4Stars) = 3,
-    _5_STARS      SWIFT_NAME(5Stars) = 4,
-    PERCENTAGE      SWIFT_NAME(percentage) = 5,
-    NONE      SWIFT_NAME(none) = 6,
+    NONE      SWIFT_NAME(none) = 0,
+    HEART      SWIFT_NAME(heart) = 1,
+    THUMBS_UP_DOWN      SWIFT_NAME(thumbsUpDown) = 2,
+    _3_STARS      SWIFT_NAME(3Stars) = 3,
+    _4_STARS      SWIFT_NAME(4Stars) = 4,
+    _5_STARS      SWIFT_NAME(5Stars) = 5,
+    PERCENTAGE      SWIFT_NAME(percentage) = 6,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -48,26 +48,26 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RatingType fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("none"): return margelo::nitro::audiobrowser::RatingType::NONE;
         case hashString("heart"): return margelo::nitro::audiobrowser::RatingType::HEART;
         case hashString("thumbs-up-down"): return margelo::nitro::audiobrowser::RatingType::THUMBS_UP_DOWN;
         case hashString("3-stars"): return margelo::nitro::audiobrowser::RatingType::_3_STARS;
         case hashString("4-stars"): return margelo::nitro::audiobrowser::RatingType::_4_STARS;
         case hashString("5-stars"): return margelo::nitro::audiobrowser::RatingType::_5_STARS;
         case hashString("percentage"): return margelo::nitro::audiobrowser::RatingType::PERCENTAGE;
-        case hashString("none"): return margelo::nitro::audiobrowser::RatingType::NONE;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum RatingType - invalid value!");
       }
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::RatingType arg) {
       switch (arg) {
+        case margelo::nitro::audiobrowser::RatingType::NONE: return JSIConverter<std::string>::toJSI(runtime, "none");
         case margelo::nitro::audiobrowser::RatingType::HEART: return JSIConverter<std::string>::toJSI(runtime, "heart");
         case margelo::nitro::audiobrowser::RatingType::THUMBS_UP_DOWN: return JSIConverter<std::string>::toJSI(runtime, "thumbs-up-down");
         case margelo::nitro::audiobrowser::RatingType::_3_STARS: return JSIConverter<std::string>::toJSI(runtime, "3-stars");
         case margelo::nitro::audiobrowser::RatingType::_4_STARS: return JSIConverter<std::string>::toJSI(runtime, "4-stars");
         case margelo::nitro::audiobrowser::RatingType::_5_STARS: return JSIConverter<std::string>::toJSI(runtime, "5-stars");
         case margelo::nitro::audiobrowser::RatingType::PERCENTAGE: return JSIConverter<std::string>::toJSI(runtime, "percentage");
-        case margelo::nitro::audiobrowser::RatingType::NONE: return JSIConverter<std::string>::toJSI(runtime, "none");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert RatingType to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -79,13 +79,13 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("none"):
         case hashString("heart"):
         case hashString("thumbs-up-down"):
         case hashString("3-stars"):
         case hashString("4-stars"):
         case hashString("5-stars"):
         case hashString("percentage"):
-        case hashString("none"):
           return true;
         default:
           return false;
