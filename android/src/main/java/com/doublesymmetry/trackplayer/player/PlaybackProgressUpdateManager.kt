@@ -4,7 +4,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.margelo.nitro.audiobrowser.State
+import com.margelo.nitro.audiobrowser.PlaybackState
 
 class PlaybackProgressUpdateManager(private val onProgressUpdate: () -> Unit) {
   private val scope = MainScope()
@@ -38,18 +38,18 @@ class PlaybackProgressUpdateManager(private val onProgressUpdate: () -> Unit) {
     job = null
   }
 
-  fun onPlaybackStateChanged(state: State) {
+  fun onPlaybackStateChanged(state: PlaybackState) {
     when (state) {
       // Start when playback is set to resume (loading, buffering) or playing
-      State.LOADING,
-      State.BUFFERING,
-      State.PLAYING -> start()
+      PlaybackState.LOADING,
+      PlaybackState.BUFFERING,
+      PlaybackState.PLAYING -> start()
 
       // Stop when playback pauses, stops, or errors
-      State.PAUSED,
-      State.STOPPED,
-      State.ENDED,
-      State.ERROR -> stop()
+      PlaybackState.PAUSED,
+      PlaybackState.STOPPED,
+      PlaybackState.ENDED,
+      PlaybackState.ERROR -> stop()
 
       // No action for READY, IDLE, NONE
       else -> {}

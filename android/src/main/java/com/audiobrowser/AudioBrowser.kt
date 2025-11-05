@@ -25,7 +25,6 @@ import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlayerOptions
 import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.Progress
-import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackErrorEvent
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
@@ -56,6 +55,7 @@ import com.margelo.nitro.audiobrowser.RemoteSkipEvent
 import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.NitroUpdateOptions
+import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
 import com.margelo.nitro.audiobrowser.UpdateOptions
 
@@ -64,6 +64,7 @@ import com.margelo.nitro.audiobrowser.UpdateOptions
 class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     private lateinit var browser: MediaBrowser
+    private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
     private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
     private var setupOptions = PlayerSetupOptions()
     private val mainScope = MainScope()
@@ -72,12 +73,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
     // MARK: callbacks
-    override var onPlaybackStateChanged: (data: PlaybackState) -> Unit = { }
+    override var onPlaybackChanged: (data: Playback) -> Unit = { }
     override var onRemoteBookmark: () -> Unit = { }
     override var onRemoteDislike: () -> Unit = { }
-    override var onRemoteJumpBackward: (com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent) -> Unit =
+    override var onRemoteJumpBackward: (RemoteJumpBackwardEvent) -> Unit =
         { }
-    override var onRemoteJumpForward: (com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent) -> Unit =
+    override var onRemoteJumpForward: (RemoteJumpForwardEvent) -> Unit =
         { }
     override var onRemoteLike: () -> Unit = { }
     override var onRemoteNext: () -> Unit = { }
@@ -99,8 +100,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     override var onRemotePlayId: (RemotePlayIdEvent) -> Unit = { }
     override var onRemotePlaySearch: (RemotePlaySearchEvent) -> Unit = { }
     override var onRemotePrevious: () -> Unit = { }
-    override var onRemoteSeek: (com.margelo.nitro.audiobrowser.RemoteSeekEvent) -> Unit = { }
-    override var onRemoteSetRating: (com.margelo.nitro.audiobrowser.RemoteSetRatingEvent) -> Unit =
+    override var onRemoteSeek: (RemoteSeekEvent) -> Unit = { }
+    override var onRemoteSetRating: (RemoteSetRatingEvent) -> Unit =
         { }
     override var onRemoteSkip: (RemoteSkipEvent) -> Unit = { }
     override var onRemoteStop: () -> Unit = { }
@@ -109,9 +110,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // MARK: handlers
     override var handleRemoteBookmark: (() -> Unit)? = null
     override var handleRemoteDislike: (() -> Unit)? = null
-    override var handleRemoteJumpBackward: ((com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent) -> Unit)? =
+    override var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Unit)? =
         null
-    override var handleRemoteJumpForward: ((com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent) -> Unit)? =
+    override var handleRemoteJumpForward: ((RemoteJumpForwardEvent) -> Unit)? =
         null
     override var handleRemoteLike: (() -> Unit)? = null
     override var handleRemoteNext: (() -> Unit)? = null
@@ -120,9 +121,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     override var handleRemotePlayId: ((RemotePlayIdEvent) -> Unit)? = null
     override var handleRemotePlaySearch: ((RemotePlaySearchEvent) -> Unit)? = null
     override var handleRemotePrevious: (() -> Unit)? = null
-    override var handleRemoteSeek: ((com.margelo.nitro.audiobrowser.RemoteSeekEvent) -> Unit)? =
+    override var handleRemoteSeek: ((RemoteSeekEvent) -> Unit)? =
         null
-    override var handleRemoteSetRating: ((com.margelo.nitro.audiobrowser.RemoteSetRatingEvent) -> Unit)? =
+    override var handleRemoteSetRating: ((RemoteSetRatingEvent) -> Unit)? =
         null
     override var handleRemoteSkip: (() -> Unit)? = null
     override var handleRemoteStop: (() -> Unit)? = null
@@ -175,10 +176,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
 
     override fun updateOptions(options: NitroUpdateOptions) {
-        val currentOptions = player.getOptions()
-        val updatedOptions = currentOptions.copy()
-        updatedOptions.updateFromBridge(options)
-        player.applyOptions(updatedOptions)
+        updateOptions.updateFromBridge(options)
+        // Only update the options if the service is around
+        connectedService?.let {
+            player.applyOptions(updateOptions)
+        }
     }
 
     override fun getOptions(): UpdateOptions {
@@ -253,8 +255,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         )
     }
 
-    override fun getPlaybackState(): PlaybackState = runBlockingOnMain {
-        player.getPlaybackState()
+    override fun getPlayback(): Playback = runBlockingOnMain {
+        player.getPlayback()
     }
 
     override fun getPlayingState(): PlayingState = runBlockingOnMain {
@@ -359,6 +361,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         launchInScope {
             connectedService = (serviceBinder as TrackPlayerService.LocalBinder).service.apply {
                 player.setCallbacks(callbacks)
+                player.applyOptions(updateOptions)
                 player.setup(setupOptions)
             }
 
@@ -395,8 +398,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     val callbacks =
         object : TrackPlayerCallbacks {
-            override fun onPlaybackState(state: PlaybackState) {
-                this@AudioBrowser.onPlaybackStateChanged(state)
+            override fun onPlaybackChanged(playback: Playback) {
+                this@AudioBrowser.onPlaybackChanged(playback)
             }
 
             override fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent) {

@@ -4,6 +4,7 @@ import com.doublesymmetry.trackplayer.model.PlaybackMetadata
 import com.doublesymmetry.trackplayer.model.PlayerUpdateOptions
 import com.doublesymmetry.trackplayer.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
@@ -20,7 +21,7 @@ import com.margelo.nitro.audiobrowser.RepeatMode
 /** Callbacks for all player events. */
 interface TrackPlayerCallbacks {
   // Playback state events
-  fun onPlaybackState(state: PlaybackState)
+  fun onPlaybackChanged(playback: Playback)
 
   fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent)
 

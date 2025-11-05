@@ -8,7 +8,7 @@ import androidx.media3.common.Player
 import com.doublesymmetry.trackplayer.TrackPlayer
 import com.doublesymmetry.trackplayer.extension.NumberExt.Companion.toSeconds
 import com.margelo.nitro.audiobrowser.PlaybackError
-import com.margelo.nitro.audiobrowser.State
+import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 
 class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
@@ -66,44 +66,44 @@ class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
         Player.EVENT_PLAYBACK_STATE_CHANGED -> {
           val state =
             when (player.playbackState) {
-              Player.STATE_BUFFERING -> State.BUFFERING
-              Player.STATE_READY -> State.READY
+              Player.STATE_BUFFERING -> PlaybackState.BUFFERING
+              Player.STATE_READY -> PlaybackState.READY
               Player.STATE_IDLE ->
                 // Avoid transitioning to idle from error or stopped
                 if (
-                  trackPlayer.playerState == State.ERROR || trackPlayer.playerState == State.STOPPED
+                  trackPlayer.playbackState == PlaybackState.ERROR || trackPlayer.playbackState == PlaybackState.STOPPED
                 )
                   null
-                else State.NONE
-              Player.STATE_ENDED -> if (player.mediaItemCount > 0) State.ENDED else State.NONE
+                else PlaybackState.NONE
+              Player.STATE_ENDED -> if (player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
               else -> null // noop
             }
-          if (state != null && state != trackPlayer.playerState) {
+          if (state != null && state != trackPlayer.playbackState) {
             // Clear error when recovering from ERROR state to a successful state
-            if (trackPlayer.playerState == State.ERROR) {
+            if (trackPlayer.playbackState == PlaybackState.ERROR) {
               trackPlayer.playbackError = null
             }
-            trackPlayer.setPlayerState(state)
+            trackPlayer.setPlaybackState(state)
           }
         }
         Player.EVENT_MEDIA_ITEM_TRANSITION -> {
           trackPlayer.playbackError = null
           if (trackPlayer.currentTrack != null) {
-            trackPlayer.setPlayerState(State.LOADING)
+            trackPlayer.setPlaybackState(PlaybackState.LOADING)
             if (trackPlayer.isPlaying) {
-              trackPlayer.setPlayerState(State.READY)
-              trackPlayer.setPlayerState(State.PLAYING)
+              trackPlayer.setPlaybackState(PlaybackState.READY)
+              trackPlayer.setPlaybackState(PlaybackState.PLAYING)
             }
           }
         }
         Player.EVENT_PLAY_WHEN_READY_CHANGED -> {
-          if (!player.playWhenReady && trackPlayer.playerState != State.STOPPED) {
-            trackPlayer.setPlayerState(State.PAUSED)
+          if (!player.playWhenReady && trackPlayer.playbackState != PlaybackState.STOPPED) {
+            trackPlayer.setPlaybackState(PlaybackState.PAUSED)
           }
         }
         Player.EVENT_IS_PLAYING_CHANGED -> {
           if (player.isPlaying) {
-            trackPlayer.setPlayerState(State.PLAYING)
+            trackPlayer.setPlaybackState(PlaybackState.PLAYING)
           }
         }
       }
@@ -121,6 +121,6 @@ class PlayerListener(private val trackPlayer: TrackPlayer) : Player.Listener {
       )
     trackPlayer.onPlaybackError(playbackError)
     trackPlayer.playbackError = playbackError
-    trackPlayer.setPlayerState(State.ERROR)
+    trackPlayer.setPlaybackState(PlaybackState.ERROR)
   }
 }

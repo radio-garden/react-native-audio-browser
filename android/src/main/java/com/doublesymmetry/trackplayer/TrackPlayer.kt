@@ -57,9 +57,9 @@ import com.doublesymmetry.trackplayer.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RatingType
-import com.margelo.nitro.audiobrowser.State
 import com.margelo.nitro.audiobrowser.Track
 import java.util.concurrent.TimeUnit
 import timber.log.Timber
@@ -220,11 +220,11 @@ class TrackPlayer(
   var playbackError: PlaybackError? = null
     internal set
 
-  internal var playerState: State = State.NONE
+  internal var playbackState: PlaybackState = PlaybackState.NONE
     private set
 
-  fun getPlaybackState(): PlaybackState {
-    return PlaybackState(playerState, playbackError)
+  fun getPlayback(): Playback {
+    return Playback(playbackState, playbackError)
   }
 
   fun getPlayingState(): PlayingState {
@@ -268,7 +268,7 @@ class TrackPlayer(
 
   internal fun onPlayWhenReadyChanged(playWhenReady: Boolean, pausedBecauseReachedEnd: Boolean) {
     callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady))
-    val newPlayingState = derivePlayingState(playWhenReady, playerState)
+    val newPlayingState = derivePlayingState(playWhenReady, playbackState)
     if (newPlayingState != playingState) {
       playingState = newPlayingState
       callbacks?.onPlaybackPlayingState(playingState)
@@ -472,7 +472,7 @@ class TrackPlayer(
       // Initial setup - create player listener and emit initial state
       playerListener = PlayerListener(this)
       forwardingPlayer.addListener(playerListener)
-      callbacks?.onPlaybackState(PlaybackState(State.NONE, null))
+      callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
     } else {
       // Re-setup - re-add listener and update MediaSession
       forwardingPlayer.addListener(playerListener)
@@ -483,7 +483,7 @@ class TrackPlayer(
         mediaSession.player = forwardingPlayer
       }
 
-      setPlayerState(State.NONE)
+      setPlaybackState(PlaybackState.NONE)
     }
   }
 
@@ -664,7 +664,7 @@ class TrackPlayer(
    * required for playback.
    */
   fun stop() {
-    playerState = State.STOPPED
+    playbackState = PlaybackState.STOPPED
     exoPlayer.playWhenReady = false
     exoPlayer.stop()
   }
@@ -705,24 +705,24 @@ class TrackPlayer(
    *
    * @param state The new player state to set
    */
-  internal fun setPlayerState(state: State) {
-    if (state != playerState) {
-      val oldState = playerState
-      playerState = state
+  internal fun setPlaybackState(state: PlaybackState) {
+    if (state != playbackState) {
+      val oldState = playbackState
+      playbackState = state
 
       // Clear error when transitioning away from error state
-      if (oldState == State.ERROR) {
+      if (oldState == PlaybackState.ERROR) {
         playbackError = null
         callbacks?.onPlaybackError(null)
       }
 
-      val playbackState = PlaybackState(state, playbackError)
-      callbacks?.onPlaybackState(playbackState)
+      val playbackState = Playback(state, playbackError)
+      callbacks?.onPlaybackChanged(playbackState)
 
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state
       // changes
-      if (state == State.ENDED && isLastTrack) {
+      if (state == PlaybackState.ENDED && isLastTrack) {
         currentIndex?.let { index ->
           val event = PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
@@ -1118,9 +1118,9 @@ class TrackPlayer(
    * @param state The current player state
    * @return A PlayingState representing the current playing/buffering status
    */
-  private fun derivePlayingState(playWhenReady: Boolean, state: State): PlayingState {
-    val playing = playWhenReady && !(state == State.ERROR || state == State.ENDED || state == State.NONE)
-    val buffering = playWhenReady && (state == State.LOADING || state == State.BUFFERING)
+  private fun derivePlayingState(playWhenReady: Boolean, state: PlaybackState): PlayingState {
+    val playing = playWhenReady && !(state == PlaybackState.ERROR || state == PlaybackState.ENDED || state == PlaybackState.NONE)
+    val buffering = playWhenReady && (state == PlaybackState.LOADING || state == PlaybackState.BUFFERING)
     return PlayingState(playing, buffering)
   }
 }
