@@ -379,23 +379,6 @@ class Player(
       exoPlayer.skipSilenceEnabled = value
     }
 
-  fun setAudioOffload(options: AudioOffloadOptions) {
-    val audioOffloadPreferences =
-      TrackSelectionParameters.AudioOffloadPreferences.Builder()
-        .setAudioOffloadMode(
-          TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
-        )
-        .setIsGaplessSupportRequired(options.gaplessSupportRequired)
-        .setIsSpeedChangeSupportRequired(options.rateChangeSupportRequired)
-        .build()
-    exoPlayer.trackSelectionParameters =
-      exoPlayer.trackSelectionParameters
-        .buildUpon()
-        .setAudioOffloadPreferences(audioOffloadPreferences)
-        .build()
-  }
-
-
   /**
    * Sets up or recreates the ExoPlayer with the provided setup options.
    * This method can be called multiple times to change setup options.
@@ -460,7 +443,17 @@ class Player(
     exoPlayer.setAudioAttributes(audioAttributes, true)
 
     // Apply setup-specific options
-    setupOptions.audioOffload?.let { setAudioOffload(it) }
+    setupOptions.audioOffload?.let {
+      val audioOffloadPreferences =
+        TrackSelectionParameters.AudioOffloadPreferences.Builder()
+          .setAudioOffloadMode(
+            TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+          )
+          .setIsGaplessSupportRequired(it.gaplessSupportRequired)
+          .setIsSpeedChangeSupportRequired(it.rateChangeSupportRequired)
+          .build()
+        exoPlayer.trackSelectionParameters.audioOffloadPreferences = audioOffloadPreferences
+    }
 
     // Recreate forwarding player with new ExoPlayer
     forwardingPlayer = InterceptingPlayer(exoPlayer)
