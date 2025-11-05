@@ -431,7 +431,7 @@ class Player(
       val playBuffer = setupOptions.playBuffer.toInt()
       val defaultRebufferMultiplier = 2; // DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS / DEFAULT_BUFFER_FOR_PLAYBACK_MS
       val playAfterRebuffer =
-        setupOptions.rebufferBuffer?.toInt() ?: (playBuffer * defaultMultiplier)
+        setupOptions.rebufferBuffer?.toInt() ?: (playBuffer * defaultRebufferMultiplier)
       val backBuffer =
         setupOptions.backBuffer.toInt()
       DefaultLoadControl.Builder()
