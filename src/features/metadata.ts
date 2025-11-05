@@ -1,6 +1,5 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
 import { LazyEmitter } from '../utils/LazyEmitter'
-import resolveAssetSource from '../utils/resolveAssetSource'
 import type { Rating } from './rating'
 
 // MARK: - Types
@@ -89,52 +88,6 @@ export interface AudioCommonMetadataReceivedEvent {
  */
 export interface AudioMetadataReceivedEvent {
   metadata: AudioMetadata[]
-}
-
-// MARK: - Helpers
-
-function resolveImportedAssetOrPath(pathOrAsset: string | number | undefined) {
-  return pathOrAsset === undefined
-    ? undefined
-    : typeof pathOrAsset === 'string'
-      ? pathOrAsset
-      : resolveImportedAsset(pathOrAsset)
-}
-
-function resolveImportedAsset(id?: number) {
-  return id
-    ? ((resolveAssetSource(id) as { uri: string } | null) ?? undefined)
-    : undefined
-}
-
-// MARK: - Metadata Updates
-
-/**
- * Updates the metadata of a track in the queue. If the current track is updated,
- * the notification and the Now Playing Center will be updated accordingly.
- *
- * @param trackIndex - The index of the track whose metadata will be updated.
- * @param metadata - The metadata to update.
- */
-export function updateMetadataForTrack(
-  trackIndex: number,
-  metadata: TrackMetadataBase
-): void {
-  TrackPlayer.updateMetadataForTrack(trackIndex, {
-    ...metadata,
-    artwork: resolveImportedAssetOrPath(metadata.artwork),
-  })
-}
-
-/**
- * Updates the metadata content of the notification (Android) and the Now Playing Center (iOS)
- * without affecting the data stored for the current track.
- */
-export function updateNowPlayingMetadata(metadata: NowPlayingMetadata): void {
-  TrackPlayer.updateNowPlayingMetadata({
-    ...metadata,
-    artwork: resolveImportedAssetOrPath(metadata.artwork),
-  })
 }
 
 // MARK: - Event Callbacks
