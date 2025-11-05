@@ -20,7 +20,7 @@ import type {
   PlaybackProgressUpdatedEvent,
   Progress,
 } from '../features/progress'
-import type { PlaybackQueueEndedEvent, Track } from '../features/queue'
+import type { PlaybackQueueEndedEvent } from '../features/queue'
 import type {
   RemoteJumpBackwardEvent,
   RemoteJumpForwardEvent,
@@ -31,6 +31,7 @@ import type {
   RemoteSkipEvent,
 } from '../features/remoteControls'
 import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
+import type { Track } from '../types'
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {

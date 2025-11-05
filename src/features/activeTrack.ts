@@ -1,7 +1,7 @@
 import { AudioBrowser } from '../NativeAudioBrowser'
+import type { Track } from '../types'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
-import type { Track } from './queue'
 
 /**
  * Event data for the active track.

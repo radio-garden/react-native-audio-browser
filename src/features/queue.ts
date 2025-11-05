@@ -1,28 +1,8 @@
 import { AudioBrowser as TrackPlayer } from '../NativeAudioBrowser'
+import type { Track } from '../types'
 import { LazyEmitter } from '../utils/LazyEmitter'
-import type { TrackMetadataBase } from './metadata'
 
 // MARK: - Types
-
-export type TrackType = 'default' | 'dash' | 'hls' | 'smoothstreaming'
-
-/**
- * PitchAlgorithm options:
- * - `'linear'`: A high-quality time pitch algorithm that doesn't perform pitch
- *   correction.
- * - `'music'`: A highest-quality time pitch algorithm that's suitable for
- *   music.
- * - `'voice'`: A modest quality time pitch algorithm that's suitable for voice.
- */
-export type PitchAlgorithm = 'linear' | 'music' | 'voice'
-
-export type ResourceObject = number
-
-export interface Track extends TrackMetadataBase {
-  mediaId?: string
-  url?: string
-  isLiveStream?: boolean
-}
 
 /**
  * Event data for when the playback queue has ended.
@@ -31,16 +11,6 @@ export interface PlaybackQueueEndedEvent {
   /** The index of the active track when the playback queue ended. */
   track: number
   /** The playback position in seconds of the active track when the playback queue ended. */
-  position: number
-}
-
-/**
- * Event data for when the queue ends.
- */
-export interface PlaybackQueueEndedEvent {
-  /** The index of the track when the queue ended */
-  track: number
-  /** The position in seconds when the queue ended */
   position: number
 }
 
