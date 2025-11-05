@@ -29,6 +29,8 @@ public extension RatingType {
         self = .5Stars
       case "percentage":
         self = .percentage
+      case "none":
+        self = .none
       default:
         return nil
     }
@@ -51,6 +53,8 @@ public extension RatingType {
         return "5-stars"
       case .percentage:
         return "percentage"
+      case .none:
+        return "none"
     }
   }
 }

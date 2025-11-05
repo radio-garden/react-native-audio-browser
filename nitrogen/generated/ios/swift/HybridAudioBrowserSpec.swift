@@ -22,7 +22,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onPlaybackProgressUpdated: (_ data: PlaybackProgressUpdatedEvent) -> Void { get set }
   var onPlaybackQueueEnded: (_ data: PlaybackQueueEndedEvent) -> Void { get set }
   var onPlaybackRepeatModeChanged: (_ data: RepeatModeChangedEvent) -> Void { get set }
-  var onPlaybackStateChanged: (_ data: PlaybackState) -> Void { get set }
+  var onPlaybackChanged: (_ data: Playback) -> Void { get set }
   var onRemoteBookmark: () -> Void { get set }
   var onRemoteDislike: () -> Void { get set }
   var onRemoteJumpBackward: (_ event: RemoteJumpBackwardEvent) -> Void { get set }
@@ -74,7 +74,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func setRate(rate: Double) throws -> Void
   func getRate() throws -> Double
   func getProgress() throws -> Progress
-  func getPlaybackState() throws -> PlaybackState
+  func getPlayback() throws -> Playback
   func getPlayingState() throws -> PlayingState
   func getRepeatMode() throws -> RepeatMode
   func setRepeatMode(mode: RepeatMode) throws -> Void

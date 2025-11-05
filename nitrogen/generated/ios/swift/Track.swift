@@ -18,33 +18,27 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(mediaId: String?, url: String?, isLiveStream: Bool?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, genre: String?, rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?) {
-    self.init({ () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = mediaId {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__string_ in
+  init(src: String, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?) {
+    self.init(std.string(src), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = isLiveStream {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = title {
+    }(), std.string(title), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = subtitle {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
     }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = album {
+      if let __unwrappedValue = icon {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = artwork {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -55,14 +49,8 @@ public extension Track {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_double_ in
-      if let __unwrappedValue = duration {
-        return bridge.create_std__optional_double_(__unwrappedValue)
-      } else {
-        return .init()
-      }
     }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = artwork {
+      if let __unwrappedValue = album {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -79,47 +67,23 @@ public extension Track {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ in
-      if let __unwrappedValue = rating {
-        return bridge.create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__({ () -> bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ in
-          switch __unwrappedValue {
-            case .first(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            case .second(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            case .third(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            case .fourth(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-          }
-        }().variant)
+    }(), { () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = duration {
+        return bridge.create_std__optional_double_(__unwrappedValue)
       } else {
         return .init()
       }
     }())
   }
 
-  var mediaId: String? {
+  var src: String {
     @inline(__always)
     get {
-      return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__mediaId) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__mediaId)
-          return String(__unwrapped)
-        } else {
-          return nil
-        }
-      }()
+      return String(self.__src)
     }
     @inline(__always)
     set {
-      self.__mediaId = { () -> bridge.std__optional_std__string_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-        } else {
-          return .init()
-        }
-      }()
+      self.__src = std.string(newValue)
     }
   }
   
@@ -147,29 +111,23 @@ public extension Track {
     }
   }
   
-  var isLiveStream: Bool? {
+  var title: String {
     @inline(__always)
     get {
-      return self.__isLiveStream.value
+      return String(self.__title)
     }
     @inline(__always)
     set {
-      self.__isLiveStream = { () -> bridge.std__optional_bool_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_bool_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
+      self.__title = std.string(newValue)
     }
   }
   
-  var title: String? {
+  var subtitle: String? {
     @inline(__always)
     get {
       return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__title) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__title)
+        if bridge.has_value_std__optional_std__string_(self.__subtitle) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__subtitle)
           return String(__unwrapped)
         } else {
           return nil
@@ -178,7 +136,7 @@ public extension Track {
     }
     @inline(__always)
     set {
-      self.__title = { () -> bridge.std__optional_std__string_ in
+      self.__subtitle = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
@@ -188,12 +146,12 @@ public extension Track {
     }
   }
   
-  var album: String? {
+  var icon: String? {
     @inline(__always)
     get {
       return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__album) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__album)
+        if bridge.has_value_std__optional_std__string_(self.__icon) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__icon)
           return String(__unwrapped)
         } else {
           return nil
@@ -202,7 +160,31 @@ public extension Track {
     }
     @inline(__always)
     set {
-      self.__album = { () -> bridge.std__optional_std__string_ in
+      self.__icon = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var artwork: String? {
+    @inline(__always)
+    get {
+      return { () -> String? in
+        if bridge.has_value_std__optional_std__string_(self.__artwork) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__artwork)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__artwork = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
@@ -236,29 +218,12 @@ public extension Track {
     }
   }
   
-  var duration: Double? {
-    @inline(__always)
-    get {
-      return self.__duration.value
-    }
-    @inline(__always)
-    set {
-      self.__duration = { () -> bridge.std__optional_double_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_double_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var artwork: String? {
+  var album: String? {
     @inline(__always)
     get {
       return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__artwork) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__artwork)
+        if bridge.has_value_std__optional_std__string_(self.__album) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__album)
           return String(__unwrapped)
         } else {
           return nil
@@ -267,7 +232,7 @@ public extension Track {
     }
     @inline(__always)
     set {
-      self.__artwork = { () -> bridge.std__optional_std__string_ in
+      self.__album = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
@@ -325,52 +290,16 @@ public extension Track {
     }
   }
   
-  var rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? {
+  var duration: Double? {
     @inline(__always)
     get {
-      return { () -> Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? in
-        if bridge.has_value_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(self.__rating) {
-          let __unwrapped = bridge.get_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(self.__rating)
-          return { () -> Variant_HeartRating_ThumbsRating_StarRating_PercentageRating in
-            let __variant = bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__unwrapped)
-            switch __variant.index() {
-              case 0:
-                let __actual = __variant.get_0()
-                return .first(__actual)
-              case 1:
-                let __actual = __variant.get_1()
-                return .second(__actual)
-              case 2:
-                let __actual = __variant.get_2()
-                return .third(__actual)
-              case 3:
-                let __actual = __variant.get_3()
-                return .fourth(__actual)
-              default:
-                fatalError("Variant can never have index \(__variant.index())!")
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
+      return self.__duration.value
     }
     @inline(__always)
     set {
-      self.__rating = { () -> bridge.std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ in
+      self.__duration = { () -> bridge.std__optional_double_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__({ () -> bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ in
-            switch __unwrappedValue {
-              case .first(let __value):
-                return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-              case .second(let __value):
-                return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-              case .third(let __value):
-                return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-              case .fourth(let __value):
-                return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            }
-          }().variant)
+          return bridge.create_std__optional_double_(__unwrappedValue)
         } else {
           return .init()
         }

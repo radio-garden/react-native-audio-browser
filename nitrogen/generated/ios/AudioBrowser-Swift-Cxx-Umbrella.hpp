@@ -73,7 +73,9 @@ namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
 // Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `Playback` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `PlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerOptions; }
 // Forward declaration of `PlayingState` to properly resolve imports.
@@ -102,8 +104,6 @@ namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `State` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class State; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -137,6 +137,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "NullSentinel.hpp"
 #include "Options.hpp"
 #include "PercentageRating.hpp"
+#include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
@@ -159,7 +160,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "RepeatMode.hpp"
 #include "RepeatModeChangedEvent.hpp"
 #include "StarRating.hpp"
-#include "State.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
 #include "UpdateOptions.hpp"

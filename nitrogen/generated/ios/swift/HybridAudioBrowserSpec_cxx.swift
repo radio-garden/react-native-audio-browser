@@ -315,19 +315,19 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onPlaybackStateChanged: bridge.Func_void_PlaybackState {
+  public final var onPlaybackChanged: bridge.Func_void_Playback {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_PlaybackState in
-        let __closureWrapper = Func_void_PlaybackState(self.__implementation.onPlaybackStateChanged)
-        return bridge.create_Func_void_PlaybackState(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_Playback in
+        let __closureWrapper = Func_void_Playback(self.__implementation.onPlaybackChanged)
+        return bridge.create_Func_void_Playback(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onPlaybackStateChanged = { () -> (PlaybackState) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackState(newValue)
-        return { (__data: PlaybackState) -> Void in
+      self.__implementation.onPlaybackChanged = { () -> (Playback) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_Playback(newValue)
+        return { (__data: Playback) -> Void in
           __wrappedFunction.call(__data)
         }
       }()
@@ -1331,14 +1331,14 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func getPlaybackState() -> bridge.Result_PlaybackState_ {
+  public final func getPlayback() -> bridge.Result_Playback_ {
     do {
-      let __result = try self.__implementation.getPlaybackState()
+      let __result = try self.__implementation.getPlayback()
       let __resultCpp = __result
-      return bridge.create_Result_PlaybackState_(__resultCpp)
+      return bridge.create_Result_Playback_(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_PlaybackState_(__exceptionPtr)
+      return bridge.create_Result_Playback_(__exceptionPtr)
     }
   }
   

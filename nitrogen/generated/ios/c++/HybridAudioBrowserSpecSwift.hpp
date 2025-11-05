@@ -24,14 +24,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
@@ -48,10 +40,10 @@ namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `Playback` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackState; }
-// Forward declaration of `State` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class State; }
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
 // Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
@@ -64,6 +56,14 @@ namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
 // Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
+// Forward declaration of `HeartRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct HeartRating; }
+// Forward declaration of `ThumbsRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `StarRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct StarRating; }
+// Forward declaration of `PercentageRating` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -123,11 +123,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "PlaybackMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "Track.hpp"
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
-#include <variant>
 #include "PlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
@@ -136,14 +131,19 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "PlaybackQueueEndedEvent.hpp"
 #include "RepeatModeChangedEvent.hpp"
 #include "RepeatMode.hpp"
+#include "Playback.hpp"
 #include "PlaybackState.hpp"
-#include "State.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
 #include "RemoteSetRatingEvent.hpp"
+#include "HeartRating.hpp"
+#include "ThumbsRating.hpp"
+#include "StarRating.hpp"
+#include "PercentageRating.hpp"
+#include <variant>
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "AndroidOptions.hpp"
@@ -284,12 +284,12 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) noexcept override {
       _swiftPart.setOnPlaybackRepeatModeChanged(onPlaybackRepeatModeChanged);
     }
-    inline std::function<void(const PlaybackState& /* data */)> getOnPlaybackStateChanged() noexcept override {
-      auto __result = _swiftPart.getOnPlaybackStateChanged();
+    inline std::function<void(const Playback& /* data */)> getOnPlaybackChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackChanged();
       return __result;
     }
-    inline void setOnPlaybackStateChanged(const std::function<void(const PlaybackState& /* data */)>& onPlaybackStateChanged) noexcept override {
-      _swiftPart.setOnPlaybackStateChanged(onPlaybackStateChanged);
+    inline void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) noexcept override {
+      _swiftPart.setOnPlaybackChanged(onPlaybackChanged);
     }
     inline std::function<void()> getOnRemoteBookmark() noexcept override {
       auto __result = _swiftPart.getOnRemoteBookmark();
@@ -631,8 +631,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline PlaybackState getPlaybackState() override {
-      auto __result = _swiftPart.getPlaybackState();
+    inline Playback getPlayback() override {
+      auto __result = _swiftPart.getPlayback();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

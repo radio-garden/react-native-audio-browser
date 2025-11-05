@@ -191,18 +191,18 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPlaybackRepeatModeChanged = value
     }
   
-  abstract var onPlaybackStateChanged: (data: PlaybackState) -> Unit
+  abstract var onPlaybackChanged: (data: Playback) -> Unit
   
-  private var onPlaybackStateChanged_cxx: Func_void_PlaybackState
+  private var onPlaybackChanged_cxx: Func_void_Playback
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_PlaybackState_java(onPlaybackStateChanged)
+      return Func_void_Playback_java(onPlaybackChanged)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onPlaybackStateChanged = value
+      onPlaybackChanged = value
     }
   
   abstract var onRemoteBookmark: () -> Unit
@@ -714,7 +714,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getPlaybackState(): PlaybackState
+  abstract fun getPlayback(): Playback
   
   @DoNotStrip
   @Keep

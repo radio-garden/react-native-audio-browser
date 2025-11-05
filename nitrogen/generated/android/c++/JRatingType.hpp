@@ -47,6 +47,7 @@ namespace margelo::nitro::audiobrowser {
       static const auto field_4_STARS = clazz->getStaticField<JRatingType>("_4_STARS");
       static const auto field_5_STARS = clazz->getStaticField<JRatingType>("_5_STARS");
       static const auto fieldPERCENTAGE = clazz->getStaticField<JRatingType>("PERCENTAGE");
+      static const auto fieldNONE = clazz->getStaticField<JRatingType>("NONE");
       
       switch (value) {
         case RatingType::HEART:
@@ -61,6 +62,8 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(field_5_STARS);
         case RatingType::PERCENTAGE:
           return clazz->getStaticFieldValue(fieldPERCENTAGE);
+        case RatingType::NONE:
+          return clazz->getStaticFieldValue(fieldNONE);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

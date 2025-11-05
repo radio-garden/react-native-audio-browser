@@ -17,16 +17,6 @@
 #include "Track.hpp"
 #include "JTrack.hpp"
 #include <string>
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
-#include <variant>
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "JHeartRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JStarRating.hpp"
-#include "JPercentageRating.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

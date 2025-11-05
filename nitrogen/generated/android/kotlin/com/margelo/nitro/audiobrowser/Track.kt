@@ -23,28 +23,28 @@ data class Track
   constructor(
     @DoNotStrip
     @Keep
-    val mediaId: String?,
+    val src: String,
     @DoNotStrip
     @Keep
     val url: String?,
     @DoNotStrip
     @Keep
-    val isLiveStream: Boolean?,
+    val title: String,
     @DoNotStrip
     @Keep
-    val title: String?,
+    val subtitle: String?,
     @DoNotStrip
     @Keep
-    val album: String?,
+    val icon: String?,
+    @DoNotStrip
+    @Keep
+    val artwork: String?,
     @DoNotStrip
     @Keep
     val artist: String?,
     @DoNotStrip
     @Keep
-    val duration: Double?,
-    @DoNotStrip
-    @Keep
-    val artwork: String?,
+    val album: String?,
     @DoNotStrip
     @Keep
     val description: String?,
@@ -53,7 +53,7 @@ data class Track
     val genre: String?,
     @DoNotStrip
     @Keep
-    val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?
+    val duration: Double?
   ) {
   /* main constructor */
 }

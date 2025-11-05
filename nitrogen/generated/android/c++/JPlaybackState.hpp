@@ -10,19 +10,12 @@
 #include <fbjni/fbjni.h>
 #include "PlaybackState.hpp"
 
-#include "JPlaybackError.hpp"
-#include "JState.hpp"
-#include "PlaybackError.hpp"
-#include "State.hpp"
-#include <optional>
-#include <string>
-
 namespace margelo::nitro::audiobrowser {
 
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PlaybackState" and the the Kotlin data class "PlaybackState".
+   * The C++ JNI bridge between the C++ enum "PlaybackState" and the the Kotlin enum "PlaybackState".
    */
   struct JPlaybackState final: public jni::JavaClass<JPlaybackState> {
   public:
@@ -30,32 +23,57 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     /**
-     * Convert this Java/Kotlin-based struct to the C++ struct PlaybackState by copying all values to C++.
+     * Convert this Java/Kotlin-based enum to the C++ enum PlaybackState.
      */
     [[maybe_unused]]
     [[nodiscard]]
     PlaybackState toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldState = clazz->getField<JState>("state");
-      jni::local_ref<JState> state = this->getFieldValue(fieldState);
-      static const auto fieldError = clazz->getField<JPlaybackError>("error");
-      jni::local_ref<JPlaybackError> error = this->getFieldValue(fieldError);
-      return PlaybackState(
-        state->toCpp(),
-        error != nullptr ? std::make_optional(error->toCpp()) : std::nullopt
-      );
+      static const auto fieldOrdinal = clazz->getField<int>("value");
+      int ordinal = this->getFieldValue(fieldOrdinal);
+      return static_cast<PlaybackState>(ordinal);
     }
 
   public:
     /**
-     * Create a Java/Kotlin-based struct by copying all values from the given C++ struct to Java.
+     * Create a Java/Kotlin-based enum with the given C++ enum's value.
      */
     [[maybe_unused]]
-    static jni::local_ref<JPlaybackState::javaobject> fromCpp(const PlaybackState& value) {
-      return newInstance(
-        JState::fromCpp(value.state),
-        value.error.has_value() ? JPlaybackError::fromCpp(value.error.value()) : nullptr
-      );
+    static jni::alias_ref<JPlaybackState> fromCpp(PlaybackState value) {
+      static const auto clazz = javaClassStatic();
+      static const auto fieldNONE = clazz->getStaticField<JPlaybackState>("NONE");
+      static const auto fieldREADY = clazz->getStaticField<JPlaybackState>("READY");
+      static const auto fieldPLAYING = clazz->getStaticField<JPlaybackState>("PLAYING");
+      static const auto fieldPAUSED = clazz->getStaticField<JPlaybackState>("PAUSED");
+      static const auto fieldSTOPPED = clazz->getStaticField<JPlaybackState>("STOPPED");
+      static const auto fieldLOADING = clazz->getStaticField<JPlaybackState>("LOADING");
+      static const auto fieldBUFFERING = clazz->getStaticField<JPlaybackState>("BUFFERING");
+      static const auto fieldERROR = clazz->getStaticField<JPlaybackState>("ERROR");
+      static const auto fieldENDED = clazz->getStaticField<JPlaybackState>("ENDED");
+      
+      switch (value) {
+        case PlaybackState::NONE:
+          return clazz->getStaticFieldValue(fieldNONE);
+        case PlaybackState::READY:
+          return clazz->getStaticFieldValue(fieldREADY);
+        case PlaybackState::PLAYING:
+          return clazz->getStaticFieldValue(fieldPLAYING);
+        case PlaybackState::PAUSED:
+          return clazz->getStaticFieldValue(fieldPAUSED);
+        case PlaybackState::STOPPED:
+          return clazz->getStaticFieldValue(fieldSTOPPED);
+        case PlaybackState::LOADING:
+          return clazz->getStaticFieldValue(fieldLOADING);
+        case PlaybackState::BUFFERING:
+          return clazz->getStaticFieldValue(fieldBUFFERING);
+        case PlaybackState::ERROR:
+          return clazz->getStaticFieldValue(fieldERROR);
+        case PlaybackState::ENDED:
+          return clazz->getStaticFieldValue(fieldENDED);
+        default:
+          std::string stringValue = std::to_string(static_cast<int>(value));
+          throw std::invalid_argument("Invalid enum value (" + stringValue + "!");
+      }
     }
   };
 

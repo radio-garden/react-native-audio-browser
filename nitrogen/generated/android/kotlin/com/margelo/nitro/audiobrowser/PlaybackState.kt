@@ -9,24 +9,20 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
-
 
 /**
- * Represents the JavaScript object/struct "PlaybackState".
+ * Represents the JavaScript enum/union "PlaybackState".
  */
 @DoNotStrip
 @Keep
-data class PlaybackState
-  @DoNotStrip
-  @Keep
-  constructor(
-    @DoNotStrip
-    @Keep
-    val state: State,
-    @DoNotStrip
-    @Keep
-    val error: PlaybackError?
-  ) {
-  /* main constructor */
+enum class PlaybackState(@DoNotStrip @Keep val value: Int) {
+  NONE(0),
+  READY(1),
+  PLAYING(2),
+  PAUSED(3),
+  STOPPED(4),
+  LOADING(5),
+  BUFFERING(6),
+  ERROR(7),
+  ENDED(8);
 }

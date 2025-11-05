@@ -10,18 +10,8 @@
 #include <fbjni/fbjni.h>
 #include "Track.hpp"
 
-#include "HeartRating.hpp"
-#include "JHeartRating.hpp"
-#include "JPercentageRating.hpp"
-#include "JStarRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "PercentageRating.hpp"
-#include "StarRating.hpp"
-#include "ThumbsRating.hpp"
 #include <optional>
 #include <string>
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -42,40 +32,40 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     Track toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldMediaId = clazz->getField<jni::JString>("mediaId");
-      jni::local_ref<jni::JString> mediaId = this->getFieldValue(fieldMediaId);
+      static const auto fieldSrc = clazz->getField<jni::JString>("src");
+      jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
       static const auto fieldUrl = clazz->getField<jni::JString>("url");
       jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
-      static const auto fieldIsLiveStream = clazz->getField<jni::JBoolean>("isLiveStream");
-      jni::local_ref<jni::JBoolean> isLiveStream = this->getFieldValue(fieldIsLiveStream);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
-      static const auto fieldAlbum = clazz->getField<jni::JString>("album");
-      jni::local_ref<jni::JString> album = this->getFieldValue(fieldAlbum);
-      static const auto fieldArtist = clazz->getField<jni::JString>("artist");
-      jni::local_ref<jni::JString> artist = this->getFieldValue(fieldArtist);
-      static const auto fieldDuration = clazz->getField<jni::JDouble>("duration");
-      jni::local_ref<jni::JDouble> duration = this->getFieldValue(fieldDuration);
+      static const auto fieldSubtitle = clazz->getField<jni::JString>("subtitle");
+      jni::local_ref<jni::JString> subtitle = this->getFieldValue(fieldSubtitle);
+      static const auto fieldIcon = clazz->getField<jni::JString>("icon");
+      jni::local_ref<jni::JString> icon = this->getFieldValue(fieldIcon);
       static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
       jni::local_ref<jni::JString> artwork = this->getFieldValue(fieldArtwork);
+      static const auto fieldArtist = clazz->getField<jni::JString>("artist");
+      jni::local_ref<jni::JString> artist = this->getFieldValue(fieldArtist);
+      static const auto fieldAlbum = clazz->getField<jni::JString>("album");
+      jni::local_ref<jni::JString> album = this->getFieldValue(fieldAlbum);
       static const auto fieldDescription = clazz->getField<jni::JString>("description");
       jni::local_ref<jni::JString> description = this->getFieldValue(fieldDescription);
       static const auto fieldGenre = clazz->getField<jni::JString>("genre");
       jni::local_ref<jni::JString> genre = this->getFieldValue(fieldGenre);
-      static const auto fieldRating = clazz->getField<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>("rating");
-      jni::local_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating> rating = this->getFieldValue(fieldRating);
+      static const auto fieldDuration = clazz->getField<jni::JDouble>("duration");
+      jni::local_ref<jni::JDouble> duration = this->getFieldValue(fieldDuration);
       return Track(
-        mediaId != nullptr ? std::make_optional(mediaId->toStdString()) : std::nullopt,
+        src->toStdString(),
         url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
-        isLiveStream != nullptr ? std::make_optional(static_cast<bool>(isLiveStream->value())) : std::nullopt,
-        title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
-        album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
-        artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
-        duration != nullptr ? std::make_optional(duration->value()) : std::nullopt,
+        title->toStdString(),
+        subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
+        icon != nullptr ? std::make_optional(icon->toStdString()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
+        artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
+        album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
         description != nullptr ? std::make_optional(description->toStdString()) : std::nullopt,
         genre != nullptr ? std::make_optional(genre->toStdString()) : std::nullopt,
-        rating != nullptr ? std::make_optional(rating->toCpp()) : std::nullopt
+        duration != nullptr ? std::make_optional(duration->value()) : std::nullopt
       );
     }
 
@@ -86,17 +76,17 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
       return newInstance(
-        value.mediaId.has_value() ? jni::make_jstring(value.mediaId.value()) : nullptr,
+        jni::make_jstring(value.src),
         value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
-        value.isLiveStream.has_value() ? jni::JBoolean::valueOf(value.isLiveStream.value()) : nullptr,
-        value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
-        value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
-        value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
-        value.duration.has_value() ? jni::JDouble::valueOf(value.duration.value()) : nullptr,
+        jni::make_jstring(value.title),
+        value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,
+        value.icon.has_value() ? jni::make_jstring(value.icon.value()) : nullptr,
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
+        value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
+        value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,
         value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr,
-        value.rating.has_value() ? JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating.value()) : nullptr
+        value.duration.has_value() ? jni::JDouble::valueOf(value.duration.value()) : nullptr
       );
     }
   };

@@ -33,8 +33,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
 namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 // Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
-// Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+// Forward declaration of `Playback` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
@@ -77,7 +77,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
 #include "RepeatModeChangedEvent.hpp"
-#include "PlaybackState.hpp"
+#include "Playback.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
@@ -146,8 +146,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) = 0;
       virtual std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() = 0;
       virtual void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) = 0;
-      virtual std::function<void(const PlaybackState& /* data */)> getOnPlaybackStateChanged() = 0;
-      virtual void setOnPlaybackStateChanged(const std::function<void(const PlaybackState& /* data */)>& onPlaybackStateChanged) = 0;
+      virtual std::function<void(const Playback& /* data */)> getOnPlaybackChanged() = 0;
+      virtual void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) = 0;
       virtual std::function<void()> getOnRemoteBookmark() = 0;
       virtual void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) = 0;
       virtual std::function<void()> getOnRemoteDislike() = 0;
@@ -231,7 +231,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void setRate(double rate) = 0;
       virtual double getRate() = 0;
       virtual Progress getProgress() = 0;
-      virtual PlaybackState getPlaybackState() = 0;
+      virtual Playback getPlayback() = 0;
       virtual PlayingState getPlayingState() = 0;
       virtual RepeatMode getRepeatMode() = 0;
       virtual void setRepeatMode(RepeatMode mode) = 0;

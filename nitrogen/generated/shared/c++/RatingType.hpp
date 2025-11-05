@@ -35,6 +35,7 @@ namespace margelo::nitro::audiobrowser {
     _4_STARS      SWIFT_NAME(4Stars) = 3,
     _5_STARS      SWIFT_NAME(5Stars) = 4,
     PERCENTAGE      SWIFT_NAME(percentage) = 5,
+    NONE      SWIFT_NAME(none) = 6,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -53,6 +54,7 @@ namespace margelo::nitro {
         case hashString("4-stars"): return margelo::nitro::audiobrowser::RatingType::_4_STARS;
         case hashString("5-stars"): return margelo::nitro::audiobrowser::RatingType::_5_STARS;
         case hashString("percentage"): return margelo::nitro::audiobrowser::RatingType::PERCENTAGE;
+        case hashString("none"): return margelo::nitro::audiobrowser::RatingType::NONE;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum RatingType - invalid value!");
       }
@@ -65,6 +67,7 @@ namespace margelo::nitro {
         case margelo::nitro::audiobrowser::RatingType::_4_STARS: return JSIConverter<std::string>::toJSI(runtime, "4-stars");
         case margelo::nitro::audiobrowser::RatingType::_5_STARS: return JSIConverter<std::string>::toJSI(runtime, "5-stars");
         case margelo::nitro::audiobrowser::RatingType::PERCENTAGE: return JSIConverter<std::string>::toJSI(runtime, "percentage");
+        case margelo::nitro::audiobrowser::RatingType::NONE: return JSIConverter<std::string>::toJSI(runtime, "none");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert RatingType to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -82,6 +85,7 @@ namespace margelo::nitro {
         case hashString("4-stars"):
         case hashString("5-stars"):
         case hashString("percentage"):
+        case hashString("none"):
           return true;
         default:
           return false;

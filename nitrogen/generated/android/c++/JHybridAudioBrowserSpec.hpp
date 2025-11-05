@@ -71,8 +71,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) override;
     std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() override;
     void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) override;
-    std::function<void(const PlaybackState& /* data */)> getOnPlaybackStateChanged() override;
-    void setOnPlaybackStateChanged(const std::function<void(const PlaybackState& /* data */)>& onPlaybackStateChanged) override;
+    std::function<void(const Playback& /* data */)> getOnPlaybackChanged() override;
+    void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) override;
     std::function<void()> getOnRemoteBookmark() override;
     void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) override;
     std::function<void()> getOnRemoteDislike() override;
@@ -156,7 +156,7 @@ namespace margelo::nitro::audiobrowser {
     void setRate(double rate) override;
     double getRate() override;
     Progress getProgress() override;
-    PlaybackState getPlaybackState() override;
+    Playback getPlayback() override;
     PlayingState getPlayingState() override;
     RepeatMode getRepeatMode() override;
     void setRepeatMode(RepeatMode mode) override;

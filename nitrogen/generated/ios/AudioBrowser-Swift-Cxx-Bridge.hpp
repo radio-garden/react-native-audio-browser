@@ -71,7 +71,9 @@ namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
 // Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackState; }
+namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
+// Forward declaration of `Playback` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `PlayingState` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `Progress` to properly resolve imports.
@@ -98,8 +100,6 @@ namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `State` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class State; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -136,6 +136,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "NullSentinel.hpp"
 #include "Options.hpp"
 #include "PercentageRating.hpp"
+#include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
@@ -157,7 +158,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "RepeatMode.hpp"
 #include "RepeatModeChangedEvent.hpp"
 #include "StarRating.hpp"
-#include "State.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
 #include "UpdateOptions.hpp"
@@ -693,62 +693,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_PlaybackMetadata_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>
-  /**
-   * Wrapper struct for `std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
-   */
-  struct std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ {
-    std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant;
-    std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant): variant(variant) { }
-    operator std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline HeartRating get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline ThumbsRating get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-    inline StarRating get_2() const noexcept {
-      return std::get<2>(variant);
-    }
-    inline PercentageRating get_3() const noexcept {
-      return std::get<3>(variant);
-    }
-  };
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const HeartRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const ThumbsRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const StarRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const PercentageRating& value) noexcept {
-    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
-  }
-  
-  // pragma MARK: std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>
-  /**
-   * Specialized version of `std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>`.
-   */
-  using std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ = std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>;
-  inline std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>& value) noexcept {
-    return std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> get_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>& optional) noexcept {
-    return *optional;
-  }
-  
   // pragma MARK: std::optional<Track>
   /**
    * Specialized version of `std::optional<Track>`.
@@ -933,26 +877,26 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RepeatModeChangedEvent_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::function<void(const PlaybackState& /* data */)>
+  // pragma MARK: std::function<void(const Playback& /* data */)>
   /**
-   * Specialized version of `std::function<void(const PlaybackState&)>`.
+   * Specialized version of `std::function<void(const Playback&)>`.
    */
-  using Func_void_PlaybackState = std::function<void(const PlaybackState& /* data */)>;
+  using Func_void_Playback = std::function<void(const Playback& /* data */)>;
   /**
-   * Wrapper class for a `std::function<void(const PlaybackState& / * data * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const Playback& / * data * /)>`, this can be used from Swift.
    */
-  class Func_void_PlaybackState_Wrapper final {
+  class Func_void_Playback_Wrapper final {
   public:
-    explicit Func_void_PlaybackState_Wrapper(std::function<void(const PlaybackState& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackState& /* data */)>>(std::move(func))) {}
-    inline void call(PlaybackState data) const noexcept {
+    explicit Func_void_Playback_Wrapper(std::function<void(const Playback& /* data */)>&& func): _function(std::make_unique<std::function<void(const Playback& /* data */)>>(std::move(func))) {}
+    inline void call(Playback data) const noexcept {
       _function->operator()(data);
     }
   private:
-    std::unique_ptr<std::function<void(const PlaybackState& /* data */)>> _function;
+    std::unique_ptr<std::function<void(const Playback& /* data */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_PlaybackState create_Func_void_PlaybackState(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_PlaybackState_Wrapper wrap_Func_void_PlaybackState(Func_void_PlaybackState value) noexcept {
-    return Func_void_PlaybackState_Wrapper(std::move(value));
+  Func_void_Playback create_Func_void_Playback(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_Playback_Wrapper wrap_Func_void_Playback(Func_void_Playback value) noexcept {
+    return Func_void_Playback_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::function<void(const RemoteJumpBackwardEvent& /* event */)>
@@ -1063,6 +1007,47 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_RemoteSeekEvent create_Func_void_RemoteSeekEvent(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_RemoteSeekEvent_Wrapper wrap_Func_void_RemoteSeekEvent(Func_void_RemoteSeekEvent value) noexcept {
     return Func_void_RemoteSeekEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>
+  /**
+   * Wrapper struct for `std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ {
+    std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant;
+    std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> variant): variant(variant) { }
+    operator std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline HeartRating get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline ThumbsRating get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+    inline StarRating get_2() const noexcept {
+      return std::get<2>(variant);
+    }
+    inline PercentageRating get_3() const noexcept {
+      return std::get<3>(variant);
+    }
+  };
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const HeartRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const ThumbsRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const StarRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
+  }
+  inline std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(const PercentageRating& value) noexcept {
+    return std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(value);
   }
   
   // pragma MARK: std::function<void(const RemoteSetRatingEvent& /* event */)>
@@ -1355,13 +1340,13 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Result<Progress>::withError(error);
   }
   
-  // pragma MARK: Result<PlaybackState>
-  using Result_PlaybackState_ = Result<PlaybackState>;
-  inline Result_PlaybackState_ create_Result_PlaybackState_(const PlaybackState& value) noexcept {
-    return Result<PlaybackState>::withValue(value);
+  // pragma MARK: Result<Playback>
+  using Result_Playback_ = Result<Playback>;
+  inline Result_Playback_ create_Result_Playback_(const Playback& value) noexcept {
+    return Result<Playback>::withValue(value);
   }
-  inline Result_PlaybackState_ create_Result_PlaybackState_(const std::exception_ptr& error) noexcept {
-    return Result<PlaybackState>::withError(error);
+  inline Result_Playback_ create_Result_Playback_(const std::exception_ptr& error) noexcept {
+    return Result<Playback>::withError(error);
   }
   
   // pragma MARK: Result<PlayingState>

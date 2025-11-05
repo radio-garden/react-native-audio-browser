@@ -5,54 +5,64 @@
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
 
-import NitroModules
-
 /**
- * Represents an instance of `PlaybackState`, backed by a C++ struct.
+ * Represents the JS union `PlaybackState`, backed by a C++ enum.
  */
 public typealias PlaybackState = margelo.nitro.audiobrowser.PlaybackState
 
 public extension PlaybackState {
-  private typealias bridge = margelo.nitro.audiobrowser.bridge.swift
+  /**
+   * Get a PlaybackState for the given String value, or
+   * return `nil` if the given value was invalid/unknown.
+   */
+  init?(fromString string: String) {
+    switch string {
+      case "none":
+        self = .none
+      case "ready":
+        self = .ready
+      case "playing":
+        self = .playing
+      case "paused":
+        self = .paused
+      case "stopped":
+        self = .stopped
+      case "loading":
+        self = .loading
+      case "buffering":
+        self = .buffering
+      case "error":
+        self = .error
+      case "ended":
+        self = .ended
+      default:
+        return nil
+    }
+  }
 
   /**
-   * Create a new instance of `PlaybackState`.
+   * Get the String value this PlaybackState represents.
    */
-  init(state: State, error: PlaybackError?) {
-    self.init(state, { () -> bridge.std__optional_PlaybackError_ in
-      if let __unwrappedValue = error {
-        return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }())
-  }
-
-  var state: State {
-    @inline(__always)
-    get {
-      return self.__state
-    }
-    @inline(__always)
-    set {
-      self.__state = newValue
-    }
-  }
-  
-  var error: PlaybackError? {
-    @inline(__always)
-    get {
-      return self.__error.value
-    }
-    @inline(__always)
-    set {
-      self.__error = { () -> bridge.std__optional_PlaybackError_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
+  var stringValue: String {
+    switch self {
+      case .none:
+        return "none"
+      case .ready:
+        return "ready"
+      case .playing:
+        return "playing"
+      case .paused:
+        return "paused"
+      case .stopped:
+        return "stopped"
+      case .loading:
+        return "loading"
+      case .buffering:
+        return "buffering"
+      case .error:
+        return "error"
+      case .ended:
+        return "ended"
     }
   }
 }

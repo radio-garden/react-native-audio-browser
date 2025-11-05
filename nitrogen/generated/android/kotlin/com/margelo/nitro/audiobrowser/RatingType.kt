@@ -21,5 +21,6 @@ enum class RatingType(@DoNotStrip @Keep val value: Int) {
   _3_STARS(2),
   _4_STARS(3),
   _5_STARS(4),
-  PERCENTAGE(5);
+  PERCENTAGE(5),
+  NONE(6);
 }
