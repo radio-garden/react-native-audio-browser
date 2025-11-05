@@ -35,10 +35,9 @@ object TrackFactory {
 
         return MediaItem.Builder()
             .setMediaId(
-                track.mediaId ?: track.url
-                ?: throw IllegalArgumentException("Track must have either mediaId or url")
+                track.url ?: track.src
             )
-            .setUri(track.url)
+            .setUri(track.src)
             .setMediaMetadata(mediaMetadata)
             .setTag(track)
             .build()
