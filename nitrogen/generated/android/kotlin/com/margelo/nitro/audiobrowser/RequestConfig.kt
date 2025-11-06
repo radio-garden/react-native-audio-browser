@@ -19,6 +19,9 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class RequestConfig(
   @DoNotStrip
   @Keep
+  val method: HttpMethod?,
+  @DoNotStrip
+  @Keep
   val path: String?,
   @DoNotStrip
   @Keep
@@ -28,7 +31,7 @@ data class RequestConfig(
   val headers: Map<String, String>?,
   @DoNotStrip
   @Keep
-  val query: Map<String, Variant_Boolean_String_Double>?,
+  val query: Map<String, String>?,
   @DoNotStrip
   @Keep
   val body: String?,
@@ -49,8 +52,8 @@ data class RequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, Variant_Boolean_String_Double>?, body: String?, contentType: String?, userAgent: String?): RequestConfig {
-      return RequestConfig(path, baseUrl, headers, query, body, contentType, userAgent)
+    private fun fromCpp(method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): RequestConfig {
+      return RequestConfig(method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }
 }

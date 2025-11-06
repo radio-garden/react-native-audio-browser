@@ -9,6 +9,8 @@
 
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -25,10 +27,10 @@ namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 #include "RequestConfig.hpp"
 #include <optional>
 #include "JRequestConfig.hpp"
+#include "HttpMethod.hpp"
+#include "JHttpMethod.hpp"
 #include <string>
 #include <unordered_map>
-#include <variant>
-#include "JVariant_Boolean_String_Double.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
@@ -37,6 +39,7 @@ namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 #include <NitroModules/JPromise.hpp>
 #include "Track.hpp"
 #include <vector>
+#include <variant>
 #include "JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
 #include "JTrack.hpp"

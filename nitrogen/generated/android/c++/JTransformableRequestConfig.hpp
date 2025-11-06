@@ -10,9 +10,10 @@
 #include <fbjni/fbjni.h>
 #include "TransformableRequestConfig.hpp"
 
+#include "HttpMethod.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig.hpp"
+#include "JHttpMethod.hpp"
 #include "JRequestConfig.hpp"
-#include "JVariant_Boolean_String_Double.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/JPromise.hpp>
 #include <NitroModules/Promise.hpp>
@@ -20,7 +21,6 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -43,12 +43,16 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldTransform = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject>("transform");
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject> transform = this->getFieldValue(fieldTransform);
+      static const auto fieldMethod = clazz->getField<JHttpMethod>("method");
+      jni::local_ref<JHttpMethod> method = this->getFieldValue(fieldMethod);
+      static const auto fieldPath = clazz->getField<jni::JString>("path");
+      jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
       static const auto fieldBaseUrl = clazz->getField<jni::JString>("baseUrl");
       jni::local_ref<jni::JString> baseUrl = this->getFieldValue(fieldBaseUrl);
       static const auto fieldHeaders = clazz->getField<jni::JMap<jni::JString, jni::JString>>("headers");
       jni::local_ref<jni::JMap<jni::JString, jni::JString>> headers = this->getFieldValue(fieldHeaders);
-      static const auto fieldQuery = clazz->getField<jni::JMap<jni::JString, JVariant_Boolean_String_Double>>("query");
-      jni::local_ref<jni::JMap<jni::JString, JVariant_Boolean_String_Double>> query = this->getFieldValue(fieldQuery);
+      static const auto fieldQuery = clazz->getField<jni::JMap<jni::JString, jni::JString>>("query");
+      jni::local_ref<jni::JMap<jni::JString, jni::JString>> query = this->getFieldValue(fieldQuery);
       static const auto fieldBody = clazz->getField<jni::JString>("body");
       jni::local_ref<jni::JString> body = this->getFieldValue(fieldBody);
       static const auto fieldContentType = clazz->getField<jni::JString>("contentType");
@@ -67,6 +71,8 @@ namespace margelo::nitro::audiobrowser {
             };
           }
         }()) : std::nullopt,
+        method != nullptr ? std::make_optional(method->toCpp()) : std::nullopt,
+        path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         baseUrl != nullptr ? std::make_optional(baseUrl->toStdString()) : std::nullopt,
         headers != nullptr ? std::make_optional([&]() {
           std::unordered_map<std::string, std::string> __map;
@@ -77,10 +83,10 @@ namespace margelo::nitro::audiobrowser {
           return __map;
         }()) : std::nullopt,
         query != nullptr ? std::make_optional([&]() {
-          std::unordered_map<std::string, std::variant<bool, std::string, double>> __map;
+          std::unordered_map<std::string, std::string> __map;
           __map.reserve(query->size());
           for (const auto& __entry : *query) {
-            __map.emplace(__entry.first->toStdString(), __entry.second->toCpp());
+            __map.emplace(__entry.first->toStdString(), __entry.second->toStdString());
           }
           return __map;
         }()) : std::nullopt,
@@ -96,12 +102,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTransformableRequestConfig::javaobject> fromCpp(const TransformableRequestConfig& value) {
-      using JSignature = JTransformableRequestConfig(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JMap<jni::JString, JVariant_Boolean_String_Double>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JTransformableRequestConfig(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject>, jni::alias_ref<JHttpMethod>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.transform.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_cxx::fromCpp(value.transform.value()) : nullptr,
+        value.method.has_value() ? JHttpMethod::fromCpp(value.method.value()) : nullptr,
+        value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.baseUrl.has_value() ? jni::make_jstring(value.baseUrl.value()) : nullptr,
         value.headers.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
           auto __map = jni::JHashMap<jni::JString, jni::JString>::create(value.headers.value().size());
@@ -110,10 +118,10 @@ namespace margelo::nitro::audiobrowser {
           }
           return __map;
         }() : nullptr,
-        value.query.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, JVariant_Boolean_String_Double>> {
-          auto __map = jni::JHashMap<jni::JString, JVariant_Boolean_String_Double>::create(value.query.value().size());
+        value.query.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
+          auto __map = jni::JHashMap<jni::JString, jni::JString>::create(value.query.value().size());
           for (const auto& __entry : value.query.value()) {
-            __map->put(jni::make_jstring(__entry.first), JVariant_Boolean_String_Double::fromCpp(__entry.second));
+            __map->put(jni::make_jstring(__entry.first), jni::make_jstring(__entry.second));
           }
           return __map;
         }() : nullptr,

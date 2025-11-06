@@ -23,12 +23,13 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 
-
-#include <string>
+#include "HttpMethod.hpp"
 #include <optional>
+#include <string>
 #include <unordered_map>
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -37,17 +38,18 @@ namespace margelo::nitro::audiobrowser {
    */
   struct RequestConfig {
   public:
+    std::optional<HttpMethod> method     SWIFT_PRIVATE;
     std::optional<std::string> path     SWIFT_PRIVATE;
     std::optional<std::string> baseUrl     SWIFT_PRIVATE;
     std::optional<std::unordered_map<std::string, std::string>> headers     SWIFT_PRIVATE;
-    std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>> query     SWIFT_PRIVATE;
+    std::optional<std::unordered_map<std::string, std::string>> query     SWIFT_PRIVATE;
     std::optional<std::string> body     SWIFT_PRIVATE;
     std::optional<std::string> contentType     SWIFT_PRIVATE;
     std::optional<std::string> userAgent     SWIFT_PRIVATE;
 
   public:
     RequestConfig() = default;
-    explicit RequestConfig(std::optional<std::string> path, std::optional<std::string> baseUrl, std::optional<std::unordered_map<std::string, std::string>> headers, std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>> query, std::optional<std::string> body, std::optional<std::string> contentType, std::optional<std::string> userAgent): path(path), baseUrl(baseUrl), headers(headers), query(query), body(body), contentType(contentType), userAgent(userAgent) {}
+    explicit RequestConfig(std::optional<HttpMethod> method, std::optional<std::string> path, std::optional<std::string> baseUrl, std::optional<std::unordered_map<std::string, std::string>> headers, std::optional<std::unordered_map<std::string, std::string>> query, std::optional<std::string> body, std::optional<std::string> contentType, std::optional<std::string> userAgent): method(method), path(path), baseUrl(baseUrl), headers(headers), query(query), body(body), contentType(contentType), userAgent(userAgent) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -60,10 +62,11 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RequestConfig fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::RequestConfig(
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::fromJSI(runtime, obj.getProperty(runtime, "method")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "path")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "baseUrl")),
         JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::fromJSI(runtime, obj.getProperty(runtime, "headers")),
-        JSIConverter<std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>>>::fromJSI(runtime, obj.getProperty(runtime, "query")),
+        JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::fromJSI(runtime, obj.getProperty(runtime, "query")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "body")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "contentType")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "userAgent"))
@@ -71,10 +74,11 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::RequestConfig& arg) {
       jsi::Object obj(runtime);
+      obj.setProperty(runtime, "method", JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::toJSI(runtime, arg.method));
       obj.setProperty(runtime, "path", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.path));
       obj.setProperty(runtime, "baseUrl", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.baseUrl));
       obj.setProperty(runtime, "headers", JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::toJSI(runtime, arg.headers));
-      obj.setProperty(runtime, "query", JSIConverter<std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>>>::toJSI(runtime, arg.query));
+      obj.setProperty(runtime, "query", JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::toJSI(runtime, arg.query));
       obj.setProperty(runtime, "body", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.body));
       obj.setProperty(runtime, "contentType", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.contentType));
       obj.setProperty(runtime, "userAgent", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.userAgent));
@@ -88,10 +92,11 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::canConvert(runtime, obj.getProperty(runtime, "method"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "path"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "baseUrl"))) return false;
       if (!JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::canConvert(runtime, obj.getProperty(runtime, "headers"))) return false;
-      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>>>::canConvert(runtime, obj.getProperty(runtime, "query"))) return false;
+      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::canConvert(runtime, obj.getProperty(runtime, "query"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "body"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "contentType"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "userAgent"))) return false;

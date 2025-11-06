@@ -40,6 +40,8 @@ namespace margelo::nitro::audiobrowser { enum class Capability; }
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `HybridAudioPlayerSpec` to properly resolve imports.
@@ -144,6 +146,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "Capability.hpp"
 #include "FeedbackOptions.hpp"
 #include "HeartRating.hpp"
+#include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "HybridAudioPlayerSpec.hpp"
 #include "IOSCategory.hpp"

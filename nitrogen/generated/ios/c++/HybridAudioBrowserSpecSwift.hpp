@@ -14,6 +14,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -29,14 +31,15 @@ namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 
 #include "RequestConfig.hpp"
 #include <optional>
+#include "HttpMethod.hpp"
 #include <string>
 #include <unordered_map>
-#include <variant>
 #include "TransformableRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
 #include <functional>
 #include "Track.hpp"
 #include <vector>
+#include <variant>
 #include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "BrowserLink.hpp"

@@ -17,20 +17,26 @@ export type RequestConfigTransformer = (
   request: RequestConfig
 ) => Promise<RequestConfig>
 
-export interface BaseRequestConfig {
+export type HttpMethod =
+  | 'GET'
+  | 'POST'
+  | 'PUT'
+  | 'DELETE'
+  | 'PATCH'
+  | 'HEAD'
+  | 'OPTIONS'
+export interface RequestConfig {
+  method?: HttpMethod
+  path?: string
   baseUrl?: string
-  headers?: Record<string, string | undefined>
-  query?: Record<string, string | number | boolean | undefined>
+  headers?: Record<string, string>
+  query?: Record<string, string>
   body?: string
   contentType?: string
   userAgent?: string
 }
 
-export interface RequestConfig extends BaseRequestConfig {
-  path?: string
-}
-
-export interface TransformableRequestConfig extends BaseRequestConfig {
+export interface TransformableRequestConfig extends RequestConfig {
   transform?: RequestConfigTransformer
 }
 

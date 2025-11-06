@@ -12,6 +12,7 @@
     "android:format": "cd example/android && ./gradlew :react-native-audio-browser:format",
     "android:ide": "cd example/android && open -a 'Android Studio' .",
     "android:logs": "react-native log-android",
+    "android:test": "cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "codegen": "nitrogen --logLevel=\"debug\" && node post-script.cjs && yarn run build",

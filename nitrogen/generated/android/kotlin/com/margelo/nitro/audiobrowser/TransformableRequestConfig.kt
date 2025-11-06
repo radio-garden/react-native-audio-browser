@@ -22,13 +22,19 @@ data class TransformableRequestConfig(
   val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig?,
   @DoNotStrip
   @Keep
+  val method: HttpMethod?,
+  @DoNotStrip
+  @Keep
+  val path: String?,
+  @DoNotStrip
+  @Keep
   val baseUrl: String?,
   @DoNotStrip
   @Keep
   val headers: Map<String, String>?,
   @DoNotStrip
   @Keep
-  val query: Map<String, Variant_Boolean_String_Double>?,
+  val query: Map<String, String>?,
   @DoNotStrip
   @Keep
   val body: String?,
@@ -42,8 +48,8 @@ data class TransformableRequestConfig(
   /**
    * Create a new instance of TransformableRequestConfig from Kotlin
    */
-  constructor(transform: ((request: RequestConfig) -> Promise<Promise<RequestConfig>>)?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, Variant_Boolean_String_Double>?, body: String?, contentType: String?, userAgent: String?):
-         this(transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_java(it) }, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(transform: ((request: RequestConfig) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
 
   private companion object {
     /**
@@ -53,8 +59,8 @@ data class TransformableRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, Variant_Boolean_String_Double>?, body: String?, contentType: String?, userAgent: String?): TransformableRequestConfig {
-      return TransformableRequestConfig(transform, baseUrl, headers, query, body, contentType, userAgent)
+    private fun fromCpp(transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): TransformableRequestConfig {
+      return TransformableRequestConfig(transform, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }
 }

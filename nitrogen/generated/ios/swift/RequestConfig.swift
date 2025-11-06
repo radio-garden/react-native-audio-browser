@@ -18,8 +18,14 @@ public extension RequestConfig {
   /**
    * Create a new instance of `RequestConfig`.
    */
-  init(path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, Variant_Bool_String_Double>?, body: String?, contentType: String?, userAgent: String?) {
-    self.init({ () -> bridge.std__optional_std__string_ in
+  init(method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
+    self.init({ () -> bridge.std__optional_HttpMethod_ in
+      if let __unwrappedValue = method {
+        return bridge.create_std__optional_HttpMethod_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
@@ -43,21 +49,12 @@ public extension RequestConfig {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_bool__std__string__double___ in
+    }(), { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
       if let __unwrappedValue = query {
-        return bridge.create_std__optional_std__unordered_map_std__string__std__variant_bool__std__string__double___({ () -> bridge.std__unordered_map_std__string__std__variant_bool__std__string__double__ in
-          var __map = bridge.create_std__unordered_map_std__string__std__variant_bool__std__string__double__(__unwrappedValue.count)
+        return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
+          var __map = bridge.create_std__unordered_map_std__string__std__string_(__unwrappedValue.count)
           for (__k, __v) in __unwrappedValue {
-            bridge.emplace_std__unordered_map_std__string__std__variant_bool__std__string__double__(&__map, std.string(__k), { () -> bridge.std__variant_bool__std__string__double_ in
-              switch __v {
-                case .first(let __value):
-                  return bridge.create_std__variant_bool__std__string__double_(__value)
-                case .second(let __value):
-                  return bridge.create_std__variant_bool__std__string__double_(std.string(__value))
-                case .third(let __value):
-                  return bridge.create_std__variant_bool__std__string__double_(__value)
-              }
-            }().variant)
+            bridge.emplace_std__unordered_map_std__string__std__string_(&__map, std.string(__k), std.string(__v))
           }
           return __map
         }())
@@ -85,6 +82,23 @@ public extension RequestConfig {
     }())
   }
 
+  var method: HttpMethod? {
+    @inline(__always)
+    get {
+      return self.__method.value
+    }
+    @inline(__always)
+    set {
+      self.__method = { () -> bridge.std__optional_HttpMethod_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_HttpMethod_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
   var path: String? {
     @inline(__always)
     get {
@@ -171,33 +185,18 @@ public extension RequestConfig {
     }
   }
   
-  var query: Dictionary<String, Variant_Bool_String_Double>? {
+  var query: Dictionary<String, String>? {
     @inline(__always)
     get {
-      return { () -> Dictionary<String, Variant_Bool_String_Double>? in
-        if bridge.has_value_std__optional_std__unordered_map_std__string__std__variant_bool__std__string__double___(self.__query) {
-          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__variant_bool__std__string__double___(self.__query)
-          return { () -> Dictionary<String, Variant_Bool_String_Double> in
-            var __dictionary = Dictionary<String, Variant_Bool_String_Double>(minimumCapacity: __unwrapped.size())
-            let __keys = bridge.get_std__unordered_map_std__string__std__variant_bool__std__string__double___keys(__unwrapped)
+      return { () -> Dictionary<String, String>? in
+        if bridge.has_value_std__optional_std__unordered_map_std__string__std__string__(self.__query) {
+          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__string__(self.__query)
+          return { () -> Dictionary<String, String> in
+            var __dictionary = Dictionary<String, String>(minimumCapacity: __unwrapped.size())
+            let __keys = bridge.get_std__unordered_map_std__string__std__string__keys(__unwrapped)
             for __key in __keys {
-              let __value = bridge.get_std__unordered_map_std__string__std__variant_bool__std__string__double___value(__unwrapped, __key)
-              __dictionary[String(__key)] = { () -> Variant_Bool_String_Double in
-                let __variant = bridge.std__variant_bool__std__string__double_(__value)
-                switch __variant.index() {
-                  case 0:
-                    let __actual = __variant.get_0()
-                    return .first(__actual)
-                  case 1:
-                    let __actual = __variant.get_1()
-                    return .second(String(__actual))
-                  case 2:
-                    let __actual = __variant.get_2()
-                    return .third(__actual)
-                  default:
-                    fatalError("Variant can never have index \(__variant.index())!")
-                }
-              }()
+              let __value = bridge.get_std__unordered_map_std__string__std__string__value(__unwrapped, __key)
+              __dictionary[String(__key)] = String(__value)
             }
             return __dictionary
           }()
@@ -208,21 +207,12 @@ public extension RequestConfig {
     }
     @inline(__always)
     set {
-      self.__query = { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_bool__std__string__double___ in
+      self.__query = { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__unordered_map_std__string__std__variant_bool__std__string__double___({ () -> bridge.std__unordered_map_std__string__std__variant_bool__std__string__double__ in
-            var __map = bridge.create_std__unordered_map_std__string__std__variant_bool__std__string__double__(__unwrappedValue.count)
+          return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
+            var __map = bridge.create_std__unordered_map_std__string__std__string_(__unwrappedValue.count)
             for (__k, __v) in __unwrappedValue {
-              bridge.emplace_std__unordered_map_std__string__std__variant_bool__std__string__double__(&__map, std.string(__k), { () -> bridge.std__variant_bool__std__string__double_ in
-                switch __v {
-                  case .first(let __value):
-                    return bridge.create_std__variant_bool__std__string__double_(__value)
-                  case .second(let __value):
-                    return bridge.create_std__variant_bool__std__string__double_(std.string(__value))
-                  case .third(let __value):
-                    return bridge.create_std__variant_bool__std__string__double_(__value)
-                }
-              }().variant)
+              bridge.emplace_std__unordered_map_std__string__std__string_(&__map, std.string(__k), std.string(__v))
             }
             return __map
           }())

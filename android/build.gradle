@@ -6,6 +6,7 @@ buildscript {
 
   dependencies {
     classpath "com.android.tools.build:gradle:8.8.0"
+    classpath "org.jetbrains.kotlin:kotlin-serialization:2.2.21"
   }
 }
 
@@ -24,6 +25,7 @@ plugins {
 
 apply plugin: "com.android.library"
 apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply from: '../nitrogen/generated/android/AudioBrowser+autolinking.gradle'
 apply from: "./fix-prefab.gradle"
 
@@ -177,6 +179,19 @@ dependencies {
   implementation "com.google.guava:guava:33.0.0-android"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
+
+  // HTTP client for browser API requests
+  implementation 'com.squareup.okhttp3:okhttp:5.3.0'
+  implementation 'com.squareup.okhttp3:logging-interceptor:5.3.0'
+  
+  // JSON parsing
+  implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+
+  // Testing dependencies
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.mockito:mockito-core:5.8.0'
+  testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+  testImplementation 'org.robolectric:robolectric:4.11.1'
 
   api 'com.jakewharton.timber:timber:5.0.1'
 }

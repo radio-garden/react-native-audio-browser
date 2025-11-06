@@ -34,8 +34,9 @@
 #include "RequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig.hpp"
 #include "JRequestConfig.hpp"
+#include "HttpMethod.hpp"
+#include "JHttpMethod.hpp"
 #include <unordered_map>
-#include "JVariant_Boolean_String_Double.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

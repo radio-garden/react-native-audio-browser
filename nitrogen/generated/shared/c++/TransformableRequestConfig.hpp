@@ -25,14 +25,16 @@
 
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
 #include <functional>
 #include <optional>
+#include "HttpMethod.hpp"
 #include <string>
 #include <unordered_map>
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -42,16 +44,18 @@ namespace margelo::nitro::audiobrowser {
   struct TransformableRequestConfig {
   public:
     std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */)>> transform     SWIFT_PRIVATE;
+    std::optional<HttpMethod> method     SWIFT_PRIVATE;
+    std::optional<std::string> path     SWIFT_PRIVATE;
     std::optional<std::string> baseUrl     SWIFT_PRIVATE;
     std::optional<std::unordered_map<std::string, std::string>> headers     SWIFT_PRIVATE;
-    std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>> query     SWIFT_PRIVATE;
+    std::optional<std::unordered_map<std::string, std::string>> query     SWIFT_PRIVATE;
     std::optional<std::string> body     SWIFT_PRIVATE;
     std::optional<std::string> contentType     SWIFT_PRIVATE;
     std::optional<std::string> userAgent     SWIFT_PRIVATE;
 
   public:
     TransformableRequestConfig() = default;
-    explicit TransformableRequestConfig(std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */)>> transform, std::optional<std::string> baseUrl, std::optional<std::unordered_map<std::string, std::string>> headers, std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>> query, std::optional<std::string> body, std::optional<std::string> contentType, std::optional<std::string> userAgent): transform(transform), baseUrl(baseUrl), headers(headers), query(query), body(body), contentType(contentType), userAgent(userAgent) {}
+    explicit TransformableRequestConfig(std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */)>> transform, std::optional<HttpMethod> method, std::optional<std::string> path, std::optional<std::string> baseUrl, std::optional<std::unordered_map<std::string, std::string>> headers, std::optional<std::unordered_map<std::string, std::string>> query, std::optional<std::string> body, std::optional<std::string> contentType, std::optional<std::string> userAgent): transform(transform), method(method), path(path), baseUrl(baseUrl), headers(headers), query(query), body(body), contentType(contentType), userAgent(userAgent) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -65,9 +69,11 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::TransformableRequestConfig(
         JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::RequestConfig&)>>>::fromJSI(runtime, obj.getProperty(runtime, "transform")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::fromJSI(runtime, obj.getProperty(runtime, "method")),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "path")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "baseUrl")),
         JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::fromJSI(runtime, obj.getProperty(runtime, "headers")),
-        JSIConverter<std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>>>::fromJSI(runtime, obj.getProperty(runtime, "query")),
+        JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::fromJSI(runtime, obj.getProperty(runtime, "query")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "body")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "contentType")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "userAgent"))
@@ -76,9 +82,11 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::TransformableRequestConfig& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "transform", JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::RequestConfig&)>>>::toJSI(runtime, arg.transform));
+      obj.setProperty(runtime, "method", JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::toJSI(runtime, arg.method));
+      obj.setProperty(runtime, "path", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.path));
       obj.setProperty(runtime, "baseUrl", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.baseUrl));
       obj.setProperty(runtime, "headers", JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::toJSI(runtime, arg.headers));
-      obj.setProperty(runtime, "query", JSIConverter<std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>>>::toJSI(runtime, arg.query));
+      obj.setProperty(runtime, "query", JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::toJSI(runtime, arg.query));
       obj.setProperty(runtime, "body", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.body));
       obj.setProperty(runtime, "contentType", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.contentType));
       obj.setProperty(runtime, "userAgent", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.userAgent));
@@ -93,9 +101,11 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::RequestConfig&)>>>::canConvert(runtime, obj.getProperty(runtime, "transform"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::canConvert(runtime, obj.getProperty(runtime, "method"))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "path"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "baseUrl"))) return false;
       if (!JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::canConvert(runtime, obj.getProperty(runtime, "headers"))) return false;
-      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::variant<bool, std::string, double>>>>::canConvert(runtime, obj.getProperty(runtime, "query"))) return false;
+      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::canConvert(runtime, obj.getProperty(runtime, "query"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "body"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "contentType"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "userAgent"))) return false;

@@ -15,11 +15,11 @@
 #include <functional>
 #include <NitroModules/JPromise.hpp>
 #include "JRequestConfig.hpp"
-#include <string>
+#include "HttpMethod.hpp"
 #include <optional>
+#include "JHttpMethod.hpp"
+#include <string>
 #include <unordered_map>
-#include <variant>
-#include "JVariant_Boolean_String_Double.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
