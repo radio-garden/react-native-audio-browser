@@ -17,6 +17,8 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.Promise
 import kotlinx.coroutines.MainScope
 import timber.log.Timber
+import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.browser.BrowserConfig
 
 @Keep
 @DoNotStrip
@@ -25,6 +27,19 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   private val context =
     NitroModules.applicationContext
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
+  
+  private val browserManager = BrowserManager()
+
+  private fun buildConfig(): BrowserConfig {
+    return BrowserConfig(
+      routes = routes,
+      browse = browse,
+      search = search,
+      tabs = tabs,
+      request = request,
+      media = media
+    )
+  }
 
   // Browser API configuration properties
   override var request: RequestConfig? = null
@@ -38,35 +53,18 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   override fun navigate(path: String): Promise<BrowserList> {
     return Promise.async(mainScope) {
       Timber.d("Navigating to path: $path")
-      // TODO: Implement browser navigation logic
-      BrowserList(
-        children = arrayOf(),
-        style = null,
-        playable = null,
-        url = path,
-        title = "Root",
-        subtitle = null,
-        icon = null,
-        artwork = null,
-        artist = null,
-        album = null,
-        description = null,
-        genre = null,
-        duration = null
-      )
+      browserManager.navigate(path, buildConfig())
     }
   }
 
   override fun onSearch(query: String): Promise<Array<Track>> {
     return Promise.async(mainScope) {
       Timber.d("Searching for: $query")
-      // TODO: Implement search logic using configured SearchSource
-      arrayOf<Track>() // Return empty array for now
+      browserManager.search(query, buildConfig())
     }
   }
 
   override fun getCurrentPath(): String {
-    // TODO: Implement current path tracking
-    return "/"
+    return browserManager.getCurrentPath()
   }
 }
