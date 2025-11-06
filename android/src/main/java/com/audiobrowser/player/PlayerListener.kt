@@ -6,19 +6,33 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.audiobrowser.model.PlaybackMetadata
+import com.audiobrowser.util.MetadataAdapter
+import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 
 class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   /** Called when there is metadata associated with the current playback time. */
   override fun onMetadata(metadata: Metadata) {
-    player.onTimedMetadata(metadata)
+    // Parse playback metadata from different formats
+    val playbackMetadata =
+      PlaybackMetadata.Companion.fromId3Metadata(metadata)
+        ?: PlaybackMetadata.Companion.fromIcy(metadata)
+        ?: PlaybackMetadata.Companion.fromVorbisComment(metadata)
+        ?: PlaybackMetadata.Companion.fromQuickTime(metadata)
+
+    playbackMetadata?.let {
+      player.callbacks?.onPlaybackMetadata(it)
+    }
   }
 
   override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-    player.onCommonMetadata(mediaMetadata)
+    player.callbacks?.onMetadataCommonReceived(MetadataAdapter.Companion.audioMetadataFromMediaMetadata(mediaMetadata))
   }
 
   /**
@@ -44,13 +58,29 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     val lastPosition = player.oldPosition.toSeconds()
     // Audio item transition events are not currently exposed to callbacks
     // Emit active track changed event with last track info
-    player.emitActiveTrackChanged(lastPosition)
+    val event =
+        PlaybackActiveTrackChangedEvent(
+            lastIndex = player.lastIndex?.toDouble(),
+            lastTrack = player.lastTrack,
+            lastPosition = lastPosition,
+            index = player.currentIndex?.toDouble(),
+            track = player.currentTrack,
+        )
+    player.callbacks?.onPlaybackActiveTrackChanged(event)
+
+    // Update last track info for next transition
+    player.lastTrack = player.currentTrack
+    player.lastIndex = player.currentIndex
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-    val pausedBecauseReachedEnd = reason == MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM
-    player.onPlayWhenReadyChanged(playWhenReady, pausedBecauseReachedEnd)
+    player.callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady))
+    val newPlayingState = PlayingStateFactory.derive(playWhenReady, player.playbackState)
+    if (newPlayingState != player.playingState) {
+      player.playingState = newPlayingState
+      player.callbacks?.onPlaybackPlayingState(player.playingState)
+    }
   }
 
   /**
@@ -119,7 +149,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           .replace("_", "-"),
         error.message ?: "An unknown error occurred",
       )
-    player.onPlaybackError(playbackError)
+    player.callbacks?.onPlaybackError(playbackError)
     player.playbackError = playbackError
     player.setPlaybackState(PlaybackState.ERROR)
   }

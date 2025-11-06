@@ -2,51 +2,32 @@ package com.audiobrowser.player
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.Metadata
-import androidx.media3.common.Rating
 import androidx.media3.common.TrackSelectionParameters
-import androidx.media3.database.DatabaseProvider
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionError
-import androidx.media3.session.SessionResult
 import com.audiobrowser.Callbacks
-import com.audiobrowser.extension.NumberExt.Companion.toMilliseconds
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
-import com.audiobrowser.model.AudioOffloadOptions
-import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
-import com.audiobrowser.util.MetadataAdapter
-import com.audiobrowser.util.RatingFactory
+import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
-import com.google.common.collect.ImmutableList
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.Playback
-import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
-import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
 import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
@@ -55,12 +36,10 @@ import com.margelo.nitro.audiobrowser.RatingType
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
 import timber.log.Timber
 import java.io.File
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -72,16 +51,16 @@ class Player(
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
   private var options = PlayerUpdateOptions()
-  private var callbacks: Callbacks? = null
+  internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
-  private val commandManager = MediaSessionCommandManager()
+  private val mediaSessionCallback = MediaSessionCallback(this)
 
   // Media browser functionality
-  private val pendingGetItemRequests = ConcurrentHashMap<String, SettableFuture<MediaItem?>>()
-  private val pendingGetChildrenRequests =
+  internal val pendingGetItemRequests = ConcurrentHashMap<String, SettableFuture<MediaItem?>>()
+  internal val pendingGetChildrenRequests =
       ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
-  private val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
-  private var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
+  internal val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
+  internal var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
@@ -215,8 +194,8 @@ class Player(
   val currentTrack: Track?
     get() = exoPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
 
-  private var lastTrack: Track? = null
-  private var lastIndex: Int? = null
+  internal var lastTrack: Track? = null
+  internal var lastIndex: Int? = null
 
   var playbackError: PlaybackError? = null
     internal set
@@ -230,61 +209,6 @@ class Player(
 
   fun getPlayingState(): PlayingState {
     return playingState
-  }
-
-  internal fun emitActiveTrackChanged(lastPosition: Double) {
-    val event =
-        PlaybackActiveTrackChangedEvent(
-            lastIndex = lastIndex?.toDouble(),
-            lastTrack = lastTrack,
-            lastPosition = lastPosition,
-            index = currentIndex?.toDouble(),
-            track = currentTrack,
-        )
-    callbacks?.onPlaybackActiveTrackChanged(event)
-
-    // Update last track info for next transition
-    lastTrack = currentTrack
-    lastIndex = currentIndex
-  }
-
-  internal fun onTimedMetadata(metadata: Metadata) {
-//    callbacks?.onMetadataTimedReceived(metadata)
-//
-    // Parse playback metadata from different formats
-    val playbackMetadata =
-      PlaybackMetadata.Companion.fromId3Metadata(metadata)
-        ?: PlaybackMetadata.Companion.fromIcy(metadata)
-        ?: PlaybackMetadata.Companion.fromVorbisComment(metadata)
-        ?: PlaybackMetadata.Companion.fromQuickTime(metadata)
-
-    playbackMetadata?.let {
-      callbacks?.onPlaybackMetadata(it)
-    }
-  }
-
-  internal fun onCommonMetadata(mediaMetadata: MediaMetadata) {
-      callbacks?.onMetadataCommonReceived(MetadataAdapter.Companion.audioMetadataFromMediaMetadata(mediaMetadata))
-  }
-
-  internal fun onPlayWhenReadyChanged(playWhenReady: Boolean, pausedBecauseReachedEnd: Boolean) {
-    callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady))
-    val newPlayingState = derivePlayingState(playWhenReady, playbackState)
-    if (newPlayingState != playingState) {
-      playingState = newPlayingState
-      callbacks?.onPlaybackPlayingState(playingState)
-    }
-  }
-
-  internal fun onPlaybackError(playbackError: PlaybackError) {
-    callbacks?.onPlaybackError(playbackError)
-  }
-
-  internal fun onSetRating(rating: Rating) {
-    RatingFactory.media3ToBridge(rating)?.let {
-      val event = RemoteSetRatingEvent(it)
-      callbacks?.handleRemoteSetRating(event)
-    }
   }
 
   var playWhenReady: Boolean
@@ -713,7 +637,7 @@ class Player(
       }
 
       progressUpdateManager.onPlaybackStateChanged(state)
-      val newPlayingState = derivePlayingState(playWhenReady, state)
+      val newPlayingState = PlayingStateFactory.derive(playWhenReady, state)
       if (newPlayingState != playingState) {
         playingState = newPlayingState
         callbacks?.onPlaybackPlayingState(playingState)
@@ -790,7 +714,7 @@ class Player(
     }
 
     if (capabilitiesChanged || notificationCapabilitiesChanged) {
-      commandManager.updateMediaSession(
+      mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
         options.notificationCapabilities,
@@ -862,180 +786,9 @@ class Player(
    * @return MediaLibrarySession.Callback instance
    */
   fun getMediaSessionCallback(): MediaLibraryService.MediaLibrarySession.Callback {
-    return MediaSessionCallback()
+    return mediaSessionCallback
   }
 
-  /**
-   * MediaLibrarySession callback that handles all media session interactions.
-   * All logic is handled directly by the AudioBrowser.
-   */
-  private inner class MediaSessionCallback : MediaLibraryService.MediaLibrarySession.Callback {
-    override fun onConnect(
-        session: MediaSession,
-        controller: MediaSession.ControllerInfo,
-    ): MediaSession.ConnectionResult {
-      Timber.Forest.d("MediaSession connect: ${controller.packageName}")
-      return commandManager.buildConnectionResult(session)
-    }
-
-    override fun onCustomCommand(
-        session: MediaSession,
-        controller: MediaSession.ControllerInfo,
-        command: SessionCommand,
-        args: Bundle,
-    ): ListenableFuture<SessionResult> {
-      commandManager.handleCustomCommand(command, this@Player)
-      return super.onCustomCommand(session, controller, command, args)
-    }
-
-    override fun onSetRating(
-        session: MediaSession,
-        controller: MediaSession.ControllerInfo,
-        rating: Rating,
-    ): ListenableFuture<SessionResult> {
-      onSetRating(rating)
-      return super.onSetRating(session, controller, rating)
-    }
-
-    override fun onGetLibraryRoot(
-        session: MediaLibraryService.MediaLibrarySession,
-        browser: MediaSession.ControllerInfo,
-        params: MediaLibraryService.LibraryParams?,
-    ): ListenableFuture<LibraryResult<MediaItem>> {
-      Timber.Forest.d("onGetLibraryRoot: { package: ${browser.packageName} }")
-      return Futures.immediateFuture(
-        LibraryResult.ofItem(
-          MediaItem.Builder()
-            .setMediaId("__ROOT__")
-            .setMediaMetadata(
-              MediaMetadata.Builder()
-                .setTitle("Root")
-                .setIsBrowsable(true)
-                .setIsPlayable(false)
-                .build()
-            )
-            .build(),
-          null
-        )
-      )
-    }
-
-    override fun onGetChildren(
-        session: MediaLibraryService.MediaLibrarySession,
-        browser: MediaSession.ControllerInfo,
-        parentId: String,
-        page: Int,
-        pageSize: Int,
-        params: MediaLibraryService.LibraryParams?,
-    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-      Timber.Forest.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize }")
-      val requestId = UUID.randomUUID().toString()
-      val future = SettableFuture.create<List<MediaItem>>()
-      // Store the future for later resolution
-      pendingGetChildrenRequests[requestId] = future
-      // Emit event to JavaScript via callbacks
-      callbacks?.onGetChildrenRequest(requestId, parentId, page, pageSize)
-      return Futures.transform(
-        future,
-        { items -> LibraryResult.ofItemList(ImmutableList.copyOf(items), null) },
-        MoreExecutors.directExecutor(),
-      )
-    }
-
-    override fun onGetItem(
-        session: MediaLibraryService.MediaLibrarySession,
-        browser: MediaSession.ControllerInfo,
-        mediaId: String,
-    ): ListenableFuture<LibraryResult<MediaItem>> {
-      Timber.Forest.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
-      val requestId = UUID.randomUUID().toString()
-      val future = SettableFuture.create<MediaItem?>()
-      // Store the future for later resolution
-      pendingGetItemRequests[requestId] = future
-      // Emit event to JavaScript via callbacks
-      callbacks?.onGetItemRequest(requestId, mediaId)
-      return Futures.transform(
-        future,
-        { item ->
-          if (item != null) {
-            LibraryResult.ofItem(item, null)
-          } else {
-            LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
-          }
-        },
-        MoreExecutors.directExecutor(),
-      )
-    }
-
-    override fun onSearch(
-        session: MediaLibraryService.MediaLibrarySession,
-        browser: MediaSession.ControllerInfo,
-        query: String,
-        params: MediaLibraryService.LibraryParams?,
-    ): ListenableFuture<LibraryResult<Void>> {
-      Timber.Forest.d("onSearch: ${browser.packageName}, query = $query")
-      // Emit event to JavaScript via callbacks for search initiation
-      val requestId = UUID.randomUUID().toString()
-      val extrasMap = params?.extras?.let { bundle ->
-        mutableMapOf<String, Any>().apply {
-          for (key in bundle.keySet()) {
-            when (val value = bundle.get(key)) {
-              is String -> put(key, value)
-              is Int -> put(key, value)
-              is Double -> put(key, value)
-              is Boolean -> put(key, value)
-              // Add other types as needed
-            }
-          }
-        }
-      }
-      callbacks?.onSearchRequest(requestId, query, extrasMap)
-      return super.onSearch(session, browser, query, params)
-    }
-
-    override fun onSetMediaItems(
-        mediaSession: MediaSession,
-        controller: MediaSession.ControllerInfo,
-        mediaItems: MutableList<MediaItem>,
-        startIndex: Int,
-        startPositionMs: Long,
-    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-      Timber.Forest.d(
-        "onSetMediaItems: ${controller.packageName}, mediaId=${mediaItems[0].mediaId}, uri=${mediaItems[0].localConfiguration?.uri}, title=${mediaItems[0].mediaMetadata.title}"
-      )
-
-      val resolvedItems = mediaItems.map { mediaItem ->
-        val mediaId = mediaItem.mediaId
-        val fullMediaItem = mediaItemById[mediaId]
-        if (fullMediaItem != null) {
-          Timber.Forest.d("Found full MediaItem for mediaId: $mediaId")
-          fullMediaItem
-        } else {
-          Timber.Forest.d("No full MediaItem found for mediaId: $mediaId, using original")
-          mediaItem
-        }
-      }
-
-      try {
-        clear()
-        add(TrackFactory.fromMedia3(resolvedItems))
-        skipTo(startIndex)
-        seekTo(startPositionMs, TimeUnit.MILLISECONDS)
-        play()
-      } catch (e: Exception) {
-        Timber.Forest.e(e, "Error in onSetMediaItems")
-      }
-
-      return Futures.immediateFuture(
-        MediaSession.MediaItemsWithStartPosition(
-          resolvedItems,
-          startIndex,
-          startPositionMs,
-        )
-      )
-    }
-
-  }
 
   /**
    * Resolves a pending GetItem request with the provided MediaItem.
@@ -1094,17 +847,5 @@ class Player(
     pendingSearchRequests.remove(requestId)?.set(items)
   }
 
-  /**
-   * Derives a PlayingState from playWhenReady and state.
-   *
-   * @param playWhenReady Whether the player wants to play when ready
-   * @param state The current player state
-   * @return A PlayingState representing the current playing/buffering status
-   */
-  private fun derivePlayingState(playWhenReady: Boolean, state: PlaybackState): PlayingState {
-    val playing = playWhenReady && !(state == PlaybackState.ERROR || state == PlaybackState.ENDED || state == PlaybackState.NONE)
-    val buffering = playWhenReady && (state == PlaybackState.LOADING || state == PlaybackState.BUFFERING)
-    return PlayingState(playing, buffering)
-  }
 
 }
