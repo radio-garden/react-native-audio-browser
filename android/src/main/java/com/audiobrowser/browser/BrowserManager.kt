@@ -1,5 +1,6 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.margelo.nitro.audiobrowser.BrowserList
 import com.margelo.nitro.audiobrowser.BrowserSource
@@ -12,6 +13,7 @@ import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList as BrowseSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import timber.log.Timber
 
 /**
@@ -26,6 +28,11 @@ import timber.log.Timber
 class BrowserManager {
     private val router = SimpleRouter()
     private val requestBuilder = RequestConfigBuilder()
+    private val httpClient = HttpClient()
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
     private var currentPath: String = "/"
     
     /**
@@ -199,15 +206,44 @@ class BrowserManager {
         browserConfig: BrowserConfig
     ): BrowserList {
         return withContext(Dispatchers.IO) {
-            // TODO: Implement HTTP request execution
-            // 1. Merge base config with API config
-            // 2. Substitute route parameters in URLs
-            // 3. Apply transform function if provided
-            // 4. Execute HTTP request
-            // 5. Parse response into BrowserList
-            
-            Timber.d("TODO: Execute API request with params: $routeParams")
-            createEmptyBrowserList(getCurrentPath(), "API requests not yet implemented")
+            try {
+                // 1. Start with base config, apply API config on top
+                val baseConfig = browserConfig.request ?: RequestConfig(
+                    method = null,
+                    path = null,
+                    baseUrl = null,
+                    headers = null,
+                    query = null,
+                    body = null,
+                    contentType = null,
+                    userAgent = null
+                )
+                val mergedConfig = requestBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
+                
+                // 2. Build and execute HTTP request
+                val httpRequest = requestBuilder.buildHttpRequest(mergedConfig)
+                val response = httpClient.request(httpRequest)
+                
+                response.fold(
+                    onSuccess = { httpResponse ->
+                        if (httpResponse.isSuccessful) {
+                            // 3. Parse response as BrowserList
+                            val jsonBrowserList = json.decodeFromString<JsonBrowserList>(httpResponse.body)
+                            jsonBrowserList.toNitro()
+                        } else {
+                            Timber.w("HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
+                            createErrorBrowserList(getCurrentPath(), "Server returned ${httpResponse.code}")
+                        }
+                    },
+                    onFailure = { exception ->
+                        Timber.e(exception, "HTTP request failed")
+                        createErrorBrowserList(getCurrentPath(), "Network request failed: ${exception.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Error executing API request")
+                createErrorBrowserList(getCurrentPath(), "Request failed: ${e.message}")
+            }
         }
     }
     
@@ -221,15 +257,59 @@ class BrowserManager {
         browserConfig: BrowserConfig
     ): Array<Track> {
         return withContext(Dispatchers.IO) {
-            // TODO: Implement search HTTP request execution
-            // 1. Merge base config with search API config
-            // 2. Add query as { q: query } to request parameters
-            // 3. Apply transform function if provided
-            // 4. Execute HTTP request
-            // 5. Parse response into Track array
-            
-            Timber.d("TODO: Execute search API request for query: $query")
-            emptyArray()
+            try {
+                // 1. Start with base config
+                val baseConfig = browserConfig.request ?: RequestConfig(
+                    method = null,
+                    path = null,
+                    baseUrl = null,
+                    headers = null,
+                    query = null,
+                    body = null,
+                    contentType = null,
+                    userAgent = null
+                )
+                
+                // 2. Create a copy of API config with added query parameter
+                val searchConfig = TransformableRequestConfig(
+                    transform = apiConfig.transform,
+                    method = apiConfig.method,
+                    path = apiConfig.path,
+                    baseUrl = apiConfig.baseUrl,
+                    headers = apiConfig.headers,
+                    query = (apiConfig.query ?: emptyMap()) + mapOf("q" to query),
+                    body = apiConfig.body,
+                    contentType = apiConfig.contentType,
+                    userAgent = apiConfig.userAgent
+                )
+                
+                // 3. Merge configs and apply transform if provided
+                var mergedConfig = requestBuilder.mergeConfig(baseConfig, searchConfig, emptyMap())
+                
+                // 4. Build and execute HTTP request
+                val httpRequest = requestBuilder.buildHttpRequest(mergedConfig)
+                val response = httpClient.request(httpRequest)
+                
+                response.fold(
+                    onSuccess = { httpResponse ->
+                        if (httpResponse.isSuccessful) {
+                            // 4. Parse response as Track array
+                            val jsonTracks = json.decodeFromString<List<JsonTrack>>(httpResponse.body)
+                            jsonTracks.map { it.toNitro() }.toTypedArray()
+                        } else {
+                            Timber.w("Search HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
+                            emptyArray()
+                        }
+                    },
+                    onFailure = { exception ->
+                        Timber.e(exception, "Search HTTP request failed")
+                        emptyArray()
+                    }
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Error executing search API request")
+                emptyArray()
+            }
         }
     }
     
