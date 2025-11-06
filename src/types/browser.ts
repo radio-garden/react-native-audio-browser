@@ -209,8 +209,3 @@ export type BrowserConfig = {
   // media?: MediaSource
 }
 
-export type Browser = {
-  navigate(path: string): void
-  getCurrentItem(): BrowserItem
-  search(query: string): Promise<Track[]>
-}
