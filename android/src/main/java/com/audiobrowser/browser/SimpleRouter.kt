@@ -1,4 +1,4 @@
-package com.audiobrowser.routing
+package com.audiobrowser.browser
 
 /**
  * Simple route matcher for path patterns with parameter extraction.

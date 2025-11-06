@@ -40,10 +40,18 @@ class RequestConfigBuilder {
   }
 
   suspend fun mergeConfig(base: RequestConfig, override: TransformableRequestConfig): RequestConfig {
+    return mergeConfig(base, override, emptyMap())
+  }
+
+  suspend fun mergeConfig(
+    base: RequestConfig, 
+    override: TransformableRequestConfig, 
+    routeParams: Map<String, String>? = null
+  ): RequestConfig {
     // Apply transform function if provided
     return override.transform?.let { transformFn ->
       try {
-        transformFn.invoke(base).await().await() // Transform result wins completely
+        transformFn.invoke(base, routeParams).await().await() // Transform result wins completely
       } catch (e: Exception) {
         Timber.e(e, "Failed to apply transform function, using base config")
         base

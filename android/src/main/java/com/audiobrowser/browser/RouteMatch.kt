@@ -1,4 +1,4 @@
-package com.audiobrowser.routing
+package com.audiobrowser.browser
 
 /**
  * Represents a successful route match with extracted parameters and specificity score.

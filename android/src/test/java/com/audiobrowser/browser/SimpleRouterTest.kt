@@ -1,4 +1,4 @@
-package com.audiobrowser.routing
+package com.audiobrowser.browser
 
 import org.junit.Test
 import org.junit.Assert.*
