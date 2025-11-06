@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import type { Track } from '../types'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
@@ -25,7 +25,7 @@ export interface PlaybackActiveTrackChangedEvent {
  * Gets the active track or undefined if there is no current track.
  */
 export function getActiveTrack(): Track | undefined {
-  return nativeAudioBrowser.getActiveTrack() ?? undefined
+  return nativePlayer.getActiveTrack() ?? undefined
 }
 
 /**
@@ -33,7 +33,7 @@ export function getActiveTrack(): Track | undefined {
  * current track.
  */
 export function getActiveTrackIndex(): number | undefined {
-  return nativeAudioBrowser.getActiveTrackIndex() ?? undefined
+  return nativePlayer.getActiveTrackIndex() ?? undefined
 }
 
 // MARK: - Event Callbacks
@@ -45,7 +45,7 @@ export function getActiveTrackIndex(): number | undefined {
  */
 export const onActiveTrackChanged =
   LazyEmitter.emitterize<PlaybackActiveTrackChangedEvent>(
-    (cb) => (nativeAudioBrowser.onPlaybackActiveTrackChanged = cb)
+    (cb) => (nativePlayer.onPlaybackActiveTrackChanged = cb)
   )
 
 // MARK: - Hooks

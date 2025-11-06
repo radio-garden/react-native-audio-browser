@@ -115,547 +115,12 @@ open class HybridAudioBrowserSpec_cxx {
   }
 
   // Properties
-  public final var onMetadataChapterReceived: bridge.Func_void_AudioMetadataReceivedEvent {
+  public final var request: bridge.std__optional_RequestConfig_ {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_AudioMetadataReceivedEvent in
-        let __closureWrapper = Func_void_AudioMetadataReceivedEvent(self.__implementation.onMetadataChapterReceived)
-        return bridge.create_Func_void_AudioMetadataReceivedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onMetadataChapterReceived = { () -> (AudioMetadataReceivedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_AudioMetadataReceivedEvent(newValue)
-        return { (__event: AudioMetadataReceivedEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onMetadataCommonReceived: bridge.Func_void_AudioCommonMetadataReceivedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_AudioCommonMetadataReceivedEvent in
-        let __closureWrapper = Func_void_AudioCommonMetadataReceivedEvent(self.__implementation.onMetadataCommonReceived)
-        return bridge.create_Func_void_AudioCommonMetadataReceivedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onMetadataCommonReceived = { () -> (AudioCommonMetadataReceivedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_AudioCommonMetadataReceivedEvent(newValue)
-        return { (__event: AudioCommonMetadataReceivedEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onMetadataTimedReceived: bridge.Func_void_AudioMetadataReceivedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_AudioMetadataReceivedEvent in
-        let __closureWrapper = Func_void_AudioMetadataReceivedEvent(self.__implementation.onMetadataTimedReceived)
-        return bridge.create_Func_void_AudioMetadataReceivedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onMetadataTimedReceived = { () -> (AudioMetadataReceivedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_AudioMetadataReceivedEvent(newValue)
-        return { (__event: AudioMetadataReceivedEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackMetadata: bridge.Func_void_PlaybackMetadata {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackMetadata in
-        let __closureWrapper = Func_void_PlaybackMetadata(self.__implementation.onPlaybackMetadata)
-        return bridge.create_Func_void_PlaybackMetadata(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackMetadata = { () -> (PlaybackMetadata) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackMetadata(newValue)
-        return { (__data: PlaybackMetadata) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackActiveTrackChanged: bridge.Func_void_PlaybackActiveTrackChangedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackActiveTrackChangedEvent in
-        let __closureWrapper = Func_void_PlaybackActiveTrackChangedEvent(self.__implementation.onPlaybackActiveTrackChanged)
-        return bridge.create_Func_void_PlaybackActiveTrackChangedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackActiveTrackChanged = { () -> (PlaybackActiveTrackChangedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackActiveTrackChangedEvent(newValue)
-        return { (__data: PlaybackActiveTrackChangedEvent) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackError: bridge.Func_void_PlaybackErrorEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackErrorEvent in
-        let __closureWrapper = Func_void_PlaybackErrorEvent(self.__implementation.onPlaybackError)
-        return bridge.create_Func_void_PlaybackErrorEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackError = { () -> (PlaybackErrorEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackErrorEvent(newValue)
-        return { (__data: PlaybackErrorEvent) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackPlayWhenReadyChanged: bridge.Func_void_PlaybackPlayWhenReadyChangedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackPlayWhenReadyChangedEvent in
-        let __closureWrapper = Func_void_PlaybackPlayWhenReadyChangedEvent(self.__implementation.onPlaybackPlayWhenReadyChanged)
-        return bridge.create_Func_void_PlaybackPlayWhenReadyChangedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackPlayWhenReadyChanged = { () -> (PlaybackPlayWhenReadyChangedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackPlayWhenReadyChangedEvent(newValue)
-        return { (__data: PlaybackPlayWhenReadyChangedEvent) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackPlayingState: bridge.Func_void_PlayingState {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlayingState in
-        let __closureWrapper = Func_void_PlayingState(self.__implementation.onPlaybackPlayingState)
-        return bridge.create_Func_void_PlayingState(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackPlayingState = { () -> (PlayingState) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlayingState(newValue)
-        return { (__data: PlayingState) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackProgressUpdated: bridge.Func_void_PlaybackProgressUpdatedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackProgressUpdatedEvent in
-        let __closureWrapper = Func_void_PlaybackProgressUpdatedEvent(self.__implementation.onPlaybackProgressUpdated)
-        return bridge.create_Func_void_PlaybackProgressUpdatedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackProgressUpdated = { () -> (PlaybackProgressUpdatedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackProgressUpdatedEvent(newValue)
-        return { (__data: PlaybackProgressUpdatedEvent) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackQueueEnded: bridge.Func_void_PlaybackQueueEndedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackQueueEndedEvent in
-        let __closureWrapper = Func_void_PlaybackQueueEndedEvent(self.__implementation.onPlaybackQueueEnded)
-        return bridge.create_Func_void_PlaybackQueueEndedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackQueueEnded = { () -> (PlaybackQueueEndedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackQueueEndedEvent(newValue)
-        return { (__data: PlaybackQueueEndedEvent) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackRepeatModeChanged: bridge.Func_void_RepeatModeChangedEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RepeatModeChangedEvent in
-        let __closureWrapper = Func_void_RepeatModeChangedEvent(self.__implementation.onPlaybackRepeatModeChanged)
-        return bridge.create_Func_void_RepeatModeChangedEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackRepeatModeChanged = { () -> (RepeatModeChangedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RepeatModeChangedEvent(newValue)
-        return { (__data: RepeatModeChangedEvent) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackChanged: bridge.Func_void_Playback {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_Playback in
-        let __closureWrapper = Func_void_Playback(self.__implementation.onPlaybackChanged)
-        return bridge.create_Func_void_Playback(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackChanged = { () -> (Playback) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_Playback(newValue)
-        return { (__data: Playback) -> Void in
-          __wrappedFunction.call(__data)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteBookmark: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteBookmark)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteBookmark = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteDislike: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteDislike)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteDislike = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteJumpBackward: bridge.Func_void_RemoteJumpBackwardEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteJumpBackwardEvent in
-        let __closureWrapper = Func_void_RemoteJumpBackwardEvent(self.__implementation.onRemoteJumpBackward)
-        return bridge.create_Func_void_RemoteJumpBackwardEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteJumpBackward = { () -> (RemoteJumpBackwardEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpBackwardEvent(newValue)
-        return { (__event: RemoteJumpBackwardEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteJumpForward: bridge.Func_void_RemoteJumpForwardEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteJumpForwardEvent in
-        let __closureWrapper = Func_void_RemoteJumpForwardEvent(self.__implementation.onRemoteJumpForward)
-        return bridge.create_Func_void_RemoteJumpForwardEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteJumpForward = { () -> (RemoteJumpForwardEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpForwardEvent(newValue)
-        return { (__event: RemoteJumpForwardEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteLike: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteLike)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteLike = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteNext: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteNext)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteNext = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemotePause: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemotePause)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemotePause = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemotePlay: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemotePlay)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemotePlay = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemotePlayId: bridge.Func_void_RemotePlayIdEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemotePlayIdEvent in
-        let __closureWrapper = Func_void_RemotePlayIdEvent(self.__implementation.onRemotePlayId)
-        return bridge.create_Func_void_RemotePlayIdEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemotePlayId = { () -> (RemotePlayIdEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemotePlayIdEvent(newValue)
-        return { (__event: RemotePlayIdEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemotePlaySearch: bridge.Func_void_RemotePlaySearchEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemotePlaySearchEvent in
-        let __closureWrapper = Func_void_RemotePlaySearchEvent(self.__implementation.onRemotePlaySearch)
-        return bridge.create_Func_void_RemotePlaySearchEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemotePlaySearch = { () -> (RemotePlaySearchEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemotePlaySearchEvent(newValue)
-        return { (__event: RemotePlaySearchEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemotePrevious: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemotePrevious)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemotePrevious = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteSeek: bridge.Func_void_RemoteSeekEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteSeekEvent in
-        let __closureWrapper = Func_void_RemoteSeekEvent(self.__implementation.onRemoteSeek)
-        return bridge.create_Func_void_RemoteSeekEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteSeek = { () -> (RemoteSeekEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteSeekEvent(newValue)
-        return { (__event: RemoteSeekEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteSetRating: bridge.Func_void_RemoteSetRatingEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteSetRatingEvent in
-        let __closureWrapper = Func_void_RemoteSetRatingEvent(self.__implementation.onRemoteSetRating)
-        return bridge.create_Func_void_RemoteSetRatingEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteSetRating = { () -> (RemoteSetRatingEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteSetRatingEvent(newValue)
-        return { (__event: RemoteSetRatingEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteSkip: bridge.Func_void_RemoteSkipEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteSkipEvent in
-        let __closureWrapper = Func_void_RemoteSkipEvent(self.__implementation.onRemoteSkip)
-        return bridge.create_Func_void_RemoteSkipEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteSkip = { () -> (RemoteSkipEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteSkipEvent(newValue)
-        return { (__event: RemoteSkipEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteStop: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteStop)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteStop = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onOptionsChanged: bridge.Func_void_Options {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_Options in
-        let __closureWrapper = Func_void_Options(self.__implementation.onOptionsChanged)
-        return bridge.create_Func_void_Options(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onOptionsChanged = { () -> (Options) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_Options(newValue)
-        return { (__event: Options) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteBookmark: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteBookmark {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
+      return { () -> bridge.std__optional_RequestConfig_ in
+        if let __unwrappedValue = self.__implementation.request {
+          return bridge.create_std__optional_RequestConfig_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -663,13 +128,90 @@ open class HybridAudioBrowserSpec_cxx {
     }
     @inline(__always)
     set {
-      self.__implementation.handleRemoteBookmark = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
+      self.__implementation.request = newValue.value
+    }
+  }
+  
+  public final var media: bridge.std__optional_TransformableRequestConfig_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_TransformableRequestConfig_ in
+        if let __unwrappedValue = self.__implementation.media {
+          return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.media = newValue.value
+    }
+  }
+  
+  public final var search: bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__ in
+        if let __unwrappedValue = self.__implementation.search {
+          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string in
+                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(__value)
+                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(__closureWrapper.toUnsafe())
+                }())
+              case .second(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(__value)
+            }
+          }().variant)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.search = { () -> Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig? in
+        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(newValue)
+          return { () -> Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig in
+            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first({ () -> (String) -> Promise<Promise<[Track]>> in
+                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(__actual)
+                  return { (__query: String) -> Promise<Promise<[Track]>> in
+                    let __result = __wrappedFunction.call(std.string(__query))
+                    return { () -> Promise<Promise<[Track]>> in
+                      let __promise = Promise<Promise<[Track]>>()
+                      let __resolver = { (__result: Promise<[Track]>) in
+                        __promise.resolve(withResult: __result)
+                      }
+                      let __rejecter = { (__error: Error) in
+                        __promise.reject(withError: __error)
+                      }
+                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_std__vector_Track___ in
+                        let __closureWrapper = Func_void_std__shared_ptr_Promise_std__vector_Track___(__resolver)
+                        return bridge.create_Func_void_std__shared_ptr_Promise_std__vector_Track___(__closureWrapper.toUnsafe())
+                      }()
+                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                      }()
+                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__result)
+                      __promiseHolder.addOnResolvedListener(__resolverCpp)
+                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                      return __promise
+                    }()
+                  }
+                }())
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
             }
           }()
         } else {
@@ -679,14 +221,29 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var handleRemoteDislike: bridge.std__optional_std__function_void____ {
+  public final var routes: bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___ {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteDislike {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
+      return { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___ in
+        if let __unwrappedValue = self.__implementation.routes {
+          return bridge.create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___({ () -> bridge.std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ in
+            var __map = bridge.create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(__unwrappedValue.count)
+            for (__k, __v) in __unwrappedValue {
+              bridge.emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(&__map, std.string(__k), { () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ in
+                switch __v {
+                  case .first(let __value):
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam in
+                      let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__value)
+                      return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
+                    }())
+                  case .second(let __value):
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
+                  case .third(let __value):
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
+                }
+              }().variant)
+            }
+            return __map
           }())
         } else {
           return .init()
@@ -695,13 +252,140 @@ open class HybridAudioBrowserSpec_cxx {
     }
     @inline(__always)
     set {
-      self.__implementation.handleRemoteDislike = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
+      self.__implementation.routes = { () -> Dictionary<String, BrowserSource>? in
+        if bridge.has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(newValue)
+          return { () -> Dictionary<String, BrowserSource> in
+            var __dictionary = Dictionary<String, BrowserSource>(minimumCapacity: __unwrapped.size())
+            let __keys = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___keys(__unwrapped)
+            for __key in __keys {
+              let __value = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___value(__unwrapped, __key)
+              __dictionary[String(__key)] = { () -> BrowserSource in
+                let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
+                switch __variant.index() {
+                  case 0:
+                    let __actual = __variant.get_0()
+                    return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
+                      let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__actual)
+                      return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
+                        let __result = __wrappedFunction.call(__param)
+                        return { () -> Promise<Promise<BrowserList>> in
+                          let __promise = Promise<Promise<BrowserList>>()
+                          let __resolver = { (__result: Promise<BrowserList>) in
+                            __promise.resolve(withResult: __result)
+                          }
+                          let __rejecter = { (__error: Error) in
+                            __promise.reject(withError: __error)
+                          }
+                          let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_BrowserList__ in
+                            let __closureWrapper = Func_void_std__shared_ptr_Promise_BrowserList__(__resolver)
+                            return bridge.create_Func_void_std__shared_ptr_Promise_BrowserList__(__closureWrapper.toUnsafe())
+                          }()
+                          let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                            let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                            return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                          }()
+                          let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList____(__result)
+                          __promiseHolder.addOnResolvedListener(__resolverCpp)
+                          __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                          return __promise
+                        }()
+                      }
+                    }())
+                  case 1:
+                    let __actual = __variant.get_1()
+                    return .second(__actual)
+                  case 2:
+                    let __actual = __variant.get_2()
+                    return .third(__actual)
+                  default:
+                    fatalError("Variant can never have index \(__variant.index())!")
+                }
+              }()
+            }
+            return __dictionary
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
+  public final var tabs: bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__ in
+        if let __unwrappedValue = self.__implementation.tabs {
+          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam in
+                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__value)
+                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
+                }())
+              case .second(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_({ () -> bridge.std__vector_BrowserLink_ in
+                  var __vector = bridge.create_std__vector_BrowserLink_(__value.count)
+                  for __item in __value {
+                    __vector.push_back(__item)
+                  }
+                  return __vector
+                }())
+              case .third(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(__value)
+            }
+          }().variant)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.tabs = { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList____BrowserLink__TransformableRequestConfig? in
+        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(newValue)
+          return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList____BrowserLink__TransformableRequestConfig in
+            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
+                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__actual)
+                  return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
+                    let __result = __wrappedFunction.call(__param)
+                    return { () -> Promise<Promise<BrowserList>> in
+                      let __promise = Promise<Promise<BrowserList>>()
+                      let __resolver = { (__result: Promise<BrowserList>) in
+                        __promise.resolve(withResult: __result)
+                      }
+                      let __rejecter = { (__error: Error) in
+                        __promise.reject(withError: __error)
+                      }
+                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_BrowserList__ in
+                        let __closureWrapper = Func_void_std__shared_ptr_Promise_BrowserList__(__resolver)
+                        return bridge.create_Func_void_std__shared_ptr_Promise_BrowserList__(__closureWrapper.toUnsafe())
+                      }()
+                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                      }()
+                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList____(__result)
+                      __promiseHolder.addOnResolvedListener(__resolverCpp)
+                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                      return __promise
+                    }()
+                  }
+                }())
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual.map({ __item in __item }))
+              case 2:
+                let __actual = __variant.get_2()
+                return .third(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
             }
           }()
         } else {
@@ -711,47 +395,24 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var handleRemoteJumpBackward: bridge.std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______ {
+  public final var browse: bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemoteJumpBackward {
-          return bridge.create_std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______({ () -> bridge.Func_void_RemoteJumpBackwardEvent in
-            let __closureWrapper = Func_void_RemoteJumpBackwardEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemoteJumpBackwardEvent(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteJumpBackward = { () -> ((_ event: RemoteJumpBackwardEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______(newValue)
-          return { () -> (RemoteJumpBackwardEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpBackwardEvent(__unwrapped)
-            return { (__event: RemoteJumpBackwardEvent) -> Void in
-              __wrappedFunction.call(__event)
+      return { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ in
+        if let __unwrappedValue = self.__implementation.browse {
+          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam in
+                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__value)
+                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
+                }())
+              case .second(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
+              case .third(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
             }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteJumpForward: bridge.std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemoteJumpForward {
-          return bridge.create_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______({ () -> bridge.Func_void_RemoteJumpForwardEvent in
-            let __closureWrapper = Func_void_RemoteJumpForwardEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemoteJumpForwardEvent(__closureWrapper.toUnsafe())
-          }())
+          }().variant)
         } else {
           return .init()
         }
@@ -759,365 +420,49 @@ open class HybridAudioBrowserSpec_cxx {
     }
     @inline(__always)
     set {
-      self.__implementation.handleRemoteJumpForward = { () -> ((_ event: RemoteJumpForwardEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______(newValue)
-          return { () -> (RemoteJumpForwardEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpForwardEvent(__unwrapped)
-            return { (__event: RemoteJumpForwardEvent) -> Void in
-              __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteLike: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteLike {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteLike = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteNext: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteNext {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteNext = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemotePause: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemotePause {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemotePause = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemotePlay: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemotePlay {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemotePlay = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemotePlayId: bridge.std__optional_std__function_void_const_RemotePlayIdEvent_____event______ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void_const_RemotePlayIdEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemotePlayId {
-          return bridge.create_std__optional_std__function_void_const_RemotePlayIdEvent_____event______({ () -> bridge.Func_void_RemotePlayIdEvent in
-            let __closureWrapper = Func_void_RemotePlayIdEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemotePlayIdEvent(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemotePlayId = { () -> ((_ event: RemotePlayIdEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemotePlayIdEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemotePlayIdEvent_____event______(newValue)
-          return { () -> (RemotePlayIdEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemotePlayIdEvent(__unwrapped)
-            return { (__event: RemotePlayIdEvent) -> Void in
-              __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemotePlaySearch: bridge.std__optional_std__function_void_const_RemotePlaySearchEvent_____event______ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void_const_RemotePlaySearchEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemotePlaySearch {
-          return bridge.create_std__optional_std__function_void_const_RemotePlaySearchEvent_____event______({ () -> bridge.Func_void_RemotePlaySearchEvent in
-            let __closureWrapper = Func_void_RemotePlaySearchEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemotePlaySearchEvent(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemotePlaySearch = { () -> ((_ event: RemotePlaySearchEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemotePlaySearchEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemotePlaySearchEvent_____event______(newValue)
-          return { () -> (RemotePlaySearchEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemotePlaySearchEvent(__unwrapped)
-            return { (__event: RemotePlaySearchEvent) -> Void in
-              __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemotePrevious: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemotePrevious {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemotePrevious = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteSeek: bridge.std__optional_std__function_void_const_RemoteSeekEvent_____event______ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void_const_RemoteSeekEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemoteSeek {
-          return bridge.create_std__optional_std__function_void_const_RemoteSeekEvent_____event______({ () -> bridge.Func_void_RemoteSeekEvent in
-            let __closureWrapper = Func_void_RemoteSeekEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemoteSeekEvent(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteSeek = { () -> ((_ event: RemoteSeekEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemoteSeekEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemoteSeekEvent_____event______(newValue)
-          return { () -> (RemoteSeekEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemoteSeekEvent(__unwrapped)
-            return { (__event: RemoteSeekEvent) -> Void in
-              __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteSetRating: bridge.std__optional_std__function_void_const_RemoteSetRatingEvent_____event______ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void_const_RemoteSetRatingEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemoteSetRating {
-          return bridge.create_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______({ () -> bridge.Func_void_RemoteSetRatingEvent in
-            let __closureWrapper = Func_void_RemoteSetRatingEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemoteSetRatingEvent(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteSetRating = { () -> ((_ event: RemoteSetRatingEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(newValue)
-          return { () -> (RemoteSetRatingEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemoteSetRatingEvent(__unwrapped)
-            return { (__event: RemoteSetRatingEvent) -> Void in
-              __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteSkip: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteSkip {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteSkip = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteStop: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteStop {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteStop = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
+      self.__implementation.browse = { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList? in
+        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(newValue)
+          return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList in
+            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
+                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__actual)
+                  return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
+                    let __result = __wrappedFunction.call(__param)
+                    return { () -> Promise<Promise<BrowserList>> in
+                      let __promise = Promise<Promise<BrowserList>>()
+                      let __resolver = { (__result: Promise<BrowserList>) in
+                        __promise.resolve(withResult: __result)
+                      }
+                      let __rejecter = { (__error: Error) in
+                        __promise.reject(withError: __error)
+                      }
+                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_BrowserList__ in
+                        let __closureWrapper = Func_void_std__shared_ptr_Promise_BrowserList__(__resolver)
+                        return bridge.create_Func_void_std__shared_ptr_Promise_BrowserList__(__closureWrapper.toUnsafe())
+                      }()
+                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                      }()
+                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList____(__result)
+                      __promiseHolder.addOnResolvedListener(__resolverCpp)
+                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                      return __promise
+                    }()
+                  }
+                }())
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              case 2:
+                let __actual = __variant.get_2()
+                return .third(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
             }
           }()
         } else {
@@ -1129,449 +474,58 @@ open class HybridAudioBrowserSpec_cxx {
 
   // Methods
   @inline(__always)
-  public final func setupPlayer(options: PartialSetupPlayerOptions) -> bridge.Result_std__shared_ptr_Promise_void___ {
+  public final func navigate(path: std.string) -> bridge.Result_std__shared_ptr_Promise_BrowserList___ {
     do {
-      let __result = try self.__implementation.setupPlayer(options: options)
-      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
-        let __promise = bridge.create_std__shared_ptr_Promise_void__()
-        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+      let __result = try self.__implementation.navigate(path: String(path))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_BrowserList__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_BrowserList__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_BrowserList__(__promise)
         __result
-          .then({ __result in __promiseHolder.resolve() })
+          .then({ __result in __promiseHolder.resolve(__result) })
           .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
         return __promise
       }()
-      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+      return bridge.create_Result_std__shared_ptr_Promise_BrowserList___(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+      return bridge.create_Result_std__shared_ptr_Promise_BrowserList___(__exceptionPtr)
     }
   }
   
   @inline(__always)
-  public final func updateOptions(options: NativeUpdateOptions) -> bridge.Result_void_ {
+  public final func onSearch(query: std.string) -> bridge.Result_std__shared_ptr_Promise_std__vector_Track____ {
     do {
-      try self.__implementation.updateOptions(options: options)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getOptions() -> bridge.Result_UpdateOptions_ {
-    do {
-      let __result = try self.__implementation.getOptions()
-      let __resultCpp = __result
-      return bridge.create_Result_UpdateOptions_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_UpdateOptions_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func load(track: Track) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.load(track: track)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func reset() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.reset()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func play() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.play()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func pause() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.pause()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func togglePlayback() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.togglePlayback()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func stop() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.stop()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func setPlayWhenReady(playWhenReady: Bool) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.setPlayWhenReady(playWhenReady: playWhenReady)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getPlayWhenReady() -> bridge.Result_bool_ {
-    do {
-      let __result = try self.__implementation.getPlayWhenReady()
-      let __resultCpp = __result
-      return bridge.create_Result_bool_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_bool_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func seekTo(position: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.seekTo(position: position)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func seekBy(offset: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.seekBy(offset: offset)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func setVolume(level: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.setVolume(level: level)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getVolume() -> bridge.Result_double_ {
-    do {
-      let __result = try self.__implementation.getVolume()
-      let __resultCpp = __result
-      return bridge.create_Result_double_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_double_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func setRate(rate: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.setRate(rate: rate)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getRate() -> bridge.Result_double_ {
-    do {
-      let __result = try self.__implementation.getRate()
-      let __resultCpp = __result
-      return bridge.create_Result_double_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_double_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getProgress() -> bridge.Result_Progress_ {
-    do {
-      let __result = try self.__implementation.getProgress()
-      let __resultCpp = __result
-      return bridge.create_Result_Progress_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_Progress_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getPlayback() -> bridge.Result_Playback_ {
-    do {
-      let __result = try self.__implementation.getPlayback()
-      let __resultCpp = __result
-      return bridge.create_Result_Playback_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_Playback_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getPlayingState() -> bridge.Result_PlayingState_ {
-    do {
-      let __result = try self.__implementation.getPlayingState()
-      let __resultCpp = __result
-      return bridge.create_Result_PlayingState_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_PlayingState_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getRepeatMode() -> bridge.Result_RepeatMode_ {
-    do {
-      let __result = try self.__implementation.getRepeatMode()
-      let __resultCpp = __result
-      return bridge.create_Result_RepeatMode_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_RepeatMode_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func setRepeatMode(mode: Int32) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.setRepeatMode(mode: margelo.nitro.audiobrowser.RepeatMode(rawValue: mode)!)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getPlaybackError() -> bridge.Result_std__optional_PlaybackError__ {
-    do {
-      let __result = try self.__implementation.getPlaybackError()
-      let __resultCpp = { () -> bridge.std__optional_PlaybackError_ in
-        if let __unwrappedValue = __result {
-          return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
-        } else {
-          return .init()
-        }
+      let __result = try self.__implementation.onSearch(query: String(query))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__vector_Track___ in
+        let __promise = bridge.create_std__shared_ptr_Promise_std__vector_Track___()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__vector_Track___(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve({ () -> bridge.std__vector_Track_ in
+              var __vector = bridge.create_std__vector_Track_(__result.count)
+              for __item in __result {
+                __vector.push_back(__item)
+              }
+              return __vector
+            }()) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
       }()
-      return bridge.create_Result_std__optional_PlaybackError__(__resultCpp)
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_Track____(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_PlaybackError__(__exceptionPtr)
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_Track____(__exceptionPtr)
     }
   }
   
   @inline(__always)
-  public final func retry() -> bridge.Result_void_ {
+  public final func getCurrentPath() -> bridge.Result_std__string_ {
     do {
-      try self.__implementation.retry()
-      return bridge.create_Result_void_()
+      let __result = try self.__implementation.getCurrentPath()
+      let __resultCpp = std.string(__result)
+      return bridge.create_Result_std__string_(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func add(tracks: bridge.std__vector_Track_, insertBeforeIndex: bridge.std__optional_double_) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.add(tracks: tracks.map({ __item in __item }), insertBeforeIndex: insertBeforeIndex.value)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func move(fromIndex: Double, toIndex: Double) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.move(fromIndex: fromIndex, toIndex: toIndex)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func remove(indexes: bridge.std__vector_double_) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.remove(indexes: indexes.map({ __item in __item }))
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func removeUpcomingTracks() -> bridge.Result_void_ {
-    do {
-      try self.__implementation.removeUpcomingTracks()
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func skip(index: Double, initialPosition: bridge.std__optional_double_) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.skip(index: index, initialPosition: initialPosition.value)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func skipToNext(initialPosition: bridge.std__optional_double_) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.skipToNext(initialPosition: initialPosition.value)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func skipToPrevious(initialPosition: bridge.std__optional_double_) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.skipToPrevious(initialPosition: initialPosition.value)
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func setQueue(tracks: bridge.std__vector_Track_) -> bridge.Result_void_ {
-    do {
-      try self.__implementation.setQueue(tracks: tracks.map({ __item in __item }))
-      return bridge.create_Result_void_()
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getQueue() -> bridge.Result_std__vector_Track__ {
-    do {
-      let __result = try self.__implementation.getQueue()
-      let __resultCpp = { () -> bridge.std__vector_Track_ in
-        var __vector = bridge.create_std__vector_Track_(__result.count)
-        for __item in __result {
-          __vector.push_back(__item)
-        }
-        return __vector
-      }()
-      return bridge.create_Result_std__vector_Track__(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__vector_Track__(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getTrack(index: Double) -> bridge.Result_std__optional_Track__ {
-    do {
-      let __result = try self.__implementation.getTrack(index: index)
-      let __resultCpp = { () -> bridge.std__optional_Track_ in
-        if let __unwrappedValue = __result {
-          return bridge.create_std__optional_Track_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-      return bridge.create_Result_std__optional_Track__(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_Track__(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getActiveTrackIndex() -> bridge.Result_std__optional_double__ {
-    do {
-      let __result = try self.__implementation.getActiveTrackIndex()
-      let __resultCpp = { () -> bridge.std__optional_double_ in
-        if let __unwrappedValue = __result {
-          return bridge.create_std__optional_double_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-      return bridge.create_Result_std__optional_double__(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_double__(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getActiveTrack() -> bridge.Result_std__optional_Track__ {
-    do {
-      let __result = try self.__implementation.getActiveTrack()
-      let __resultCpp = { () -> bridge.std__optional_Track_ in
-        if let __unwrappedValue = __result {
-          return bridge.create_std__optional_Track_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-      return bridge.create_Result_std__optional_Track__(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_Track__(__exceptionPtr)
+      return bridge.create_Result_std__string_(__exceptionPtr)
     }
   }
 }

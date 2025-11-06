@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import { onPlaybackChanged } from './playbackState'
@@ -38,7 +38,7 @@ export interface PlaybackProgressUpdatedEvent extends Progress {
  * duration in seconds.
  */
 export function getProgress(): Progress {
-  return nativeAudioBrowser.getProgress()
+  return nativePlayer.getProgress()
 }
 
 // MARK: - Event Callbacks
@@ -50,7 +50,7 @@ export function getProgress(): Progress {
  */
 export const onProgressUpdated =
   LazyEmitter.emitterize<PlaybackProgressUpdatedEvent>(
-    (cb) => (nativeAudioBrowser.onPlaybackProgressUpdated = cb)
+    (cb) => (nativePlayer.onPlaybackProgressUpdated = cb)
   )
 
 // MARK: - Hooks

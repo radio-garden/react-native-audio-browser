@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
@@ -19,7 +19,7 @@ export type RepeatMode = 'off' | 'track' | 'queue'
  * Gets the current repeat mode.
  */
 export function getRepeatMode(): RepeatMode {
-  return nativeAudioBrowser.getRepeatMode()
+  return nativePlayer.getRepeatMode()
 }
 
 /**
@@ -27,7 +27,7 @@ export function getRepeatMode(): RepeatMode {
  * @param repeatMode - The repeat mode to set
  */
 export function setRepeatMode(repeatMode: RepeatMode) {
-  nativeAudioBrowser.setRepeatMode(repeatMode)
+  nativePlayer.setRepeatMode(repeatMode)
 }
 
 // MARK: - Event Callbacks
@@ -44,7 +44,7 @@ export interface RepeatModeChangedEvent {
  */
 export const onRepeatModeChanged =
   LazyEmitter.emitterize<RepeatModeChangedEvent>(
-    (cb) => (nativeAudioBrowser.onPlaybackRepeatModeChanged = cb)
+    (cb) => (nativePlayer.onPlaybackRepeatModeChanged = cb)
   )
 
 // MARK: - Hooks

@@ -1,11 +1,11 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 // MARK: - Getters
 
 /**
  * Gets the volume of the player as a number between 0 and 1.
  */
 export function getVolume(): number {
-  return nativeAudioBrowser.getVolume()
+  return nativePlayer.getVolume()
 }
 
 // MARK: - Setters
@@ -15,5 +15,5 @@ export function getVolume(): number {
  * @param level - The volume as a number between 0 and 1.
  */
 export function setVolume(level: number): void {
-  nativeAudioBrowser.setVolume(level)
+  nativePlayer.setVolume(level)
 }

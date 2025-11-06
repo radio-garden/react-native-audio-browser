@@ -7,242 +7,52 @@
 
 #include "JHybridAudioBrowserSpec.hpp"
 
-// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
-// Forward declaration of `AudioMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
-// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
-// Forward declaration of `PlaybackMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
-// Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
+// Forward declaration of `RequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
-// Forward declaration of `PlaybackError` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
-// Forward declaration of `PlayingState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlayingState; }
-// Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
-// Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
-// Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
-// Forward declaration of `RepeatMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
-// Forward declaration of `Playback` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Playback; }
-// Forward declaration of `PlaybackState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
-// Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
-// Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
-// Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
-// Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
-// Forward declaration of `RemoteSeekEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
-// Forward declaration of `RemoteSkipEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
-// Forward declaration of `Options` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Options; }
-// Forward declaration of `AndroidOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
-// Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
-// Forward declaration of `Capability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class Capability; }
-// Forward declaration of `IOSOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IOSOptions; }
-// Forward declaration of `FeedbackOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
-// Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
-// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
-// Forward declaration of `Progress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Progress; }
-// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
-// Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
-// Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
-// Forward declaration of `AndroidAudioContentType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
-// Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
-// Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
-// Forward declaration of `IOSCategory` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
-// Forward declaration of `IOSCategoryMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
-// Forward declaration of `IOSCategoryOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
-// Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
-// Forward declaration of `NativeUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
-// Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
-// Forward declaration of `NullSentinel` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NullSentinel; }
+// Forward declaration of `BrowserList` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserList; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `BrowserItemStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 
-#include "AudioMetadataReceivedEvent.hpp"
-#include <functional>
-#include "JFunc_void_AudioMetadataReceivedEvent.hpp"
-#include "JAudioMetadataReceivedEvent.hpp"
-#include "AudioMetadata.hpp"
-#include <vector>
-#include "JAudioMetadata.hpp"
-#include <string>
+#include "RequestConfig.hpp"
 #include <optional>
-#include "AudioCommonMetadataReceivedEvent.hpp"
-#include "JFunc_void_AudioCommonMetadataReceivedEvent.hpp"
-#include "JAudioCommonMetadataReceivedEvent.hpp"
-#include "PlaybackMetadata.hpp"
-#include "JFunc_void_PlaybackMetadata.hpp"
-#include "JPlaybackMetadata.hpp"
-#include "PlaybackActiveTrackChangedEvent.hpp"
-#include "JFunc_void_PlaybackActiveTrackChangedEvent.hpp"
-#include "JPlaybackActiveTrackChangedEvent.hpp"
-#include "Track.hpp"
-#include "JTrack.hpp"
-#include "PlaybackErrorEvent.hpp"
-#include "JFunc_void_PlaybackErrorEvent.hpp"
-#include "JPlaybackErrorEvent.hpp"
-#include "PlaybackError.hpp"
-#include "JPlaybackError.hpp"
-#include "PlaybackPlayWhenReadyChangedEvent.hpp"
-#include "JFunc_void_PlaybackPlayWhenReadyChangedEvent.hpp"
-#include "JPlaybackPlayWhenReadyChangedEvent.hpp"
-#include "PlayingState.hpp"
-#include "JFunc_void_PlayingState.hpp"
-#include "JPlayingState.hpp"
-#include "PlaybackProgressUpdatedEvent.hpp"
-#include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
-#include "JPlaybackProgressUpdatedEvent.hpp"
-#include "PlaybackQueueEndedEvent.hpp"
-#include "JFunc_void_PlaybackQueueEndedEvent.hpp"
-#include "JPlaybackQueueEndedEvent.hpp"
-#include "RepeatModeChangedEvent.hpp"
-#include "JFunc_void_RepeatModeChangedEvent.hpp"
-#include "JRepeatModeChangedEvent.hpp"
-#include "RepeatMode.hpp"
-#include "JRepeatMode.hpp"
-#include "Playback.hpp"
-#include "JFunc_void_Playback.hpp"
-#include "JPlayback.hpp"
-#include "PlaybackState.hpp"
-#include "JPlaybackState.hpp"
-#include "JFunc_void.hpp"
-#include "RemoteJumpBackwardEvent.hpp"
-#include "JFunc_void_RemoteJumpBackwardEvent.hpp"
-#include "JRemoteJumpBackwardEvent.hpp"
-#include "RemoteJumpForwardEvent.hpp"
-#include "JFunc_void_RemoteJumpForwardEvent.hpp"
-#include "JRemoteJumpForwardEvent.hpp"
-#include "RemotePlayIdEvent.hpp"
-#include "JFunc_void_RemotePlayIdEvent.hpp"
-#include "JRemotePlayIdEvent.hpp"
-#include "RemotePlaySearchEvent.hpp"
-#include "JFunc_void_RemotePlaySearchEvent.hpp"
-#include "JRemotePlaySearchEvent.hpp"
-#include "RemoteSeekEvent.hpp"
-#include "JFunc_void_RemoteSeekEvent.hpp"
-#include "JRemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
-#include "JFunc_void_RemoteSetRatingEvent.hpp"
-#include "JRemoteSetRatingEvent.hpp"
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
+#include "JRequestConfig.hpp"
+#include <string>
+#include <unordered_map>
 #include <variant>
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "JHeartRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JStarRating.hpp"
-#include "JPercentageRating.hpp"
-#include "RemoteSkipEvent.hpp"
-#include "JFunc_void_RemoteSkipEvent.hpp"
-#include "JRemoteSkipEvent.hpp"
-#include "Options.hpp"
-#include "JFunc_void_Options.hpp"
-#include "JOptions.hpp"
-#include "AndroidOptions.hpp"
-#include "JAndroidOptions.hpp"
-#include "AppKilledPlaybackBehavior.hpp"
-#include "JAppKilledPlaybackBehavior.hpp"
-#include "RatingType.hpp"
-#include "JRatingType.hpp"
-#include "Capability.hpp"
-#include "JCapability.hpp"
-#include "IOSOptions.hpp"
-#include "JIOSOptions.hpp"
-#include "FeedbackOptions.hpp"
-#include "JFeedbackOptions.hpp"
+#include "JVariant_Boolean_String_Double.hpp"
+#include "TransformableRequestConfig.hpp"
+#include "JTransformableRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
+#include <functional>
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig.hpp"
 #include <NitroModules/JPromise.hpp>
-#include "UpdateOptions.hpp"
-#include "JUpdateOptions.hpp"
-#include "AndroidUpdateOptions.hpp"
-#include "JAndroidUpdateOptions.hpp"
-#include "IOSUpdateOptions.hpp"
-#include "JIOSUpdateOptions.hpp"
-#include "Progress.hpp"
-#include "JProgress.hpp"
-#include "PartialSetupPlayerOptions.hpp"
-#include "JPartialSetupPlayerOptions.hpp"
-#include "PartialAndroidSetupPlayerOptions.hpp"
-#include "JPartialAndroidSetupPlayerOptions.hpp"
-#include "AndroidAudioOffloadSettings.hpp"
-#include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
-#include "JAndroidAudioOffloadSettings.hpp"
-#include "AndroidAudioContentType.hpp"
-#include "JAndroidAudioContentType.hpp"
-#include "AndroidPlayerWakeMode.hpp"
-#include "JAndroidPlayerWakeMode.hpp"
-#include "PartialIOSSetupPlayerOptions.hpp"
-#include "JPartialIOSSetupPlayerOptions.hpp"
-#include "IOSCategory.hpp"
-#include "JIOSCategory.hpp"
-#include "IOSCategoryMode.hpp"
-#include "JIOSCategoryMode.hpp"
-#include "IOSCategoryOptions.hpp"
-#include "JIOSCategoryOptions.hpp"
-#include "IOSCategoryPolicy.hpp"
-#include "JIOSCategoryPolicy.hpp"
-#include "NativeUpdateOptions.hpp"
-#include "JNativeUpdateOptions.hpp"
-#include "NitroAndroidUpdateOptions.hpp"
-#include "JNitroAndroidUpdateOptions.hpp"
-#include "NullSentinel.hpp"
-#include "JVariant_Array_Capability__NullSentinel.hpp"
-#include "JNullSentinel.hpp"
-#include "JVariant_Double_NullSentinel.hpp"
+#include "Track.hpp"
+#include <vector>
+#include "JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
+#include "JTrack.hpp"
+#include "BrowserList.hpp"
+#include "BrowserSourceCallbackParam.hpp"
+#include "JBrowserSource.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam.hpp"
+#include "JBrowserList.hpp"
+#include "BrowserLink.hpp"
+#include "JBrowserItem.hpp"
+#include "JBrowserLink.hpp"
+#include "BrowserItemStyle.hpp"
+#include "JBrowserItemStyle.hpp"
+#include "JBrowserSourceCallbackParam.hpp"
+#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig.hpp"
+#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -273,832 +83,83 @@ namespace margelo::nitro::audiobrowser {
   }
 
   // Properties
-  std::function<void(const AudioMetadataReceivedEvent& /* event */)> JHybridAudioBrowserSpec::getOnMetadataChapterReceived() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_AudioMetadataReceivedEvent::javaobject>()>("getOnMetadataChapterReceived_cxx");
+  std::optional<RequestConfig> JHybridAudioBrowserSpec::getRequest() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JRequestConfig>()>("getRequest");
     auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const AudioMetadataReceivedEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_AudioMetadataReceivedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_AudioMetadataReceivedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](AudioMetadataReceivedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setOnMetadataChapterReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataChapterReceived) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_AudioMetadataReceivedEvent::javaobject> /* onMetadataChapterReceived */)>("setOnMetadataChapterReceived_cxx");
-    method(_javaPart, JFunc_void_AudioMetadataReceivedEvent_cxx::fromCpp(onMetadataChapterReceived));
+  void JHybridAudioBrowserSpec::setRequest(const std::optional<RequestConfig>& request) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRequestConfig> /* request */)>("setRequest");
+    method(_javaPart, request.has_value() ? JRequestConfig::fromCpp(request.value()) : nullptr);
   }
-  std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)> JHybridAudioBrowserSpec::getOnMetadataCommonReceived() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_AudioCommonMetadataReceivedEvent::javaobject>()>("getOnMetadataCommonReceived_cxx");
+  std::optional<TransformableRequestConfig> JHybridAudioBrowserSpec::getMedia() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JTransformableRequestConfig>()>("getMedia");
     auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_AudioCommonMetadataReceivedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_AudioCommonMetadataReceivedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](AudioCommonMetadataReceivedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setOnMetadataCommonReceived(const std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>& onMetadataCommonReceived) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_AudioCommonMetadataReceivedEvent::javaobject> /* onMetadataCommonReceived */)>("setOnMetadataCommonReceived_cxx");
-    method(_javaPart, JFunc_void_AudioCommonMetadataReceivedEvent_cxx::fromCpp(onMetadataCommonReceived));
+  void JHybridAudioBrowserSpec::setMedia(const std::optional<TransformableRequestConfig>& media) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JTransformableRequestConfig> /* media */)>("setMedia");
+    method(_javaPart, media.has_value() ? JTransformableRequestConfig::fromCpp(media.value()) : nullptr);
   }
-  std::function<void(const AudioMetadataReceivedEvent& /* event */)> JHybridAudioBrowserSpec::getOnMetadataTimedReceived() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_AudioMetadataReceivedEvent::javaobject>()>("getOnMetadataTimedReceived_cxx");
+  std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> JHybridAudioBrowserSpec::getSearch() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig>()>("getSearch");
     auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const AudioMetadataReceivedEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_AudioMetadataReceivedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_AudioMetadataReceivedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](AudioMetadataReceivedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setOnMetadataTimedReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataTimedReceived) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_AudioMetadataReceivedEvent::javaobject> /* onMetadataTimedReceived */)>("setOnMetadataTimedReceived_cxx");
-    method(_javaPart, JFunc_void_AudioMetadataReceivedEvent_cxx::fromCpp(onMetadataTimedReceived));
+  void JHybridAudioBrowserSpec::setSearch(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& search) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig> /* search */)>("setSearch");
+    method(_javaPart, search.has_value() ? JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig::fromCpp(search.value()) : nullptr);
   }
-  std::function<void(const PlaybackMetadata& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackMetadata() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackMetadata::javaobject>()>("getOnPlaybackMetadata_cxx");
+  std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> JHybridAudioBrowserSpec::getRoutes() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JMap<jni::JString, JBrowserSource>>()>("getRoutes");
     auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlaybackMetadata& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlaybackMetadata_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlaybackMetadata_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackMetadata data) -> void {
-          return __resultRef->invoke(data);
-        };
+    return __result != nullptr ? std::make_optional([&]() {
+      std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> __map;
+      __map.reserve(__result->size());
+      for (const auto& __entry : *__result) {
+        __map.emplace(__entry.first->toStdString(), __entry.second->toCpp());
       }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackMetadata(const std::function<void(const PlaybackMetadata& /* data */)>& onPlaybackMetadata) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackMetadata::javaobject> /* onPlaybackMetadata */)>("setOnPlaybackMetadata_cxx");
-    method(_javaPart, JFunc_void_PlaybackMetadata_cxx::fromCpp(onPlaybackMetadata));
-  }
-  std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackActiveTrackChanged() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackActiveTrackChangedEvent::javaobject>()>("getOnPlaybackActiveTrackChanged_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlaybackActiveTrackChangedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlaybackActiveTrackChangedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackActiveTrackChangedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackActiveTrackChanged(const std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>& onPlaybackActiveTrackChanged) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackActiveTrackChangedEvent::javaobject> /* onPlaybackActiveTrackChanged */)>("setOnPlaybackActiveTrackChanged_cxx");
-    method(_javaPart, JFunc_void_PlaybackActiveTrackChangedEvent_cxx::fromCpp(onPlaybackActiveTrackChanged));
-  }
-  std::function<void(const PlaybackErrorEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackError() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackErrorEvent::javaobject>()>("getOnPlaybackError_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlaybackErrorEvent& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlaybackErrorEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlaybackErrorEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackErrorEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackError(const std::function<void(const PlaybackErrorEvent& /* data */)>& onPlaybackError) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackErrorEvent::javaobject> /* onPlaybackError */)>("setOnPlaybackError_cxx");
-    method(_javaPart, JFunc_void_PlaybackErrorEvent_cxx::fromCpp(onPlaybackError));
-  }
-  std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackPlayWhenReadyChanged() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackPlayWhenReadyChangedEvent::javaobject>()>("getOnPlaybackPlayWhenReadyChanged_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackPlayWhenReadyChangedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackPlayWhenReadyChanged(const std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>& onPlaybackPlayWhenReadyChanged) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackPlayWhenReadyChangedEvent::javaobject> /* onPlaybackPlayWhenReadyChanged */)>("setOnPlaybackPlayWhenReadyChanged_cxx");
-    method(_javaPart, JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::fromCpp(onPlaybackPlayWhenReadyChanged));
-  }
-  std::function<void(const PlayingState& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackPlayingState() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlayingState::javaobject>()>("getOnPlaybackPlayingState_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlayingState& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlayingState_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlayingState_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlayingState data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackPlayingState(const std::function<void(const PlayingState& /* data */)>& onPlaybackPlayingState) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlayingState::javaobject> /* onPlaybackPlayingState */)>("setOnPlaybackPlayingState_cxx");
-    method(_javaPart, JFunc_void_PlayingState_cxx::fromCpp(onPlaybackPlayingState));
-  }
-  std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackProgressUpdated() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackProgressUpdatedEvent::javaobject>()>("getOnPlaybackProgressUpdated_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlaybackProgressUpdatedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlaybackProgressUpdatedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackProgressUpdatedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackProgressUpdatedEvent::javaobject> /* onPlaybackProgressUpdated */)>("setOnPlaybackProgressUpdated_cxx");
-    method(_javaPart, JFunc_void_PlaybackProgressUpdatedEvent_cxx::fromCpp(onPlaybackProgressUpdated));
-  }
-  std::function<void(const PlaybackQueueEndedEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackQueueEnded() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackQueueEndedEvent::javaobject>()>("getOnPlaybackQueueEnded_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const PlaybackQueueEndedEvent& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_PlaybackQueueEndedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_PlaybackQueueEndedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackQueueEndedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackQueueEndedEvent::javaobject> /* onPlaybackQueueEnded */)>("setOnPlaybackQueueEnded_cxx");
-    method(_javaPart, JFunc_void_PlaybackQueueEndedEvent_cxx::fromCpp(onPlaybackQueueEnded));
-  }
-  std::function<void(const RepeatModeChangedEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackRepeatModeChanged() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RepeatModeChangedEvent::javaobject>()>("getOnPlaybackRepeatModeChanged_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RepeatModeChangedEvent& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_RepeatModeChangedEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RepeatModeChangedEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RepeatModeChangedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RepeatModeChangedEvent::javaobject> /* onPlaybackRepeatModeChanged */)>("setOnPlaybackRepeatModeChanged_cxx");
-    method(_javaPart, JFunc_void_RepeatModeChangedEvent_cxx::fromCpp(onPlaybackRepeatModeChanged));
-  }
-  std::function<void(const Playback& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackChanged() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_Playback::javaobject>()>("getOnPlaybackChanged_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const Playback& /* data */)> {
-      if (__result->isInstanceOf(JFunc_void_Playback_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_Playback_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](Playback data) -> void {
-          return __resultRef->invoke(data);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_Playback::javaobject> /* onPlaybackChanged */)>("setOnPlaybackChanged_cxx");
-    method(_javaPart, JFunc_void_Playback_cxx::fromCpp(onPlaybackChanged));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteBookmark() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteBookmark_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteBookmark */)>("setOnRemoteBookmark_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteBookmark));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteDislike() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteDislike_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteDislike(const std::function<void()>& onRemoteDislike) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteDislike */)>("setOnRemoteDislike_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteDislike));
-  }
-  std::function<void(const RemoteJumpBackwardEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteJumpBackward() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject>()>("getOnRemoteJumpBackward_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemoteJumpBackwardEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteJumpBackwardEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteJumpBackwardEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpBackwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteJumpBackward(const std::function<void(const RemoteJumpBackwardEvent& /* event */)>& onRemoteJumpBackward) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject> /* onRemoteJumpBackward */)>("setOnRemoteJumpBackward_cxx");
-    method(_javaPart, JFunc_void_RemoteJumpBackwardEvent_cxx::fromCpp(onRemoteJumpBackward));
-  }
-  std::function<void(const RemoteJumpForwardEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteJumpForward() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteJumpForwardEvent::javaobject>()>("getOnRemoteJumpForward_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemoteJumpForwardEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteJumpForwardEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteJumpForwardEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpForwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteJumpForwardEvent::javaobject> /* onRemoteJumpForward */)>("setOnRemoteJumpForward_cxx");
-    method(_javaPart, JFunc_void_RemoteJumpForwardEvent_cxx::fromCpp(onRemoteJumpForward));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteLike() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteLike_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteLike(const std::function<void()>& onRemoteLike) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteLike */)>("setOnRemoteLike_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteLike));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteNext() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteNext_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteNext(const std::function<void()>& onRemoteNext) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteNext */)>("setOnRemoteNext_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteNext));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemotePause() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemotePause_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemotePause(const std::function<void()>& onRemotePause) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemotePause */)>("setOnRemotePause_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemotePause));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemotePlay() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemotePlay_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemotePlay(const std::function<void()>& onRemotePlay) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemotePlay */)>("setOnRemotePlay_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemotePlay));
-  }
-  std::function<void(const RemotePlayIdEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemotePlayId() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemotePlayIdEvent::javaobject>()>("getOnRemotePlayId_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemotePlayIdEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemotePlayIdEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemotePlayIdEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlayIdEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemotePlayId(const std::function<void(const RemotePlayIdEvent& /* event */)>& onRemotePlayId) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemotePlayIdEvent::javaobject> /* onRemotePlayId */)>("setOnRemotePlayId_cxx");
-    method(_javaPart, JFunc_void_RemotePlayIdEvent_cxx::fromCpp(onRemotePlayId));
-  }
-  std::function<void(const RemotePlaySearchEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemotePlaySearch() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemotePlaySearchEvent::javaobject>()>("getOnRemotePlaySearch_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemotePlaySearchEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemotePlaySearchEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemotePlaySearchEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlaySearchEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemotePlaySearch(const std::function<void(const RemotePlaySearchEvent& /* event */)>& onRemotePlaySearch) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemotePlaySearchEvent::javaobject> /* onRemotePlaySearch */)>("setOnRemotePlaySearch_cxx");
-    method(_javaPart, JFunc_void_RemotePlaySearchEvent_cxx::fromCpp(onRemotePlaySearch));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemotePrevious() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemotePrevious_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemotePrevious(const std::function<void()>& onRemotePrevious) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemotePrevious */)>("setOnRemotePrevious_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemotePrevious));
-  }
-  std::function<void(const RemoteSeekEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteSeek() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSeekEvent::javaobject>()>("getOnRemoteSeek_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemoteSeekEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSeekEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSeekEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSeekEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSeekEvent::javaobject> /* onRemoteSeek */)>("setOnRemoteSeek_cxx");
-    method(_javaPart, JFunc_void_RemoteSeekEvent_cxx::fromCpp(onRemoteSeek));
-  }
-  std::function<void(const RemoteSetRatingEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteSetRating() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSetRatingEvent::javaobject>()>("getOnRemoteSetRating_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemoteSetRatingEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSetRatingEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSetRatingEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSetRatingEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSetRatingEvent::javaobject> /* onRemoteSetRating */)>("setOnRemoteSetRating_cxx");
-    method(_javaPart, JFunc_void_RemoteSetRatingEvent_cxx::fromCpp(onRemoteSetRating));
-  }
-  std::function<void(const RemoteSkipEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteSkip() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSkipEvent::javaobject>()>("getOnRemoteSkip_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemoteSkipEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSkipEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSkipEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSkipEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteSkip(const std::function<void(const RemoteSkipEvent& /* event */)>& onRemoteSkip) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSkipEvent::javaobject> /* onRemoteSkip */)>("setOnRemoteSkip_cxx");
-    method(_javaPart, JFunc_void_RemoteSkipEvent_cxx::fromCpp(onRemoteSkip));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteStop() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteStop_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteStop(const std::function<void()>& onRemoteStop) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteStop */)>("setOnRemoteStop_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteStop));
-  }
-  std::function<void(const Options& /* event */)> JHybridAudioBrowserSpec::getOnOptionsChanged() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_Options::javaobject>()>("getOnOptionsChanged_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const Options& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_Options_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_Options_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](Options event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_Options::javaobject> /* onOptionsChanged */)>("setOnOptionsChanged_cxx");
-    method(_javaPart, JFunc_void_Options_cxx::fromCpp(onOptionsChanged));
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteBookmark() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteBookmark_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
+      return __map;
     }()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteBookmark */)>("setHandleRemoteBookmark_cxx");
-    method(_javaPart, handleRemoteBookmark.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteBookmark.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteDislike() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteDislike_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+  void JHybridAudioBrowserSpec::setRoutes(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& routes) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JMap<jni::JString, JBrowserSource>> /* routes */)>("setRoutes");
+    method(_javaPart, routes.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, JBrowserSource>> {
+      auto __map = jni::JHashMap<jni::JString, JBrowserSource>::create(routes.value().size());
+      for (const auto& __entry : routes.value()) {
+        __map->put(jni::make_jstring(__entry.first), JBrowserSource::fromCpp(__entry.second));
       }
-    }()) : std::nullopt;
+      return __map;
+    }() : nullptr);
   }
-  void JHybridAudioBrowserSpec::setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteDislike */)>("setHandleRemoteDislike_cxx");
-    method(_javaPart, handleRemoteDislike.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteDislike.value()) : nullptr);
-  }
-  std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemoteJumpBackward() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject>()>("getHandleRemoteJumpBackward_cxx");
+  std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> JHybridAudioBrowserSpec::getTabs() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig>()>("getTabs");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemoteJumpBackwardEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteJumpBackwardEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteJumpBackwardEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpBackwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setHandleRemoteJumpBackward(const std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>& handleRemoteJumpBackward) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject> /* handleRemoteJumpBackward */)>("setHandleRemoteJumpBackward_cxx");
-    method(_javaPart, handleRemoteJumpBackward.has_value() ? JFunc_void_RemoteJumpBackwardEvent_cxx::fromCpp(handleRemoteJumpBackward.value()) : nullptr);
+  void JHybridAudioBrowserSpec::setTabs(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& tabs) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig> /* tabs */)>("setTabs");
+    method(_javaPart, tabs.has_value() ? JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig::fromCpp(tabs.value()) : nullptr);
   }
-  std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemoteJumpForward() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteJumpForwardEvent::javaobject>()>("getHandleRemoteJumpForward_cxx");
+  std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> JHybridAudioBrowserSpec::getBrowse() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList>()>("getBrowse");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemoteJumpForwardEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteJumpForwardEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteJumpForwardEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpForwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteJumpForwardEvent::javaobject> /* handleRemoteJumpForward */)>("setHandleRemoteJumpForward_cxx");
-    method(_javaPart, handleRemoteJumpForward.has_value() ? JFunc_void_RemoteJumpForwardEvent_cxx::fromCpp(handleRemoteJumpForward.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteLike() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteLike_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteLike */)>("setHandleRemoteLike_cxx");
-    method(_javaPart, handleRemoteLike.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteLike.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteNext() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteNext_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteNext(const std::optional<std::function<void()>>& handleRemoteNext) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteNext */)>("setHandleRemoteNext_cxx");
-    method(_javaPart, handleRemoteNext.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteNext.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemotePause() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemotePause_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemotePause(const std::optional<std::function<void()>>& handleRemotePause) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemotePause */)>("setHandleRemotePause_cxx");
-    method(_javaPart, handleRemotePause.has_value() ? JFunc_void_cxx::fromCpp(handleRemotePause.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemotePlay() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemotePlay_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemotePlay(const std::optional<std::function<void()>>& handleRemotePlay) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemotePlay */)>("setHandleRemotePlay_cxx");
-    method(_javaPart, handleRemotePlay.has_value() ? JFunc_void_cxx::fromCpp(handleRemotePlay.value()) : nullptr);
-  }
-  std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemotePlayId() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemotePlayIdEvent::javaobject>()>("getHandleRemotePlayId_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemotePlayIdEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemotePlayIdEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemotePlayIdEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlayIdEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemotePlayId(const std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>& handleRemotePlayId) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemotePlayIdEvent::javaobject> /* handleRemotePlayId */)>("setHandleRemotePlayId_cxx");
-    method(_javaPart, handleRemotePlayId.has_value() ? JFunc_void_RemotePlayIdEvent_cxx::fromCpp(handleRemotePlayId.value()) : nullptr);
-  }
-  std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemotePlaySearch() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemotePlaySearchEvent::javaobject>()>("getHandleRemotePlaySearch_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemotePlaySearchEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemotePlaySearchEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemotePlaySearchEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlaySearchEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemotePlaySearch(const std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>& handleRemotePlaySearch) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemotePlaySearchEvent::javaobject> /* handleRemotePlaySearch */)>("setHandleRemotePlaySearch_cxx");
-    method(_javaPart, handleRemotePlaySearch.has_value() ? JFunc_void_RemotePlaySearchEvent_cxx::fromCpp(handleRemotePlaySearch.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemotePrevious() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemotePrevious_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemotePrevious(const std::optional<std::function<void()>>& handleRemotePrevious) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemotePrevious */)>("setHandleRemotePrevious_cxx");
-    method(_javaPart, handleRemotePrevious.has_value() ? JFunc_void_cxx::fromCpp(handleRemotePrevious.value()) : nullptr);
-  }
-  std::optional<std::function<void(const RemoteSeekEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemoteSeek() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSeekEvent::javaobject>()>("getHandleRemoteSeek_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemoteSeekEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSeekEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSeekEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSeekEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteSeek(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& handleRemoteSeek) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSeekEvent::javaobject> /* handleRemoteSeek */)>("setHandleRemoteSeek_cxx");
-    method(_javaPart, handleRemoteSeek.has_value() ? JFunc_void_RemoteSeekEvent_cxx::fromCpp(handleRemoteSeek.value()) : nullptr);
-  }
-  std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemoteSetRating() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSetRatingEvent::javaobject>()>("getHandleRemoteSetRating_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemoteSetRatingEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSetRatingEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSetRatingEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSetRatingEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSetRatingEvent::javaobject> /* handleRemoteSetRating */)>("setHandleRemoteSetRating_cxx");
-    method(_javaPart, handleRemoteSetRating.has_value() ? JFunc_void_RemoteSetRatingEvent_cxx::fromCpp(handleRemoteSetRating.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteSkip() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteSkip_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteSkip(const std::optional<std::function<void()>>& handleRemoteSkip) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteSkip */)>("setHandleRemoteSkip_cxx");
-    method(_javaPart, handleRemoteSkip.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteSkip.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteStop() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteStop_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteStop */)>("setHandleRemoteStop_cxx");
-    method(_javaPart, handleRemoteStop.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteStop.value()) : nullptr);
+  void JHybridAudioBrowserSpec::setBrowse(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& browse) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList> /* browse */)>("setBrowse");
+    method(_javaPart, browse.has_value() ? JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList::fromCpp(browse.value()) : nullptr);
   }
 
   // Methods
-  std::shared_ptr<Promise<void>> JHybridAudioBrowserSpec::setupPlayer(const PartialSetupPlayerOptions& options) {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<JPartialSetupPlayerOptions> /* options */)>("setupPlayer");
-    auto __result = method(_javaPart, JPartialSetupPlayerOptions::fromCpp(options));
+  std::shared_ptr<Promise<BrowserList>> JHybridAudioBrowserSpec::navigate(const std::string& path) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* path */)>("navigate");
+    auto __result = method(_javaPart, jni::make_jstring(path));
     return [&]() {
-      auto __promise = Promise<void>::create();
-      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
-        __promise->resolve();
+      auto __promise = Promise<BrowserList>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<JBrowserList>(__boxedResult);
+        __promise->resolve(__result->toCpp());
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
         jni::JniException __jniError(__throwable);
@@ -1107,188 +168,35 @@ namespace margelo::nitro::audiobrowser {
       return __promise;
     }();
   }
-  void JHybridAudioBrowserSpec::updateOptions(const NativeUpdateOptions& options) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JNativeUpdateOptions> /* options */)>("updateOptions");
-    method(_javaPart, JNativeUpdateOptions::fromCpp(options));
-  }
-  UpdateOptions JHybridAudioBrowserSpec::getOptions() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JUpdateOptions>()>("getOptions");
-    auto __result = method(_javaPart);
-    return __result->toCpp();
-  }
-  void JHybridAudioBrowserSpec::load(const Track& track) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JTrack> /* track */)>("load");
-    method(_javaPart, JTrack::fromCpp(track));
-  }
-  void JHybridAudioBrowserSpec::reset() {
-    static const auto method = javaClassStatic()->getMethod<void()>("reset");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::play() {
-    static const auto method = javaClassStatic()->getMethod<void()>("play");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::pause() {
-    static const auto method = javaClassStatic()->getMethod<void()>("pause");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::togglePlayback() {
-    static const auto method = javaClassStatic()->getMethod<void()>("togglePlayback");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::stop() {
-    static const auto method = javaClassStatic()->getMethod<void()>("stop");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::setPlayWhenReady(bool playWhenReady) {
-    static const auto method = javaClassStatic()->getMethod<void(jboolean /* playWhenReady */)>("setPlayWhenReady");
-    method(_javaPart, playWhenReady);
-  }
-  bool JHybridAudioBrowserSpec::getPlayWhenReady() {
-    static const auto method = javaClassStatic()->getMethod<jboolean()>("getPlayWhenReady");
-    auto __result = method(_javaPart);
-    return static_cast<bool>(__result);
-  }
-  void JHybridAudioBrowserSpec::seekTo(double position) {
-    static const auto method = javaClassStatic()->getMethod<void(double /* position */)>("seekTo");
-    method(_javaPart, position);
-  }
-  void JHybridAudioBrowserSpec::seekBy(double offset) {
-    static const auto method = javaClassStatic()->getMethod<void(double /* offset */)>("seekBy");
-    method(_javaPart, offset);
-  }
-  void JHybridAudioBrowserSpec::setVolume(double level) {
-    static const auto method = javaClassStatic()->getMethod<void(double /* level */)>("setVolume");
-    method(_javaPart, level);
-  }
-  double JHybridAudioBrowserSpec::getVolume() {
-    static const auto method = javaClassStatic()->getMethod<double()>("getVolume");
-    auto __result = method(_javaPart);
-    return __result;
-  }
-  void JHybridAudioBrowserSpec::setRate(double rate) {
-    static const auto method = javaClassStatic()->getMethod<void(double /* rate */)>("setRate");
-    method(_javaPart, rate);
-  }
-  double JHybridAudioBrowserSpec::getRate() {
-    static const auto method = javaClassStatic()->getMethod<double()>("getRate");
-    auto __result = method(_javaPart);
-    return __result;
-  }
-  Progress JHybridAudioBrowserSpec::getProgress() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JProgress>()>("getProgress");
-    auto __result = method(_javaPart);
-    return __result->toCpp();
-  }
-  Playback JHybridAudioBrowserSpec::getPlayback() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlayback>()>("getPlayback");
-    auto __result = method(_javaPart);
-    return __result->toCpp();
-  }
-  PlayingState JHybridAudioBrowserSpec::getPlayingState() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlayingState>()>("getPlayingState");
-    auto __result = method(_javaPart);
-    return __result->toCpp();
-  }
-  RepeatMode JHybridAudioBrowserSpec::getRepeatMode() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JRepeatMode>()>("getRepeatMode");
-    auto __result = method(_javaPart);
-    return __result->toCpp();
-  }
-  void JHybridAudioBrowserSpec::setRepeatMode(RepeatMode mode) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRepeatMode> /* mode */)>("setRepeatMode");
-    method(_javaPart, JRepeatMode::fromCpp(mode));
-  }
-  std::optional<PlaybackError> JHybridAudioBrowserSpec::getPlaybackError() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlaybackError>()>("getPlaybackError");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::retry() {
-    static const auto method = javaClassStatic()->getMethod<void()>("retry");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* insertBeforeIndex */)>("add");
-    method(_javaPart, [&]() {
-      size_t __size = tracks.size();
-      jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
-      for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = tracks[__i];
-        __array->setElement(__i, *JTrack::fromCpp(__element));
-      }
-      return __array;
-    }(), insertBeforeIndex.has_value() ? jni::JDouble::valueOf(insertBeforeIndex.value()) : nullptr);
-  }
-  void JHybridAudioBrowserSpec::move(double fromIndex, double toIndex) {
-    static const auto method = javaClassStatic()->getMethod<void(double /* fromIndex */, double /* toIndex */)>("move");
-    method(_javaPart, fromIndex, toIndex);
-  }
-  void JHybridAudioBrowserSpec::remove(const std::vector<double>& indexes) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayDouble> /* indexes */)>("remove");
-    method(_javaPart, [&]() {
-      size_t __size = indexes.size();
-      jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
-      __array->setRegion(0, __size, indexes.data());
-      return __array;
-    }());
-  }
-  void JHybridAudioBrowserSpec::removeUpcomingTracks() {
-    static const auto method = javaClassStatic()->getMethod<void()>("removeUpcomingTracks");
-    method(_javaPart);
-  }
-  void JHybridAudioBrowserSpec::skip(double index, std::optional<double> initialPosition) {
-    static const auto method = javaClassStatic()->getMethod<void(double /* index */, jni::alias_ref<jni::JDouble> /* initialPosition */)>("skip");
-    method(_javaPart, index, initialPosition.has_value() ? jni::JDouble::valueOf(initialPosition.value()) : nullptr);
-  }
-  void JHybridAudioBrowserSpec::skipToNext(std::optional<double> initialPosition) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* initialPosition */)>("skipToNext");
-    method(_javaPart, initialPosition.has_value() ? jni::JDouble::valueOf(initialPosition.value()) : nullptr);
-  }
-  void JHybridAudioBrowserSpec::skipToPrevious(std::optional<double> initialPosition) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* initialPosition */)>("skipToPrevious");
-    method(_javaPart, initialPosition.has_value() ? jni::JDouble::valueOf(initialPosition.value()) : nullptr);
-  }
-  void JHybridAudioBrowserSpec::setQueue(const std::vector<Track>& tracks) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */)>("setQueue");
-    method(_javaPart, [&]() {
-      size_t __size = tracks.size();
-      jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
-      for (size_t __i = 0; __i < __size; __i++) {
-        const auto& __element = tracks[__i];
-        __array->setElement(__i, *JTrack::fromCpp(__element));
-      }
-      return __array;
-    }());
-  }
-  std::vector<Track> JHybridAudioBrowserSpec::getQueue() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JTrack>>()>("getQueue");
-    auto __result = method(_javaPart);
+  std::shared_ptr<Promise<std::vector<Track>>> JHybridAudioBrowserSpec::onSearch(const std::string& query) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* query */)>("onSearch");
+    auto __result = method(_javaPart, jni::make_jstring(query));
     return [&]() {
-      size_t __size = __result->size();
-      std::vector<Track> __vector;
-      __vector.reserve(__size);
-      for (size_t __i = 0; __i < __size; __i++) {
-        auto __element = __result->getElement(__i);
-        __vector.push_back(__element->toCpp());
-      }
-      return __vector;
+      auto __promise = Promise<std::vector<Track>>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<jni::JArrayClass<JTrack>>(__boxedResult);
+        __promise->resolve([&]() {
+          size_t __size = __result->size();
+          std::vector<Track> __vector;
+          __vector.reserve(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            auto __element = __result->getElement(__i);
+            __vector.push_back(__element->toCpp());
+          }
+          return __vector;
+        }());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
     }();
   }
-  std::optional<Track> JHybridAudioBrowserSpec::getTrack(double index) {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JTrack>(double /* index */)>("getTrack");
-    auto __result = method(_javaPart, index);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
-  }
-  std::optional<double> JHybridAudioBrowserSpec::getActiveTrackIndex() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getActiveTrackIndex");
+  std::string JHybridAudioBrowserSpec::getCurrentPath() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getCurrentPath");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->value()) : std::nullopt;
-  }
-  std::optional<Track> JHybridAudioBrowserSpec::getActiveTrack() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JTrack>()>("getActiveTrack");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+    return __result->toStdString();
   }
 
 } // namespace margelo::nitro::audiobrowser

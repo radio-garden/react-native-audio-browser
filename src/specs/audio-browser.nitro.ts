@@ -1,134 +1,126 @@
-import { type HybridObject } from 'react-native-nitro-modules'
+import { type HybridObject } from 'react-native-nitro-modules';
 
-import type { PlaybackActiveTrackChangedEvent } from '../features/activeTrack'
-import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
-  AudioCommonMetadataReceivedEvent,
-  AudioMetadataReceivedEvent,
-  PlaybackMetadata,
-} from '../features/metadata'
-import type {
-  NativeUpdateOptions,
-  Options,
-  UpdateOptions,
-} from '../features/options'
-import type { Playback } from '../features/playbackState'
-import type { PartialSetupPlayerOptions } from '../features/player'
-import type { PlayingState } from '../features/playingState'
-import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playWhenReady'
-import type {
-  PlaybackProgressUpdatedEvent,
-  Progress,
-} from '../features/progress'
-import type { PlaybackQueueEndedEvent } from '../features/queue'
-import type {
-  RemoteJumpBackwardEvent,
-  RemoteJumpForwardEvent,
-  RemotePlayIdEvent,
-  RemotePlaySearchEvent,
-  RemoteSeekEvent,
-  RemoteSetRatingEvent,
-  RemoteSkipEvent,
-} from '../features/remoteControls'
-import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
-import type { Track } from '../types'
+  BrowserList,
+  BrowserSource,
+  MediaSource,
+  RequestConfig,
+  SearchSource,
+  TabsSource,
+  Track,
+} from '../types';
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
-  // MARK: init and config
-  setupPlayer(options: PartialSetupPlayerOptions): Promise<void>
-  updateOptions(options: NativeUpdateOptions): void
-  getOptions(): UpdateOptions
+  /**
+   * Base request configuration applied to all HTTP requests.
+   * Merged with specific configurations (browse, search, media) where specific settings override base settings.
+   * Useful for shared settings like user agent, common headers / request parameters (e.g., API keys, locale), or base URL.
+   */
+  request?: RequestConfig
 
-  // // MARK: events
-  onMetadataChapterReceived: (event: AudioMetadataReceivedEvent) => void
-  onMetadataCommonReceived: (event: AudioCommonMetadataReceivedEvent) => void
-  onMetadataTimedReceived: (event: AudioMetadataReceivedEvent) => void
-  onPlaybackMetadata: (data: PlaybackMetadata) => void
-  onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) => void
-  onPlaybackError: (data: PlaybackErrorEvent) => void
-  onPlaybackPlayWhenReadyChanged: (
-    data: PlaybackPlayWhenReadyChangedEvent
-  ) => void
-  onPlaybackPlayingState: (data: PlayingState) => void
-  onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
-  onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
-  onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
-  onPlaybackChanged: (data: Playback) => void
-  onRemoteBookmark: () => void
-  onRemoteDislike: () => void
-  onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void
-  onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void
-  onRemoteLike: () => void
-  onRemoteNext: () => void
-  onRemotePause: () => void
-  onRemotePlay: () => void
-  onRemotePlayId: (event: RemotePlayIdEvent) => void
-  onRemotePlaySearch: (event: RemotePlaySearchEvent) => void
-  onRemotePrevious: () => void
-  onRemoteSeek: (event: RemoteSeekEvent) => void
-  onRemoteSetRating: (event: RemoteSetRatingEvent) => void
-  onRemoteSkip: (event: RemoteSkipEvent) => void
-  onRemoteStop: () => void
-  onOptionsChanged: (event: Options) => void
+  /**
+   * Configuration for media/stream requests.
+   * Used for fetching actual audio/video files referenced in MediaItem.src URLs.
+   * Handles the final step of media playback - transforming media URLs into playable streams.
+   *
+   * Optional - if not provided, MediaItem.src URLs are used directly without transformation.
+   * Useful when media files are already accessible at their src URLs without additional processing.
+   *
+   * Common use cases:
+   * - Adding authentication headers for protected content
+   * - CDN routing and URL rewriting
+   * - Format negotiation (HLS vs MP4)
+   *
+   * @example
+   * ```typescript
+   * media: {
+   *   baseUrl: 'https://cdn.example.com',
+   *   transform(request) {
+   *     return {
+   *       ...request,
+   *       headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+   *       path: request.path?.replace('/stream/', '/hls/')
+   *     };
+   *   }
+   * }
+   * ```
+   */
+  media?: MediaSource
 
-  // MARK: remote handlers
-  handleRemoteBookmark: (() => void) | undefined
-  handleRemoteDislike: (() => void) | undefined
-  handleRemoteJumpBackward:
-    | ((event: RemoteJumpBackwardEvent) => void)
-    | undefined
-  handleRemoteJumpForward: ((event: RemoteJumpForwardEvent) => void) | undefined
-  handleRemoteLike: (() => void) | undefined
-  handleRemoteNext: (() => void) | undefined
-  handleRemotePause: (() => void) | undefined
-  handleRemotePlay: (() => void) | undefined
-  handleRemotePlayId: ((event: RemotePlayIdEvent) => void) | undefined
-  handleRemotePlaySearch: ((event: RemotePlaySearchEvent) => void) | undefined
-  handleRemotePrevious: (() => void) | undefined
-  handleRemoteSeek: ((event: RemoteSeekEvent) => void) | undefined
-  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined
-  handleRemoteSkip: (() => void) | undefined
-  handleRemoteStop: (() => void) | undefined
+  /**
+   * Configuration for search functionality.
+   * Enables search capabilities in the media browser, typically accessed through voice commands or search UI.
+   *
+   * Optional - if not provided, search functionality will be disabled.
+   * Required for Android Auto/CarPlay voice search integration.
+   *
+   * Can be either:
+   * - SearchSourceCallback: Custom function for complex search logic
+   * - TransformableRequestConfig: API endpoint where query is automatically added as { q: query } to request.query
+   *   (use transform callback to place query in headers, body, or custom parameter names)
+   *
+   * @example
+   * ```typescript
+   * search: {
+   *   baseUrl: 'https://api.example.com/search',
+   *   transform(request) {
+   *     return {
+   *       ...request,
+   *       query: { ...request.query, limit: 20 }
+   *     };
+   *   }
+   * }
+   * ```
+   */
+  search?: SearchSource
 
-  // MARK: player api
-  load(track: Track): void
-  reset(): void
-  play(): void
-  pause(): void
-  togglePlayback(): void
-  stop(): void
-  setPlayWhenReady(playWhenReady: boolean): void
-  getPlayWhenReady(): boolean
-  seekTo(position: number): void
-  seekBy(offset: number): void
-  setVolume(level: number): void
-  getVolume(): number
-  setRate(rate: number): void
-  getRate(): number
-  getProgress(): Progress
-  getPlayback(): Playback
-  getPlayingState(): PlayingState
-  getRepeatMode(): RepeatMode
-  setRepeatMode(mode: RepeatMode): void
-  getPlaybackError(): PlaybackError | null
-  retry(): void
+  /**
+   * Route-specific configurations for handling navigation paths.
+   * Maps URL paths to their corresponding sources (static content, API configs, or callbacks).
+   *
+   * Optional - if not provided, all navigation uses the browse fallback.
+   * Routes match paths that start with the route key, with specificity (most slashes wins).
+   *
+   * @example
+   * ```typescript
+   * routes: {
+   *   '/favorites': {
+   *     transform: async (request) => ({
+   *       ...request,
+   *       body: JSON.stringify({ ids: await getFavoriteIds() })
+   *     })
+   *   },
+   *   '/artists': { baseUrl: 'https://music-api.com' },
+   *   '/artists/premium': { baseUrl: 'https://premium-api.com' } // More specific, wins for /artists/premium/*
+   * }
+   * ```
+   */
+  routes?: Record<string, BrowserSource>
 
-  // MARK: playlist management
-  add(tracks: Track[], insertBeforeIndex?: number): void
-  move(fromIndex: number, toIndex: number): void
-  remove(indexes: number[]): void
-  removeUpcomingTracks(): void
-  skip(index: number, initialPosition?: number): void
-  skipToNext(initialPosition?: number): void
-  skipToPrevious(initialPosition?: number): void
-  // updateMetadataForTrack(trackIndex: number, metadata: TrackMetadataBase): void
-  // updateNowPlayingMetadata(metadata: TrackMetadataBase): void
-  setQueue(tracks: Track[]): void
-  getQueue(): Track[]
-  getTrack(index: number): Track | undefined
-  getActiveTrackIndex(): number | undefined
-  getActiveTrack(): Track | undefined
+  /**
+   * Configuration for navigation tabs in the media browser.
+   * The first tab's URL is automatically loaded when the browser starts.
+   *
+   * Optional - if not provided, no tab navigation will be available.
+   * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
+   *
+   * Can provide static array of MediaLink objects as tabs, API configuration, or custom callback.
+   */
+  tabs?: TabsSource
 
-  // MARK: Android methods
+  /**
+   * Default handler for browse/navigation requests.
+   * Used as fallback when a path doesn't have a specific source defined in routes.
+   * Can be API configuration or custom callback function.
+   *
+   * Optional - if not provided, navigation to undefined paths will fail.
+   * Typically used when most navigation can be handled by a single API endpoint.
+   */
+  browse?: BrowserSource
+
+  // Browser navigation methods
+  navigate(path: string): Promise<BrowserList>
+  onSearch(query: string): Promise<Track[]>
+  getCurrentPath(): string
 }

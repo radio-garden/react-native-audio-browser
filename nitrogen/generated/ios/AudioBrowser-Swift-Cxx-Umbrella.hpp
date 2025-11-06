@@ -26,6 +26,14 @@ namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent
 namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `BrowserItemStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `BrowserList` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserList; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
@@ -34,6 +42,8 @@ namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
+// Forward declaration of `HybridAudioPlayerSpec` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { class HybridAudioPlayerSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 // Forward declaration of `IOSCategoryOptions` to properly resolve imports.
@@ -104,12 +114,16 @@ namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `RequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 
@@ -123,10 +137,15 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
+#include "BrowserItemStyle.hpp"
+#include "BrowserLink.hpp"
+#include "BrowserList.hpp"
+#include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"
 #include "FeedbackOptions.hpp"
 #include "HeartRating.hpp"
 #include "HybridAudioBrowserSpec.hpp"
+#include "HybridAudioPlayerSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
@@ -162,9 +181,11 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "RemoteSkipEvent.hpp"
 #include "RepeatMode.hpp"
 #include "RepeatModeChangedEvent.hpp"
+#include "RequestConfig.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
+#include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
@@ -173,6 +194,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -188,6 +210,8 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
+// Forward declaration of `HybridAudioPlayerSpec_cxx` to properly resolve imports.
+namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 
 // Include Swift defined types
 #if __has_include("AudioBrowser-Swift.h")

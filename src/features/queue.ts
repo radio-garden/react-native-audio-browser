@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import type { Track } from '../types'
 import { LazyEmitter } from '../utils/LazyEmitter'
 
@@ -33,7 +33,7 @@ export function add(track: Track, insertBeforeIndex?: number): void
 export function add(tracks: Track | Track[], insertBeforeIndex = -1): void {
   const addTracks = Array.isArray(tracks) ? tracks : [tracks]
   if (addTracks.length > 0) {
-    nativeAudioBrowser.add(addTracks, insertBeforeIndex)
+    nativePlayer.add(addTracks, insertBeforeIndex)
   }
 }
 
@@ -42,7 +42,7 @@ export function add(tracks: Track | Track[], insertBeforeIndex = -1): void {
  * @param track - The track to load.
  */
 export function load(track: Track): void {
-  nativeAudioBrowser.load(track)
+  nativePlayer.load(track)
 }
 
 /**
@@ -52,7 +52,7 @@ export function load(track: Track): void {
  * the size of the queue, then the track is moved to the end of the queue.
  */
 export function move(fromIndex: number, toIndex: number): void {
-  nativeAudioBrowser.move(fromIndex, toIndex)
+  nativePlayer.move(fromIndex, toIndex)
 }
 
 /**
@@ -76,7 +76,7 @@ export function remove(indexes: number[]): void
  */
 export function remove(index: number): void
 export function remove(indexOrIndexes: number | number[]): void {
-  nativeAudioBrowser.remove(
+  nativePlayer.remove(
     Array.isArray(indexOrIndexes) ? indexOrIndexes : [indexOrIndexes]
   )
 }
@@ -85,7 +85,7 @@ export function remove(indexOrIndexes: number | number[]): void {
  * Clears any upcoming tracks from the queue.
  */
 export function removeUpcomingTracks(): void {
-  nativeAudioBrowser.removeUpcomingTracks()
+  nativePlayer.removeUpcomingTracks()
 }
 
 /**
@@ -94,7 +94,7 @@ export function removeUpcomingTracks(): void {
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  */
 export function skip(index: number, initialPosition?: number): void {
-  nativeAudioBrowser.skip(index, initialPosition)
+  nativePlayer.skip(index, initialPosition)
 }
 
 /**
@@ -102,7 +102,7 @@ export function skip(index: number, initialPosition?: number): void {
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  */
 export function skipToNext(initialPosition?: number): void {
-  nativeAudioBrowser.skipToNext(initialPosition)
+  nativePlayer.skipToNext(initialPosition)
 }
 
 /**
@@ -110,7 +110,7 @@ export function skipToNext(initialPosition?: number): void {
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  */
 export function skipToPrevious(initialPosition?: number): void {
-  nativeAudioBrowser.skipToPrevious(initialPosition)
+  nativePlayer.skipToPrevious(initialPosition)
 }
 
 /**
@@ -118,7 +118,7 @@ export function skipToPrevious(initialPosition?: number): void {
  * @param tracks - The tracks to set as the queue.
  */
 export function setQueue(tracks: Track[]): void {
-  nativeAudioBrowser.setQueue(tracks)
+  nativePlayer.setQueue(tracks)
 }
 
 // MARK: - Getters
@@ -129,14 +129,14 @@ export function setQueue(tracks: Track[]): void {
  * @returns The track object or undefined if there isn't a track object at that index.
  */
 export function getTrack(index: number): Track | undefined {
-  return nativeAudioBrowser.getTrack(index) as unknown as Track
+  return nativePlayer.getTrack(index) as unknown as Track
 }
 
 /**
  * Gets the whole queue.
  */
 export function getQueue(): Track[] {
-  return nativeAudioBrowser.getQueue() as unknown as Track[]
+  return nativePlayer.getQueue() as unknown as Track[]
 }
 
 // MARK: - Event Callbacks
@@ -147,5 +147,5 @@ export function getQueue(): Track[] {
  * @returns Cleanup function to unsubscribe
  */
 export const onQueueEnded = LazyEmitter.emitterize<PlaybackQueueEndedEvent>(
-  (cb) => (nativeAudioBrowser.onPlaybackQueueEnded = cb)
+  (cb) => (nativePlayer.onPlaybackQueueEnded = cb)
 )

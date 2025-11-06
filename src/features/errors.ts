@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
@@ -21,7 +21,7 @@ export interface PlaybackErrorEvent {
  * @returns The current error or undefined if there is no error
  */
 export function getPlaybackError(): PlaybackError | undefined {
-  const error = nativeAudioBrowser.getPlaybackError()
+  const error = nativePlayer.getPlaybackError()
   return error ?? undefined
 }
 
@@ -33,7 +33,7 @@ export function getPlaybackError(): PlaybackError | undefined {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlaybackError = LazyEmitter.emitterize<PlaybackErrorEvent>(
-  (cb) => (nativeAudioBrowser.onPlaybackError = cb)
+  (cb) => (nativePlayer.onPlaybackError = cb)
 )
 
 // MARK: - Hooks

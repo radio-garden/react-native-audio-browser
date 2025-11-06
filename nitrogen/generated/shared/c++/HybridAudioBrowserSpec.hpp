@@ -13,89 +13,32 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
-// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
-// Forward declaration of `PlaybackMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
-// Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
-// Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
-// Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
-// Forward declaration of `PlayingState` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlayingState; }
-// Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
-// Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
-// Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
-// Forward declaration of `Playback` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Playback; }
-// Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
-// Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
-// Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
-// Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
-// Forward declaration of `RemoteSeekEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
-// Forward declaration of `RemoteSkipEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
-// Forward declaration of `Options` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Options; }
-// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
-// Forward declaration of `NativeUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
+// Forward declaration of `RequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `Progress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Progress; }
-// Forward declaration of `RepeatMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
-// Forward declaration of `PlaybackError` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `BrowserList` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserList; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `BrowserLink` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserLink; }
 
-#include "AudioMetadataReceivedEvent.hpp"
-#include <functional>
-#include "AudioCommonMetadataReceivedEvent.hpp"
-#include "PlaybackMetadata.hpp"
-#include "PlaybackActiveTrackChangedEvent.hpp"
-#include "PlaybackErrorEvent.hpp"
-#include "PlaybackPlayWhenReadyChangedEvent.hpp"
-#include "PlayingState.hpp"
-#include "PlaybackProgressUpdatedEvent.hpp"
-#include "PlaybackQueueEndedEvent.hpp"
-#include "RepeatModeChangedEvent.hpp"
-#include "Playback.hpp"
-#include "RemoteJumpBackwardEvent.hpp"
-#include "RemoteJumpForwardEvent.hpp"
-#include "RemotePlayIdEvent.hpp"
-#include "RemotePlaySearchEvent.hpp"
-#include "RemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
-#include "RemoteSkipEvent.hpp"
-#include "Options.hpp"
+#include "RequestConfig.hpp"
 #include <optional>
-#include <NitroModules/Promise.hpp>
-#include "PartialSetupPlayerOptions.hpp"
-#include "NativeUpdateOptions.hpp"
-#include "UpdateOptions.hpp"
+#include "TransformableRequestConfig.hpp"
 #include "Track.hpp"
-#include "Progress.hpp"
-#include "RepeatMode.hpp"
-#include "PlaybackError.hpp"
 #include <vector>
+#include <NitroModules/Promise.hpp>
+#include <string>
+#include <functional>
+#include <variant>
+#include "BrowserList.hpp"
+#include "BrowserSourceCallbackParam.hpp"
+#include <unordered_map>
+#include "BrowserLink.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -124,131 +67,24 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Properties
-      virtual std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataChapterReceived() = 0;
-      virtual void setOnMetadataChapterReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataChapterReceived) = 0;
-      virtual std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)> getOnMetadataCommonReceived() = 0;
-      virtual void setOnMetadataCommonReceived(const std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>& onMetadataCommonReceived) = 0;
-      virtual std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataTimedReceived() = 0;
-      virtual void setOnMetadataTimedReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataTimedReceived) = 0;
-      virtual std::function<void(const PlaybackMetadata& /* data */)> getOnPlaybackMetadata() = 0;
-      virtual void setOnPlaybackMetadata(const std::function<void(const PlaybackMetadata& /* data */)>& onPlaybackMetadata) = 0;
-      virtual std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)> getOnPlaybackActiveTrackChanged() = 0;
-      virtual void setOnPlaybackActiveTrackChanged(const std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>& onPlaybackActiveTrackChanged) = 0;
-      virtual std::function<void(const PlaybackErrorEvent& /* data */)> getOnPlaybackError() = 0;
-      virtual void setOnPlaybackError(const std::function<void(const PlaybackErrorEvent& /* data */)>& onPlaybackError) = 0;
-      virtual std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)> getOnPlaybackPlayWhenReadyChanged() = 0;
-      virtual void setOnPlaybackPlayWhenReadyChanged(const std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>& onPlaybackPlayWhenReadyChanged) = 0;
-      virtual std::function<void(const PlayingState& /* data */)> getOnPlaybackPlayingState() = 0;
-      virtual void setOnPlaybackPlayingState(const std::function<void(const PlayingState& /* data */)>& onPlaybackPlayingState) = 0;
-      virtual std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> getOnPlaybackProgressUpdated() = 0;
-      virtual void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) = 0;
-      virtual std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() = 0;
-      virtual void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) = 0;
-      virtual std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() = 0;
-      virtual void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) = 0;
-      virtual std::function<void(const Playback& /* data */)> getOnPlaybackChanged() = 0;
-      virtual void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) = 0;
-      virtual std::function<void()> getOnRemoteBookmark() = 0;
-      virtual void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) = 0;
-      virtual std::function<void()> getOnRemoteDislike() = 0;
-      virtual void setOnRemoteDislike(const std::function<void()>& onRemoteDislike) = 0;
-      virtual std::function<void(const RemoteJumpBackwardEvent& /* event */)> getOnRemoteJumpBackward() = 0;
-      virtual void setOnRemoteJumpBackward(const std::function<void(const RemoteJumpBackwardEvent& /* event */)>& onRemoteJumpBackward) = 0;
-      virtual std::function<void(const RemoteJumpForwardEvent& /* event */)> getOnRemoteJumpForward() = 0;
-      virtual void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) = 0;
-      virtual std::function<void()> getOnRemoteLike() = 0;
-      virtual void setOnRemoteLike(const std::function<void()>& onRemoteLike) = 0;
-      virtual std::function<void()> getOnRemoteNext() = 0;
-      virtual void setOnRemoteNext(const std::function<void()>& onRemoteNext) = 0;
-      virtual std::function<void()> getOnRemotePause() = 0;
-      virtual void setOnRemotePause(const std::function<void()>& onRemotePause) = 0;
-      virtual std::function<void()> getOnRemotePlay() = 0;
-      virtual void setOnRemotePlay(const std::function<void()>& onRemotePlay) = 0;
-      virtual std::function<void(const RemotePlayIdEvent& /* event */)> getOnRemotePlayId() = 0;
-      virtual void setOnRemotePlayId(const std::function<void(const RemotePlayIdEvent& /* event */)>& onRemotePlayId) = 0;
-      virtual std::function<void(const RemotePlaySearchEvent& /* event */)> getOnRemotePlaySearch() = 0;
-      virtual void setOnRemotePlaySearch(const std::function<void(const RemotePlaySearchEvent& /* event */)>& onRemotePlaySearch) = 0;
-      virtual std::function<void()> getOnRemotePrevious() = 0;
-      virtual void setOnRemotePrevious(const std::function<void()>& onRemotePrevious) = 0;
-      virtual std::function<void(const RemoteSeekEvent& /* event */)> getOnRemoteSeek() = 0;
-      virtual void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) = 0;
-      virtual std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() = 0;
-      virtual void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) = 0;
-      virtual std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() = 0;
-      virtual void setOnRemoteSkip(const std::function<void(const RemoteSkipEvent& /* event */)>& onRemoteSkip) = 0;
-      virtual std::function<void()> getOnRemoteStop() = 0;
-      virtual void setOnRemoteStop(const std::function<void()>& onRemoteStop) = 0;
-      virtual std::function<void(const Options& /* event */)> getOnOptionsChanged() = 0;
-      virtual void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteBookmark() = 0;
-      virtual void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteDislike() = 0;
-      virtual void setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) = 0;
-      virtual std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> getHandleRemoteJumpBackward() = 0;
-      virtual void setHandleRemoteJumpBackward(const std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>& handleRemoteJumpBackward) = 0;
-      virtual std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>> getHandleRemoteJumpForward() = 0;
-      virtual void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteLike() = 0;
-      virtual void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteNext() = 0;
-      virtual void setHandleRemoteNext(const std::optional<std::function<void()>>& handleRemoteNext) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemotePause() = 0;
-      virtual void setHandleRemotePause(const std::optional<std::function<void()>>& handleRemotePause) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemotePlay() = 0;
-      virtual void setHandleRemotePlay(const std::optional<std::function<void()>>& handleRemotePlay) = 0;
-      virtual std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>> getHandleRemotePlayId() = 0;
-      virtual void setHandleRemotePlayId(const std::optional<std::function<void(const RemotePlayIdEvent& /* event */)>>& handleRemotePlayId) = 0;
-      virtual std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>> getHandleRemotePlaySearch() = 0;
-      virtual void setHandleRemotePlaySearch(const std::optional<std::function<void(const RemotePlaySearchEvent& /* event */)>>& handleRemotePlaySearch) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemotePrevious() = 0;
-      virtual void setHandleRemotePrevious(const std::optional<std::function<void()>>& handleRemotePrevious) = 0;
-      virtual std::optional<std::function<void(const RemoteSeekEvent& /* event */)>> getHandleRemoteSeek() = 0;
-      virtual void setHandleRemoteSeek(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& handleRemoteSeek) = 0;
-      virtual std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> getHandleRemoteSetRating() = 0;
-      virtual void setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteSkip() = 0;
-      virtual void setHandleRemoteSkip(const std::optional<std::function<void()>>& handleRemoteSkip) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteStop() = 0;
-      virtual void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) = 0;
+      virtual std::optional<RequestConfig> getRequest() = 0;
+      virtual void setRequest(const std::optional<RequestConfig>& request) = 0;
+      virtual std::optional<TransformableRequestConfig> getMedia() = 0;
+      virtual void setMedia(const std::optional<TransformableRequestConfig>& media) = 0;
+      virtual std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> getSearch() = 0;
+      virtual void setSearch(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& search) = 0;
+      virtual std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> getRoutes() = 0;
+      virtual void setRoutes(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& routes) = 0;
+      virtual std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> getTabs() = 0;
+      virtual void setTabs(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& tabs) = 0;
+      virtual std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> getBrowse() = 0;
+      virtual void setBrowse(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& browse) = 0;
 
     public:
       // Methods
-      virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
-      virtual void updateOptions(const NativeUpdateOptions& options) = 0;
-      virtual UpdateOptions getOptions() = 0;
-      virtual void load(const Track& track) = 0;
-      virtual void reset() = 0;
-      virtual void play() = 0;
-      virtual void pause() = 0;
-      virtual void togglePlayback() = 0;
-      virtual void stop() = 0;
-      virtual void setPlayWhenReady(bool playWhenReady) = 0;
-      virtual bool getPlayWhenReady() = 0;
-      virtual void seekTo(double position) = 0;
-      virtual void seekBy(double offset) = 0;
-      virtual void setVolume(double level) = 0;
-      virtual double getVolume() = 0;
-      virtual void setRate(double rate) = 0;
-      virtual double getRate() = 0;
-      virtual Progress getProgress() = 0;
-      virtual Playback getPlayback() = 0;
-      virtual PlayingState getPlayingState() = 0;
-      virtual RepeatMode getRepeatMode() = 0;
-      virtual void setRepeatMode(RepeatMode mode) = 0;
-      virtual std::optional<PlaybackError> getPlaybackError() = 0;
-      virtual void retry() = 0;
-      virtual void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) = 0;
-      virtual void move(double fromIndex, double toIndex) = 0;
-      virtual void remove(const std::vector<double>& indexes) = 0;
-      virtual void removeUpcomingTracks() = 0;
-      virtual void skip(double index, std::optional<double> initialPosition) = 0;
-      virtual void skipToNext(std::optional<double> initialPosition) = 0;
-      virtual void skipToPrevious(std::optional<double> initialPosition) = 0;
-      virtual void setQueue(const std::vector<Track>& tracks) = 0;
-      virtual std::vector<Track> getQueue() = 0;
-      virtual std::optional<Track> getTrack(double index) = 0;
-      virtual std::optional<double> getActiveTrackIndex() = 0;
-      virtual std::optional<Track> getActiveTrack() = 0;
+      virtual std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) = 0;
+      virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
+      virtual std::string getCurrentPath() = 0;
 
     protected:
       // Hybrid Setup

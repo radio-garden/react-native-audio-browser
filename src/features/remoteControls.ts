@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import type {
   HeartRating,
@@ -156,7 +156,7 @@ export interface RemoteSkipEvent {
  * @param callback - Called when the user presses the play button. Pass undefined to disable.
  */
 export function handleRemotePlay(callback: (() => void) | undefined) {
-  nativeAudioBrowser.handleRemotePlay = callback
+  nativePlayer.handleRemotePlay = callback
 }
 
 /**
@@ -164,7 +164,7 @@ export function handleRemotePlay(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the pause button. Pass undefined to disable.
  */
 export function handleRemotePause(callback: (() => void) | undefined) {
-  nativeAudioBrowser.handleRemotePause = callback
+  nativePlayer.handleRemotePause = callback
 }
 
 /**
@@ -172,7 +172,7 @@ export function handleRemotePause(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the next track button. Pass undefined to disable.
  */
 export function handleRemoteNext(callback: (() => void) | undefined) {
-  nativeAudioBrowser.handleRemoteNext = callback
+  nativePlayer.handleRemoteNext = callback
 }
 
 /**
@@ -180,7 +180,7 @@ export function handleRemoteNext(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the previous track button. Pass undefined to disable.
  */
 export function handleRemotePrevious(callback: (() => void) | undefined) {
-  nativeAudioBrowser.handleRemotePrevious = callback
+  nativePlayer.handleRemotePrevious = callback
 }
 
 /**
@@ -188,7 +188,7 @@ export function handleRemotePrevious(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the stop button. Pass undefined to disable.
  */
 export function handleRemoteStop(callback: (() => void) | undefined) {
-  nativeAudioBrowser.handleRemoteStop = callback
+  nativePlayer.handleRemoteStop = callback
 }
 
 /**
@@ -198,7 +198,7 @@ export function handleRemoteStop(callback: (() => void) | undefined) {
 export function handleRemoteSeek(
   callback: ((event: RemoteSeekEvent) => void) | undefined
 ) {
-  nativeAudioBrowser.handleRemoteSeek = callback
+  nativePlayer.handleRemoteSeek = callback
 }
 
 /**
@@ -208,7 +208,7 @@ export function handleRemoteSeek(
 export function handleRemoteJumpForward(
   callback: ((event: RemoteJumpForwardEvent) => void) | undefined
 ) {
-  nativeAudioBrowser.handleRemoteJumpForward = callback
+  nativePlayer.handleRemoteJumpForward = callback
 }
 
 /**
@@ -218,7 +218,7 @@ export function handleRemoteJumpForward(
 export function handleRemoteJumpBackward(
   callback: ((event: RemoteJumpBackwardEvent) => void) | undefined
 ) {
-  nativeAudioBrowser.handleRemoteJumpBackward = callback
+  nativePlayer.handleRemoteJumpBackward = callback
 }
 
 // MARK: - Event Callbacks (for listening/debugging only)
@@ -234,7 +234,7 @@ export function handleRemoteJumpBackward(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteBookmark = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemoteBookmark = cb)
+  (cb) => (nativePlayer.onRemoteBookmark = cb)
 )
 
 /**
@@ -243,7 +243,7 @@ export const onRemoteBookmark = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteDislike = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemoteDislike = cb)
+  (cb) => (nativePlayer.onRemoteDislike = cb)
 )
 
 /**
@@ -253,7 +253,7 @@ export const onRemoteDislike = LazyEmitter.emitterize<void>(
  */
 export const onRemoteJumpBackward =
   LazyEmitter.emitterize<RemoteJumpBackwardEvent>(
-    (cb) => (nativeAudioBrowser.onRemoteJumpBackward = cb)
+    (cb) => (nativePlayer.onRemoteJumpBackward = cb)
   )
 
 /**
@@ -263,7 +263,7 @@ export const onRemoteJumpBackward =
  */
 export const onRemoteJumpForward =
   LazyEmitter.emitterize<RemoteJumpForwardEvent>(
-    (cb) => (nativeAudioBrowser.onRemoteJumpForward = cb)
+    (cb) => (nativePlayer.onRemoteJumpForward = cb)
   )
 
 /**
@@ -272,7 +272,7 @@ export const onRemoteJumpForward =
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteLike = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemoteLike = cb)
+  (cb) => (nativePlayer.onRemoteLike = cb)
 )
 
 /**
@@ -281,7 +281,7 @@ export const onRemoteLike = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteNext = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemoteNext = cb)
+  (cb) => (nativePlayer.onRemoteNext = cb)
 )
 
 /**
@@ -290,7 +290,7 @@ export const onRemoteNext = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePause = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemotePause = cb)
+  (cb) => (nativePlayer.onRemotePause = cb)
 )
 
 /**
@@ -299,7 +299,7 @@ export const onRemotePause = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePlay = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemotePlay = cb)
+  (cb) => (nativePlayer.onRemotePlay = cb)
 )
 
 /**
@@ -308,7 +308,7 @@ export const onRemotePlay = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePlayId = LazyEmitter.emitterize<RemotePlayIdEvent>(
-  (cb) => (nativeAudioBrowser.onRemotePlayId = cb)
+  (cb) => (nativePlayer.onRemotePlayId = cb)
 )
 
 /**
@@ -317,7 +317,7 @@ export const onRemotePlayId = LazyEmitter.emitterize<RemotePlayIdEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePlaySearch = LazyEmitter.emitterize<RemotePlaySearchEvent>(
-  (cb) => (nativeAudioBrowser.onRemotePlaySearch = cb)
+  (cb) => (nativePlayer.onRemotePlaySearch = cb)
 )
 
 /**
@@ -326,7 +326,7 @@ export const onRemotePlaySearch = LazyEmitter.emitterize<RemotePlaySearchEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePrevious = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemotePrevious = cb)
+  (cb) => (nativePlayer.onRemotePrevious = cb)
 )
 
 /**
@@ -335,7 +335,7 @@ export const onRemotePrevious = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteSeek = LazyEmitter.emitterize<RemoteSeekEvent>(
-  (cb) => (nativeAudioBrowser.onRemoteSeek = cb)
+  (cb) => (nativePlayer.onRemoteSeek = cb)
 )
 
 /**
@@ -344,7 +344,7 @@ export const onRemoteSeek = LazyEmitter.emitterize<RemoteSeekEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteSetRating = LazyEmitter.emitterize<RemoteSetRatingEvent>(
-  (cb) => (nativeAudioBrowser.onRemoteSetRating = cb)
+  (cb) => (nativePlayer.onRemoteSetRating = cb)
 )
 
 /**
@@ -353,7 +353,7 @@ export const onRemoteSetRating = LazyEmitter.emitterize<RemoteSetRatingEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteSkip = LazyEmitter.emitterize<RemoteSkipEvent>(
-  (cb) => (nativeAudioBrowser.onRemoteSkip = cb)
+  (cb) => (nativePlayer.onRemoteSkip = cb)
 )
 
 /**
@@ -362,5 +362,5 @@ export const onRemoteSkip = LazyEmitter.emitterize<RemoteSkipEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteStop = LazyEmitter.emitterize<void>(
-  (cb) => (nativeAudioBrowser.onRemoteStop = cb)
+  (cb) => (nativePlayer.onRemoteStop = cb)
 )

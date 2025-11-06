@@ -34,8 +34,16 @@ target_sources(
   ../nitrogen/generated/android/AudioBrowserOnLoad.cpp
   # Shared Nitrogen C++ sources
   ../nitrogen/generated/shared/c++/HybridAudioBrowserSpec.cpp
+  ../nitrogen/generated/shared/c++/HybridAudioPlayerSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
+  ../nitrogen/generated/android/c++/JVariant_Boolean_String_Double.cpp
+  ../nitrogen/generated/android/c++/JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.cpp
+  ../nitrogen/generated/android/c++/JBrowserSource.cpp
+  ../nitrogen/generated/android/c++/JBrowserItem.cpp
+  ../nitrogen/generated/android/c++/JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig.cpp
+  ../nitrogen/generated/android/c++/JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList.cpp
+  ../nitrogen/generated/android/c++/JHybridAudioPlayerSpec.cpp
   ../nitrogen/generated/android/c++/JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
   ../nitrogen/generated/android/c++/JVariant_Array_Capability__NullSentinel.cpp

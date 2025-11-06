@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
@@ -18,7 +18,7 @@ export interface PlaybackPlayWhenReadyChangedEvent {
  * Gets whether the player will play automatically when it is ready to do so.
  */
 export function getPlayWhenReady(): boolean {
-  return nativeAudioBrowser.getPlayWhenReady()
+  return nativePlayer.getPlayWhenReady()
 }
 
 // MARK: - Setters
@@ -29,7 +29,7 @@ export function getPlayWhenReady(): boolean {
  * or `pause()` when `playWhenReady = false`.
  */
 export function setPlayWhenReady(playWhenReady: boolean): void {
-  nativeAudioBrowser.setPlayWhenReady(playWhenReady)
+  nativePlayer.setPlayWhenReady(playWhenReady)
 }
 
 // MARK: - Event Callbacks
@@ -41,7 +41,7 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
  */
 export const onPlayWhenReadyChanged =
   LazyEmitter.emitterize<PlaybackPlayWhenReadyChangedEvent>(
-    (cb) => (nativeAudioBrowser.onPlaybackPlayWhenReadyChanged = cb)
+    (cb) => (nativePlayer.onPlaybackPlayWhenReadyChanged = cb)
   )
 
 // MARK: - Hooks

@@ -1,8 +1,4 @@
-import { Platform } from 'react-native'
-
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
-
-const isAndroid = Platform.OS === 'android'
+import { nativePlayer } from '../native'
 
 // MARK: - Types
 
@@ -456,7 +452,7 @@ export interface PlayerOptions {
 export async function setupPlayer(
   options: PartialSetupPlayerOptions = {}
 ): Promise<void> {
-  return nativeAudioBrowser.setupPlayer(options)
+  return nativePlayer.setupPlayer(options)
 }
 
 // MARK: - Android-specific

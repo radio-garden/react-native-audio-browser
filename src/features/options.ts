@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { type NullSentinel, wrapNullSentinel } from '../utils/null-sentinel'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
@@ -350,7 +350,7 @@ export interface NativeUpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
-  nativeAudioBrowser.updateOptions({
+  nativePlayer.updateOptions({
     ...options,
     android: options.android
       ? {
@@ -383,7 +383,7 @@ export function updateOptions(options: UpdateOptions): void {
  * ```
  */
 export function getOptions(): Options {
-  return nativeAudioBrowser.getOptions() as Options
+  return nativePlayer.getOptions() as Options
 }
 
 // MARK: - Event Callbacks
@@ -394,7 +394,7 @@ export function getOptions(): Options {
  * @returns Cleanup function to unsubscribe
  */
 export const onOptionsChanged = LazyEmitter.emitterize<Options>(
-  (cb) => (nativeAudioBrowser.onOptionsChanged = cb)
+  (cb) => (nativePlayer.onOptionsChanged = cb)
 )
 
 // MARK: - Hooks

@@ -1,4 +1,4 @@
-import { nativeAudioBrowser } from '../NativeAudioBrowser'
+import { nativePlayer } from '../native'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 import type { PlaybackError } from './errors'
@@ -47,7 +47,7 @@ export type Playback = {
  * @see https://rntp.dev/docs/api/constants/state
  */
 export function getPlayback(): Playback {
-  return nativeAudioBrowser.getPlayback()
+  return nativePlayer.getPlayback()
 }
 
 // MARK: - Event Callbacks
@@ -58,7 +58,7 @@ export function getPlayback(): Playback {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlaybackChanged = LazyEmitter.emitterize<Playback>(
-  (cb) => (nativeAudioBrowser.onPlaybackChanged = cb)
+  (cb) => (nativePlayer.onPlaybackChanged = cb)
 )
 
 // MARK: - Hooks
