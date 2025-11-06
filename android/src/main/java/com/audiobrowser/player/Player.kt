@@ -38,18 +38,17 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
-import timber.log.Timber
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
-class Player(
-    internal val context: Context,
-) {
+class Player(internal val context: Context) {
 
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
+
   private var options = PlayerUpdateOptions()
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
@@ -58,7 +57,7 @@ class Player(
   // Media browser functionality
   internal val pendingGetItemRequests = ConcurrentHashMap<String, SettableFuture<MediaItem?>>()
   internal val pendingGetChildrenRequests =
-      ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
+    ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   internal val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
   internal var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
 
@@ -88,9 +87,9 @@ class Player(
     }
 
     override fun setMediaItems(
-        mediaItems: MutableList<MediaItem>,
-        startIndex: Int,
-        startPositionMs: Long,
+      mediaItems: MutableList<MediaItem>,
+      startIndex: Int,
+      startPositionMs: Long,
     ) {
       return super.setMediaItems(mediaItems, startIndex, startPositionMs)
     }
@@ -142,13 +141,21 @@ class Player(
 
     override fun seekForward() {
       Timber.Forest.d("InterceptingPlayer.seekForward() called")
-      if (callbacks?.handleRemoteJumpForward(RemoteJumpForwardEvent(interval = options.forwardJumpInterval)) != true) {
+      if (
+        callbacks?.handleRemoteJumpForward(
+          RemoteJumpForwardEvent(interval = options.forwardJumpInterval)
+        ) != true
+      ) {
         super.seekForward()
       }
     }
 
     override fun seekBack() {
-      if (callbacks?.handleRemoteJumpBackward(RemoteJumpBackwardEvent(interval = options.backwardJumpInterval)) != true) {
+      if (
+        callbacks?.handleRemoteJumpBackward(
+          RemoteJumpBackwardEvent(interval = options.backwardJumpInterval)
+        ) != true
+      ) {
         super.seekBack()
       }
     }
@@ -160,13 +167,19 @@ class Player(
     }
 
     override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
-      if (callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) != true) {
+      if (
+        callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) !=
+          true
+      ) {
         super.seekTo(mediaItemIndex, positionMs)
       }
     }
 
     override fun seekTo(positionMs: Long) {
-      if (callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) != true) {
+      if (
+        callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) !=
+          true
+      ) {
         super.seekTo(positionMs)
       }
     }
@@ -179,12 +192,12 @@ class Player(
     PlaybackProgressUpdateManager {
       val index = currentIndex ?: return@PlaybackProgressUpdateManager
       val event =
-          PlaybackProgressUpdatedEvent(
-              position = position.toSeconds(),
-              duration = duration.toSeconds(),
-              buffered = bufferedPosition.toSeconds(),
-              track = index.toDouble(),
-          )
+        PlaybackProgressUpdatedEvent(
+          position = position.toSeconds(),
+          duration = duration.toSeconds(),
+          buffered = bufferedPosition.toSeconds(),
+          track = index.toDouble(),
+        )
       callbacks?.onPlaybackProgressUpdated(event)
     }
   }
@@ -223,10 +236,12 @@ class Player(
   internal var oldPosition = 0L
 
   val position: Long
-    get() = if (exoPlayer.currentPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.currentPosition
+    get() =
+      if (exoPlayer.currentPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.currentPosition
 
   val bufferedPosition: Long
-    get() = if (exoPlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.bufferedPosition
+    get() =
+      if (exoPlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.bufferedPosition
 
   var volume: Float
     get() = exoPlayer.volume
@@ -252,7 +267,9 @@ class Player(
     }
 
   val currentIndex: Int?
-    get() = if (exoPlayer.currentMediaItemIndex == C.INDEX_UNSET) null else exoPlayer.currentMediaItemIndex
+    get() =
+      if (exoPlayer.currentMediaItemIndex == C.INDEX_UNSET) null
+      else exoPlayer.currentMediaItemIndex
 
   var shuffleMode: Boolean
     get() = exoPlayer.shuffleModeEnabled
@@ -267,9 +284,10 @@ class Player(
     get() = exoPlayer.mediaItemCount == 0
 
   val tracks: Array<Track>
-    get() = (0 until exoPlayer.mediaItemCount).map { index ->
-      TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index))
-    }.toTypedArray()
+    get() =
+      (0 until exoPlayer.mediaItemCount)
+        .map { index -> TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index)) }
+        .toTypedArray()
 
   val isLastTrack: Boolean
     get() = exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1
@@ -296,8 +314,8 @@ class Player(
     }
 
   /**
-   * Sets up or recreates the ExoPlayer with the provided setup options.
-   * This method can be called multiple times to change setup options.
+   * Sets up or recreates the ExoPlayer with the provided setup options. This method can be called
+   * multiple times to change setup options.
    */
   fun setup(setupOptions: PlayerSetupOptions) {
     Timber.Forest.d("Setting up player with new options")
@@ -311,11 +329,12 @@ class Player(
     }
 
     if (setupOptions.maxCacheSize > 0) {
-      cache = SimpleCache(
+      cache =
+        SimpleCache(
           File(context.cacheDir, "RNAB"),
           LeastRecentlyUsedCacheEvictor(setupOptions.maxCacheSize.toLong() * 1000), // kb to bytes
           StandaloneDatabaseProvider(context),
-      )
+        )
     } else {
       cache?.release()
       cache = null
@@ -328,11 +347,11 @@ class Player(
       val minBuffer = setupOptions.minBuffer.toInt()
       val maxBuffer = setupOptions.maxBuffer.toInt()
       val playBuffer = setupOptions.playBuffer.toInt()
-      val defaultRebufferMultiplier = 2; // DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS / DEFAULT_BUFFER_FOR_PLAYBACK_MS
+      val defaultRebufferMultiplier = 2
+      // DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS / DEFAULT_BUFFER_FOR_PLAYBACK_MS
       val playAfterRebuffer =
         setupOptions.rebufferBuffer?.toInt() ?: (playBuffer * defaultRebufferMultiplier)
-      val backBuffer =
-        setupOptions.backBuffer.toInt()
+      val backBuffer = setupOptions.backBuffer.toInt()
       DefaultLoadControl.Builder()
         .setBufferDurationsMs(minBuffer, maxBuffer, playBuffer, playAfterRebuffer)
         .setBackBuffer(backBuffer, false)
@@ -343,11 +362,13 @@ class Player(
         .setRenderersFactory(renderer)
         .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
         .setMediaSourceFactory(MediaFactory(context, cache))
-        .setWakeMode(when (setupOptions.wakeMode) {
+        .setWakeMode(
+          when (setupOptions.wakeMode) {
             AndroidPlayerWakeMode.NONE -> C.WAKE_MODE_NONE
             AndroidPlayerWakeMode.LOCAL -> C.WAKE_MODE_LOCAL
             AndroidPlayerWakeMode.NETWORK -> C.WAKE_MODE_NETWORK
-        })
+          }
+        )
         .setLoadControl(loadControl)
         .setName("AudioBrowser")
         .build()
@@ -368,7 +389,7 @@ class Player(
           .setIsGaplessSupportRequired(it.gaplessSupportRequired)
           .setIsSpeedChangeSupportRequired(it.rateChangeSupportRequired)
           .build()
-        exoPlayer.trackSelectionParameters.audioOffloadPreferences = audioOffloadPreferences
+      exoPlayer.trackSelectionParameters.audioOffloadPreferences = audioOffloadPreferences
     }
 
     // Recreate forwarding player with new ExoPlayer
@@ -631,7 +652,7 @@ class Player(
       if (state == PlaybackState.ENDED && isLastTrack) {
         currentIndex?.let { index ->
           val event =
-              PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
+            PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
         }
       }
@@ -655,8 +676,8 @@ class Player(
   }
 
   /**
-   * Applies update options with change detection.
-   * Only updates properties that have actually changed and emits events accordingly.
+   * Applies update options with change detection. Only updates properties that have actually
+   * changed and emits events accordingly.
    *
    * @param options The new options to apply
    * @param mediaSession The MediaSession to update when capabilities change
@@ -707,7 +728,6 @@ class Player(
     if (shuffleChanged) {
       shuffleMode = options.shuffle
     }
-
 
     if (progressUpdateEventIntervalChanged) {
       setProgressUpdateInterval(options.progressUpdateEventInterval)
@@ -789,7 +809,6 @@ class Player(
     return mediaSessionCallback
   }
 
-
   /**
    * Resolves a pending GetItem request with the provided MediaItem.
    *
@@ -800,7 +819,9 @@ class Player(
     // Store MediaItem in lookup map for later use in onAddMediaItems/onSetMediaItems
     mediaItem.mediaId.let { mediaId ->
       mediaItemById[mediaId] = mediaItem
-      Timber.Forest.d("Stored single MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}")
+      Timber.Forest.d(
+        "Stored single MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}"
+      )
     }
     pendingGetItemRequests.remove(requestId)?.set(mediaItem)
   }
@@ -810,21 +831,22 @@ class Player(
    *
    * @param requestId The request ID to resolve
    * @param items The list of MediaItems to resolve with
-   * @param totalChildrenCount The total number of children (unused but maintained for compatibility)
+   * @param totalChildrenCount The total number of children (unused but maintained for
+   *   compatibility)
    */
   fun resolveGetChildrenRequest(
-      requestId: String,
-      items: List<MediaItem>,
-      totalChildrenCount: Int,
+    requestId: String,
+    items: List<MediaItem>,
+    totalChildrenCount: Int,
   ) {
-    Timber.Forest.d(
-      "resolveGetChildrenRequest: requestId=$requestId, itemCount=${items.size}"
-    )
+    Timber.Forest.d("resolveGetChildrenRequest: requestId=$requestId, itemCount=${items.size}")
     // Store MediaItems in lookup map for later use in onAddMediaItems/onSetMediaItems
     items.forEach { mediaItem ->
       mediaItem.mediaId?.let { mediaId ->
         mediaItemById[mediaId] = mediaItem
-        Timber.Forest.d("Stored MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}")
+        Timber.Forest.d(
+          "Stored MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}"
+        )
       }
     }
     val future = pendingGetChildrenRequests.remove(requestId)
@@ -846,6 +868,4 @@ class Player(
   fun resolveSearchRequest(requestId: String, items: List<MediaItem>, totalMatchesCount: Int) {
     pendingSearchRequests.remove(requestId)?.set(items)
   }
-
-
 }

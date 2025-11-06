@@ -12,8 +12,14 @@ object PlayingStateFactory {
    * @return A PlayingState representing the current playing/buffering status
    */
   fun derive(playWhenReady: Boolean, playbackState: PlaybackState): PlayingState {
-    val playing = playWhenReady && !(playbackState == PlaybackState.ERROR || playbackState == PlaybackState.ENDED || playbackState == PlaybackState.NONE)
-    val buffering = playWhenReady && (playbackState == PlaybackState.LOADING || playbackState == PlaybackState.BUFFERING)
+    val playing =
+      playWhenReady &&
+        !(playbackState == PlaybackState.ERROR ||
+          playbackState == PlaybackState.ENDED ||
+          playbackState == PlaybackState.NONE)
+    val buffering =
+      playWhenReady &&
+        (playbackState == PlaybackState.LOADING || playbackState == PlaybackState.BUFFERING)
     return PlayingState(playing, buffering)
   }
 }

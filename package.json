@@ -9,7 +9,7 @@
   "react-native": "src/index",
   "source": "src/index",
   "scripts": {
-    "android:format": "cd example/android && ./gradlew :react-native-react-native-audio-browser:format",
+    "android:format": "cd example/android && ./gradlew :react-native-audio-browser:format",
     "android:ide": "cd example/android && open -a 'Android Studio' .",
     "android:logs": "react-native log-android",
     "build": "yarn prepare",

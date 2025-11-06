@@ -16,46 +16,48 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
-import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import timber.log.Timber
 
 /**
- * MediaLibrarySession callback that handles all media session interactions.
- * All logic is handled directly by the AudioBrowser.
+ * MediaLibrarySession callback that handles all media session interactions. All logic is handled
+ * directly by the AudioBrowser.
  */
-class MediaSessionCallback(private val player: Player) : MediaLibraryService.MediaLibrarySession.Callback {
+class MediaSessionCallback(private val player: Player) :
+  MediaLibraryService.MediaLibrarySession.Callback {
   private val commandManager = MediaSessionCommandManager()
 
   fun updateMediaSession(
-      mediaSession: MediaSession,
-      capabilities: List<Capability>,
-      notificationCapabilities: List<Capability>?
+    mediaSession: MediaSession,
+    capabilities: List<Capability>,
+    notificationCapabilities: List<Capability>?,
   ) {
     commandManager.updateMediaSession(mediaSession, capabilities, notificationCapabilities)
   }
+
   override fun onConnect(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
+    session: MediaSession,
+    controller: MediaSession.ControllerInfo,
   ): MediaSession.ConnectionResult {
     Timber.Forest.d("MediaSession connect: ${controller.packageName}")
     return commandManager.buildConnectionResult(session)
   }
 
   override fun onCustomCommand(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      command: SessionCommand,
-      args: Bundle,
+    session: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    command: SessionCommand,
+    args: Bundle,
   ): ListenableFuture<SessionResult> {
     commandManager.handleCustomCommand(command, player)
     return super.onCustomCommand(session, controller, command, args)
   }
 
   override fun onSetRating(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      rating: Rating,
+    session: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    rating: Rating,
   ): ListenableFuture<SessionResult> {
     RatingFactory.media3ToBridge(rating)?.let {
       val event = RemoteSetRatingEvent(it)
@@ -65,9 +67,9 @@ class MediaSessionCallback(private val player: Player) : MediaLibraryService.Med
   }
 
   override fun onGetLibraryRoot(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      params: MediaLibraryService.LibraryParams?,
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<MediaItem>> {
     Timber.Forest.d("onGetLibraryRoot: { package: ${browser.packageName} }")
     return Futures.immediateFuture(
@@ -82,18 +84,18 @@ class MediaSessionCallback(private val player: Player) : MediaLibraryService.Med
               .build()
           )
           .build(),
-        null
+        null,
       )
     )
   }
 
   override fun onGetChildren(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      parentId: String,
-      page: Int,
-      pageSize: Int,
-      params: MediaLibraryService.LibraryParams?,
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    parentId: String,
+    page: Int,
+    pageSize: Int,
+    params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
     Timber.Forest.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize }")
     val requestId = UUID.randomUUID().toString()
@@ -110,9 +112,9 @@ class MediaSessionCallback(private val player: Player) : MediaLibraryService.Med
   }
 
   override fun onGetItem(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      mediaId: String,
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    mediaId: String,
   ): ListenableFuture<LibraryResult<MediaItem>> {
     Timber.Forest.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
     val requestId = UUID.randomUUID().toString()
@@ -135,53 +137,55 @@ class MediaSessionCallback(private val player: Player) : MediaLibraryService.Med
   }
 
   override fun onSearch(
-      session: MediaLibraryService.MediaLibrarySession,
-      browser: MediaSession.ControllerInfo,
-      query: String,
-      params: MediaLibraryService.LibraryParams?,
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    query: String,
+    params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<Void>> {
     Timber.Forest.d("onSearch: ${browser.packageName}, query = $query")
     // Emit event to JavaScript via callbacks for search initiation
     val requestId = UUID.randomUUID().toString()
-    val extrasMap = params?.extras?.let { bundle ->
-      mutableMapOf<String, Any>().apply {
-        for (key in bundle.keySet()) {
-          when (val value = bundle.get(key)) {
-            is String -> put(key, value)
-            is Int -> put(key, value)
-            is Double -> put(key, value)
-            is Boolean -> put(key, value)
+    val extrasMap =
+      params?.extras?.let { bundle ->
+        mutableMapOf<String, Any>().apply {
+          for (key in bundle.keySet()) {
+            when (val value = bundle.get(key)) {
+              is String -> put(key, value)
+              is Int -> put(key, value)
+              is Double -> put(key, value)
+              is Boolean -> put(key, value)
             // Add other types as needed
+            }
           }
         }
       }
-    }
     player.callbacks?.onSearchRequest(requestId, query, extrasMap)
     return super.onSearch(session, browser, query, params)
   }
 
   override fun onSetMediaItems(
-      mediaSession: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      mediaItems: MutableList<MediaItem>,
-      startIndex: Int,
-      startPositionMs: Long,
+    mediaSession: MediaSession,
+    controller: MediaSession.ControllerInfo,
+    mediaItems: MutableList<MediaItem>,
+    startIndex: Int,
+    startPositionMs: Long,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
     Timber.Forest.d(
       "onSetMediaItems: ${controller.packageName}, mediaId=${mediaItems[0].mediaId}, uri=${mediaItems[0].localConfiguration?.uri}, title=${mediaItems[0].mediaMetadata.title}"
     )
 
-    val resolvedItems = mediaItems.map { mediaItem ->
-      val mediaId = mediaItem.mediaId
-      val fullMediaItem = player.mediaItemById[mediaId]
-      if (fullMediaItem != null) {
-        Timber.Forest.d("Found full MediaItem for mediaId: $mediaId")
-        fullMediaItem
-      } else {
-        Timber.Forest.d("No full MediaItem found for mediaId: $mediaId, using original")
-        mediaItem
+    val resolvedItems =
+      mediaItems.map { mediaItem ->
+        val mediaId = mediaItem.mediaId
+        val fullMediaItem = player.mediaItemById[mediaId]
+        if (fullMediaItem != null) {
+          Timber.Forest.d("Found full MediaItem for mediaId: $mediaId")
+          fullMediaItem
+        } else {
+          Timber.Forest.d("No full MediaItem found for mediaId: $mediaId, using original")
+          mediaItem
+        }
       }
-    }
 
     try {
       player.clear()
@@ -194,11 +198,7 @@ class MediaSessionCallback(private val player: Player) : MediaLibraryService.Med
     }
 
     return Futures.immediateFuture(
-      MediaSession.MediaItemsWithStartPosition(
-        resolvedItems,
-        startIndex,
-        startPositionMs,
-      )
+      MediaSession.MediaItemsWithStartPosition(resolvedItems, startIndex, startPositionMs)
     )
   }
 }

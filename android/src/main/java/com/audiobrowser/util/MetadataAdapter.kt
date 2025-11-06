@@ -33,23 +33,29 @@ sealed class MetadataAdapter {
           }
           is TextInformationFrame -> {
             when (entry.id.uppercase()) {
-              "TIT2", "TT2" -> {
+              "TIT2",
+              "TT2" -> {
                 title = entry.values[0]
               }
-              "TALB", "TOAL", "TAL" -> {
+              "TALB",
+              "TOAL",
+              "TAL" -> {
                 albumTitle = entry.values[0]
               }
-              "TOPE", "TPE1", "TP1" -> {
+              "TOPE",
+              "TPE1",
+              "TP1" -> {
                 artist = entry.values[0]
               }
-              "TDRC", "TOR" -> {
+              "TDRC",
+              "TOR" -> {
                 creationDate = entry.values[0]
               }
-              "TCON", "TCO" -> {
+              "TCON",
+              "TCO" -> {
                 genre = entry.values[0]
               }
-              else -> {
-              }
+              else -> {}
             }
           }
           is UrlLinkFrame -> {
@@ -103,14 +109,16 @@ sealed class MetadataAdapter {
           }
         }
 
-        entries.add(MetadataEntry(
-          title = title,
-          artist = artist,
-          albumTitle = albumTitle,
-          genre = genre,
-          creationDate = creationDate,
-          url = url
-        ))
+        entries.add(
+          MetadataEntry(
+            title = title,
+            artist = artist,
+            albumTitle = albumTitle,
+            genre = genre,
+            creationDate = creationDate,
+            url = url,
+          )
+        )
       }
 
       return TimedMetadata(entries)
@@ -118,18 +126,19 @@ sealed class MetadataAdapter {
 
     fun audioMetadataFromMediaMetadata(metadata: MediaMetadata): AudioMetadata {
       // Handle creation date from recording day and month
-      val creationDate = (metadata.recordingDay to metadata.recordingMonth).let { (day, month) ->
-        // if both are not null, combine them into a single string
-        if (day != null && month != null) {
-          "${String.format("%02d", day)}${String.format("%02d", month)}"
-        } else if (day != null) {
-          String.format("%02d", day)
-        } else if (month != null) {
-          String.format("%02d", month)
-        } else {
-          null
+      val creationDate =
+        (metadata.recordingDay to metadata.recordingMonth).let { (day, month) ->
+          // if both are not null, combine them into a single string
+          if (day != null && month != null) {
+            "${String.format("%02d", day)}${String.format("%02d", month)}"
+          } else if (day != null) {
+            String.format("%02d", day)
+          } else if (month != null) {
+            String.format("%02d", month)
+          } else {
+            null
+          }
         }
-      }
 
       return AudioMetadata(
         title = metadata.title as String?,
@@ -147,7 +156,7 @@ sealed class MetadataAdapter {
         mediaType = metadata.mediaType?.toString(),
         creationDate = creationDate,
         creationYear = metadata.recordingYear?.toString(),
-        url = null
+        url = null,
       )
     }
   }

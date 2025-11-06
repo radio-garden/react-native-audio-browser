@@ -1,11 +1,11 @@
 package com.audiobrowser.model
 
-import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
-import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
+import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
+import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NullSentinel
 import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
 
@@ -14,97 +14,89 @@ import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
  * behavior and capabilities that can be modified during playback.
  */
 data class PlayerUpdateOptions(
-    // Jump intervals
-    var forwardJumpInterval: Double = 15.0,
-    var backwardJumpInterval: Double = 15.0,
-    var progressUpdateEventInterval: Double? = null,
+  // Jump intervals
+  var forwardJumpInterval: Double = 15.0,
+  var backwardJumpInterval: Double = 15.0,
+  var progressUpdateEventInterval: Double? = null,
 
-    // Rating and capabilities
-    var capabilities: List<Capability> =
-        listOf(
-            Capability.PLAY,
-            Capability.PAUSE,
-            Capability.SKIP_TO_NEXT,
-            Capability.SKIP_TO_PREVIOUS,
-            Capability.SEEK_TO,
-        ),
-    var notificationCapabilities: List<Capability>? = null,
+  // Rating and capabilities
+  var capabilities: List<Capability> =
+    listOf(
+      Capability.PLAY,
+      Capability.PAUSE,
+      Capability.SKIP_TO_NEXT,
+      Capability.SKIP_TO_PREVIOUS,
+      Capability.SEEK_TO,
+    ),
+  var notificationCapabilities: List<Capability>? = null,
 
-    // Android-specific runtime options (all under android.* in JS)
-    var ratingType: NitroRatingType? = null,
-    var appKilledPlaybackBehavior: AppKilledPlaybackBehavior = AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION,
-    var skipSilence: Boolean = false,
-    var shuffle: Boolean = false,
+  // Android-specific runtime options (all under android.* in JS)
+  var ratingType: NitroRatingType? = null,
+  var appKilledPlaybackBehavior: AppKilledPlaybackBehavior =
+    AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION,
+  var skipSilence: Boolean = false,
+  var shuffle: Boolean = false,
 ) {
-    fun updateFromBridge(options: NativeUpdateOptions) {
-        options.forwardJumpInterval?.let { forwardJumpInterval = it }
-        options.backwardJumpInterval?.let { backwardJumpInterval = it }
-        options.progressUpdateEventInterval?.let { variant ->
-            progressUpdateEventInterval = when (variant) {
-                is Variant_Double_NullSentinel.First -> variant.value
-                is Variant_Double_NullSentinel.Second -> null
-            }
-        }
-
-        options.capabilities?.let { nitroCaps ->
-            capabilities = nitroCaps.toList()
-        }
-
-        // Update Android-specific options
-        options.android?.let { androidOptions ->
-            // Convert rating type
-            androidOptions.ratingType?.let {
-                ratingType = it
-            }
-
-            androidOptions.appKilledPlaybackBehavior?.let {
-                appKilledPlaybackBehavior = it
-            }
-
-            // Update boolean options
-            androidOptions.skipSilence?.let {
-                skipSilence = it
-            }
-
-            androidOptions.shuffle?.let {
-                shuffle = it
-            }
-
-            androidOptions.notificationCapabilities?.let { variant ->
-                notificationCapabilities = when (variant) {
-                    is Variant_Array_Capability__NullSentinel.First -> variant.value.toList()
-
-                    is Variant_Array_Capability__NullSentinel.Second -> null
-                }
-            }
+  fun updateFromBridge(options: NativeUpdateOptions) {
+    options.forwardJumpInterval?.let { forwardJumpInterval = it }
+    options.backwardJumpInterval?.let { backwardJumpInterval = it }
+    options.progressUpdateEventInterval?.let { variant ->
+      progressUpdateEventInterval =
+        when (variant) {
+          is Variant_Double_NullSentinel.First -> variant.value
+          is Variant_Double_NullSentinel.Second -> null
         }
     }
 
-    fun toNitro(): UpdateOptions {
-        // Convert capabilities
-        val nitroCapabilities = capabilities.toTypedArray()
+    options.capabilities?.let { nitroCaps -> capabilities = nitroCaps.toList() }
 
-        // Convert notification capabilities
-        val nitroNotificationCapabilities =
-            notificationCapabilities?.toTypedArray()
+    // Update Android-specific options
+    options.android?.let { androidOptions ->
+      // Convert rating type
+      androidOptions.ratingType?.let { ratingType = it }
 
-        // Create Android options
-        val androidOptions = AndroidUpdateOptions(
-            appKilledPlaybackBehavior = appKilledPlaybackBehavior,
-            skipSilence = skipSilence,
-            shuffle = shuffle,
-            ratingType = ratingType,
-            notificationCapabilities = nitroNotificationCapabilities
-        )
+      androidOptions.appKilledPlaybackBehavior?.let { appKilledPlaybackBehavior = it }
 
-        return UpdateOptions(
-            android = androidOptions,
-            ios = null, // iOS options not handled in this class
-            forwardJumpInterval = forwardJumpInterval,
-            backwardJumpInterval = backwardJumpInterval,
-            progressUpdateEventInterval = progressUpdateEventInterval,
-            capabilities = nitroCapabilities
-        )
+      // Update boolean options
+      androidOptions.skipSilence?.let { skipSilence = it }
+
+      androidOptions.shuffle?.let { shuffle = it }
+
+      androidOptions.notificationCapabilities?.let { variant ->
+        notificationCapabilities =
+          when (variant) {
+            is Variant_Array_Capability__NullSentinel.First -> variant.value.toList()
+
+            is Variant_Array_Capability__NullSentinel.Second -> null
+          }
+      }
     }
+  }
 
+  fun toNitro(): UpdateOptions {
+    // Convert capabilities
+    val nitroCapabilities = capabilities.toTypedArray()
+
+    // Convert notification capabilities
+    val nitroNotificationCapabilities = notificationCapabilities?.toTypedArray()
+
+    // Create Android options
+    val androidOptions =
+      AndroidUpdateOptions(
+        appKilledPlaybackBehavior = appKilledPlaybackBehavior,
+        skipSilence = skipSilence,
+        shuffle = shuffle,
+        ratingType = ratingType,
+        notificationCapabilities = nitroNotificationCapabilities,
+      )
+
+    return UpdateOptions(
+      android = androidOptions,
+      ios = null, // iOS options not handled in this class
+      forwardJumpInterval = forwardJumpInterval,
+      backwardJumpInterval = backwardJumpInterval,
+      progressUpdateEventInterval = progressUpdateEventInterval,
+      capabilities = nitroCapabilities,
+    )
+  }
 }

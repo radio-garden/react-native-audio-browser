@@ -1,13 +1,13 @@
 package com.audiobrowser.model
 
 import androidx.media3.common.Metadata
-import com.margelo.nitro.audiobrowser.PlaybackMetadata as NitroPlaybackMetadata
 import androidx.media3.container.MdtaMetadataEntry
 import androidx.media3.extractor.metadata.icy.IcyHeaders
 import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.id3.UrlLinkFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
+import com.margelo.nitro.audiobrowser.PlaybackMetadata as NitroPlaybackMetadata
 
 data class PlaybackMetadata(
   val source: String,
@@ -223,7 +223,7 @@ data class PlaybackMetadata(
       artist = artist,
       album = album,
       date = date,
-      genre = genre
+      genre = genre,
     )
   }
 }

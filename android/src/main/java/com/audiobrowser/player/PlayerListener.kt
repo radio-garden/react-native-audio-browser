@@ -26,13 +26,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         ?: PlaybackMetadata.Companion.fromVorbisComment(metadata)
         ?: PlaybackMetadata.Companion.fromQuickTime(metadata)
 
-    playbackMetadata?.let {
-      player.callbacks?.onPlaybackMetadata(it)
-    }
+    playbackMetadata?.let { player.callbacks?.onPlaybackMetadata(it) }
   }
 
   override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-    player.callbacks?.onMetadataCommonReceived(MetadataAdapter.Companion.audioMetadataFromMediaMetadata(mediaMetadata))
+    player.callbacks?.onMetadataCommonReceived(
+      MetadataAdapter.Companion.audioMetadataFromMediaMetadata(mediaMetadata)
+    )
   }
 
   /**
@@ -59,13 +59,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Audio item transition events are not currently exposed to callbacks
     // Emit active track changed event with last track info
     val event =
-        PlaybackActiveTrackChangedEvent(
-            lastIndex = player.lastIndex?.toDouble(),
-            lastTrack = player.lastTrack,
-            lastPosition = lastPosition,
-            index = player.currentIndex?.toDouble(),
-            track = player.currentTrack,
-        )
+      PlaybackActiveTrackChangedEvent(
+        lastIndex = player.lastIndex?.toDouble(),
+        lastTrack = player.lastTrack,
+        lastPosition = lastPosition,
+        index = player.currentIndex?.toDouble(),
+        track = player.currentTrack,
+      )
     player.callbacks?.onPlaybackActiveTrackChanged(event)
 
     // Update last track info for next transition
@@ -75,7 +75,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-    player.callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady))
+    player.callbacks?.onPlaybackPlayWhenReadyChanged(
+      PlaybackPlayWhenReadyChangedEvent(playWhenReady)
+    )
     val newPlayingState = PlayingStateFactory.derive(playWhenReady, player.playbackState)
     if (newPlayingState != player.playingState) {
       player.playingState = newPlayingState
@@ -101,11 +103,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
               MediaPlayer.STATE_IDLE ->
                 // Avoid transitioning to idle from error or stopped
                 if (
-                  player.playbackState == PlaybackState.ERROR || player.playbackState == PlaybackState.STOPPED
+                  player.playbackState == PlaybackState.ERROR ||
+                    player.playbackState == PlaybackState.STOPPED
                 )
                   null
                 else PlaybackState.NONE
-              MediaPlayer.STATE_ENDED -> if (media3Player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
+              MediaPlayer.STATE_ENDED ->
+                if (media3Player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
               else -> null // noop
             }
           if (state != null && state != player.playbackState) {
@@ -155,8 +159,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onRepeatModeChanged(repeatMode: Int) {
-    player.callbacks?.onPlaybackRepeatModeChanged(
-      RepeatModeFactory.fromMedia3(repeatMode)
-    )
+    player.callbacks?.onPlaybackRepeatModeChanged(RepeatModeFactory.fromMedia3(repeatMode))
   }
 }

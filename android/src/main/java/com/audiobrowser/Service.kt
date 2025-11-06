@@ -35,8 +35,6 @@ class Service : MediaLibraryService() {
       override fun onServiceDisconnected(className: ComponentName) {}
     }
 
-
-
   override fun onCreate() {
     super.onCreate()
 
@@ -118,7 +116,6 @@ class Service : MediaLibraryService() {
 
     Timber.d("hasExternalControllers = $hasExternalControllers")
 
-
     when (appKilledPlaybackBehavior) {
       AppKilledPlaybackBehavior.PAUSE_PLAYBACK -> {
         Timber.d("Pausing playback - appKilledPlaybackBehavior = $appKilledPlaybackBehavior")
@@ -164,7 +161,8 @@ class Service : MediaLibraryService() {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
     // Ensure player is properly set up for external controllers like Android Auto
-    // Only call setup if callbacks haven't been installed yet (meaning React Native hasn't connected)
+    // Only call setup if callbacks haven't been installed yet (meaning React Native hasn't
+    // connected)
     if (player.getCallbacks() == null) {
       Timber.w("External controller connecting before React Native setup - using default options")
       player.setup(PlayerSetupOptions())
@@ -210,5 +208,4 @@ class Service : MediaLibraryService() {
   inner class LocalBinder : Binder() {
     val service = this@Service
   }
-
 }

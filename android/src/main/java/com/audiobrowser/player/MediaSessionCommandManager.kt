@@ -71,9 +71,9 @@ class MediaSessionCommandManager {
    * Manager initializes with defaults: all global capabilities, limited notification capabilities.
    */
   fun updateMediaSession(
-      mediaSession: MediaSession,
-      capabilities: List<Capability>,
-      notificationCapabilities: List<Capability>?,
+    mediaSession: MediaSession,
+    capabilities: List<Capability>,
+    notificationCapabilities: List<Capability>?,
   ) {
     // Update internal configuration
     updatePlayerCommands(capabilities)
@@ -151,8 +151,7 @@ class MediaSessionCommandManager {
     }
 
     // Check each capability and add commands to remove if not enabled
-    val hasPlayPause =
-      capabilities.any { it == Capability.PLAY || it == Capability.PAUSE }
+    val hasPlayPause = capabilities.any { it == Capability.PLAY || it == Capability.PAUSE }
     if (!hasPlayPause) {
       disabledCommands.add(MediaPlayer.COMMAND_PLAY_PAUSE)
     }

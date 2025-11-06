@@ -1,10 +1,10 @@
 package com.audiobrowser.player
 
+import com.margelo.nitro.audiobrowser.PlaybackState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.margelo.nitro.audiobrowser.PlaybackState
 
 class PlaybackProgressUpdateManager(private val onProgressUpdate: () -> Unit) {
   private val scope = MainScope()

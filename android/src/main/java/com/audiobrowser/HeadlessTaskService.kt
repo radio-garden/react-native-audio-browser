@@ -56,5 +56,4 @@ class HeadlessTaskService : HeadlessJsTaskService() {
     Timber.d("onStartCommand")
     return super.onStartCommand(intent, flags, startId)
   }
-
 }

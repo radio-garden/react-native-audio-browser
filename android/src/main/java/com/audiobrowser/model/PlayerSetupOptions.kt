@@ -1,7 +1,6 @@
 package com.audiobrowser.model
 
 import androidx.media3.exoplayer.DefaultLoadControl
-import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
@@ -41,43 +40,28 @@ data class PlayerSetupOptions(
 
     // Android-specific options
     options.android?.let { android ->
-      android.maxBuffer?.let {
-        maxBuffer = it
-      }
-      android.playBuffer?.let {
-        playBuffer = it
-      }
-      android.rebufferBuffer?.let {
-        rebufferBuffer = it
-      }
-      android.backBuffer?.let {
-        backBuffer = it
-      }
-      android.maxCacheSize?.let {
-        maxCacheSize = it
-      }
-      android.handleAudioBecomingNoisy?.let {
-        handleAudioBecomingNoisy = it
-      }
-      android.audioContentType?.let {
-        audioContentType = it
-      }
-      android.wakeMode?.let {
-        wakeMode = it
-      }
+      android.maxBuffer?.let { maxBuffer = it }
+      android.playBuffer?.let { playBuffer = it }
+      android.rebufferBuffer?.let { rebufferBuffer = it }
+      android.backBuffer?.let { backBuffer = it }
+      android.maxCacheSize?.let { maxCacheSize = it }
+      android.handleAudioBecomingNoisy?.let { handleAudioBecomingNoisy = it }
+      android.audioContentType?.let { audioContentType = it }
+      android.wakeMode?.let { wakeMode = it }
       android.audioOffload?.let {
-        audioOffload = when (android.audioOffload) {
-          is Variant_Boolean_AndroidAudioOffloadSettings.First -> {
-            if (android.audioOffload.value) AudioOffloadOptions() else null
+        audioOffload =
+          when (android.audioOffload) {
+            is Variant_Boolean_AndroidAudioOffloadSettings.First -> {
+              if (android.audioOffload.value) AudioOffloadOptions() else null
+            }
+            is Variant_Boolean_AndroidAudioOffloadSettings.Second -> {
+              val settings = android.audioOffload.value
+              AudioOffloadOptions(
+                gaplessSupportRequired = settings.gaplessSupportRequired ?: false,
+                rateChangeSupportRequired = settings.rateChangeSupportRequired ?: false,
+              )
+            }
           }
-          is Variant_Boolean_AndroidAudioOffloadSettings.Second -> {
-            val settings = android.audioOffload.value
-            AudioOffloadOptions(
-              gaplessSupportRequired = settings.gaplessSupportRequired ?: false,
-              rateChangeSupportRequired = settings.rateChangeSupportRequired ?: false
-            )
-          }
-        }
       }
     }
   }
