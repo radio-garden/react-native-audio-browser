@@ -35,7 +35,7 @@ namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 #include "JTransformableRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
 #include <functional>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include <NitroModules/JPromise.hpp>
 #include "Track.hpp"
 #include <vector>

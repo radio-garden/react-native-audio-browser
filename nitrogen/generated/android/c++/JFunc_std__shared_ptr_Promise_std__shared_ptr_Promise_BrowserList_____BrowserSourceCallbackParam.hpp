@@ -28,6 +28,7 @@
 #include "BrowserItemStyle.hpp"
 #include "JBrowserItemStyle.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
+#include <unordered_map>
 
 namespace margelo::nitro::audiobrowser {
 

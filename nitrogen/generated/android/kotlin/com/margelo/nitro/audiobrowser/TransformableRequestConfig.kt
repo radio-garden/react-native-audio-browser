@@ -19,7 +19,7 @@ import com.margelo.nitro.core.Promise
 data class TransformableRequestConfig(
   @DoNotStrip
   @Keep
-  val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig?,
+  val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?,
   @DoNotStrip
   @Keep
   val method: HttpMethod?,
@@ -48,8 +48,8 @@ data class TransformableRequestConfig(
   /**
    * Create a new instance of TransformableRequestConfig from Kotlin
    */
-  constructor(transform: ((request: RequestConfig) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
-         this(transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
 
   private companion object {
     /**
@@ -59,7 +59,7 @@ data class TransformableRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): TransformableRequestConfig {
+    private fun fromCpp(transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): TransformableRequestConfig {
       return TransformableRequestConfig(transform, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }

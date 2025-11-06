@@ -7,6 +7,7 @@ import type {
 
 export type BrowserSourceCallbackParam = {
   path: string
+  routeParams?: Record<string, string>
 }
 
 export type BrowserSourceCallback = (
@@ -14,7 +15,8 @@ export type BrowserSourceCallback = (
 ) => Promise<BrowserList>
 export type SearchSourceCallback = (query: string) => Promise<Track[]>
 export type RequestConfigTransformer = (
-  request: RequestConfig
+  request: RequestConfig,
+  routeParams?: Record<string, string>
 ) => Promise<RequestConfig>
 
 export type HttpMethod =

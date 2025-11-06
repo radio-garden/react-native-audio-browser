@@ -11,7 +11,7 @@
 #include "TransformableRequestConfig.hpp"
 
 #include "HttpMethod.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JHttpMethod.hpp"
 #include "JRequestConfig.hpp"
 #include "RequestConfig.hpp"
@@ -41,8 +41,8 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     TransformableRequestConfig toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldTransform = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject>("transform");
-      jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject> transform = this->getFieldValue(fieldTransform);
+      static const auto fieldTransform = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__::javaobject>("transform");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__::javaobject> transform = this->getFieldValue(fieldTransform);
       static const auto fieldMethod = clazz->getField<JHttpMethod>("method");
       jni::local_ref<JHttpMethod> method = this->getFieldValue(fieldMethod);
       static const auto fieldPath = clazz->getField<jni::JString>("path");
@@ -60,14 +60,14 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldUserAgent = clazz->getField<jni::JString>("userAgent");
       jni::local_ref<jni::JString> userAgent = this->getFieldValue(fieldUserAgent);
       return TransformableRequestConfig(
-        transform != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */)> {
-          if (transform->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_cxx::javaClassStatic())) [[likely]] {
-            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_cxx::javaobject>(transform);
+        transform != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> {
+          if (transform->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::javaobject>(transform);
             return downcast->cthis()->getFunction();
           } else {
             auto transformRef = jni::make_global(transform);
-            return [transformRef](RequestConfig request) -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
-              return transformRef->invoke(request);
+            return [transformRef](RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
+              return transformRef->invoke(request,routeParams);
             };
           }
         }()) : std::nullopt,
@@ -102,12 +102,12 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTransformableRequestConfig::javaobject> fromCpp(const TransformableRequestConfig& value) {
-      using JSignature = JTransformableRequestConfig(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig::javaobject>, jni::alias_ref<JHttpMethod>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JTransformableRequestConfig(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__::javaobject>, jni::alias_ref<JHttpMethod>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        value.transform.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_cxx::fromCpp(value.transform.value()) : nullptr,
+        value.transform.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::fromCpp(value.transform.value()) : nullptr,
         value.method.has_value() ? JHttpMethod::fromCpp(value.method.value()) : nullptr,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.baseUrl.has_value() ? jni::make_jstring(value.baseUrl.value()) : nullptr,

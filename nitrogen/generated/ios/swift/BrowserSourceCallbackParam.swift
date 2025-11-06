@@ -18,8 +18,20 @@ public extension BrowserSourceCallbackParam {
   /**
    * Create a new instance of `BrowserSourceCallbackParam`.
    */
-  init(path: String) {
-    self.init(std.string(path))
+  init(path: String, routeParams: Dictionary<String, String>?) {
+    self.init(std.string(path), { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
+      if let __unwrappedValue = routeParams {
+        return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
+          var __map = bridge.create_std__unordered_map_std__string__std__string_(__unwrappedValue.count)
+          for (__k, __v) in __unwrappedValue {
+            bridge.emplace_std__unordered_map_std__string__std__string_(&__map, std.string(__k), std.string(__v))
+          }
+          return __map
+        }())
+      } else {
+        return .init()
+      }
+    }())
   }
 
   var path: String {
@@ -30,6 +42,44 @@ public extension BrowserSourceCallbackParam {
     @inline(__always)
     set {
       self.__path = std.string(newValue)
+    }
+  }
+  
+  var routeParams: Dictionary<String, String>? {
+    @inline(__always)
+    get {
+      return { () -> Dictionary<String, String>? in
+        if bridge.has_value_std__optional_std__unordered_map_std__string__std__string__(self.__routeParams) {
+          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__string__(self.__routeParams)
+          return { () -> Dictionary<String, String> in
+            var __dictionary = Dictionary<String, String>(minimumCapacity: __unwrapped.size())
+            let __keys = bridge.get_std__unordered_map_std__string__std__string__keys(__unwrapped)
+            for __key in __keys {
+              let __value = bridge.get_std__unordered_map_std__string__std__string__value(__unwrapped, __key)
+              __dictionary[String(__key)] = String(__value)
+            }
+            return __dictionary
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__routeParams = { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
+            var __map = bridge.create_std__unordered_map_std__string__std__string_(__unwrappedValue.count)
+            for (__k, __v) in __unwrappedValue {
+              bridge.emplace_std__unordered_map_std__string__std__string_(&__map, std.string(__k), std.string(__v))
+            }
+            return __map
+          }())
+        } else {
+          return .init()
+        }
+      }()
     }
   }
 }

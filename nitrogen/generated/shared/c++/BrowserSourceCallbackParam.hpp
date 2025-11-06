@@ -26,6 +26,8 @@
 
 
 #include <string>
+#include <unordered_map>
+#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,10 +37,11 @@ namespace margelo::nitro::audiobrowser {
   struct BrowserSourceCallbackParam {
   public:
     std::string path     SWIFT_PRIVATE;
+    std::optional<std::unordered_map<std::string, std::string>> routeParams     SWIFT_PRIVATE;
 
   public:
     BrowserSourceCallbackParam() = default;
-    explicit BrowserSourceCallbackParam(std::string path): path(path) {}
+    explicit BrowserSourceCallbackParam(std::string path, std::optional<std::unordered_map<std::string, std::string>> routeParams): path(path), routeParams(routeParams) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -51,12 +54,14 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::BrowserSourceCallbackParam fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::BrowserSourceCallbackParam(
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "path"))
+        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "path")),
+        JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::fromJSI(runtime, obj.getProperty(runtime, "routeParams"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::BrowserSourceCallbackParam& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "path", JSIConverter<std::string>::toJSI(runtime, arg.path));
+      obj.setProperty(runtime, "routeParams", JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::toJSI(runtime, arg.routeParams));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -68,6 +73,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "path"))) return false;
+      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::canConvert(runtime, obj.getProperty(runtime, "routeParams"))) return false;
       return true;
     }
   };

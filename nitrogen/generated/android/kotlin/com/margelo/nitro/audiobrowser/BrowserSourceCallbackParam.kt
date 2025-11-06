@@ -19,7 +19,10 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class BrowserSourceCallbackParam(
   @DoNotStrip
   @Keep
-  val path: String
+  val path: String,
+  @DoNotStrip
+  @Keep
+  val routeParams: Map<String, String>?
 ) {
   /* primary constructor */
 
@@ -31,8 +34,8 @@ data class BrowserSourceCallbackParam(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String): BrowserSourceCallbackParam {
-      return BrowserSourceCallbackParam(path)
+    private fun fromCpp(path: String, routeParams: Map<String, String>?): BrowserSourceCallbackParam {
+      return BrowserSourceCallbackParam(path, routeParams)
     }
   }
 }

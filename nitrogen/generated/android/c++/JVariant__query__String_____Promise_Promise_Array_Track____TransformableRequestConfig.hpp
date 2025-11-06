@@ -23,11 +23,11 @@
 #include <optional>
 #include "JTransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig.hpp"
+#include <unordered_map>
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
-#include <unordered_map>
 
 namespace margelo::nitro::audiobrowser {
 

@@ -10,7 +10,9 @@
 #include <fbjni/fbjni.h>
 #include "BrowserSourceCallbackParam.hpp"
 
+#include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -33,8 +35,18 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldPath = clazz->getField<jni::JString>("path");
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
+      static const auto fieldRouteParams = clazz->getField<jni::JMap<jni::JString, jni::JString>>("routeParams");
+      jni::local_ref<jni::JMap<jni::JString, jni::JString>> routeParams = this->getFieldValue(fieldRouteParams);
       return BrowserSourceCallbackParam(
-        path->toStdString()
+        path->toStdString(),
+        routeParams != nullptr ? std::make_optional([&]() {
+          std::unordered_map<std::string, std::string> __map;
+          __map.reserve(routeParams->size());
+          for (const auto& __entry : *routeParams) {
+            __map.emplace(__entry.first->toStdString(), __entry.second->toStdString());
+          }
+          return __map;
+        }()) : std::nullopt
       );
     }
 
@@ -44,12 +56,19 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JBrowserSourceCallbackParam::javaobject> fromCpp(const BrowserSourceCallbackParam& value) {
-      using JSignature = JBrowserSourceCallbackParam(jni::alias_ref<jni::JString>);
+      using JSignature = JBrowserSourceCallbackParam(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        jni::make_jstring(value.path)
+        jni::make_jstring(value.path),
+        value.routeParams.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
+          auto __map = jni::JHashMap<jni::JString, jni::JString>::create(value.routeParams.value().size());
+          for (const auto& __entry : value.routeParams.value()) {
+            __map->put(jni::make_jstring(__entry.first), jni::make_jstring(__entry.second));
+          }
+          return __map;
+        }() : nullptr
       );
     }
   };
