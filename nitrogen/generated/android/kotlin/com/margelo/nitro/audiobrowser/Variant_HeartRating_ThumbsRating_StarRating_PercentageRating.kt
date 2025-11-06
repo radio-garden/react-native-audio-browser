@@ -11,7 +11,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 
 
 /**
- * Represents the TypeScript variant "HeartRating|ThumbsRating|StarRating|PercentageRating".
+ * Represents the TypeScript variant "HeartRating | ThumbsRating | StarRating | PercentageRating".
  */
 @Suppress("ClassName")
 @DoNotStrip
@@ -25,6 +25,7 @@ sealed class Variant_HeartRating_ThumbsRating_StarRating_PercentageRating {
   @DoNotStrip
   data class Fourth(@DoNotStrip val value: PercentageRating): Variant_HeartRating_ThumbsRating_StarRating_PercentageRating()
 
+  @Deprecated("getAs() is not type-safe. Use fold/asFirstOrNull/asSecondOrNull instead.", level = DeprecationLevel.ERROR)
   inline fun <reified T> getAs(): T? = when (this) {
     is First -> value as? T
     is Second -> value as? T
@@ -40,6 +41,32 @@ sealed class Variant_HeartRating_ThumbsRating_StarRating_PercentageRating {
     get() = this is Third
   val isFourth: Boolean
     get() = this is Fourth
+
+  fun asFirstOrNull(): HeartRating? {
+    val value = (this as? First)?.value ?: return null
+    return value
+  }
+  fun asSecondOrNull(): ThumbsRating? {
+    val value = (this as? Second)?.value ?: return null
+    return value
+  }
+  fun asThirdOrNull(): StarRating? {
+    val value = (this as? Third)?.value ?: return null
+    return value
+  }
+  fun asFourthOrNull(): PercentageRating? {
+    val value = (this as? Fourth)?.value ?: return null
+    return value
+  }
+
+  inline fun <R> match(first: (HeartRating) -> R, second: (ThumbsRating) -> R, third: (StarRating) -> R, fourth: (PercentageRating) -> R): R {
+    return when (this) {
+      is First -> first(value)
+      is Second -> second(value)
+      is Third -> third(value)
+      is Fourth -> fourth(value)
+    }
+  }
 
   companion object {
     @JvmStatic

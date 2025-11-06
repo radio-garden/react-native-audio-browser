@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,25 +16,35 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class AndroidUpdateOptions
+data class AndroidUpdateOptions(
   @DoNotStrip
   @Keep
-  constructor(
+  val appKilledPlaybackBehavior: AppKilledPlaybackBehavior?,
+  @DoNotStrip
+  @Keep
+  val skipSilence: Boolean?,
+  @DoNotStrip
+  @Keep
+  val shuffle: Boolean?,
+  @DoNotStrip
+  @Keep
+  val ratingType: RatingType?,
+  @DoNotStrip
+  @Keep
+  val notificationCapabilities: Array<Capability>?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val appKilledPlaybackBehavior: AppKilledPlaybackBehavior?,
-    @DoNotStrip
-    @Keep
-    val skipSilence: Boolean?,
-    @DoNotStrip
-    @Keep
-    val shuffle: Boolean?,
-    @DoNotStrip
-    @Keep
-    val ratingType: RatingType?,
-    @DoNotStrip
-    @Keep
-    val notificationCapabilities: Array<Capability>?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, shuffle: Boolean?, ratingType: RatingType?, notificationCapabilities: Array<Capability>?): AndroidUpdateOptions {
+      return AndroidUpdateOptions(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, notificationCapabilities)
+    }
+  }
 }

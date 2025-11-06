@@ -11,7 +11,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 
 
 /**
- * Represents the TypeScript variant "Boolean|AndroidAudioOffloadSettings".
+ * Represents the TypeScript variant "Boolean | AndroidAudioOffloadSettings".
  */
 @Suppress("ClassName")
 @DoNotStrip
@@ -21,6 +21,7 @@ sealed class Variant_Boolean_AndroidAudioOffloadSettings {
   @DoNotStrip
   data class Second(@DoNotStrip val value: AndroidAudioOffloadSettings): Variant_Boolean_AndroidAudioOffloadSettings()
 
+  @Deprecated("getAs() is not type-safe. Use fold/asFirstOrNull/asSecondOrNull instead.", level = DeprecationLevel.ERROR)
   inline fun <reified T> getAs(): T? = when (this) {
     is First -> value as? T
     is Second -> value as? T
@@ -30,6 +31,22 @@ sealed class Variant_Boolean_AndroidAudioOffloadSettings {
     get() = this is First
   val isSecond: Boolean
     get() = this is Second
+
+  fun asFirstOrNull(): Boolean? {
+    val value = (this as? First)?.value ?: return null
+    return value
+  }
+  fun asSecondOrNull(): AndroidAudioOffloadSettings? {
+    val value = (this as? Second)?.value ?: return null
+    return value
+  }
+
+  inline fun <R> match(first: (Boolean) -> R, second: (AndroidAudioOffloadSettings) -> R): R {
+    return when (this) {
+      is First -> first(value)
+      is Second -> second(value)
+    }
+  }
 
   companion object {
     @JvmStatic

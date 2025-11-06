@@ -44,7 +44,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JRemoteSkipEvent::javaobject> fromCpp(const RemoteSkipEvent& value) {
-      return newInstance(
+      using JSignature = JRemoteSkipEvent(double);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.index
       );
     }

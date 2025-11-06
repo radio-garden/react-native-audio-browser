@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,22 +16,32 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PlaybackProgressUpdatedEvent
+data class PlaybackProgressUpdatedEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val track: Double,
+  @DoNotStrip
+  @Keep
+  val position: Double,
+  @DoNotStrip
+  @Keep
+  val duration: Double,
+  @DoNotStrip
+  @Keep
+  val buffered: Double
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val track: Double,
-    @DoNotStrip
-    @Keep
-    val position: Double,
-    @DoNotStrip
-    @Keep
-    val duration: Double,
-    @DoNotStrip
-    @Keep
-    val buffered: Double
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(track: Double, position: Double, duration: Double, buffered: Double): PlaybackProgressUpdatedEvent {
+      return PlaybackProgressUpdatedEvent(track, position, duration, buffered)
+    }
+  }
 }

@@ -47,7 +47,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JAndroidAudioOffloadSettings::javaobject> fromCpp(const AndroidAudioOffloadSettings& value) {
-      return newInstance(
+      using JSignature = JAndroidAudioOffloadSettings(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.gaplessSupportRequired.has_value() ? jni::JBoolean::valueOf(value.gaplessSupportRequired.value()) : nullptr,
         value.rateChangeSupportRequired.has_value() ? jni::JBoolean::valueOf(value.rateChangeSupportRequired.value()) : nullptr
       );

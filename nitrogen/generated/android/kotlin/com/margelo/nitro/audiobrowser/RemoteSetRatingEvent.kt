@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,13 +16,23 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class RemoteSetRatingEvent
+data class RemoteSetRatingEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating): RemoteSetRatingEvent {
+      return RemoteSetRatingEvent(rating)
+    }
+  }
 }

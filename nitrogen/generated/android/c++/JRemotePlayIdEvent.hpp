@@ -48,7 +48,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JRemotePlayIdEvent::javaobject> fromCpp(const RemotePlayIdEvent& value) {
-      return newInstance(
+      using JSignature = JRemotePlayIdEvent(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         jni::make_jstring(value.id),
         value.index.has_value() ? jni::JDouble::valueOf(value.index.value()) : nullptr
       );

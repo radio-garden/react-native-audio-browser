@@ -71,7 +71,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialIOSSetupPlayerOptions::javaobject> fromCpp(const PartialIOSSetupPlayerOptions& value) {
-      return newInstance(
+      using JSignature = JPartialIOSSetupPlayerOptions(jni::alias_ref<JIOSCategory>, jni::alias_ref<JIOSCategoryMode>, jni::alias_ref<jni::JArrayClass<JIOSCategoryOptions>>, jni::alias_ref<JIOSCategoryPolicy>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.category.has_value() ? JIOSCategory::fromCpp(value.category.value()) : nullptr,
         value.categoryMode.has_value() ? JIOSCategoryMode::fromCpp(value.categoryMode.value()) : nullptr,
         value.categoryOptions.has_value() ? [&]() {

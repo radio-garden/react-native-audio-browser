@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,31 +16,41 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PlaybackMetadata
+data class PlaybackMetadata(
   @DoNotStrip
   @Keep
-  constructor(
+  val source: String,
+  @DoNotStrip
+  @Keep
+  val title: String?,
+  @DoNotStrip
+  @Keep
+  val url: String?,
+  @DoNotStrip
+  @Keep
+  val artist: String?,
+  @DoNotStrip
+  @Keep
+  val album: String?,
+  @DoNotStrip
+  @Keep
+  val date: String?,
+  @DoNotStrip
+  @Keep
+  val genre: String?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val source: String,
-    @DoNotStrip
-    @Keep
-    val title: String?,
-    @DoNotStrip
-    @Keep
-    val url: String?,
-    @DoNotStrip
-    @Keep
-    val artist: String?,
-    @DoNotStrip
-    @Keep
-    val album: String?,
-    @DoNotStrip
-    @Keep
-    val date: String?,
-    @DoNotStrip
-    @Keep
-    val genre: String?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(source: String, title: String?, url: String?, artist: String?, album: String?, date: String?, genre: String?): PlaybackMetadata {
+      return PlaybackMetadata(source, title, url, artist, album, date, genre)
+    }
+  }
 }

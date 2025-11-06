@@ -59,7 +59,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPlaybackActiveTrackChangedEvent::javaobject> fromCpp(const PlaybackActiveTrackChangedEvent& value) {
-      return newInstance(
+      using JSignature = JPlaybackActiveTrackChangedEvent(jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrack>, double, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrack>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.lastIndex.has_value() ? jni::JDouble::valueOf(value.lastIndex.value()) : nullptr,
         value.lastTrack.has_value() ? JTrack::fromCpp(value.lastTrack.value()) : nullptr,
         value.lastPosition,

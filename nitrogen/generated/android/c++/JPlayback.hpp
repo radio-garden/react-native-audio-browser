@@ -52,7 +52,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPlayback::javaobject> fromCpp(const Playback& value) {
-      return newInstance(
+      using JSignature = JPlayback(jni::alias_ref<JPlaybackState>, jni::alias_ref<JPlaybackError>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         JPlaybackState::fromCpp(value.state),
         value.error.has_value() ? JPlaybackError::fromCpp(value.error.value()) : nullptr
       );

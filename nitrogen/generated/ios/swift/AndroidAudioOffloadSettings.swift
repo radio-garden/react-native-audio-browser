@@ -37,7 +37,14 @@ public extension AndroidAudioOffloadSettings {
   var gaplessSupportRequired: Bool? {
     @inline(__always)
     get {
-      return self.__gaplessSupportRequired.value
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__gaplessSupportRequired) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__gaplessSupportRequired)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {
@@ -54,7 +61,14 @@ public extension AndroidAudioOffloadSettings {
   var rateChangeSupportRequired: Bool? {
     @inline(__always)
     get {
-      return self.__rateChangeSupportRequired.value
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__rateChangeSupportRequired) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__rateChangeSupportRequired)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {

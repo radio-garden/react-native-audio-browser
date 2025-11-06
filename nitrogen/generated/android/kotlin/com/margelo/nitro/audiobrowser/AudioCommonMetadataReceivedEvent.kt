@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,13 +16,23 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class AudioCommonMetadataReceivedEvent
+data class AudioCommonMetadataReceivedEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val metadata: AudioMetadata
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val metadata: AudioMetadata
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(metadata: AudioMetadata): AudioCommonMetadataReceivedEvent {
+      return AudioCommonMetadataReceivedEvent(metadata)
+    }
+  }
 }

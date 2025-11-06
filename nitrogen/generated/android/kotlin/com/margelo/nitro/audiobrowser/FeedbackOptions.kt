@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,16 +16,26 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class FeedbackOptions
+data class FeedbackOptions(
   @DoNotStrip
   @Keep
-  constructor(
+  val isActive: Boolean,
+  @DoNotStrip
+  @Keep
+  val title: String
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val isActive: Boolean,
-    @DoNotStrip
-    @Keep
-    val title: String
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(isActive: Boolean, title: String): FeedbackOptions {
+      return FeedbackOptions(isActive, title)
+    }
+  }
 }

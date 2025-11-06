@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,16 +16,26 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PlayingState
+data class PlayingState(
   @DoNotStrip
   @Keep
-  constructor(
+  val playing: Boolean,
+  @DoNotStrip
+  @Keep
+  val buffering: Boolean
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val playing: Boolean,
-    @DoNotStrip
-    @Keep
-    val buffering: Boolean
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(playing: Boolean, buffering: Boolean): PlayingState {
+      return PlayingState(playing, buffering)
+    }
+  }
 }

@@ -45,7 +45,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JRepeatModeChangedEvent::javaobject> fromCpp(const RepeatModeChangedEvent& value) {
-      return newInstance(
+      using JSignature = JRepeatModeChangedEvent(jni::alias_ref<JRepeatMode>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         JRepeatMode::fromCpp(value.repeatMode)
       );
     }

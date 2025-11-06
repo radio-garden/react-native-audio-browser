@@ -48,9 +48,13 @@ public extension NitroAndroidUpdateOptions {
         return bridge.create_std__optional_std__variant_std__vector_Capability___NullSentinel__({ () -> bridge.std__variant_std__vector_Capability___NullSentinel_ in
           switch __unwrappedValue {
             case .first(let __value):
-              return bridge.create_std__variant_std__vector_Capability___NullSentinel_(__value.withUnsafeBufferPointer { __pointer -> bridge.std__vector_Capability_ in
-                return bridge.copy_std__vector_Capability_(__pointer.baseAddress!, __value.count)
-              })
+              return bridge.create_std__variant_std__vector_Capability___NullSentinel_({ () -> bridge.std__vector_Capability_ in
+                var __vector = bridge.create_std__vector_Capability_(__value.count)
+                for __item in __value {
+                  __vector.push_back(__item)
+                }
+                return __vector
+              }())
             case .second(let __value):
               return bridge.create_std__variant_std__vector_Capability___NullSentinel_(__value)
           }
@@ -81,7 +85,14 @@ public extension NitroAndroidUpdateOptions {
   var skipSilence: Bool? {
     @inline(__always)
     get {
-      return self.__skipSilence.value
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__skipSilence) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__skipSilence)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {
@@ -98,7 +109,14 @@ public extension NitroAndroidUpdateOptions {
   var shuffle: Bool? {
     @inline(__always)
     get {
-      return self.__shuffle.value
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__shuffle) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__shuffle)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {
@@ -140,11 +158,7 @@ public extension NitroAndroidUpdateOptions {
             switch __variant.index() {
               case 0:
                 let __actual = __variant.get_0()
-                return .first({ () -> [Capability] in
-                  let __data = bridge.get_data_std__vector_Capability_(__actual)
-                  let __size = __actual.size()
-                  return Array(UnsafeBufferPointer(start: __data, count: __size))
-                }())
+                return .first(__actual.map({ __item in __item }))
               case 1:
                 let __actual = __variant.get_1()
                 return .second(__actual)
@@ -164,9 +178,13 @@ public extension NitroAndroidUpdateOptions {
           return bridge.create_std__optional_std__variant_std__vector_Capability___NullSentinel__({ () -> bridge.std__variant_std__vector_Capability___NullSentinel_ in
             switch __unwrappedValue {
               case .first(let __value):
-                return bridge.create_std__variant_std__vector_Capability___NullSentinel_(__value.withUnsafeBufferPointer { __pointer -> bridge.std__vector_Capability_ in
-                  return bridge.copy_std__vector_Capability_(__pointer.baseAddress!, __value.count)
-                })
+                return bridge.create_std__variant_std__vector_Capability___NullSentinel_({ () -> bridge.std__vector_Capability_ in
+                  var __vector = bridge.create_std__vector_Capability_(__value.count)
+                  for __item in __value {
+                    __vector.push_back(__item)
+                  }
+                  return __vector
+                }())
               case .second(let __value):
                 return bridge.create_std__variant_std__vector_Capability___NullSentinel_(__value)
             }

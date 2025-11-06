@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,58 +16,68 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class AudioMetadata
+data class AudioMetadata(
   @DoNotStrip
   @Keep
-  constructor(
+  val title: String?,
+  @DoNotStrip
+  @Keep
+  val artist: String?,
+  @DoNotStrip
+  @Keep
+  val albumTitle: String?,
+  @DoNotStrip
+  @Keep
+  val subtitle: String?,
+  @DoNotStrip
+  @Keep
+  val description: String?,
+  @DoNotStrip
+  @Keep
+  val artworkUri: String?,
+  @DoNotStrip
+  @Keep
+  val trackNumber: String?,
+  @DoNotStrip
+  @Keep
+  val composer: String?,
+  @DoNotStrip
+  @Keep
+  val conductor: String?,
+  @DoNotStrip
+  @Keep
+  val genre: String?,
+  @DoNotStrip
+  @Keep
+  val compilation: String?,
+  @DoNotStrip
+  @Keep
+  val station: String?,
+  @DoNotStrip
+  @Keep
+  val mediaType: String?,
+  @DoNotStrip
+  @Keep
+  val creationDate: String?,
+  @DoNotStrip
+  @Keep
+  val creationYear: String?,
+  @DoNotStrip
+  @Keep
+  val url: String?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val title: String?,
-    @DoNotStrip
-    @Keep
-    val artist: String?,
-    @DoNotStrip
-    @Keep
-    val albumTitle: String?,
-    @DoNotStrip
-    @Keep
-    val subtitle: String?,
-    @DoNotStrip
-    @Keep
-    val description: String?,
-    @DoNotStrip
-    @Keep
-    val artworkUri: String?,
-    @DoNotStrip
-    @Keep
-    val trackNumber: String?,
-    @DoNotStrip
-    @Keep
-    val composer: String?,
-    @DoNotStrip
-    @Keep
-    val conductor: String?,
-    @DoNotStrip
-    @Keep
-    val genre: String?,
-    @DoNotStrip
-    @Keep
-    val compilation: String?,
-    @DoNotStrip
-    @Keep
-    val station: String?,
-    @DoNotStrip
-    @Keep
-    val mediaType: String?,
-    @DoNotStrip
-    @Keep
-    val creationDate: String?,
-    @DoNotStrip
-    @Keep
-    val creationYear: String?,
-    @DoNotStrip
-    @Keep
-    val url: String?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(title: String?, artist: String?, albumTitle: String?, subtitle: String?, description: String?, artworkUri: String?, trackNumber: String?, composer: String?, conductor: String?, genre: String?, compilation: String?, station: String?, mediaType: String?, creationDate: String?, creationYear: String?, url: String?): AudioMetadata {
+      return AudioMetadata(title, artist, albumTitle, subtitle, description, artworkUri, trackNumber, composer, conductor, genre, compilation, station, mediaType, creationDate, creationYear, url)
+    }
+  }
 }

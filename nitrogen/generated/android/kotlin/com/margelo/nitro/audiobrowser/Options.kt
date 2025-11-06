@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,31 +16,41 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class Options
+data class Options(
   @DoNotStrip
   @Keep
-  constructor(
+  val android: AndroidOptions?,
+  @DoNotStrip
+  @Keep
+  val ios: IOSOptions?,
+  @DoNotStrip
+  @Keep
+  val forwardJumpInterval: Double,
+  @DoNotStrip
+  @Keep
+  val backwardJumpInterval: Double,
+  @DoNotStrip
+  @Keep
+  val progressUpdateEventInterval: Double?,
+  @DoNotStrip
+  @Keep
+  val capabilities: Array<Capability>,
+  @DoNotStrip
+  @Keep
+  val repeatMode: RepeatMode
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val android: AndroidOptions?,
-    @DoNotStrip
-    @Keep
-    val ios: IOSOptions?,
-    @DoNotStrip
-    @Keep
-    val forwardJumpInterval: Double,
-    @DoNotStrip
-    @Keep
-    val backwardJumpInterval: Double,
-    @DoNotStrip
-    @Keep
-    val progressUpdateEventInterval: Double?,
-    @DoNotStrip
-    @Keep
-    val capabilities: Array<Capability>,
-    @DoNotStrip
-    @Keep
-    val repeatMode: RepeatMode
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Double?, capabilities: Array<Capability>, repeatMode: RepeatMode): Options {
+      return Options(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, repeatMode)
+    }
+  }
 }

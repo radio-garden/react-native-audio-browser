@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,22 +16,32 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PartialIOSSetupPlayerOptions
+data class PartialIOSSetupPlayerOptions(
   @DoNotStrip
   @Keep
-  constructor(
+  val category: IOSCategory?,
+  @DoNotStrip
+  @Keep
+  val categoryMode: IOSCategoryMode?,
+  @DoNotStrip
+  @Keep
+  val categoryOptions: Array<IOSCategoryOptions>?,
+  @DoNotStrip
+  @Keep
+  val categoryPolicy: IOSCategoryPolicy?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val category: IOSCategory?,
-    @DoNotStrip
-    @Keep
-    val categoryMode: IOSCategoryMode?,
-    @DoNotStrip
-    @Keep
-    val categoryOptions: Array<IOSCategoryOptions>?,
-    @DoNotStrip
-    @Keep
-    val categoryPolicy: IOSCategoryPolicy?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(category: IOSCategory?, categoryMode: IOSCategoryMode?, categoryOptions: Array<IOSCategoryOptions>?, categoryPolicy: IOSCategoryPolicy?): PartialIOSSetupPlayerOptions {
+      return PartialIOSSetupPlayerOptions(category, categoryMode, categoryOptions, categoryPolicy)
+    }
+  }
 }

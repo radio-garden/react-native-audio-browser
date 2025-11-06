@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,13 +16,23 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class RepeatModeChangedEvent
+data class RepeatModeChangedEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val repeatMode: RepeatMode
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val repeatMode: RepeatMode
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(repeatMode: RepeatMode): RepeatModeChangedEvent {
+      return RepeatModeChangedEvent(repeatMode)
+    }
+  }
 }

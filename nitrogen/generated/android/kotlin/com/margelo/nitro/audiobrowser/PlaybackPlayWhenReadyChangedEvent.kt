@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,13 +16,23 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PlaybackPlayWhenReadyChangedEvent
+data class PlaybackPlayWhenReadyChangedEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val playWhenReady: Boolean
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val playWhenReady: Boolean
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(playWhenReady: Boolean): PlaybackPlayWhenReadyChangedEvent {
+      return PlaybackPlayWhenReadyChangedEvent(playWhenReady)
+    }
+  }
 }

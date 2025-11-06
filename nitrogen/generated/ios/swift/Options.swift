@@ -37,9 +37,13 @@ public extension Options {
       } else {
         return .init()
       }
-    }(), capabilities.withUnsafeBufferPointer { __pointer -> bridge.std__vector_Capability_ in
-      return bridge.copy_std__vector_Capability_(__pointer.baseAddress!, capabilities.count)
-    }, repeatMode)
+    }(), { () -> bridge.std__vector_Capability_ in
+      var __vector = bridge.create_std__vector_Capability_(capabilities.count)
+      for __item in capabilities {
+        __vector.push_back(__item)
+      }
+      return __vector
+    }(), repeatMode)
   }
 
   var android: AndroidOptions? {
@@ -118,17 +122,17 @@ public extension Options {
   var capabilities: [Capability] {
     @inline(__always)
     get {
-      return { () -> [Capability] in
-        let __data = bridge.get_data_std__vector_Capability_(self.__capabilities)
-        let __size = self.__capabilities.size()
-        return Array(UnsafeBufferPointer(start: __data, count: __size))
-      }()
+      return self.__capabilities.map({ __item in __item })
     }
     @inline(__always)
     set {
-      self.__capabilities = newValue.withUnsafeBufferPointer { __pointer -> bridge.std__vector_Capability_ in
-        return bridge.copy_std__vector_Capability_(__pointer.baseAddress!, newValue.count)
-      }
+      self.__capabilities = { () -> bridge.std__vector_Capability_ in
+        var __vector = bridge.create_std__vector_Capability_(newValue.count)
+        for __item in newValue {
+          __vector.push_back(__item)
+        }
+        return __vector
+      }()
     }
   }
   

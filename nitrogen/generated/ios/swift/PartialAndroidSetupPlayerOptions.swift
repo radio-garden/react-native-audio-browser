@@ -212,7 +212,14 @@ public extension PartialAndroidSetupPlayerOptions {
   var handleAudioBecomingNoisy: Bool? {
     @inline(__always)
     get {
-      return self.__handleAudioBecomingNoisy.value
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__handleAudioBecomingNoisy) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__handleAudioBecomingNoisy)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {

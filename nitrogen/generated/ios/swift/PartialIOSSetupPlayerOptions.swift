@@ -33,9 +33,13 @@ public extension PartialIOSSetupPlayerOptions {
       }
     }(), { () -> bridge.std__optional_std__vector_IOSCategoryOptions__ in
       if let __unwrappedValue = categoryOptions {
-        return bridge.create_std__optional_std__vector_IOSCategoryOptions__(__unwrappedValue.withUnsafeBufferPointer { __pointer -> bridge.std__vector_IOSCategoryOptions_ in
-          return bridge.copy_std__vector_IOSCategoryOptions_(__pointer.baseAddress!, __unwrappedValue.count)
-        })
+        return bridge.create_std__optional_std__vector_IOSCategoryOptions__({ () -> bridge.std__vector_IOSCategoryOptions_ in
+          var __vector = bridge.create_std__vector_IOSCategoryOptions_(__unwrappedValue.count)
+          for __item in __unwrappedValue {
+            __vector.push_back(__item)
+          }
+          return __vector
+        }())
       } else {
         return .init()
       }
@@ -88,11 +92,7 @@ public extension PartialIOSSetupPlayerOptions {
       return { () -> [IOSCategoryOptions]? in
         if bridge.has_value_std__optional_std__vector_IOSCategoryOptions__(self.__categoryOptions) {
           let __unwrapped = bridge.get_std__optional_std__vector_IOSCategoryOptions__(self.__categoryOptions)
-          return { () -> [IOSCategoryOptions] in
-            let __data = bridge.get_data_std__vector_IOSCategoryOptions_(__unwrapped)
-            let __size = __unwrapped.size()
-            return Array(UnsafeBufferPointer(start: __data, count: __size))
-          }()
+          return __unwrapped.map({ __item in __item })
         } else {
           return nil
         }
@@ -102,9 +102,13 @@ public extension PartialIOSSetupPlayerOptions {
     set {
       self.__categoryOptions = { () -> bridge.std__optional_std__vector_IOSCategoryOptions__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__vector_IOSCategoryOptions__(__unwrappedValue.withUnsafeBufferPointer { __pointer -> bridge.std__vector_IOSCategoryOptions_ in
-            return bridge.copy_std__vector_IOSCategoryOptions_(__pointer.baseAddress!, __unwrappedValue.count)
-          })
+          return bridge.create_std__optional_std__vector_IOSCategoryOptions__({ () -> bridge.std__vector_IOSCategoryOptions_ in
+            var __vector = bridge.create_std__vector_IOSCategoryOptions_(__unwrappedValue.count)
+            for __item in __unwrappedValue {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
         } else {
           return .init()
         }

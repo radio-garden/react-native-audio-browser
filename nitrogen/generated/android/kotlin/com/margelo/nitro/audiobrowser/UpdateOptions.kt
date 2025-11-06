@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,28 +16,38 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class UpdateOptions
+data class UpdateOptions(
   @DoNotStrip
   @Keep
-  constructor(
+  val android: AndroidUpdateOptions?,
+  @DoNotStrip
+  @Keep
+  val ios: IOSUpdateOptions?,
+  @DoNotStrip
+  @Keep
+  val forwardJumpInterval: Double?,
+  @DoNotStrip
+  @Keep
+  val backwardJumpInterval: Double?,
+  @DoNotStrip
+  @Keep
+  val progressUpdateEventInterval: Double?,
+  @DoNotStrip
+  @Keep
+  val capabilities: Array<Capability>?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val android: AndroidUpdateOptions?,
-    @DoNotStrip
-    @Keep
-    val ios: IOSUpdateOptions?,
-    @DoNotStrip
-    @Keep
-    val forwardJumpInterval: Double?,
-    @DoNotStrip
-    @Keep
-    val backwardJumpInterval: Double?,
-    @DoNotStrip
-    @Keep
-    val progressUpdateEventInterval: Double?,
-    @DoNotStrip
-    @Keep
-    val capabilities: Array<Capability>?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Double?, capabilities: Array<Capability>?): UpdateOptions {
+      return UpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities)
+    }
+  }
 }

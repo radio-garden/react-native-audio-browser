@@ -7,6 +7,7 @@
 
 import Foundation
 import NitroModules
+import NitroModules
 
 /// See ``HybridAudioBrowserSpec``
 public protocol HybridAudioBrowserSpec_protocol: HybridObject {
@@ -92,6 +93,13 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
+}
+
+public extension HybridAudioBrowserSpec_protocol {
+  /// Default implementation of ``HybridObject.toString``
+  func toString() -> String {
+    return "[HybridObject AudioBrowser]"
+  }
 }
 
 /// See ``HybridAudioBrowserSpec``

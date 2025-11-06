@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,13 +16,23 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class RemoteJumpBackwardEvent
+data class RemoteJumpBackwardEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val interval: Double
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val interval: Double
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(interval: Double): RemoteJumpBackwardEvent {
+      return RemoteJumpBackwardEvent(interval)
+    }
+  }
 }

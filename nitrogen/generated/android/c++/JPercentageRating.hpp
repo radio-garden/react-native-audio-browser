@@ -44,7 +44,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPercentageRating::javaobject> fromCpp(const PercentageRating& value) {
-      return newInstance(
+      using JSignature = JPercentageRating(double);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.percentage
       );
     }

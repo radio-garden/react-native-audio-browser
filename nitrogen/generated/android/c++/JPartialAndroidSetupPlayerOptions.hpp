@@ -76,7 +76,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialAndroidSetupPlayerOptions::javaobject> fromCpp(const PartialAndroidSetupPlayerOptions& value) {
-      return newInstance(
+      using JSignature = JPartialAndroidSetupPlayerOptions(jni::alias_ref<JVariant_Boolean_AndroidAudioOffloadSettings>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JAndroidAudioContentType>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JAndroidPlayerWakeMode>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         JVariant_Boolean_AndroidAudioOffloadSettings::fromCpp(value.audioOffload),
         value.maxBuffer.has_value() ? jni::JDouble::valueOf(value.maxBuffer.value()) : nullptr,
         value.backBuffer.has_value() ? jni::JDouble::valueOf(value.backBuffer.value()) : nullptr,

@@ -10145,18 +10145,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nitrogen@npm:0.30.0":
-  version: 0.30.0
-  resolution: "nitrogen@npm:0.30.0"
+"nitrogen@npm:0.31.4":
+  version: 0.31.4
+  resolution: "nitrogen@npm:0.31.4"
   dependencies:
     chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.30.0"
+    react-native-nitro-modules: "npm:^0.31.4"
     ts-morph: "npm:^27.0.0"
     yargs: "npm:^18.0.0"
     zod: "npm:^4.0.5"
   bin:
     nitrogen: lib/index.js
-  checksum: 10c0/41f72457247aa9e95cfedbce474a47f25ac02cd42e6a0c998262b6fe01f84b20d48fed8a9fbf41e65c9a1be81e87632ae08f63bd605f005300d12443a04c5e8d
+  checksum: 10c0/5bb9250716bbe307cfcdcdb148ea5c67c054ee8491060259e0328c8fd4be591f60812f15ccb5eb45f29cd51c3bb117ee30c9b4b77a1ac33172ee0fe694426306
   languageName: node
   linkType: hard
 
@@ -11467,7 +11467,7 @@ __metadata:
     eslint-config-prettier: "npm:^10.1.1"
     eslint-plugin-prettier: "npm:^5.2.3"
     jest: "npm:^29.7.0"
-    nitrogen: "npm:0.30.0"
+    nitrogen: "npm:0.31.4"
     prettier: "npm:^3.0.3"
     react: "npm:19.1.1"
     react-native: "npm:0.82"
@@ -11515,23 +11515,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.31.4":
+"react-native-nitro-modules@npm:0.31.4, react-native-nitro-modules@npm:^0.31.4":
   version: 0.31.4
   resolution: "react-native-nitro-modules@npm:0.31.4"
   peerDependencies:
     react: "*"
     react-native: "*"
   checksum: 10c0/42fd2cc0d7f2bb913e8d757437f3aed3e123d46c79a6aecb6240e868731a0d9ba8fe097b493dc01050a2e2436cf96e978eb5b021b8f14ef0f8445f9e74e59095
-  languageName: node
-  linkType: hard
-
-"react-native-nitro-modules@npm:^0.30.0":
-  version: 0.30.0
-  resolution: "react-native-nitro-modules@npm:0.30.0"
-  peerDependencies:
-    react: "*"
-    react-native: "*"
-  checksum: 10c0/880f9ca2e71fac3ebbe038aab9f50ee62879583f8f92b4d31adee6e401d60c23e9023f4144ae041ec1e04028fc41a74783f0db02d1d82758ba653efbfbfd8650
   languageName: node
   linkType: hard
 

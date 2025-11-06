@@ -164,7 +164,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
 #include "UpdateOptions.hpp"
-#include <NitroModules/FastVectorCopy.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/PromiseHolder.hpp>
 #include <NitroModules/Result.hpp>
@@ -377,11 +376,10 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
    * Specialized version of `std::vector<IOSCategoryOptions>`.
    */
   using std__vector_IOSCategoryOptions_ = std::vector<IOSCategoryOptions>;
-  inline std::vector<IOSCategoryOptions> copy_std__vector_IOSCategoryOptions_(const IOSCategoryOptions* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
-    return margelo::nitro::FastVectorCopy<IOSCategoryOptions>(data, size);
-  }
-  inline const IOSCategoryOptions* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_IOSCategoryOptions_(const std::vector<IOSCategoryOptions>& vector) noexcept {
-    return vector.data();
+  inline std::vector<IOSCategoryOptions> create_std__vector_IOSCategoryOptions_(size_t size) noexcept {
+    std::vector<IOSCategoryOptions> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::optional<std::vector<IOSCategoryOptions>>
@@ -464,11 +462,10 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
    * Specialized version of `std::vector<Capability>`.
    */
   using std__vector_Capability_ = std::vector<Capability>;
-  inline std::vector<Capability> copy_std__vector_Capability_(const Capability* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
-    return margelo::nitro::FastVectorCopy<Capability>(data, size);
-  }
-  inline const Capability* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_Capability_(const std::vector<Capability>& vector) noexcept {
-    return vector.data();
+  inline std::vector<Capability> create_std__vector_Capability_(size_t size) noexcept {
+    std::vector<Capability> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::variant<std::vector<Capability>, NullSentinel>
@@ -1300,11 +1297,10 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
    * Specialized version of `std::vector<double>`.
    */
   using std__vector_double_ = std::vector<double>;
-  inline std::vector<double> copy_std__vector_double_(const double* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
-    return margelo::nitro::FastVectorCopy<double>(data, size);
-  }
-  inline const double* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_double_(const std::vector<double>& vector) noexcept {
-    return vector.data();
+  inline std::vector<double> create_std__vector_double_(size_t size) noexcept {
+    std::vector<double> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>

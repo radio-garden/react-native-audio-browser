@@ -57,7 +57,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JAudioMetadataReceivedEvent::javaobject> fromCpp(const AudioMetadataReceivedEvent& value) {
-      return newInstance(
+      using JSignature = JAudioMetadataReceivedEvent(jni::alias_ref<jni::JArrayClass<JAudioMetadata>>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         [&]() {
           size_t __size = value.metadata.size();
           jni::local_ref<jni::JArrayClass<JAudioMetadata>> __array = jni::JArrayClass<JAudioMetadata>::newArray(__size);

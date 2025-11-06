@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,22 +16,32 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PartialSetupPlayerOptions
+data class PartialSetupPlayerOptions(
   @DoNotStrip
   @Keep
-  constructor(
+  val minBuffer: Double?,
+  @DoNotStrip
+  @Keep
+  val android: PartialAndroidSetupPlayerOptions?,
+  @DoNotStrip
+  @Keep
+  val ios: PartialIOSSetupPlayerOptions?,
+  @DoNotStrip
+  @Keep
+  val autoUpdateMetadata: Boolean?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val minBuffer: Double?,
-    @DoNotStrip
-    @Keep
-    val android: PartialAndroidSetupPlayerOptions?,
-    @DoNotStrip
-    @Keep
-    val ios: PartialIOSSetupPlayerOptions?,
-    @DoNotStrip
-    @Keep
-    val autoUpdateMetadata: Boolean?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(minBuffer: Double?, android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?): PartialSetupPlayerOptions {
+      return PartialSetupPlayerOptions(minBuffer, android, ios, autoUpdateMetadata)
+    }
+  }
 }

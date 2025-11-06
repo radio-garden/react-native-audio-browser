@@ -53,7 +53,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JRemoteSetRatingEvent::javaobject> fromCpp(const RemoteSetRatingEvent& value) {
-      return newInstance(
+      using JSignature = JRemoteSetRatingEvent(jni::alias_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating)
       );
     }

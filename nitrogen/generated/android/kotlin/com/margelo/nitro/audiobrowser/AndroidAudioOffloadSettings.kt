@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,16 +16,26 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class AndroidAudioOffloadSettings
+data class AndroidAudioOffloadSettings(
   @DoNotStrip
   @Keep
-  constructor(
+  val gaplessSupportRequired: Boolean?,
+  @DoNotStrip
+  @Keep
+  val rateChangeSupportRequired: Boolean?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val gaplessSupportRequired: Boolean?,
-    @DoNotStrip
-    @Keep
-    val rateChangeSupportRequired: Boolean?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(gaplessSupportRequired: Boolean?, rateChangeSupportRequired: Boolean?): AndroidAudioOffloadSettings {
+      return AndroidAudioOffloadSettings(gaplessSupportRequired, rateChangeSupportRequired)
+    }
+  }
 }

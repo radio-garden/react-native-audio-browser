@@ -50,7 +50,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JProgress::javaobject> fromCpp(const Progress& value) {
-      return newInstance(
+      using JSignature = JProgress(double, double, double);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.position,
         value.duration,
         value.buffered

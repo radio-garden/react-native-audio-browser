@@ -266,6 +266,12 @@ namespace margelo::nitro::audiobrowser {
     method(_javaPart);
   }
 
+  std::string JHybridAudioBrowserSpec::toString() {
+    static const auto method = javaClassStatic()->getMethod<jni::JString()>("toString");
+    auto javaString = method(_javaPart);
+    return javaString->toStdString();
+  }
+
   // Properties
   std::function<void(const AudioMetadataReceivedEvent& /* event */)> JHybridAudioBrowserSpec::getOnMetadataChapterReceived() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_AudioMetadataReceivedEvent::javaobject>()>("getOnMetadataChapterReceived_cxx");

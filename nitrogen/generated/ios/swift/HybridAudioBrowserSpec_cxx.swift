@@ -7,6 +7,7 @@
 
 import Foundation
 import NitroModules
+import NitroModules
 
 /**
  * A class implementation that bridges HybridAudioBrowserSpec over to C++.
@@ -76,7 +77,7 @@ open class HybridAudioBrowserSpec_cxx {
    */
   public func getCxxPart() -> bridge.std__shared_ptr_HybridAudioBrowserSpec_ {
     let cachedCxxPart = self.__cxxPart.lock()
-    if cachedCxxPart.__convertToBool() {
+    if Bool(fromCxx: cachedCxxPart) {
       return cachedCxxPart
     } else {
       let newCxxPart = bridge.create_std__shared_ptr_HybridAudioBrowserSpec_(self.toUnsafe())
@@ -103,6 +104,14 @@ open class HybridAudioBrowserSpec_cxx {
   @inline(__always)
   public func dispose() {
     self.__implementation.dispose()
+  }
+
+  /**
+   * Call toString() on the Swift class.
+   */
+  @inline(__always)
+  public func toString() -> String {
+    return self.__implementation.toString()
   }
 
   // Properties
@@ -1431,11 +1440,7 @@ open class HybridAudioBrowserSpec_cxx {
   @inline(__always)
   public final func remove(indexes: bridge.std__vector_double_) -> bridge.Result_void_ {
     do {
-      try self.__implementation.remove(indexes: { () -> [Double] in
-        let __data = bridge.get_data_std__vector_double_(indexes)
-        let __size = indexes.size()
-        return Array(UnsafeBufferPointer(start: __data, count: __size))
-      }())
+      try self.__implementation.remove(indexes: indexes.map({ __item in __item }))
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

@@ -51,9 +51,13 @@ public extension UpdateOptions {
       }
     }(), { () -> bridge.std__optional_std__vector_Capability__ in
       if let __unwrappedValue = capabilities {
-        return bridge.create_std__optional_std__vector_Capability__(__unwrappedValue.withUnsafeBufferPointer { __pointer -> bridge.std__vector_Capability_ in
-          return bridge.copy_std__vector_Capability_(__pointer.baseAddress!, __unwrappedValue.count)
-        })
+        return bridge.create_std__optional_std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
+          var __vector = bridge.create_std__vector_Capability_(__unwrappedValue.count)
+          for __item in __unwrappedValue {
+            __vector.push_back(__item)
+          }
+          return __vector
+        }())
       } else {
         return .init()
       }
@@ -151,11 +155,7 @@ public extension UpdateOptions {
       return { () -> [Capability]? in
         if bridge.has_value_std__optional_std__vector_Capability__(self.__capabilities) {
           let __unwrapped = bridge.get_std__optional_std__vector_Capability__(self.__capabilities)
-          return { () -> [Capability] in
-            let __data = bridge.get_data_std__vector_Capability_(__unwrapped)
-            let __size = __unwrapped.size()
-            return Array(UnsafeBufferPointer(start: __data, count: __size))
-          }()
+          return __unwrapped.map({ __item in __item })
         } else {
           return nil
         }
@@ -165,9 +165,13 @@ public extension UpdateOptions {
     set {
       self.__capabilities = { () -> bridge.std__optional_std__vector_Capability__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__vector_Capability__(__unwrappedValue.withUnsafeBufferPointer { __pointer -> bridge.std__vector_Capability_ in
-            return bridge.copy_std__vector_Capability_(__pointer.baseAddress!, __unwrappedValue.count)
-          })
+          return bridge.create_std__optional_std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
+            var __vector = bridge.create_std__vector_Capability_(__unwrappedValue.count)
+            for __item in __unwrappedValue {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
         } else {
           return .init()
         }

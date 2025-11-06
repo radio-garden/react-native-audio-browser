@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,16 +16,26 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PlaybackQueueEndedEvent
+data class PlaybackQueueEndedEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val track: Double,
+  @DoNotStrip
+  @Keep
+  val position: Double
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val track: Double,
-    @DoNotStrip
-    @Keep
-    val position: Double
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(track: Double, position: Double): PlaybackQueueEndedEvent {
+      return PlaybackQueueEndedEvent(track, position)
+    }
+  }
 }

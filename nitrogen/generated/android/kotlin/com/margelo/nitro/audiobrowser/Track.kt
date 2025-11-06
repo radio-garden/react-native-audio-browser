@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,43 +16,53 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class Track
+data class Track(
   @DoNotStrip
   @Keep
-  constructor(
+  val src: String,
+  @DoNotStrip
+  @Keep
+  val url: String?,
+  @DoNotStrip
+  @Keep
+  val title: String,
+  @DoNotStrip
+  @Keep
+  val subtitle: String?,
+  @DoNotStrip
+  @Keep
+  val icon: String?,
+  @DoNotStrip
+  @Keep
+  val artwork: String?,
+  @DoNotStrip
+  @Keep
+  val artist: String?,
+  @DoNotStrip
+  @Keep
+  val album: String?,
+  @DoNotStrip
+  @Keep
+  val description: String?,
+  @DoNotStrip
+  @Keep
+  val genre: String?,
+  @DoNotStrip
+  @Keep
+  val duration: Double?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val src: String,
-    @DoNotStrip
-    @Keep
-    val url: String?,
-    @DoNotStrip
-    @Keep
-    val title: String,
-    @DoNotStrip
-    @Keep
-    val subtitle: String?,
-    @DoNotStrip
-    @Keep
-    val icon: String?,
-    @DoNotStrip
-    @Keep
-    val artwork: String?,
-    @DoNotStrip
-    @Keep
-    val artist: String?,
-    @DoNotStrip
-    @Keep
-    val album: String?,
-    @DoNotStrip
-    @Keep
-    val description: String?,
-    @DoNotStrip
-    @Keep
-    val genre: String?,
-    @DoNotStrip
-    @Keep
-    val duration: Double?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(src: String, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?): Track {
+      return Track(src, url, title, subtitle, icon, artwork, artist, album, description, genre, duration)
+    }
+  }
 }

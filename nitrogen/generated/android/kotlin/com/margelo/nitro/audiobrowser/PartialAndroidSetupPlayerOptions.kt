@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,37 +16,47 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PartialAndroidSetupPlayerOptions
+data class PartialAndroidSetupPlayerOptions(
   @DoNotStrip
   @Keep
-  constructor(
+  val audioOffload: Variant_Boolean_AndroidAudioOffloadSettings,
+  @DoNotStrip
+  @Keep
+  val maxBuffer: Double?,
+  @DoNotStrip
+  @Keep
+  val backBuffer: Double?,
+  @DoNotStrip
+  @Keep
+  val playBuffer: Double?,
+  @DoNotStrip
+  @Keep
+  val rebufferBuffer: Double?,
+  @DoNotStrip
+  @Keep
+  val maxCacheSize: Double?,
+  @DoNotStrip
+  @Keep
+  val audioContentType: AndroidAudioContentType?,
+  @DoNotStrip
+  @Keep
+  val handleAudioBecomingNoisy: Boolean?,
+  @DoNotStrip
+  @Keep
+  val wakeMode: AndroidPlayerWakeMode?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val audioOffload: Variant_Boolean_AndroidAudioOffloadSettings,
-    @DoNotStrip
-    @Keep
-    val maxBuffer: Double?,
-    @DoNotStrip
-    @Keep
-    val backBuffer: Double?,
-    @DoNotStrip
-    @Keep
-    val playBuffer: Double?,
-    @DoNotStrip
-    @Keep
-    val rebufferBuffer: Double?,
-    @DoNotStrip
-    @Keep
-    val maxCacheSize: Double?,
-    @DoNotStrip
-    @Keep
-    val audioContentType: AndroidAudioContentType?,
-    @DoNotStrip
-    @Keep
-    val handleAudioBecomingNoisy: Boolean?,
-    @DoNotStrip
-    @Keep
-    val wakeMode: AndroidPlayerWakeMode?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(audioOffload: Variant_Boolean_AndroidAudioOffloadSettings, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
+      return PartialAndroidSetupPlayerOptions(audioOffload, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
+    }
+  }
 }

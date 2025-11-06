@@ -37,6 +37,7 @@
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JFunc_void_Options.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
+#include "JHybridAudioPlayerSpec.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -74,6 +75,14 @@ int initialize(JavaVM* vm) {
       "AudioBrowser",
       []() -> std::shared_ptr<HybridObject> {
         static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/audiobrowser/AudioBrowser");
+        auto instance = object.create();
+        return instance->cthis()->shared();
+      }
+    );
+    HybridObjectRegistry::registerHybridObjectConstructor(
+      "AudioPlayer",
+      []() -> std::shared_ptr<HybridObject> {
+        static DefaultConstructableObject<JHybridAudioPlayerSpec::javaobject> object("com/audiobrowser/AudioPlayer");
         auto instance = object.create();
         return instance->cthis()->shared();
       }

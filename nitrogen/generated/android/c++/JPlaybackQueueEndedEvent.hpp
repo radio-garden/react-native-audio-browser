@@ -47,7 +47,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPlaybackQueueEndedEvent::javaobject> fromCpp(const PlaybackQueueEndedEvent& value) {
-      return newInstance(
+      using JSignature = JPlaybackQueueEndedEvent(double, double);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.track,
         value.position
       );

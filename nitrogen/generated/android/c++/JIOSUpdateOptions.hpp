@@ -53,7 +53,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JIOSUpdateOptions::javaobject> fromCpp(const IOSUpdateOptions& value) {
-      return newInstance(
+      using JSignature = JIOSUpdateOptions(jni::alias_ref<JFeedbackOptions>, jni::alias_ref<JFeedbackOptions>, jni::alias_ref<JFeedbackOptions>);
+      static const auto clazz = javaClassStatic();
+      static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
+      return create(
+        clazz,
         value.likeOptions.has_value() ? JFeedbackOptions::fromCpp(value.likeOptions.value()) : nullptr,
         value.dislikeOptions.has_value() ? JFeedbackOptions::fromCpp(value.dislikeOptions.value()) : nullptr,
         value.bookmarkOptions.has_value() ? JFeedbackOptions::fromCpp(value.bookmarkOptions.value()) : nullptr

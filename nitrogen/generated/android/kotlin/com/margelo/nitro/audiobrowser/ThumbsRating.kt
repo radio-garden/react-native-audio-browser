@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,13 +16,23 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class ThumbsRating
+data class ThumbsRating(
   @DoNotStrip
   @Keep
-  constructor(
+  val isThumbsUp: Boolean
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val isThumbsUp: Boolean
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(isThumbsUp: Boolean): ThumbsRating {
+      return ThumbsRating(isThumbsUp)
+    }
+  }
 }

@@ -10,7 +10,8 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
+import com.margelo.nitro.core.Promise
+import com.margelo.nitro.core.HybridObject
 
 /**
  * A Kotlin class representing the AudioBrowser HybridObject.
@@ -34,6 +35,11 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   override fun updateNative(hybridData: HybridData) {
     mHybridData = hybridData
     super.updateNative(hybridData)
+  }
+
+  // Default implementation of `HybridObject.toString()`
+  override fun toString(): String {
+    return "[HybridObject AudioBrowser]"
   }
 
   // Properties
@@ -787,6 +793,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   private external fun initHybrid(): HybridData
 
   companion object {
-    private const val TAG = "HybridAudioBrowserSpec"
+    protected const val TAG = "HybridAudioBrowserSpec"
   }
 }

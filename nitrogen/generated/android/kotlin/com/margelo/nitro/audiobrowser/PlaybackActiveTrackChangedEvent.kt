@@ -9,7 +9,6 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.*
 
 
 /**
@@ -17,25 +16,35 @@ import com.margelo.nitro.core.*
  */
 @DoNotStrip
 @Keep
-data class PlaybackActiveTrackChangedEvent
+data class PlaybackActiveTrackChangedEvent(
   @DoNotStrip
   @Keep
-  constructor(
+  val lastIndex: Double?,
+  @DoNotStrip
+  @Keep
+  val lastTrack: Track?,
+  @DoNotStrip
+  @Keep
+  val lastPosition: Double,
+  @DoNotStrip
+  @Keep
+  val index: Double?,
+  @DoNotStrip
+  @Keep
+  val track: Track?
+) {
+  /* primary constructor */
+
+  private companion object {
+    /**
+     * Constructor called from C++
+     */
     @DoNotStrip
     @Keep
-    val lastIndex: Double?,
-    @DoNotStrip
-    @Keep
-    val lastTrack: Track?,
-    @DoNotStrip
-    @Keep
-    val lastPosition: Double,
-    @DoNotStrip
-    @Keep
-    val index: Double?,
-    @DoNotStrip
-    @Keep
-    val track: Track?
-  ) {
-  /* main constructor */
+    @Suppress("unused")
+    @JvmStatic
+    private fun fromCpp(lastIndex: Double?, lastTrack: Track?, lastPosition: Double, index: Double?, track: Track?): PlaybackActiveTrackChangedEvent {
+      return PlaybackActiveTrackChangedEvent(lastIndex, lastTrack, lastPosition, index, track)
+    }
+  }
 }
