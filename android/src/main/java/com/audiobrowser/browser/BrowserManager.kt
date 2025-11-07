@@ -2,6 +2,7 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
+import com.margelo.nitro.audiobrowser.BrowserLink
 import com.margelo.nitro.audiobrowser.BrowserList
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
@@ -110,6 +111,28 @@ class BrowserManager {
     }
     
     /**
+     * Get navigation tabs from the configured tabs source.
+     * 
+     * @param config Browser configuration containing tabs source
+     * @return Array of BrowserLink objects representing tabs
+     */
+    suspend fun getTabs(config: BrowserConfig): Array<BrowserLink> {
+        Timber.d("Getting navigation tabs")
+        
+        try {
+            return config.tabs?.let { tabsSource ->
+                resolveTabsSource(tabsSource, config)
+            } ?: run {
+                Timber.d("No tabs configured")
+                emptyArray()
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting tabs")
+            return emptyArray()
+        }
+    }
+    
+    /**
      * Resolve a BrowserSource into a BrowserList.
      * Handles the three possible types: static BrowserList, callback, or API config.
      */
@@ -192,6 +215,47 @@ class BrowserManager {
             second = { apiConfig ->
                 Timber.d("Resolving search source via API config")
                 executeSearchApiRequest(apiConfig, query, config)
+            }
+        )
+    }
+    
+    /**
+     * Resolve a TabsSource into BrowserLink array.
+     * Handles the three possible types: static array, callback, or API config.
+     */
+    private suspend fun resolveTabsSource(
+        source: TabsSource,
+        config: BrowserConfig
+    ): Array<BrowserLink> {
+        return source.match(
+            // Callback function
+            first = { callback ->
+                Timber.d("Resolving tabs source via callback")
+                val param = BrowserSourceCallbackParam("/", emptyMap())
+                val promise = callback.invoke(param)
+                val innerPromise = promise.await()
+                val browserList = innerPromise.await()
+                
+                // Extract BrowserLink items from the returned BrowserList
+                browserList.children.mapNotNull { browserItem ->
+                    try {
+                        // Try to extract as BrowserLink
+                        browserItem.asSecondOrNull()
+                    } catch (e: Exception) {
+                        Timber.w("Tab item is not a BrowserLink: ${e.message}")
+                        null
+                    }
+                }.toTypedArray()
+            },
+            // Static array of BrowserLink
+            second = { staticTabs ->
+                Timber.d("Resolving tabs source via static array")
+                staticTabs
+            },
+            // API configuration
+            third = { apiConfig ->
+                Timber.d("Resolving tabs source via API config")
+                executeTabsApiRequest(apiConfig, config)
             }
         )
     }
@@ -308,6 +372,69 @@ class BrowserManager {
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Error executing search API request")
+                emptyArray()
+            }
+        }
+    }
+    
+    /**
+     * Execute an API request for tabs.
+     * Expects the API to return a BrowserList with BrowserLink children.
+     */
+    private suspend fun executeTabsApiRequest(
+        apiConfig: TransformableRequestConfig,
+        browserConfig: BrowserConfig
+    ): Array<BrowserLink> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // 1. Start with base config
+                val baseConfig = browserConfig.request ?: RequestConfig(
+                    method = null,
+                    path = null,
+                    baseUrl = null,
+                    headers = null,
+                    query = null,
+                    body = null,
+                    contentType = null,
+                    userAgent = null
+                )
+                
+                // 2. Merge configs with default path of '/' for tabs
+                val mergedConfig = requestBuilder.mergeConfig(baseConfig, apiConfig, emptyMap())
+                
+                // 3. Build and execute HTTP request
+                val httpRequest = requestBuilder.buildHttpRequest(mergedConfig)
+                val response = httpClient.request(httpRequest)
+                
+                response.fold(
+                    onSuccess = { httpResponse ->
+                        if (httpResponse.isSuccessful) {
+                            // 4. Parse response as BrowserList
+                            val jsonBrowserList = json.decodeFromString<JsonBrowserList>(httpResponse.body)
+                            val browserList = jsonBrowserList.toNitro()
+                            
+                            // 5. Extract BrowserLink items from the list
+                            browserList.children.mapNotNull { browserItem ->
+                                try {
+                                    // Try to extract as BrowserLink
+                                    browserItem.asSecondOrNull()
+                                } catch (e: Exception) {
+                                    Timber.w("Tab item from API is not a BrowserLink: ${e.message}")
+                                    null
+                                }
+                            }.toTypedArray()
+                        } else {
+                            Timber.w("Tabs HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
+                            emptyArray()
+                        }
+                    },
+                    onFailure = { exception ->
+                        Timber.e(exception, "Tabs HTTP request failed")
+                        emptyArray()
+                    }
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Error executing tabs API request")
                 emptyArray()
             }
         }

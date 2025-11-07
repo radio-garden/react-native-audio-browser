@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.NitroModules
+import com.margelo.nitro.audiobrowser.BrowserLink
 import com.margelo.nitro.audiobrowser.BrowserList
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserItemStyle
@@ -66,5 +67,12 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
   override fun getCurrentPath(): String {
     return browserManager.getCurrentPath()
+  }
+  
+  override fun getTabs(): Promise<Array<BrowserLink>> {
+    return Promise.async(mainScope) {
+      Timber.d("Getting navigation tabs")
+      browserManager.getTabs(buildConfig())
+    }
   }
 }

@@ -909,6 +909,40 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
+  // pragma MARK: std::shared_ptr<Promise<std::vector<BrowserLink>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::vector<BrowserLink>>>`.
+   */
+  using std__shared_ptr_Promise_std__vector_BrowserLink___ = std::shared_ptr<Promise<std::vector<BrowserLink>>>;
+  inline std::shared_ptr<Promise<std::vector<BrowserLink>>> create_std__shared_ptr_Promise_std__vector_BrowserLink___() noexcept {
+    return Promise<std::vector<BrowserLink>>::create();
+  }
+  inline PromiseHolder<std::vector<BrowserLink>> wrap_std__shared_ptr_Promise_std__vector_BrowserLink___(std::shared_ptr<Promise<std::vector<BrowserLink>>> promise) noexcept {
+    return PromiseHolder<std::vector<BrowserLink>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::vector<BrowserLink>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::vector<BrowserLink>&)>`.
+   */
+  using Func_void_std__vector_BrowserLink_ = std::function<void(const std::vector<BrowserLink>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::vector<BrowserLink>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__vector_BrowserLink__Wrapper final {
+  public:
+    explicit Func_void_std__vector_BrowserLink__Wrapper(std::function<void(const std::vector<BrowserLink>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<BrowserLink>& /* result */)>>(std::move(func))) {}
+    inline void call(std::vector<BrowserLink> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::vector<BrowserLink>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__vector_BrowserLink_ create_Func_void_std__vector_BrowserLink_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__vector_BrowserLink__Wrapper wrap_Func_void_std__vector_BrowserLink_(Func_void_std__vector_BrowserLink_ value) noexcept {
+    return Func_void_std__vector_BrowserLink__Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridAudioBrowserSpec>`.
@@ -946,6 +980,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__string_ create_Result_std__string_(const std::exception_ptr& error) noexcept {
     return Result<std::string>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>
+  using Result_std__shared_ptr_Promise_std__vector_BrowserLink____ = Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>;
+  inline Result_std__shared_ptr_Promise_std__vector_BrowserLink____ create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(const std::shared_ptr<Promise<std::vector<BrowserLink>>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_std__vector_BrowserLink____ create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>::withError(error);
   }
   
   // pragma MARK: std::shared_ptr<Promise<void>>

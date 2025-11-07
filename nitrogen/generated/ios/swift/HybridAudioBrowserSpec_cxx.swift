@@ -528,4 +528,29 @@ open class HybridAudioBrowserSpec_cxx {
       return bridge.create_Result_std__string_(__exceptionPtr)
     }
   }
+  
+  @inline(__always)
+  public final func getTabs() -> bridge.Result_std__shared_ptr_Promise_std__vector_BrowserLink____ {
+    do {
+      let __result = try self.__implementation.getTabs()
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__vector_BrowserLink___ in
+        let __promise = bridge.create_std__shared_ptr_Promise_std__vector_BrowserLink___()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__vector_BrowserLink___(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve({ () -> bridge.std__vector_BrowserLink_ in
+              var __vector = bridge.create_std__vector_BrowserLink_(__result.count)
+              for __item in __result {
+                __vector.push_back(__item)
+              }
+              return __vector
+            }()) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(__exceptionPtr)
+    }
+  }
 }

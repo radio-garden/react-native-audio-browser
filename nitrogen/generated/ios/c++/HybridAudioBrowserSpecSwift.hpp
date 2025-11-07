@@ -154,6 +154,14 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline std::shared_ptr<Promise<std::vector<BrowserLink>>> getTabs() override {
+      auto __result = _swiftPart.getTabs();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
 
   private:
     AudioBrowser::HybridAudioBrowserSpec_cxx _swiftPart;

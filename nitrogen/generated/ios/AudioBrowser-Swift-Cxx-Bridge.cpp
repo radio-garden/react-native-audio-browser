@@ -97,6 +97,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const std::vector<BrowserLink>& /* result */)>
+  Func_void_std__vector_BrowserLink_ create_Func_void_std__vector_BrowserLink_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__vector_BrowserLink_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::vector<BrowserLink>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
   std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
     AudioBrowser::HybridAudioBrowserSpec_cxx swiftPart = AudioBrowser::HybridAudioBrowserSpec_cxx::fromUnsafe(swiftUnsafePointer);

@@ -1,6 +1,7 @@
 import { type HybridObject } from 'react-native-nitro-modules';
 
 import type {
+  BrowserLink,
   BrowserList,
   BrowserSource,
   MediaSource,
@@ -123,4 +124,5 @@ export interface AudioBrowser
   navigate(path: string): Promise<BrowserList>
   onSearch(query: string): Promise<Track[]>
   getCurrentPath(): string
+  getTabs(): Promise<BrowserLink[]>
 }
