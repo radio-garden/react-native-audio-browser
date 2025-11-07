@@ -1,5 +1,4 @@
 import type {
-  BrowserItem,
   BrowserLink,
   BrowserList,
   Track,
