@@ -201,8 +201,8 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result->toStdString();
   }
-  std::shared_ptr<Promise<std::vector<BrowserLink>>> JHybridAudioBrowserSpec::getTabs() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("getTabs");
+  std::shared_ptr<Promise<std::vector<BrowserLink>>> JHybridAudioBrowserSpec::queryTabs() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("queryTabs");
     auto __result = method(_javaPart);
     return [&]() {
       auto __promise = Promise<std::vector<BrowserLink>>::create();

@@ -94,7 +94,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getTabs(): Promise<Array<BrowserLink>>
+  abstract fun queryTabs(): Promise<Array<BrowserLink>>
 
   private external fun initHybrid(): HybridData
 

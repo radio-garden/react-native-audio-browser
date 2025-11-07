@@ -53,8 +53,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     
     return try {
       // Create base request config with the original URL as path
-      val baseConfig = request ?: RequestConfig()
-      val urlRequestConfig = RequestConfig(path = originalUrl)
+      val baseConfig = request ?: RequestConfig(null, null, null, null, null, null, null, null)
+      val urlRequestConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
       val mergedBaseConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
       
       // Apply media transformation
@@ -102,9 +102,9 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     return browserManager.getCurrentPath()
   }
   
-  override fun getTabs(): Promise<Array<BrowserLink>> {
+  override fun queryTabs(): Promise<Array<BrowserLink>> {
     return Promise.async(mainScope) {
-      Timber.d("Getting navigation tabs")
+      Timber.d("Querying navigation tabs")
       browserManager.getTabs(buildConfig())
     }
   }

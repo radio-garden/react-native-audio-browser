@@ -338,6 +338,16 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   private val player
     get() = service.player
 
+  /**
+   * Registers the AudioBrowser instance to enable media URL transformation.
+   * Called by AudioBrowser when it's created.
+   */
+  fun registerAudioBrowser(audioBrowser: AudioBrowser) {
+    connectedService?.player?.getMediaRequestConfig = { url: String ->
+      audioBrowser.getMediaRequestConfig(url)
+    }
+  }
+
   val callbacks =
     object : Callbacks {
       override fun onPlaybackChanged(playback: Playback) {
@@ -535,16 +545,6 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
         //                }
         //                emitSearchResultRequest(requestId, query, extrasMap, 0, 100)
       }
-    }
-  }
-  
-  /**
-   * Registers the AudioBrowser instance to enable media URL transformation.
-   * Called by AudioBrowser when it's created.
-   */
-  fun registerAudioBrowser(audioBrowser: AudioBrowser) {
-    connectedService?.player?.getMediaRequestConfig = { url -> 
-      audioBrowser.getMediaRequestConfig(url) 
     }
   }
   

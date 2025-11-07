@@ -154,8 +154,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline std::shared_ptr<Promise<std::vector<BrowserLink>>> getTabs() override {
-      auto __result = _swiftPart.getTabs();
+    inline std::shared_ptr<Promise<std::vector<BrowserLink>>> queryTabs() override {
+      auto __result = _swiftPart.queryTabs();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

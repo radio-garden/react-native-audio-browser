@@ -68,7 +68,7 @@ namespace margelo::nitro::audiobrowser {
     std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) override;
     std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override;
     std::string getCurrentPath() override;
-    std::shared_ptr<Promise<std::vector<BrowserLink>>> getTabs() override;
+    std::shared_ptr<Promise<std::vector<BrowserLink>>> queryTabs() override;
 
   private:
     friend HybridBase;

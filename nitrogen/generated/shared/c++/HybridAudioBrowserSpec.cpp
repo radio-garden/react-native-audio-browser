@@ -29,7 +29,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("navigate", &HybridAudioBrowserSpec::navigate);
       prototype.registerHybridMethod("onSearch", &HybridAudioBrowserSpec::onSearch);
       prototype.registerHybridMethod("getCurrentPath", &HybridAudioBrowserSpec::getCurrentPath);
-      prototype.registerHybridMethod("getTabs", &HybridAudioBrowserSpec::getTabs);
+      prototype.registerHybridMethod("queryTabs", &HybridAudioBrowserSpec::queryTabs);
     });
   }
 

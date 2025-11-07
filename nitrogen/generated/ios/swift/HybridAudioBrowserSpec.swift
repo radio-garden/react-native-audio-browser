@@ -23,7 +23,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func navigate(path: String) throws -> Promise<BrowserList>
   func onSearch(query: String) throws -> Promise<[Track]>
   func getCurrentPath() throws -> String
-  func getTabs() throws -> Promise<[BrowserLink]>
+  func queryTabs() throws -> Promise<[BrowserLink]>
 }
 
 public extension HybridAudioBrowserSpec_protocol {

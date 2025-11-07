@@ -399,7 +399,7 @@ class BrowserManager {
                 )
                 
                 // 2. Merge configs with default path of '/' for tabs
-                val mergedConfig = requestBuilder.mergeConfig(baseConfig, apiConfig, emptyMap())
+                val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, emptyMap<String, String>())
                 
                 // 3. Build and execute HTTP request
                 val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
