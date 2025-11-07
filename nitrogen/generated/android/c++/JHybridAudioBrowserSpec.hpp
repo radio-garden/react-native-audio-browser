@@ -50,25 +50,24 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    std::optional<RequestConfig> getRequest() override;
-    void setRequest(const std::optional<RequestConfig>& request) override;
-    std::optional<TransformableRequestConfig> getMedia() override;
-    void setMedia(const std::optional<TransformableRequestConfig>& media) override;
-    std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> getSearch() override;
-    void setSearch(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& search) override;
-    std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> getRoutes() override;
-    void setRoutes(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& routes) override;
-    std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> getTabs() override;
-    void setTabs(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& tabs) override;
-    std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> getBrowse() override;
-    void setBrowse(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& browse) override;
+    std::optional<std::string> getPath() override;
+    void setPath(const std::optional<std::string>& path) override;
+    std::optional<std::vector<Track>> getTabs() override;
+    void setTabs(const std::optional<std::vector<Track>>& tabs) override;
+    std::function<void(const std::string& /* path */)> getOnPathChanged() override;
+    void setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) override;
+    std::function<void(const std::optional<BrowserList>& /* content */)> getOnContentChanged() override;
+    void setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) override;
+    std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() override;
+    void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) override;
+    BrowserConfiguration getConfiguration() override;
+    void setConfiguration(const BrowserConfiguration& configuration) override;
 
   public:
     // Methods
     std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) override;
     std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override;
-    std::string getCurrentPath() override;
-    std::shared_ptr<Promise<std::vector<BrowserLink>>> queryTabs() override;
+    std::optional<BrowserList> getContent() override;
 
   private:
     friend HybridBase;

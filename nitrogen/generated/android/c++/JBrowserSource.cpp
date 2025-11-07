@@ -9,9 +9,9 @@
 
 namespace margelo::nitro::audiobrowser {
   /**
-   * Converts JBrowserSource to std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& param)>, TransformableRequestConfig, BrowserList>
+   * Converts JBrowserSource to std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& param)>, BrowserList, TransformableRequestConfig>
    */
-  std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList> JBrowserSource::toCpp() const {
+  std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> JBrowserSource::toCpp() const {
     if (isInstanceOf(JBrowserSource_impl::First::javaClassStatic())) {
       // It's a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>`
       auto jniValue = static_cast<const JBrowserSource_impl::First*>(this)->getValue();
@@ -27,11 +27,11 @@ namespace margelo::nitro::audiobrowser {
       }
     }();
     } else if (isInstanceOf(JBrowserSource_impl::Second::javaClassStatic())) {
-      // It's a `TransformableRequestConfig`
+      // It's a `BrowserList`
       auto jniValue = static_cast<const JBrowserSource_impl::Second*>(this)->getValue();
       return jniValue->toCpp();
     } else if (isInstanceOf(JBrowserSource_impl::Third::javaClassStatic())) {
-      // It's a `BrowserList`
+      // It's a `TransformableRequestConfig`
       auto jniValue = static_cast<const JBrowserSource_impl::Third*>(this)->getValue();
       return jniValue->toCpp();
     }

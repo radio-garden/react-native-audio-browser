@@ -7,55 +7,58 @@
 
 #include "JHybridAudioBrowserSpec.hpp"
 
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `BrowserList` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserList; }
+// Forward declaration of `BrowserItemStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
+// Forward declaration of `BrowserConfiguration` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
-// Forward declaration of `Track` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `BrowserList` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserList; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
-// Forward declaration of `BrowserItemStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 
-#include "RequestConfig.hpp"
+#include <string>
 #include <optional>
+#include "Track.hpp"
+#include <vector>
+#include "JTrack.hpp"
+#include <functional>
+#include "JFunc_void_std__string.hpp"
+#include "BrowserList.hpp"
+#include "JFunc_void_std__optional_BrowserList_.hpp"
+#include "JBrowserList.hpp"
+#include "BrowserItemStyle.hpp"
+#include "JBrowserItemStyle.hpp"
+#include "JFunc_void_std__vector_Track_.hpp"
+#include "BrowserConfiguration.hpp"
+#include "JBrowserConfiguration.hpp"
+#include "RequestConfig.hpp"
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
-#include <string>
 #include <unordered_map>
 #include "TransformableRequestConfig.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include <functional>
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include <NitroModules/JPromise.hpp>
-#include "Track.hpp"
-#include <vector>
 #include <variant>
 #include "JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
-#include "JTrack.hpp"
-#include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "JBrowserSource.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam.hpp"
-#include "JBrowserList.hpp"
-#include "BrowserLink.hpp"
-#include "JBrowserItem.hpp"
-#include "JBrowserLink.hpp"
-#include "BrowserItemStyle.hpp"
-#include "JBrowserItemStyle.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
-#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig.hpp"
-#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList.hpp"
+#include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
+#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -86,72 +89,106 @@ namespace margelo::nitro::audiobrowser {
   }
 
   // Properties
-  std::optional<RequestConfig> JHybridAudioBrowserSpec::getRequest() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JRequestConfig>()>("getRequest");
+  std::optional<std::string> JHybridAudioBrowserSpec::getPath() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getPath");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+    return __result != nullptr ? std::make_optional(__result->toStdString()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setRequest(const std::optional<RequestConfig>& request) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRequestConfig> /* request */)>("setRequest");
-    method(_javaPart, request.has_value() ? JRequestConfig::fromCpp(request.value()) : nullptr);
+  void JHybridAudioBrowserSpec::setPath(const std::optional<std::string>& path) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("setPath");
+    method(_javaPart, path.has_value() ? jni::make_jstring(path.value()) : nullptr);
   }
-  std::optional<TransformableRequestConfig> JHybridAudioBrowserSpec::getMedia() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JTransformableRequestConfig>()>("getMedia");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setMedia(const std::optional<TransformableRequestConfig>& media) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JTransformableRequestConfig> /* media */)>("setMedia");
-    method(_javaPart, media.has_value() ? JTransformableRequestConfig::fromCpp(media.value()) : nullptr);
-  }
-  std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> JHybridAudioBrowserSpec::getSearch() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig>()>("getSearch");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setSearch(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& search) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig> /* search */)>("setSearch");
-    method(_javaPart, search.has_value() ? JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig::fromCpp(search.value()) : nullptr);
-  }
-  std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> JHybridAudioBrowserSpec::getRoutes() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JMap<jni::JString, JBrowserSource>>()>("getRoutes");
+  std::optional<std::vector<Track>> JHybridAudioBrowserSpec::getTabs() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JTrack>>()>("getTabs");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional([&]() {
-      std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> __map;
-      __map.reserve(__result->size());
-      for (const auto& __entry : *__result) {
-        __map.emplace(__entry.first->toStdString(), __entry.second->toCpp());
+      size_t __size = __result->size();
+      std::vector<Track> __vector;
+      __vector.reserve(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        auto __element = __result->getElement(__i);
+        __vector.push_back(__element->toCpp());
       }
-      return __map;
+      return __vector;
     }()) : std::nullopt;
   }
-  void JHybridAudioBrowserSpec::setRoutes(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& routes) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JMap<jni::JString, JBrowserSource>> /* routes */)>("setRoutes");
-    method(_javaPart, routes.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, JBrowserSource>> {
-      auto __map = jni::JHashMap<jni::JString, JBrowserSource>::create(routes.value().size());
-      for (const auto& __entry : routes.value()) {
-        __map->put(jni::make_jstring(__entry.first), JBrowserSource::fromCpp(__entry.second));
+  void JHybridAudioBrowserSpec::setTabs(const std::optional<std::vector<Track>>& tabs) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tabs */)>("setTabs");
+    method(_javaPart, tabs.has_value() ? [&]() {
+      size_t __size = tabs.value().size();
+      jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = tabs.value()[__i];
+        __array->setElement(__i, *JTrack::fromCpp(__element));
       }
-      return __map;
+      return __array;
     }() : nullptr);
   }
-  std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> JHybridAudioBrowserSpec::getTabs() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig>()>("getTabs");
+  std::function<void(const std::string& /* path */)> JHybridAudioBrowserSpec::getOnPathChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__string::javaobject>()>("getOnPathChanged_cxx");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+    return [&]() -> std::function<void(const std::string& /* path */)> {
+      if (__result->isInstanceOf(JFunc_void_std__string_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__string_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](std::string path) -> void {
+          return __resultRef->invoke(path);
+        };
+      }
+    }();
   }
-  void JHybridAudioBrowserSpec::setTabs(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& tabs) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig> /* tabs */)>("setTabs");
-    method(_javaPart, tabs.has_value() ? JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig::fromCpp(tabs.value()) : nullptr);
+  void JHybridAudioBrowserSpec::setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__string::javaobject> /* onPathChanged */)>("setOnPathChanged_cxx");
+    method(_javaPart, JFunc_void_std__string_cxx::fromCpp(onPathChanged));
   }
-  std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> JHybridAudioBrowserSpec::getBrowse() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList>()>("getBrowse");
+  std::function<void(const std::optional<BrowserList>& /* content */)> JHybridAudioBrowserSpec::getOnContentChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__optional_BrowserList_::javaobject>()>("getOnContentChanged_cxx");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+    return [&]() -> std::function<void(const std::optional<BrowserList>& /* content */)> {
+      if (__result->isInstanceOf(JFunc_void_std__optional_BrowserList__cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__optional_BrowserList__cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](std::optional<BrowserList> content) -> void {
+          return __resultRef->invoke(content);
+        };
+      }
+    }();
   }
-  void JHybridAudioBrowserSpec::setBrowse(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& browse) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList> /* browse */)>("setBrowse");
-    method(_javaPart, browse.has_value() ? JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList::fromCpp(browse.value()) : nullptr);
+  void JHybridAudioBrowserSpec::setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__optional_BrowserList_::javaobject> /* onContentChanged */)>("setOnContentChanged_cxx");
+    method(_javaPart, JFunc_void_std__optional_BrowserList__cxx::fromCpp(onContentChanged));
+  }
+  std::function<void(const std::vector<Track>& /* tabs */)> JHybridAudioBrowserSpec::getOnTabsChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__vector_Track_::javaobject>()>("getOnTabsChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const std::vector<Track>& /* tabs */)> {
+      if (__result->isInstanceOf(JFunc_void_std__vector_Track__cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__vector_Track__cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](std::vector<Track> tabs) -> void {
+          return __resultRef->invoke(tabs);
+        };
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__vector_Track_::javaobject> /* onTabsChanged */)>("setOnTabsChanged_cxx");
+    method(_javaPart, JFunc_void_std__vector_Track__cxx::fromCpp(onTabsChanged));
+  }
+  BrowserConfiguration JHybridAudioBrowserSpec::getConfiguration() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserConfiguration>()>("getConfiguration");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  void JHybridAudioBrowserSpec::setConfiguration(const BrowserConfiguration& configuration) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JBrowserConfiguration> /* configuration */)>("setConfiguration");
+    method(_javaPart, JBrowserConfiguration::fromCpp(configuration));
   }
 
   // Methods
@@ -196,35 +233,10 @@ namespace margelo::nitro::audiobrowser {
       return __promise;
     }();
   }
-  std::string JHybridAudioBrowserSpec::getCurrentPath() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getCurrentPath");
+  std::optional<BrowserList> JHybridAudioBrowserSpec::getContent() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserList>()>("getContent");
     auto __result = method(_javaPart);
-    return __result->toStdString();
-  }
-  std::shared_ptr<Promise<std::vector<BrowserLink>>> JHybridAudioBrowserSpec::queryTabs() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("queryTabs");
-    auto __result = method(_javaPart);
-    return [&]() {
-      auto __promise = Promise<std::vector<BrowserLink>>::create();
-      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
-        auto __result = jni::static_ref_cast<jni::JArrayClass<JBrowserLink>>(__boxedResult);
-        __promise->resolve([&]() {
-          size_t __size = __result->size();
-          std::vector<BrowserLink> __vector;
-          __vector.reserve(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = __result->getElement(__i);
-            __vector.push_back(__element->toCpp());
-          }
-          return __vector;
-        }());
-      });
-      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-        jni::JniException __jniError(__throwable);
-        __promise->reject(std::make_exception_ptr(__jniError));
-      });
-      return __promise;
-    }();
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
 
 } // namespace margelo::nitro::audiobrowser

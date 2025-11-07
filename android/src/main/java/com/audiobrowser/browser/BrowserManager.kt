@@ -2,16 +2,16 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
-import com.margelo.nitro.audiobrowser.BrowserLink
 import com.margelo.nitro.audiobrowser.BrowserList
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
+import com.audiobrowser.BrowseSource
+import com.audiobrowser.MediaSource
+import com.audiobrowser.SearchSource
+import com.audiobrowser.TabsSource
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
-import com.margelo.nitro.audiobrowser.Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig as SearchSource
-import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig as TabsSource
-import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList as BrowseSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -19,10 +19,10 @@ import timber.log.Timber
 
 /**
  * Core browser manager that handles navigation, search, and media browsing.
- * 
+ *
  * This class contains the main business logic for:
  * - Route resolution and path matching with parameter extraction
- * - HTTP API requests and response processing  
+ * - HTTP API requests and response processing
  * - JavaScript callback invocation
  * - Fallback handling and error management
  */
@@ -33,59 +33,83 @@ class BrowserManager {
         ignoreUnknownKeys = true
         isLenient = true
     }
-    private var currentPath: String = "/"
-    
+    private var path: String = "/"
+    private var content: BrowserList? = null
+    private var tabs: Array<Track>? = null
+    private var onPathChanged: ((String) -> Unit)? = null
+    private var onContentChanged: ((BrowserList?) -> Unit)? = null
+    private var onTabsChanged: ((Array<Track>) -> Unit)? = null
+
     /**
      * Navigate to a path and return browser content.
-     * 
+     *
      * @param path The path to navigate to (e.g., "/artists/123")
      * @param config Browser configuration containing routes, browse fallback, etc.
      * @return BrowserList containing the navigation result
      */
     suspend fun navigate(path: String, config: BrowserConfig): BrowserList {
         Timber.d("Navigating to path: $path")
-        
+
         try {
             // Update current path
-            currentPath = path
-            
-            // First try to match against configured routes
-            config.routes?.takeUnless { it.isEmpty() }?.let { routes ->
-                router.findBestMatch(path, routes)?.let { (routePattern, match) ->
-                    val browserSource = routes[routePattern]!!
-                    val routeParams = match.params
-                    
-                    Timber.d("Matched route: $routePattern with params: $routeParams")
-                    return resolveBrowserSource(browserSource, path, routeParams, config)
+            val previousPath = this.path
+            this.path = path
+            if (previousPath != path) {
+                onPathChanged?.invoke(path)
+            }
+
+            val result: BrowserList = run {
+                // First try to match against configured routes
+                config.routes?.takeUnless { it.isEmpty() }?.let { routes ->
+                    router.findBestMatch(path, routes)?.let { (routePattern, match) ->
+                        val browserSource = routes[routePattern]!!
+                        val routeParams = match.params
+
+                        Timber.d("Matched route: $routePattern with params: $routeParams")
+                        return@run resolveBrowserSource(browserSource, path, routeParams, config)
+                    }
                 }
+
+                // No route matched, fall back to browse configuration
+                config.browse?.let { browseSource ->
+                    Timber.d("No route matched, using browse fallback")
+                    return@run resolveBrowseSource(browseSource, path, emptyMap(), config)
+                }
+
+                // No routes and no browse fallback configured
+                Timber.w("No route matched and no browse fallback configured for path: $path")
+                createEmptyBrowserList(path, "No content configured for this path")
             }
-            
-            // No route matched, fall back to browse configuration
-            config.browse?.let { browseSource ->
-                Timber.d("No route matched, using browse fallback")
-                return resolveBrowseSource(browseSource, path, emptyMap(), config)
+
+            val previousContent = this.content
+            this.content = result
+            if (previousContent != result) {
+                onContentChanged?.invoke(result)
             }
-            
-            // No routes and no browse fallback configured
-            Timber.w("No route matched and no browse fallback configured for path: $path")
-            return createEmptyBrowserList(path, "No content configured for this path")
-            
+            return result
+
         } catch (e: Exception) {
             Timber.e(e, "Error during navigation to path: $path")
-            return createErrorBrowserList(path, "Navigation failed: ${e.message}")
+            val errorResult = createErrorBrowserList(path, "Navigation failed: ${e.message}")
+            val previousContent = this.content
+            this.content = errorResult
+            if (previousContent != errorResult) {
+                onContentChanged?.invoke(errorResult)
+            }
+            return errorResult
         }
     }
-    
+
     /**
      * Search for tracks using the configured search source.
-     * 
+     *
      * @param query The search query string
      * @param config Browser configuration containing search source
      * @return Array of Track results
      */
     suspend fun search(query: String, config: BrowserConfig): Array<Track> {
         Timber.d("Searching for: $query")
-        
+
         try {
             return config.search?.let { searchSource ->
                 resolveSearchSource(searchSource, query, config)
@@ -93,44 +117,92 @@ class BrowserManager {
                 Timber.w("Search requested but no search source configured")
                 emptyArray()
             }
-            
+
         } catch (e: Exception) {
             Timber.e(e, "Error during search for query: $query")
             return emptyArray()
         }
     }
-    
+
     /**
      * Get the current navigation path.
-     * 
+     *
      * @return Current path string
      */
-    fun getCurrentPath(): String {
-        return currentPath
+    fun getPath(): String {
+        return path
     }
-    
+
+    /**
+     * Get the current loaded content.
+     *
+     * @return Current BrowserList content or null if none loaded
+     */
+    fun getContent(): BrowserList? {
+        return content
+    }
+
+    /**
+     * Get the current tabs.
+     *
+     * @return Current tabs array or null if none loaded
+     */
+    fun getTabs(): Array<Track>? {
+        return tabs
+    }
+
+    /**
+     * Set callback for path changes.
+     */
+    fun setOnPathChanged(callback: (String) -> Unit) {
+        onPathChanged = callback
+    }
+
+    /**
+     * Set callback for content changes.
+     */
+    fun setOnContentChanged(callback: (BrowserList?) -> Unit) {
+        onContentChanged = callback
+    }
+
+    /**
+     * Set callback for tabs changes.
+     */
+    fun setOnTabsChanged(callback: (Array<Track>) -> Unit) {
+        onTabsChanged = callback
+    }
+
     /**
      * Get navigation tabs from the configured tabs source.
-     * 
+     *
      * @param config Browser configuration containing tabs source
      * @return Array of BrowserLink objects representing tabs
      */
-    suspend fun getTabs(config: BrowserConfig): Array<BrowserLink> {
+    suspend fun getTabs(config: BrowserConfig): Array<Track> {
         Timber.d("Getting navigation tabs")
-        
+
         try {
-            return config.tabs?.let { tabsSource ->
+            val result = config.tabs?.let { tabsSource ->
                 resolveTabsSource(tabsSource, config)
             } ?: run {
                 Timber.d("No tabs configured")
                 emptyArray()
             }
+
+            // Check if tabs have changed and trigger callback if necessary
+            val previousTabs = this.tabs
+            if (!result.contentEquals(previousTabs)) {
+                this.tabs = result
+                onTabsChanged?.invoke(result)
+            }
+
+            return result
         } catch (e: Exception) {
             Timber.e(e, "Error getting tabs")
             return emptyArray()
         }
     }
-    
+
     /**
      * Resolve a BrowserSource into a BrowserList.
      * Handles the three possible types: static BrowserList, callback, or API config.
@@ -150,19 +222,19 @@ class BrowserManager {
                 val innerPromise = promise.await()
                 innerPromise.await()
             },
-            // API configuration  
-            second = { apiConfig ->
-                Timber.d("Resolving browser source via API config")
-                executeApiRequest(apiConfig, routeParams, config)
-            },
             // Static BrowserList
-            third = { staticList ->
+            second = { staticList ->
                 Timber.d("Resolving browser source via static list")
                 staticList
+            },
+            // API configuration
+            third = { apiConfig ->
+                Timber.d("Resolving browser source via API config")
+                executeApiRequest(apiConfig, routeParams, config)
             }
         )
     }
-    
+
     /**
      * Resolve a BrowseSource (which doesn't include static BrowserList option).
      */
@@ -181,19 +253,19 @@ class BrowserManager {
                 val innerPromise = promise.await()
                 innerPromise.await()
             },
-            // API configuration
-            second = { apiConfig ->
-                Timber.d("Resolving browse source via API config")
-                executeApiRequest(apiConfig, routeParams, config)
-            },
-            // Static BrowserList (not available in BrowseSource)
-            third = { staticList ->
+            // Static BrowserList
+            second = { staticList ->
                 Timber.d("Resolving browse source via static list")
                 staticList
+            },
+            // API configuration
+            third = { apiConfig ->
+                Timber.d("Resolving browse source via API config")
+                executeApiRequest(apiConfig, routeParams, config)
             }
         )
     }
-    
+
     /**
      * Resolve a SearchSource into Track results.
      */
@@ -217,7 +289,7 @@ class BrowserManager {
             }
         )
     }
-    
+
     /**
      * Resolve a TabsSource into BrowserLink array.
      * Handles the three possible types: static array, callback, or API config.
@@ -225,26 +297,12 @@ class BrowserManager {
     private suspend fun resolveTabsSource(
         source: TabsSource,
         config: BrowserConfig
-    ): Array<BrowserLink> {
+    ): Array<Track> {
         return source.match(
             // Callback function
             first = { callback ->
                 Timber.d("Resolving tabs source via callback")
-                val param = BrowserSourceCallbackParam("/", emptyMap())
-                val promise = callback.invoke(param)
-                val innerPromise = promise.await()
-                val browserList = innerPromise.await()
-                
-                // Extract BrowserLink items from the returned BrowserList
-                browserList.children.mapNotNull { browserItem ->
-                    try {
-                        // Try to extract as BrowserLink
-                        browserItem.asSecondOrNull()
-                    } catch (e: Exception) {
-                        Timber.w("Tab item is not a BrowserLink: ${e.message}")
-                        null
-                    }
-                }.toTypedArray()
+                callback.invoke().await().await()
             },
             // Static array of BrowserLink
             second = { staticTabs ->
@@ -258,7 +316,7 @@ class BrowserManager {
             }
         )
     }
-    
+
     /**
      * Execute an API request for browser content.
      * Handles URL parameter substitution, config merging, and transforms.
@@ -282,11 +340,11 @@ class BrowserManager {
                     userAgent = null
                 )
                 val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
-                
+
                 // 2. Build and execute HTTP request
                 val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
                 val response = httpClient.request(httpRequest)
-                
+
                 response.fold(
                     onSuccess = { httpResponse ->
                         if (httpResponse.isSuccessful) {
@@ -295,21 +353,21 @@ class BrowserManager {
                             jsonBrowserList.toNitro()
                         } else {
                             Timber.w("HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
-                            createErrorBrowserList(getCurrentPath(), "Server returned ${httpResponse.code}")
+                            createErrorBrowserList(getPath(), "Server returned ${httpResponse.code}")
                         }
                     },
                     onFailure = { exception ->
                         Timber.e(exception, "HTTP request failed")
-                        createErrorBrowserList(getCurrentPath(), "Network request failed: ${exception.message}")
+                        createErrorBrowserList(getPath(), "Network request failed: ${exception.message}")
                     }
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Error executing API request")
-                createErrorBrowserList(getCurrentPath(), "Request failed: ${e.message}")
+                createErrorBrowserList(getPath(), "Request failed: ${e.message}")
             }
         }
     }
-    
+
     /**
      * Execute an API request for search results.
      * Automatically adds query as { q: query } to request parameters.
@@ -332,7 +390,7 @@ class BrowserManager {
                     contentType = null,
                     userAgent = null
                 )
-                
+
                 // 2. Create a copy of API config with added query parameter
                 val searchConfig = TransformableRequestConfig(
                     transform = apiConfig.transform,
@@ -345,14 +403,14 @@ class BrowserManager {
                     contentType = apiConfig.contentType,
                     userAgent = apiConfig.userAgent
                 )
-                
+
                 // 3. Merge configs and apply transform if provided
                 var mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, searchConfig, emptyMap())
-                
+
                 // 4. Build and execute HTTP request
                 val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
                 val response = httpClient.request(httpRequest)
-                
+
                 response.fold(
                     onSuccess = { httpResponse ->
                         if (httpResponse.isSuccessful) {
@@ -375,7 +433,7 @@ class BrowserManager {
             }
         }
     }
-    
+
     /**
      * Execute an API request for tabs.
      * Expects the API to return a BrowserList with BrowserLink children.
@@ -383,7 +441,7 @@ class BrowserManager {
     private suspend fun executeTabsApiRequest(
         apiConfig: TransformableRequestConfig,
         browserConfig: BrowserConfig
-    ): Array<BrowserLink> {
+    ): Array<Track> {
         return withContext(Dispatchers.IO) {
             try {
                 // 1. Start with base config
@@ -397,31 +455,23 @@ class BrowserManager {
                     contentType = null,
                     userAgent = null
                 )
-                
+
                 // 2. Merge configs with default path of '/' for tabs
                 val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, emptyMap<String, String>())
-                
+
                 // 3. Build and execute HTTP request
                 val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
                 val response = httpClient.request(httpRequest)
-                
+
                 response.fold(
                     onSuccess = { httpResponse ->
                         if (httpResponse.isSuccessful) {
                             // 4. Parse response as BrowserList
                             val jsonBrowserList = json.decodeFromString<JsonBrowserList>(httpResponse.body)
                             val browserList = jsonBrowserList.toNitro()
-                            
+
                             // 5. Extract BrowserLink items from the list
-                            browserList.children.mapNotNull { browserItem ->
-                                try {
-                                    // Try to extract as BrowserLink
-                                    browserItem.asSecondOrNull()
-                                } catch (e: Exception) {
-                                    Timber.w("Tab item from API is not a BrowserLink: ${e.message}")
-                                    null
-                                }
-                            }.toTypedArray()
+                            browserList.children
                         } else {
                             Timber.w("Tabs HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
                             emptyArray()
@@ -438,7 +488,7 @@ class BrowserManager {
             }
         }
     }
-    
+
     /**
      * Create an empty BrowserList for cases where no content is available.
      */
@@ -459,7 +509,7 @@ class BrowserManager {
             duration = null
         )
     }
-    
+
     /**
      * Create an error BrowserList for exception cases.
      */
@@ -488,7 +538,7 @@ class BrowserManager {
  */
 data class BrowserConfig(
     val request: RequestConfig? = null,
-    val media: TransformableRequestConfig? = null,
+    val media: MediaSource? = null,
     val search: SearchSource? = null,
     val routes: Map<String, BrowserSource>? = null,
     val tabs: TabsSource? = null,

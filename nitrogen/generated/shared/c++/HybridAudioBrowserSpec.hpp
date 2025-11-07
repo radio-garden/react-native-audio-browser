@@ -13,32 +13,21 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `RequestConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RequestConfig; }
-// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `BrowserList` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserList; }
-// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
+// Forward declaration of `BrowserConfiguration` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 
-#include "RequestConfig.hpp"
+#include <string>
 #include <optional>
-#include "TransformableRequestConfig.hpp"
 #include "Track.hpp"
 #include <vector>
-#include <NitroModules/Promise.hpp>
-#include <string>
 #include <functional>
-#include <variant>
 #include "BrowserList.hpp"
-#include "BrowserSourceCallbackParam.hpp"
-#include <unordered_map>
-#include "BrowserLink.hpp"
+#include "BrowserConfiguration.hpp"
+#include <NitroModules/Promise.hpp>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -67,25 +56,24 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Properties
-      virtual std::optional<RequestConfig> getRequest() = 0;
-      virtual void setRequest(const std::optional<RequestConfig>& request) = 0;
-      virtual std::optional<TransformableRequestConfig> getMedia() = 0;
-      virtual void setMedia(const std::optional<TransformableRequestConfig>& media) = 0;
-      virtual std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> getSearch() = 0;
-      virtual void setSearch(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& search) = 0;
-      virtual std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> getRoutes() = 0;
-      virtual void setRoutes(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& routes) = 0;
-      virtual std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> getTabs() = 0;
-      virtual void setTabs(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& tabs) = 0;
-      virtual std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> getBrowse() = 0;
-      virtual void setBrowse(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& browse) = 0;
+      virtual std::optional<std::string> getPath() = 0;
+      virtual void setPath(const std::optional<std::string>& path) = 0;
+      virtual std::optional<std::vector<Track>> getTabs() = 0;
+      virtual void setTabs(const std::optional<std::vector<Track>>& tabs) = 0;
+      virtual std::function<void(const std::string& /* path */)> getOnPathChanged() = 0;
+      virtual void setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) = 0;
+      virtual std::function<void(const std::optional<BrowserList>& /* content */)> getOnContentChanged() = 0;
+      virtual void setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) = 0;
+      virtual std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() = 0;
+      virtual void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) = 0;
+      virtual BrowserConfiguration getConfiguration() = 0;
+      virtual void setConfiguration(const BrowserConfiguration& configuration) = 0;
 
     public:
       // Methods
       virtual std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) = 0;
       virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
-      virtual std::string getCurrentPath() = 0;
-      virtual std::shared_ptr<Promise<std::vector<BrowserLink>>> queryTabs() = 0;
+      virtual std::optional<BrowserList> getContent() = 0;
 
     protected:
       // Hybrid Setup

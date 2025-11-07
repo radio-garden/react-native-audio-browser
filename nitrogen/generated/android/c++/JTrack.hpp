@@ -34,6 +34,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldSrc = clazz->getField<jni::JString>("src");
       jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
+      static const auto fieldPlayable = clazz->getField<jni::JBoolean>("playable");
+      jni::local_ref<jni::JBoolean> playable = this->getFieldValue(fieldPlayable);
       static const auto fieldUrl = clazz->getField<jni::JString>("url");
       jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
@@ -55,7 +57,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldDuration = clazz->getField<jni::JDouble>("duration");
       jni::local_ref<jni::JDouble> duration = this->getFieldValue(fieldDuration);
       return Track(
-        src->toStdString(),
+        src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
+        playable != nullptr ? std::make_optional(static_cast<bool>(playable->value())) : std::nullopt,
         url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
         title->toStdString(),
         subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
@@ -75,12 +78,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
-      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
+      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        jni::make_jstring(value.src),
+        value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
+        value.playable.has_value() ? jni::JBoolean::valueOf(value.playable.value()) : nullptr,
         value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
         jni::make_jstring(value.title),
         value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,

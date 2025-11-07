@@ -19,7 +19,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class BrowserList(
   @DoNotStrip
   @Keep
-  val children: Array<BrowserItem>,
+  val children: Array<Track>,
   @DoNotStrip
   @Keep
   val style: BrowserItemStyle?,
@@ -67,7 +67,7 @@ data class BrowserList(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(children: Array<BrowserItem>, style: BrowserItemStyle?, playable: Boolean?, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?): BrowserList {
+    private fun fromCpp(children: Array<Track>, style: BrowserItemStyle?, playable: Boolean?, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?): BrowserList {
       return BrowserList(children, style, playable, url, title, subtitle, icon, artwork, artist, album, description, genre, duration)
     }
   }

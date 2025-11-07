@@ -18,8 +18,20 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(src: String, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?) {
-    self.init(std.string(src), { () -> bridge.std__optional_std__string_ in
+  init(src: String?, playable: Bool?, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?) {
+    self.init({ () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = src {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = playable {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
@@ -76,14 +88,51 @@ public extension Track {
     }())
   }
 
-  var src: String {
+  var src: String? {
     @inline(__always)
     get {
-      return String(self.__src)
+      return { () -> String? in
+        if bridge.has_value_std__optional_std__string_(self.__src) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__src)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {
-      self.__src = std.string(newValue)
+      self.__src = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var playable: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__playable) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__playable)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__playable = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
     }
   }
   

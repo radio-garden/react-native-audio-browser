@@ -20,13 +20,10 @@
 #include <NitroModules/JPromise.hpp>
 #include "JBrowserList.hpp"
 #include "Track.hpp"
-#include "BrowserLink.hpp"
 #include <vector>
-#include "JBrowserItem.hpp"
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
-#include "JBrowserLink.hpp"
 #include "BrowserItemStyle.hpp"
 #include "JBrowserItemStyle.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
@@ -53,25 +50,25 @@ namespace margelo::nitro::audiobrowser {
       static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam::javaobject>)>("create");
       return method(javaClassStatic(), value);
     }
-    static jni::local_ref<JBrowserSource> create_1(jni::alias_ref<JTransformableRequestConfig> value) {
-      static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JTransformableRequestConfig>)>("create");
-      return method(javaClassStatic(), value);
-    }
-    static jni::local_ref<JBrowserSource> create_2(jni::alias_ref<JBrowserList> value) {
+    static jni::local_ref<JBrowserSource> create_1(jni::alias_ref<JBrowserList> value) {
       static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JBrowserList>)>("create");
       return method(javaClassStatic(), value);
     }
+    static jni::local_ref<JBrowserSource> create_2(jni::alias_ref<JTransformableRequestConfig> value) {
+      static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JTransformableRequestConfig>)>("create");
+      return method(javaClassStatic(), value);
+    }
 
-    static jni::local_ref<JBrowserSource> fromCpp(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>& variant) {
+    static jni::local_ref<JBrowserSource> fromCpp(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>& variant) {
       switch (variant.index()) {
         case 0: return create_0(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam_cxx::fromCpp(std::get<0>(variant)));
-        case 1: return create_1(JTransformableRequestConfig::fromCpp(std::get<1>(variant)));
-        case 2: return create_2(JBrowserList::fromCpp(std::get<2>(variant)));
+        case 1: return create_1(JBrowserList::fromCpp(std::get<1>(variant)));
+        case 2: return create_2(JTransformableRequestConfig::fromCpp(std::get<2>(variant)));
         default: throw std::invalid_argument("Variant holds unknown index! (" + std::to_string(variant.index()) + ")");
       }
     }
 
-    [[nodiscard]] std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList> toCpp() const;
+    [[nodiscard]] std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> toCpp() const;
   };
 
   namespace JBrowserSource_impl {
@@ -89,8 +86,8 @@ namespace margelo::nitro::audiobrowser {
     public:
       static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSource$Second;";
     
-      [[nodiscard]] jni::local_ref<JTransformableRequestConfig> getValue() const {
-        static const auto field = javaClassStatic()->getField<JTransformableRequestConfig>("value");
+      [[nodiscard]] jni::local_ref<JBrowserList> getValue() const {
+        static const auto field = javaClassStatic()->getField<JBrowserList>("value");
         return getFieldValue(field);
       }
     };
@@ -99,8 +96,8 @@ namespace margelo::nitro::audiobrowser {
     public:
       static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSource$Third;";
     
-      [[nodiscard]] jni::local_ref<JBrowserList> getValue() const {
-        static const auto field = javaClassStatic()->getField<JBrowserList>("value");
+      [[nodiscard]] jni::local_ref<JTransformableRequestConfig> getValue() const {
+        static const auto field = javaClassStatic()->getField<JTransformableRequestConfig>("value");
         return getFieldValue(field);
       }
     };

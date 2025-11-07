@@ -8,6 +8,7 @@
  */
 
 export * from './activeTrack'
+export * from './browser'
 export * from './errors'
 export * from './metadata'
 export * from './options'

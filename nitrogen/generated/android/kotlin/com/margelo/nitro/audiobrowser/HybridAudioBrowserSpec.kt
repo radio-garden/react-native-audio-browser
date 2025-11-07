@@ -47,37 +47,61 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
-  abstract var request: RequestConfig?
+  abstract var path: String?
   
   @get:DoNotStrip
   @get:Keep
   @set:DoNotStrip
   @set:Keep
-  abstract var media: TransformableRequestConfig?
+  abstract var tabs: Array<Track>?
+  
+  abstract var onPathChanged: (path: String) -> Unit
+  
+  private var onPathChanged_cxx: Func_void_std__string
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_std__string_java(onPathChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onPathChanged = value
+    }
+  
+  abstract var onContentChanged: (content: BrowserList?) -> Unit
+  
+  private var onContentChanged_cxx: Func_void_std__optional_BrowserList_
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_std__optional_BrowserList__java(onContentChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onContentChanged = value
+    }
+  
+  abstract var onTabsChanged: (tabs: Array<Track>) -> Unit
+  
+  private var onTabsChanged_cxx: Func_void_std__vector_Track_
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_std__vector_Track__java(onTabsChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onTabsChanged = value
+    }
   
   @get:DoNotStrip
   @get:Keep
   @set:DoNotStrip
   @set:Keep
-  abstract var search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?
-  
-  @get:DoNotStrip
-  @get:Keep
-  @set:DoNotStrip
-  @set:Keep
-  abstract var routes: Map<String, BrowserSource>?
-  
-  @get:DoNotStrip
-  @get:Keep
-  @set:DoNotStrip
-  @set:Keep
-  abstract var tabs: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig?
-  
-  @get:DoNotStrip
-  @get:Keep
-  @set:DoNotStrip
-  @set:Keep
-  abstract var browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList?
+  abstract var configuration: BrowserConfiguration
 
   // Methods
   @DoNotStrip
@@ -90,11 +114,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getCurrentPath(): String
-  
-  @DoNotStrip
-  @Keep
-  abstract fun queryTabs(): Promise<Array<BrowserLink>>
+  abstract fun getContent(): BrowserList?
 
   private external fun initHybrid(): HybridData
 

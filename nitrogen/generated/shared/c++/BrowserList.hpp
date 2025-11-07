@@ -25,14 +25,10 @@
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
 // Forward declaration of `BrowserItemStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 
 #include "Track.hpp"
-#include "BrowserLink.hpp"
-#include <variant>
 #include <vector>
 #include "BrowserItemStyle.hpp"
 #include <optional>
@@ -45,7 +41,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct BrowserList {
   public:
-    std::vector<std::variant<Track, BrowserLink>> children     SWIFT_PRIVATE;
+    std::vector<Track> children     SWIFT_PRIVATE;
     std::optional<BrowserItemStyle> style     SWIFT_PRIVATE;
     std::optional<bool> playable     SWIFT_PRIVATE;
     std::optional<std::string> url     SWIFT_PRIVATE;
@@ -61,7 +57,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     BrowserList() = default;
-    explicit BrowserList(std::vector<std::variant<Track, BrowserLink>> children, std::optional<BrowserItemStyle> style, std::optional<bool> playable, std::optional<std::string> url, std::string title, std::optional<std::string> subtitle, std::optional<std::string> icon, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration): children(children), style(style), playable(playable), url(url), title(title), subtitle(subtitle), icon(icon), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration) {}
+    explicit BrowserList(std::vector<Track> children, std::optional<BrowserItemStyle> style, std::optional<bool> playable, std::optional<std::string> url, std::string title, std::optional<std::string> subtitle, std::optional<std::string> icon, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration): children(children), style(style), playable(playable), url(url), title(title), subtitle(subtitle), icon(icon), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -74,7 +70,7 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::BrowserList fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::BrowserList(
-        JSIConverter<std::vector<std::variant<margelo::nitro::audiobrowser::Track, margelo::nitro::audiobrowser::BrowserLink>>>::fromJSI(runtime, obj.getProperty(runtime, "children")),
+        JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::fromJSI(runtime, obj.getProperty(runtime, "children")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::BrowserItemStyle>>::fromJSI(runtime, obj.getProperty(runtime, "style")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "playable")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "url")),
@@ -91,7 +87,7 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::BrowserList& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, "children", JSIConverter<std::vector<std::variant<margelo::nitro::audiobrowser::Track, margelo::nitro::audiobrowser::BrowserLink>>>::toJSI(runtime, arg.children));
+      obj.setProperty(runtime, "children", JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::toJSI(runtime, arg.children));
       obj.setProperty(runtime, "style", JSIConverter<std::optional<margelo::nitro::audiobrowser::BrowserItemStyle>>::toJSI(runtime, arg.style));
       obj.setProperty(runtime, "playable", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.playable));
       obj.setProperty(runtime, "url", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.url));
@@ -114,7 +110,7 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::vector<std::variant<margelo::nitro::audiobrowser::Track, margelo::nitro::audiobrowser::BrowserLink>>>::canConvert(runtime, obj.getProperty(runtime, "children"))) return false;
+      if (!JSIConverter<std::vector<margelo::nitro::audiobrowser::Track>>::canConvert(runtime, obj.getProperty(runtime, "children"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::BrowserItemStyle>>::canConvert(runtime, obj.getProperty(runtime, "style"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "playable"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "url"))) return false;

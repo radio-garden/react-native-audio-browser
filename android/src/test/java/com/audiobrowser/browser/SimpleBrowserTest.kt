@@ -5,13 +5,13 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class SimpleBrowserTest {
-    
+
     @Test
     fun `basic test without promises`() {
         val browserManager = BrowserManager()
-        assertEquals("/", browserManager.getCurrentPath())
+        assertEquals("/", browserManager.getPath())
     }
-    
+
     @Test
     fun `simple router test`() {
         val router = SimpleRouter()
@@ -20,13 +20,13 @@ class SimpleBrowserTest {
         assertNotNull(match)
         assertEquals("/test", match!!.first)
     }
-    
+
     @Test
     fun `navigate with empty config returns empty list`() = runBlocking {
         val browserManager = BrowserManager()
         val config = BrowserConfig()
         val result = browserManager.navigate("/test", config)
-        
+
         assertEquals("No content configured for this path", result.title)
         assertEquals("/test", result.url)
     }

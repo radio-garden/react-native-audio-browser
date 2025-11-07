@@ -14,22 +14,21 @@ namespace margelo::nitro::audiobrowser {
     HybridObject::loadHybridMethods();
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
-      prototype.registerHybridGetter("request", &HybridAudioBrowserSpec::getRequest);
-      prototype.registerHybridSetter("request", &HybridAudioBrowserSpec::setRequest);
-      prototype.registerHybridGetter("media", &HybridAudioBrowserSpec::getMedia);
-      prototype.registerHybridSetter("media", &HybridAudioBrowserSpec::setMedia);
-      prototype.registerHybridGetter("search", &HybridAudioBrowserSpec::getSearch);
-      prototype.registerHybridSetter("search", &HybridAudioBrowserSpec::setSearch);
-      prototype.registerHybridGetter("routes", &HybridAudioBrowserSpec::getRoutes);
-      prototype.registerHybridSetter("routes", &HybridAudioBrowserSpec::setRoutes);
+      prototype.registerHybridGetter("path", &HybridAudioBrowserSpec::getPath);
+      prototype.registerHybridSetter("path", &HybridAudioBrowserSpec::setPath);
       prototype.registerHybridGetter("tabs", &HybridAudioBrowserSpec::getTabs);
       prototype.registerHybridSetter("tabs", &HybridAudioBrowserSpec::setTabs);
-      prototype.registerHybridGetter("browse", &HybridAudioBrowserSpec::getBrowse);
-      prototype.registerHybridSetter("browse", &HybridAudioBrowserSpec::setBrowse);
+      prototype.registerHybridGetter("onPathChanged", &HybridAudioBrowserSpec::getOnPathChanged);
+      prototype.registerHybridSetter("onPathChanged", &HybridAudioBrowserSpec::setOnPathChanged);
+      prototype.registerHybridGetter("onContentChanged", &HybridAudioBrowserSpec::getOnContentChanged);
+      prototype.registerHybridSetter("onContentChanged", &HybridAudioBrowserSpec::setOnContentChanged);
+      prototype.registerHybridGetter("onTabsChanged", &HybridAudioBrowserSpec::getOnTabsChanged);
+      prototype.registerHybridSetter("onTabsChanged", &HybridAudioBrowserSpec::setOnTabsChanged);
+      prototype.registerHybridGetter("configuration", &HybridAudioBrowserSpec::getConfiguration);
+      prototype.registerHybridSetter("configuration", &HybridAudioBrowserSpec::setConfiguration);
       prototype.registerHybridMethod("navigate", &HybridAudioBrowserSpec::navigate);
       prototype.registerHybridMethod("onSearch", &HybridAudioBrowserSpec::onSearch);
-      prototype.registerHybridMethod("getCurrentPath", &HybridAudioBrowserSpec::getCurrentPath);
-      prototype.registerHybridMethod("queryTabs", &HybridAudioBrowserSpec::queryTabs);
+      prototype.registerHybridMethod("getContent", &HybridAudioBrowserSpec::getContent);
     });
   }
 

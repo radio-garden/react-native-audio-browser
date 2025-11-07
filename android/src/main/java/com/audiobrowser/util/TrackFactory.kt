@@ -20,8 +20,12 @@ object TrackFactory {
   }
 
   fun toMedia3(track: Track): MediaItem {
-    // TODO: this needs to be reconsidered:
-    val playable = track.url != null
+    // Tracks are browsable when they don't have an src:
+    val browsable = track.src == null
+
+    // Tracks are playable when they have an src or when they are specifically marked as playable:
+    val playable = !browsable || track.playable == null || track.playable
+
     val mediaMetadata =
       MediaMetadata.Builder()
         .setTitle(track.title)
@@ -30,12 +34,15 @@ object TrackFactory {
         .setDescription(track.description)
         .setGenre(track.genre)
         .setArtworkUri(track.artwork?.toUri())
-        .setIsBrowsable(!playable)
+        .setIsBrowsable(browsable)
         .setIsPlayable(playable)
         .build()
 
+    val mediaId = track.url ?: track.src
+      ?: throw IllegalArgumentException("Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'")
+    
     return MediaItem.Builder()
-      .setMediaId(track.url ?: track.src)
+      .setMediaId(mediaId)
       .setUri(track.src)
       .setMediaMetadata(mediaMetadata)
       .setTag(track)

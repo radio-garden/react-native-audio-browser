@@ -11,15 +11,11 @@
 #include "BrowserList.hpp"
 
 #include "BrowserItemStyle.hpp"
-#include "BrowserLink.hpp"
-#include "JBrowserItem.hpp"
 #include "JBrowserItemStyle.hpp"
-#include "JBrowserLink.hpp"
 #include "JTrack.hpp"
 #include "Track.hpp"
 #include <optional>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {
@@ -41,8 +37,8 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     BrowserList toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldChildren = clazz->getField<jni::JArrayClass<JBrowserItem>>("children");
-      jni::local_ref<jni::JArrayClass<JBrowserItem>> children = this->getFieldValue(fieldChildren);
+      static const auto fieldChildren = clazz->getField<jni::JArrayClass<JTrack>>("children");
+      jni::local_ref<jni::JArrayClass<JTrack>> children = this->getFieldValue(fieldChildren);
       static const auto fieldStyle = clazz->getField<JBrowserItemStyle>("style");
       jni::local_ref<JBrowserItemStyle> style = this->getFieldValue(fieldStyle);
       static const auto fieldPlayable = clazz->getField<jni::JBoolean>("playable");
@@ -70,7 +66,7 @@ namespace margelo::nitro::audiobrowser {
       return BrowserList(
         [&]() {
           size_t __size = children->size();
-          std::vector<std::variant<Track, BrowserLink>> __vector;
+          std::vector<Track> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             auto __element = children->getElement(__i);
@@ -99,17 +95,17 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JBrowserList::javaobject> fromCpp(const BrowserList& value) {
-      using JSignature = JBrowserList(jni::alias_ref<jni::JArrayClass<JBrowserItem>>, jni::alias_ref<JBrowserItemStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
+      using JSignature = JBrowserList(jni::alias_ref<jni::JArrayClass<JTrack>>, jni::alias_ref<JBrowserItemStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         [&]() {
           size_t __size = value.children.size();
-          jni::local_ref<jni::JArrayClass<JBrowserItem>> __array = jni::JArrayClass<JBrowserItem>::newArray(__size);
+          jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             const auto& __element = value.children[__i];
-            __array->setElement(__i, *JBrowserItem::fromCpp(__element));
+            __array->setElement(__i, *JTrack::fromCpp(__element));
           }
           return __array;
         }(),

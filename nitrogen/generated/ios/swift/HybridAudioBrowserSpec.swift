@@ -12,18 +12,17 @@ import NitroModules
 /// See ``HybridAudioBrowserSpec``
 public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   // Properties
-  var request: RequestConfig? { get set }
-  var media: TransformableRequestConfig? { get set }
-  var search: Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig? { get set }
-  var routes: Dictionary<String, BrowserSource>? { get set }
-  var tabs: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList____BrowserLink__TransformableRequestConfig? { get set }
-  var browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList? { get set }
+  var path: String? { get set }
+  var tabs: [Track]? { get set }
+  var onPathChanged: (_ path: String) -> Void { get set }
+  var onContentChanged: (_ content: BrowserList?) -> Void { get set }
+  var onTabsChanged: (_ tabs: [Track]) -> Void { get set }
+  var configuration: BrowserConfiguration { get set }
 
   // Methods
   func navigate(path: String) throws -> Promise<BrowserList>
   func onSearch(query: String) throws -> Promise<[Track]>
-  func getCurrentPath() throws -> String
-  func queryTabs() throws -> Promise<[BrowserLink]>
+  func getContent() throws -> BrowserList?
 }
 
 public extension HybridAudioBrowserSpec_protocol {

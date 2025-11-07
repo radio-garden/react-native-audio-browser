@@ -1,8 +1,4 @@
-import type {
-  BrowserLink,
-  BrowserList,
-  Track,
-} from './browser-nodes'
+import type { BrowserList, Track } from './browser-nodes'
 
 export type BrowserSourceCallbackParam = {
   path: string
@@ -48,6 +44,7 @@ export type BrowserSource =
 
 export type RouteSource = BrowserSourceCallback | TransformableRequestConfig
 
+export type TabsSourceCallback = () => Promise<Track[]>
 /**
  * Tab source configuration for navigation tabs.
  *
@@ -55,8 +52,8 @@ export type RouteSource = BrowserSourceCallback | TransformableRequestConfig
  * and should return a MediaList with MediaLink children representing the tabs.
  */
 export type TabsSource =
-  | BrowserLink[]
-  | BrowserSourceCallback
+  | Track[]
+  | TabsSourceCallback
   | TransformableRequestConfig
 
 /**
@@ -70,7 +67,12 @@ export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
 export type MediaSource = TransformableRequestConfig
 
-export type BrowserConfig = {
+export type BrowserConfiguration = {
+  /**
+   * Initial navigation path. Setting this triggers initial navigation to the specified path.
+   */
+  path?: string
+
   /**
    * Base request configuration applied to all HTTP requests.
    * Merged with specific configurations (browse, search, media) where specific settings override base settings.
@@ -177,34 +179,4 @@ export type BrowserConfig = {
    * Typically used when most navigation can be handled by a single API endpoint.
    */
   browse?: BrowserSource
-
-  // /**
-  //  * Configuration for media/stream requests.
-  //  * Used for fetching actual audio/video files referenced in MediaItem.src URLs.
-  //  * Handles the final step of media playback - transforming media URLs into playable streams.
-  //  *
-  //  * Optional - if not provided, MediaItem.src URLs are used directly without transformation.
-  //  * Useful when media files are already accessible at their src URLs without additional processing.
-  //  *
-  //  * Common use cases:
-  //  * - Adding authentication headers for protected content
-  //  * - CDN routing and URL rewriting
-  //  * - Format negotiation (HLS vs MP4)
-  //  *
-  //  * @example
-  //  * ```typescript
-  //  * media: {
-  //  *   baseUrl: 'https://cdn.example.com',
-  //  *   transform(request) {
-  //  *     return {
-  //  *       ...request,
-  //  *       headers: { 'Authorization': `Bearer ${getAuthToken()}` },
-  //  *       path: request.path?.replace('/stream/', '/hls/')
-  //  *     };
-  //  *   }
-  //  * }
-  //  * ```
-  //  */
-  // media?: MediaSource
 }
-

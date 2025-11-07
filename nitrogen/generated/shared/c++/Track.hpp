@@ -35,7 +35,8 @@ namespace margelo::nitro::audiobrowser {
    */
   struct Track {
   public:
-    std::string src     SWIFT_PRIVATE;
+    std::optional<std::string> src     SWIFT_PRIVATE;
+    std::optional<bool> playable     SWIFT_PRIVATE;
     std::optional<std::string> url     SWIFT_PRIVATE;
     std::string title     SWIFT_PRIVATE;
     std::optional<std::string> subtitle     SWIFT_PRIVATE;
@@ -49,7 +50,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     Track() = default;
-    explicit Track(std::string src, std::optional<std::string> url, std::string title, std::optional<std::string> subtitle, std::optional<std::string> icon, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration): src(src), url(url), title(title), subtitle(subtitle), icon(icon), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration) {}
+    explicit Track(std::optional<std::string> src, std::optional<bool> playable, std::optional<std::string> url, std::string title, std::optional<std::string> subtitle, std::optional<std::string> icon, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration): src(src), playable(playable), url(url), title(title), subtitle(subtitle), icon(icon), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -62,7 +63,8 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::Track fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::Track(
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "src")),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "src")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "playable")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "url")),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "title")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "subtitle")),
@@ -77,7 +79,8 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::Track& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, "src", JSIConverter<std::string>::toJSI(runtime, arg.src));
+      obj.setProperty(runtime, "src", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.src));
+      obj.setProperty(runtime, "playable", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.playable));
       obj.setProperty(runtime, "url", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.url));
       obj.setProperty(runtime, "title", JSIConverter<std::string>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, "subtitle", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.subtitle));
@@ -98,7 +101,8 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "src"))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "src"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "playable"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "url"))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "title"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "subtitle"))) return false;

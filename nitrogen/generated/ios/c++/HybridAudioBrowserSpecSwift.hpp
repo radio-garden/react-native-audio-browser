@@ -12,38 +12,38 @@
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `BrowserList` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserList; }
+// Forward declaration of `BrowserItemStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
+// Forward declaration of `BrowserConfiguration` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
-// Forward declaration of `Track` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `BrowserList` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserList; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
-// Forward declaration of `BrowserItemStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
 
-#include "RequestConfig.hpp"
-#include <optional>
-#include "HttpMethod.hpp"
 #include <string>
+#include <optional>
+#include "Track.hpp"
+#include <vector>
+#include <functional>
+#include "BrowserList.hpp"
+#include "BrowserItemStyle.hpp"
+#include "BrowserConfiguration.hpp"
+#include "RequestConfig.hpp"
+#include "HttpMethod.hpp"
 #include <unordered_map>
 #include "TransformableRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include <functional>
-#include "Track.hpp"
-#include <vector>
 #include <variant>
-#include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
-#include "BrowserLink.hpp"
-#include "BrowserItemStyle.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -85,47 +85,46 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Properties
-    inline std::optional<RequestConfig> getRequest() noexcept override {
-      auto __result = _swiftPart.getRequest();
+    inline std::optional<std::string> getPath() noexcept override {
+      auto __result = _swiftPart.getPath();
       return __result;
     }
-    inline void setRequest(const std::optional<RequestConfig>& request) noexcept override {
-      _swiftPart.setRequest(request);
+    inline void setPath(const std::optional<std::string>& path) noexcept override {
+      _swiftPart.setPath(path);
     }
-    inline std::optional<TransformableRequestConfig> getMedia() noexcept override {
-      auto __result = _swiftPart.getMedia();
-      return __result;
-    }
-    inline void setMedia(const std::optional<TransformableRequestConfig>& media) noexcept override {
-      _swiftPart.setMedia(media);
-    }
-    inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> getSearch() noexcept override {
-      auto __result = _swiftPart.getSearch();
-      return __result;
-    }
-    inline void setSearch(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& search) noexcept override {
-      _swiftPart.setSearch(search);
-    }
-    inline std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> getRoutes() noexcept override {
-      auto __result = _swiftPart.getRoutes();
-      return __result;
-    }
-    inline void setRoutes(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& routes) noexcept override {
-      _swiftPart.setRoutes(routes);
-    }
-    inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> getTabs() noexcept override {
+    inline std::optional<std::vector<Track>> getTabs() noexcept override {
       auto __result = _swiftPart.getTabs();
       return __result;
     }
-    inline void setTabs(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& tabs) noexcept override {
+    inline void setTabs(const std::optional<std::vector<Track>>& tabs) noexcept override {
       _swiftPart.setTabs(tabs);
     }
-    inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> getBrowse() noexcept override {
-      auto __result = _swiftPart.getBrowse();
+    inline std::function<void(const std::string& /* path */)> getOnPathChanged() noexcept override {
+      auto __result = _swiftPart.getOnPathChanged();
       return __result;
     }
-    inline void setBrowse(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& browse) noexcept override {
-      _swiftPart.setBrowse(browse);
+    inline void setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) noexcept override {
+      _swiftPart.setOnPathChanged(onPathChanged);
+    }
+    inline std::function<void(const std::optional<BrowserList>& /* content */)> getOnContentChanged() noexcept override {
+      auto __result = _swiftPart.getOnContentChanged();
+      return __result;
+    }
+    inline void setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) noexcept override {
+      _swiftPart.setOnContentChanged(onContentChanged);
+    }
+    inline std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() noexcept override {
+      auto __result = _swiftPart.getOnTabsChanged();
+      return __result;
+    }
+    inline void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) noexcept override {
+      _swiftPart.setOnTabsChanged(onTabsChanged);
+    }
+    inline BrowserConfiguration getConfiguration() noexcept override {
+      return _swiftPart.getConfiguration();
+    }
+    inline void setConfiguration(const BrowserConfiguration& configuration) noexcept override {
+      _swiftPart.setConfiguration(std::forward<decltype(configuration)>(configuration));
     }
 
   public:
@@ -146,16 +145,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline std::string getCurrentPath() override {
-      auto __result = _swiftPart.getCurrentPath();
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-      auto __value = std::move(__result.value());
-      return __value;
-    }
-    inline std::shared_ptr<Promise<std::vector<BrowserLink>>> queryTabs() override {
-      auto __result = _swiftPart.queryTabs();
+    inline std::optional<BrowserList> getContent() override {
+      auto __result = _swiftPart.getContent();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

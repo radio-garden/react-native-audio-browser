@@ -26,10 +26,10 @@ namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent
 namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `BrowserConfiguration` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `BrowserItemStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
 // Forward declaration of `BrowserList` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserList; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
@@ -139,8 +139,8 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
+#include "BrowserConfiguration.hpp"
 #include "BrowserItemStyle.hpp"
-#include "BrowserLink.hpp"
 #include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"

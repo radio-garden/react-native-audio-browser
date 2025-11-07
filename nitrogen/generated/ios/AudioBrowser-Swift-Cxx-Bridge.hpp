@@ -28,8 +28,6 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 // Forward declaration of `BrowserItemStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
-// Forward declaration of `BrowserLink` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserLink; }
 // Forward declaration of `BrowserList` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserList; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
@@ -142,7 +140,6 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
 #include "BrowserItemStyle.hpp"
-#include "BrowserLink.hpp"
 #include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"
@@ -208,21 +205,6 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
  */
 namespace margelo::nitro::audiobrowser::bridge::swift {
 
-  // pragma MARK: std::optional<HttpMethod>
-  /**
-   * Specialized version of `std::optional<HttpMethod>`.
-   */
-  using std__optional_HttpMethod_ = std::optional<HttpMethod>;
-  inline std::optional<HttpMethod> create_std__optional_HttpMethod_(const HttpMethod& value) noexcept {
-    return std::optional<HttpMethod>(value);
-  }
-  inline bool has_value_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline HttpMethod get_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
-    return *optional;
-  }
-  
   // pragma MARK: std::optional<std::string>
   /**
    * Specialized version of `std::optional<std::string>`.
@@ -235,6 +217,241 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<bool>
+  /**
+   * Specialized version of `std::optional<bool>`.
+   */
+  using std__optional_bool_ = std::optional<bool>;
+  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
+    return std::optional<bool>(value);
+  }
+  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<double>
+  /**
+   * Specialized version of `std::optional<double>`.
+   */
+  using std__optional_double_ = std::optional<double>;
+  inline std::optional<double> create_std__optional_double_(const double& value) noexcept {
+    return std::optional<double>(value);
+  }
+  inline bool has_value_std__optional_double_(const std::optional<double>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline double get_std__optional_double_(const std::optional<double>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<Track>
+  /**
+   * Specialized version of `std::vector<Track>`.
+   */
+  using std__vector_Track_ = std::vector<Track>;
+  inline std::vector<Track> create_std__vector_Track_(size_t size) noexcept {
+    std::vector<Track> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::optional<std::vector<Track>>
+  /**
+   * Specialized version of `std::optional<std::vector<Track>>`.
+   */
+  using std__optional_std__vector_Track__ = std::optional<std::vector<Track>>;
+  inline std::optional<std::vector<Track>> create_std__optional_std__vector_Track__(const std::vector<Track>& value) noexcept {
+    return std::optional<std::vector<Track>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_Track__(const std::optional<std::vector<Track>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<Track> get_std__optional_std__vector_Track__(const std::optional<std::vector<Track>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<BrowserItemStyle>
+  /**
+   * Specialized version of `std::optional<BrowserItemStyle>`.
+   */
+  using std__optional_BrowserItemStyle_ = std::optional<BrowserItemStyle>;
+  inline std::optional<BrowserItemStyle> create_std__optional_BrowserItemStyle_(const BrowserItemStyle& value) noexcept {
+    return std::optional<BrowserItemStyle>(value);
+  }
+  inline bool has_value_std__optional_BrowserItemStyle_(const std::optional<BrowserItemStyle>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline BrowserItemStyle get_std__optional_BrowserItemStyle_(const std::optional<BrowserItemStyle>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<BrowserList>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<BrowserList>>`.
+   */
+  using std__shared_ptr_Promise_BrowserList__ = std::shared_ptr<Promise<BrowserList>>;
+  inline std::shared_ptr<Promise<BrowserList>> create_std__shared_ptr_Promise_BrowserList__() noexcept {
+    return Promise<BrowserList>::create();
+  }
+  inline PromiseHolder<BrowserList> wrap_std__shared_ptr_Promise_BrowserList__(std::shared_ptr<Promise<BrowserList>> promise) noexcept {
+    return PromiseHolder<BrowserList>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const BrowserList& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const BrowserList&)>`.
+   */
+  using Func_void_BrowserList = std::function<void(const BrowserList& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const BrowserList& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_BrowserList_Wrapper final {
+  public:
+    explicit Func_void_BrowserList_Wrapper(std::function<void(const BrowserList& /* result */)>&& func): _function(std::make_unique<std::function<void(const BrowserList& /* result */)>>(std::move(func))) {}
+    inline void call(BrowserList result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const BrowserList& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_BrowserList create_Func_void_BrowserList(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_BrowserList_Wrapper wrap_Func_void_BrowserList(Func_void_BrowserList value) noexcept {
+    return Func_void_BrowserList_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
+  /**
+   * Specialized version of `std::function<void(const std::exception_ptr&)>`.
+   */
+  using Func_void_std__exception_ptr = std::function<void(const std::exception_ptr& /* error */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::exception_ptr& / * error * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__exception_ptr_Wrapper final {
+  public:
+    explicit Func_void_std__exception_ptr_Wrapper(std::function<void(const std::exception_ptr& /* error */)>&& func): _function(std::make_unique<std::function<void(const std::exception_ptr& /* error */)>>(std::move(func))) {}
+    inline void call(std::exception_ptr error) const noexcept {
+      _function->operator()(error);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::exception_ptr& /* error */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__exception_ptr_Wrapper wrap_Func_void_std__exception_ptr(Func_void_std__exception_ptr value) noexcept {
+    return Func_void_std__exception_ptr_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::vector<Track>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::vector<Track>>>`.
+   */
+  using std__shared_ptr_Promise_std__vector_Track___ = std::shared_ptr<Promise<std::vector<Track>>>;
+  inline std::shared_ptr<Promise<std::vector<Track>>> create_std__shared_ptr_Promise_std__vector_Track___() noexcept {
+    return Promise<std::vector<Track>>::create();
+  }
+  inline PromiseHolder<std::vector<Track>> wrap_std__shared_ptr_Promise_std__vector_Track___(std::shared_ptr<Promise<std::vector<Track>>> promise) noexcept {
+    return PromiseHolder<std::vector<Track>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::vector<Track>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::vector<Track>&)>`.
+   */
+  using Func_void_std__vector_Track_ = std::function<void(const std::vector<Track>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::vector<Track>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__vector_Track__Wrapper final {
+  public:
+    explicit Func_void_std__vector_Track__Wrapper(std::function<void(const std::vector<Track>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<Track>& /* result */)>>(std::move(func))) {}
+    inline void call(std::vector<Track> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::vector<Track>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__vector_Track_ create_Func_void_std__vector_Track_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__vector_Track__Wrapper wrap_Func_void_std__vector_Track_(Func_void_std__vector_Track_ value) noexcept {
+    return Func_void_std__vector_Track__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<BrowserList>
+  /**
+   * Specialized version of `std::optional<BrowserList>`.
+   */
+  using std__optional_BrowserList_ = std::optional<BrowserList>;
+  inline std::optional<BrowserList> create_std__optional_BrowserList_(const BrowserList& value) noexcept {
+    return std::optional<BrowserList>(value);
+  }
+  inline bool has_value_std__optional_BrowserList_(const std::optional<BrowserList>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline BrowserList get_std__optional_BrowserList_(const std::optional<BrowserList>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const std::string& /* path */)>
+  /**
+   * Specialized version of `std::function<void(const std::string&)>`.
+   */
+  using Func_void_std__string = std::function<void(const std::string& /* path */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::string& / * path * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__string_Wrapper final {
+  public:
+    explicit Func_void_std__string_Wrapper(std::function<void(const std::string& /* path */)>&& func): _function(std::make_unique<std::function<void(const std::string& /* path */)>>(std::move(func))) {}
+    inline void call(std::string path) const noexcept {
+      _function->operator()(path);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::string& /* path */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__string create_Func_void_std__string(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__string_Wrapper wrap_Func_void_std__string(Func_void_std__string value) noexcept {
+    return Func_void_std__string_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<BrowserList>& /* content */)>
+  /**
+   * Specialized version of `std::function<void(const std::optional<BrowserList>&)>`.
+   */
+  using Func_void_std__optional_BrowserList_ = std::function<void(const std::optional<BrowserList>& /* content */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::optional<BrowserList>& / * content * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__optional_BrowserList__Wrapper final {
+  public:
+    explicit Func_void_std__optional_BrowserList__Wrapper(std::function<void(const std::optional<BrowserList>& /* content */)>&& func): _function(std::make_unique<std::function<void(const std::optional<BrowserList>& /* content */)>>(std::move(func))) {}
+    inline void call(std::optional<BrowserList> content) const noexcept {
+      _function->operator()(content);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::optional<BrowserList>& /* content */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__optional_BrowserList_ create_Func_void_std__optional_BrowserList_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__optional_BrowserList__Wrapper wrap_Func_void_std__optional_BrowserList_(Func_void_std__optional_BrowserList_ value) noexcept {
+    return Func_void_std__optional_BrowserList__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<HttpMethod>
+  /**
+   * Specialized version of `std::optional<HttpMethod>`.
+   */
+  using std__optional_HttpMethod_ = std::optional<HttpMethod>;
+  inline std::optional<HttpMethod> create_std__optional_HttpMethod_(const HttpMethod& value) noexcept {
+    return std::optional<HttpMethod>(value);
+  }
+  inline bool has_value_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline HttpMethod get_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
     return *optional;
   }
   
@@ -327,28 +544,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RequestConfig_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
-  /**
-   * Specialized version of `std::function<void(const std::exception_ptr&)>`.
-   */
-  using Func_void_std__exception_ptr = std::function<void(const std::exception_ptr& /* error */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::exception_ptr& / * error * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__exception_ptr_Wrapper final {
-  public:
-    explicit Func_void_std__exception_ptr_Wrapper(std::function<void(const std::exception_ptr& /* error */)>&& func): _function(std::make_unique<std::function<void(const std::exception_ptr& /* error */)>>(std::move(func))) {}
-    inline void call(std::exception_ptr error) const noexcept {
-      _function->operator()(error);
-    }
-  private:
-    std::unique_ptr<std::function<void(const std::exception_ptr& /* error */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__exception_ptr_Wrapper wrap_Func_void_std__exception_ptr(Func_void_std__exception_ptr value) noexcept {
-    return Func_void_std__exception_ptr_Wrapper(std::move(value));
-  }
-  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
   /**
    * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
@@ -434,66 +629,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline TransformableRequestConfig get_std__optional_TransformableRequestConfig_(const std::optional<TransformableRequestConfig>& optional) noexcept {
     return *optional;
-  }
-  
-  // pragma MARK: std::optional<double>
-  /**
-   * Specialized version of `std::optional<double>`.
-   */
-  using std__optional_double_ = std::optional<double>;
-  inline std::optional<double> create_std__optional_double_(const double& value) noexcept {
-    return std::optional<double>(value);
-  }
-  inline bool has_value_std__optional_double_(const std::optional<double>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline double get_std__optional_double_(const std::optional<double>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::vector<Track>
-  /**
-   * Specialized version of `std::vector<Track>`.
-   */
-  using std__vector_Track_ = std::vector<Track>;
-  inline std::vector<Track> create_std__vector_Track_(size_t size) noexcept {
-    std::vector<Track> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<std::vector<Track>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::vector<Track>>>`.
-   */
-  using std__shared_ptr_Promise_std__vector_Track___ = std::shared_ptr<Promise<std::vector<Track>>>;
-  inline std::shared_ptr<Promise<std::vector<Track>>> create_std__shared_ptr_Promise_std__vector_Track___() noexcept {
-    return Promise<std::vector<Track>>::create();
-  }
-  inline PromiseHolder<std::vector<Track>> wrap_std__shared_ptr_Promise_std__vector_Track___(std::shared_ptr<Promise<std::vector<Track>>> promise) noexcept {
-    return PromiseHolder<std::vector<Track>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::vector<Track>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::vector<Track>&)>`.
-   */
-  using Func_void_std__vector_Track_ = std::function<void(const std::vector<Track>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::vector<Track>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__vector_Track__Wrapper final {
-  public:
-    explicit Func_void_std__vector_Track__Wrapper(std::function<void(const std::vector<Track>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<Track>& /* result */)>>(std::move(func))) {}
-    inline void call(std::vector<Track> result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const std::vector<Track>& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_std__vector_Track_ create_Func_void_std__vector_Track_(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__vector_Track__Wrapper wrap_Func_void_std__vector_Track_(Func_void_std__vector_Track_ value) noexcept {
-    return Func_void_std__vector_Track__Wrapper(std::move(value));
   }
   
   // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>
@@ -597,110 +732,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<bool>
-  /**
-   * Specialized version of `std::optional<bool>`.
-   */
-  using std__optional_bool_ = std::optional<bool>;
-  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
-    return std::optional<bool>(value);
-  }
-  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::variant<Track, BrowserLink>
-  /**
-   * Wrapper struct for `std::variant<Track, BrowserLink>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
-   */
-  struct std__variant_Track__BrowserLink_ {
-    std::variant<Track, BrowserLink> variant;
-    std__variant_Track__BrowserLink_(std::variant<Track, BrowserLink> variant): variant(variant) { }
-    operator std::variant<Track, BrowserLink>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline Track get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline BrowserLink get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-  };
-  inline std__variant_Track__BrowserLink_ create_std__variant_Track__BrowserLink_(const Track& value) noexcept {
-    return std__variant_Track__BrowserLink_(value);
-  }
-  inline std__variant_Track__BrowserLink_ create_std__variant_Track__BrowserLink_(const BrowserLink& value) noexcept {
-    return std__variant_Track__BrowserLink_(value);
-  }
-  
-  // pragma MARK: std::vector<std::variant<Track, BrowserLink>>
-  /**
-   * Specialized version of `std::vector<std::variant<Track, BrowserLink>>`.
-   */
-  using std__vector_std__variant_Track__BrowserLink__ = std::vector<std::variant<Track, BrowserLink>>;
-  inline std::vector<std::variant<Track, BrowserLink>> create_std__vector_std__variant_Track__BrowserLink__(size_t size) noexcept {
-    std::vector<std::variant<Track, BrowserLink>> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
-  // pragma MARK: std::optional<BrowserItemStyle>
-  /**
-   * Specialized version of `std::optional<BrowserItemStyle>`.
-   */
-  using std__optional_BrowserItemStyle_ = std::optional<BrowserItemStyle>;
-  inline std::optional<BrowserItemStyle> create_std__optional_BrowserItemStyle_(const BrowserItemStyle& value) noexcept {
-    return std::optional<BrowserItemStyle>(value);
-  }
-  inline bool has_value_std__optional_BrowserItemStyle_(const std::optional<BrowserItemStyle>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline BrowserItemStyle get_std__optional_BrowserItemStyle_(const std::optional<BrowserItemStyle>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<BrowserList>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<BrowserList>>`.
-   */
-  using std__shared_ptr_Promise_BrowserList__ = std::shared_ptr<Promise<BrowserList>>;
-  inline std::shared_ptr<Promise<BrowserList>> create_std__shared_ptr_Promise_BrowserList__() noexcept {
-    return Promise<BrowserList>::create();
-  }
-  inline PromiseHolder<BrowserList> wrap_std__shared_ptr_Promise_BrowserList__(std::shared_ptr<Promise<BrowserList>> promise) noexcept {
-    return PromiseHolder<BrowserList>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const BrowserList& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const BrowserList&)>`.
-   */
-  using Func_void_BrowserList = std::function<void(const BrowserList& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const BrowserList& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_BrowserList_Wrapper final {
-  public:
-    explicit Func_void_BrowserList_Wrapper(std::function<void(const BrowserList& /* result */)>&& func): _function(std::make_unique<std::function<void(const BrowserList& /* result */)>>(std::move(func))) {}
-    inline void call(BrowserList result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const BrowserList& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_BrowserList create_Func_void_BrowserList(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_BrowserList_Wrapper wrap_Func_void_BrowserList(Func_void_BrowserList value) noexcept {
-    return Func_void_BrowserList_Wrapper(std::move(value));
-  }
-  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>
   /**
    * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam&)>`.
@@ -758,16 +789,16 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_std__shared_ptr_Promise_BrowserList___Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>
   /**
-   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, TransformableRequestConfig, BrowserList>`.
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, BrowserList, TransformableRequestConfig>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ {
-    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList> variant;
-    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList> variant): variant(variant) { }
-    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>() const noexcept {
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
@@ -776,34 +807,34 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)> get_0() const noexcept {
       return std::get<0>(variant);
     }
-    inline TransformableRequestConfig get_1() const noexcept {
+    inline BrowserList get_1() const noexcept {
       return std::get<1>(variant);
     }
-    inline BrowserList get_2() const noexcept {
+    inline TransformableRequestConfig get_2() const noexcept {
       return std::get<2>(variant);
     }
   };
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(const TransformableRequestConfig& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(const BrowserList& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(const BrowserList& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(value);
   }
   
-  // pragma MARK: std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>
+  // pragma MARK: std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>
   /**
-   * Specialized version of `std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, TransformableRequestConfig, BrowserList>>`.
+   * Specialized version of `std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, BrowserList, TransformableRequestConfig>>`.
    */
-  using std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ = std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>;
-  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(size_t size) noexcept {
-    std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> map;
+  using std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__ = std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>;
+  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__(size_t size) noexcept {
+    std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> map;
     map.reserve(size);
     return map;
   }
-  inline std::vector<std::string> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___keys(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__& map) noexcept {
+  inline std::vector<std::string> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig___keys(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__& map) noexcept {
     std::vector<std::string> keys;
     keys.reserve(map.size());
     for (const auto& entry : map) {
@@ -811,136 +842,114 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     }
     return keys;
   }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___value(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__& map, const std::string& key) noexcept {
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig___value(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__& map, const std::string& key) noexcept {
     return map.find(key)->second;
   }
-  inline void emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__& map, const std::string& key, const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>& value) noexcept {
+  inline void emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__(std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__& map, const std::string& key, const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>& value) noexcept {
     map.emplace(key, value);
   }
   
-  // pragma MARK: std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>
+  // pragma MARK: std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>>
   /**
-   * Specialized version of `std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, TransformableRequestConfig, BrowserList>>>`.
+   * Specialized version of `std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, BrowserList, TransformableRequestConfig>>>`.
    */
-  using std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___ = std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>;
-  inline std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>> create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(const std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& value) noexcept {
-    return std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>(value);
+  using std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig___ = std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>>;
+  inline std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>> create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig___(const std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>& value) noexcept {
+    return std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>>(value);
   }
-  inline bool has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& optional) noexcept {
+  inline bool has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>>& optional) noexcept {
+  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::vector<BrowserLink>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>
   /**
-   * Specialized version of `std::vector<BrowserLink>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`.
    */
-  using std__vector_BrowserLink_ = std::vector<BrowserLink>;
-  inline std::vector<BrowserLink> create_std__vector_BrowserLink_(size_t size) noexcept {
-    std::vector<BrowserLink> vector;
-    vector.reserve(size);
-    return vector;
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call() const noexcept {
+      auto __result = _function->operator()();
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>
   /**
-   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, std::vector<BrowserLink>, TransformableRequestConfig>`.
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_ {
-    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig> variant;
-    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig> variant): variant(variant) { }
-    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>() const noexcept {
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
       return variant.index();
     }
-    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)> get_0() const noexcept {
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()> get_0() const noexcept {
       return std::get<0>(variant);
     }
-    inline std::vector<BrowserLink> get_1() const noexcept {
+    inline std::vector<Track> get_1() const noexcept {
       return std::get<1>(variant);
     }
     inline TransformableRequestConfig get_2() const noexcept {
       return std::get<2>(variant);
     }
   };
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(const std::vector<BrowserLink>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const std::vector<Track>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>
+  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>
   /**
-   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, std::vector<BrowserLink>, TransformableRequestConfig>>`.
+   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>`.
    */
-  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>;
-  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>& value) noexcept {
-    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>(value);
+  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>;
+  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>& value) noexcept {
+    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>(value);
   }
-  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, std::vector<BrowserLink>, TransformableRequestConfig>>& optional) noexcept {
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>
+  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>
   /**
-   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, TransformableRequestConfig, BrowserList>>`.
+   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& / * param * /)>, BrowserList, TransformableRequestConfig>>`.
    */
-  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>;
-  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>& value) noexcept {
-    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>(value);
+  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>;
+  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>& value) noexcept {
+    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>(value);
   }
-  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, TransformableRequestConfig, BrowserList>>& optional) noexcept {
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>& optional) noexcept {
     return *optional;
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<std::vector<BrowserLink>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::vector<BrowserLink>>>`.
-   */
-  using std__shared_ptr_Promise_std__vector_BrowserLink___ = std::shared_ptr<Promise<std::vector<BrowserLink>>>;
-  inline std::shared_ptr<Promise<std::vector<BrowserLink>>> create_std__shared_ptr_Promise_std__vector_BrowserLink___() noexcept {
-    return Promise<std::vector<BrowserLink>>::create();
-  }
-  inline PromiseHolder<std::vector<BrowserLink>> wrap_std__shared_ptr_Promise_std__vector_BrowserLink___(std::shared_ptr<Promise<std::vector<BrowserLink>>> promise) noexcept {
-    return PromiseHolder<std::vector<BrowserLink>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::vector<BrowserLink>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::vector<BrowserLink>&)>`.
-   */
-  using Func_void_std__vector_BrowserLink_ = std::function<void(const std::vector<BrowserLink>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::vector<BrowserLink>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__vector_BrowserLink__Wrapper final {
-  public:
-    explicit Func_void_std__vector_BrowserLink__Wrapper(std::function<void(const std::vector<BrowserLink>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<BrowserLink>& /* result */)>>(std::move(func))) {}
-    inline void call(std::vector<BrowserLink> result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const std::vector<BrowserLink>& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_std__vector_BrowserLink_ create_Func_void_std__vector_BrowserLink_(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__vector_BrowserLink__Wrapper wrap_Func_void_std__vector_BrowserLink_(Func_void_std__vector_BrowserLink_ value) noexcept {
-    return Func_void_std__vector_BrowserLink__Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
@@ -973,22 +982,13 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Result<std::shared_ptr<Promise<std::vector<Track>>>>::withError(error);
   }
   
-  // pragma MARK: Result<std::string>
-  using Result_std__string_ = Result<std::string>;
-  inline Result_std__string_ create_Result_std__string_(const std::string& value) noexcept {
-    return Result<std::string>::withValue(value);
+  // pragma MARK: Result<std::optional<BrowserList>>
+  using Result_std__optional_BrowserList__ = Result<std::optional<BrowserList>>;
+  inline Result_std__optional_BrowserList__ create_Result_std__optional_BrowserList__(const std::optional<BrowserList>& value) noexcept {
+    return Result<std::optional<BrowserList>>::withValue(value);
   }
-  inline Result_std__string_ create_Result_std__string_(const std::exception_ptr& error) noexcept {
-    return Result<std::string>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>
-  using Result_std__shared_ptr_Promise_std__vector_BrowserLink____ = Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>;
-  inline Result_std__shared_ptr_Promise_std__vector_BrowserLink____ create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(const std::shared_ptr<Promise<std::vector<BrowserLink>>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_std__vector_BrowserLink____ create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<std::vector<BrowserLink>>>>::withError(error);
+  inline Result_std__optional_BrowserList__ create_Result_std__optional_BrowserList__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<BrowserList>>::withError(error);
   }
   
   // pragma MARK: std::shared_ptr<Promise<void>>

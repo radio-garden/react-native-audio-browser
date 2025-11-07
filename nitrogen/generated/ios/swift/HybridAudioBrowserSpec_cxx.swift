@@ -115,12 +115,12 @@ open class HybridAudioBrowserSpec_cxx {
   }
 
   // Properties
-  public final var request: bridge.std__optional_RequestConfig_ {
+  public final var path: bridge.std__optional_std__string_ {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_RequestConfig_ in
-        if let __unwrappedValue = self.__implementation.request {
-          return bridge.create_std__optional_RequestConfig_(__unwrappedValue)
+      return { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = self.__implementation.path {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
           return .init()
         }
@@ -128,92 +128,10 @@ open class HybridAudioBrowserSpec_cxx {
     }
     @inline(__always)
     set {
-      self.__implementation.request = newValue.value
-    }
-  }
-  
-  public final var media: bridge.std__optional_TransformableRequestConfig_ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_TransformableRequestConfig_ in
-        if let __unwrappedValue = self.__implementation.media {
-          return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.media = newValue.value
-    }
-  }
-  
-  public final var search: bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__ in
-        if let __unwrappedValue = self.__implementation.search {
-          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_ in
-            switch __unwrappedValue {
-              case .first(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string in
-                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(__value)
-                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(__closureWrapper.toUnsafe())
-                }())
-              case .second(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(__value)
-            }
-          }().variant)
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.search = { () -> Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig? in
-        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(newValue)
-          return { () -> Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig in
-            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(__unwrapped)
-            switch __variant.index() {
-              case 0:
-                let __actual = __variant.get_0()
-                return .first({ () -> (String) -> Promise<Promise<[Track]>> in
-                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(__actual)
-                  return { (__query: String) -> Promise<Promise<[Track]>> in
-                    let __result = __wrappedFunction.call(std.string(__query))
-                    return { () -> Promise<Promise<[Track]>> in
-                      let __promise = Promise<Promise<[Track]>>()
-                      let __resolver = { (__result: Promise<[Track]>) in
-                        __promise.resolve(withResult: __result)
-                      }
-                      let __rejecter = { (__error: Error) in
-                        __promise.reject(withError: __error)
-                      }
-                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_std__vector_Track___ in
-                        let __closureWrapper = Func_void_std__shared_ptr_Promise_std__vector_Track___(__resolver)
-                        return bridge.create_Func_void_std__shared_ptr_Promise_std__vector_Track___(__closureWrapper.toUnsafe())
-                      }()
-                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
-                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
-                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
-                      }()
-                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__result)
-                      __promiseHolder.addOnResolvedListener(__resolverCpp)
-                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
-                      return __promise
-                    }()
-                  }
-                }())
-              case 1:
-                let __actual = __variant.get_1()
-                return .second(__actual)
-              default:
-                fatalError("Variant can never have index \(__variant.index())!")
-            }
-          }()
+      self.__implementation.path = { () -> String? in
+        if bridge.has_value_std__optional_std__string_(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__string_(newValue)
+          return String(__unwrapped)
         } else {
           return nil
         }
@@ -221,29 +139,17 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var routes: bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___ {
+  public final var tabs: bridge.std__optional_std__vector_Track__ {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___ in
-        if let __unwrappedValue = self.__implementation.routes {
-          return bridge.create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___({ () -> bridge.std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ in
-            var __map = bridge.create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(__unwrappedValue.count)
-            for (__k, __v) in __unwrappedValue {
-              bridge.emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(&__map, std.string(__k), { () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ in
-                switch __v {
-                  case .first(let __value):
-                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam in
-                      let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__value)
-                      return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
-                    }())
-                  case .second(let __value):
-                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
-                  case .third(let __value):
-                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
-                }
-              }().variant)
+      return { () -> bridge.std__optional_std__vector_Track__ in
+        if let __unwrappedValue = self.__implementation.tabs {
+          return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
+            var __vector = bridge.create_std__vector_Track_(__unwrappedValue.count)
+            for __item in __unwrappedValue {
+              __vector.push_back(__item)
             }
-            return __map
+            return __vector
           }())
         } else {
           return .init()
@@ -252,59 +158,10 @@ open class HybridAudioBrowserSpec_cxx {
     }
     @inline(__always)
     set {
-      self.__implementation.routes = { () -> Dictionary<String, BrowserSource>? in
-        if bridge.has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___(newValue)
-          return { () -> Dictionary<String, BrowserSource> in
-            var __dictionary = Dictionary<String, BrowserSource>(minimumCapacity: __unwrapped.size())
-            let __keys = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___keys(__unwrapped)
-            for __key in __keys {
-              let __value = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList___value(__unwrapped, __key)
-              __dictionary[String(__key)] = { () -> BrowserSource in
-                let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
-                switch __variant.index() {
-                  case 0:
-                    let __actual = __variant.get_0()
-                    return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
-                      let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__actual)
-                      return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
-                        let __result = __wrappedFunction.call(__param)
-                        return { () -> Promise<Promise<BrowserList>> in
-                          let __promise = Promise<Promise<BrowserList>>()
-                          let __resolver = { (__result: Promise<BrowserList>) in
-                            __promise.resolve(withResult: __result)
-                          }
-                          let __rejecter = { (__error: Error) in
-                            __promise.reject(withError: __error)
-                          }
-                          let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_BrowserList__ in
-                            let __closureWrapper = Func_void_std__shared_ptr_Promise_BrowserList__(__resolver)
-                            return bridge.create_Func_void_std__shared_ptr_Promise_BrowserList__(__closureWrapper.toUnsafe())
-                          }()
-                          let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
-                            let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
-                            return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
-                          }()
-                          let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList____(__result)
-                          __promiseHolder.addOnResolvedListener(__resolverCpp)
-                          __promiseHolder.addOnRejectedListener(__rejecterCpp)
-                          return __promise
-                        }()
-                      }
-                    }())
-                  case 1:
-                    let __actual = __variant.get_1()
-                    return .second(__actual)
-                  case 2:
-                    let __actual = __variant.get_2()
-                    return .third(__actual)
-                  default:
-                    fatalError("Variant can never have index \(__variant.index())!")
-                }
-              }()
-            }
-            return __dictionary
-          }()
+      self.__implementation.tabs = { () -> [Track]? in
+        if bridge.has_value_std__optional_std__vector_Track__(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__vector_Track__(newValue)
+          return __unwrapped.map({ __item in __item })
         } else {
           return nil
         }
@@ -312,163 +169,83 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var tabs: bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__ {
+  public final var onPathChanged: bridge.Func_void_std__string {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__ in
-        if let __unwrappedValue = self.__implementation.tabs {
-          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_ in
-            switch __unwrappedValue {
-              case .first(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam in
-                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__value)
-                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
-                }())
-              case .second(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_({ () -> bridge.std__vector_BrowserLink_ in
-                  var __vector = bridge.create_std__vector_BrowserLink_(__value.count)
-                  for __item in __value {
-                    __vector.push_back(__item)
-                  }
-                  return __vector
-                }())
-              case .third(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(__value)
-            }
-          }().variant)
-        } else {
-          return .init()
-        }
+      return { () -> bridge.Func_void_std__string in
+        let __closureWrapper = Func_void_std__string(self.__implementation.onPathChanged)
+        return bridge.create_Func_void_std__string(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.tabs = { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList____BrowserLink__TransformableRequestConfig? in
-        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig__(newValue)
-          return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList____BrowserLink__TransformableRequestConfig in
-            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______std__vector_BrowserLink___TransformableRequestConfig_(__unwrapped)
-            switch __variant.index() {
-              case 0:
-                let __actual = __variant.get_0()
-                return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
-                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__actual)
-                  return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
-                    let __result = __wrappedFunction.call(__param)
-                    return { () -> Promise<Promise<BrowserList>> in
-                      let __promise = Promise<Promise<BrowserList>>()
-                      let __resolver = { (__result: Promise<BrowserList>) in
-                        __promise.resolve(withResult: __result)
-                      }
-                      let __rejecter = { (__error: Error) in
-                        __promise.reject(withError: __error)
-                      }
-                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_BrowserList__ in
-                        let __closureWrapper = Func_void_std__shared_ptr_Promise_BrowserList__(__resolver)
-                        return bridge.create_Func_void_std__shared_ptr_Promise_BrowserList__(__closureWrapper.toUnsafe())
-                      }()
-                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
-                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
-                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
-                      }()
-                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList____(__result)
-                      __promiseHolder.addOnResolvedListener(__resolverCpp)
-                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
-                      return __promise
-                    }()
-                  }
-                }())
-              case 1:
-                let __actual = __variant.get_1()
-                return .second(__actual.map({ __item in __item }))
-              case 2:
-                let __actual = __variant.get_2()
-                return .third(__actual)
-              default:
-                fatalError("Variant can never have index \(__variant.index())!")
-            }
-          }()
-        } else {
-          return nil
+      self.__implementation.onPathChanged = { () -> (String) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__string(newValue)
+        return { (__path: String) -> Void in
+          __wrappedFunction.call(std.string(__path))
         }
       }()
     }
   }
   
-  public final var browse: bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ {
+  public final var onContentChanged: bridge.Func_void_std__optional_BrowserList_ {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__ in
-        if let __unwrappedValue = self.__implementation.browse {
-          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_ in
-            switch __unwrappedValue {
-              case .first(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam in
-                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__value)
-                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
-                }())
-              case .second(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
-              case .third(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__value)
-            }
-          }().variant)
-        } else {
-          return .init()
-        }
+      return { () -> bridge.Func_void_std__optional_BrowserList_ in
+        let __closureWrapper = Func_void_std__optional_BrowserList_(self.__implementation.onContentChanged)
+        return bridge.create_Func_void_std__optional_BrowserList_(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.browse = { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList? in
-        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList__(newValue)
-          return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList in
-            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______TransformableRequestConfig__BrowserList_(__unwrapped)
-            switch __variant.index() {
-              case 0:
-                let __actual = __variant.get_0()
-                return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
-                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam(__actual)
-                  return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<BrowserList>> in
-                    let __result = __wrappedFunction.call(__param)
-                    return { () -> Promise<Promise<BrowserList>> in
-                      let __promise = Promise<Promise<BrowserList>>()
-                      let __resolver = { (__result: Promise<BrowserList>) in
-                        __promise.resolve(withResult: __result)
-                      }
-                      let __rejecter = { (__error: Error) in
-                        __promise.reject(withError: __error)
-                      }
-                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_BrowserList__ in
-                        let __closureWrapper = Func_void_std__shared_ptr_Promise_BrowserList__(__resolver)
-                        return bridge.create_Func_void_std__shared_ptr_Promise_BrowserList__(__closureWrapper.toUnsafe())
-                      }()
-                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
-                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
-                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
-                      }()
-                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList____(__result)
-                      __promiseHolder.addOnResolvedListener(__resolverCpp)
-                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
-                      return __promise
-                    }()
-                  }
-                }())
-              case 1:
-                let __actual = __variant.get_1()
-                return .second(__actual)
-              case 2:
-                let __actual = __variant.get_2()
-                return .third(__actual)
-              default:
-                fatalError("Variant can never have index \(__variant.index())!")
+      self.__implementation.onContentChanged = { () -> (BrowserList?) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__optional_BrowserList_(newValue)
+        return { (__content: BrowserList?) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__optional_BrowserList_ in
+            if let __unwrappedValue = __content {
+              return bridge.create_std__optional_BrowserList_(__unwrappedValue)
+            } else {
+              return .init()
             }
-          }()
-        } else {
-          return nil
+          }())
         }
       }()
+    }
+  }
+  
+  public final var onTabsChanged: bridge.Func_void_std__vector_Track_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_std__vector_Track_ in
+        let __closureWrapper = Func_void_std__vector_Track_(self.__implementation.onTabsChanged)
+        return bridge.create_Func_void_std__vector_Track_(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onTabsChanged = { () -> ([Track]) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__vector_Track_(newValue)
+        return { (__tabs: [Track]) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__vector_Track_ in
+            var __vector = bridge.create_std__vector_Track_(__tabs.count)
+            for __item in __tabs {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
+        }
+      }()
+    }
+  }
+  
+  public final var configuration: BrowserConfiguration {
+    @inline(__always)
+    get {
+      return self.__implementation.configuration
+    }
+    @inline(__always)
+    set {
+      self.__implementation.configuration = newValue
     }
   }
 
@@ -518,39 +295,20 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func getCurrentPath() -> bridge.Result_std__string_ {
+  public final func getContent() -> bridge.Result_std__optional_BrowserList__ {
     do {
-      let __result = try self.__implementation.getCurrentPath()
-      let __resultCpp = std.string(__result)
-      return bridge.create_Result_std__string_(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__string_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func queryTabs() -> bridge.Result_std__shared_ptr_Promise_std__vector_BrowserLink____ {
-    do {
-      let __result = try self.__implementation.queryTabs()
-      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__vector_BrowserLink___ in
-        let __promise = bridge.create_std__shared_ptr_Promise_std__vector_BrowserLink___()
-        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__vector_BrowserLink___(__promise)
-        __result
-          .then({ __result in __promiseHolder.resolve({ () -> bridge.std__vector_BrowserLink_ in
-              var __vector = bridge.create_std__vector_BrowserLink_(__result.count)
-              for __item in __result {
-                __vector.push_back(__item)
-              }
-              return __vector
-            }()) })
-          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
-        return __promise
+      let __result = try self.__implementation.getContent()
+      let __resultCpp = { () -> bridge.std__optional_BrowserList_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_BrowserList_(__unwrappedValue)
+        } else {
+          return .init()
+        }
       }()
-      return bridge.create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(__resultCpp)
+      return bridge.create_Result_std__optional_BrowserList__(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__shared_ptr_Promise_std__vector_BrowserLink____(__exceptionPtr)
+      return bridge.create_Result_std__optional_BrowserList__(__exceptionPtr)
     }
   }
 }

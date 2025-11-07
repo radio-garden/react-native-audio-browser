@@ -17,14 +17,10 @@
 #include <NitroModules/JPromise.hpp>
 #include "JBrowserList.hpp"
 #include "Track.hpp"
-#include "BrowserLink.hpp"
-#include <variant>
 #include <vector>
-#include "JBrowserItem.hpp"
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
-#include "JBrowserLink.hpp"
 #include "BrowserItemStyle.hpp"
 #include "JBrowserItemStyle.hpp"
 #include "JBrowserSourceCallbackParam.hpp"

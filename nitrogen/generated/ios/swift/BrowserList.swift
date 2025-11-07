@@ -18,18 +18,11 @@ public extension BrowserList {
   /**
    * Create a new instance of `BrowserList`.
    */
-  init(children: [BrowserItem], style: BrowserItemStyle?, playable: Bool?, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?) {
-    self.init({ () -> bridge.std__vector_std__variant_Track__BrowserLink__ in
-      var __vector = bridge.create_std__vector_std__variant_Track__BrowserLink__(children.count)
+  init(children: [Track], style: BrowserItemStyle?, playable: Bool?, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?) {
+    self.init({ () -> bridge.std__vector_Track_ in
+      var __vector = bridge.create_std__vector_Track_(children.count)
       for __item in children {
-        __vector.push_back({ () -> bridge.std__variant_Track__BrowserLink_ in
-          switch __item {
-            case .first(let __value):
-              return bridge.create_std__variant_Track__BrowserLink_(__value)
-            case .second(let __value):
-              return bridge.create_std__variant_Track__BrowserLink_(__value)
-          }
-        }().variant)
+        __vector.push_back(__item)
       }
       return __vector
     }(), { () -> bridge.std__optional_BrowserItemStyle_ in
@@ -101,36 +94,17 @@ public extension BrowserList {
     }())
   }
 
-  var children: [BrowserItem] {
+  var children: [Track] {
     @inline(__always)
     get {
-      return self.__children.map({ __item in { () -> BrowserItem in
-        let __variant = bridge.std__variant_Track__BrowserLink_(__item)
-        switch __variant.index() {
-          case 0:
-            let __actual = __variant.get_0()
-            return .first(__actual)
-          case 1:
-            let __actual = __variant.get_1()
-            return .second(__actual)
-          default:
-            fatalError("Variant can never have index \(__variant.index())!")
-        }
-      }() })
+      return self.__children.map({ __item in __item })
     }
     @inline(__always)
     set {
-      self.__children = { () -> bridge.std__vector_std__variant_Track__BrowserLink__ in
-        var __vector = bridge.create_std__vector_std__variant_Track__BrowserLink__(newValue.count)
+      self.__children = { () -> bridge.std__vector_Track_ in
+        var __vector = bridge.create_std__vector_Track_(newValue.count)
         for __item in newValue {
-          __vector.push_back({ () -> bridge.std__variant_Track__BrowserLink_ in
-            switch __item {
-              case .first(let __value):
-                return bridge.create_std__variant_Track__BrowserLink_(__value)
-              case .second(let __value):
-                return bridge.create_std__variant_Track__BrowserLink_(__value)
-            }
-          }().variant)
+          __vector.push_back(__item)
         }
         return __vector
       }()

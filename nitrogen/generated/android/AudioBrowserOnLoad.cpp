@@ -16,9 +16,13 @@
 #include <NitroModules/HybridObjectRegistry.hpp>
 
 #include "JHybridAudioBrowserSpec.hpp"
+#include "JFunc_void_std__string.hpp"
+#include "JFunc_void_std__optional_BrowserList_.hpp"
+#include "JFunc_void_std__vector_Track_.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
 #include "JHybridAudioPlayerSpec.hpp"
 #include "JFunc_void_AudioMetadataReceivedEvent.hpp"
 #include "JFunc_void_AudioCommonMetadataReceivedEvent.hpp"
@@ -52,9 +56,13 @@ int initialize(JavaVM* vm) {
   return facebook::jni::initialize(vm, [] {
     // Register native JNI methods
     margelo::nitro::audiobrowser::JHybridAudioBrowserSpec::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_std__string_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_std__optional_BrowserList__cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_std__vector_Track__cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______cxx::registerNatives();
     margelo::nitro::audiobrowser::JHybridAudioPlayerSpec::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_AudioMetadataReceivedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_AudioCommonMetadataReceivedEvent_cxx::registerNatives();

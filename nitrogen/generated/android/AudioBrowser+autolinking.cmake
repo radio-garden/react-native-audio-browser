@@ -39,9 +39,8 @@ target_sources(
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
   ../nitrogen/generated/android/c++/JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.cpp
   ../nitrogen/generated/android/c++/JBrowserSource.cpp
-  ../nitrogen/generated/android/c++/JBrowserItem.cpp
-  ../nitrogen/generated/android/c++/JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___Array_BrowserLink__TransformableRequestConfig.cpp
-  ../nitrogen/generated/android/c++/JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList.cpp
+  ../nitrogen/generated/android/c++/JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.cpp
+  ../nitrogen/generated/android/c++/JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig.cpp
   ../nitrogen/generated/android/c++/JHybridAudioPlayerSpec.cpp
   ../nitrogen/generated/android/c++/JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp

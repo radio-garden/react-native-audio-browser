@@ -20,27 +20,28 @@ export interface BrowserBase {
 
 export type BrowserItemStyle = 'list' | 'grid'
 
-export interface BrowserSection {
-  title: string
-  style?: BrowserItemStyle
-  children: (Track | BrowserLink)[]
-}
-
-export type BrowserItem = Track | BrowserLink
+// export interface BrowserSection {
+//   title: string
+//   style?: BrowserItemStyle
+//   children: Track
+// }
 
 export interface BrowserList extends BrowserBase {
-  children: BrowserItem[]
+  children: Track[]
   style?: BrowserItemStyle
   /** When true, indicates this container can be played as a unit (e.g., "Play Album") */
   playable?: boolean
 }
 
 export interface Track extends BrowserBase {
-  src: string
-}
-
-export interface BrowserLink extends BrowserBase {
-  /** When true, indicates this link's destination can be played as a unit
+  src?: string
+  /** When true without an src, indicates this link's destination can be played as a unit
    * (e.g., "Play Playlist") */
   playable?: boolean
 }
+
+// export interface BrowserLink extends BrowserBase {
+//   /** When true, indicates this link's destination can be played as a unit
+//    * (e.g., "Play Playlist") */
+//   playable?: boolean
+// }
