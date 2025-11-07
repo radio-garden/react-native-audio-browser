@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.net.URLEncoder
 
-class RequestConfigBuilder {
+object RequestConfigBuilder {
 
   suspend fun buildHttpRequest(
     config: RequestConfig

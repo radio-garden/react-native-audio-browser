@@ -28,7 +28,6 @@ import timber.log.Timber
  */
 class BrowserManager {
     private val router = SimpleRouter()
-    private val requestBuilder = RequestConfigBuilder()
     private val httpClient = HttpClient()
     private val json = Json {
         ignoreUnknownKeys = true
@@ -282,10 +281,10 @@ class BrowserManager {
                     contentType = null,
                     userAgent = null
                 )
-                val mergedConfig = requestBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
+                val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
                 
                 // 2. Build and execute HTTP request
-                val httpRequest = requestBuilder.buildHttpRequest(mergedConfig)
+                val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
                 val response = httpClient.request(httpRequest)
                 
                 response.fold(
@@ -348,10 +347,10 @@ class BrowserManager {
                 )
                 
                 // 3. Merge configs and apply transform if provided
-                var mergedConfig = requestBuilder.mergeConfig(baseConfig, searchConfig, emptyMap())
+                var mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, searchConfig, emptyMap())
                 
                 // 4. Build and execute HTTP request
-                val httpRequest = requestBuilder.buildHttpRequest(mergedConfig)
+                val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
                 val response = httpClient.request(httpRequest)
                 
                 response.fold(
@@ -403,7 +402,7 @@ class BrowserManager {
                 val mergedConfig = requestBuilder.mergeConfig(baseConfig, apiConfig, emptyMap())
                 
                 // 3. Build and execute HTTP request
-                val httpRequest = requestBuilder.buildHttpRequest(mergedConfig)
+                val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
                 val response = httpClient.request(httpRequest)
                 
                 response.fold(

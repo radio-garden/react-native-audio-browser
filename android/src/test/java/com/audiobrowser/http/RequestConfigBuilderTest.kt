@@ -10,12 +10,6 @@ import org.junit.Test
 
 class RequestConfigBuilderTest {
 
-    private lateinit var builder: RequestConfigBuilder
-
-    @Before
-    fun setUp() {
-        builder = RequestConfigBuilder()
-    }
 
     @Test
     fun `buildHttpRequest should use defaults when config fields are null`() = runTest {
@@ -30,7 +24,7 @@ class RequestConfigBuilderTest {
             userAgent = null
         )
 
-        val result = builder.buildHttpRequest(config)
+        val result = RequestConfigBuilder.buildHttpRequest(config)
 
         assertEquals("GET", result.method)
         assertEquals("", result.url)
@@ -52,7 +46,7 @@ class RequestConfigBuilderTest {
             userAgent = "MyApp/1.0"
         )
 
-        val result = builder.buildHttpRequest(config)
+        val result = RequestConfigBuilder.buildHttpRequest(config)
 
         assertEquals("GET", result.method)
         assertEquals("https://api.example.com/albums?limit=20&offset=0", result.url)
@@ -74,7 +68,7 @@ class RequestConfigBuilderTest {
             userAgent = null
         )
 
-        val result = builder.buildHttpRequest(config)
+        val result = RequestConfigBuilder.buildHttpRequest(config)
 
         assertEquals("POST", result.method)
         assertEquals("""{"name":"John"}""", result.body)
@@ -105,7 +99,7 @@ class RequestConfigBuilderTest {
             userAgent = "OverrideAgent"
         )
 
-        val result = builder.mergeConfig(base, override)
+        val result = RequestConfigBuilder.mergeConfig(base, override)
 
         assertEquals(HttpMethod.POST, result.method)
         assertEquals("/override", result.path)
@@ -139,7 +133,7 @@ class RequestConfigBuilderTest {
             userAgent = null
         )
 
-        val result = builder.mergeConfig(base, override)
+        val result = RequestConfigBuilder.mergeConfig(base, override)
 
         assertEquals(HttpMethod.PUT, result.method)
         assertEquals("/base", result.path)
@@ -173,7 +167,7 @@ class RequestConfigBuilderTest {
             userAgent = null
         )
 
-        val result = builder.mergeConfig(base, override)
+        val result = RequestConfigBuilder.mergeConfig(base, override)
 
         // Headers should be merged with override winning
         assertEquals("base-value", result.headers!!["Base-Header"])
@@ -210,8 +204,8 @@ class RequestConfigBuilderTest {
             userAgent = null
         )
 
-        val result1 = builder.buildHttpRequest(configWithSlash)
-        val result2 = builder.buildHttpRequest(configWithoutSlash)
+        val result1 = RequestConfigBuilder.buildHttpRequest(configWithSlash)
+        val result2 = RequestConfigBuilder.buildHttpRequest(configWithoutSlash)
 
         assertEquals("https://api.example.com/albums", result1.url)
         assertEquals("https://api.example.com/albums", result2.url) // Should add slash
@@ -230,7 +224,7 @@ class RequestConfigBuilderTest {
             userAgent = null
         )
 
-        val result = builder.buildHttpRequest(config)
+        val result = RequestConfigBuilder.buildHttpRequest(config)
 
         assertEquals("https://api.example.com/albums", result.url) // No query string
     }

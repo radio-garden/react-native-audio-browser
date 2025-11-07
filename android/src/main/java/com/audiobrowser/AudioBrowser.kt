@@ -20,6 +20,8 @@ import kotlinx.coroutines.MainScope
 import timber.log.Timber
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.browser.BrowserConfig
+import com.audiobrowser.http.RequestConfigBuilder
+import kotlinx.coroutines.runBlocking
 
 @Keep
 @DoNotStrip
@@ -40,6 +42,37 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       request = request,
       media = media
     )
+  }
+  
+  /**
+   * Creates a request config for media URL transformation by merging base and media configs.
+   * Returns null if no media configuration is set.
+   */
+  fun getMediaRequestConfig(originalUrl: String): RequestConfig? {
+    val mediaConfig = media ?: return null
+    
+    return try {
+      // Create base request config with the original URL as path
+      val baseConfig = request ?: RequestConfig()
+      val urlRequestConfig = RequestConfig(path = originalUrl)
+      val mergedBaseConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
+      
+      // Apply media transformation
+      runBlocking {
+        RequestConfigBuilder.mergeConfig(mergedBaseConfig, mediaConfig)
+      }
+    } catch (e: Exception) {
+      Timber.e(e, "Failed to transform media URL: $originalUrl")
+      null
+    }
+  }
+  
+  /**
+   * Registers this AudioBrowser instance with AudioPlayer for media URL transformation.
+   * Should be called after both AudioBrowser and AudioPlayer are created.
+   */
+  fun registerWithAudioPlayer(audioPlayer: AudioPlayer) {
+    audioPlayer.registerAudioBrowser(this)
   }
 
   // Browser API configuration properties

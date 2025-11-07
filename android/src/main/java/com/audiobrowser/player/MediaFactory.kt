@@ -16,9 +16,16 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
+import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import kotlinx.coroutines.runBlocking
+import timber.log.Timber
 
-class MediaFactory(private val context: Context, private val cache: SimpleCache?) :
-  MediaSource.Factory {
+class MediaFactory(
+  private val context: Context, 
+  private val cache: SimpleCache?,
+  private val getRequestConfig: (originalUrl: String) -> RequestConfig?
+) : MediaSource.Factory {
 
   companion object {
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
@@ -41,6 +48,43 @@ class MediaFactory(private val context: Context, private val cache: SimpleCache?
   override fun getSupportedTypes(): IntArray {
     return mediaFactory.supportedTypes
   }
+  
+  /**
+   * Get the final request configuration for a media URL.
+   * Returns the URL, headers, and user-agent to use for streaming.
+   */
+  private fun getMediaRequestConfig(originalUrl: String): Triple<String, Map<String, String>, String> {
+    return try {
+      val requestConfig = getRequestConfig(originalUrl)
+      if (requestConfig != null) {
+        val finalUrl = requestConfig.baseUrl?.let { baseUrl ->
+          val path = requestConfig.path ?: ""
+          val url = if (path.startsWith("http")) path else "$baseUrl$path"
+          
+          // Add query parameters if any
+          if (requestConfig.query?.isNotEmpty() == true) {
+            val uri = Uri.parse(url).buildUpon()
+            requestConfig.query.forEach { (key, value) ->
+              uri.appendQueryParameter(key, value)
+            }
+            uri.build().toString()
+          } else {
+            url
+          }
+        } ?: originalUrl
+        
+        val headers = requestConfig.headers ?: emptyMap()
+        val userAgent = requestConfig.userAgent ?: DEFAULT_USER_AGENT
+        
+        Triple(finalUrl, headers, userAgent)
+      } else {
+        Triple(originalUrl, emptyMap(), DEFAULT_USER_AGENT)
+      }
+    } catch (e: Exception) {
+      Timber.e(e, "Error getting media request config for URL: $originalUrl")
+      Triple(originalUrl, emptyMap(), DEFAULT_USER_AGENT)
+    }
+  }
 
   private fun isLocalFile(uri: Uri): Boolean {
     val scheme = uri.scheme
@@ -55,27 +99,31 @@ class MediaFactory(private val context: Context, private val cache: SimpleCache?
   }
 
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-    val uri = mediaItem.localConfiguration?.uri
+    val originalUri = mediaItem.localConfiguration?.uri
+    
     val factory: DataSource.Factory =
       when {
-        uri != null && isLocalFile(uri) -> {
+        originalUri != null && isLocalFile(originalUri) -> {
           DefaultDataSource.Factory(context)
         }
-        else -> {
-          val userAgent =
-            mediaItem.mediaMetadata.extras?.getString("user-agent") ?: DEFAULT_USER_AGENT
-          val headers =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-              mediaItem.mediaMetadata.extras?.getSerializable("headers", HashMap::class.java)
-            } else {
-              mediaItem.mediaMetadata.extras?.getSerializable("headers")
-            }
-
+        originalUri != null -> {
+          // Get the transformed URL, headers, and user-agent from request config
+          val (finalUrl, headers, userAgent) = getMediaRequestConfig(originalUri.toString())
+          
+          Timber.d("Media URL: $originalUri -> $finalUrl")
+          Timber.d("Media headers: $headers")
+          Timber.d("Media user-agent: $userAgent")
+          
           DefaultHttpDataSource.Factory().apply {
             setUserAgent(userAgent)
             setAllowCrossProtocolRedirects(true)
-            headers?.let { setDefaultRequestProperties(it as HashMap<String, String>) }
+            if (headers.isNotEmpty()) {
+              setDefaultRequestProperties(headers)
+            }
           }
+        }
+        else -> {
+          DefaultDataSource.Factory(context)
         }
       }
 

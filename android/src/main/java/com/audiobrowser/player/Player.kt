@@ -16,6 +16,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.Callbacks
+import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -63,6 +65,10 @@ class Player(internal val context: Context) {
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
+  private lateinit var mediaFactory: MediaFactory
+  
+  // Settable function to get transformed request config for media URLs
+  var getMediaRequestConfig: ((originalUrl: String) -> RequestConfig?)? = null
 
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
@@ -357,11 +363,14 @@ class Player(internal val context: Context) {
         .setBackBuffer(backBuffer, false)
         .build()
     }
+    // Create MediaFactory with getMediaRequestConfig function
+    mediaFactory = MediaFactory(context, cache) { url -> getMediaRequestConfig?.invoke(url) }
+    
     exoPlayer =
       ExoPlayer.Builder(context)
         .setRenderersFactory(renderer)
         .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
-        .setMediaSourceFactory(MediaFactory(context, cache))
+        .setMediaSourceFactory(mediaFactory)
         .setWakeMode(
           when (setupOptions.wakeMode) {
             AndroidPlayerWakeMode.NONE -> C.WAKE_MODE_NONE
@@ -868,4 +877,5 @@ class Player(internal val context: Context) {
   fun resolveSearchRequest(requestId: String, items: List<MediaItem>, totalMatchesCount: Int) {
     pendingSearchRequests.remove(requestId)?.set(items)
   }
+  
 }
