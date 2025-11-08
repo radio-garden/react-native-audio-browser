@@ -1,5 +1,9 @@
 # Claude Development Notes
 
+## Breaking Changes Policy
+
+This is an **alpha product** - we do not care about breaking changes. Feel free to make any necessary API changes to improve the codebase.
+
 ## Architecture
 
 - Uses **Nitro Modules** most functionality can be sync / blocking in nature
