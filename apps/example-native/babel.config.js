@@ -1,5 +1,5 @@
 const path = require('path');
-const pak = require('../package.json');
+const pak = require('../../package.json');
 
 module.exports = api => {
   api.cache(true);
@@ -11,7 +11,7 @@ module.exports = api => {
         {
           extensions: ['.js', '.ts', '.json', '.jsx', '.tsx'],
           alias: {
-            [pak.name]: path.join(__dirname, '../', pak.source),
+            [pak.name]: path.join(__dirname, '../../', pak.source),
           },
         },
       ],

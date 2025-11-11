@@ -1,5 +1,5 @@
 {
-  "name": "example",
+  "name": "example-native",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -27,8 +27,11 @@
   },
   "dependencies": {
     "@react-native-vector-icons/fontawesome6": "^12.0.1",
+    "@react-native/new-app-screen": "0.82.0",
+    "common-app": "*",
     "react": "19.1.1",
     "react-native": "0.82.0",
+    "react-native-audio-browser": "*",
     "react-native-nitro-modules": "0.31.4",
     "react-native-safe-area-context": "^5.5.2"
   },
@@ -48,6 +51,7 @@
     "babel-plugin-module-resolver": "^5.0.2",
     "eslint": "^9.39.1",
     "prettier": "^3.0.3",
+    "react-native-monorepo-config": "^0.3.0",
     "typescript": "^5.9.3"
   },
   "engines": {
