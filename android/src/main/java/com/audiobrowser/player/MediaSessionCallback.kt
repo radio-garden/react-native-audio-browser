@@ -18,11 +18,11 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.guava.future
-import java.util.concurrent.TimeUnit
 import timber.log.Timber
 
 /**
@@ -91,7 +91,6 @@ class MediaSessionCallback(private val player: Player) :
     // BROWSER_ROOT_HINTS_KEY_ROOT_CHILDREN_LIMIT
     // KEY_ROOT_HINT_MAX_QUEUE_ITEMS_WHILE_RESTRICTED
 
-
     if (params?.isRecent == true) {
       // TODO: support recent queries through something like onRecent and return a MediaItem with
       // .setMediaId("__RECENT__") here - when onRecent is not configured we can keep returning an
@@ -109,10 +108,7 @@ class MediaSessionCallback(private val player: Player) :
         MediaItem.Builder()
           .setMediaId(ROOT_ID)
           .setMediaMetadata(
-            MediaMetadata.Builder()
-              .setIsBrowsable(true)
-              .setIsPlayable(false)
-              .build()
+            MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
           )
           .build(),
         null,
@@ -136,49 +132,51 @@ class MediaSessionCallback(private val player: Player) :
         Timber.w("AudioBrowser not registered - media browsing not available")
         return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       }
-      
-      try {
-        val children = if (parentId == ROOT_ID_RECENT) {
-          // TODO: implement recent media items
-          emptyList<MediaItem>()
-        } else if (parentId == ROOT_ID) {
-          // Return tabs as root children (limited to 4 for automotive platform compatibility)
-          // TODO: Check what Android Auto does with empty tabs list - may need to return error?
-          browserManager.queryTabs().take(4).map { tab ->
-            TrackFactory.toMedia3(tab)
-          }
-        } else {
-          // Resolve the specific path and get its children
-          val resolvedTrack = browserManager.resolve(parentId)
 
-          // Convert children to MediaItems
-          resolvedTrack.children?.map { track ->
-            TrackFactory.toMedia3(track)
-          } ?: throw IllegalStateException("Expected browsed ResolvedTrack to have a children array")
-        }
-        
+      try {
+        val children =
+          if (parentId == ROOT_ID_RECENT) {
+            // TODO: implement recent media items
+            emptyList<MediaItem>()
+          } else if (parentId == ROOT_ID) {
+            // Return tabs as root children (limited to 4 for automotive platform compatibility)
+            // TODO: Check what Android Auto does with empty tabs list - may need to return error?
+            browserManager.queryTabs().take(4).map { tab -> TrackFactory.toMedia3(tab) }
+          } else {
+            // Resolve the specific path and get its children
+            val resolvedTrack = browserManager.resolve(parentId)
+
+            // Convert children to MediaItems
+            resolvedTrack.children?.map { track -> TrackFactory.toMedia3(track) }
+              ?: throw IllegalStateException(
+                "Expected browsed ResolvedTrack to have a children array"
+              )
+          }
+
         // Apply pagination if needed
-        val paginatedChildren = if (pageSize > 0) {
-          val startIndex = page * pageSize
-          children.drop(startIndex).take(pageSize)
-        } else {
-          children
-        }
-        
+        val paginatedChildren =
+          if (pageSize > 0) {
+            val startIndex = page * pageSize
+            children.drop(startIndex).take(pageSize)
+          } else {
+            children
+          }
+
         LibraryResult.ofItemList(ImmutableList.copyOf(paginatedChildren), params)
       } catch (e: Exception) {
         Timber.e(e, "Error getting children for parentId: $parentId")
-        val errorCode = when (e) {
-          is com.audiobrowser.browser.ContentNotFoundException -> SessionError.ERROR_BAD_VALUE
-          is com.audiobrowser.browser.HttpStatusException -> {
-            when (e.statusCode) {
-              404 -> SessionError.ERROR_BAD_VALUE
-              else -> SessionError.ERROR_UNKNOWN
+        val errorCode =
+          when (e) {
+            is com.audiobrowser.browser.ContentNotFoundException -> SessionError.ERROR_BAD_VALUE
+            is com.audiobrowser.browser.HttpStatusException -> {
+              when (e.statusCode) {
+                404 -> SessionError.ERROR_BAD_VALUE
+                else -> SessionError.ERROR_UNKNOWN
+              }
             }
+            is com.audiobrowser.browser.NetworkException -> SessionError.ERROR_UNKNOWN
+            else -> SessionError.ERROR_UNKNOWN
           }
-          is com.audiobrowser.browser.NetworkException -> SessionError.ERROR_UNKNOWN
-          else -> SessionError.ERROR_UNKNOWN
-        }
         LibraryResult.ofError(errorCode)
       }
     }
@@ -197,7 +195,7 @@ class MediaSessionCallback(private val player: Player) :
         Timber.w("AudioBrowser not registered - media browsing not available")
         return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       }
-      
+
       try {
         val resolvedTrack = browserManager.resolve(mediaId)
         val mediaItem = ResolvedTrackFactory.toMedia3(resolvedTrack)

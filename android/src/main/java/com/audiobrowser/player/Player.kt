@@ -55,7 +55,8 @@ class Player(internal val context: Context) {
 
   // Media browser functionality
   // TODO: Investigate if this cache is actually needed - when do MediaItems arrive without tags?
-  //       Used in onSetMediaItems to look up full MediaItems by ID, but unclear if necessary for normal browsing
+  //       Used in onSetMediaItems to look up full MediaItems by ID, but unclear if necessary for
+  // normal browsing
   internal var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
 
   lateinit var exoPlayer: ExoPlayer
@@ -358,7 +359,7 @@ class Player(internal val context: Context) {
     }
     // Create MediaFactory with reference to browser for media URL transformation
     mediaFactory = MediaFactory(context, cache) { url -> browser?.getMediaRequestConfig(url) }
-    
+
     exoPlayer =
       ExoPlayer.Builder(context)
         .setRenderersFactory(renderer)

@@ -36,8 +36,6 @@ import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.Progress
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
-import com.margelo.nitro.audiobrowser.RequestConfig
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
 import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
@@ -527,5 +525,4 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
         //                emitOnOptionsChanged(options.toBridge())
       }
     }
-  }
-  
+}

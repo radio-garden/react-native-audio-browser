@@ -1,21 +1,19 @@
 package com.audiobrowser.http
 
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import okhttp3.Headers
-import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import timber.log.Timber
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 class HttpClient {
   companion object {
@@ -29,18 +27,17 @@ class HttpClient {
     isLenient = true
   }
 
-  private val loggingInterceptor = HttpLoggingInterceptor { message ->
-    Timber.d(message)
-  }.apply {
-    level = HttpLoggingInterceptor.Level.BODY
-  }
+  private val loggingInterceptor =
+    HttpLoggingInterceptor { message -> Timber.d(message) }
+      .apply { level = HttpLoggingInterceptor.Level.BODY }
 
-  private val client = OkHttpClient.Builder()
-    .addInterceptor(loggingInterceptor)
-    .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-    .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-    .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-    .build()
+  private val client =
+    OkHttpClient.Builder()
+      .addInterceptor(loggingInterceptor)
+      .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+      .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+      .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+      .build()
 
   data class HttpRequest(
     val url: String,
@@ -48,70 +45,76 @@ class HttpClient {
     val headers: Map<String, String>? = null,
     val body: String? = null,
     val contentType: String = DEFAULT_CONTENT_TYPE,
-    val userAgent: String = DEFAULT_USER_AGENT
+    val userAgent: String = DEFAULT_USER_AGENT,
   )
 
-  data class HttpResponse(
-    val code: Int,
-    val body: String,
-    val headers: Map<String, String>
-  ) {
-    val isSuccessful: Boolean get() = code in 200..299
+  data class HttpResponse(val code: Int, val body: String, val headers: Map<String, String>) {
+    val isSuccessful: Boolean
+      get() = code in 200..299
   }
 
-  suspend fun request(httpRequest: HttpRequest): Result<HttpResponse> = withContext(Dispatchers.IO) {
-    try {
-      val url = httpRequest.url.toHttpUrlOrNull()
-        ?: return@withContext Result.failure(IllegalArgumentException("Invalid URL: ${httpRequest.url}"))
+  suspend fun request(httpRequest: HttpRequest): Result<HttpResponse> =
+    withContext(Dispatchers.IO) {
+      try {
+        val url =
+          httpRequest.url.toHttpUrlOrNull()
+            ?: return@withContext Result.failure(
+              IllegalArgumentException("Invalid URL: ${httpRequest.url}")
+            )
 
-      val requestBuilder = Request.Builder().url(url)
+        val requestBuilder = Request.Builder().url(url)
 
-      // Add headers
-      val headers = Headers.Builder().apply {
-        httpRequest.headers?.forEach { (name, value) ->
-          add(name, value)
-        }
-        // Set User-Agent (userAgent parameter takes precedence over headers)
-        add("User-Agent", httpRequest.userAgent)
-      }.build()
-      requestBuilder.headers(headers)
+        // Add headers
+        val headers =
+          Headers.Builder()
+            .apply {
+              httpRequest.headers?.forEach { (name, value) -> add(name, value) }
+              // Set User-Agent (userAgent parameter takes precedence over headers)
+              add("User-Agent", httpRequest.userAgent)
+            }
+            .build()
+        requestBuilder.headers(headers)
 
-      // Add body for non-GET requests
-      when (httpRequest.method.uppercase()) {
-        "GET" -> { /* No body for GET */ }
-        "POST", "PUT", "PATCH" -> {
-          val body = httpRequest.body ?: ""
-          val mediaType = httpRequest.contentType.toMediaType()
-          requestBuilder.method(httpRequest.method, body.toRequestBody(mediaType))
+        // Add body for non-GET requests
+        when (httpRequest.method.uppercase()) {
+          "GET" -> {
+            /* No body for GET */
+          }
+          "POST",
+          "PUT",
+          "PATCH" -> {
+            val body = httpRequest.body ?: ""
+            val mediaType = httpRequest.contentType.toMediaType()
+            requestBuilder.method(httpRequest.method, body.toRequestBody(mediaType))
+          }
+          "DELETE" -> {
+            val mediaType = httpRequest.contentType.toMediaType()
+            requestBuilder.delete(httpRequest.body?.toRequestBody(mediaType))
+          }
+          else -> {
+            return@withContext Result.failure(
+              IllegalArgumentException("Unsupported HTTP method: ${httpRequest.method}")
+            )
+          }
         }
-        "DELETE" -> {
-          val mediaType = httpRequest.contentType.toMediaType()
-          requestBuilder.delete(httpRequest.body?.toRequestBody(mediaType))
-        }
-        else -> {
-          return@withContext Result.failure(IllegalArgumentException("Unsupported HTTP method: ${httpRequest.method}"))
-        }
+
+        val request = requestBuilder.build()
+        val response = client.newCall(request).execute()
+
+        val responseBody = response.body?.string() ?: ""
+        val responseHeaders = response.headers.toMap()
+
+        Result.success(
+          HttpResponse(code = response.code, body = responseBody, headers = responseHeaders)
+        )
+      } catch (e: IOException) {
+        Timber.e(e, "HTTP request failed")
+        Result.failure(e)
+      } catch (e: Exception) {
+        Timber.e(e, "Unexpected error during HTTP request")
+        Result.failure(e)
       }
-
-      val request = requestBuilder.build()
-      val response = client.newCall(request).execute()
-
-      val responseBody = response.body?.string() ?: ""
-      val responseHeaders = response.headers.toMap()
-
-      Result.success(HttpResponse(
-        code = response.code,
-        body = responseBody,
-        headers = responseHeaders
-      ))
-    } catch (e: IOException) {
-      Timber.e(e, "HTTP request failed")
-      Result.failure(e)
-    } catch (e: Exception) {
-      Timber.e(e, "Unexpected error during HTTP request")
-      Result.failure(e)
     }
-  }
 
   suspend inline fun <reified T> requestJson(httpRequest: HttpRequest): Result<T> {
     return request(httpRequest).mapCatching { response ->
@@ -131,5 +134,6 @@ class HttpClient {
     }
   }
 
-  class HttpException(val code: Int, val responseBody: String) : Exception("HTTP $code: $responseBody")
+  class HttpException(val code: Int, val responseBody: String) :
+    Exception("HTTP $code: $responseBody")
 }

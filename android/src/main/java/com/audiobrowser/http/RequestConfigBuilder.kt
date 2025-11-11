@@ -3,29 +3,28 @@ package com.audiobrowser.http
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.net.URLEncoder
 
 object RequestConfigBuilder {
 
-  suspend fun buildHttpRequest(
-    config: RequestConfig
-  ): HttpClient.HttpRequest = withContext(Dispatchers.Default) {
+  suspend fun buildHttpRequest(config: RequestConfig): HttpClient.HttpRequest =
+    withContext(Dispatchers.Default) {
 
-    // Build final URL with query parameters
-    val url = buildUrl(config)
+      // Build final URL with query parameters
+      val url = buildUrl(config)
 
-    HttpClient.HttpRequest(
-      url = url,
-      method = config.method?.name ?: "GET",
-      headers = config.headers,
-      body = config.body,
-      contentType = config.contentType ?: HttpClient.DEFAULT_CONTENT_TYPE,
-      userAgent = config.userAgent ?: HttpClient.DEFAULT_USER_AGENT
-    )
-  }
+      HttpClient.HttpRequest(
+        url = url,
+        method = config.method?.name ?: "GET",
+        headers = config.headers,
+        body = config.body,
+        contentType = config.contentType ?: HttpClient.DEFAULT_CONTENT_TYPE,
+        userAgent = config.userAgent ?: HttpClient.DEFAULT_USER_AGENT,
+      )
+    }
 
   fun mergeConfig(base: RequestConfig, override: RequestConfig): RequestConfig {
     return RequestConfig(
@@ -36,7 +35,7 @@ object RequestConfigBuilder {
       query = mergeQuery(base.query, override.query),
       body = override.body ?: base.body,
       contentType = override.contentType ?: base.contentType,
-      userAgent = override.userAgent ?: base.userAgent
+      userAgent = override.userAgent ?: base.userAgent,
     )
   }
 
@@ -51,18 +50,21 @@ object RequestConfigBuilder {
       query = mergeQuery(base.query, override.query),
       body = override.body ?: base.body,
       contentType = override.contentType ?: base.contentType,
-      userAgent = override.userAgent ?: base.userAgent
+      userAgent = override.userAgent ?: base.userAgent,
     )
   }
 
-  suspend fun mergeConfig(base: RequestConfig, override: TransformableRequestConfig): RequestConfig {
+  suspend fun mergeConfig(
+    base: RequestConfig,
+    override: TransformableRequestConfig,
+  ): RequestConfig {
     return mergeConfig(base, override, emptyMap())
   }
 
   suspend fun mergeConfig(
-    base: RequestConfig, 
-    override: TransformableRequestConfig, 
-    routeParams: Map<String, String>? = null
+    base: RequestConfig,
+    override: TransformableRequestConfig,
+    routeParams: Map<String, String>? = null,
   ): RequestConfig {
     // Apply transform function if provided
     return override.transform?.let { transformFn ->
@@ -75,7 +77,9 @@ object RequestConfigBuilder {
     } ?: mergeConfig(base, convertToRequestConfig(override)) // Only merge if no transform
   }
 
-  private fun convertToRequestConfig(transformableConfig: TransformableRequestConfig): RequestConfig {
+  private fun convertToRequestConfig(
+    transformableConfig: TransformableRequestConfig
+  ): RequestConfig {
     return RequestConfig(
       path = transformableConfig.path,
       method = transformableConfig.method,
@@ -84,11 +88,14 @@ object RequestConfigBuilder {
       query = transformableConfig.query,
       body = transformableConfig.body,
       contentType = transformableConfig.contentType,
-      userAgent = transformableConfig.userAgent
+      userAgent = transformableConfig.userAgent,
     )
   }
 
-  private fun mergeHeaders(base: Map<String, String>?, override: Map<String, String>?): Map<String, String>? {
+  private fun mergeHeaders(
+    base: Map<String, String>?,
+    override: Map<String, String>?,
+  ): Map<String, String>? {
     return when {
       base == null -> override
       override == null -> base
@@ -96,7 +103,10 @@ object RequestConfigBuilder {
     }
   }
 
-  private fun mergeQuery(base: Map<String, String>?, override: Map<String, String>?): Map<String, String>? {
+  private fun mergeQuery(
+    base: Map<String, String>?,
+    override: Map<String, String>?,
+  ): Map<String, String>? {
     return when {
       base == null -> override
       override == null -> base
@@ -106,17 +116,17 @@ object RequestConfigBuilder {
 
   private fun buildUrl(config: RequestConfig): String {
     val baseUrl = config.baseUrl?.trimEnd('/') ?: ""
-    val path = config.path?.let {
-      if (it.startsWith("/")) it else "/$it"
-    } ?: ""
+    val path = config.path?.let { if (it.startsWith("/")) it else "/$it" } ?: ""
 
-    val queryString = config.query?.let { query ->
-      if (query.isNotEmpty()) {
-        "?" + query.entries.joinToString("&") { (key, value) ->
-          "${encodeUrlParam(key)}=${encodeUrlParam(value)}"
-        }
-      } else ""
-    } ?: ""
+    val queryString =
+      config.query?.let { query ->
+        if (query.isNotEmpty()) {
+          "?" +
+            query.entries.joinToString("&") { (key, value) ->
+              "${encodeUrlParam(key)}=${encodeUrlParam(value)}"
+            }
+        } else ""
+      } ?: ""
 
     return "$baseUrl$path$queryString"
   }

@@ -9,7 +9,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.annotation.MainThread
 import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.model.PlayerSetupOptions

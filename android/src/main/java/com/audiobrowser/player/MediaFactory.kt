@@ -3,7 +3,6 @@ package com.audiobrowser.player
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
@@ -17,15 +16,12 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.RequestConfig
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 class MediaFactory(
-  private val context: Context, 
+  private val context: Context,
   private val cache: SimpleCache?,
-  private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?
+  private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
 
   companion object {
@@ -49,34 +45,35 @@ class MediaFactory(
   override fun getSupportedTypes(): IntArray {
     return mediaFactory.supportedTypes
   }
-  
+
   /**
-   * Get the final request configuration for a media URL.
-   * Returns the URL, headers, and user-agent to use for streaming.
+   * Get the final request configuration for a media URL. Returns the URL, headers, and user-agent
+   * to use for streaming.
    */
-  private fun getMediaRequestConfig(originalUrl: String): Triple<String, Map<String, String>, String> {
+  private fun getMediaRequestConfig(
+    originalUrl: String
+  ): Triple<String, Map<String, String>, String> {
     return try {
       val requestConfig = getRequestConfig(originalUrl)
       if (requestConfig != null) {
-        val finalUrl = requestConfig.baseUrl?.let { baseUrl ->
-          val path = requestConfig.path ?: ""
-          val url = if (path.startsWith("http")) path else "$baseUrl$path"
-          
-          // Add query parameters if any
-          if (requestConfig.query?.isNotEmpty() == true) {
-            val uri = Uri.parse(url).buildUpon()
-            requestConfig.query.forEach { (key, value) ->
-              uri.appendQueryParameter(key, value)
+        val finalUrl =
+          requestConfig.baseUrl?.let { baseUrl ->
+            val path = requestConfig.path ?: ""
+            val url = if (path.startsWith("http")) path else "$baseUrl$path"
+
+            // Add query parameters if any
+            if (requestConfig.query?.isNotEmpty() == true) {
+              val uri = Uri.parse(url).buildUpon()
+              requestConfig.query.forEach { (key, value) -> uri.appendQueryParameter(key, value) }
+              uri.build().toString()
+            } else {
+              url
             }
-            uri.build().toString()
-          } else {
-            url
-          }
-        } ?: originalUrl
-        
+          } ?: originalUrl
+
         val headers = requestConfig.headers ?: emptyMap()
         val userAgent = requestConfig.userAgent ?: DEFAULT_USER_AGENT
-        
+
         Triple(finalUrl, headers, userAgent)
       } else {
         Triple(originalUrl, emptyMap(), DEFAULT_USER_AGENT)
@@ -101,7 +98,7 @@ class MediaFactory(
 
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
     val originalUri = mediaItem.localConfiguration?.uri
-    
+
     val factory: DataSource.Factory =
       when {
         originalUri != null && isLocalFile(originalUri) -> {
@@ -110,11 +107,11 @@ class MediaFactory(
         originalUri != null -> {
           // Get the transformed URL, headers, and user-agent from request config
           val (finalUrl, headers, userAgent) = getMediaRequestConfig(originalUri.toString())
-          
+
           Timber.d("Media URL: $originalUri -> $finalUrl")
           Timber.d("Media headers: $headers")
           Timber.d("Media user-agent: $userAgent")
-          
+
           DefaultHttpDataSource.Factory().apply {
             setUserAgent(userAgent)
             setAllowCrossProtocolRedirects(true)

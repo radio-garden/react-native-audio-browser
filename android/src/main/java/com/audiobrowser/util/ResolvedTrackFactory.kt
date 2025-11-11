@@ -11,7 +11,8 @@ object ResolvedTrackFactory {
     // ResolvedTracks are always browsable (they have a url)
     val browsable = true
 
-    // ResolvedTracks are playable when they have an src or when they are specifically marked as playable:
+    // ResolvedTracks are playable when they have an src or when they are specifically marked as
+    // playable:
     val playable = resolvedTrack.src != null || resolvedTrack.playable == true
 
     val mediaMetadata =

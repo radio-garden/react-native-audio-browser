@@ -24,10 +24,11 @@ import timber.log.Timber
 class AudioBrowser : HybridAudioBrowserSpec() {
   private val mainScope = MainScope()
   private val context =
-      NitroModules.applicationContext
-          ?: throw IllegalStateException("NitroModules.applicationContext is null")
+    NitroModules.applicationContext
+      ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
-  private var _configuration = BrowserConfiguration(
+  private var _configuration =
+    BrowserConfiguration(
       path = null,
       request = null,
       media = null,
@@ -35,26 +36,26 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       routes = null,
       tabs = null,
       browse = null,
-      play = PlayConfigurationBehavior.SINGLE
-  )
+      play = PlayConfigurationBehavior.SINGLE,
+    )
 
   internal val browserManager =
-      BrowserManager().apply {
-        setOnPathChanged { path -> onPathChanged(path) }
-        setOnContentChanged { content -> onContentChanged(content) }
-        setOnTabsChanged { tabs -> onTabsChanged(tabs) }
-      }
+    BrowserManager().apply {
+      setOnPathChanged { path -> onPathChanged(path) }
+      setOnContentChanged { content -> onContentChanged(content) }
+      setOnTabsChanged { tabs -> onTabsChanged(tabs) }
+    }
 
   private var audioPlayer: AudioPlayer? = null
 
   internal fun buildConfig(): BrowserConfig {
     return BrowserConfig(
-        request = _configuration.request,
-        media = _configuration.media,
-        search = _configuration.search,
-        routes = _configuration.routes,
-        tabs = _configuration.tabs,
-        browse = _configuration.browse
+      request = _configuration.request,
+      media = _configuration.media,
+      search = _configuration.search,
+      routes = _configuration.routes,
+      tabs = _configuration.tabs,
+      browse = _configuration.browse,
     )
   }
 
@@ -67,7 +68,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
     return try {
       // Create base request config with the original URL as path
-      val baseConfig = _configuration.request ?: RequestConfig(null, null, null, null, null, null, null, null)
+      val baseConfig =
+        _configuration.request ?: RequestConfig(null, null, null, null, null, null, null, null)
       val urlRequestConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
       val mergedBaseConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
 
@@ -79,15 +81,15 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     }
   }
 
-  /**
-   * Internal method called by AudioPlayer.registerBrowser() to establish the connection.
-   */
+  /** Internal method called by AudioPlayer.registerBrowser() to establish the connection. */
   internal fun setAudioPlayer(audioPlayer: AudioPlayer) {
     this.audioPlayer = audioPlayer
   }
 
   private fun hasValidConfiguration(): Boolean {
-    return _configuration.tabs != null || _configuration.routes?.isNotEmpty() == true || _configuration.browse != null
+    return _configuration.tabs != null ||
+      _configuration.routes?.isNotEmpty() == true ||
+      _configuration.browse != null
   }
 
   private fun getDefaultPath(): String? {
@@ -113,11 +115,10 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     set(value) {
       if (hasValidConfiguration()) {
         browserManager.config = buildConfig()
-        (value ?: getDefaultPath())?.let {
-          mainScope.launch { browserManager.navigate(it) }
-        }
+        (value ?: getDefaultPath())?.let { mainScope.launch { browserManager.navigate(it) } }
       }
     }
+
   override var tabs: Array<Track>?
     get() = browserManager.getTabs()
     set(value) {}
@@ -129,9 +130,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       browserManager.config = buildConfig()
 
       // Navigate to initial path or default to first tab
-      (value.path ?: getDefaultPath())?.let {
-        mainScope.launch { browserManager.navigate(it) }
-      }
+      (value.path ?: getDefaultPath())?.let { mainScope.launch { browserManager.navigate(it) } }
     }
 
   override var onPathChanged: (String) -> Unit = {}
@@ -159,11 +158,15 @@ class AudioBrowser : HybridAudioBrowserSpec() {
         track.src != null || track.playable == true -> {
           Timber.d("Loading playable track into player: ${track.title}")
           audioPlayer?.load(track)
-            ?: throw IllegalStateException("AudioPlayer not registered. Call audioPlayer.registerBrowser(audioBrowser) first.")
+            ?: throw IllegalStateException(
+              "AudioPlayer not registered. Call audioPlayer.registerBrowser(audioBrowser) first."
+            )
         }
         // No url, src, or playable flag - invalid track
         else -> {
-          throw IllegalArgumentException("Track must have either 'url', 'src', or 'playable' property")
+          throw IllegalArgumentException(
+            "Track must have either 'url', 'src', or 'playable' property"
+          )
         }
       }
     }

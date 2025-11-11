@@ -2,11 +2,9 @@ package com.audiobrowser.util
 
 import android.os.Bundle
 import androidx.core.net.toUri
-import androidx.media.utils.MediaConstants
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.margelo.nitro.audiobrowser.Track
-
 
 object TrackFactory {
 
@@ -41,9 +39,12 @@ object TrackFactory {
         .setIsPlayable(playable)
         .build()
 
-    val mediaId = track.url ?: track.src
-      ?: throw IllegalArgumentException("Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'")
-
+    val mediaId =
+      track.url
+        ?: track.src
+        ?: throw IllegalArgumentException(
+          "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
+        )
 
     val extras = Bundle()
 
@@ -52,8 +53,6 @@ object TrackFactory {
     //   MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_STATUS
     //   MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE
     // )
-
-
 
     return MediaItem.Builder()
       .setMediaId(mediaId)
