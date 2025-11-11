@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@react-native-vector-icons/fontawesome6": "^12.0.1",
-    "react": "19.1.1",
+    "react": "19.2.0",
     "react-native": "0.82.0",
     "react-native-nitro-modules": "0.31.4",
     "react-native-safe-area-context": "^5.5.2"
@@ -44,7 +44,7 @@
     "@react-native/metro-config": "0.82.0",
     "@react-native/typescript-config": "0.82.0",
     "@types/jest": "^29.5.13",
-    "@types/react": "^19.1.0",
+    "@types/react": "^19.2.2",
     "babel-plugin-module-resolver": "^5.0.2",
     "eslint": "^9.39.1",
     "prettier": "^3.0.3",
