@@ -25,19 +25,22 @@ data class BrowserConfiguration(
   val request: RequestConfig?,
   @DoNotStrip
   @Keep
-  val media: TransformableRequestConfig?,
+  val media: MediaRequestConfig?,
   @DoNotStrip
   @Keep
   val search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?,
   @DoNotStrip
   @Keep
-  val routes: Map<String, BrowserSource>?,
-  @DoNotStrip
-  @Keep
   val tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?,
   @DoNotStrip
   @Keep
-  val browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?
+  val routes: Map<String, BrowserSource>?,
+  @DoNotStrip
+  @Keep
+  val browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?,
+  @DoNotStrip
+  @Keep
+  val play: PlayConfigurationBehavior?
 ) {
   /* primary constructor */
 
@@ -49,8 +52,8 @@ data class BrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: RequestConfig?, media: TransformableRequestConfig?, search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?, routes: Map<String, BrowserSource>?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?): BrowserConfiguration {
-      return BrowserConfiguration(path, request, media, search, routes, tabs, browse)
+    private fun fromCpp(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, BrowserSource>?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?, play: PlayConfigurationBehavior?): BrowserConfiguration {
+      return BrowserConfiguration(path, request, media, search, tabs, routes, browse, play)
     }
   }
 }

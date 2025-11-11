@@ -22,6 +22,7 @@ export type HttpMethod =
   | 'PATCH'
   | 'HEAD'
   | 'OPTIONS'
+
 export interface RequestConfig {
   method?: HttpMethod
   path?: string
@@ -35,6 +36,10 @@ export interface RequestConfig {
 
 export interface TransformableRequestConfig extends RequestConfig {
   transform?: RequestConfigTransformer
+}
+
+export interface MediaRequestConfig extends TransformableRequestConfig {
+  resolve?: (track: Track) => Promise<RequestConfig>
 }
 
 export type BrowserSource =
@@ -65,13 +70,18 @@ export type TabsSource =
  */
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
-export type MediaSource = TransformableRequestConfig
+export type PlayConfigurationBehavior = 'single' | 'queue'
+
+export type PlayConfigurationHandler = (
+  track: Track,
+  parent?: BrowserList
+) => void
 
 export type BrowserConfiguration = {
   /**
    * Initial navigation path. Setting this triggers initial navigation to the specified path.
    */
-  path?: string
+  path?: string | undefined
 
   /**
    * Base request configuration applied to all HTTP requests.
@@ -80,34 +90,7 @@ export type BrowserConfiguration = {
    */
   request?: RequestConfig
 
-  /**
-   * Configuration for media/stream requests.
-   * Used for fetching actual audio/video files referenced in MediaItem.src URLs.
-   * Handles the final step of media playback - transforming media URLs into playable streams.
-   *
-   * Optional - if not provided, MediaItem.src URLs are used directly without transformation.
-   * Useful when media files are already accessible at their src URLs without additional processing.
-   *
-   * Common use cases:
-   * - Adding authentication headers for protected content
-   * - CDN routing and URL rewriting
-   * - Format negotiation (HLS vs MP4)
-   *
-   * @example
-   * ```typescript
-   * media: {
-   *   baseUrl: 'https://cdn.example.com',
-   *   transform(request) {
-   *     return {
-   *       ...request,
-   *       headers: { 'Authorization': `Bearer ${getAuthToken()}` },
-   *       path: request.path?.replace('/stream/', '/hls/')
-   *     };
-   *   }
-   * }
-   * ```
-   */
-  media?: MediaSource
+  media?: MediaRequestConfig
 
   /**
    * Configuration for search functionality.
@@ -137,6 +120,17 @@ export type BrowserConfiguration = {
   search?: SearchSource
 
   /**
+   * Configuration for navigation tabs in the media browser.
+   * The first tab's URL is automatically loaded when the browser starts.
+   *
+   * Optional - if not provided, no tab navigation will be available.
+   * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
+   *
+   * Can provide static array of MediaLink objects as tabs, API configuration, or custom callback.
+   */
+  tabs?: TabsSource
+
+  /**
    * Route-specific configurations for handling navigation paths.
    * Maps URL paths to their corresponding sources (static content, API configs, or callbacks).
    *
@@ -159,24 +153,17 @@ export type BrowserConfiguration = {
    */
   routes?: Record<string, BrowserSource>
 
-  /**
-   * Configuration for navigation tabs in the media browser.
-   * The first tab's URL is automatically loaded when the browser starts.
-   *
-   * Optional - if not provided, no tab navigation will be available.
-   * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
-   *
-   * Can provide static array of MediaLink objects as tabs, API configuration, or custom callback.
-   */
-  tabs?: TabsSource
+  browse?: BrowserSource
 
   /**
-   * Default handler for browse/navigation requests.
-   * Used as fallback when a path doesn't have a specific source defined in routes.
-   * Can be API configuration or custom callback function.
+   * Configuration for track playback behavior when user selects a track.
+   * Controls how the audio queue is set up when playback starts.
    *
-   * Optional - if not provided, navigation to undefined paths will fail.
-   * Typically used when most navigation can be handled by a single API endpoint.
+   * Can be either a simple behavior string or a custom handler function:
+   * - 'queue': Replace queue with all tracks from parent context, start at selected track (default)
+   * - 'single': Replace queue with just the selected track
+   *
+   * @default 'queue'
    */
-  browse?: BrowserSource
+  play?: PlayConfigurationBehavior
 }

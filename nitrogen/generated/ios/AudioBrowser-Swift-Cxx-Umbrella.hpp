@@ -58,6 +58,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `MediaRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
@@ -74,6 +76,8 @@ namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
+// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -155,6 +159,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
 #include "IOSUpdateOptions.hpp"
+#include "MediaRequestConfig.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NullSentinel.hpp"
@@ -163,6 +168,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "PartialIOSSetupPlayerOptions.hpp"
 #include "PartialSetupPlayerOptions.hpp"
 #include "PercentageRating.hpp"
+#include "PlayConfigurationBehavior.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"

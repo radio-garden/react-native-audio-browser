@@ -19,10 +19,14 @@ namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
+// Forward declaration of `MediaRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 
 #include <string>
 #include <optional>
@@ -44,21 +48,26 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
 #include <unordered_map>
-#include "TransformableRequestConfig.hpp"
-#include "JTransformableRequestConfig.hpp"
+#include "MediaRequestConfig.hpp"
+#include "JMediaRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
 #include <NitroModules/JPromise.hpp>
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "TransformableRequestConfig.hpp"
 #include <variant>
 #include "JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
+#include "JTransformableRequestConfig.hpp"
+#include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "JBrowserSource.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
-#include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
 #include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig.hpp"
+#include "PlayConfigurationBehavior.hpp"
+#include "JPlayConfigurationBehavior.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

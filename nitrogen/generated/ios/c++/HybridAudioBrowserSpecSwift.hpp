@@ -24,10 +24,14 @@ namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
+// Forward declaration of `MediaRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 
 #include <string>
 #include <optional>
@@ -40,10 +44,12 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 #include "RequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include <unordered_map>
-#include "TransformableRequestConfig.hpp"
+#include "MediaRequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
+#include "TransformableRequestConfig.hpp"
 #include <variant>
 #include "BrowserSourceCallbackParam.hpp"
+#include "PlayConfigurationBehavior.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 

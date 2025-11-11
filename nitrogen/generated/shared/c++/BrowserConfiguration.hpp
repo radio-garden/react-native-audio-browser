@@ -25,27 +25,33 @@
 
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
-// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
+// Forward declaration of `MediaRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `BrowserList` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserList; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 
 #include <string>
 #include <optional>
 #include "RequestConfig.hpp"
-#include "TransformableRequestConfig.hpp"
+#include "MediaRequestConfig.hpp"
 #include "Track.hpp"
 #include <vector>
 #include <NitroModules/Promise.hpp>
 #include <functional>
+#include "TransformableRequestConfig.hpp"
 #include <variant>
 #include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include <unordered_map>
+#include "PlayConfigurationBehavior.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -56,15 +62,16 @@ namespace margelo::nitro::audiobrowser {
   public:
     std::optional<std::string> path     SWIFT_PRIVATE;
     std::optional<RequestConfig> request     SWIFT_PRIVATE;
-    std::optional<TransformableRequestConfig> media     SWIFT_PRIVATE;
+    std::optional<MediaRequestConfig> media     SWIFT_PRIVATE;
     std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> search     SWIFT_PRIVATE;
-    std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>> routes     SWIFT_PRIVATE;
     std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> tabs     SWIFT_PRIVATE;
+    std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>> routes     SWIFT_PRIVATE;
     std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> browse     SWIFT_PRIVATE;
+    std::optional<PlayConfigurationBehavior> play     SWIFT_PRIVATE;
 
   public:
     BrowserConfiguration() = default;
-    explicit BrowserConfiguration(std::optional<std::string> path, std::optional<RequestConfig> request, std::optional<TransformableRequestConfig> media, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> search, std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>> routes, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> tabs, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> browse): path(path), request(request), media(media), search(search), routes(routes), tabs(tabs), browse(browse) {}
+    explicit BrowserConfiguration(std::optional<std::string> path, std::optional<RequestConfig> request, std::optional<MediaRequestConfig> media, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> search, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> tabs, std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>>> routes, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>> browse, std::optional<PlayConfigurationBehavior> play): path(path), request(request), media(media), search(search), tabs(tabs), routes(routes), browse(browse), play(play) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -79,22 +86,24 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::BrowserConfiguration(
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "path")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::RequestConfig>>::fromJSI(runtime, obj.getProperty(runtime, "request")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::TransformableRequestConfig>>::fromJSI(runtime, obj.getProperty(runtime, "media")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::MediaRequestConfig>>::fromJSI(runtime, obj.getProperty(runtime, "media")),
         JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>(const std::string&)>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "search")),
-        JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::fromJSI(runtime, obj.getProperty(runtime, "routes")),
         JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>()>, std::vector<margelo::nitro::audiobrowser::Track>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "tabs")),
-        JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "browse"))
+        JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::fromJSI(runtime, obj.getProperty(runtime, "routes")),
+        JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "browse")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::fromJSI(runtime, obj.getProperty(runtime, "play"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::BrowserConfiguration& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "path", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.path));
       obj.setProperty(runtime, "request", JSIConverter<std::optional<margelo::nitro::audiobrowser::RequestConfig>>::toJSI(runtime, arg.request));
-      obj.setProperty(runtime, "media", JSIConverter<std::optional<margelo::nitro::audiobrowser::TransformableRequestConfig>>::toJSI(runtime, arg.media));
+      obj.setProperty(runtime, "media", JSIConverter<std::optional<margelo::nitro::audiobrowser::MediaRequestConfig>>::toJSI(runtime, arg.media));
       obj.setProperty(runtime, "search", JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>(const std::string&)>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::toJSI(runtime, arg.search));
-      obj.setProperty(runtime, "routes", JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::toJSI(runtime, arg.routes));
       obj.setProperty(runtime, "tabs", JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>()>, std::vector<margelo::nitro::audiobrowser::Track>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::toJSI(runtime, arg.tabs));
+      obj.setProperty(runtime, "routes", JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::toJSI(runtime, arg.routes));
       obj.setProperty(runtime, "browse", JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::toJSI(runtime, arg.browse));
+      obj.setProperty(runtime, "play", JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::toJSI(runtime, arg.play));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -107,11 +116,12 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "path"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::RequestConfig>>::canConvert(runtime, obj.getProperty(runtime, "request"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TransformableRequestConfig>>::canConvert(runtime, obj.getProperty(runtime, "media"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::MediaRequestConfig>>::canConvert(runtime, obj.getProperty(runtime, "media"))) return false;
       if (!JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>(const std::string&)>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::canConvert(runtime, obj.getProperty(runtime, "search"))) return false;
-      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::canConvert(runtime, obj.getProperty(runtime, "routes"))) return false;
       if (!JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>()>, std::vector<margelo::nitro::audiobrowser::Track>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::canConvert(runtime, obj.getProperty(runtime, "tabs"))) return false;
+      if (!JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::canConvert(runtime, obj.getProperty(runtime, "routes"))) return false;
       if (!JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::BrowserList>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::BrowserList, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::canConvert(runtime, obj.getProperty(runtime, "browse"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::canConvert(runtime, obj.getProperty(runtime, "play"))) return false;
       return true;
     }
   };

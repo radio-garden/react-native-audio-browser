@@ -18,7 +18,7 @@ public extension BrowserConfiguration {
   /**
    * Create a new instance of `BrowserConfiguration`.
    */
-  init(path: String?, request: RequestConfig?, media: TransformableRequestConfig?, search: Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig?, routes: Dictionary<String, BrowserSource>?, tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig?, browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?) {
+  init(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant____query__String_____Promise_Promise__Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig?, routes: Dictionary<String, BrowserSource>?, browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?, play: PlayConfigurationBehavior?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -31,9 +31,9 @@ public extension BrowserConfiguration {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_TransformableRequestConfig_ in
+    }(), { () -> bridge.std__optional_MediaRequestConfig_ in
       if let __unwrappedValue = media {
-        return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+        return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -48,6 +48,30 @@ public extension BrowserConfiguration {
               }())
             case .second(let __value):
               return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(__value)
+          }
+        }().variant)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ in
+      if let __unwrappedValue = tabs {
+        return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ in
+                let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__value)
+                return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__closureWrapper.toUnsafe())
+              }())
+            case .second(let __value):
+              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.std__vector_Track_ in
+                var __vector = bridge.create_std__vector_Track_(__value.count)
+                for __item in __value {
+                  __vector.push_back(__item)
+                }
+                return __vector
+              }())
+            case .third(let __value):
+              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(__value)
           }
         }().variant)
       } else {
@@ -77,30 +101,6 @@ public extension BrowserConfiguration {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ in
-      if let __unwrappedValue = tabs {
-        return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ in
-          switch __unwrappedValue {
-            case .first(let __value):
-              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ in
-                let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__value)
-                return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__closureWrapper.toUnsafe())
-              }())
-            case .second(let __value):
-              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.std__vector_Track_ in
-                var __vector = bridge.create_std__vector_Track_(__value.count)
-                for __item in __value {
-                  __vector.push_back(__item)
-                }
-                return __vector
-              }())
-            case .third(let __value):
-              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(__value)
-          }
-        }().variant)
-      } else {
-        return .init()
-      }
     }(), { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__ in
       if let __unwrappedValue = browse {
         return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_ in
@@ -116,6 +116,12 @@ public extension BrowserConfiguration {
               return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(__value)
           }
         }().variant)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_PlayConfigurationBehavior_ in
+      if let __unwrappedValue = play {
+        return bridge.create_std__optional_PlayConfigurationBehavior_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -163,16 +169,16 @@ public extension BrowserConfiguration {
     }
   }
   
-  var media: TransformableRequestConfig? {
+  var media: MediaRequestConfig? {
     @inline(__always)
     get {
       return self.__media.value
     }
     @inline(__always)
     set {
-      self.__media = { () -> bridge.std__optional_TransformableRequestConfig_ in
+      self.__media = { () -> bridge.std__optional_MediaRequestConfig_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+          return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -243,6 +249,89 @@ public extension BrowserConfiguration {
                 }())
               case .second(let __value):
                 return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(__value)
+            }
+          }().variant)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig? {
+    @inline(__always)
+    get {
+      return { () -> Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig? in
+        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(self.__tabs) {
+          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(self.__tabs)
+          return { () -> Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig in
+            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first({ () -> () -> Promise<Promise<[Track]>> in
+                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__actual)
+                  return { () -> Promise<Promise<[Track]>> in
+                    let __result = __wrappedFunction.call()
+                    return { () -> Promise<Promise<[Track]>> in
+                      let __promise = Promise<Promise<[Track]>>()
+                      let __resolver = { (__result: Promise<[Track]>) in
+                        __promise.resolve(withResult: __result)
+                      }
+                      let __rejecter = { (__error: Error) in
+                        __promise.reject(withError: __error)
+                      }
+                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_std__vector_Track___ in
+                        let __closureWrapper = Func_void_std__shared_ptr_Promise_std__vector_Track___(__resolver)
+                        return bridge.create_Func_void_std__shared_ptr_Promise_std__vector_Track___(__closureWrapper.toUnsafe())
+                      }()
+                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                      }()
+                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__result)
+                      __promiseHolder.addOnResolvedListener(__resolverCpp)
+                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                      return __promise
+                    }()
+                  }
+                }())
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual.map({ __item in __item }))
+              case 2:
+                let __actual = __variant.get_2()
+                return .third(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__tabs = { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ in
+                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__value)
+                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__closureWrapper.toUnsafe())
+                }())
+              case .second(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.std__vector_Track_ in
+                  var __vector = bridge.create_std__vector_Track_(__value.count)
+                  for __item in __value {
+                    __vector.push_back(__item)
+                  }
+                  return __vector
+                }())
+              case .third(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(__value)
             }
           }().variant)
         } else {
@@ -343,89 +432,6 @@ public extension BrowserConfiguration {
     }
   }
   
-  var tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig? {
-    @inline(__always)
-    get {
-      return { () -> Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig? in
-        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(self.__tabs) {
-          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(self.__tabs)
-          return { () -> Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig in
-            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(__unwrapped)
-            switch __variant.index() {
-              case 0:
-                let __actual = __variant.get_0()
-                return .first({ () -> () -> Promise<Promise<[Track]>> in
-                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__actual)
-                  return { () -> Promise<Promise<[Track]>> in
-                    let __result = __wrappedFunction.call()
-                    return { () -> Promise<Promise<[Track]>> in
-                      let __promise = Promise<Promise<[Track]>>()
-                      let __resolver = { (__result: Promise<[Track]>) in
-                        __promise.resolve(withResult: __result)
-                      }
-                      let __rejecter = { (__error: Error) in
-                        __promise.reject(withError: __error)
-                      }
-                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_std__vector_Track___ in
-                        let __closureWrapper = Func_void_std__shared_ptr_Promise_std__vector_Track___(__resolver)
-                        return bridge.create_Func_void_std__shared_ptr_Promise_std__vector_Track___(__closureWrapper.toUnsafe())
-                      }()
-                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
-                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
-                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
-                      }()
-                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__result)
-                      __promiseHolder.addOnResolvedListener(__resolverCpp)
-                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
-                      return __promise
-                    }()
-                  }
-                }())
-              case 1:
-                let __actual = __variant.get_1()
-                return .second(__actual.map({ __item in __item }))
-              case 2:
-                let __actual = __variant.get_2()
-                return .third(__actual)
-              default:
-                fatalError("Variant can never have index \(__variant.index())!")
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__tabs = { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ in
-            switch __unwrappedValue {
-              case .first(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ in
-                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__value)
-                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(__closureWrapper.toUnsafe())
-                }())
-              case .second(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_({ () -> bridge.std__vector_Track_ in
-                  var __vector = bridge.create_std__vector_Track_(__value.count)
-                  for __item in __value {
-                    __vector.push_back(__item)
-                  }
-                  return __vector
-                }())
-              case .third(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(__value)
-            }
-          }().variant)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
   var browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig? {
     @inline(__always)
     get {
@@ -496,6 +502,23 @@ public extension BrowserConfiguration {
                 return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____const_BrowserSourceCallbackParam_____param_______BrowserList__TransformableRequestConfig_(__value)
             }
           }().variant)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var play: PlayConfigurationBehavior? {
+    @inline(__always)
+    get {
+      return self.__play.value
+    }
+    @inline(__always)
+    set {
+      self.__play = { () -> bridge.std__optional_PlayConfigurationBehavior_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_PlayConfigurationBehavior_(__unwrappedValue)
         } else {
           return .init()
         }
