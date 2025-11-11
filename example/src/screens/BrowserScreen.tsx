@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,66 +20,14 @@ import {
   usePlayingState,
   useTabs,
 } from 'react-native-audio-browser';
+import { useBrowserHistory } from '../hooks/useBrowserHistory';
 
 export function BrowserScreen() {
   const path = usePath();
   const content = useContent();
   const track = useActiveTrack();
   const tabs = useTabs();
-
-  // Track navigation history - initialize with current path
-  const [history, setHistory] = useState<string[]>(() => (path ? [path] : []));
-  const isNavigatingBackRef = useRef(false);
-
-  // Update history when path changes
-  useEffect(() => {
-    if (!path) return;
-
-    if (isNavigatingBackRef.current) {
-      // We're navigating back, don't add to history
-      isNavigatingBackRef.current = false;
-      return;
-    }
-
-    // Check if this path is a tab root
-    const isTabRoot = tabs?.some(tab => tab.url === path);
-
-    setHistory(prev => {
-      const currentTop = prev[prev.length - 1];
-
-      // If history is empty, this is the first path - always add it
-      if (prev.length === 0) {
-        console.log('Initializing history with first path:', path);
-        return [path];
-      }
-
-      // If navigating to a tab root, reset history to just that tab
-      if (isTabRoot) {
-        console.log('Navigating to tab root, resetting history:', path);
-        return [path];
-      }
-
-      // Check if this is a new path (not already at the top of history)
-      if (path !== currentTop) {
-        const newHistory = [...prev, path];
-        console.log('Adding to history:', path, 'New history:', newHistory);
-        return newHistory;
-      }
-      return prev;
-    });
-  }, [path, tabs]);
-
-  const handleBackPress = () => {
-    if (history.length > 1) {
-      setHistory(history => history.slice(0, -1));
-      isNavigatingBackRef.current = true;
-      void navigate(history[history.length - 2]);
-    }
-  };
-
-  // Don't show back button if we're on a tab root
-  const isOnTabRoot = tabs?.some(tab => tab.url === path);
-  const canGoBack = history.length > 1 && !isOnTabRoot;
+  const handleBackPress = useBrowserHistory();
 
   const renderItem = ({ item }: { item: Track }) => {
     const isActive = 'src' in item && track?.src === item.src;
@@ -128,7 +76,7 @@ export function BrowserScreen() {
     <View style={styles.container}>
       {/* Header with back button and current path */}
       <View style={styles.header}>
-        {canGoBack && (
+        {handleBackPress && (
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
