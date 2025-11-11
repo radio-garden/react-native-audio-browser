@@ -4,7 +4,7 @@ import type {
   HeartRating,
   PercentageRating,
   StarRating,
-  ThumbsRating,
+  ThumbsRating
 } from './rating'
 
 // MARK: - Event Interfaces

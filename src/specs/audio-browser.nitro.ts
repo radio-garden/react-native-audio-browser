@@ -1,6 +1,6 @@
-import { type HybridObject } from 'react-native-nitro-modules';
+import { type HybridObject } from 'react-native-nitro-modules'
 
-import type { BrowserConfiguration, ResolvedTrack, Track } from '../types';
+import type { BrowserConfiguration, ResolvedTrack, Track } from '../types'
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {

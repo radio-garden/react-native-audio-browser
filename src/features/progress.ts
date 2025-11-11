@@ -77,7 +77,7 @@ export function usePolledProgress(updateInterval = 1000): Progress {
   const [state, setState] = useState<Progress>({
     position: 0,
     duration: 0,
-    buffered: 0,
+    buffered: 0
   })
 
   useEffect(() => {

@@ -357,13 +357,13 @@ export function updateOptions(options: UpdateOptions): void {
           ...options.android,
           notificationCapabilities: wrapNullSentinel(
             options.android.notificationCapabilities
-          ),
+          )
         }
       : undefined,
     ios: options.ios ? { ...options.ios } : undefined,
     progressUpdateEventInterval: wrapNullSentinel(
       options.progressUpdateEventInterval
-    ),
+    )
   })
 }
 

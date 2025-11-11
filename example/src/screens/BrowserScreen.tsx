@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -6,8 +6,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View
+} from 'react-native'
 import {
   navigate,
   skipToNext,
@@ -18,25 +18,25 @@ import {
   useContent,
   usePath,
   usePlayingState,
-  useTabs,
-} from 'react-native-audio-browser';
-import { useBrowserHistory } from '../hooks/useBrowserHistory';
+  useTabs
+} from 'react-native-audio-browser'
+import { useBrowserHistory } from '../hooks/useBrowserHistory'
 
 export function BrowserScreen() {
-  const path = usePath();
-  const content = useContent();
-  const track = useActiveTrack();
-  const tabs = useTabs();
-  const handleBackPress = useBrowserHistory();
+  const path = usePath()
+  const content = useContent()
+  const track = useActiveTrack()
+  const tabs = useTabs()
+  const handleBackPress = useBrowserHistory()
 
   const renderItem = ({ item }: { item: Track }) => {
-    const isActive = 'src' in item && track?.src === item.src;
+    const isActive = 'src' in item && track?.src === item.src
 
     return (
       <TouchableOpacity
         style={[styles.item, isActive && styles.activeItem]}
         onPress={() => {
-          void navigate(item);
+          void navigate(item)
         }}
       >
         <View style={styles.itemContent}>
@@ -47,7 +47,7 @@ export function BrowserScreen() {
             <Text
               style={[
                 styles.itemSubtitle,
-                isActive && styles.activeItemSubtitle,
+                isActive && styles.activeItemSubtitle
               ]}
             >
               {item.subtitle}
@@ -67,10 +67,10 @@ export function BrowserScreen() {
           <Text style={styles.itemIcon}>{item.url ? '📁' : '🎵'}</Text>
         )}
       </TouchableOpacity>
-    );
-  };
+    )
+  }
 
-  const playingState = usePlayingState();
+  const playingState = usePlayingState()
 
   return (
     <View style={styles.container}>
@@ -166,13 +166,13 @@ export function BrowserScreen() {
               key={index}
               style={[styles.tab, tab.url === path && styles.activeTab]}
               onPress={() => {
-                void navigate(tab);
+                void navigate(tab)
               }}
             >
               <Text
                 style={[
                   styles.tabText,
-                  tab.url === path && styles.activeTabText,
+                  tab.url === path && styles.activeTabText
                 ]}
               >
                 {tab.title}
@@ -182,131 +182,131 @@ export function BrowserScreen() {
         </View>
       )}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#000000'
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: '#333333'
   },
   backButton: {
-    marginRight: 12,
+    marginRight: 12
   },
   backButtonText: {
     color: '#007AFF',
-    fontSize: 16,
+    fontSize: 16
   },
   pathText: {
     color: '#888888',
-    fontSize: 14,
+    fontSize: 14
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 16
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 16,
+    marginBottom: 16
   },
   playAllButton: {
     backgroundColor: '#007AFF',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   playAllButtonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   list: {
-    flex: 1,
+    flex: 1
   },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#222222',
+    borderBottomColor: '#222222'
   },
   itemContent: {
-    flex: 1,
+    flex: 1
   },
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: 2,
+    marginBottom: 2
   },
   itemSubtitle: {
     fontSize: 14,
     color: '#888888',
-    marginBottom: 2,
+    marginBottom: 2
   },
   itemArtist: {
     fontSize: 14,
-    color: '#666666',
+    color: '#666666'
   },
   itemIcon: {
     fontSize: 24,
-    marginLeft: 12,
+    marginLeft: 12
   },
   itemArtwork: {
     width: 48,
     height: 48,
     borderRadius: 4,
-    marginLeft: 12,
+    marginLeft: 12
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: '#000000'
   },
   loadingText: {
     color: '#888888',
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 16
   },
   errorText: {
     color: '#ff4444',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 16
   },
   retryButton: {
     backgroundColor: '#007AFF',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 8
   },
   retryButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 16
   },
   activeItem: {
     backgroundColor: '#1a1a1a',
     borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#007AFF'
   },
   activeItemTitle: {
-    color: '#007AFF',
+    color: '#007AFF'
   },
   activeItemSubtitle: {
-    color: '#aaaaaa',
+    color: '#aaaaaa'
   },
   activeItemArtist: {
-    color: '#888888',
+    color: '#888888'
   },
   tabBar: {
     flexDirection: 'row',
@@ -314,26 +314,26 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#333333',
     paddingBottom: 20,
-    paddingTop: 10,
+    paddingTop: 10
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 15
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
+    borderBottomColor: '#007AFF'
   },
   tabText: {
     color: '#888888',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '500'
   },
   activeTabText: {
     color: '#007AFF',
-    fontWeight: '600',
+    fontWeight: '600'
   },
   miniPlayer: {
     flexDirection: 'row',
@@ -342,19 +342,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#333333',
-    padding: 12,
+    padding: 12
   },
   miniPlayerInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 12
   },
   miniPlayerArtwork: {
     width: 48,
     height: 48,
     borderRadius: 4,
-    marginRight: 12,
+    marginRight: 12
   },
   miniPlayerArtworkPlaceholder: {
     width: 48,
@@ -363,34 +363,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#333333',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 12
   },
   miniPlayerArtworkEmoji: {
-    fontSize: 24,
+    fontSize: 24
   },
   miniPlayerText: {
-    flex: 1,
+    flex: 1
   },
   miniPlayerTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: 2,
+    marginBottom: 2
   },
   miniPlayerArtist: {
     fontSize: 12,
-    color: '#888888',
+    color: '#888888'
   },
   miniPlayerControls: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   miniControlButton: {
     padding: 8,
-    marginLeft: 4,
+    marginLeft: 4
   },
   miniControlText: {
     fontSize: 20,
-    color: '#ffffff',
-  },
-});
+    color: '#ffffff'
+  }
+})

@@ -5,12 +5,12 @@ import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
   AudioCommonMetadataReceivedEvent,
   AudioMetadataReceivedEvent,
-  PlaybackMetadata,
+  PlaybackMetadata
 } from '../features/metadata'
 import type {
   NativeUpdateOptions,
   Options,
-  UpdateOptions,
+  UpdateOptions
 } from '../features/options'
 import type { Playback } from '../features/playbackState'
 import type { PartialSetupPlayerOptions } from '../features/player'
@@ -18,7 +18,7 @@ import type { PlayingState } from '../features/playingState'
 import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playWhenReady'
 import type {
   PlaybackProgressUpdatedEvent,
-  Progress,
+  Progress
 } from '../features/progress'
 import type { PlaybackQueueEndedEvent } from '../features/queue'
 import type {
@@ -28,7 +28,7 @@ import type {
   RemotePlaySearchEvent,
   RemoteSeekEvent,
   RemoteSetRatingEvent,
-  RemoteSkipEvent,
+  RemoteSkipEvent
 } from '../features/remoteControls'
 import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
 import type { Track } from '../types'
