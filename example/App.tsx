@@ -1,189 +1,100 @@
-import Icon from '@react-native-vector-icons/fontawesome6';
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useActiveTrack } from 'react-native-audio-browser';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import {
-  ActionSheet,
-  Button,
-  OptionSheet,
-  PlayerControls,
-  Progress,
-  Spacer,
-  TrackInfo,
-} from './src/components';
-import { configurePlayer } from './src/services/configure';
-import { useSetupPlayer } from './src/services/usePlayer';
+import React from 'react';
+import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { BrowserScreen } from './src/screens/BrowserScreen';
 
-configurePlayer();
+void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true));
+
+AudioBrowser.configureBrowser({
+  tabs: [
+    {
+      title: 'Music Library',
+      url: '/library',
+    },
+    {
+      title: 'Favorites',
+      url: '/favorites',
+    },
+  ],
+  routes: {
+    '/favorites': {
+      url: '/favorites',
+      title: 'Favorites',
+      children: [
+        {
+          src: 'https://radio.garden/api/ara/content/listen/EFZafC9V/channel.mp3',
+          title: '538 Classics',
+        },
+      ],
+    },
+    '/library/radio': {
+      url: '/library/radio',
+      title: 'Radio Stations',
+      children: [
+        {
+          src: 'https://ais-sa5.cdnstream1.com/b75154_128mp3',
+          title: 'Smooth Jazz 24/7',
+          artist: 'New York, NY',
+          artwork: 'https://rntp.dev/example/smooth-jazz-24-7.jpeg',
+        },
+        {
+          src: 'https://kut.streamguys1.com/kutx-app.aac?listenerId=123456784123',
+          title: 'KUTX',
+        },
+      ],
+    },
+    '/library': {
+      url: '/library',
+      title: 'Music Library',
+      children: [
+        {
+          url: '/library/radio',
+          title: 'Radio Stations',
+        },
+        {
+          src: 'https://radio.garden/api/ara/content/listen/EFZafC9V/channel.mp3',
+          title: '538 Classics',
+        },
+        {
+          src: 'https://rntp.dev/example/Soul%20Searching.mp3',
+          title: 'Soul Searching (Demo)',
+          artist: 'David Chavez',
+          artwork: 'https://rntp.dev/example/Soul%20Searching.jpeg',
+          duration: 77,
+        },
+        {
+          src: 'https://rntp.dev/example/Lullaby%20(Demo).mp3',
+          title: 'Lullaby (Demo)',
+          artist: 'David Chavez',
+          artwork: 'https://rntp.dev/example/Lullaby%20(Demo).jpeg',
+          duration: 71,
+        },
+        {
+          src: 'https://rntp.dev/example/Rhythm%20City%20(Demo).mp3',
+          title: 'Rhythm City (Demo)',
+          artist: 'David Chavez',
+          artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
+          duration: 106,
+        },
+        {
+          src: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
+          title: 'Whip',
+          artist: 'prazkhanal',
+          artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg',
+        },
+        {
+          src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
+          title: 'Chapters',
+        },
+      ],
+    },
+  },
+});
 
 export default function App() {
-  const isPlayerReady = useSetupPlayer();
   return (
     <SafeAreaProvider>
-      {isPlayerReady ? (
-        <Player />
-      ) : (
-        <SafeAreaView style={styles.screenContainer}>
-          <ActivityIndicator />
-        </SafeAreaView>
-      )}
+      <BrowserScreen />
     </SafeAreaProvider>
   );
 }
-
-function Player() {
-  const track = useActiveTrack();
-  const [optionsVisible, setOptionsVisible] = useState(false);
-  const [actionsVisible, setActionsVisible] = useState(false);
-
-  useEffect(() => {
-    // This event will be fired when the app is already open and the notification is clicked
-    const subscription = Linking.addEventListener('url', data => {
-      console.log('deepLinkHandler', data.url);
-    });
-
-    // When you launch the closed app from the notification or any other link
-    Linking.getInitialURL()
-      .then(url => console.log('getInitialURL', url))
-      .catch(console.error);
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  return (
-    <SafeAreaView style={styles.screenContainer}>
-      <StatusBar barStyle={'light-content'} />
-      <View style={styles.contentContainer}>
-        <View style={styles.topBarContainer}>
-          <Button
-            title="Options"
-            onPress={() => setOptionsVisible(true)}
-            type="primary"
-          />
-          <Button
-            title="Actions"
-            onPress={() => setActionsVisible(true)}
-            type="primary"
-          />
-        </View>
-        <TrackInfo track={track} />
-        <Progress live={track?.isLiveStream} />
-        <Spacer />
-        <PlayerControls />
-        <Spacer mode={'expand'} />
-      </View>
-      <Modal
-        visible={optionsVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setOptionsVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setOptionsVisible(false)}
-        >
-          <View
-            style={styles.modalContent}
-            onStartShouldSetResponder={() => true}
-            onTouchEnd={e => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Pressable
-                onPress={() => setOptionsVisible(false)}
-                style={styles.closeButton}
-              >
-                <Icon name="xmark" size={24} color="white" iconStyle="solid" />
-              </Pressable>
-            </View>
-            <OptionSheet />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-      <Modal
-        visible={actionsVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setActionsVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setActionsVisible(false)}
-        >
-          <View
-            style={styles.modalContent}
-            onStartShouldSetResponder={() => true}
-            onTouchEnd={e => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Pressable
-                onPress={() => setActionsVisible(false)}
-                style={styles.closeButton}
-              >
-                <Icon name="xmark" size={24} color="white" iconStyle="solid" />
-              </Pressable>
-            </View>
-            <ActionSheet />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: '#212121',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: Platform.OS === 'web' ? Dimensions.get('window').height : '100%',
-  },
-  contentContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  topBarContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#181818',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '50%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  closeButton: {
-    padding: 8,
-  },
-});
