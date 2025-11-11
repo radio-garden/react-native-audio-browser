@@ -57,6 +57,8 @@ namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
+// Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `Progress` to properly resolve imports.
@@ -91,6 +93,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "PartialSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
+#include <memory>
+#include "HybridAudioBrowserSpec.hpp"
 #include "Track.hpp"
 #include "Progress.hpp"
 #include "RepeatMode.hpp"
@@ -216,6 +220,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;
       virtual UpdateOptions getOptions() = 0;
+      virtual void registerBrowser(const std::shared_ptr<HybridAudioBrowserSpec>& browser) = 0;
       virtual void load(const Track& track) = 0;
       virtual void reset() = 0;
       virtual void play() = 0;

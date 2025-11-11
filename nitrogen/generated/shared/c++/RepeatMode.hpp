@@ -29,9 +29,9 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (RepeatMode).
    */
   enum class RepeatMode {
-    OFF      SWIFT_NAME(off) = 0,
-    TRACK      SWIFT_NAME(track) = 1,
-    QUEUE      SWIFT_NAME(queue) = 2,
+    QUEUE      SWIFT_NAME(queue) = 0,
+    OFF      SWIFT_NAME(off) = 1,
+    TRACK      SWIFT_NAME(track) = 2,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -44,18 +44,18 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RepeatMode fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("queue"): return margelo::nitro::audiobrowser::RepeatMode::QUEUE;
         case hashString("off"): return margelo::nitro::audiobrowser::RepeatMode::OFF;
         case hashString("track"): return margelo::nitro::audiobrowser::RepeatMode::TRACK;
-        case hashString("queue"): return margelo::nitro::audiobrowser::RepeatMode::QUEUE;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum RepeatMode - invalid value!");
       }
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::RepeatMode arg) {
       switch (arg) {
+        case margelo::nitro::audiobrowser::RepeatMode::QUEUE: return JSIConverter<std::string>::toJSI(runtime, "queue");
         case margelo::nitro::audiobrowser::RepeatMode::OFF: return JSIConverter<std::string>::toJSI(runtime, "off");
         case margelo::nitro::audiobrowser::RepeatMode::TRACK: return JSIConverter<std::string>::toJSI(runtime, "track");
-        case margelo::nitro::audiobrowser::RepeatMode::QUEUE: return JSIConverter<std::string>::toJSI(runtime, "queue");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert RepeatMode to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -67,9 +67,9 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("queue"):
         case hashString("off"):
         case hashString("track"):
-        case hashString("queue"):
           return true;
         default:
           return false;

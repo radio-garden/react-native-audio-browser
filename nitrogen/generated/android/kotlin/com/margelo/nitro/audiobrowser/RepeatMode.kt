@@ -16,7 +16,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 @DoNotStrip
 @Keep
 enum class RepeatMode(@DoNotStrip @Keep val value: Int) {
-  OFF(0),
-  TRACK(1),
-  QUEUE(2);
+  QUEUE(0),
+  OFF(1),
+  TRACK(2);
 }

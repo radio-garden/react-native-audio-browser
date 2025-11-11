@@ -24,6 +24,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `TrackStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
@@ -112,6 +114,8 @@ namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
+// Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 
@@ -125,6 +129,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "PlaybackMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "Track.hpp"
+#include "TrackStyle.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
@@ -171,6 +176,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"
+#include <memory>
+#include "HybridAudioBrowserSpec.hpp"
 #include "Progress.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
@@ -538,6 +545,12 @@ namespace margelo::nitro::audiobrowser {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline void registerBrowser(const std::shared_ptr<HybridAudioBrowserSpec>& browser) override {
+      auto __result = _swiftPart.registerBrowser(browser);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline void load(const Track& track) override {
       auto __result = _swiftPart.load(std::forward<decltype(track)>(track));

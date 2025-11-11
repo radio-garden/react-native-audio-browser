@@ -188,22 +188,22 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onContentChanged: bridge.Func_void_std__optional_BrowserList_ {
+  public final var onContentChanged: bridge.Func_void_std__optional_ResolvedTrack_ {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_std__optional_BrowserList_ in
-        let __closureWrapper = Func_void_std__optional_BrowserList_(self.__implementation.onContentChanged)
-        return bridge.create_Func_void_std__optional_BrowserList_(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_std__optional_ResolvedTrack_ in
+        let __closureWrapper = Func_void_std__optional_ResolvedTrack_(self.__implementation.onContentChanged)
+        return bridge.create_Func_void_std__optional_ResolvedTrack_(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onContentChanged = { () -> (BrowserList?) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_std__optional_BrowserList_(newValue)
-        return { (__content: BrowserList?) -> Void in
-          __wrappedFunction.call({ () -> bridge.std__optional_BrowserList_ in
+      self.__implementation.onContentChanged = { () -> (ResolvedTrack?) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__optional_ResolvedTrack_(newValue)
+        return { (__content: ResolvedTrack?) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__optional_ResolvedTrack_ in
             if let __unwrappedValue = __content {
-              return bridge.create_std__optional_BrowserList_(__unwrappedValue)
+              return bridge.create_std__optional_ResolvedTrack_(__unwrappedValue)
             } else {
               return .init()
             }
@@ -251,21 +251,24 @@ open class HybridAudioBrowserSpec_cxx {
 
   // Methods
   @inline(__always)
-  public final func navigate(path: std.string) -> bridge.Result_std__shared_ptr_Promise_BrowserList___ {
+  public final func navigatePath(path: std.string) -> bridge.Result_void_ {
     do {
-      let __result = try self.__implementation.navigate(path: String(path))
-      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_BrowserList__ in
-        let __promise = bridge.create_std__shared_ptr_Promise_BrowserList__()
-        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_BrowserList__(__promise)
-        __result
-          .then({ __result in __promiseHolder.resolve(__result) })
-          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
-        return __promise
-      }()
-      return bridge.create_Result_std__shared_ptr_Promise_BrowserList___(__resultCpp)
+      try self.__implementation.navigatePath(path: String(path))
+      return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__shared_ptr_Promise_BrowserList___(__exceptionPtr)
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func navigateTrack(track: Track) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.navigateTrack(track: track)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
   
@@ -295,20 +298,20 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func getContent() -> bridge.Result_std__optional_BrowserList__ {
+  public final func getContent() -> bridge.Result_std__optional_ResolvedTrack__ {
     do {
       let __result = try self.__implementation.getContent()
-      let __resultCpp = { () -> bridge.std__optional_BrowserList_ in
+      let __resultCpp = { () -> bridge.std__optional_ResolvedTrack_ in
         if let __unwrappedValue = __result {
-          return bridge.create_std__optional_BrowserList_(__unwrappedValue)
+          return bridge.create_std__optional_ResolvedTrack_(__unwrappedValue)
         } else {
           return .init()
         }
       }()
-      return bridge.create_Result_std__optional_BrowserList__(__resultCpp)
+      return bridge.create_Result_std__optional_ResolvedTrack__(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_BrowserList__(__exceptionPtr)
+      return bridge.create_Result_std__optional_ResolvedTrack__(__exceptionPtr)
     }
   }
 }

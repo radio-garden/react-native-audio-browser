@@ -21,6 +21,8 @@
 #include <NitroModules/JPromise.hpp>
 #include "JTrack.hpp"
 #include <optional>
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <unordered_map>

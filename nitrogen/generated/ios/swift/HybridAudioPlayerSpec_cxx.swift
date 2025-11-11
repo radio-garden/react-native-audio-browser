@@ -1171,6 +1171,21 @@ open class HybridAudioPlayerSpec_cxx {
   }
   
   @inline(__always)
+  public final func registerBrowser(browser: bridge.std__shared_ptr_HybridAudioBrowserSpec_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.registerBrowser(browser: { () -> HybridAudioBrowserSpec in
+        let __unsafePointer = bridge.get_std__shared_ptr_HybridAudioBrowserSpec_(browser)
+        let __instance = HybridAudioBrowserSpec_cxx.fromUnsafe(__unsafePointer)
+        return __instance.getHybridAudioBrowserSpec()
+      }())
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func load(track: Track) -> bridge.Result_void_ {
     do {
       try self.__implementation.load(track: track)

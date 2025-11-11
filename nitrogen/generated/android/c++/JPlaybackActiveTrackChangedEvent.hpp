@@ -11,7 +11,9 @@
 #include "PlaybackActiveTrackChangedEvent.hpp"
 
 #include "JTrack.hpp"
+#include "JTrackStyle.hpp"
 #include "Track.hpp"
+#include "TrackStyle.hpp"
 #include <optional>
 #include <string>
 

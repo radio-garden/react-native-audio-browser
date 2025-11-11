@@ -19,12 +19,6 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class Track(
   @DoNotStrip
   @Keep
-  val src: String?,
-  @DoNotStrip
-  @Keep
-  val playable: Boolean?,
-  @DoNotStrip
-  @Keep
   val url: String?,
   @DoNotStrip
   @Keep
@@ -32,9 +26,6 @@ data class Track(
   @DoNotStrip
   @Keep
   val subtitle: String?,
-  @DoNotStrip
-  @Keep
-  val icon: String?,
   @DoNotStrip
   @Keep
   val artwork: String?,
@@ -52,7 +43,16 @@ data class Track(
   val genre: String?,
   @DoNotStrip
   @Keep
-  val duration: Double?
+  val duration: Double?,
+  @DoNotStrip
+  @Keep
+  val playable: Boolean?,
+  @DoNotStrip
+  @Keep
+  val src: String?,
+  @DoNotStrip
+  @Keep
+  val style: TrackStyle?
 ) {
   /* primary constructor */
 
@@ -64,8 +64,8 @@ data class Track(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(src: String?, playable: Boolean?, url: String?, title: String, subtitle: String?, icon: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?): Track {
-      return Track(src, playable, url, title, subtitle, icon, artwork, artist, album, description, genre, duration)
+    private fun fromCpp(url: String?, title: String, subtitle: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, playable: Boolean?, src: String?, style: TrackStyle?): Track {
+      return Track(url, title, subtitle, artwork, artist, album, description, genre, duration, playable, src, style)
     }
   }
 }

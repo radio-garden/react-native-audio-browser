@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
+import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.runBlocking
@@ -24,7 +25,7 @@ import timber.log.Timber
 class MediaFactory(
   private val context: Context, 
   private val cache: SimpleCache?,
-  private val getRequestConfig: (originalUrl: String) -> RequestConfig?
+  private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?
 ) : MediaSource.Factory {
 
   companion object {

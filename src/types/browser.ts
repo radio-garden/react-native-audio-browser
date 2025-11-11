@@ -1,4 +1,4 @@
-import type { BrowserList, Track } from './browser-nodes'
+import type { ResolvedTrack, Track } from './browser-nodes'
 
 export type BrowserSourceCallbackParam = {
   path: string
@@ -7,7 +7,7 @@ export type BrowserSourceCallbackParam = {
 
 export type BrowserSourceCallback = (
   param: BrowserSourceCallbackParam
-) => Promise<BrowserList>
+) => Promise<ResolvedTrack>
 export type SearchSourceCallback = (query: string) => Promise<Track[]>
 export type RequestConfigTransformer = (
   request: RequestConfig,
@@ -43,7 +43,7 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
 }
 
 export type BrowserSource =
-  | BrowserList
+  | ResolvedTrack
   | BrowserSourceCallback
   | TransformableRequestConfig
 
@@ -54,7 +54,7 @@ export type TabsSourceCallback = () => Promise<Track[]>
  * Tab source configuration for navigation tabs.
  *
  * When using API configuration (TransformableRequestConfig), the request path defaults to '/'
- * and should return a MediaList with MediaLink children representing the tabs.
+ * and should return an array of Track objects with urls representing the tabs.
  */
 export type TabsSource =
   | Track[]
@@ -65,7 +65,7 @@ export type TabsSource =
  * Search source configuration for handling search requests.
  *
  * Can be either:
- * - SearchSourceCallback: Custom function that receives query string and returns MediaItem[]
+ * - SearchSourceCallback: Custom function that receives query string and returns Track[]
  * - TransformableRequestConfig: API configuration where query will be automatically added as { q: query } to request.query
  */
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
@@ -74,7 +74,7 @@ export type PlayConfigurationBehavior = 'single' | 'queue'
 
 export type PlayConfigurationHandler = (
   track: Track,
-  parent?: BrowserList
+  parent?: ResolvedTrack
 ) => void
 
 export type BrowserConfiguration = {
@@ -126,7 +126,7 @@ export type BrowserConfiguration = {
    * Optional - if not provided, no tab navigation will be available.
    * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
    *
-   * Can provide static array of MediaLink objects as tabs, API configuration, or custom callback.
+   * Can provide static array of Track objects with urls as tabs, API configuration, or custom callback.
    */
   tabs?: TabsSource
 

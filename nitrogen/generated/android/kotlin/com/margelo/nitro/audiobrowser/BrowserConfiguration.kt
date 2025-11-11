@@ -37,7 +37,7 @@ data class BrowserConfiguration(
   val routes: Map<String, BrowserSource>?,
   @DoNotStrip
   @Keep
-  val browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?,
+  val browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?,
   @DoNotStrip
   @Keep
   val play: PlayConfigurationBehavior?
@@ -52,7 +52,7 @@ data class BrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, BrowserSource>?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig?, play: PlayConfigurationBehavior?): BrowserConfiguration {
+    private fun fromCpp(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, BrowserSource>?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, play: PlayConfigurationBehavior?): BrowserConfiguration {
       return BrowserConfiguration(path, request, media, search, tabs, routes, browse, play)
     }
   }

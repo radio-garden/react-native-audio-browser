@@ -18,6 +18,8 @@
 #include <NitroModules/JPromise.hpp>
 #include "JTrack.hpp"
 #include <optional>
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

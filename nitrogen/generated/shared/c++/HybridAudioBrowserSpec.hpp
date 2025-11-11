@@ -15,8 +15,8 @@
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `BrowserList` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserList; }
+// Forward declaration of `ResolvedTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 
@@ -25,7 +25,7 @@ namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 #include "Track.hpp"
 #include <vector>
 #include <functional>
-#include "BrowserList.hpp"
+#include "ResolvedTrack.hpp"
 #include "BrowserConfiguration.hpp"
 #include <NitroModules/Promise.hpp>
 
@@ -62,8 +62,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setTabs(const std::optional<std::vector<Track>>& tabs) = 0;
       virtual std::function<void(const std::string& /* path */)> getOnPathChanged() = 0;
       virtual void setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) = 0;
-      virtual std::function<void(const std::optional<BrowserList>& /* content */)> getOnContentChanged() = 0;
-      virtual void setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) = 0;
+      virtual std::function<void(const std::optional<ResolvedTrack>& /* content */)> getOnContentChanged() = 0;
+      virtual void setOnContentChanged(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& onContentChanged) = 0;
       virtual std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() = 0;
       virtual void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) = 0;
       virtual BrowserConfiguration getConfiguration() = 0;
@@ -71,9 +71,10 @@ namespace margelo::nitro::audiobrowser {
 
     public:
       // Methods
-      virtual std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) = 0;
+      virtual void navigatePath(const std::string& path) = 0;
+      virtual void navigateTrack(const Track& track) = 0;
       virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
-      virtual std::optional<BrowserList> getContent() = 0;
+      virtual std::optional<ResolvedTrack> getContent() = 0;
 
     protected:
       // Hybrid Setup

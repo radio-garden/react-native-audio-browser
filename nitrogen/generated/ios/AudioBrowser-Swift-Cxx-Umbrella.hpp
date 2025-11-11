@@ -28,10 +28,6 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
-// Forward declaration of `BrowserItemStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
-// Forward declaration of `BrowserList` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserList; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `Capability` to properly resolve imports.
@@ -122,10 +118,14 @@ namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `ResolvedTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `TrackStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
@@ -144,8 +144,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
 #include "BrowserConfiguration.hpp"
-#include "BrowserItemStyle.hpp"
-#include "BrowserList.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"
 #include "FeedbackOptions.hpp"
@@ -191,9 +189,11 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "RepeatMode.hpp"
 #include "RepeatModeChangedEvent.hpp"
 #include "RequestConfig.hpp"
+#include "ResolvedTrack.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
+#include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"
 #include <NitroModules/Promise.hpp>

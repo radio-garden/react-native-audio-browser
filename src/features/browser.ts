@@ -1,18 +1,41 @@
-import { nativeBrowser } from '../native'
-import type {
-  BrowserConfiguration,
-  BrowserList,
-  Track
-} from '../types'
+import { nativeBrowser, nativePlayer } from '../native'
+import type { BrowserConfiguration, ResolvedTrack, Track } from '../types'
 import { LazyEmitter } from '../utils/LazyEmitter'
 import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
 
+/**
+ * Configures the browser with routes, tabs, and other settings.
+ * Also registers the browser with the player to enable:
+ * - Media URL transformation for authenticated playback
+ * - Android Auto / CarPlay browsing integration
+ * - Playback of browsable tracks via navigate()
+ *
+ * @param configuration - Browser configuration including routes, tabs, media config, etc.
+ *
+ * @example
+ * ```ts
+ * configureBrowser({
+ *   routes: {
+ *     '/albums/:id': { path: '/api/albums/:id' }
+ *   },
+ *   tabs: [
+ *     { title: 'Home', url: '/' },
+ *     { title: 'Search', url: '/search' }
+ *   ]
+ * })
+ * ```
+ */
 export function configureBrowser(configuration: BrowserConfiguration): void {
   nativeBrowser.configuration = configuration
+  nativePlayer.registerBrowser(nativeBrowser)
 }
 
-export function navigate(path: string) {
-  return (nativeBrowser.path = path)
+export function navigate(pathOrTrack: string | Track) {
+  if (typeof pathOrTrack === 'string') {
+    return nativeBrowser.navigatePath(pathOrTrack)
+  } else {
+    return nativeBrowser.navigateTrack(pathOrTrack)
+  }
 }
 
 export function getPath() {
@@ -27,15 +50,15 @@ export function usePath(): string | undefined {
   return useUpdatedNativeValue(getPath, onPathChanged)
 }
 
-export function getContent(): BrowserList | undefined {
+export function getContent(): ResolvedTrack | undefined {
   return nativeBrowser.getContent()
 }
 
-export const onContentChanged = LazyEmitter.emitterize<BrowserList | undefined>(
-  (cb) => (nativeBrowser.onContentChanged = cb)
-)
+export const onContentChanged = LazyEmitter.emitterize<
+  ResolvedTrack | undefined
+>((cb) => (nativeBrowser.onContentChanged = cb))
 
-export function useContent(): BrowserList | undefined {
+export function useContent(): ResolvedTrack | undefined {
   return useUpdatedNativeValue(getContent, onContentChanged)
 }
 export function getTabs(): Track[] | undefined {

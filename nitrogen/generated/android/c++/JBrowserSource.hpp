@@ -10,22 +10,22 @@
 #include <fbjni/fbjni.h>
 #include <variant>
 
-#include "BrowserList.hpp"
+#include "ResolvedTrack.hpp"
 #include <NitroModules/Promise.hpp>
 #include "BrowserSourceCallbackParam.hpp"
 #include <functional>
 #include "TransformableRequestConfig.hpp"
 #include <variant>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
 #include <NitroModules/JPromise.hpp>
-#include "JBrowserList.hpp"
+#include "JResolvedTrack.hpp"
+#include <string>
 #include "Track.hpp"
 #include <vector>
-#include "JTrack.hpp"
-#include <string>
 #include <optional>
-#include "BrowserItemStyle.hpp"
-#include "JBrowserItemStyle.hpp"
+#include "JTrack.hpp"
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
 #include <unordered_map>
 #include "JTransformableRequestConfig.hpp"
@@ -46,12 +46,12 @@ namespace margelo::nitro::audiobrowser {
   public:
     static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSource;";
 
-    static jni::local_ref<JBrowserSource> create_0(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam::javaobject> value) {
-      static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam::javaobject>)>("create");
+    static jni::local_ref<JBrowserSource> create_0(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam::javaobject> value) {
+      static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam::javaobject>)>("create");
       return method(javaClassStatic(), value);
     }
-    static jni::local_ref<JBrowserSource> create_1(jni::alias_ref<JBrowserList> value) {
-      static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JBrowserList>)>("create");
+    static jni::local_ref<JBrowserSource> create_1(jni::alias_ref<JResolvedTrack> value) {
+      static const auto method = javaClassStatic()->getStaticMethod<JBrowserSource(jni::alias_ref<JResolvedTrack>)>("create");
       return method(javaClassStatic(), value);
     }
     static jni::local_ref<JBrowserSource> create_2(jni::alias_ref<JTransformableRequestConfig> value) {
@@ -59,16 +59,16 @@ namespace margelo::nitro::audiobrowser {
       return method(javaClassStatic(), value);
     }
 
-    static jni::local_ref<JBrowserSource> fromCpp(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig>& variant) {
+    static jni::local_ref<JBrowserSource> fromCpp(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>& variant) {
       switch (variant.index()) {
-        case 0: return create_0(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam_cxx::fromCpp(std::get<0>(variant)));
-        case 1: return create_1(JBrowserList::fromCpp(std::get<1>(variant)));
+        case 0: return create_0(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::fromCpp(std::get<0>(variant)));
+        case 1: return create_1(JResolvedTrack::fromCpp(std::get<1>(variant)));
         case 2: return create_2(JTransformableRequestConfig::fromCpp(std::get<2>(variant)));
         default: throw std::invalid_argument("Variant holds unknown index! (" + std::to_string(variant.index()) + ")");
       }
     }
 
-    [[nodiscard]] std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> toCpp() const;
+    [[nodiscard]] std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> toCpp() const;
   };
 
   namespace JBrowserSource_impl {
@@ -76,8 +76,8 @@ namespace margelo::nitro::audiobrowser {
     public:
       static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSource$First;";
     
-      [[nodiscard]] jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam::javaobject> getValue() const {
-        static const auto field = javaClassStatic()->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam::javaobject>("value");
+      [[nodiscard]] jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam::javaobject> getValue() const {
+        static const auto field = javaClassStatic()->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam::javaobject>("value");
         return getFieldValue(field);
       }
     };
@@ -86,8 +86,8 @@ namespace margelo::nitro::audiobrowser {
     public:
       static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/BrowserSource$Second;";
     
-      [[nodiscard]] jni::local_ref<JBrowserList> getValue() const {
-        static const auto field = javaClassStatic()->getField<JBrowserList>("value");
+      [[nodiscard]] jni::local_ref<JResolvedTrack> getValue() const {
+        static const auto field = javaClassStatic()->getField<JResolvedTrack>("value");
         return getFieldValue(field);
       }
     };

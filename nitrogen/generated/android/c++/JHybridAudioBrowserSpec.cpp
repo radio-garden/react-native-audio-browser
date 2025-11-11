@@ -9,10 +9,10 @@
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `BrowserList` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserList; }
-// Forward declaration of `BrowserItemStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
+// Forward declaration of `TrackStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
+// Forward declaration of `ResolvedTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
@@ -33,13 +33,13 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include "Track.hpp"
 #include <vector>
 #include "JTrack.hpp"
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 #include <functional>
 #include "JFunc_void_std__string.hpp"
-#include "BrowserList.hpp"
-#include "JFunc_void_std__optional_BrowserList_.hpp"
-#include "JBrowserList.hpp"
-#include "BrowserItemStyle.hpp"
-#include "JBrowserItemStyle.hpp"
+#include "ResolvedTrack.hpp"
+#include "JFunc_void_std__optional_ResolvedTrack_.hpp"
+#include "JResolvedTrack.hpp"
 #include "JFunc_void_std__vector_Track_.hpp"
 #include "BrowserConfiguration.hpp"
 #include "JBrowserConfiguration.hpp"
@@ -63,9 +63,9 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "JBrowserSource.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
-#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___BrowserList_TransformableRequestConfig.hpp"
+#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.hpp"
 #include "PlayConfigurationBehavior.hpp"
 #include "JPlayConfigurationBehavior.hpp"
 
@@ -152,24 +152,24 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__string::javaobject> /* onPathChanged */)>("setOnPathChanged_cxx");
     method(_javaPart, JFunc_void_std__string_cxx::fromCpp(onPathChanged));
   }
-  std::function<void(const std::optional<BrowserList>& /* content */)> JHybridAudioBrowserSpec::getOnContentChanged() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__optional_BrowserList_::javaobject>()>("getOnContentChanged_cxx");
+  std::function<void(const std::optional<ResolvedTrack>& /* content */)> JHybridAudioBrowserSpec::getOnContentChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__optional_ResolvedTrack_::javaobject>()>("getOnContentChanged_cxx");
     auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const std::optional<BrowserList>& /* content */)> {
-      if (__result->isInstanceOf(JFunc_void_std__optional_BrowserList__cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_std__optional_BrowserList__cxx::javaobject>(__result);
+    return [&]() -> std::function<void(const std::optional<ResolvedTrack>& /* content */)> {
+      if (__result->isInstanceOf(JFunc_void_std__optional_ResolvedTrack__cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__optional_ResolvedTrack__cxx::javaobject>(__result);
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::optional<BrowserList> content) -> void {
+        return [__resultRef](std::optional<ResolvedTrack> content) -> void {
           return __resultRef->invoke(content);
         };
       }
     }();
   }
-  void JHybridAudioBrowserSpec::setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__optional_BrowserList_::javaobject> /* onContentChanged */)>("setOnContentChanged_cxx");
-    method(_javaPart, JFunc_void_std__optional_BrowserList__cxx::fromCpp(onContentChanged));
+  void JHybridAudioBrowserSpec::setOnContentChanged(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& onContentChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__optional_ResolvedTrack_::javaobject> /* onContentChanged */)>("setOnContentChanged_cxx");
+    method(_javaPart, JFunc_void_std__optional_ResolvedTrack__cxx::fromCpp(onContentChanged));
   }
   std::function<void(const std::vector<Track>& /* tabs */)> JHybridAudioBrowserSpec::getOnTabsChanged() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__vector_Track_::javaobject>()>("getOnTabsChanged_cxx");
@@ -201,21 +201,13 @@ namespace margelo::nitro::audiobrowser {
   }
 
   // Methods
-  std::shared_ptr<Promise<BrowserList>> JHybridAudioBrowserSpec::navigate(const std::string& path) {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* path */)>("navigate");
-    auto __result = method(_javaPart, jni::make_jstring(path));
-    return [&]() {
-      auto __promise = Promise<BrowserList>::create();
-      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
-        auto __result = jni::static_ref_cast<JBrowserList>(__boxedResult);
-        __promise->resolve(__result->toCpp());
-      });
-      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
-        jni::JniException __jniError(__throwable);
-        __promise->reject(std::make_exception_ptr(__jniError));
-      });
-      return __promise;
-    }();
+  void JHybridAudioBrowserSpec::navigatePath(const std::string& path) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("navigatePath");
+    method(_javaPart, jni::make_jstring(path));
+  }
+  void JHybridAudioBrowserSpec::navigateTrack(const Track& track) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JTrack> /* track */)>("navigateTrack");
+    method(_javaPart, JTrack::fromCpp(track));
   }
   std::shared_ptr<Promise<std::vector<Track>>> JHybridAudioBrowserSpec::onSearch(const std::string& query) {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* query */)>("onSearch");
@@ -242,8 +234,8 @@ namespace margelo::nitro::audiobrowser {
       return __promise;
     }();
   }
-  std::optional<BrowserList> JHybridAudioBrowserSpec::getContent() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserList>()>("getContent");
+  std::optional<ResolvedTrack> JHybridAudioBrowserSpec::getContent() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JResolvedTrack>()>("getContent");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }

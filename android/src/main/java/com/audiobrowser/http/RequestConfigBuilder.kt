@@ -1,5 +1,6 @@
 package com.audiobrowser.http
 
+import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,21 @@ object RequestConfigBuilder {
 
   fun mergeConfig(base: RequestConfig, override: RequestConfig): RequestConfig {
     return RequestConfig(
+      path = override.path ?: base.path,
+      method = override.method ?: base.method,
+      baseUrl = override.baseUrl ?: base.baseUrl,
+      headers = mergeHeaders(base.headers, override.headers),
+      query = mergeQuery(base.query, override.query),
+      body = override.body ?: base.body,
+      contentType = override.contentType ?: base.contentType,
+      userAgent = override.userAgent ?: base.userAgent
+    )
+  }
+
+  fun mergeConfig(base: RequestConfig, override: MediaRequestConfig): MediaRequestConfig {
+    return MediaRequestConfig(
+      override.resolve,
+      transform = override.transform,
       path = override.path ?: base.path,
       method = override.method ?: base.method,
       baseUrl = override.baseUrl ?: base.baseUrl,

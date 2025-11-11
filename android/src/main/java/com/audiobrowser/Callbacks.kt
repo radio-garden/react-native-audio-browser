@@ -64,11 +64,4 @@ interface Callbacks {
 
   // Configuration events
   fun onOptionsChanged(options: PlayerUpdateOptions)
-
-  // Media browser events
-  fun onGetChildrenRequest(requestId: String, parentId: String, page: Int, pageSize: Int)
-
-  fun onGetItemRequest(requestId: String, mediaId: String)
-
-  fun onSearchRequest(requestId: String, query: String, extras: Map<String, Any>?)
 }

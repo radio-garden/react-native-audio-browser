@@ -21,6 +21,7 @@ import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.AudioCommonMetadataReceivedEvent
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent
+import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.HybridAudioPlayerSpec
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.Options
@@ -68,6 +69,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   private var setupOptions = PlayerSetupOptions()
   private val mainScope = MainScope()
   private var connectedService: Service? = null
+  private var audioBrowser: AudioBrowser? = null
   private val context =
     NitroModules.applicationContext
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
@@ -179,9 +181,15 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     return player.getOptions().toNitro()
   }
 
+  override fun registerBrowser(browser: HybridAudioBrowserSpec) {
+    registerAudioBrowser(browser as AudioBrowser)
+  }
+
   private var setupPromise: ((Unit) -> Unit)? = null
 
-  override fun load(track: Track): Unit = runBlockingOnMain { player.load(track) }
+  override fun load(track: Track) {
+    launchInScope { player.load(track) }
+  }
 
   override fun reset() = runBlockingOnMain {
     player.stop()
@@ -309,6 +317,9 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           player.setup(setupOptions)
         }
 
+      // Apply audio browser if it was registered before service connected
+      audioBrowser?.let { connectedService?.player?.browser = it }
+
       val sessionToken = SessionToken(context, ComponentName(context, Service::class.java))
       mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
 
@@ -339,13 +350,14 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     get() = service.player
 
   /**
-   * Registers the AudioBrowser instance to enable media URL transformation.
-   * Called by AudioBrowser when it's created.
+   * Registers the AudioBrowser instance to enable media URL transformation and browsing.
+   * Establishes bidirectional connection between AudioBrowser and AudioPlayer.
    */
-  fun registerAudioBrowser(audioBrowser: AudioBrowser) {
-    connectedService?.player?.getMediaRequestConfig = { url: String ->
-      audioBrowser.getMediaRequestConfig(url)
-    }
+  internal fun registerAudioBrowser(audioBrowser: AudioBrowser) {
+    this.audioBrowser = audioBrowser
+    audioBrowser.setAudioPlayer(this)
+    // Apply immediately if service is already connected
+    connectedService?.player?.browser = audioBrowser
   }
 
   val callbacks =
@@ -513,37 +525,6 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
       override fun onOptionsChanged(options: PlayerUpdateOptions) {
         //                emitOnOptionsChanged(options.toBridge())
-      }
-
-      // Media browser callbacks
-      override fun onGetChildrenRequest(
-        requestId: String,
-        parentId: String,
-        page: Int,
-        pageSize: Int,
-      ) {
-        //                emitGetChildrenRequest(requestId, parentId, page, pageSize)
-      }
-
-      override fun onGetItemRequest(requestId: String, mediaId: String) {
-        //                emitGetItemRequest(requestId, mediaId)
-      }
-
-      override fun onSearchRequest(requestId: String, query: String, extras: Map<String, Any>?) {
-        //                val extrasMap = extras?.let { map ->
-        //                    Arguments.createMap().apply {
-        //                        map.forEach { (key, value) ->
-        //                            when (value) {
-        //                                is String -> putString(key, value)
-        //                                is Int -> putInt(key, value)
-        //                                is Double -> putDouble(key, value)
-        //                                is Boolean -> putBoolean(key, value)
-        //                                // Add other types as needed
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //                emitSearchResultRequest(requestId, query, extrasMap, 0, 100)
       }
     }
   }

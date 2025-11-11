@@ -188,23 +188,6 @@ class Service : MediaLibraryService() {
     super.onDestroy()
   }
 
-  // Android Auto request resolution methods
-  fun resolveGetItemRequest(requestId: String, mediaItem: MediaItem) {
-    player.resolveGetItemRequest(requestId, mediaItem)
-  }
-
-  fun resolveGetChildrenRequest(
-    requestId: String,
-    items: List<MediaItem>,
-    totalChildrenCount: Int,
-  ) {
-    player.resolveGetChildrenRequest(requestId, items, totalChildrenCount)
-  }
-
-  fun resolveSearchRequest(requestId: String, items: List<MediaItem>, totalMatchesCount: Int) {
-    player.resolveSearchRequest(requestId, items, totalMatchesCount)
-  }
-
   inner class LocalBinder : Binder() {
     val service = this@Service
   }

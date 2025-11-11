@@ -142,6 +142,7 @@ namespace margelo::nitro::audiobrowser {
     std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override;
     void updateOptions(const NativeUpdateOptions& options) override;
     UpdateOptions getOptions() override;
+    void registerBrowser(const std::shared_ptr<HybridAudioBrowserSpec>& browser) override;
     void load(const Track& track) override;
     void reset() override;
     void play() override;

@@ -103,6 +103,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("setupPlayer", &HybridAudioPlayerSpec::setupPlayer);
       prototype.registerHybridMethod("updateOptions", &HybridAudioPlayerSpec::updateOptions);
       prototype.registerHybridMethod("getOptions", &HybridAudioPlayerSpec::getOptions);
+      prototype.registerHybridMethod("registerBrowser", &HybridAudioPlayerSpec::registerBrowser);
       prototype.registerHybridMethod("load", &HybridAudioPlayerSpec::load);
       prototype.registerHybridMethod("reset", &HybridAudioPlayerSpec::reset);
       prototype.registerHybridMethod("play", &HybridAudioPlayerSpec::play);

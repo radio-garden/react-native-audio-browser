@@ -24,8 +24,8 @@ class SimpleBrowserTest {
     @Test
     fun `navigate with empty config returns empty list`() = runBlocking {
         val browserManager = BrowserManager()
-        val config = BrowserConfig()
-        val result = browserManager.navigate("/test", config)
+        browserManager.config = BrowserConfig()
+        val result = browserManager.navigate("/test")
 
         assertEquals("No content configured for this path", result.title)
         assertEquals("/test", result.url)

@@ -9,25 +9,25 @@
 
 namespace margelo::nitro::audiobrowser {
   /**
-   * Converts JBrowserSource to std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& param)>, BrowserList, TransformableRequestConfig>
+   * Converts JBrowserSource to std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& param)>, ResolvedTrack, TransformableRequestConfig>
    */
-  std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>, BrowserList, TransformableRequestConfig> JBrowserSource::toCpp() const {
+  std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> JBrowserSource::toCpp() const {
     if (isInstanceOf(JBrowserSource_impl::First::javaClassStatic())) {
-      // It's a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)>`
+      // It's a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>`
       auto jniValue = static_cast<const JBrowserSource_impl::First*>(this)->getValue();
-      return [&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>>(const BrowserSourceCallbackParam& /* param */)> {
-      if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_BrowserList_____BrowserSourceCallbackParam_cxx::javaobject>(jniValue);
+      return [&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)> {
+      if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::javaobject>(jniValue);
         return downcast->cthis()->getFunction();
       } else {
         auto jniValueRef = jni::make_global(jniValue);
-        return [jniValueRef](BrowserSourceCallbackParam param) -> std::shared_ptr<Promise<std::shared_ptr<Promise<BrowserList>>>> {
+        return [jniValueRef](BrowserSourceCallbackParam param) -> std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>> {
           return jniValueRef->invoke(param);
         };
       }
     }();
     } else if (isInstanceOf(JBrowserSource_impl::Second::javaClassStatic())) {
-      // It's a `BrowserList`
+      // It's a `ResolvedTrack`
       auto jniValue = static_cast<const JBrowserSource_impl::Second*>(this)->getValue();
       return jniValue->toCpp();
     } else if (isInstanceOf(JBrowserSource_impl::Third::javaClassStatic())) {

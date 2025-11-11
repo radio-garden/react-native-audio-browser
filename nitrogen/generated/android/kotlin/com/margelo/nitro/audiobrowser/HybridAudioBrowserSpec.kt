@@ -69,13 +69,13 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPathChanged = value
     }
   
-  abstract var onContentChanged: (content: BrowserList?) -> Unit
+  abstract var onContentChanged: (content: ResolvedTrack?) -> Unit
   
-  private var onContentChanged_cxx: Func_void_std__optional_BrowserList_
+  private var onContentChanged_cxx: Func_void_std__optional_ResolvedTrack_
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_std__optional_BrowserList__java(onContentChanged)
+      return Func_void_std__optional_ResolvedTrack__java(onContentChanged)
     }
     @Keep
     @DoNotStrip
@@ -106,7 +106,11 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   // Methods
   @DoNotStrip
   @Keep
-  abstract fun navigate(path: String): Promise<BrowserList>
+  abstract fun navigatePath(path: String): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun navigateTrack(track: Track): Unit
   
   @DoNotStrip
   @Keep
@@ -114,7 +118,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getContent(): BrowserList?
+  abstract fun getContent(): ResolvedTrack?
 
   private external fun initHybrid(): HybridData
 

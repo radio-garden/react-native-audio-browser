@@ -56,8 +56,8 @@ namespace margelo::nitro::audiobrowser {
     void setTabs(const std::optional<std::vector<Track>>& tabs) override;
     std::function<void(const std::string& /* path */)> getOnPathChanged() override;
     void setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) override;
-    std::function<void(const std::optional<BrowserList>& /* content */)> getOnContentChanged() override;
-    void setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) override;
+    std::function<void(const std::optional<ResolvedTrack>& /* content */)> getOnContentChanged() override;
+    void setOnContentChanged(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& onContentChanged) override;
     std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() override;
     void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) override;
     BrowserConfiguration getConfiguration() override;
@@ -65,9 +65,10 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Methods
-    std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) override;
+    void navigatePath(const std::string& path) override;
+    void navigateTrack(const Track& track) override;
     std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override;
-    std::optional<BrowserList> getContent() override;
+    std::optional<ResolvedTrack> getContent() override;
 
   private:
     friend HybridBase;

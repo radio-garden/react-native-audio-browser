@@ -1,6 +1,6 @@
 import { type HybridObject } from 'react-native-nitro-modules';
 
-import type { BrowserConfiguration, BrowserList, Track } from '../types';
+import type { BrowserConfiguration, ResolvedTrack, Track } from '../types';
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
@@ -8,13 +8,14 @@ export interface AudioBrowser
   tabs: Track[] | undefined
 
   // Browser navigation methods
-  navigate(path: string): Promise<BrowserList>
+  navigatePath(path: string): void
+  navigateTrack(track: Track): void
   onSearch(query: string): Promise<Track[]>
-  getContent(): BrowserList | undefined
+  getContent(): ResolvedTrack | undefined
 
   // Event callbacks
   onPathChanged: (path: string) => void
-  onContentChanged: (content: BrowserList | undefined) => void
+  onContentChanged: (content: ResolvedTrack | undefined) => void
   onTabsChanged: (tabs: Track[]) => void
   configuration: BrowserConfiguration
 }

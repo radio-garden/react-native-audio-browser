@@ -18,6 +18,8 @@
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

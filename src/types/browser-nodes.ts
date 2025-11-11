@@ -1,12 +1,19 @@
-export interface BrowserBase {
+export type TrackStyle = 'list' | 'grid'
+
+// export interface BrowserSection {
+//   title: string
+//   style?: BrowserItemStyle
+//   children: Track
+// }
+
+export interface Track {
+  /**
+   * Navigation path. When present, this track is a container (tab, album, playlist, folder)
+   * that can be navigated into to view its contents.
+   */
   url?: string
   title: string
   subtitle?: string
-  /**
-   * Optional icon URL for the item. Will be displayed to the left of the item
-   * in lists, or above the item in grid layouts.
-   */
-  icon?: string
   /**
    * Optional artwork URL for the item.
    */
@@ -16,32 +23,43 @@ export interface BrowserBase {
   description?: string
   genre?: string
   duration?: number
-}
-
-export type BrowserItemStyle = 'list' | 'grid'
-
-// export interface BrowserSection {
-//   title: string
-//   style?: BrowserItemStyle
-//   children: Track
-// }
-
-export interface BrowserList extends BrowserBase {
-  children: Track[]
-  style?: BrowserItemStyle
-  /** When true, indicates this container can be played as a unit (e.g., "Play Album") */
+  /**
+   * When true without a src, indicates this track can be played as a queue
+   * by fetching and playing all its children (e.g., "Play Album", "Play Playlist").
+   *
+   * @default false - true when src is present
+   */
   playable?: boolean
-}
-
-export interface Track extends BrowserBase {
+  /**
+   * Direct audio source URL. When present, this track can be played directly.
+   */
   src?: string
-  /** When true without an src, indicates this link's destination can be played as a unit
-   * (e.g., "Play Playlist") */
-  playable?: boolean
+  style?: TrackStyle
 }
 
-// export interface BrowserLink extends BrowserBase {
-//   /** When true, indicates this link's destination can be played as a unit
-//    * (e.g., "Play Playlist") */
-//   playable?: boolean
-// }
+/**
+ * A Track that has been resolved with its children through browsing.
+ *
+ * This is the return type when browsing a track - it includes the track's
+ * metadata along with its immediate children.
+ *
+ * @example
+ * ```ts
+ * const resolved = await audioBrowser.navigate('albums/abbey-road');
+ * console.log(resolved.url); // "albums/abbey-road"
+ * console.log(resolved.title); // "Abbey Road"
+ * console.log(resolved.children); // Array of tracks in this album
+ * ```
+ */
+export interface ResolvedTrack extends Track {
+  /**
+   * URL path for this resolved track. Always present since you navigated to this location.
+   */
+  url: string
+
+  /**
+   * Immediate children of this track. Present for container tracks (albums, playlists, folders).
+   * Undefined for leaf tracks (individual songs without children).
+   */
+  children?: Track[]
+}

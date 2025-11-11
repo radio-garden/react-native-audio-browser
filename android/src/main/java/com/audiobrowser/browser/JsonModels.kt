@@ -1,9 +1,8 @@
 package com.audiobrowser.browser
 
 import kotlinx.serialization.Serializable
-import com.margelo.nitro.audiobrowser.BrowserList
+import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
-import com.margelo.nitro.audiobrowser.BrowserItemStyle
 
 /**
  * JSON serializable models for parsing API responses.
@@ -11,8 +10,8 @@ import com.margelo.nitro.audiobrowser.BrowserItemStyle
  */
 
 @Serializable
-data class JsonBrowserList(
-    val url: String? = null,
+data class JsonResolvedTrack(
+    val url: String,
     val title: String,
     val subtitle: String? = null,
     val icon: String? = null,
@@ -22,8 +21,8 @@ data class JsonBrowserList(
     val description: String? = null,
     val genre: String? = null,
     val duration: Double? = null,
-    val children: List<JsonTrack>,
-    val style: String? = null,
+    val children: List<JsonTrack>? = null,
+    val src: String? = null,
     val playable: Boolean? = null
 )
 
@@ -46,26 +45,20 @@ data class JsonTrack(
 /**
  * Convert JSON models to Nitro types
  */
-fun JsonBrowserList.toNitro(): BrowserList {
-    return BrowserList(
-        children = children.map { it.toNitro() }.toTypedArray(),
-        style = style?.let { 
-            when (it.lowercase()) {
-                "grid" -> BrowserItemStyle.GRID
-                else -> BrowserItemStyle.LIST
-            }
-        },
-        playable = playable,
+fun JsonResolvedTrack.toNitro(): ResolvedTrack {
+    return ResolvedTrack(
         url = url,
         title = title,
         subtitle = subtitle,
-        icon = icon,
         artwork = artwork,
         artist = artist,
         album = album,
         description = description,
         genre = genre,
-        duration = duration
+        duration = duration,
+        playable = playable,
+        src = src,
+        children = children?.map { it.toNitro() }?.toTypedArray()
     )
 }
 
@@ -75,7 +68,6 @@ fun JsonTrack.toNitro(): Track {
             url = url,
             title = title,
             subtitle = subtitle,
-            icon = icon,
             artwork = artwork,
             artist = artist,
             album = album,

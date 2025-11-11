@@ -22,6 +22,8 @@
 #include <string>
 #include <unordered_map>
 #include "JTrack.hpp"
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

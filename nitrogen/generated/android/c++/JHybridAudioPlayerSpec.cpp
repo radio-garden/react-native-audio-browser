@@ -19,6 +19,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `TrackStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
@@ -109,6 +111,8 @@ namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NullSentinel` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NullSentinel; }
+// Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
@@ -130,6 +134,8 @@ namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 #include "JPlaybackActiveTrackChangedEvent.hpp"
 #include "Track.hpp"
 #include "JTrack.hpp"
+#include "TrackStyle.hpp"
+#include "JTrackStyle.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "JFunc_void_PlaybackErrorEvent.hpp"
 #include "JPlaybackErrorEvent.hpp"
@@ -243,6 +249,9 @@ namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 #include "JVariant_Array_Capability__NullSentinel.hpp"
 #include "JNullSentinel.hpp"
 #include "JVariant_Double_NullSentinel.hpp"
+#include <memory>
+#include "HybridAudioBrowserSpec.hpp"
+#include "JHybridAudioBrowserSpec.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -1115,6 +1124,10 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JUpdateOptions>()>("getOptions");
     auto __result = method(_javaPart);
     return __result->toCpp();
+  }
+  void JHybridAudioPlayerSpec::registerBrowser(const std::shared_ptr<HybridAudioBrowserSpec>& browser) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JHybridAudioBrowserSpec::javaobject> /* browser */)>("registerBrowser");
+    method(_javaPart, std::dynamic_pointer_cast<JHybridAudioBrowserSpec>(browser)->getJavaPart());
   }
   void JHybridAudioPlayerSpec::load(const Track& track) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JTrack> /* track */)>("load");

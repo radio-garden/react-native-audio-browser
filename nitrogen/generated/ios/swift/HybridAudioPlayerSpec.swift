@@ -60,6 +60,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
   func updateOptions(options: NativeUpdateOptions) throws -> Void
   func getOptions() throws -> UpdateOptions
+  func registerBrowser(browser: (any HybridAudioBrowserSpec)) throws -> Void
   func load(track: Track) throws -> Void
   func reset() throws -> Void
   func play() throws -> Void

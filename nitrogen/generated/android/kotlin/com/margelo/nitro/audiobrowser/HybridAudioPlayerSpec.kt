@@ -660,6 +660,10 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun registerBrowser(browser: HybridAudioBrowserSpec): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun load(track: Track): Unit
   
   @DoNotStrip

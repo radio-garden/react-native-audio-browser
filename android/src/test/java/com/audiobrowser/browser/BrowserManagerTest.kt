@@ -29,8 +29,8 @@ class BrowserManagerTest {
 
     @Test
     fun `navigate with no routes and no browse fallback returns empty list`() = runBlocking {
-        val config = BrowserConfig()
-        val result = browserManager.navigate("/test", config)
+        browserManager.config = BrowserConfig()
+        val result = browserManager.navigate("/test")
 
         assertEquals("No content configured for this path", result.title)
         assertEquals("/test", result.url)
@@ -39,8 +39,8 @@ class BrowserManagerTest {
 
     @Test
     fun `navigate updates current path`() = runBlocking {
-        val config = BrowserConfig()
-        browserManager.navigate("/artists/123", config)
+        browserManager.config = BrowserConfig()
+        browserManager.navigate("/artists/123")
 
         assertEquals("/artists/123", browserManager.getPath())
     }
@@ -68,8 +68,8 @@ class BrowserManagerTest {
             "/artists/{id}" to BrowserSource.create(staticList)
         )
 
-        val config = BrowserConfig(routes = routes)
-        val result = browserManager.navigate("/artists/123", config)
+        browserManager.config = BrowserConfig(routes = routes)
+        val result = browserManager.navigate("/artists/123")
 
         assertEquals("Artist 123", result.title)
         assertEquals("/artists/123", result.url)
@@ -96,16 +96,16 @@ class BrowserManagerTest {
 
         val browse = com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_BrowserList___TransformableRequestConfig_BrowserList.create(browseList)
 
-        val config = BrowserConfig(browse = browse)
-        val result = browserManager.navigate("/unknown", config)
+        browserManager.config = BrowserConfig(browse = browse)
+        val result = browserManager.navigate("/unknown")
 
         assertEquals("Browse Fallback", result.title)
     }
 
     @Test
     fun `search with no search source returns empty array`() = runBlocking {
-        val config = BrowserConfig()
-        val result = browserManager.search("test query", config)
+        browserManager.config = BrowserConfig()
+        val result = browserManager.search("test query")
 
         assertTrue(result.isEmpty())
     }
@@ -149,8 +149,8 @@ class BrowserManagerTest {
             "/artists/popular" to BrowserSource.create(specificList)
         )
 
-        val config = BrowserConfig(routes = routes)
-        val result = browserManager.navigate("/artists/popular", config)
+        browserManager.config = BrowserConfig(routes = routes)
+        val result = browserManager.navigate("/artists/popular")
 
         // Should match the more specific route
         assertEquals("Popular Artists", result.title)
@@ -179,8 +179,8 @@ class BrowserManagerTest {
             "/artists/{id}/albums/{albumId}" to BrowserSource.create(testList)
         )
 
-        val config = BrowserConfig(routes = routes)
-        val result = browserManager.navigate("/artists/123/albums/456", config)
+        browserManager.config = BrowserConfig(routes = routes)
+        val result = browserManager.navigate("/artists/123/albums/456")
 
         // Verify the route was matched and static content returned
         assertEquals("Test Result", result.title)
@@ -216,8 +216,8 @@ class BrowserManagerTest {
             "/files/*" to BrowserSource.create(wildcardList)
         )
 
-        val config = BrowserConfig(routes = routes)
-        val result = browserManager.navigate("/files/document.pdf", config)
+        browserManager.config = BrowserConfig(routes = routes)
+        val result = browserManager.navigate("/files/document.pdf")
 
         assertEquals("Wildcard Match", result.title)
     }
@@ -245,8 +245,8 @@ class BrowserManagerTest {
             "/files/**" to BrowserSource.create(testList)
         )
 
-        val config = BrowserConfig(routes = routes)
-        val result = browserManager.navigate("/files/docs/readme.md", config)
+        browserManager.config = BrowserConfig(routes = routes)
+        val result = browserManager.navigate("/files/docs/readme.md")
 
         // Verify the route was matched
         assertEquals("File Browser", result.title)
@@ -266,8 +266,8 @@ class BrowserManagerTest {
         val browserManager = BrowserManager()
 
         // This should not throw but handle gracefully
-        val config = BrowserConfig()
-        val result = browserManager.navigate("", config)
+        browserManager.config = BrowserConfig()
+        val result = browserManager.navigate("")
 
         // Should return a valid response even for empty path
         assertNotNull(result)

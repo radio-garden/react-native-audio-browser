@@ -15,9 +15,8 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
-import com.margelo.nitro.audiobrowser.RequestConfig
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -25,7 +24,6 @@ import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
-import com.google.common.util.concurrent.SettableFuture
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.Playback
@@ -41,7 +39,6 @@ import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import timber.log.Timber
 
@@ -57,18 +54,14 @@ class Player(internal val context: Context) {
   private val mediaSessionCallback = MediaSessionCallback(this)
 
   // Media browser functionality
-  internal val pendingGetItemRequests = ConcurrentHashMap<String, SettableFuture<MediaItem?>>()
-  internal val pendingGetChildrenRequests =
-    ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
-  internal val pendingSearchRequests = ConcurrentHashMap<String, SettableFuture<List<MediaItem>>>()
+  // TODO: Investigate if this cache is actually needed - when do MediaItems arrive without tags?
+  //       Used in onSetMediaItems to look up full MediaItems by ID, but unclear if necessary for normal browsing
   internal var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
   private lateinit var mediaFactory: MediaFactory
-  
-  // Settable function to get transformed request config for media URLs
-  var getMediaRequestConfig: ((originalUrl: String) -> RequestConfig?)? = null
+  var browser: AudioBrowser? = null
 
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
@@ -363,8 +356,8 @@ class Player(internal val context: Context) {
         .setBackBuffer(backBuffer, false)
         .build()
     }
-    // Create MediaFactory with getMediaRequestConfig function
-    mediaFactory = MediaFactory(context, cache) { url -> getMediaRequestConfig?.invoke(url) }
+    // Create MediaFactory with reference to browser for media URL transformation
+    mediaFactory = MediaFactory(context, cache) { url -> browser?.getMediaRequestConfig(url) }
     
     exoPlayer =
       ExoPlayer.Builder(context)
@@ -817,65 +810,4 @@ class Player(internal val context: Context) {
   fun getMediaSessionCallback(): MediaLibraryService.MediaLibrarySession.Callback {
     return mediaSessionCallback
   }
-
-  /**
-   * Resolves a pending GetItem request with the provided MediaItem.
-   *
-   * @param requestId The request ID to resolve
-   * @param mediaItem The MediaItem to resolve with
-   */
-  fun resolveGetItemRequest(requestId: String, mediaItem: MediaItem) {
-    // Store MediaItem in lookup map for later use in onAddMediaItems/onSetMediaItems
-    mediaItem.mediaId.let { mediaId ->
-      mediaItemById[mediaId] = mediaItem
-      Timber.Forest.d(
-        "Stored single MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}"
-      )
-    }
-    pendingGetItemRequests.remove(requestId)?.set(mediaItem)
-  }
-
-  /**
-   * Resolves a pending GetChildren request with the provided list of MediaItems.
-   *
-   * @param requestId The request ID to resolve
-   * @param items The list of MediaItems to resolve with
-   * @param totalChildrenCount The total number of children (unused but maintained for
-   *   compatibility)
-   */
-  fun resolveGetChildrenRequest(
-    requestId: String,
-    items: List<MediaItem>,
-    totalChildrenCount: Int,
-  ) {
-    Timber.Forest.d("resolveGetChildrenRequest: requestId=$requestId, itemCount=${items.size}")
-    // Store MediaItems in lookup map for later use in onAddMediaItems/onSetMediaItems
-    items.forEach { mediaItem ->
-      mediaItem.mediaId?.let { mediaId ->
-        mediaItemById[mediaId] = mediaItem
-        Timber.Forest.d(
-          "Stored MediaItem: mediaId=$mediaId, title=${mediaItem.mediaMetadata.title}"
-        )
-      }
-    }
-    val future = pendingGetChildrenRequests.remove(requestId)
-    if (future != null) {
-      future.set(items)
-      Timber.Forest.d("Resolved future for requestId=$requestId with ${items.size} items")
-    } else {
-      Timber.Forest.w("No pending future found for requestId=$requestId")
-    }
-  }
-
-  /**
-   * Resolves a pending Search request with the provided list of MediaItems.
-   *
-   * @param requestId The request ID to resolve
-   * @param items The list of MediaItems to resolve with
-   * @param totalMatchesCount The total number of matches (unused but maintained for compatibility)
-   */
-  fun resolveSearchRequest(requestId: String, items: List<MediaItem>, totalMatchesCount: Int) {
-    pendingSearchRequests.remove(requestId)?.set(items)
-  }
-  
 }

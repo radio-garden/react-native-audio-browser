@@ -15,14 +15,15 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var path: String? { get set }
   var tabs: [Track]? { get set }
   var onPathChanged: (_ path: String) -> Void { get set }
-  var onContentChanged: (_ content: BrowserList?) -> Void { get set }
+  var onContentChanged: (_ content: ResolvedTrack?) -> Void { get set }
   var onTabsChanged: (_ tabs: [Track]) -> Void { get set }
   var configuration: BrowserConfiguration { get set }
 
   // Methods
-  func navigate(path: String) throws -> Promise<BrowserList>
+  func navigatePath(path: String) throws -> Void
+  func navigateTrack(track: Track) throws -> Void
   func onSearch(query: String) throws -> Promise<[Track]>
-  func getContent() throws -> BrowserList?
+  func getContent() throws -> ResolvedTrack?
 }
 
 public extension HybridAudioBrowserSpec_protocol {

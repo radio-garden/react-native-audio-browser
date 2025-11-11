@@ -32,6 +32,7 @@ import type {
 } from '../features/remoteControls'
 import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
 import type { Track } from '../types'
+import type { AudioBrowser } from './audio-browser.nitro'
 
 export interface AudioPlayer
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
@@ -39,6 +40,7 @@ export interface AudioPlayer
   setupPlayer(options: PartialSetupPlayerOptions): Promise<void>
   updateOptions(options: NativeUpdateOptions): void
   getOptions(): UpdateOptions
+  registerBrowser(browser: AudioBrowser): void
 
   // // MARK: events
   onMetadataChapterReceived: (event: AudioMetadataReceivedEvent) => void

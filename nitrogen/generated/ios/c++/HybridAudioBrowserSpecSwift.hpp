@@ -14,10 +14,10 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
-// Forward declaration of `BrowserList` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserList; }
-// Forward declaration of `BrowserItemStyle` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class BrowserItemStyle; }
+// Forward declaration of `TrackStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
+// Forward declaration of `ResolvedTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
@@ -37,9 +37,9 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include <optional>
 #include "Track.hpp"
 #include <vector>
+#include "TrackStyle.hpp"
 #include <functional>
-#include "BrowserList.hpp"
-#include "BrowserItemStyle.hpp"
+#include "ResolvedTrack.hpp"
 #include "BrowserConfiguration.hpp"
 #include "RequestConfig.hpp"
 #include "HttpMethod.hpp"
@@ -112,11 +112,11 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPathChanged(const std::function<void(const std::string& /* path */)>& onPathChanged) noexcept override {
       _swiftPart.setOnPathChanged(onPathChanged);
     }
-    inline std::function<void(const std::optional<BrowserList>& /* content */)> getOnContentChanged() noexcept override {
+    inline std::function<void(const std::optional<ResolvedTrack>& /* content */)> getOnContentChanged() noexcept override {
       auto __result = _swiftPart.getOnContentChanged();
       return __result;
     }
-    inline void setOnContentChanged(const std::function<void(const std::optional<BrowserList>& /* content */)>& onContentChanged) noexcept override {
+    inline void setOnContentChanged(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& onContentChanged) noexcept override {
       _swiftPart.setOnContentChanged(onContentChanged);
     }
     inline std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() noexcept override {
@@ -135,13 +135,17 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     // Methods
-    inline std::shared_ptr<Promise<BrowserList>> navigate(const std::string& path) override {
-      auto __result = _swiftPart.navigate(path);
+    inline void navigatePath(const std::string& path) override {
+      auto __result = _swiftPart.navigatePath(path);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
-      auto __value = std::move(__result.value());
-      return __value;
+    }
+    inline void navigateTrack(const Track& track) override {
+      auto __result = _swiftPart.navigateTrack(std::forward<decltype(track)>(track));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override {
       auto __result = _swiftPart.onSearch(query);
@@ -151,7 +155,7 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline std::optional<BrowserList> getContent() override {
+    inline std::optional<ResolvedTrack> getContent() override {
       auto __result = _swiftPart.getContent();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());

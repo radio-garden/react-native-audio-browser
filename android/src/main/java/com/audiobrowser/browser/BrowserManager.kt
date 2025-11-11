@@ -2,15 +2,14 @@ package com.audiobrowser.browser
 
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
-import com.margelo.nitro.audiobrowser.BrowserList
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
-import com.audiobrowser.BrowseSource
-import com.audiobrowser.MediaSource
 import com.audiobrowser.SearchSource
 import com.audiobrowser.TabsSource
+import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,86 +32,98 @@ class BrowserManager {
         ignoreUnknownKeys = true
         isLenient = true
     }
-    private var path: String = "/"
-    private var content: BrowserList? = null
-    private var tabs: Array<Track>? = null
+
     private var onPathChanged: ((String) -> Unit)? = null
-    private var onContentChanged: ((BrowserList?) -> Unit)? = null
+    private var onContentChanged: ((ResolvedTrack?) -> Unit)? = null
     private var onTabsChanged: ((Array<Track>) -> Unit)? = null
+
+    private var path: String = "/"
+        set(value) {
+            val previous = field
+            field = value
+            if (previous != value) {
+                onPathChanged?.invoke(value)
+            }
+        }
+
+    private var content: ResolvedTrack? = null
+        set(value) {
+            val previous = field
+            field = value
+            if (previous != value) {
+                onContentChanged?.invoke(value)
+            }
+        }
+
+    private var tabs: Array<Track>? = null
+        set(value) {
+            val previous = field
+            field = value
+            // Arrays need contentEquals for comparison
+            if (value != null && !value.contentEquals(previous)) {
+                onTabsChanged?.invoke(value)
+            } else if (value == null && previous != null) {
+                onTabsChanged?.invoke(emptyArray())
+            }
+        }
+
+    /**
+     * Browser configuration containing routes, search, tabs, and request settings.
+     * This can be updated dynamically when the configuration changes.
+     */
+    var config: BrowserConfig = BrowserConfig()
+
+
+    suspend fun resolve(path: String): ResolvedTrack {
+        // First try to match against configured routes
+        config.routes?.takeUnless { it.isEmpty() }?.let { routes ->
+            router.findBestMatch(path, routes)?.let { (routePattern, match) ->
+                val browserSource = routes[routePattern]!!
+                val routeParams = match.params
+
+                Timber.d("Matched route: $routePattern with params: $routeParams")
+                return resolveBrowserSource(browserSource, path, routeParams)
+            }
+        }
+
+        // No route matched, fall back to browse configuration
+        config.browse?.let { browseSource ->
+            Timber.d("No route matched, using browse fallback")
+            return resolveBrowseSource(browseSource, path, emptyMap())
+        }
+
+        // No routes and no browse fallback configured
+        Timber.e("No route matched and no browse fallback configured for path: $path")
+        throw ContentNotFoundException(path)
+    }
 
     /**
      * Navigate to a path and return browser content.
      *
      * @param path The path to navigate to (e.g., "/artists/123")
-     * @param config Browser configuration containing routes, browse fallback, etc.
      * @return BrowserList containing the navigation result
      */
-    suspend fun navigate(path: String, config: BrowserConfig): BrowserList {
+    suspend fun navigate(path: String): ResolvedTrack {
         Timber.d("Navigating to path: $path")
 
-        try {
-            // Update current path
-            val previousPath = this.path
-            this.path = path
-            if (previousPath != path) {
-                onPathChanged?.invoke(path)
-            }
-
-            val result: BrowserList = run {
-                // First try to match against configured routes
-                config.routes?.takeUnless { it.isEmpty() }?.let { routes ->
-                    router.findBestMatch(path, routes)?.let { (routePattern, match) ->
-                        val browserSource = routes[routePattern]!!
-                        val routeParams = match.params
-
-                        Timber.d("Matched route: $routePattern with params: $routeParams")
-                        return@run resolveBrowserSource(browserSource, path, routeParams, config)
-                    }
-                }
-
-                // No route matched, fall back to browse configuration
-                config.browse?.let { browseSource ->
-                    Timber.d("No route matched, using browse fallback")
-                    return@run resolveBrowseSource(browseSource, path, emptyMap(), config)
-                }
-
-                // No routes and no browse fallback configured
-                Timber.w("No route matched and no browse fallback configured for path: $path")
-                createEmptyBrowserList(path, "No content configured for this path")
-            }
-
-            val previousContent = this.content
-            this.content = result
-            if (previousContent != result) {
-                onContentChanged?.invoke(result)
-            }
-            return result
-
-        } catch (e: Exception) {
-            Timber.e(e, "Error during navigation to path: $path")
-            val errorResult = createErrorBrowserList(path, "Navigation failed: ${e.message}")
-            val previousContent = this.content
-            this.content = errorResult
-            if (previousContent != errorResult) {
-                onContentChanged?.invoke(errorResult)
-            }
-            return errorResult
-        }
+        this.path = path
+        val content = resolve(path)
+        this.content = content
+        return content
     }
 
     /**
      * Search for tracks using the configured search source.
      *
      * @param query The search query string
-     * @param config Browser configuration containing search source
      * @return Array of Track results
      */
-    suspend fun search(query: String, config: BrowserConfig): Array<Track> {
+    suspend fun search(query: String): Array<Track> {
         Timber.d("Searching for: $query")
 
         try {
             return config.search?.let { searchSource ->
-                resolveSearchSource(searchSource, query, config)
+                resolveSearchSource(searchSource, query)
             } ?: run {
                 Timber.w("Search requested but no search source configured")
                 emptyArray()
@@ -136,14 +147,14 @@ class BrowserManager {
     /**
      * Get the current loaded content.
      *
-     * @return Current BrowserList content or null if none loaded
+     * @return Current ResolvedTrack content or null if none loaded
      */
-    fun getContent(): BrowserList? {
+    fun getContent(): ResolvedTrack? {
         return content
     }
 
     /**
-     * Get the current tabs.
+     * Get the current cached tabs.
      *
      * @return Current tabs array or null if none loaded
      */
@@ -161,7 +172,7 @@ class BrowserManager {
     /**
      * Set callback for content changes.
      */
-    fun setOnContentChanged(callback: (BrowserList?) -> Unit) {
+    fun setOnContentChanged(callback: (ResolvedTrack?) -> Unit) {
         onContentChanged = callback
     }
 
@@ -173,34 +184,23 @@ class BrowserManager {
     }
 
     /**
-     * Get navigation tabs from the configured tabs source.
+     * Query navigation tabs from the configured tabs source.
+     * This is an async operation that resolves the tabs configuration.
      *
-     * @param config Browser configuration containing tabs source
-     * @return Array of BrowserLink objects representing tabs
+     * @return Array of Track objects representing tabs
      */
-    suspend fun getTabs(config: BrowserConfig): Array<Track> {
+    suspend fun queryTabs(): Array<Track> {
+        // Return cached tabs if available
+        this.tabs?.let { return it }
+
         Timber.d("Getting navigation tabs")
 
-        try {
-            val result = config.tabs?.let { tabsSource ->
-                resolveTabsSource(tabsSource, config)
-            } ?: run {
-                Timber.d("No tabs configured")
-                emptyArray()
-            }
-
-            // Check if tabs have changed and trigger callback if necessary
-            val previousTabs = this.tabs
-            if (!result.contentEquals(previousTabs)) {
-                this.tabs = result
-                onTabsChanged?.invoke(result)
-            }
-
-            return result
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting tabs")
-            return emptyArray()
-        }
+        return (config.tabs?.let { tabsSource ->
+            resolveTabsSource(tabsSource)
+        } ?: run {
+            Timber.d("No tabs configured")
+            emptyArray()
+        }).also { this.tabs = it }
     }
 
     /**
@@ -210,9 +210,8 @@ class BrowserManager {
     private suspend fun resolveBrowserSource(
         source: BrowserSource,
         path: String,
-        routeParams: Map<String, String>,
-        config: BrowserConfig
-    ): BrowserList {
+        routeParams: Map<String, String>
+    ): ResolvedTrack {
         return source.match(
             // Callback function
             first = { callback ->
@@ -230,7 +229,7 @@ class BrowserManager {
             // API configuration
             third = { apiConfig ->
                 Timber.d("Resolving browser source via API config")
-                executeApiRequest(apiConfig, routeParams, config)
+                executeApiRequest(apiConfig, routeParams)
             }
         )
     }
@@ -241,9 +240,8 @@ class BrowserManager {
     private suspend fun resolveBrowseSource(
         source: BrowseSource,
         path: String,
-        routeParams: Map<String, String>,
-        config: BrowserConfig
-    ): BrowserList {
+        routeParams: Map<String, String>
+    ): ResolvedTrack {
         return source.match(
             // Callback function
             first = { callback ->
@@ -261,7 +259,7 @@ class BrowserManager {
             // API configuration
             third = { apiConfig ->
                 Timber.d("Resolving browse source via API config")
-                executeApiRequest(apiConfig, routeParams, config)
+                executeApiRequest(apiConfig, routeParams)
             }
         )
     }
@@ -271,8 +269,7 @@ class BrowserManager {
      */
     private suspend fun resolveSearchSource(
         source: SearchSource,
-        query: String,
-        config: BrowserConfig
+        query: String
     ): Array<Track> {
         return source.match(
             // Callback function
@@ -285,7 +282,7 @@ class BrowserManager {
             // API configuration
             second = { apiConfig ->
                 Timber.d("Resolving search source via API config")
-                executeSearchApiRequest(apiConfig, query, config)
+                executeSearchApiRequest(apiConfig, query)
             }
         )
     }
@@ -295,8 +292,7 @@ class BrowserManager {
      * Handles the three possible types: static array, callback, or API config.
      */
     private suspend fun resolveTabsSource(
-        source: TabsSource,
-        config: BrowserConfig
+        source: TabsSource
     ): Array<Track> {
         return source.match(
             // Callback function
@@ -312,7 +308,7 @@ class BrowserManager {
             // API configuration
             third = { apiConfig ->
                 Timber.d("Resolving tabs source via API config")
-                executeTabsApiRequest(apiConfig, config)
+                executeTabsApiRequest(apiConfig)
             }
         )
     }
@@ -323,48 +319,49 @@ class BrowserManager {
      */
     private suspend fun executeApiRequest(
         apiConfig: TransformableRequestConfig,
-        routeParams: Map<String, String>,
-        browserConfig: BrowserConfig
-    ): BrowserList {
+        routeParams: Map<String, String>
+    ): ResolvedTrack {
         return withContext(Dispatchers.IO) {
-            try {
-                // 1. Start with base config, apply API config on top
-                val baseConfig = browserConfig.request ?: RequestConfig(
-                    method = null,
-                    path = null,
-                    baseUrl = null,
-                    headers = null,
-                    query = null,
-                    body = null,
-                    contentType = null,
-                    userAgent = null
-                )
-                val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
+            // 1. Start with base config, apply API config on top
+            val baseConfig = config.request ?: RequestConfig(
+                method = null,
+                path = null,
+                baseUrl = null,
+                headers = null,
+                query = null,
+                body = null,
+                contentType = null,
+                userAgent = null
+            )
+            val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
 
-                // 2. Build and execute HTTP request
-                val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
-                val response = httpClient.request(httpRequest)
+            // 2. Build and execute HTTP request
+            val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
+            val response = httpClient.request(httpRequest)
 
-                response.fold(
-                    onSuccess = { httpResponse ->
-                        if (httpResponse.isSuccessful) {
-                            // 3. Parse response as BrowserList
-                            val jsonBrowserList = json.decodeFromString<JsonBrowserList>(httpResponse.body)
-                            jsonBrowserList.toNitro()
-                        } else {
-                            Timber.w("HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
-                            createErrorBrowserList(getPath(), "Server returned ${httpResponse.code}")
-                        }
-                    },
-                    onFailure = { exception ->
-                        Timber.e(exception, "HTTP request failed")
-                        createErrorBrowserList(getPath(), "Network request failed: ${exception.message}")
+            response.fold(
+                onSuccess = { httpResponse ->
+                    if (httpResponse.isSuccessful) {
+                        // 3. Parse response as ResolvedTrack
+                        val jsonResolvedTrack =
+                            json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
+                        jsonResolvedTrack.toNitro()
+                    } else {
+                        Timber.w("HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
+                        throw HttpStatusException(
+                            httpResponse.code,
+                            "Server returned ${httpResponse.code}"
+                        )
                     }
-                )
-            } catch (e: Exception) {
-                Timber.e(e, "Error executing API request")
-                createErrorBrowserList(getPath(), "Request failed: ${e.message}")
-            }
+                },
+                onFailure = { exception ->
+                    Timber.e(exception, "HTTP request failed")
+                    throw NetworkException(
+                        "Network request failed: ${exception.message}",
+                        exception
+                    )
+                }
+            )
         }
     }
 
@@ -374,13 +371,12 @@ class BrowserManager {
      */
     private suspend fun executeSearchApiRequest(
         apiConfig: TransformableRequestConfig,
-        query: String,
-        browserConfig: BrowserConfig
+        query: String
     ): Array<Track> {
         return withContext(Dispatchers.IO) {
             try {
                 // 1. Start with base config
-                val baseConfig = browserConfig.request ?: RequestConfig(
+                val baseConfig = config.request ?: RequestConfig(
                     method = null,
                     path = null,
                     baseUrl = null,
@@ -439,13 +435,12 @@ class BrowserManager {
      * Expects the API to return a BrowserList with BrowserLink children.
      */
     private suspend fun executeTabsApiRequest(
-        apiConfig: TransformableRequestConfig,
-        browserConfig: BrowserConfig
+        apiConfig: TransformableRequestConfig
     ): Array<Track> {
         return withContext(Dispatchers.IO) {
             try {
                 // 1. Start with base config
-                val baseConfig = browserConfig.request ?: RequestConfig(
+                val baseConfig = config.request ?: RequestConfig(
                     method = null,
                     path = null,
                     baseUrl = null,
@@ -466,12 +461,13 @@ class BrowserManager {
                 response.fold(
                     onSuccess = { httpResponse ->
                         if (httpResponse.isSuccessful) {
-                            // 4. Parse response as BrowserList
-                            val jsonBrowserList = json.decodeFromString<JsonBrowserList>(httpResponse.body)
-                            val browserList = jsonBrowserList.toNitro()
+                            // 4. Parse response as ResolvedTrack
+                            val jsonResolvedTrack = json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
+                            val resolvedTrack = jsonResolvedTrack.toNitro()
 
-                            // 5. Extract BrowserLink items from the list
-                            browserList.children
+                            // 5. Extract Track items from the resolved track
+                            resolvedTrack.children
+                                ?: throw IllegalStateException("Expected browsed ResolvedTrack to have a children array")
                         } else {
                             Timber.w("Tabs HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
                             emptyArray()
@@ -489,56 +485,32 @@ class BrowserManager {
         }
     }
 
-    /**
-     * Create an empty BrowserList for cases where no content is available.
-     */
-    private fun createEmptyBrowserList(path: String, message: String): BrowserList {
-        return BrowserList(
-            children = arrayOf(),
-            style = null,
-            playable = null,
-            url = path,
-            title = message,
-            subtitle = null,
-            icon = null,
-            artwork = null,
-            artist = null,
-            album = null,
-            description = null,
-            genre = null,
-            duration = null
-        )
-    }
-
-    /**
-     * Create an error BrowserList for exception cases.
-     */
-    private fun createErrorBrowserList(path: String, errorMessage: String): BrowserList {
-        return BrowserList(
-            children = arrayOf(),
-            style = null,
-            playable = null,
-            url = path,
-            title = "Error",
-            subtitle = errorMessage,
-            icon = null,
-            artwork = null,
-            artist = null,
-            album = null,
-            description = null,
-            genre = null,
-            duration = null
-        )
-    }
 }
+
+/**
+ * Exception thrown when no content is configured for a requested path.
+ */
+class ContentNotFoundException(val path: String) : Exception("No content configured for path: $path")
+
+/**
+ * Exception thrown when an HTTP request fails with a non-2xx status code.
+ */
+class HttpStatusException(val statusCode: Int, message: String) : Exception(message)
+
+/**
+ * Exception thrown when a network request fails (connection error, timeout, etc).
+ */
+class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /**
  * Configuration object that holds all browser settings.
  * This will be passed from AudioBrowser.kt to contain all the configured sources.
  */
+typealias BrowseSource = com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
+
 data class BrowserConfig(
     val request: RequestConfig? = null,
-    val media: MediaSource? = null,
+    val media: MediaRequestConfig? = null,
     val search: SearchSource? = null,
     val routes: Map<String, BrowserSource>? = null,
     val tabs: TabsSource? = null,

@@ -16,8 +16,10 @@
 #include "JHttpMethod.hpp"
 #include "JRequestConfig.hpp"
 #include "JTrack.hpp"
+#include "JTrackStyle.hpp"
 #include "RequestConfig.hpp"
 #include "Track.hpp"
+#include "TrackStyle.hpp"
 #include <NitroModules/JPromise.hpp>
 #include <NitroModules/Promise.hpp>
 #include <functional>
