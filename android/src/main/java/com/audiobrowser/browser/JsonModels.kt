@@ -3,6 +3,7 @@ package com.audiobrowser.browser
 import kotlinx.serialization.Serializable
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackStyle
 
 /**
  * JSON serializable models for parsing API responses.
@@ -23,7 +24,8 @@ data class JsonResolvedTrack(
     val duration: Double? = null,
     val children: List<JsonTrack>? = null,
     val src: String? = null,
-    val playable: Boolean? = null
+    val playable: Boolean? = null,
+    val style: String? = null
 )
 
 @Serializable
@@ -39,14 +41,41 @@ data class JsonTrack(
     val genre: String? = null,
     val duration: Double? = null,
     val src: String? = null,
-    val playable: Boolean? = null
+    val playable: Boolean? = null,
+    val style: String? = null
 )
 
 /**
  * Convert JSON models to Nitro types
  */
+private fun String?.toTrackStyle(): TrackStyle? {
+    return when (this?.lowercase()) {
+        "list" -> TrackStyle.LIST
+        "grid" -> TrackStyle.GRID
+        else -> null
+    }
+}
+
 fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     return ResolvedTrack(
+        url = url,
+        children = children?.map { it.toNitro() }?.toTypedArray(),
+        title = title,
+        subtitle = subtitle,
+        artwork = artwork,
+        artist = artist,
+        album = album,
+        description = description,
+        genre = genre,
+        duration = duration,
+        playable = playable,
+        src = src,
+        style = style.toTrackStyle()
+    )
+}
+
+fun JsonTrack.toNitro(): Track {
+    return Track(
         url = url,
         title = title,
         subtitle = subtitle,
@@ -58,22 +87,6 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
         duration = duration,
         playable = playable,
         src = src,
-        children = children?.map { it.toNitro() }?.toTypedArray()
+        style = style.toTrackStyle()
     )
-}
-
-fun JsonTrack.toNitro(): Track {
-        return Track(
-            src = src,
-            url = url,
-            title = title,
-            subtitle = subtitle,
-            artwork = artwork,
-            artist = artist,
-            album = album,
-            description = description,
-            genre = genre,
-            duration = duration,
-            playable = playable
-        )
 }
