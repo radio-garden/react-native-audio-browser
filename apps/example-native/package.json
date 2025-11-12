@@ -17,7 +17,7 @@
     "android:test": "cd android && ./gradlew :react-native-audio-browser:testDebugUnitTest",
     "android:uninstall": "adb uninstall com.audiobrowserexample",
     "android": "react-native run-android",
-    "api-server": "node example-api-server.mts",
+    "api-server": "yarn workspace example-nextjs dev",
     "format": "oxfmt --write",
     "ios:build": "react-native build-ios --mode Debug",
     "ios:ide": "open ios/*.xcworkspace",
@@ -35,10 +35,9 @@
     "@react-native-community/slider": "^5.1.1",
     "@react-native-vector-icons/fontawesome6": "^12.0.1",
     "@react-native/new-app-screen": "0.82.0",
-    "common-app": "*",
     "react": "19.1.1",
     "react-native": "0.83.0",
-    "react-native-audio-browser": "link:react-native-audio-browser",
+    "react-native-audio-browser": "workspace:*",
     "react-native-mmkv": "^4.1.0",
     "react-native-nitro-modules": "0.31.10",
     "react-native-safe-area-context": "^5.6.2"
@@ -62,5 +61,8 @@
   },
   "engines": {
     "node": ">=24"
+  },
+  "installConfig": {
+    "hoistingLimits": "workspaces"
   }
 }
