@@ -96,14 +96,6 @@
     "react-native": "*",
     "react-native-nitro-modules": "*"
   },
-  "prettier": {
-    "quoteProps": "consistent",
-    "singleQuote": true,
-    "tabWidth": 2,
-    "trailingComma": "none",
-    "useTabs": false,
-    "semi": false
-  },
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
