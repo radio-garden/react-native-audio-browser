@@ -48,6 +48,13 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
   private var audioPlayer: AudioPlayer? = null
 
+  /** Internal getter for the player instance with proper error handling */
+  private val player: com.audiobrowser.player.Player
+    get() = audioPlayer?.player
+      ?: throw IllegalStateException(
+        "AudioPlayer not registered. Call audioPlayer.registerBrowser(audioBrowser) first."
+      )
+
   internal fun buildConfig(): BrowserConfig {
     return BrowserConfig(
       request = _configuration.request,
@@ -149,7 +156,30 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     mainScope.launch {
       val url = track.url
       when {
-        // Otherwise navigate to it to show browsing UI
+        // Check if this is a contextual URL (playable-only track with queue context)
+        url != null && com.audiobrowser.util.ContextualUrlHelper.isContextual(url) -> {
+          Timber.d("Navigating to contextual track URL: $url")
+
+          // Expand the queue from the contextual URL
+          val expanded = browserManager.expandQueueFromContextualUrl(url)
+
+          if (expanded != null) {
+            val (tracks, startIndex) = expanded
+            Timber.d("Loading expanded queue: ${tracks.size} tracks, starting at index $startIndex")
+
+            // Replace queue and seek to selected track
+            // Use internal player methods directly to avoid blocking on main thread
+            player.clear()
+            player.add(tracks)
+            player.skipTo(startIndex)
+            player.play()
+          } else {
+            // Fallback: just load the single track
+            Timber.w("Queue expansion failed, loading single track")
+            player.load(track)
+          }
+        }
+        // Navigate to browsable track to show browsing UI
         url != null -> {
           Timber.d("Navigating to browsable track: $url")
           browserManager.navigate(url)
@@ -157,10 +187,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
         // If track is playable (has src or playable flag), load it into player
         track.src != null || track.playable == true -> {
           Timber.d("Loading playable track into player: ${track.title}")
-          audioPlayer?.load(track)
-            ?: throw IllegalStateException(
-              "AudioPlayer not registered. Call audioPlayer.registerBrowser(audioBrowser) first."
-            )
+          player.load(track)
         }
         // No url, src, or playable flag - invalid track
         else -> {

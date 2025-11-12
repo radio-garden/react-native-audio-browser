@@ -165,49 +165,23 @@ class BrowserManager {
         Timber.w("Search request: ${mediaItem.requestMetadata.searchQuery}")
       }
       val mediaId = mediaItems[0].mediaId
-      val trackId = ContextualUrlHelper.extractTrackId(mediaId)
 
-      if (trackId != null) {
-        Timber.d("Attempting queue expansion for mediaId='$mediaId', trackId='$trackId'")
+      if (ContextualUrlHelper.isContextual(mediaId)) {
+        Timber.d("Attempting queue expansion for mediaId='$mediaId'")
 
-        try {
-          // Resolve the parent container to get all siblings
-          val parentPath = ContextualUrlHelper.stripTrackId(mediaId)
-          val parentResolvedTrack = resolve(parentPath)
-          val children = parentResolvedTrack.children
+        val expanded = expandQueueFromContextualUrl(mediaId)
 
-          if (!children.isNullOrEmpty()) {
-            // Filter to only playable tracks (tracks with src)
-            val playableTracks = children.filter { track -> track.src != null }
+        if (expanded != null) {
+          val (tracks, selectedIndex) = expanded
 
-            if (playableTracks.isNotEmpty()) {
-              // Find the index of the selected track in the playable tracks array
-              val selectedIndex = playableTracks.indexOfFirst { track -> track.src == trackId }
+          // Convert to Media3 MediaItems
+          val expandedMediaItems = tracks.map { track -> TrackFactory.toMedia3(track) }
 
-              if (selectedIndex >= 0) {
-                Timber.d(
-                  "Queue expanded successfully: ${playableTracks.size} playable tracks (filtered from ${children.size} total), starting at index $selectedIndex"
-                )
-
-                // Convert to Media3 MediaItems
-                val expandedMediaItems = playableTracks.map { track -> TrackFactory.toMedia3(track) }
-
-                return MediaSession.MediaItemsWithStartPosition(
-                  expandedMediaItems,
-                  selectedIndex,
-                  startPositionMs
-                )
-              } else {
-                Timber.w("Track with src='$trackId' not found in playable children")
-              }
-            } else {
-              Timber.w("Parent has no playable tracks, cannot expand queue")
-            }
-          } else {
-            Timber.w("Parent has no children, cannot expand queue")
-          }
-        } catch (e: Exception) {
-          Timber.e(e, "Failed to expand queue from mediaId='$mediaId'")
+          return MediaSession.MediaItemsWithStartPosition(
+            expandedMediaItems,
+            selectedIndex,
+            startPositionMs
+          )
         }
       }
     }
@@ -330,10 +304,61 @@ class BrowserManager {
   }
 
   /**
+   * Expands a contextual URL into a queue of playable tracks.
+   *
+   * Used when navigating to a track to load it with its full album/playlist context.
+   *
+   * @param contextualUrl The contextual URL (e.g., "/album?__trackId=song.mp3")
+   * @return Pair of (tracks array, selected track index), or null if expansion fails
+   */
+  suspend fun expandQueueFromContextualUrl(contextualUrl: String): Pair<Array<Track>, Int>? {
+    val trackId = ContextualUrlHelper.extractTrackId(contextualUrl) ?: return null
+
+    Timber.d("Expanding queue from contextual URL: $contextualUrl (trackId=$trackId)")
+
+    try {
+      // Resolve the parent container to get all siblings
+      val parentPath = ContextualUrlHelper.stripTrackId(contextualUrl)
+      val parentResolvedTrack = resolve(parentPath)
+      val children = parentResolvedTrack.children
+
+      if (children.isNullOrEmpty()) {
+        Timber.w("Parent has no children, cannot expand queue")
+        return null
+      }
+
+      // Filter to only playable tracks (tracks with src)
+      val playableTracks = children.filter { track -> track.src != null }
+
+      if (playableTracks.isEmpty()) {
+        Timber.w("Parent has no playable tracks, cannot expand queue")
+        return null
+      }
+
+      // Find the index of the selected track in the playable tracks array
+      val selectedIndex = playableTracks.indexOfFirst { track -> track.src == trackId }
+
+      if (selectedIndex < 0) {
+        Timber.w("Track with src='$trackId' not found in playable children")
+        return null
+      }
+
+      Timber.d(
+        "Queue expanded: ${playableTracks.size} playable tracks (from ${children.size} total), starting at index $selectedIndex"
+      )
+
+      return Pair(playableTracks.toTypedArray(), selectedIndex)
+    } catch (e: Exception) {
+      Timber.e(e, "Error expanding queue from contextual URL: $contextualUrl")
+      return null
+    }
+  }
+
+  /**
    * Navigate to a path and return browser content.
    *
    * @param path The path to navigate to (e.g., "/artists/123")
-   * @return BrowserList containing the navigation result
+   * @return ResolvedTrack containing the navigation result
    */
   suspend fun navigate(path: String): ResolvedTrack {
     Timber.d("Navigating to path: $path")

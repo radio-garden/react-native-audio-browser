@@ -344,7 +344,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   private val service: Service
     get() = connectedService ?: throw Exception("Player not initialized")
 
-  private val player
+  internal val player
     get() = service.player
 
   /**
