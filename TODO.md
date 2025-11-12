@@ -34,3 +34,5 @@
     - [ ] Call `BrowserManager.search(query)` which uses `config.search` SearchSource
     - [ ] Cache returned Track[] results for later retrieval
     - [ ] Return search results as `MediaItemsWithStartPosition`
+
+- [ ] Android Auto cold start: When Android Auto launches the app before React Native has loaded, it requests media browsing before the browser is registered, causing empty content.
