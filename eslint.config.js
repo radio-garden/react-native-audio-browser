@@ -30,7 +30,17 @@ export default typescriptEslint.config(
       },
     },
     rules: {
-
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      // Disable unsafe rules for web directory where we use DOM APIs
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
   // react-native
