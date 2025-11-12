@@ -1,3 +1,4 @@
+import Icon from '@react-native-vector-icons/fontawesome6'
 import React from 'react'
 import {
   ActivityIndicator,
@@ -21,7 +22,6 @@ import {
   useTabs
 } from 'react-native-audio-browser'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
-import Icon from '@react-native-vector-icons/fontawesome6'
 
 export function BrowserScreen() {
   const path = usePath()
@@ -65,7 +65,7 @@ export function BrowserScreen() {
         {item.artwork ? (
           <Image source={{ uri: item.artwork }} style={styles.itemArtwork} />
         ) : (
-          <Text style={styles.itemIcon}>{item.url ? '📁' : '🎵'}</Text>
+          <Text style={styles.itemIcon}>{item.src ? '🎵' : '📁'}</Text>
         )}
       </TouchableOpacity>
     )
@@ -161,7 +161,12 @@ export function BrowserScreen() {
               style={styles.miniControlButton}
               onPress={() => skipToNext()}
             >
-              <Icon name="forward-step" size={20} color="white" iconStyle="solid" />
+              <Icon
+                name="forward-step"
+                size={20}
+                color="white"
+                iconStyle="solid"
+              />
             </TouchableOpacity>
           </View>
         </View>
