@@ -63,6 +63,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       routes = _configuration.routes,
       tabs = _configuration.tabs,
       browse = _configuration.browse,
+      play = _configuration.play,
     )
   }
 

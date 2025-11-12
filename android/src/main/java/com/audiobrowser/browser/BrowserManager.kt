@@ -12,6 +12,7 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.PlayConfigurationBehavior
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
@@ -307,9 +308,10 @@ class BrowserManager {
    * Expands a contextual URL into a queue of playable tracks.
    *
    * Used when navigating to a track to load it with its full album/playlist context.
+   * Respects PlayConfigurationBehavior: returns null if set to SINGLE.
    *
    * @param contextualUrl The contextual URL (e.g., "/album?__trackId=song.mp3")
-   * @return Pair of (tracks array, selected track index), or null if expansion fails
+   * @return Pair of (tracks array, selected track index), or null if expansion fails or disabled
    */
   suspend fun expandQueueFromContextualUrl(contextualUrl: String): Pair<Array<Track>, Int>? {
     val trackId = ContextualUrlHelper.extractTrackId(contextualUrl) ?: return null
@@ -343,11 +345,20 @@ class BrowserManager {
         return null
       }
 
-      Timber.d(
-        "Queue expanded: ${playableTracks.size} playable tracks (from ${children.size} total), starting at index $selectedIndex"
-      )
-
-      return Pair(playableTracks.toTypedArray(), selectedIndex)
+      // Check play behavior - if SINGLE, return only the selected track
+      val playBehavior = config.play ?: PlayConfigurationBehavior.SINGLE
+      when (playBehavior) {
+        PlayConfigurationBehavior.SINGLE -> {
+          Timber.d("Play behavior: SINGLE - returning single track at index $selectedIndex")
+          return Pair(arrayOf(playableTracks[selectedIndex]), 0)
+        }
+        PlayConfigurationBehavior.QUEUE -> {
+          Timber.d(
+            "Play behavior: QUEUE - returning ${playableTracks.size} playable tracks (from ${children.size} total), starting at index $selectedIndex"
+          )
+          return Pair(playableTracks.toTypedArray(), selectedIndex)
+        }
+      }
     } catch (e: Exception) {
       Timber.e(e, "Error expanding queue from contextual URL: $contextualUrl")
       return null
@@ -770,4 +781,5 @@ data class BrowserConfig(
   val routes: Map<String, BrowserSource>? = null,
   val tabs: TabsSource? = null,
   val browse: BrowseSource? = null,
+  val play: PlayConfigurationBehavior? = null,
 )
