@@ -1,4 +1,5 @@
-import Clipboard from '@react-native-clipboard/clipboard'
+// FIXME
+// import Clipboard from '@react-native-clipboard/clipboard'
 import React, { useRef, useState } from 'react'
 import {
   ScrollView,
@@ -19,13 +20,13 @@ export function DebugPanel() {
   const stateJson = JSON.stringify(debug.state, null, 2)
 
   const handleCopy = () => {
-    const content =
-      tab === 'state'
-        ? stateJson
-        : debug.logs
-            .map((l) => `[+${l.elapsed ?? 0}ms] ${l.message}`)
-            .join('\n\n')
-    Clipboard.setString(content)
+    // const content =
+    //   tab === 'state'
+    //     ? stateJson
+    //     : debug.logs
+    //         .map((l) => `[+${l.elapsed ?? 0}ms] ${l.message}`)
+    //         .join('\n\n')
+    // Clipboard.setString(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
