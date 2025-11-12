@@ -259,4 +259,21 @@ class MediaSessionCallback(private val player: Player) :
       browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
     }
   }
+
+  override fun onPlaybackResumption(
+    mediaSession: MediaSession,
+    controller: MediaSession.ControllerInfo,
+  ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+    Timber.Forest.d("onPlaybackResumption: ${controller.packageName}")
+
+    // TODO: Implement playback resumption by returning last played items from storage
+    // For now, return an empty result to prevent crashes
+    return Futures.immediateFuture(
+      MediaSession.MediaItemsWithStartPosition(
+        ImmutableList.of(),
+        0,
+        0
+      )
+    )
+  }
 }

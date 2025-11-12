@@ -12,3 +12,10 @@
   - [ ] Add `getNavigationError(): NavigationError | undefined` (cleared on successful navigation)
   - [ ] Define `NavigationError` type with path, message, and error code
   - [ ] Consider: Should navigation methods return `Promise<void>` for error handling?
+
+## Android / MediaSession
+
+- [ ] Implement playback resumption in `MediaSessionCallback.onPlaybackResumption()`:
+  - [ ] add some kind of configuration to BrowserConfiguration to handle playback
+        resumption, i.e. returning the most recently played queue
+  - [ ] Return stored `MediaItemsWithStartPosition` to restore playback state
