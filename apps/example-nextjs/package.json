@@ -1,0 +1,44 @@
+{
+  "name": "example-nextjs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next",
+    "build": "",
+    "build:next": "next build",
+    "build:analyze": "ANALYZE_BUNDLE=1 next build",
+    "build:disable-minification": "DISABLE_MINIFICATION=1 next build",
+    "start": "next start",
+    "e2e": "start-server-and-test http://localhost:3000 \"cypress open --e2e\"",
+    "e2e:headless": "start-server-and-test http://localhost:3000 \"cypress run --e2e\"",
+    "lint": "eslint --fix components pages",
+    "lint:check": "eslint --max-warnings=0 components pages",
+    "format": "prettier --write components pages",
+    "format:check": "prettier --check components pages"
+  },
+  "dependencies": {
+    "common-app": "workspace:*",
+    "expo": "54.0.13",
+    "next": "15.5.4",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-native-audio-browser": "workspace:*",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-web": "0.21.1",
+    "webpack": "5.102.1"
+  },
+  "devDependencies": {
+    "@babel/core": "7.28.4",
+    "@expo/next-adapter": "6.0.0",
+    "@next/bundle-analyzer": "15.5.4",
+    "cypress": "15.4.0",
+    "eslint": "9.37.0",
+    "next-compose-plugins": "2.2.1",
+    "prettier": "3.6.2",
+    "start-server-and-test": "2.1.2",
+    "typescript": "5.8.3"
+  },
+  "installConfig": {
+    "selfReferences": false
+  }
+}
