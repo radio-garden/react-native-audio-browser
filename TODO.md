@@ -13,6 +13,10 @@
   - [ ] Define `NavigationError` type with path, message, and error code
   - [ ] Consider: Should navigation methods return `Promise<void>` for error handling?
 
+## Android / Caching
+
+- [ ] Replace basic mutableMap caching in `BrowserManager` with proper LRU cache
+
 ## Android / MediaSession
 
 - [ ] Implement playback resumption in `MediaSessionCallback.onPlaybackResumption()`:
