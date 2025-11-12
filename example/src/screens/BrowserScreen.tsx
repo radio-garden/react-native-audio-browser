@@ -21,6 +21,7 @@ import {
   useTabs
 } from 'react-native-audio-browser'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
+import Icon from '@react-native-vector-icons/fontawesome6'
 
 export function BrowserScreen() {
   const path = usePath()
@@ -138,21 +139,29 @@ export function BrowserScreen() {
               style={styles.miniControlButton}
               onPress={() => skipToPrevious()}
             >
-              <Text style={styles.miniControlText}>⏮</Text>
+              <Icon
+                name="backward-step"
+                size={20}
+                color="white"
+                iconStyle="solid"
+              />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.miniControlButton}
+              style={[styles.miniControlButton, styles.playPauseButton]}
               onPress={togglePlayback}
             >
-              <Text style={styles.miniControlText}>
-                {playingState.playing ? '⏸' : '▶️'}
-              </Text>
+              <Icon
+                name={playingState.playing ? 'pause' : 'play'}
+                size={20}
+                color="white"
+                iconStyle="solid"
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.miniControlButton}
               onPress={() => skipToNext()}
             >
-              <Text style={styles.miniControlText}>⏭</Text>
+              <Icon name="forward-step" size={20} color="white" iconStyle="solid" />
             </TouchableOpacity>
           </View>
         </View>
@@ -388,6 +397,10 @@ const styles = StyleSheet.create({
   miniControlButton: {
     padding: 8,
     marginLeft: 4
+  },
+  playPauseButton: {
+    width: 36,
+    alignItems: 'center'
   },
   miniControlText: {
     fontSize: 20,
