@@ -166,7 +166,7 @@ class BrowserManager {
 
         try {
           // Resolve the parent container to get all siblings
-          val parentPath = ContextualUrlHelper.normalize(mediaId)
+          val parentPath = ContextualUrlHelper.stripTrackId(mediaId)
           val parentResolvedTrack = resolve(parentPath)
           val children = parentResolvedTrack.children
 
@@ -237,11 +237,11 @@ class BrowserManager {
   suspend fun resolve(path: String): ResolvedTrack {
     Timber.d("=== RESOLVE: path='$path' ===")
 
-    // Normalize contextual URLs (e.g., "/library/radio?__trackId=song.mp3" → "/library/radio")
+    // Strip __trackId from contextual URLs (e.g., "/library/radio?__trackId=song.mp3" → "/library/radio")
     // This allows resolving the parent container for tracks referenced by contextual URL
-    val normalizedPath = ContextualUrlHelper.normalize(path)
+    val normalizedPath = ContextualUrlHelper.stripTrackId(path)
     if (normalizedPath != path) {
-      Timber.d("Normalized contextual URL to parent path: '$normalizedPath'")
+      Timber.d("Stripped __trackId from contextual URL: '$normalizedPath'")
     }
 
     // Check cache with normalized path

@@ -30,21 +30,22 @@ object ContextualUrlHelper {
   }
 
   /**
-   * Normalizes a contextual URL by extracting the parent path. If the path is not contextual,
-   * returns it unchanged.
+   * Strips the __trackId parameter from a contextual URL to get the parent path.
+   * If the URL is not contextual, returns it unchanged.
    *
-   * @param path The URL path to normalize
-   * @return The parent path without the contextual track parameter
+   * @param url The URL to process
+   * @return The URL without the __trackId parameter
    *
    * Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
+   * Example: "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
    */
-  fun normalize(path: String): String {
-    if (!isContextual(path)) {
-      return path
+  fun stripTrackId(url: String): String {
+    if (!isContextual(url)) {
+      return url
     }
 
-    val uri = Uri.parse(path)
-    return uri.path ?: path
+    val uri = Uri.parse(url)
+    return uri.path ?: url
   }
 
   /**
