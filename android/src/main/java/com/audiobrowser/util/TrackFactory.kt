@@ -21,11 +21,8 @@ object TrackFactory {
   }
 
   fun toMedia3(track: Track): MediaItem {
-    // Tracks are browsable when they don't have an src:
-    val browsable = track.src == null
-
-    // Tracks are playable when they have an src or when they are specifically marked as playable:
-    val playable = !browsable || track.playable == null || track.playable
+    val browsable = track.url != null
+    val playable = !browsable || track.playable == true || track.src != null
 
     val mediaMetadata =
       MediaMetadata.Builder()
