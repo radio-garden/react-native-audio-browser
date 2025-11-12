@@ -178,7 +178,7 @@ export function BrowserScreen() {
           {tabs.map((tab, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.tab, tab.url === path && styles.activeTab]}
+              style={styles.tab}
               onPress={() => {
                 void navigate(tab)
               }}
@@ -335,10 +335,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 15
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#007AFF'
   },
   tabText: {
     color: '#888888',
