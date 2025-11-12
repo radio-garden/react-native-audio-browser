@@ -6,6 +6,7 @@ import { BrowserScreen } from './src/screens/BrowserScreen';
 void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true));
 
 AudioBrowser.configureBrowser({
+  play: 'queue',
   tabs: [
     {
       title: 'Music Library',
