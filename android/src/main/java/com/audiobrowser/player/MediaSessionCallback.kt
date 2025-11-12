@@ -226,8 +226,17 @@ class MediaSessionCallback(private val player: Player) :
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<Void>> {
     Timber.Forest.d("onSearch: ${browser.packageName}, query = $query")
-
-    return super.onSearch(session, browser, query, params)
+    return scope.future {
+      session.notifySearchResultChanged(
+        browser,
+        query,
+        // TODO: this should be the count of the returned results from BrowserManager.search:
+        0,
+        params
+      )
+      // TODO: return LibraryResult.ofError when search is not configured
+      LibraryResult.ofVoid()
+    }
   }
 
   override fun onSetMediaItems(

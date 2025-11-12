@@ -158,6 +158,12 @@ class BrowserManager {
   ): MediaSession.MediaItemsWithStartPosition {
     // Android Auto queue expansion: single track → full album/playlist
     if (mediaItems.size == 1) {
+      val mediaItem = mediaItems[0]
+      // TODO: handle -> mediaItems[0].requestMetadata.searchQuery
+      if (mediaItem.requestMetadata.searchQuery != null) {
+        // This is a search request
+        Timber.w("Search request: ${mediaItem.requestMetadata.searchQuery}")
+      }
       val mediaId = mediaItems[0].mediaId
       val trackId = ContextualUrlHelper.extractTrackId(mediaId)
 
