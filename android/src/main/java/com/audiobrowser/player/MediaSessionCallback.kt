@@ -18,7 +18,6 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -239,48 +238,16 @@ class MediaSessionCallback(private val player: Player) :
     startPositionMs: Long,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
     Timber.Forest.d(
-      "onSetMediaItems: ${controller.packageName}, mediaId=${mediaItems[0].mediaId}, uri=${mediaItems[0].localConfiguration?.uri}, title=${mediaItems[0].mediaMetadata.title}"
+      "onSetMediaItems: ${controller.packageName}, count=${mediaItems.size}, mediaId=${mediaItems[0].mediaId}, uri=${mediaItems[0].localConfiguration?.uri}, title=${mediaItems[0].mediaMetadata.title}"
     )
 
-    val browserManager = player.browser?.browserManager
+    return scope.future {
+      val browserManager =
+        player.browser?.browserManager
+          ?: throw IllegalStateException("BrowserManager not available")
 
-    val resolvedItems =
-      mediaItems.mapIndexed { index, mediaItem ->
-        val mediaId = mediaItem.mediaId
-        Timber.Forest.d("=== onSetMediaItems[$index]: Looking up mediaId='$mediaId' ===")
-
-        // Try to get cached content from browser manager
-        // First check if this was a navigated ResolvedTrack
-        val cachedResolvedTrack = browserManager?.getCachedResolvedTrack(mediaId)
-        if (cachedResolvedTrack != null) {
-          Timber.Forest.d("→ Found cached ResolvedTrack: '${cachedResolvedTrack.title}'")
-          return@mapIndexed ResolvedTrackFactory.toMedia3(cachedResolvedTrack)
-        }
-
-        // Then check if this is a cached child Track
-        val cachedTrack = browserManager?.getCachedTrack(mediaId)
-        if (cachedTrack != null) {
-          Timber.Forest.d("→ Found cached Track: '${cachedTrack.title}'")
-          return@mapIndexed TrackFactory.toMedia3(cachedTrack)
-        }
-
-        // Fall back to original MediaItem shell
-        Timber.Forest.w("→ No cached content, using original MediaItem shell")
-        mediaItem
-      }
-
-    try {
-      player.clear()
-      player.add(TrackFactory.fromMedia3(resolvedItems))
-      player.skipTo(startIndex)
-      player.seekTo(startPositionMs, TimeUnit.MILLISECONDS)
-      player.play()
-    } catch (e: Exception) {
-      Timber.Forest.e(e, "Error in onSetMediaItems")
+      // Resolve media items for playback (handles queue expansion and cache lookups)
+      browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
     }
-
-    return Futures.immediateFuture(
-      MediaSession.MediaItemsWithStartPosition(resolvedItems, startIndex, startPositionMs)
-    )
   }
 }

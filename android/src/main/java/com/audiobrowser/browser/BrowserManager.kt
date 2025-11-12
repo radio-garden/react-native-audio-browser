@@ -1,10 +1,14 @@
 package com.audiobrowser.browser
 
-import android.net.Uri
+import androidx.media3.common.MediaItem
+import androidx.media3.session.MediaSession
 import com.audiobrowser.SearchSource
 import com.audiobrowser.TabsSource
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
+import com.audiobrowser.util.ContextualUrlHelper
+import com.audiobrowser.util.ResolvedTrackFactory
+import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -27,47 +31,6 @@ import timber.log.Timber
  * - Fallback handling and error management
  */
 class BrowserManager {
-  companion object {
-    // Query parameter name for contextual track identifiers
-    // Used to embed parent context in track URLs for Media3 (e.g., "/parent?__trackId=child")
-    private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
-
-    /**
-     * Checks if a path contains a contextual track identifier.
-     */
-    private fun isContextualUrl(path: String): Boolean {
-      return path.contains("?$CONTEXTUAL_TRACK_PARAM=") ||
-        path.contains("&$CONTEXTUAL_TRACK_PARAM=")
-    }
-
-    /**
-     * Normalizes a contextual URL by extracting the parent path.
-     * If the path is not contextual, returns it unchanged.
-     *
-     * Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
-     */
-    private fun normalizeContextualUrl(path: String): String {
-      if (!isContextualUrl(path)) {
-        return path
-      }
-
-      val uri = Uri.parse(path)
-      return uri.path ?: path
-    }
-
-    /**
-     * Builds a contextual URL by appending a track identifier to a parent path.
-     * Handles existing query parameters correctly.
-     *
-     * Example: buildContextualUrl("/library", "song.mp3") → "/library?__trackId=song.mp3"
-     * Example: buildContextualUrl("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
-     */
-    private fun buildContextualUrl(parentPath: String, trackId: String): String {
-      val separator = if (parentPath.contains('?')) '&' else '?'
-      return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}"
-    }
-  }
-
   private val router = SimpleRouter()
   private val httpClient = HttpClient()
   private val json = Json {
@@ -121,16 +84,14 @@ class BrowserManager {
    */
   var config: BrowserConfig = BrowserConfig()
 
-  /**
-   * Get a cached ResolvedTrack by mediaId/path, or null if not cached.
-   */
+  /** Get a cached ResolvedTrack by mediaId/path, or null if not cached. */
   fun getCachedResolvedTrack(mediaId: String): ResolvedTrack? {
     return resolvedTrackCache[mediaId]
   }
 
   /**
-   * Get a cached Track by mediaId (url or src), or null if not cached.
-   * Used by Media3 to rehydrate MediaItem shells with full track metadata.
+   * Get a cached Track by mediaId (url or src), or null if not cached. Used by Media3 to rehydrate
+   * MediaItem shells with full track metadata.
    */
   fun getCachedTrack(mediaId: String): Track? {
     val track = trackCache[mediaId]
@@ -143,8 +104,127 @@ class BrowserManager {
   }
 
   /**
-   * Validates that a track has either url or src for stable identification.
-   * Throws IllegalStateException if validation fails.
+   * Resolves multiple media IDs from cache.
+   * Checks both ResolvedTrack cache (for containers) and Track cache (for individual items).
+   * Throws IllegalStateException if any mediaId is not found in cache.
+   *
+   * @param mediaIds The media IDs to resolve
+   * @return List of resolved items (can be mixed ResolvedTrack and Track)
+   */
+  fun resolveMediaIdsFromCache(mediaIds: List<String>): List<Any> {
+    return mediaIds.map { mediaId ->
+      Timber.d("=== Resolving from cache: mediaId='$mediaId' ===")
+
+      // First check if this was a navigated ResolvedTrack
+      getCachedResolvedTrack(mediaId)?.let { cachedResolvedTrack ->
+        Timber.d("→ Found cached ResolvedTrack: '${cachedResolvedTrack.title}'")
+        return@map cachedResolvedTrack
+      }
+
+      // Then check if this is a cached child Track
+      getCachedTrack(mediaId)?.let { cachedTrack ->
+        Timber.d("→ Found cached Track: '${cachedTrack.title}'")
+        return@map cachedTrack
+      }
+
+      // Cache miss - this indicates a bug in our caching system
+      Timber.e("→ Cache MISS for mediaId='$mediaId' - this should not happen")
+      throw IllegalStateException(
+        "MediaItem not found in cache: $mediaId. This indicates a bug in the caching system."
+      )
+    }
+  }
+
+  /**
+   * **Media3/Android Auto Integration Entry Point**
+   *
+   * Resolves Media3 MediaItems for playback, with special handling for Android Auto queue expansion.
+   * Called exclusively from `MediaSessionCallback.onSetMediaItems()`.
+   *
+   * Behavior:
+   * - Single item: Attempts queue expansion (Android Auto album/playlist restoration)
+   * - Multiple items OR expansion fails: Falls back to cache resolution
+   *
+   * @param mediaItems List of Media3 MediaItems requested for playback
+   * @param startIndex Index of the item to start playing
+   * @param startPositionMs Position within the start item to begin playback
+   * @return MediaSession.MediaItemsWithStartPosition ready for Media3
+   * @throws IllegalStateException if any mediaId is not found in cache
+   */
+  suspend fun resolveMediaItemsForPlayback(
+    mediaItems: List<MediaItem>,
+    startIndex: Int,
+    startPositionMs: Long
+  ): MediaSession.MediaItemsWithStartPosition {
+    // Android Auto queue expansion: single track → full album/playlist
+    if (mediaItems.size == 1) {
+      val mediaId = mediaItems[0].mediaId
+      val trackId = ContextualUrlHelper.extractTrackId(mediaId)
+
+      if (trackId != null) {
+        Timber.d("Attempting queue expansion for mediaId='$mediaId', trackId='$trackId'")
+
+        try {
+          // Resolve the parent container to get all siblings
+          val parentPath = ContextualUrlHelper.normalize(mediaId)
+          val parentResolvedTrack = resolve(parentPath)
+          val children = parentResolvedTrack.children
+
+          if (!children.isNullOrEmpty()) {
+            // Filter to only playable tracks (tracks with src)
+            val playableTracks = children.filter { track -> track.src != null }
+
+            if (playableTracks.isNotEmpty()) {
+              // Find the index of the selected track in the playable tracks array
+              val selectedIndex = playableTracks.indexOfFirst { track -> track.src == trackId }
+
+              if (selectedIndex >= 0) {
+                Timber.d(
+                  "Queue expanded successfully: ${playableTracks.size} playable tracks (filtered from ${children.size} total), starting at index $selectedIndex"
+                )
+
+                // Convert to Media3 MediaItems
+                val expandedMediaItems = playableTracks.map { track -> TrackFactory.toMedia3(track) }
+
+                return MediaSession.MediaItemsWithStartPosition(
+                  expandedMediaItems,
+                  selectedIndex,
+                  startPositionMs
+                )
+              } else {
+                Timber.w("Track with src='$trackId' not found in playable children")
+              }
+            } else {
+              Timber.w("Parent has no playable tracks, cannot expand queue")
+            }
+          } else {
+            Timber.w("Parent has no children, cannot expand queue")
+          }
+        } catch (e: Exception) {
+          Timber.e(e, "Failed to expand queue from mediaId='$mediaId'")
+        }
+      }
+    }
+
+    // No expansion - resolve from cache
+    val mediaIds = mediaItems.map { it.mediaId }
+    val cachedItems = resolveMediaIdsFromCache(mediaIds)
+
+    // Convert to Media3 MediaItems
+    val resolvedMediaItems = cachedItems.map { item ->
+      when (item) {
+        is ResolvedTrack -> ResolvedTrackFactory.toMedia3(item)
+        is Track -> TrackFactory.toMedia3(item)
+        else -> throw IllegalStateException("Unexpected item type: ${item::class.simpleName}")
+      }
+    }
+
+    return MediaSession.MediaItemsWithStartPosition(resolvedMediaItems, startIndex, startPositionMs)
+  }
+
+  /**
+   * Validates that a track has either url or src for stable identification. Throws
+   * IllegalStateException if validation fails.
    */
   private fun validateTrack(track: Track, context: String) {
     if (track.url == null && track.src == null) {
@@ -159,14 +239,16 @@ class BrowserManager {
 
     // Normalize contextual URLs (e.g., "/library/radio?__trackId=song.mp3" → "/library/radio")
     // This allows resolving the parent container for tracks referenced by contextual URL
-    val normalizedPath = normalizeContextualUrl(path)
+    val normalizedPath = ContextualUrlHelper.normalize(path)
     if (normalizedPath != path) {
       Timber.d("Normalized contextual URL to parent path: '$normalizedPath'")
     }
 
     // Check cache with normalized path
     resolvedTrackCache[normalizedPath]?.let {
-      Timber.d("Returning cached ResolvedTrack: url='${it.url}', title='${it.title}', children=${it.children?.size ?: 0}")
+      Timber.d(
+        "Returning cached ResolvedTrack: url='${it.url}', title='${it.title}', children=${it.children?.size ?: 0}"
+      )
       return it
     }
 
@@ -175,7 +257,9 @@ class BrowserManager {
 
     // Cache the resolved track
     resolvedTrackCache[normalizedPath] = resolvedTrack
-    Timber.d("Cached ResolvedTrack: url='${resolvedTrack.url}', title='${resolvedTrack.title}', children=${resolvedTrack.children?.size ?: 0}")
+    Timber.d(
+      "Cached ResolvedTrack: url='${resolvedTrack.url}', title='${resolvedTrack.title}', children=${resolvedTrack.children?.size ?: 0}"
+    )
 
     return resolvedTrack
   }
@@ -219,10 +303,12 @@ class BrowserManager {
         } else {
           // Track is playable-only - generate contextual URL for Media3
           // Safe to use !! because validateTrack ensures (url != null || src != null)
-          val contextualUrl = buildContextualUrl(path, track.src!!)
+          val contextualUrl = ContextualUrlHelper.build(path, track.src!!)
           val trackWithContextualUrl = track.copy(url = contextualUrl)
 
-          Timber.d("[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})")
+          Timber.d(
+            "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
+          )
           trackCache[contextualUrl] = trackWithContextualUrl
 
           trackWithContextualUrl
