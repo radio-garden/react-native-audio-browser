@@ -1,10 +1,7 @@
 import React from 'react'
-import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser'
-import {
-  SafeAreaProvider,
-  SafeAreaView
-} from 'react-native-safe-area-context'
 import { StyleSheet } from 'react-native'
+import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser'
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { BrowserScreen } from './src/screens/BrowserScreen'
 
 void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true))
@@ -14,12 +11,12 @@ AudioBrowser.configureBrowser({
   tabs: [
     {
       title: 'Music Library',
-      url: '/library',
+      url: '/library'
     },
     {
       title: 'Favorites',
-      url: '/favorites',
-    },
+      url: '/favorites'
+    }
   ],
   routes: {
     '/favorites': {
@@ -28,9 +25,9 @@ AudioBrowser.configureBrowser({
       children: [
         {
           src: 'https://radio.garden/api/ara/content/listen/EFZafC9V/channel.mp3',
-          title: '538 Classics',
-        },
-      ],
+          title: '538 Classics'
+        }
+      ]
     },
     '/library/radio': {
       url: '/library/radio',
@@ -40,13 +37,13 @@ AudioBrowser.configureBrowser({
           src: 'https://ais-sa5.cdnstream1.com/b75154_128mp3',
           title: 'Smooth Jazz 24/7',
           artist: 'New York, NY',
-          artwork: 'https://rntp.dev/example/smooth-jazz-24-7.jpeg',
+          artwork: 'https://rntp.dev/example/smooth-jazz-24-7.jpeg'
         },
         {
           src: 'https://kut.streamguys1.com/kutx-app.aac?listenerId=123456784123',
-          title: 'KUTX',
-        },
-      ],
+          title: 'KUTX'
+        }
+      ]
     },
     '/library': {
       url: '/library',
@@ -54,32 +51,32 @@ AudioBrowser.configureBrowser({
       children: [
         {
           url: '/library/radio',
-          title: 'Radio Stations',
+          title: 'Radio Stations'
         },
         {
           src: 'https://radio.garden/api/ara/content/listen/EFZafC9V/channel.mp3',
-          title: '538 Classics',
+          title: '538 Classics'
         },
         {
           src: 'https://rntp.dev/example/Soul%20Searching.mp3',
           title: 'Soul Searching (Demo)',
           artist: 'David Chavez',
           artwork: 'https://rntp.dev/example/Soul%20Searching.jpeg',
-          duration: 77,
+          duration: 77
         },
         {
           src: 'https://rntp.dev/example/Lullaby%20(Demo).mp3',
           title: 'Lullaby (Demo)',
           artist: 'David Chavez',
           artwork: 'https://rntp.dev/example/Lullaby%20(Demo).jpeg',
-          duration: 71,
+          duration: 71
         },
         {
           src: 'https://rntp.dev/example/Rhythm%20City%20(Demo).mp3',
           title: 'Rhythm City (Demo)',
           artist: 'David Chavez',
           artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
-          duration: 106,
+          duration: 106
         },
         // TODO: fix m3u8 support on Android:
         // {
@@ -90,11 +87,11 @@ AudioBrowser.configureBrowser({
         // },
         {
           src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
-          title: 'Chapters',
-        },
-      ],
-    },
-  },
+          title: 'Chapters'
+        }
+      ]
+    }
+  }
 })
 
 export default function App() {

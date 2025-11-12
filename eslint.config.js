@@ -49,25 +49,5 @@ export default typescriptEslint.config(
       'react-native/no-color-literals': 'off',
       'react-native/no-unused-styles': 'off',
     },
-  },
-  // prettier
-  {
-    name: 'prettier-config',
-    files: ['**/*.{js,jsx,ts,tsx,d.ts}'],
-    plugins: {
-      prettier: (await import('eslint-plugin-prettier')).default,
-    },
-    rules: {
-      'prettier/prettier': [
-        'warn',
-        {
-          quoteProps: 'consistent',
-          singleQuote: true,
-          tabWidth: 2,
-          trailingComma: 'es5',
-          useTabs: false,
-        },
-      ],
-    },
-  },
+  }
 );
