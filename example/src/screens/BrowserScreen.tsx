@@ -219,8 +219,10 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   pathText: {
+    flex: 1,
     color: '#888888',
-    fontSize: 14
+    fontSize: 14,
+    textAlign: 'right'
   },
   content: {
     flex: 1,
@@ -327,8 +329,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#333333',
-    paddingBottom: 20,
-    paddingTop: 10
+    paddingTop: 10,
+    paddingBottom: 10
   },
   tab: {
     flex: 1,

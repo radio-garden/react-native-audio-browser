@@ -1,6 +1,10 @@
 import React from 'react'
 import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
+import {
+  SafeAreaProvider,
+  SafeAreaView
+} from 'react-native-safe-area-context'
+import { StyleSheet } from 'react-native'
 import { BrowserScreen } from './src/screens/BrowserScreen'
 
 void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true))
@@ -96,7 +100,16 @@ AudioBrowser.configureBrowser({
 export default function App() {
   return (
     <SafeAreaProvider>
-      <BrowserScreen />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <BrowserScreen />
+      </SafeAreaView>
     </SafeAreaProvider>
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000'
+  }
+})
