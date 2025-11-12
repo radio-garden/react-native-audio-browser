@@ -1,5 +1,6 @@
 package com.audiobrowser.browser
 
+import android.net.Uri
 import com.audiobrowser.SearchSource
 import com.audiobrowser.TabsSource
 import com.audiobrowser.http.HttpClient
@@ -26,6 +27,47 @@ import timber.log.Timber
  * - Fallback handling and error management
  */
 class BrowserManager {
+  companion object {
+    // Query parameter name for contextual track identifiers
+    // Used to embed parent context in track URLs for Media3 (e.g., "/parent?__trackId=child")
+    private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
+
+    /**
+     * Checks if a path contains a contextual track identifier.
+     */
+    private fun isContextualUrl(path: String): Boolean {
+      return path.contains("?$CONTEXTUAL_TRACK_PARAM=") ||
+        path.contains("&$CONTEXTUAL_TRACK_PARAM=")
+    }
+
+    /**
+     * Normalizes a contextual URL by extracting the parent path.
+     * If the path is not contextual, returns it unchanged.
+     *
+     * Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
+     */
+    private fun normalizeContextualUrl(path: String): String {
+      if (!isContextualUrl(path)) {
+        return path
+      }
+
+      val uri = Uri.parse(path)
+      return uri.path ?: path
+    }
+
+    /**
+     * Builds a contextual URL by appending a track identifier to a parent path.
+     * Handles existing query parameters correctly.
+     *
+     * Example: buildContextualUrl("/library", "song.mp3") → "/library?__trackId=song.mp3"
+     * Example: buildContextualUrl("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
+     */
+    private fun buildContextualUrl(parentPath: String, trackId: String): String {
+      val separator = if (parentPath.contains('?')) '&' else '?'
+      return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}"
+    }
+  }
+
   private val router = SimpleRouter()
   private val httpClient = HttpClient()
   private val json = Json {
@@ -67,35 +109,132 @@ class BrowserManager {
       }
     }
 
+  // Cache resolved tracks by mediaId/path to avoid redundant HTTP requests
+  private val resolvedTrackCache = mutableMapOf<String, ResolvedTrack>()
+
+  // Cache individual tracks (children) for Media3 MediaItem lookup
+  private val trackCache = mutableMapOf<String, Track>()
+
   /**
    * Browser configuration containing routes, search, tabs, and request settings. This can be
    * updated dynamically when the configuration changes.
    */
   var config: BrowserConfig = BrowserConfig()
 
-  suspend fun resolve(path: String): ResolvedTrack {
-    // First try to match against configured routes
-    config.routes
-      ?.takeUnless { it.isEmpty() }
-      ?.let { routes ->
-        router.findBestMatch(path, routes)?.let { (routePattern, match) ->
-          val browserSource = routes[routePattern]!!
-          val routeParams = match.params
+  /**
+   * Get a cached ResolvedTrack by mediaId/path, or null if not cached.
+   */
+  fun getCachedResolvedTrack(mediaId: String): ResolvedTrack? {
+    return resolvedTrackCache[mediaId]
+  }
 
-          Timber.d("Matched route: $routePattern with params: $routeParams")
-          return resolveBrowserSource(browserSource, path, routeParams)
+  /**
+   * Get a cached Track by mediaId (url or src), or null if not cached.
+   * Used by Media3 to rehydrate MediaItem shells with full track metadata.
+   */
+  fun getCachedTrack(mediaId: String): Track? {
+    val track = trackCache[mediaId]
+    if (track != null) {
+      Timber.d("Cache HIT for mediaId='$mediaId' → track='${track.title}'")
+    } else {
+      Timber.w("Cache MISS for mediaId='$mediaId'")
+    }
+    return track
+  }
+
+  /**
+   * Validates that a track has either url or src for stable identification.
+   * Throws IllegalStateException if validation fails.
+   */
+  private fun validateTrack(track: Track, context: String) {
+    if (track.url == null && track.src == null) {
+      throw IllegalStateException(
+        "$context must have either 'url' or 'src' property for stable identification. Track: ${track.title}"
+      )
+    }
+  }
+
+  suspend fun resolve(path: String): ResolvedTrack {
+    Timber.d("=== RESOLVE: path='$path' ===")
+
+    // Normalize contextual URLs (e.g., "/library/radio?__trackId=song.mp3" → "/library/radio")
+    // This allows resolving the parent container for tracks referenced by contextual URL
+    val normalizedPath = normalizeContextualUrl(path)
+    if (normalizedPath != path) {
+      Timber.d("Normalized contextual URL to parent path: '$normalizedPath'")
+    }
+
+    // Check cache with normalized path
+    resolvedTrackCache[normalizedPath]?.let {
+      Timber.d("Returning cached ResolvedTrack: url='${it.url}', title='${it.title}', children=${it.children?.size ?: 0}")
+      return it
+    }
+
+    Timber.d("Cache miss, resolving path: '$normalizedPath'")
+    val resolvedTrack = resolveUncached(normalizedPath)
+
+    // Cache the resolved track
+    resolvedTrackCache[normalizedPath] = resolvedTrack
+    Timber.d("Cached ResolvedTrack: url='${resolvedTrack.url}', title='${resolvedTrack.title}', children=${resolvedTrack.children?.size ?: 0}")
+
+    return resolvedTrack
+  }
+
+  private suspend fun resolveUncached(path: String): ResolvedTrack {
+    // Resolve the track from routes or browse fallback
+    val resolvedTrack =
+      config.routes
+        ?.takeUnless { it.isEmpty() }
+        ?.let { routes ->
+          router.findBestMatch(path, routes)?.let { (routePattern, match) ->
+            val browserSource = routes[routePattern]!!
+            val routeParams = match.params
+
+            Timber.d("Matched route: $routePattern with params: $routeParams")
+            resolveBrowserSource(browserSource, path, routeParams)
+          }
+        }
+        ?: config.browse?.let { browseSource ->
+          Timber.d("No route matched, using browse fallback")
+          resolveBrowseSource(browseSource, path, emptyMap())
+        }
+        ?: run {
+          Timber.e("No route matched and no browse fallback configured for path: $path")
+          throw ContentNotFoundException(path)
+        }
+
+    // Transform and cache children
+    val transformedChildren =
+      resolvedTrack.children?.mapIndexed { index, track ->
+        // Validate that track has stable identifier
+        validateTrack(track, "Child track")
+
+        // Only generate contextual URLs for playable-only tracks (no url, just src)
+        // Browsable tracks keep their original url
+        if (track.url != null) {
+          // Track is browsable - keep original url and cache by it
+          Timber.d("[$path] Child[$index] '${track.title}': Browsable with url=${track.url}")
+          trackCache[track.url] = track
+          track
+        } else {
+          // Track is playable-only - generate contextual URL for Media3
+          // Safe to use !! because validateTrack ensures (url != null || src != null)
+          val contextualUrl = buildContextualUrl(path, track.src!!)
+          val trackWithContextualUrl = track.copy(url = contextualUrl)
+
+          Timber.d("[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})")
+          trackCache[contextualUrl] = trackWithContextualUrl
+
+          trackWithContextualUrl
         }
       }
 
-    // No route matched, fall back to browse configuration
-    config.browse?.let { browseSource ->
-      Timber.d("No route matched, using browse fallback")
-      return resolveBrowseSource(browseSource, path, emptyMap())
+    // Return resolved track with transformed children
+    return if (transformedChildren != null) {
+      resolvedTrack.copy(children = transformedChildren.toTypedArray())
+    } else {
+      resolvedTrack
     }
-
-    // No routes and no browse fallback configured
-    Timber.e("No route matched and no browse fallback configured for path: $path")
-    throw ContentNotFoundException(path)
   }
 
   /**
@@ -190,12 +329,25 @@ class BrowserManager {
 
     Timber.d("Getting navigation tabs")
 
-    return (config.tabs?.let { tabsSource -> resolveTabsSource(tabsSource) }
+    val tabs =
+      (config.tabs?.let { tabsSource -> resolveTabsSource(tabsSource) }
         ?: run {
           Timber.d("No tabs configured")
           emptyArray()
         })
-      .also { this.tabs = it }
+
+    // Validate and cache tabs for Media3 MediaItem lookup
+    tabs.forEachIndexed { index, tab ->
+      validateTrack(tab, "Tab")
+
+      val tabId = tab.url ?: tab.src!!
+
+      Timber.d("[TABS] Tab[$index] '${tab.title}': Cached with id=$tabId")
+      trackCache[tabId] = tab
+    }
+
+    this.tabs = tabs
+    return tabs
   }
 
   /**

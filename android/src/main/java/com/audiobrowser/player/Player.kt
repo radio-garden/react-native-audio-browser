@@ -53,12 +53,6 @@ class Player(internal val context: Context) {
   private lateinit var mediaSession: MediaSession
   private val mediaSessionCallback = MediaSessionCallback(this)
 
-  // Media browser functionality
-  // TODO: Investigate if this cache is actually needed - when do MediaItems arrive without tags?
-  //       Used in onSetMediaItems to look up full MediaItems by ID, but unclear if necessary for
-  // normal browsing
-  internal var mediaItemById: MutableMap<String, MediaItem> = mutableMapOf()
-
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
   private lateinit var mediaFactory: MediaFactory
