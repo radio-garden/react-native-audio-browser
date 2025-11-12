@@ -1,9 +1,9 @@
-import React from 'react';
-import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { BrowserScreen } from './src/screens/BrowserScreen';
+import React from 'react'
+import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { BrowserScreen } from './src/screens/BrowserScreen'
 
-void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true));
+void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true))
 
 AudioBrowser.configureBrowser({
   play: 'queue',
@@ -91,12 +91,12 @@ AudioBrowser.configureBrowser({
       ],
     },
   },
-});
+})
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <BrowserScreen />
     </SafeAreaProvider>
-  );
+  )
 }
