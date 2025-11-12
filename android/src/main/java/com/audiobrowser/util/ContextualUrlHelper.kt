@@ -1,6 +1,7 @@
 package com.audiobrowser.util
 
 import android.net.Uri
+import androidx.core.net.toUri
 
 /**
  * Utility for handling contextual URLs in the media browser system.
@@ -44,8 +45,22 @@ object ContextualUrlHelper {
       return url
     }
 
-    val uri = Uri.parse(url)
-    return uri.path ?: url
+    val uri = url.toUri()
+
+    // Build URL preserving everything except __trackId parameter
+    val builder = uri.buildUpon()
+    builder.clearQuery()
+
+    // Re-add all query params except __trackId
+    uri.queryParameterNames.forEach { paramName ->
+      if (paramName != CONTEXTUAL_TRACK_PARAM) {
+        uri.getQueryParameters(paramName).forEach { value ->
+          builder.appendQueryParameter(paramName, value)
+        }
+      }
+    }
+
+    return builder.build().toString()
   }
 
   /**
