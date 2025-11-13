@@ -512,15 +512,15 @@ class BrowserManager {
 
     // Check if result is browsable-only (container/route) vs playable
     // If it's browsable but also playable (has src or playable=true), treat it as playable
-    return if (firstResult.isBrowsable() && !firstResult.isPlayable()) {
-      // Browsable-only result - resolve and return children
+    val tracksToFilter = if (firstResult.isBrowsable()) {
       Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
       val resolvedTrack = resolve(firstResult.url!!)
-      resolvedTrack.children?.takeIf { it.isNotEmpty() }
+      resolvedTrack.children?.filter { it.src != null }?.takeIf { it.isNotEmpty() } ?: tracks
     } else {
-      // Playable result(s) - return as-is
       tracks
     }
+
+    return tracksToFilter?.filter { it.src != null }?.takeIf { it.isNotEmpty() }
   }
 
   /**
