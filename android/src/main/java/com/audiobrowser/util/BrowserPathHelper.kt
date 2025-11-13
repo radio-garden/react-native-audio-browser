@@ -2,23 +2,46 @@ package com.audiobrowser.util
 
 import android.net.Uri
 import androidx.core.net.toUri
+import java.net.URLEncoder
 
 /**
- * Utility for handling contextual URLs in the media browser system.
+ * Utility for handling browser paths and contextual URLs in the media browser system.
  *
- * Contextual URLs embed parent context in track identifiers for Media3 integration, allowing
- * Android Auto to reference tracks without browsable URLs.
+ * Handles two types of special paths:
+ * 1. System paths (prefixed with `/__`): Root, recent, and search paths
+ * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
  *
- * Format: `{parentPath}?__trackId={trackSrc}` Example: "/library/radio?__trackId=song.mp3"
+ * Contextual URL format: `{parentPath}?__trackId={trackSrc}` Example:
+ * "/library/radio?__trackId=song.mp3"
  *
  * This allows:
  * - Media3 to reference playable-only tracks (tracks with `src` but no `url`)
  * - Cache lookup to work consistently
  * - Parent context to be preserved for queue restoration
  */
-object ContextualUrlHelper {
+object BrowserPathHelper {
+  /** Root path for media browsing */
+  const val ROOT_PATH = "/__root"
+
+  /** Recent media path for playback resumption */
+  const val RECENT_PATH = "/__recent"
+
+  /** Search path prefix (full path is /__search?q=query) */
+  const val SEARCH_PATH_PREFIX = "/__search"
+
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
+
+  /** Check if a path is a special system path (not a regular navigation path) */
+  fun isSpecialPath(path: String): Boolean {
+    return path == ROOT_PATH || path == RECENT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
+  }
+
+  /** Create a search path for a given query */
+  fun createSearchPath(query: String): String {
+    val encodedQuery = URLEncoder.encode(query, "UTF-8")
+    return "$SEARCH_PATH_PREFIX?q=$encodedQuery"
+  }
 
   /**
    * Checks if a path contains a contextual track identifier.

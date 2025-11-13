@@ -10,7 +10,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
-import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
@@ -119,7 +119,7 @@ class MediaSessionCallback(private val player: Player) :
     return Futures.immediateFuture(
       LibraryResult.ofItem(
         MediaItem.Builder()
-          .setMediaId(BrowserManager.ROOT_PATH)
+          .setMediaId(BrowserPathHelper.ROOT_PATH)
           .setMediaMetadata(
             MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
           )
@@ -138,7 +138,7 @@ class MediaSessionCallback(private val player: Player) :
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
     Timber.d(
-      "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserManager.isSpecialPath(parentId)} }"
+      "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
     )
     return scope.future {
       val browserManager = player.browser?.browserManager
@@ -150,10 +150,10 @@ class MediaSessionCallback(private val player: Player) :
 
       try {
         val children =
-          if (parentId == BrowserManager.RECENT_PATH) {
+          if (parentId == BrowserPathHelper.RECENT_PATH) {
             // TODO: implement recent media items
             emptyList<MediaItem>()
-          } else if (parentId == BrowserManager.ROOT_PATH) {
+          } else if (parentId == BrowserPathHelper.ROOT_PATH) {
             // Return tabs as root children (limited to 4 for automotive platform compatibility)
             // TODO: Check what Android Auto does with empty tabs list - may need to return error?
             browserManager.queryTabs().take(4).map { tab -> TrackFactory.toMedia3(tab) }
@@ -203,7 +203,7 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       // Handle special root IDs
-      if (mediaId == BrowserManager.ROOT_PATH || mediaId == BrowserManager.RECENT_PATH) {
+      if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {
         return@future LibraryResult.ofItem(
           MediaItem.Builder()
             .setMediaId(mediaId)

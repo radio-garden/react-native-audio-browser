@@ -4,6 +4,7 @@ import androidx.annotation.Keep
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.http.RequestConfigBuilder
+import com.audiobrowser.util.BrowserPathHelper
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.BrowserConfiguration
@@ -159,7 +160,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       val url = track.url
       when {
         // Check if this is a contextual URL (playable-only track with queue context)
-        url != null && com.audiobrowser.util.ContextualUrlHelper.isContextual(url) -> {
+        url != null && BrowserPathHelper.isContextual(url) -> {
           Timber.d("Navigating to contextual track URL: $url")
 
           // Expand the queue from the contextual URL

@@ -17,15 +17,6 @@
 
 - [ ] Replace basic mutableMap caching in `BrowserManager` with proper LRU cache
 
-## Android / Code Organization
-
-- [ ] Refactor path handling utilities:
-  - [ ] Rename `ContextualUrlHelper` to `BrowserPathHelper`
-  - [ ] Move `BrowserManager.companion` constants (ROOT_PATH, RECENT_PATH, SEARCH_PATH_PREFIX) to `BrowserPathHelper`
-  - [ ] Move `BrowserManager.companion` functions (isSpecialPath, createSearchPath) to `BrowserPathHelper`
-  - [ ] Update all imports in `BrowserManager`, `MediaSessionCallback`, and `AudioBrowser`
-  - [ ] Consolidate all `__` prefixed path/parameter handling in one place
-
 ## Android / MediaSession
 
 - [ ] Implement playback resumption in `MediaSessionCallback.onPlaybackResumption()`:

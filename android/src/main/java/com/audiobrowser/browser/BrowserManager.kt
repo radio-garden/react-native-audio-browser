@@ -6,11 +6,10 @@ import com.audiobrowser.SearchSource
 import com.audiobrowser.TabsSource
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
-import com.audiobrowser.util.ContextualUrlHelper
+import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
 import com.audiobrowser.util.isBrowsable
-import com.audiobrowser.util.isPlayable
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -21,7 +20,6 @@ import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
-import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -37,28 +35,6 @@ import timber.log.Timber
  * - Fallback handling and error management
  */
 class BrowserManager {
-  companion object {
-    /** Root path for media browsing */
-    const val ROOT_PATH = "/__root"
-
-    /** Recent media path for playback resumption */
-    const val RECENT_PATH = "/__recent"
-
-    /** Search path prefix (full path is /__search?q=query) */
-    const val SEARCH_PATH_PREFIX = "/__search"
-
-    /** Check if a path is a special system path (not a regular navigation path) */
-    fun isSpecialPath(path: String): Boolean {
-      return path == ROOT_PATH || path == RECENT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
-    }
-
-    /** Create a search path for a given query */
-    fun createSearchPath(query: String): String {
-      val encodedQuery = URLEncoder.encode(query, "UTF-8")
-      return "$SEARCH_PATH_PREFIX?q=$encodedQuery"
-    }
-  }
-
   private val router = SimpleRouter()
   private val httpClient = HttpClient()
   private val json = Json {
@@ -245,7 +221,7 @@ class BrowserManager {
 
       val mediaId = mediaItems[0].mediaId
 
-      if (ContextualUrlHelper.isContextual(mediaId)) {
+      if (BrowserPathHelper.isContextual(mediaId)) {
         Timber.d("Attempting queue expansion for mediaId='$mediaId'")
 
         val expanded = expandQueueFromContextualUrl(mediaId)
@@ -300,7 +276,7 @@ class BrowserManager {
     // Strip __trackId from contextual URLs (e.g., "/library/radio?__trackId=song.mp3" →
     // "/library/radio")
     // This allows resolving the parent container for tracks referenced by contextual URL
-    val normalizedPath = ContextualUrlHelper.stripTrackId(path)
+    val normalizedPath = BrowserPathHelper.stripTrackId(path)
     if (normalizedPath != path) {
       Timber.d("Stripped __trackId from contextual URL: '$normalizedPath'")
     }
@@ -364,7 +340,7 @@ class BrowserManager {
         } else {
           // Track is playable-only - generate contextual URL for Media3
           // Safe to use !! because validateTrack ensures (url != null || src != null)
-          val contextualUrl = ContextualUrlHelper.build(path, track.src!!)
+          val contextualUrl = BrowserPathHelper.build(path, track.src!!)
           val trackWithContextualUrl = track.copy(url = contextualUrl)
 
           Timber.d(
@@ -394,13 +370,13 @@ class BrowserManager {
    * @return Pair of (tracks array, selected track index), or null if expansion fails or disabled
    */
   suspend fun expandQueueFromContextualUrl(contextualUrl: String): Pair<Array<Track>, Int>? {
-    val trackId = ContextualUrlHelper.extractTrackId(contextualUrl) ?: return null
+    val trackId = BrowserPathHelper.extractTrackId(contextualUrl) ?: return null
 
     Timber.d("Expanding queue from contextual URL: $contextualUrl (trackId=$trackId)")
 
     try {
       // Resolve the parent container to get all siblings
-      val parentPath = ContextualUrlHelper.stripTrackId(contextualUrl)
+      val parentPath = BrowserPathHelper.stripTrackId(contextualUrl)
       val parentResolvedTrack = resolve(parentPath)
       val children = parentResolvedTrack.children
 
@@ -468,7 +444,7 @@ class BrowserManager {
    * @return Array of Track results, or null if not found
    */
   fun getCachedSearchResults(query: String): Array<Track>? {
-    val searchPath = createSearchPath(query)
+    val searchPath = BrowserPathHelper.createSearchPath(query)
     return getCachedResolvedTrack(searchPath)?.children
   }
 
@@ -512,13 +488,17 @@ class BrowserManager {
 
     // Check if result is browsable-only (container/route) vs playable
     // If it's browsable but also playable (has src or playable=true), treat it as playable
-    val tracksToFilter = if (firstResult.isBrowsable()) {
-      Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
-      val resolvedTrack = resolve(firstResult.url!!)
-      resolvedTrack.children?.filter { it.src != null }?.takeIf { it.isNotEmpty() }?.toTypedArray() ?: tracks
-    } else {
-      tracks
-    }
+    val tracksToFilter =
+      if (firstResult.isBrowsable()) {
+        Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
+        val resolvedTrack = resolve(firstResult.url!!)
+        resolvedTrack.children
+          ?.filter { it.src != null }
+          ?.takeIf { it.isNotEmpty() }
+          ?.toTypedArray() ?: tracks
+      } else {
+        tracks
+      }
 
     return tracksToFilter.filter { it.src != null }.takeIf { it.isNotEmpty() }?.toTypedArray()
   }
@@ -554,7 +534,7 @@ class BrowserManager {
   suspend fun search(params: SearchParams): ResolvedTrack {
     Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
 
-    val searchPath = createSearchPath(params.query)
+    val searchPath = BrowserPathHelper.createSearchPath(params.query)
 
     try {
       // Execute search
