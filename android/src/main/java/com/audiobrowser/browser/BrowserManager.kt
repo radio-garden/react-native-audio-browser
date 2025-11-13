@@ -515,12 +515,12 @@ class BrowserManager {
     val tracksToFilter = if (firstResult.isBrowsable()) {
       Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
       val resolvedTrack = resolve(firstResult.url!!)
-      resolvedTrack.children?.filter { it.src != null }?.takeIf { it.isNotEmpty() } ?: tracks
+      resolvedTrack.children?.filter { it.src != null }?.takeIf { it.isNotEmpty() }?.toTypedArray() ?: tracks
     } else {
       tracks
     }
 
-    return tracksToFilter?.filter { it.src != null }?.takeIf { it.isNotEmpty() }
+    return tracksToFilter.filter { it.src != null }.takeIf { it.isNotEmpty() }?.toTypedArray()
   }
 
   /**
