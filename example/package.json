@@ -5,7 +5,7 @@
   "scripts": {
     "android:adb-reverse": "adb reverse tcp:8081 tcp:8081 && adb forward tcp:5277 tcp:5277",
     "android:adb-stop": "adb shell am force-stop com.audiobrowserexample",
-    "android:voice-search": "adb shell am start-foreground-service -a android.media.action.MEDIA_PLAY_FROM_SEARCH -n com.audiobrowserexample/com.audiobrowser.Service --es query",
+    "android:voice-search": "adb shell \"am start-foreground-service -a android.media.action.MEDIA_PLAY_FROM_SEARCH -n com.audiobrowserexample/com.audiobrowser.Service --es query '$@'\"",
     "android:dhu": "pkill -f 'desktop-head-unit' || true && $HOME/Library/Android/sdk/extras/google/auto/desktop-head-unit",
     "android:build": "react-native build-android --extra-params \"--no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a\"",
     "android:clean": "rm -rf android/.gradle && rm -rf android/build && rm -rf android/app/build && rm -rf android/app/.cxx",
