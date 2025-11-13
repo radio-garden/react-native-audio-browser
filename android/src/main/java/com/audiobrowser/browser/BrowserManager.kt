@@ -18,6 +18,8 @@ import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
+import com.audiobrowser.util.isBrowsable
+import com.audiobrowser.util.isPlayable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -469,6 +471,38 @@ class BrowserManager {
   fun getCachedSearchResults(query: String): Array<Track>? {
     val searchPath = createSearchPath(query)
     return getCachedResolvedTrack(searchPath)?.children
+  }
+
+  /**
+   * Search for tracks and return playable results.
+   * If the first result is browsable, resolves it and returns its children.
+   * If the first result is playable, returns it.
+   * Used for voice search "play X" commands.
+   *
+   * @param query The search query string
+   * @return Array of playable tracks, or null if no results or search not configured
+   */
+  suspend fun searchPlayable(query: String): Array<Track>? {
+    val searchResults = search(query)
+    val tracks = searchResults.children
+
+    if (tracks.isNullOrEmpty()) {
+      return null
+    }
+
+    val firstResult = tracks[0]
+
+    // Check if result is browsable-only (container/route) vs playable
+    // If it's browsable but also playable (has src or playable=true), treat it as playable
+    return if (firstResult.isBrowsable() && !firstResult.isPlayable()) {
+      // Browsable-only result - resolve and return children
+      Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
+      val resolvedTrack = resolve(firstResult.url!!)
+      resolvedTrack.children?.takeIf { it.isNotEmpty() }
+    } else {
+      // Playable result(s) - return as-is
+      tracks
+    }
   }
 
   /**

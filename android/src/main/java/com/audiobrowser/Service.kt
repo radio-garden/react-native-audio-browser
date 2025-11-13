@@ -17,6 +17,7 @@ import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import kotlin.system.exitProcess
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 @MainThread
@@ -86,6 +87,22 @@ class Service : MediaLibraryService() {
     // Bind headless service once at startup for JS task execution
     val headlessIntent = Intent(applicationContext, HeadlessTaskService::class.java)
     bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
+  }
+
+  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    Timber.d("onStartCommand: action=${intent?.action}")
+
+    // Handle MEDIA_PLAY_FROM_SEARCH intent for voice commands
+    intent?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
+      ?.getStringExtra("query")
+      ?.let { query ->
+        Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: query='$query'")
+        scope.launch {
+          player.playFromSearch(query)
+        }
+      }
+
+    return super.onStartCommand(intent, flags, startId)
   }
 
   override fun onBind(intent: Intent?): IBinder? {

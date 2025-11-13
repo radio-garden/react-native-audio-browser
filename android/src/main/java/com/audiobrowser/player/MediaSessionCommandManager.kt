@@ -56,7 +56,7 @@ class MediaSessionCommandManager {
       )
 
     updatePlayerCommands(Capability.entries) // All capabilities for external controllers
-    updateSessionCommandsAndLayout(defaultNotificationCapabilities)
+    updateSessionCommandsAndLayout(defaultNotificationCapabilities, searchAvailable = false)
   }
 
   /**
@@ -67,6 +67,7 @@ class MediaSessionCommandManager {
    *   (Bluetooth, Android Auto, lock screen, notification, etc.).
    * @param notificationCapabilities Capabilities that control which buttons appear in notifications
    *   only. When null, defaults to capabilities. Empty list disables all notification buttons.
+   * @param searchAvailable Whether search functionality is configured and available
    *
    * Manager initializes with defaults: all global capabilities, limited notification capabilities.
    */
@@ -74,11 +75,12 @@ class MediaSessionCommandManager {
     mediaSession: MediaSession,
     capabilities: List<Capability>,
     notificationCapabilities: List<Capability>?,
+    searchAvailable: Boolean,
   ) {
     // Update internal configuration
     updatePlayerCommands(capabilities)
     val effectiveNotificationCapabilities = notificationCapabilities ?: capabilities
-    updateSessionCommandsAndLayout(effectiveNotificationCapabilities)
+    updateSessionCommandsAndLayout(effectiveNotificationCapabilities, searchAvailable)
 
     // Apply configuration to MediaSession notification controller
     mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
@@ -181,10 +183,20 @@ class MediaSessionCommandManager {
     playerCommands = playerCommandsBuilder.build()
   }
 
-  private fun updateSessionCommandsAndLayout(notificationCapabilities: List<Capability>) {
+  private fun updateSessionCommandsAndLayout(
+    notificationCapabilities: List<Capability>,
+    searchAvailable: Boolean
+  ) {
     val customLayoutButtons = mutableListOf<CommandButton>()
     val sessionCommandsBuilder =
       MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+
+    // Remove search commands if search is not configured
+    if (!searchAvailable) {
+      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_SEARCH)
+      sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
+      Timber.Forest.d("Removed search commands - search not configured")
+    }
 
     // Create custom command buttons for jump commands (required for notification visibility)
     if (notificationCapabilities.contains(Capability.JUMP_BACKWARD)) {

@@ -57,6 +57,22 @@ class Player(internal val context: Context) {
   lateinit var forwardingPlayer: androidx.media3.common.Player
   private lateinit var mediaFactory: MediaFactory
   var browser: AudioBrowser? = null
+    set(value) {
+      field = value
+      // Update MediaSession commands when browser becomes available with search configured
+      // Only update if search is available, since default state is "no search"
+      if (::mediaSession.isInitialized) {
+        val searchAvailable = value?.browserManager?.config?.search != null
+        if (searchAvailable) {
+          mediaSessionCallback.updateMediaSession(
+            mediaSession,
+            options.capabilities,
+            options.notificationCapabilities,
+            searchAvailable
+          )
+        }
+      }
+    }
 
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
@@ -564,6 +580,36 @@ class Player(internal val context: Context) {
     }
   }
 
+  /**
+   * Executes a search and plays the results.
+   * Used for voice commands like "play soul searching".
+   *
+   * @param query The search query string
+   * @return true if search succeeded and playback started, false otherwise
+   */
+  suspend fun playFromSearch(query: String): Boolean {
+    val browserManager = browser?.browserManager ?: return false
+
+    return try {
+      Timber.d("Executing voice search for: $query")
+      val tracks = browserManager.searchPlayable(query)
+
+      if (tracks != null && tracks.isNotEmpty()) {
+        Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
+        clear()
+        add(tracks)
+        play()
+        true
+      } else {
+        Timber.w("No tracks found for query: $query")
+        false
+      }
+    } catch (e: Exception) {
+      Timber.e(e, "Error handling voice search for query: $query")
+      false
+    }
+  }
+
   fun prepare() {
     if (currentTrack != null) {
       exoPlayer.prepare()
@@ -731,10 +777,12 @@ class Player(internal val context: Context) {
     }
 
     if (capabilitiesChanged || notificationCapabilitiesChanged) {
+      val searchAvailable = browser?.browserManager?.config?.search != null
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
         options.notificationCapabilities,
+        searchAvailable,
       )
     }
 

@@ -50,8 +50,9 @@ class MediaSessionCallback(private val player: Player) :
     mediaSession: MediaSession,
     capabilities: List<Capability>,
     notificationCapabilities: List<Capability>?,
+    searchAvailable: Boolean,
   ) {
-    commandManager.updateMediaSession(mediaSession, capabilities, notificationCapabilities)
+    commandManager.updateMediaSession(mediaSession, capabilities, notificationCapabilities, searchAvailable)
   }
 
   override fun onConnect(
