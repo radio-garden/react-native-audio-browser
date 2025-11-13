@@ -104,7 +104,7 @@ class BrowserManagerTest {
     browserManager.config = BrowserConfig()
     val result = browserManager.search("test query")
 
-    assertTrue(result.isEmpty())
+    assertTrue(result.children.isNullOrEmpty())
   }
 
   @Test

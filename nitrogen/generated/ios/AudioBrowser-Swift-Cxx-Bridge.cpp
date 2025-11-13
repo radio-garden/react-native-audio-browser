@@ -80,11 +80,11 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::string& query) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> {
-      auto __result = swiftClosure.call(query);
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const SearchParams& params) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> {
+      auto __result = swiftClosure.call(params);
       return __result;
     };
   }

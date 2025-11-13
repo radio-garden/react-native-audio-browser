@@ -28,7 +28,7 @@ data class BrowserConfiguration(
   val media: MediaRequestConfig?,
   @DoNotStrip
   @Keep
-  val search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?,
+  val search: Variant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig?,
   @DoNotStrip
   @Keep
   val tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?,
@@ -52,7 +52,7 @@ data class BrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, BrowserSource>?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, play: PlayConfigurationBehavior?): BrowserConfiguration {
+    private fun fromCpp(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, BrowserSource>?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, play: PlayConfigurationBehavior?): BrowserConfiguration {
       return BrowserConfiguration(path, request, media, search, tabs, routes, browse, play)
     }
   }

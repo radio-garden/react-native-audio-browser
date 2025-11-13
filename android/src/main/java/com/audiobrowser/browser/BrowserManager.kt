@@ -15,9 +15,11 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.PlayConfigurationBehavior
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
+import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
+import com.audiobrowser.util.fromQuery
 import com.audiobrowser.util.isBrowsable
 import com.audiobrowser.util.isPlayable
 import kotlinx.coroutines.Dispatchers
@@ -475,15 +477,25 @@ class BrowserManager {
 
   /**
    * Search for tracks and return playable results.
-   * If the first result is browsable, resolves it and returns its children.
-   * If the first result is playable, returns it.
-   * Used for voice search "play X" commands.
    *
    * @param query The search query string
    * @return Array of playable tracks, or null if no results or search not configured
    */
   suspend fun searchPlayable(query: String): Array<Track>? {
-    val searchResults = search(query)
+    return searchPlayable(SearchParams.fromQuery(query))
+  }
+
+  /**
+   * Search for tracks and return playable results.
+   * If the first result is browsable, resolves it and returns its children.
+   * If the first result is playable, returns it.
+   * Used for voice search "play X" commands.
+   *
+   * @param params The structured search parameters
+   * @return Array of playable tracks, or null if no results or search not configured
+   */
+  suspend fun searchPlayable(params: SearchParams): Array<Track>? {
+    val searchResults = search(params)
     val tracks = searchResults.children
 
     if (tracks.isNullOrEmpty()) {
@@ -507,20 +519,30 @@ class BrowserManager {
 
   /**
    * Search for tracks using the configured search source.
-   * Returns a ResolvedTrack at the path /__search?q=query with children containing results.
-   * Always executes a fresh search and caches results for onGetSearchResult() retrieval.
    *
    * @param query The search query string
    * @return ResolvedTrack containing search results as children
    */
   suspend fun search(query: String): ResolvedTrack {
-    Timber.d("Executing fresh search for: $query")
+    return search(SearchParams.fromQuery(query))
+  }
 
-    val searchPath = createSearchPath(query)
+  /**
+   * Search for tracks using the configured search source.
+   * Returns a ResolvedTrack at the path /__search?q=query with children containing results.
+   * Always executes a fresh search and caches results for onGetSearchResult() retrieval.
+   *
+   * @param params The structured search parameters
+   * @return ResolvedTrack containing search results as children
+   */
+  suspend fun search(params: SearchParams): ResolvedTrack {
+    Timber.d("Executing fresh search for: ${params.query} (mode=${params.mode})")
+
+    val searchPath = createSearchPath(params.query)
 
     try {
       // Execute search
-      val searchResults = config.search?.let { searchSource -> resolveSearchSource(searchSource, query) }
+      val searchResults = config.search?.let { searchSource -> resolveSearchSource(searchSource, params) }
         ?: run {
           Timber.w("Search requested but no search source configured")
           emptyArray()
@@ -529,7 +551,7 @@ class BrowserManager {
       // Create ResolvedTrack
       val searchResolvedTrack = ResolvedTrack(
           url = searchPath,
-          title = "Search: $query",
+          title = "Search: ${params.query}",
           children = searchResults,
           artwork = null,
           artist = null,
@@ -549,12 +571,12 @@ class BrowserManager {
 
       return searchResolvedTrack
     } catch (e: Exception) {
-      Timber.e(e, "Error during search for query: $query")
+      Timber.e(e, "Error during search for query: ${params.query}")
 
       // Return empty search result on error
       val emptySearchResult = ResolvedTrack(
           url = searchPath,
-          title = "Search: $query",
+          title = "Search: ${params.query}",
           children = emptyArray(),
           artwork = null,
           artist = null,
@@ -709,19 +731,19 @@ class BrowserManager {
   }
 
   /** Resolve a SearchSource into Track results. */
-  private suspend fun resolveSearchSource(source: SearchSource, query: String): Array<Track> {
+  private suspend fun resolveSearchSource(source: SearchSource, params: SearchParams): Array<Track> {
     return source.match(
       // Callback function
       first = { callback ->
         Timber.d("Resolving search source via callback")
-        val promise = callback.invoke(query)
+        val promise = callback.invoke(params)
         val innerPromise = promise.await()
         innerPromise.await()
       },
       // API configuration
       second = { apiConfig ->
         Timber.d("Resolving search source via API config")
-        executeSearchApiRequest(apiConfig, query)
+        executeSearchApiRequest(apiConfig, params)
       },
     )
   }
@@ -798,12 +820,16 @@ class BrowserManager {
   }
 
   /**
-   * Execute an API request for search results. Automatically adds query as { q: query } to request
-   * parameters.
+   * Execute an API request for search results. Automatically adds search parameters to request query:
+   * - q: The search query string (always included)
+   * - mode: The search mode (any, genre, artist, album, song, playlist) - omitted for unstructured search
+   * - genre, artist, album, title, playlist: Included only when non-null
+   *
+   * Transform callbacks can access and modify all parameters as needed.
    */
   private suspend fun executeSearchApiRequest(
     apiConfig: TransformableRequestConfig,
-    query: String,
+    params: SearchParams,
   ): Array<Track> {
     return withContext(Dispatchers.IO) {
       try {
@@ -821,7 +847,18 @@ class BrowserManager {
               userAgent = null,
             )
 
-        // 2. Create a copy of API config with added query parameter
+        // 2. Build query parameters from SearchParams
+        val searchQueryParams = buildMap {
+          put("q", params.query)
+          params.mode?.let { put("mode", it.toString().lowercase()) }
+          params.genre?.let { put("genre", it) }
+          params.artist?.let { put("artist", it) }
+          params.album?.let { put("album", it) }
+          params.title?.let { put("title", it) }
+          params.playlist?.let { put("playlist", it) }
+        }
+
+        // 3. Create a copy of API config with added search parameters
         val searchConfig =
           TransformableRequestConfig(
             transform = apiConfig.transform,
@@ -829,7 +866,7 @@ class BrowserManager {
             path = apiConfig.path,
             baseUrl = apiConfig.baseUrl,
             headers = apiConfig.headers,
-            query = (apiConfig.query ?: emptyMap()) + mapOf("q" to query),
+            query = (apiConfig.query ?: emptyMap()) + searchQueryParams,
             body = apiConfig.body,
             contentType = apiConfig.contentType,
             userAgent = apiConfig.userAgent,

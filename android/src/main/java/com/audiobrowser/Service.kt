@@ -1,11 +1,13 @@
 package com.audiobrowser
 
 import android.app.PendingIntent
+import android.app.SearchManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
+import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.MainThread
 import androidx.core.net.toUri
@@ -14,6 +16,8 @@ import androidx.media3.session.MediaSession
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.SearchMode
+import com.margelo.nitro.audiobrowser.SearchParams
 import kotlin.system.exitProcess
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -93,16 +97,70 @@ class Service : MediaLibraryService() {
     Timber.d("onStartCommand: action=${intent?.action}")
 
     // Handle MEDIA_PLAY_FROM_SEARCH intent for voice commands
-    intent?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
-      ?.getStringExtra("query")
-      ?.let { query ->
-        Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: query='$query'")
-        scope.launch {
-          player.playFromSearch(query)
-        }
+    intent
+      ?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
+      ?.let { searchIntent ->
+        val searchParams = parseSearchIntent(searchIntent)
+        Timber.d("MEDIA_PLAY_FROM_SEARCH intent received: $searchParams")
+        scope.launch { player.playFromSearch(searchParams) }
       }
 
     return super.onStartCommand(intent, flags, startId)
+  }
+
+  /**
+   * Parses MEDIA_PLAY_FROM_SEARCH intent into structured SearchParams.
+   *
+   * Extracts search mode from EXTRA_MEDIA_FOCUS and relevant metadata fields:
+   * - "vnd.android.cursor.item/\*" with empty query → ANY ("play music")
+   * - "vnd.android.cursor.item/\*" with query → null (unstructured search)
+   * - Audio.Genres.ENTRY_CONTENT_TYPE → GENRE
+   * - Audio.Artists.ENTRY_CONTENT_TYPE → ARTIST
+   * - Audio.Albums.ENTRY_CONTENT_TYPE → ALBUM
+   * - "vnd.android.cursor.item/audio" → SONG
+   * - Audio.Playlists.ENTRY_CONTENT_TYPE → PLAYLIST
+   * - null or unknown → null (unstructured search)
+   *
+   * See: https://developer.android.com/guide/components/intents-common#PlaySearch
+   */
+  private fun parseSearchIntent(intent: Intent): SearchParams {
+    // Get the search query from SearchManager.QUERY
+    val query = intent.getStringExtra(SearchManager.QUERY) ?: ""
+
+    // Get the media focus type (what kind of media to search for)
+    val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
+
+    // Determine search mode based on media focus type
+    val mode =
+      when (mediaFocus) {
+        "vnd.android.cursor.item/*" -> {
+          // Generic audio content - could be "play music" or unstructured search
+          if (query.isEmpty()) SearchMode.ANY else null
+        }
+        MediaStore.Audio.Genres.ENTRY_CONTENT_TYPE -> SearchMode.GENRE
+        MediaStore.Audio.Artists.ENTRY_CONTENT_TYPE -> SearchMode.ARTIST
+        MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE -> SearchMode.ALBUM
+        "vnd.android.cursor.item/audio" -> SearchMode.SONG
+        MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
+        else -> null // No media focus or unknown - unstructured search
+      }
+
+    // Extract structured metadata fields
+    val genre = intent.getStringExtra("android.intent.extra.genre")
+    val artist = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ARTIST)
+    val album = intent.getStringExtra(MediaStore.EXTRA_MEDIA_ALBUM)
+    val title = intent.getStringExtra(MediaStore.EXTRA_MEDIA_TITLE)
+    val playlist = intent.getStringExtra("android.intent.extra.playlist")
+
+    return SearchParams(
+      mode = mode,
+      query = query,
+      genre = genre,
+      artist = artist,
+      album = album,
+      title = title,
+      playlist = playlist,
+    )
   }
 
   override fun onBind(intent: Intent?): IBinder? {

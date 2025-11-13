@@ -37,6 +37,7 @@ import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
+import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -68,7 +69,7 @@ class Player(internal val context: Context) {
             mediaSession,
             options.capabilities,
             options.notificationCapabilities,
-            searchAvailable
+            searchAvailable,
           )
         }
       }
@@ -581,18 +582,20 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Executes a search and plays the results.
-   * Used for voice commands like "play soul searching".
+   * Executes a search and plays the results. Used for voice commands with structured search
+   * parameters.
    *
-   * @param query The search query string
+   * @param params The structured search parameters (mode, query, artist, album, etc.)
    * @return true if search succeeded and playback started, false otherwise
    */
-  suspend fun playFromSearch(query: String): Boolean {
+  suspend fun playFromSearch(params: SearchParams): Boolean {
     val browserManager = browser?.browserManager ?: return false
 
     return try {
-      Timber.d("Executing voice search for: $query")
-      val tracks = browserManager.searchPlayable(query)
+      Timber.d(
+        "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
+      )
+      val tracks = browserManager.searchPlayable(params)
 
       if (tracks != null && tracks.isNotEmpty()) {
         Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
@@ -601,11 +604,11 @@ class Player(internal val context: Context) {
         play()
         true
       } else {
-        Timber.w("No tracks found for query: $query")
+        Timber.w("No tracks found for search: ${params}")
         false
       }
     } catch (e: Exception) {
-      Timber.e(e, "Error handling voice search for query: $query")
+      Timber.e(e, "Error handling voice search: ${params}")
       false
     }
   }

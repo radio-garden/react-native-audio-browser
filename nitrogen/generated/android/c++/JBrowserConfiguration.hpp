@@ -18,22 +18,26 @@
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JHttpMethod.hpp"
 #include "JMediaRequestConfig.hpp"
 #include "JPlayConfigurationBehavior.hpp"
 #include "JRequestConfig.hpp"
 #include "JResolvedTrack.hpp"
+#include "JSearchMode.hpp"
+#include "JSearchParams.hpp"
 #include "JTrack.hpp"
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
 #include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.hpp"
-#include "JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
+#include "JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
 #include "MediaRequestConfig.hpp"
 #include "PlayConfigurationBehavior.hpp"
 #include "RequestConfig.hpp"
 #include "ResolvedTrack.hpp"
+#include "SearchMode.hpp"
+#include "SearchParams.hpp"
 #include "Track.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
@@ -71,8 +75,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JRequestConfig> request = this->getFieldValue(fieldRequest);
       static const auto fieldMedia = clazz->getField<JMediaRequestConfig>("media");
       jni::local_ref<JMediaRequestConfig> media = this->getFieldValue(fieldMedia);
-      static const auto fieldSearch = clazz->getField<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig>("search");
-      jni::local_ref<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig> search = this->getFieldValue(fieldSearch);
+      static const auto fieldSearch = clazz->getField<JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig>("search");
+      jni::local_ref<JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig> search = this->getFieldValue(fieldSearch);
       static const auto fieldTabs = clazz->getField<JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig>("tabs");
       jni::local_ref<JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig> tabs = this->getFieldValue(fieldTabs);
       static const auto fieldRoutes = clazz->getField<jni::JMap<jni::JString, JBrowserSource>>("routes");
@@ -106,7 +110,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JBrowserConfiguration::javaobject> fromCpp(const BrowserConfiguration& value) {
-      using JSignature = JBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig>, jni::alias_ref<JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig>, jni::alias_ref<jni::JMap<jni::JString, JBrowserSource>>, jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig>, jni::alias_ref<JPlayConfigurationBehavior>);
+      using JSignature = JBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig>, jni::alias_ref<JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig>, jni::alias_ref<jni::JMap<jni::JString, JBrowserSource>>, jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig>, jni::alias_ref<JPlayConfigurationBehavior>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -114,7 +118,7 @@ namespace margelo::nitro::audiobrowser {
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.request.has_value() ? JRequestConfig::fromCpp(value.request.value()) : nullptr,
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
-        value.search.has_value() ? JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig::fromCpp(value.search.value()) : nullptr,
+        value.search.has_value() ? JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig::fromCpp(value.search.value()) : nullptr,
         value.tabs.has_value() ? JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig::fromCpp(value.tabs.value()) : nullptr,
         value.routes.has_value() ? [&]() -> jni::local_ref<jni::JMap<jni::JString, JBrowserSource>> {
           auto __map = jni::JHashMap<jni::JString, JBrowserSource>::create(value.routes.value().size());

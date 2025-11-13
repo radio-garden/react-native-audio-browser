@@ -37,7 +37,7 @@ target_sources(
   ../nitrogen/generated/shared/c++/HybridAudioPlayerSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
-  ../nitrogen/generated/android/c++/JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.cpp
+  ../nitrogen/generated/android/c++/JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig.cpp
   ../nitrogen/generated/android/c++/JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.cpp
   ../nitrogen/generated/android/c++/JBrowserSource.cpp
   ../nitrogen/generated/android/c++/JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.cpp

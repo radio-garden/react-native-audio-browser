@@ -21,8 +21,12 @@ namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `SearchParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
+// Forward declaration of `SearchMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
@@ -54,10 +58,14 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
 #include <NitroModules/JPromise.hpp>
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "SearchParams.hpp"
 #include "TransformableRequestConfig.hpp"
 #include <variant>
-#include "JVariant__query__String_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string.hpp"
+#include "JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
+#include "JSearchParams.hpp"
+#include "SearchMode.hpp"
+#include "JSearchMode.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"

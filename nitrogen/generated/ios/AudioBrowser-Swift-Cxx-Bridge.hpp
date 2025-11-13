@@ -114,6 +114,10 @@ namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
+// Forward declaration of `SearchMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SearchMode; }
+// Forward declaration of `SearchParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -187,6 +191,8 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "RepeatModeChangedEvent.hpp"
 #include "RequestConfig.hpp"
 #include "ResolvedTrack.hpp"
+#include "SearchMode.hpp"
+#include "SearchParams.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
@@ -641,27 +647,42 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>
+  // pragma MARK: std::optional<SearchMode>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string&)>`.
+   * Specialized version of `std::optional<SearchMode>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>;
+  using std__optional_SearchMode_ = std::optional<SearchMode>;
+  inline std::optional<SearchMode> create_std__optional_SearchMode_(const SearchMode& value) noexcept {
+    return std::optional<SearchMode>(value);
+  }
+  inline bool has_value_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline SearchMode get_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& / * query * /)>`, this can be used from Swift.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams&)>`.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string_Wrapper final {
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call(std::string query) const noexcept {
-      auto __result = _function->operator()(query);
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call(SearchParams params) const noexcept {
+      auto __result = _function->operator()(params);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______std__string_Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>
@@ -698,47 +719,47 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>
   /**
-   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& / * query * /)>, TransformableRequestConfig>`.
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>, TransformableRequestConfig>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_ {
-    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig> variant;
-    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig> variant): variant(variant) { }
-    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>() const noexcept {
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
       return variant.index();
     }
-    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)> get_0() const noexcept {
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)> get_0() const noexcept {
       return std::get<0>(variant);
     }
     inline TransformableRequestConfig get_1() const noexcept {
       return std::get<1>(variant);
     }
   };
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>
+  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>
   /**
-   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& / * query * /)>, TransformableRequestConfig>>`.
+   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>, TransformableRequestConfig>>`.
    */
-  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>;
-  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>& value) noexcept {
-    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>(value);
+  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>;
+  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>& value) noexcept {
+    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>(value);
   }
-  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_std__string_____query_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const std::string& /* query */)>, TransformableRequestConfig>>& optional) noexcept {
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>& optional) noexcept {
     return *optional;
   }
   

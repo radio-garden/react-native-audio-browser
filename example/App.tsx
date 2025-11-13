@@ -102,7 +102,7 @@ const configuration: BrowserConfiguration = {
   // themselves. Try searching for "radio", "kutex", "david", "soul", etc - but also
   // for "favorites" and "library" to see that route titles are also searched.
   // (Normally you would want to search a backend or local database instead)
-  async search(query) {
+  async search({ query }) {
     query = query.toLowerCase()
     return Promise.resolve(
       Object.values(configuration.routes ?? {}).reduce<Track[]>(
