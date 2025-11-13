@@ -10,6 +10,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
@@ -30,13 +31,20 @@ import timber.log.Timber
  */
 class MediaSessionCallback(private val player: Player) :
   MediaLibraryService.MediaLibrarySession.Callback {
-  companion object {
-    private const val ROOT_ID = "__ROOT__"
-    private const val ROOT_ID_RECENT = "__ROOT_RECENT__"
-  }
-
   private val commandManager = MediaSessionCommandManager()
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+  /**
+   * Apply pagination to a list of items.
+   * If pageSize is 0 or MAX_VALUE (Android Auto default), returns the full list.
+   */
+  private fun <T> List<T>.paginate(page: Int, pageSize: Int): List<T> {
+    return if (pageSize in 1 until Int.MAX_VALUE) {
+      this.drop(page * pageSize).take(pageSize)
+    } else {
+      this
+    }
+  }
 
   fun updateMediaSession(
     mediaSession: MediaSession,
@@ -105,7 +113,7 @@ class MediaSessionCallback(private val player: Player) :
     return Futures.immediateFuture(
       LibraryResult.ofItem(
         MediaItem.Builder()
-          .setMediaId(ROOT_ID)
+          .setMediaId(BrowserManager.ROOT_PATH)
           .setMediaMetadata(
             MediaMetadata.Builder().setIsBrowsable(true).setIsPlayable(false).build()
           )
@@ -123,7 +131,7 @@ class MediaSessionCallback(private val player: Player) :
     pageSize: Int,
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-    Timber.Forest.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize }")
+    Timber.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserManager.isSpecialPath(parentId)} }")
     return scope.future {
       val browserManager = player.browser?.browserManager
 
@@ -134,10 +142,10 @@ class MediaSessionCallback(private val player: Player) :
 
       try {
         val children =
-          if (parentId == ROOT_ID_RECENT) {
+          if (parentId == BrowserManager.RECENT_PATH) {
             // TODO: implement recent media items
             emptyList<MediaItem>()
-          } else if (parentId == ROOT_ID) {
+          } else if (parentId == BrowserManager.ROOT_PATH) {
             // Return tabs as root children (limited to 4 for automotive platform compatibility)
             // TODO: Check what Android Auto does with empty tabs list - may need to return error?
             browserManager.queryTabs().take(4).map { tab -> TrackFactory.toMedia3(tab) }
@@ -152,16 +160,7 @@ class MediaSessionCallback(private val player: Player) :
               )
           }
 
-        // Apply pagination if needed
-        val paginatedChildren =
-          if (pageSize > 0) {
-            val startIndex = page * pageSize
-            children.drop(startIndex).take(pageSize)
-          } else {
-            children
-          }
-
-        LibraryResult.ofItemList(ImmutableList.copyOf(paginatedChildren), params)
+        LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
       } catch (e: Exception) {
         Timber.e(e, "Error getting children for parentId: $parentId")
         val errorCode =
@@ -196,7 +195,7 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       // Handle special root IDs
-      if (mediaId == ROOT_ID || mediaId == ROOT_ID_RECENT) {
+      if (mediaId == BrowserManager.ROOT_PATH || mediaId == BrowserManager.RECENT_PATH) {
         return@future LibraryResult.ofItem(
           MediaItem.Builder()
             .setMediaId(mediaId)
@@ -225,17 +224,81 @@ class MediaSessionCallback(private val player: Player) :
     query: String,
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<Void>> {
-    Timber.Forest.d("onSearch: ${browser.packageName}, query = $query")
+    Timber.d("onSearch: ${browser.packageName}, query = $query")
     return scope.future {
-      session.notifySearchResultChanged(
-        browser,
-        query,
-        // TODO: this should be the count of the returned results from BrowserManager.search:
-        0,
-        params
-      )
-      // TODO: return LibraryResult.ofError when search is not configured
-      LibraryResult.ofVoid()
+      val browserManager = player.browser?.browserManager
+
+      if (browserManager == null) {
+        Timber.w("AudioBrowser not registered - search not available")
+        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
+      }
+
+      // Check if search is configured
+      if (browserManager.config.search == null) {
+        Timber.w("Search requested but no search source configured")
+        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
+      }
+
+      try {
+        // Execute search (automatically caches results at /__search?q=query)
+        val searchResults = browserManager.search(query)
+        val resultCount = searchResults.children?.size ?: 0
+
+        Timber.d("Search completed: $resultCount results for query '$query'")
+
+        // Notify Media3 of search results
+        session.notifySearchResultChanged(
+          browser,
+          query,
+          resultCount,
+          params
+        )
+
+        LibraryResult.ofVoid()
+      } catch (e: Exception) {
+        Timber.e(e, "Error during search for query: $query")
+        LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
+      }
+    }
+  }
+
+  override fun onGetSearchResult(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    query: String,
+    page: Int,
+    pageSize: Int,
+    params: MediaLibraryService.LibraryParams?,
+  ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+    Timber.d("onGetSearchResult: ${browser.packageName}, query = $query, page = $page, pageSize = $pageSize")
+    return scope.future {
+      val browserManager = player.browser?.browserManager
+
+      if (browserManager == null) {
+        Timber.w("AudioBrowser not registered - search not available")
+        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
+      }
+
+      try {
+        // Get cached search results from BrowserManager
+        browserManager.getCachedSearchResults(query)?.let { tracks ->
+          // Convert to MediaItems
+          val mediaItems = tracks.map { track ->
+            Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")
+            TrackFactory.toMedia3(track)
+          }
+
+          val paginatedItems = mediaItems.paginate(page, pageSize)
+          Timber.d("Returning ${paginatedItems.size} search results")
+          LibraryResult.ofItemList(ImmutableList.copyOf(paginatedItems), params)
+        } ?: run {
+          Timber.w("No cached search results for query: $query")
+          LibraryResult.ofItemList(ImmutableList.of(), params)
+        }
+      } catch (e: Exception) {
+        Timber.e(e, "Error getting search results for query: $query")
+        LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
+      }
     }
   }
 

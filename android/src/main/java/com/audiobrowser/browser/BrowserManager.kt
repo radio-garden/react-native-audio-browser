@@ -17,10 +17,12 @@ import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import java.net.URLEncoder
 
 /**
  * Core browser manager that handles navigation, search, and media browsing.
@@ -32,6 +34,33 @@ import timber.log.Timber
  * - Fallback handling and error management
  */
 class BrowserManager {
+  companion object {
+    /** Root path for media browsing */
+    const val ROOT_PATH = "/__root"
+
+    /** Recent media path for playback resumption */
+    const val RECENT_PATH = "/__recent"
+
+    /** Search path prefix (full path is /__search?q=query) */
+    const val SEARCH_PATH_PREFIX = "/__search"
+
+    /**
+     * Check if a path is a special system path (not a regular navigation path)
+     */
+    fun isSpecialPath(path: String): Boolean {
+      return path == ROOT_PATH ||
+             path == RECENT_PATH ||
+             path.startsWith("$SEARCH_PATH_PREFIX?")
+    }
+
+    /**
+     * Create a search path for a given query
+     */
+    fun createSearchPath(query: String): String {
+      val encodedQuery = URLEncoder.encode(query, "UTF-8")
+      return "$SEARCH_PATH_PREFIX?q=$encodedQuery"
+    }
+  }
   private val router = SimpleRouter()
   private val httpClient = HttpClient()
   private val json = Json {
@@ -88,6 +117,25 @@ class BrowserManager {
   /** Get a cached ResolvedTrack by mediaId/path, or null if not cached. */
   fun getCachedResolvedTrack(mediaId: String): ResolvedTrack? {
     return resolvedTrackCache[mediaId]
+  }
+
+  /**
+   * Cache a ResolvedTrack at the specified path. Also caches all children tracks.
+   * Used for special paths like search results that don't go through normal navigation.
+   */
+  fun cacheResolvedTrack(path: String, resolvedTrack: ResolvedTrack) {
+    resolvedTrackCache[path] = resolvedTrack
+
+    // Cache children tracks for Media3 lookup
+    resolvedTrack.children?.forEachIndexed { index, track ->
+      val trackId = track.url ?: track.src
+      if (trackId != null) {
+        Timber.d("[$path] Child[$index] '${track.title}': Cached with id=$trackId")
+        trackCache[trackId] = track
+      } else {
+        Timber.w("[$path] Child[$index] '${track.title}': Skipped - no url or src")
+      }
+    }
   }
 
   /**
@@ -160,11 +208,42 @@ class BrowserManager {
     // Android Auto queue expansion: single track → full album/playlist
     if (mediaItems.size == 1) {
       val mediaItem = mediaItems[0]
-      // TODO: handle -> mediaItems[0].requestMetadata.searchQuery
-      if (mediaItem.requestMetadata.searchQuery != null) {
-        // This is a search request
-        Timber.w("Search request: ${mediaItem.requestMetadata.searchQuery}")
+
+      // Handle search query - user initiated playback from search results
+      val searchQuery = mediaItem.requestMetadata.searchQuery
+      if (searchQuery != null) {
+        Timber.d("Handling search playback request for query: $searchQuery")
+
+        // Execute search (will hit cache if already performed)
+        val searchResults = search(searchQuery)
+        val searchTracks = searchResults.children
+
+        if (searchTracks != null && searchTracks.isNotEmpty()) {
+          // Find the selected track in search results
+          val mediaId = mediaItem.mediaId
+          val selectedIndex = searchTracks.indexOfFirst { track ->
+            track.url == mediaId || track.src == mediaId
+          }
+
+          if (selectedIndex >= 0) {
+            Timber.d("Playing search result at index $selectedIndex of ${searchTracks.size} results")
+
+            // Convert to Media3 MediaItems
+            val searchMediaItems = searchTracks.map { track -> TrackFactory.toMedia3(track) }
+
+            return MediaSession.MediaItemsWithStartPosition(
+              searchMediaItems,
+              selectedIndex,
+              startPositionMs
+            )
+          } else {
+            Timber.w("Selected track not found in search results, falling back to single track")
+          }
+        } else {
+          Timber.w("Search returned no results for query: $searchQuery")
+        }
       }
+
       val mediaId = mediaItems[0].mediaId
 
       if (ContextualUrlHelper.isContextual(mediaId)) {
@@ -381,23 +460,81 @@ class BrowserManager {
   }
 
   /**
-   * Search for tracks using the configured search source.
+   * Get cached search results for a query.
+   * Used by Media3 onGetSearchResult() callback to retrieve previously executed search.
    *
    * @param query The search query string
-   * @return Array of Track results
+   * @return Array of Track results, or null if not found
    */
-  suspend fun search(query: String): Array<Track> {
-    Timber.d("Searching for: $query")
+  fun getCachedSearchResults(query: String): Array<Track>? {
+    val searchPath = createSearchPath(query)
+    return getCachedResolvedTrack(searchPath)?.children
+  }
+
+  /**
+   * Search for tracks using the configured search source.
+   * Returns a ResolvedTrack at the path /__search?q=query with children containing results.
+   * Always executes a fresh search and caches results for onGetSearchResult() retrieval.
+   *
+   * @param query The search query string
+   * @return ResolvedTrack containing search results as children
+   */
+  suspend fun search(query: String): ResolvedTrack {
+    Timber.d("Executing fresh search for: $query")
+
+    val searchPath = createSearchPath(query)
 
     try {
-      return config.search?.let { searchSource -> resolveSearchSource(searchSource, query) }
+      // Execute search
+      val searchResults = config.search?.let { searchSource -> resolveSearchSource(searchSource, query) }
         ?: run {
           Timber.w("Search requested but no search source configured")
           emptyArray()
         }
+
+      // Create ResolvedTrack
+      val searchResolvedTrack = ResolvedTrack(
+          url = searchPath,
+          title = "Search: $query",
+          children = searchResults,
+          artwork = null,
+          artist = null,
+          description = null,
+          subtitle = null,
+          album = null,
+          genre = null,
+          duration = null,
+          playable = null,
+          src = null,
+          style = null,
+      )
+
+      // Cache the search results (this also caches children in trackCache)
+      cacheResolvedTrack(searchPath, searchResolvedTrack)
+      Timber.d("Cached search results at path: $searchPath with ${searchResults.size} results")
+
+      return searchResolvedTrack
     } catch (e: Exception) {
       Timber.e(e, "Error during search for query: $query")
-      return emptyArray()
+
+      // Return empty search result on error
+      val emptySearchResult = ResolvedTrack(
+          url = searchPath,
+          title = "Search: $query",
+          children = emptyArray(),
+          artwork = null,
+          artist = null,
+          description = null,
+          subtitle = null,
+          album = null,
+          genre = null,
+          duration = null,
+          playable = null,
+          src = null,
+          style = null,
+      )
+
+      return emptySearchResult
     }
   }
 
@@ -772,7 +909,7 @@ class NetworkException(message: String, cause: Throwable? = null) : Exception(me
  * contain all the configured sources.
  */
 typealias BrowseSource =
-  com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
+  Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
 
 data class BrowserConfig(
   val request: RequestConfig? = null,

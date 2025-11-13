@@ -1,12 +1,16 @@
 import React from 'react'
 import { StyleSheet } from 'react-native'
-import AudioBrowser, { setPlayWhenReady } from 'react-native-audio-browser'
+import AudioBrowser, {
+  BrowserConfiguration,
+  setPlayWhenReady,
+  Track
+} from 'react-native-audio-browser'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { BrowserScreen } from './src/screens/BrowserScreen'
 
 void AudioBrowser.setupPlayer().then(() => setPlayWhenReady(true))
 
-AudioBrowser.configureBrowser({
+const configuration: BrowserConfiguration = {
   play: 'queue',
   tabs: [
     {
@@ -91,8 +95,46 @@ AudioBrowser.configureBrowser({
         }
       ]
     }
+  },
+
+  // A somewhat convoluted search implementation that looks for the query in titles
+  // and artists of all routes' children as well as the title of the routes
+  // themselves. Try searching for "radio", "kutex", "david", "soul", etc - but also
+  // for "favorites" and "library" to see that route titles are also searched.
+  // (Normally you would want to search a backend or local database instead)
+  async search(query) {
+    query = query.toLowerCase()
+    return Promise.resolve(
+      Object.values(configuration.routes ?? {}).reduce<Track[]>(
+        (results, source) => {
+          if ('children' in source) {
+            results.push(
+              ...(source.children?.filter(
+                (track) =>
+                  !!(['title', 'artist', 'album'] as const).find(
+                    (field) => !!track[field]?.toLowerCase().includes(query)
+                  )
+              ) ?? [])
+            )
+            if (source.title?.toLowerCase().includes(query)) {
+              results.push({
+                url: source.url,
+                title: source.title,
+                artwork: source.artwork,
+                artist: source.artist,
+                album: source.album
+              })
+            }
+          }
+          return results
+        },
+        []
+      )
+    )
   }
-})
+}
+
+AudioBrowser.configureBrowser(configuration)
 
 export default function App() {
   return (

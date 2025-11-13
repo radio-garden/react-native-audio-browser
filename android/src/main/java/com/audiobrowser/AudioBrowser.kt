@@ -203,7 +203,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   override fun onSearch(query: String): Promise<Array<Track>> {
     return Promise.async(mainScope) {
       Timber.d("Searching for: $query")
-      browserManager.search(query)
+      val searchResults = browserManager.search(query)
+      searchResults.children ?: emptyArray()
     }
   }
 
