@@ -8,15 +8,12 @@
 
     <application>
         <!-- Audio Browser Service -->
-        <service
-            android:name="com.audiobrowser.Service"
-            android:enabled="true"
-            android:exported="true"
-            android:foregroundServiceType="mediaPlayback">
+        <service android:name="com.audiobrowser.Service" android:enabled="true" android:exported="true" android:foregroundServiceType="mediaPlayback">
 
             <!-- Intent filters for media browser service -->
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
+                <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
 
             <!-- For Android Auto support -->
@@ -26,5 +23,4 @@
             </intent-filter>
         </service>
     </application>
-
 </manifest>
