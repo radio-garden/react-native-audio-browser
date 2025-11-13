@@ -386,12 +386,13 @@ class Player(internal val context: Context) {
         .setLoadControl(loadControl)
         .setName("AudioBrowser")
         .build()
-    val audioAttributes =
+    exoPlayer.setAudioAttributes(
       AudioAttributes.Builder()
         .setUsage(C.USAGE_MEDIA)
         .setContentType(AndroidAudioContentTypeFactory.toMedia3(setupOptions.audioContentType))
-        .build()
-    exoPlayer.setAudioAttributes(audioAttributes, true)
+        .build(),
+      true, // handle audio focus
+    )
 
     // Apply setup-specific options
     setupOptions.audioOffload?.let {
