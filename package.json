@@ -9,10 +9,10 @@
   "react-native": "src/index",
   "source": "src/index",
   "scripts": {
-    "android:format": "cd example/android && ./gradlew :react-native-audio-browser:format",
-    "android:ide": "cd example/android && open -a 'Android Studio' .",
+    "android:format": "yarn example android:format",
+    "android:ide": "yarn example android:ide",
     "android:logs": "react-native log-android",
-    "android:test": "cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest",
+    "android:test": "yarn example android:test",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "codegen": "nitrogen --logLevel=\"debug\" && node post-script.cjs && yarn run build",
