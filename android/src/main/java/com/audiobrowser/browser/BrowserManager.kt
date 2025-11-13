@@ -479,7 +479,17 @@ class BrowserManager {
    * @return Array of playable tracks, or null if no results or search not configured
    */
   suspend fun searchPlayable(query: String): Array<Track>? {
-    return searchPlayable(SearchParams(query))
+    return searchPlayable(
+      SearchParams(
+        query = query,
+        mode = null,
+        genre = null,
+        artist = null,
+        album = null,
+        title = null,
+        playlist = null,
+      )
+    )
   }
 
   /**
@@ -520,7 +530,17 @@ class BrowserManager {
    * @return ResolvedTrack containing search results as children
    */
   suspend fun search(query: String): ResolvedTrack {
-    return search(SearchParams(query))
+    return search(
+      SearchParams(
+        query = query,
+        mode = null,
+        genre = null,
+        artist = null,
+        album = null,
+        title = null,
+        playlist = null,
+      )
+    )
   }
 
   /**
