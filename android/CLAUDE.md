@@ -258,3 +258,22 @@ graph TD
 - **Unit tests**: Route resolution, HTTP client, config merging
 - **Integration tests**: End-to-end navigation and playback flows
 - **Media3 integration**: Validated through actual playback scenarios
+
+## Code Style Guidelines
+
+### Imports
+- **Always add proper imports** instead of using fully-qualified names inline
+- **Avoid inline package references** like `com.margelo.nitro.audiobrowser.SearchMode.UNSTRUCTURED`
+- Add import at the top of the file and use the short name
+
+**Bad:**
+```kotlin
+val mode = com.margelo.nitro.audiobrowser.SearchMode.UNSTRUCTURED
+```
+
+**Good:**
+```kotlin
+import com.margelo.nitro.audiobrowser.SearchMode
+
+val mode = SearchMode.UNSTRUCTURED
+```
