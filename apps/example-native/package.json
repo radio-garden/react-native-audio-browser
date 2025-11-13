@@ -20,6 +20,7 @@
     "format": "prettier --write src App.tsx",
     "ios:build": "react-native build-ios --mode Debug",
     "ios:ide": "open ios/*.xcworkspace",
+    "ios:rebuild": "cd ios && pod install && cd .. && yarn ios",
     "ios:sim": "react-native run-ios --simulator=\"iPhone\"",
     "ios": "react-native run-ios --simulator='iPhone 16'",
     "lint": "eslint . --max-warnings=0 --fix",
