@@ -330,6 +330,9 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
+  // TODO: if we don't end up implementing playback resumption, we should also
+  // remove androidx.media3.session.MediaButtonReceiver from the manifest
+  // see https://developer.android.com/media/media3/session/background-playback#resumption
   override fun onPlaybackResumption(
     mediaSession: MediaSession,
     controller: MediaSession.ControllerInfo,
