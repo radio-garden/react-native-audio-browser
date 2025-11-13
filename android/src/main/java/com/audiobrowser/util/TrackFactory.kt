@@ -6,15 +6,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.margelo.nitro.audiobrowser.Track
 
-/**
- * Extension function to check if a track is browsable.
- * A track is browsable if it has a url.
- */
+/** Extension function to check if a track is browsable. A track is browsable if it has a url. */
 fun Track.isBrowsable(): Boolean = url != null
 
 /**
- * Extension function to check if a track is playable.
- * A track is playable if:
+ * Extension function to check if a track is playable. A track is playable if:
  * - It's not browsable (no url), OR
  * - It has the playable flag set to true, OR
  * - It has a src (media source)

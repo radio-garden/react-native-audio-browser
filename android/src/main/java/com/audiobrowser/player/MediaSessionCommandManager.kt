@@ -185,7 +185,7 @@ class MediaSessionCommandManager {
 
   private fun updateSessionCommandsAndLayout(
     notificationCapabilities: List<Capability>,
-    searchAvailable: Boolean
+    searchAvailable: Boolean,
   ) {
     val customLayoutButtons = mutableListOf<CommandButton>()
     val sessionCommandsBuilder =

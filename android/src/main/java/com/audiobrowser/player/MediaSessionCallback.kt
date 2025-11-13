@@ -35,8 +35,8 @@ class MediaSessionCallback(private val player: Player) :
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   /**
-   * Apply pagination to a list of items.
-   * If pageSize is 0 or MAX_VALUE (Android Auto default), returns the full list.
+   * Apply pagination to a list of items. If pageSize is 0 or MAX_VALUE (Android Auto default),
+   * returns the full list.
    */
   private fun <T> List<T>.paginate(page: Int, pageSize: Int): List<T> {
     return if (pageSize in 1 until Int.MAX_VALUE) {
@@ -52,7 +52,12 @@ class MediaSessionCallback(private val player: Player) :
     notificationCapabilities: List<Capability>?,
     searchAvailable: Boolean,
   ) {
-    commandManager.updateMediaSession(mediaSession, capabilities, notificationCapabilities, searchAvailable)
+    commandManager.updateMediaSession(
+      mediaSession,
+      capabilities,
+      notificationCapabilities,
+      searchAvailable,
+    )
   }
 
   override fun onConnect(
@@ -132,7 +137,9 @@ class MediaSessionCallback(private val player: Player) :
     pageSize: Int,
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-    Timber.d("onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserManager.isSpecialPath(parentId)} }")
+    Timber.d(
+      "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserManager.isSpecialPath(parentId)} }"
+    )
     return scope.future {
       val browserManager = player.browser?.browserManager
 
@@ -248,12 +255,7 @@ class MediaSessionCallback(private val player: Player) :
         Timber.d("Search completed: $resultCount results for query '$query'")
 
         // Notify Media3 of search results
-        session.notifySearchResultChanged(
-          browser,
-          query,
-          resultCount,
-          params
-        )
+        session.notifySearchResultChanged(browser, query, resultCount, params)
 
         LibraryResult.ofVoid()
       } catch (e: Exception) {
@@ -271,7 +273,9 @@ class MediaSessionCallback(private val player: Player) :
     pageSize: Int,
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-    Timber.d("onGetSearchResult: ${browser.packageName}, query = $query, page = $page, pageSize = $pageSize")
+    Timber.d(
+      "onGetSearchResult: ${browser.packageName}, query = $query, page = $page, pageSize = $pageSize"
+    )
     return scope.future {
       val browserManager = player.browser?.browserManager
 
@@ -284,18 +288,20 @@ class MediaSessionCallback(private val player: Player) :
         // Get cached search results from BrowserManager
         browserManager.getCachedSearchResults(query)?.let { tracks ->
           // Convert to MediaItems
-          val mediaItems = tracks.map { track ->
-            Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")
-            TrackFactory.toMedia3(track)
-          }
+          val mediaItems =
+            tracks.map { track ->
+              Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")
+              TrackFactory.toMedia3(track)
+            }
 
           val paginatedItems = mediaItems.paginate(page, pageSize)
           Timber.d("Returning ${paginatedItems.size} search results")
           LibraryResult.ofItemList(ImmutableList.copyOf(paginatedItems), params)
-        } ?: run {
-          Timber.w("No cached search results for query: $query")
-          LibraryResult.ofItemList(ImmutableList.of(), params)
         }
+          ?: run {
+            Timber.w("No cached search results for query: $query")
+            LibraryResult.ofItemList(ImmutableList.of(), params)
+          }
       } catch (e: Exception) {
         Timber.e(e, "Error getting search results for query: $query")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
@@ -333,11 +339,7 @@ class MediaSessionCallback(private val player: Player) :
     // TODO: Implement playback resumption by returning last played items from storage
     // For now, return an empty result to prevent crashes
     return Futures.immediateFuture(
-      MediaSession.MediaItemsWithStartPosition(
-        ImmutableList.of(),
-        0,
-        0
-      )
+      MediaSession.MediaItemsWithStartPosition(ImmutableList.of(), 0, 0)
     )
   }
 }

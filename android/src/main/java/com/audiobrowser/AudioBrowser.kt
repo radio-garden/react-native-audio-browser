@@ -4,7 +4,6 @@ import androidx.annotation.Keep
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.http.RequestConfigBuilder
-import com.audiobrowser.util.fromQuery
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.BrowserConfiguration
@@ -13,8 +12,6 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.PlayConfigurationBehavior
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
-import com.margelo.nitro.audiobrowser.SearchMode
-import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.Promise
 import kotlinx.coroutines.MainScope
@@ -53,10 +50,11 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
   /** Internal getter for the player instance with proper error handling */
   private val player: com.audiobrowser.player.Player
-    get() = audioPlayer?.player
-      ?: throw IllegalStateException(
-        "AudioPlayer not registered. Call audioPlayer.registerBrowser(audioBrowser) first."
-      )
+    get() =
+      audioPlayer?.player
+        ?: throw IllegalStateException(
+          "AudioPlayer not registered. Call audioPlayer.registerBrowser(audioBrowser) first."
+        )
 
   internal fun buildConfig(): BrowserConfig {
     return BrowserConfig(

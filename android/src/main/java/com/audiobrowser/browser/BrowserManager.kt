@@ -9,6 +9,8 @@ import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.ContextualUrlHelper
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
+import com.audiobrowser.util.isBrowsable
+import com.audiobrowser.util.isPlayable
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -19,14 +21,11 @@ import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
-import com.audiobrowser.util.fromQuery
-import com.audiobrowser.util.isBrowsable
-import com.audiobrowser.util.isPlayable
+import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import timber.log.Timber
-import java.net.URLEncoder
 
 /**
  * Core browser manager that handles navigation, search, and media browsing.
@@ -48,23 +47,18 @@ class BrowserManager {
     /** Search path prefix (full path is /__search?q=query) */
     const val SEARCH_PATH_PREFIX = "/__search"
 
-    /**
-     * Check if a path is a special system path (not a regular navigation path)
-     */
+    /** Check if a path is a special system path (not a regular navigation path) */
     fun isSpecialPath(path: String): Boolean {
-      return path == ROOT_PATH ||
-             path == RECENT_PATH ||
-             path.startsWith("$SEARCH_PATH_PREFIX?")
+      return path == ROOT_PATH || path == RECENT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
     }
 
-    /**
-     * Create a search path for a given query
-     */
+    /** Create a search path for a given query */
     fun createSearchPath(query: String): String {
       val encodedQuery = URLEncoder.encode(query, "UTF-8")
       return "$SEARCH_PATH_PREFIX?q=$encodedQuery"
     }
   }
+
   private val router = SimpleRouter()
   private val httpClient = HttpClient()
   private val json = Json {
@@ -124,8 +118,8 @@ class BrowserManager {
   }
 
   /**
-   * Cache a ResolvedTrack at the specified path. Also caches all children tracks.
-   * Used for special paths like search results that don't go through normal navigation.
+   * Cache a ResolvedTrack at the specified path. Also caches all children tracks. Used for special
+   * paths like search results that don't go through normal navigation.
    */
   fun cacheResolvedTrack(path: String, resolvedTrack: ResolvedTrack) {
     resolvedTrackCache[path] = resolvedTrack
@@ -157,9 +151,9 @@ class BrowserManager {
   }
 
   /**
-   * Resolves multiple media IDs from cache.
-   * Checks both ResolvedTrack cache (for containers) and Track cache (for individual items).
-   * Throws IllegalStateException if any mediaId is not found in cache.
+   * Resolves multiple media IDs from cache. Checks both ResolvedTrack cache (for containers) and
+   * Track cache (for individual items). Throws IllegalStateException if any mediaId is not found in
+   * cache.
    *
    * @param mediaIds The media IDs to resolve
    * @return List of resolved items (can be mixed ResolvedTrack and Track)
@@ -191,8 +185,8 @@ class BrowserManager {
   /**
    * **Media3/Android Auto Integration Entry Point**
    *
-   * Resolves Media3 MediaItems for playback, with special handling for Android Auto queue expansion.
-   * Called exclusively from `MediaSessionCallback.onSetMediaItems()`.
+   * Resolves Media3 MediaItems for playback, with special handling for Android Auto queue
+   * expansion. Called exclusively from `MediaSessionCallback.onSetMediaItems()`.
    *
    * Behavior:
    * - Single item: Attempts queue expansion (Android Auto album/playlist restoration)
@@ -207,7 +201,7 @@ class BrowserManager {
   suspend fun resolveMediaItemsForPlayback(
     mediaItems: List<MediaItem>,
     startIndex: Int,
-    startPositionMs: Long
+    startPositionMs: Long,
   ): MediaSession.MediaItemsWithStartPosition {
     // Android Auto queue expansion: single track → full album/playlist
     if (mediaItems.size == 1) {
@@ -225,12 +219,13 @@ class BrowserManager {
         if (searchTracks != null && searchTracks.isNotEmpty()) {
           // Find the selected track in search results
           val mediaId = mediaItem.mediaId
-          val selectedIndex = searchTracks.indexOfFirst { track ->
-            track.url == mediaId || track.src == mediaId
-          }
+          val selectedIndex =
+            searchTracks.indexOfFirst { track -> track.url == mediaId || track.src == mediaId }
 
           if (selectedIndex >= 0) {
-            Timber.d("Playing search result at index $selectedIndex of ${searchTracks.size} results")
+            Timber.d(
+              "Playing search result at index $selectedIndex of ${searchTracks.size} results"
+            )
 
             // Convert to Media3 MediaItems
             val searchMediaItems = searchTracks.map { track -> TrackFactory.toMedia3(track) }
@@ -238,7 +233,7 @@ class BrowserManager {
             return MediaSession.MediaItemsWithStartPosition(
               searchMediaItems,
               selectedIndex,
-              startPositionMs
+              startPositionMs,
             )
           } else {
             Timber.w("Selected track not found in search results, falling back to single track")
@@ -264,7 +259,7 @@ class BrowserManager {
           return MediaSession.MediaItemsWithStartPosition(
             expandedMediaItems,
             selectedIndex,
-            startPositionMs
+            startPositionMs,
           )
         }
       }
@@ -275,13 +270,14 @@ class BrowserManager {
     val cachedItems = resolveMediaIdsFromCache(mediaIds)
 
     // Convert to Media3 MediaItems
-    val resolvedMediaItems = cachedItems.map { item ->
-      when (item) {
-        is ResolvedTrack -> ResolvedTrackFactory.toMedia3(item)
-        is Track -> TrackFactory.toMedia3(item)
-        else -> throw IllegalStateException("Unexpected item type: ${item::class.simpleName}")
+    val resolvedMediaItems =
+      cachedItems.map { item ->
+        when (item) {
+          is ResolvedTrack -> ResolvedTrackFactory.toMedia3(item)
+          is Track -> TrackFactory.toMedia3(item)
+          else -> throw IllegalStateException("Unexpected item type: ${item::class.simpleName}")
+        }
       }
-    }
 
     return MediaSession.MediaItemsWithStartPosition(resolvedMediaItems, startIndex, startPositionMs)
   }
@@ -301,7 +297,8 @@ class BrowserManager {
   suspend fun resolve(path: String): ResolvedTrack {
     Timber.d("=== RESOLVE: path='$path' ===")
 
-    // Strip __trackId from contextual URLs (e.g., "/library/radio?__trackId=song.mp3" → "/library/radio")
+    // Strip __trackId from contextual URLs (e.g., "/library/radio?__trackId=song.mp3" →
+    // "/library/radio")
     // This allows resolving the parent container for tracks referenced by contextual URL
     val normalizedPath = ContextualUrlHelper.stripTrackId(path)
     if (normalizedPath != path) {
@@ -390,8 +387,8 @@ class BrowserManager {
   /**
    * Expands a contextual URL into a queue of playable tracks.
    *
-   * Used when navigating to a track to load it with its full album/playlist context.
-   * Respects PlayConfigurationBehavior: returns null if set to SINGLE.
+   * Used when navigating to a track to load it with its full album/playlist context. Respects
+   * PlayConfigurationBehavior: returns null if set to SINGLE.
    *
    * @param contextualUrl The contextual URL (e.g., "/album?__trackId=song.mp3")
    * @return Pair of (tracks array, selected track index), or null if expansion fails or disabled
@@ -464,8 +461,8 @@ class BrowserManager {
   }
 
   /**
-   * Get cached search results for a query.
-   * Used by Media3 onGetSearchResult() callback to retrieve previously executed search.
+   * Get cached search results for a query. Used by Media3 onGetSearchResult() callback to retrieve
+   * previously executed search.
    *
    * @param query The search query string
    * @return Array of Track results, or null if not found
@@ -482,14 +479,13 @@ class BrowserManager {
    * @return Array of playable tracks, or null if no results or search not configured
    */
   suspend fun searchPlayable(query: String): Array<Track>? {
-    return searchPlayable(SearchParams.fromQuery(query))
+    return searchPlayable(SearchParams(query))
   }
 
   /**
-   * Search for tracks and return playable results.
-   * If the first result is browsable, resolves it and returns its children.
-   * If the first result is playable, returns it.
-   * Used for voice search "play X" commands.
+   * Search for tracks and return playable results. If the first result is browsable, resolves it
+   * and returns its children. If the first result is playable, returns it. Used for voice search
+   * "play X" commands.
    *
    * @param params The structured search parameters
    * @return Array of playable tracks, or null if no results or search not configured
@@ -524,13 +520,13 @@ class BrowserManager {
    * @return ResolvedTrack containing search results as children
    */
   suspend fun search(query: String): ResolvedTrack {
-    return search(SearchParams.fromQuery(query))
+    return search(SearchParams(query))
   }
 
   /**
-   * Search for tracks using the configured search source.
-   * Returns a ResolvedTrack at the path /__search?q=query with children containing results.
-   * Always executes a fresh search and caches results for onGetSearchResult() retrieval.
+   * Search for tracks using the configured search source. Returns a ResolvedTrack at the path
+   * /__search?q=query with children containing results. Always executes a fresh search and caches
+   * results for onGetSearchResult() retrieval.
    *
    * @param params The structured search parameters
    * @return ResolvedTrack containing search results as children
@@ -542,14 +538,16 @@ class BrowserManager {
 
     try {
       // Execute search
-      val searchResults = config.search?.let { searchSource -> resolveSearchSource(searchSource, params) }
-        ?: run {
-          Timber.w("Search requested but no search source configured")
-          emptyArray()
-        }
+      val searchResults =
+        config.search?.let { searchSource -> resolveSearchSource(searchSource, params) }
+          ?: run {
+            Timber.w("Search requested but no search source configured")
+            emptyArray()
+          }
 
       // Create ResolvedTrack
-      val searchResolvedTrack = ResolvedTrack(
+      val searchResolvedTrack =
+        ResolvedTrack(
           url = searchPath,
           title = "Search: ${params.query}",
           children = searchResults,
@@ -563,7 +561,7 @@ class BrowserManager {
           playable = null,
           src = null,
           style = null,
-      )
+        )
 
       // Cache the search results (this also caches children in trackCache)
       cacheResolvedTrack(searchPath, searchResolvedTrack)
@@ -574,7 +572,8 @@ class BrowserManager {
       Timber.e(e, "Error during search for query: ${params.query}")
 
       // Return empty search result on error
-      val emptySearchResult = ResolvedTrack(
+      val emptySearchResult =
+        ResolvedTrack(
           url = searchPath,
           title = "Search: ${params.query}",
           children = emptyArray(),
@@ -588,7 +587,7 @@ class BrowserManager {
           playable = null,
           src = null,
           style = null,
-      )
+        )
 
       return emptySearchResult
     }
@@ -731,7 +730,10 @@ class BrowserManager {
   }
 
   /** Resolve a SearchSource into Track results. */
-  private suspend fun resolveSearchSource(source: SearchSource, params: SearchParams): Array<Track> {
+  private suspend fun resolveSearchSource(
+    source: SearchSource,
+    params: SearchParams,
+  ): Array<Track> {
     return source.match(
       // Callback function
       first = { callback ->
@@ -820,9 +822,11 @@ class BrowserManager {
   }
 
   /**
-   * Execute an API request for search results. Automatically adds search parameters to request query:
+   * Execute an API request for search results. Automatically adds search parameters to request
+   * query:
    * - q: The search query string (always included)
-   * - mode: The search mode (any, genre, artist, album, song, playlist) - omitted for unstructured search
+   * - mode: The search mode (any, genre, artist, album, song, playlist) - omitted for unstructured
+   *   search
    * - genre, artist, album, title, playlist: Included only when non-null
    *
    * Transform callbacks can access and modify all parameters as needed.

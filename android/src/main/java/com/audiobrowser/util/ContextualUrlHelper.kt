@@ -31,14 +31,14 @@ object ContextualUrlHelper {
   }
 
   /**
-   * Strips the __trackId parameter from a contextual URL to get the parent path.
-   * If the URL is not contextual, returns it unchanged.
+   * Strips the __trackId parameter from a contextual URL to get the parent path. If the URL is not
+   * contextual, returns it unchanged.
    *
    * @param url The URL to process
    * @return The URL without the __trackId parameter
    *
-   * Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
-   * Example: "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
+   * Example: "/library/radio?__trackId=song.mp3" → "/library/radio" Example:
+   * "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
    */
   fun stripTrackId(url: String): String {
     if (!isContextual(url)) {
