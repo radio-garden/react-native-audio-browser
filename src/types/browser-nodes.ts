@@ -37,13 +37,6 @@ export interface Track {
   description?: string
   genre?: string
   duration?: number
-  /**
-   * When true without a src, indicates this track can be played as a queue
-   * by fetching and playing all its children (e.g., "Play Album", "Play Playlist").
-   *
-   * @default false - true when src is present
-   */
-  playable?: boolean
   style?: TrackStyle
 }
 

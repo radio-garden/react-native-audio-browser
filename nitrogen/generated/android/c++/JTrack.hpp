@@ -36,6 +36,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldUrl = clazz->getField<jni::JString>("url");
       jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
+      static const auto fieldSrc = clazz->getField<jni::JString>("src");
+      jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldSubtitle = clazz->getField<jni::JString>("subtitle");
@@ -52,14 +54,11 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> genre = this->getFieldValue(fieldGenre);
       static const auto fieldDuration = clazz->getField<jni::JDouble>("duration");
       jni::local_ref<jni::JDouble> duration = this->getFieldValue(fieldDuration);
-      static const auto fieldPlayable = clazz->getField<jni::JBoolean>("playable");
-      jni::local_ref<jni::JBoolean> playable = this->getFieldValue(fieldPlayable);
-      static const auto fieldSrc = clazz->getField<jni::JString>("src");
-      jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
       static const auto fieldStyle = clazz->getField<JTrackStyle>("style");
       jni::local_ref<JTrackStyle> style = this->getFieldValue(fieldStyle);
       return Track(
         url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
+        src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
         title->toStdString(),
         subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
@@ -68,8 +67,6 @@ namespace margelo::nitro::audiobrowser {
         description != nullptr ? std::make_optional(description->toStdString()) : std::nullopt,
         genre != nullptr ? std::make_optional(genre->toStdString()) : std::nullopt,
         duration != nullptr ? std::make_optional(duration->value()) : std::nullopt,
-        playable != nullptr ? std::make_optional(static_cast<bool>(playable->value())) : std::nullopt,
-        src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
         style != nullptr ? std::make_optional(style->toCpp()) : std::nullopt
       );
     }
@@ -80,12 +77,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
-      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<JTrackStyle>);
+      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
+        value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
         jni::make_jstring(value.title),
         value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
@@ -94,8 +92,6 @@ namespace margelo::nitro::audiobrowser {
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,
         value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr,
         value.duration.has_value() ? jni::JDouble::valueOf(value.duration.value()) : nullptr,
-        value.playable.has_value() ? jni::JBoolean::valueOf(value.playable.value()) : nullptr,
-        value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
         value.style.has_value() ? JTrackStyle::fromCpp(value.style.value()) : nullptr
       );
     }

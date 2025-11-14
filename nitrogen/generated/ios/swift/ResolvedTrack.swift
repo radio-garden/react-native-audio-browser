@@ -18,7 +18,7 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, title: String, subtitle: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, playable: Bool?, src: String?, style: TrackStyle?) {
+  init(url: String, children: [Track]?, src: String?, title: String, subtitle: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?) {
     self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
@@ -28,6 +28,12 @@ public extension ResolvedTrack {
           }
           return __vector
         }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = src {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -70,18 +76,6 @@ public extension ResolvedTrack {
     }(), { () -> bridge.std__optional_double_ in
       if let __unwrappedValue = duration {
         return bridge.create_std__optional_double_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = playable {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = src {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -128,6 +122,30 @@ public extension ResolvedTrack {
             }
             return __vector
           }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var src: String? {
+    @inline(__always)
+    get {
+      return { () -> String? in
+        if bridge.has_value_std__optional_std__string_(self.__src) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__src)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__src = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
           return .init()
         }
@@ -300,54 +318,6 @@ public extension ResolvedTrack {
       self.__duration = { () -> bridge.std__optional_double_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_double_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var playable: Bool? {
-    @inline(__always)
-    get {
-      return { () -> Bool? in
-        if bridge.has_value_std__optional_bool_(self.__playable) {
-          let __unwrapped = bridge.get_std__optional_bool_(self.__playable)
-          return __unwrapped
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__playable = { () -> bridge.std__optional_bool_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_bool_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var src: String? {
-    @inline(__always)
-    get {
-      return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__src) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__src)
-          return String(__unwrapped)
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__src = { () -> bridge.std__optional_std__string_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
           return .init()
         }

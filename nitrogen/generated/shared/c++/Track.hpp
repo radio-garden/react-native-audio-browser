@@ -38,6 +38,7 @@ namespace margelo::nitro::audiobrowser {
   struct Track {
   public:
     std::optional<std::string> url     SWIFT_PRIVATE;
+    std::optional<std::string> src     SWIFT_PRIVATE;
     std::string title     SWIFT_PRIVATE;
     std::optional<std::string> subtitle     SWIFT_PRIVATE;
     std::optional<std::string> artwork     SWIFT_PRIVATE;
@@ -46,13 +47,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::string> description     SWIFT_PRIVATE;
     std::optional<std::string> genre     SWIFT_PRIVATE;
     std::optional<double> duration     SWIFT_PRIVATE;
-    std::optional<bool> playable     SWIFT_PRIVATE;
-    std::optional<std::string> src     SWIFT_PRIVATE;
     std::optional<TrackStyle> style     SWIFT_PRIVATE;
 
   public:
     Track() = default;
-    explicit Track(std::optional<std::string> url, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<bool> playable, std::optional<std::string> src, std::optional<TrackStyle> style): url(url), title(title), subtitle(subtitle), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration), playable(playable), src(src), style(style) {}
+    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style): url(url), src(src), title(title), subtitle(subtitle), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -66,6 +65,7 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::Track(
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "url")),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "src")),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "title")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "subtitle")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artwork")),
@@ -74,14 +74,13 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "description")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "genre")),
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "duration")),
-        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "playable")),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "src")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::fromJSI(runtime, obj.getProperty(runtime, "style"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::Track& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "url", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.url));
+      obj.setProperty(runtime, "src", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.src));
       obj.setProperty(runtime, "title", JSIConverter<std::string>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, "subtitle", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.subtitle));
       obj.setProperty(runtime, "artwork", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artwork));
@@ -90,8 +89,6 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "description", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.description));
       obj.setProperty(runtime, "genre", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.genre));
       obj.setProperty(runtime, "duration", JSIConverter<std::optional<double>>::toJSI(runtime, arg.duration));
-      obj.setProperty(runtime, "playable", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.playable));
-      obj.setProperty(runtime, "src", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.src));
       obj.setProperty(runtime, "style", JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::toJSI(runtime, arg.style));
       return obj;
     }
@@ -104,6 +101,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "url"))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "src"))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "title"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "subtitle"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artwork"))) return false;
@@ -112,8 +110,6 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "description"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "genre"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "duration"))) return false;
-      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "playable"))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "src"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::canConvert(runtime, obj.getProperty(runtime, "style"))) return false;
       return true;
     }

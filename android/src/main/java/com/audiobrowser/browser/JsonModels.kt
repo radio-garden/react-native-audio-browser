@@ -23,7 +23,6 @@ data class JsonResolvedTrack(
   val duration: Double? = null,
   val children: List<JsonTrack>? = null,
   val src: String? = null,
-  val playable: Boolean? = null,
   val style: String? = null,
 )
 
@@ -40,7 +39,6 @@ data class JsonTrack(
   val genre: String? = null,
   val duration: Double? = null,
   val src: String? = null,
-  val playable: Boolean? = null,
   val style: String? = null,
 )
 
@@ -65,7 +63,6 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     description = description,
     genre = genre,
     duration = duration,
-    playable = playable,
     src = src,
     style = style.toTrackStyle(),
   )
@@ -82,7 +79,6 @@ fun JsonTrack.toNitro(): Track {
     description = description,
     genre = genre,
     duration = duration,
-    playable = playable,
     src = src,
     style = style.toTrackStyle(),
   )

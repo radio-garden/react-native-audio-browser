@@ -187,15 +187,14 @@ class AudioBrowser : HybridAudioBrowserSpec() {
           Timber.d("Navigating to browsable track: $url")
           browserManager.navigate(url)
         }
-        // If track is playable (has src or playable flag), load it into player
-        track.src != null || track.playable == true -> {
+        // If track is playable (has src), load it into player
+        track.src != null -> {
           Timber.d("Loading playable track into player: ${track.title}")
           player.load(track)
         }
-        // No url, src, or playable flag - invalid track
         else -> {
           throw IllegalArgumentException(
-            "Track must have either 'url', 'src', or 'playable' property"
+            "Track must have either an 'url' or an 'src' property"
           )
         }
       }

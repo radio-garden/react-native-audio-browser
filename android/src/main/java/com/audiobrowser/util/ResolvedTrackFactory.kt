@@ -8,13 +8,6 @@ import com.margelo.nitro.audiobrowser.ResolvedTrack
 object ResolvedTrackFactory {
 
   fun toMedia3(resolvedTrack: ResolvedTrack): MediaItem {
-    // ResolvedTracks are always browsable (they have a url)
-    val browsable = true
-
-    // ResolvedTracks are playable when they have an src or when they are specifically marked as
-    // playable:
-    val playable = resolvedTrack.src != null || resolvedTrack.playable == true
-
     val mediaMetadata =
       MediaMetadata.Builder()
         .setTitle(resolvedTrack.title)
@@ -23,8 +16,8 @@ object ResolvedTrackFactory {
         .setDescription(resolvedTrack.description)
         .setGenre(resolvedTrack.genre)
         .setArtworkUri(resolvedTrack.artwork?.toUri())
-        .setIsBrowsable(browsable)
-        .setIsPlayable(playable)
+        .setIsBrowsable(resolvedTrack.src == null)
+        .setIsPlayable(resolvedTrack.src != null)
         .build()
 
     return MediaItem.Builder()

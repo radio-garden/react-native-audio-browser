@@ -558,7 +558,6 @@ class BrowserManager {
           album = null,
           genre = null,
           duration = null,
-          playable = null,
           src = null,
           style = null,
         )
@@ -584,7 +583,6 @@ class BrowserManager {
           album = null,
           genre = null,
           duration = null,
-          playable = null,
           src = null,
           style = null,
         )
