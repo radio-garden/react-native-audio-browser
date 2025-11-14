@@ -9,7 +9,6 @@ import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
-import com.audiobrowser.util.isBrowsable
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -489,7 +488,7 @@ class BrowserManager {
     // Check if result is browsable-only (container/route) vs playable
     // If it's browsable but also playable (has src or playable=true), treat it as playable
     val tracksToFilter =
-      if (firstResult.isBrowsable()) {
+      if (firstResult.src == null) {
         Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
         val resolvedTrack = resolve(firstResult.url!!)
         resolvedTrack.children
