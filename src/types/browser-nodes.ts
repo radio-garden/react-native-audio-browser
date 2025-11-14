@@ -10,10 +10,24 @@ export interface Track {
   /**
    * Navigation path. When present, this track is a container (tab, album, playlist, folder)
    * that can be navigated into to view its contents.
+   *
+   * At least one of `url` or `src` must be defined.
    */
   url?: string
   title: string
   subtitle?: string
+
+  /**
+   * Direct audio source identifier. When present, this track can be played directly.
+   *
+   * This is typically an absolute URL pointing to an audio resource, but it can also be
+   * any string (file path, custom identifier, etc.) that will be passed to
+   * MediaRequestConfig.resolve to transform it into the actual media request.
+   *
+   * At least one of `url` or `src` must be defined.
+   */
+  src?: string
+
   /**
    * Optional artwork URL for the item.
    */
@@ -30,10 +44,6 @@ export interface Track {
    * @default false - true when src is present
    */
   playable?: boolean
-  /**
-   * Direct audio source URL. When present, this track can be played directly.
-   */
-  src?: string
   style?: TrackStyle
 }
 
