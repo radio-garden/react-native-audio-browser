@@ -24,7 +24,7 @@ object TrackFactory {
         .setDescription(track.description)
         .setGenre(track.genre)
         .setArtworkUri(track.artwork?.toUri())
-        .setIsBrowsable(track.src == null)  
+        .setIsBrowsable(track.src == null)
         .setIsPlayable(track.src != null)
         .build()
 

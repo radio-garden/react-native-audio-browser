@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
@@ -55,21 +56,23 @@ class MediaFactory(
   ): Triple<String, Map<String, String>, String> {
     return try {
       val requestConfig = getRequestConfig(originalUrl)
+      Timber.d("Got media request config for URL '$originalUrl': path=${requestConfig?.path}, baseUrl=${requestConfig?.baseUrl}, headers=${requestConfig?.headers}, userAgent=${requestConfig?.userAgent}")
       if (requestConfig != null) {
-        val finalUrl =
-          requestConfig.baseUrl?.let { baseUrl ->
-            val path = requestConfig.path ?: ""
-            val url = if (path.startsWith("http")) path else "$baseUrl$path"
+        val path = requestConfig.path ?: ""
+        val baseUrl = requestConfig.baseUrl
 
-            // Add query parameters if any
-            if (requestConfig.query?.isNotEmpty() == true) {
-              val uri = Uri.parse(url).buildUpon()
-              requestConfig.query.forEach { (key, value) -> uri.appendQueryParameter(key, value) }
-              uri.build().toString()
-            } else {
-              url
-            }
-          } ?: originalUrl
+        // Build URL using the helper to ensure proper slash handling
+        val url = com.audiobrowser.util.BrowserPathHelper.buildUrl(baseUrl, path)
+
+        // Add query parameters if any
+        val finalUrl =
+          if (requestConfig.query?.isNotEmpty() == true) {
+            val uri = Uri.parse(url).buildUpon()
+            requestConfig.query.forEach { (key, value) -> uri.appendQueryParameter(key, value) }
+            uri.build().toString()
+          } else {
+            url
+          }
 
         val headers = requestConfig.headers ?: emptyMap()
         val userAgent = requestConfig.userAgent ?: DEFAULT_USER_AGENT
@@ -98,15 +101,15 @@ class MediaFactory(
 
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
     val originalUri = mediaItem.localConfiguration?.uri
+    val (finalUrl, headers, userAgent) = getMediaRequestConfig(originalUri!!.toString())
 
+    val local = isLocalFile(finalUrl.toUri())
     val factory: DataSource.Factory =
       when {
-        originalUri != null && isLocalFile(originalUri) -> {
+        local -> {
           DefaultDataSource.Factory(context)
         }
-        originalUri != null -> {
-          // Get the transformed URL, headers, and user-agent from request config
-          val (finalUrl, headers, userAgent) = getMediaRequestConfig(originalUri.toString())
+        finalUrl != null -> {
 
           Timber.d("Media URL: $originalUri -> $finalUrl")
           Timber.d("Media headers: $headers")
@@ -125,6 +128,15 @@ class MediaFactory(
         }
       }
 
+    // Create a new MediaItem with the transformed URL if it changed
+    val finalMediaItem =
+      if (finalUrl != originalUri.toString()) {
+        Timber.d("Creating new MediaItem with transformed URL: $finalUrl")
+        mediaItem.buildUpon().setUri(finalUrl.toUri()).build()
+      } else {
+        mediaItem
+      }
+
     return ProgressiveMediaSource.Factory(
         cache?.let {
           CacheDataSource.Factory()
@@ -136,6 +148,6 @@ class MediaFactory(
           // TODO: reconsider whether this should be enabled by default:
           .setConstantBitrateSeekingEnabled(true),
       )
-      .createMediaSource(mediaItem)
+      .createMediaSource(finalMediaItem)
   }
 }

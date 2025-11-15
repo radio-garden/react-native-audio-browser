@@ -1,5 +1,7 @@
 package com.audiobrowser.http
 
+import android.net.Uri
+import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
@@ -39,21 +41,6 @@ object RequestConfigBuilder {
     )
   }
 
-  fun mergeConfig(base: RequestConfig, override: MediaRequestConfig): MediaRequestConfig {
-    return MediaRequestConfig(
-      override.resolve,
-      transform = override.transform,
-      path = override.path ?: base.path,
-      method = override.method ?: base.method,
-      baseUrl = override.baseUrl ?: base.baseUrl,
-      headers = mergeHeaders(base.headers, override.headers),
-      query = mergeQuery(base.query, override.query),
-      body = override.body ?: base.body,
-      contentType = override.contentType ?: base.contentType,
-      userAgent = override.userAgent ?: base.userAgent,
-    )
-  }
-
   suspend fun mergeConfig(
     base: RequestConfig,
     override: TransformableRequestConfig,
@@ -75,6 +62,49 @@ object RequestConfigBuilder {
         base
       }
     } ?: mergeConfig(base, convertToRequestConfig(override)) // Only merge if no transform
+  }
+
+  suspend fun mergeConfig(
+    base: RequestConfig,
+    override: MediaRequestConfig,
+  ): MediaRequestConfig {
+    // Apply transform function if provided - transform result wins completely
+    val finalConfig: RequestConfig =
+      override.transform?.let { transformFn ->
+        try {
+          Timber.d("Invoking media transform for URL: ${base.path}")
+          val transformed = transformFn.invoke(base, null).await().await()
+          Timber.d("Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}")
+          transformed
+        } catch (e: Exception) {
+          Timber.e(e, "Failed to apply media transform function, using base config")
+          base
+        }
+      }
+        ?: RequestConfig(
+          path = override.path ?: base.path,
+          method = override.method ?: base.method,
+          baseUrl = override.baseUrl ?: base.baseUrl,
+          headers = mergeHeaders(base.headers, override.headers),
+          query = mergeQuery(base.query, override.query),
+          body = override.body ?: base.body,
+          contentType = override.contentType ?: base.contentType,
+          userAgent = override.userAgent ?: base.userAgent,
+        )
+
+    // Wrap the final RequestConfig in MediaRequestConfig to preserve resolve callback
+    return MediaRequestConfig(
+      override.resolve,
+      transform = override.transform,
+      path = finalConfig.path,
+      method = finalConfig.method,
+      baseUrl = finalConfig.baseUrl,
+      headers = finalConfig.headers,
+      query = finalConfig.query,
+      body = finalConfig.body,
+      contentType = finalConfig.contentType,
+      userAgent = finalConfig.userAgent,
+    )
   }
 
   private fun convertToRequestConfig(
@@ -115,9 +145,13 @@ object RequestConfigBuilder {
   }
 
   private fun buildUrl(config: RequestConfig): String {
-    val baseUrl = config.baseUrl?.trimEnd('/') ?: ""
-    val path = config.path?.let { if (it.startsWith("/")) it else "/$it" } ?: ""
+    val path = config.path ?: ""
+    val baseUrl = config.baseUrl
 
+    // Use BrowserPathHelper for consistent URL building
+    val url = BrowserPathHelper.buildUrl(baseUrl, path)
+
+    // Add query parameters if any
     val queryString =
       config.query?.let { query ->
         if (query.isNotEmpty()) {
@@ -128,7 +162,7 @@ object RequestConfigBuilder {
         } else ""
       } ?: ""
 
-    return "$baseUrl$path$queryString"
+    return "$url$queryString"
   }
 
   private fun encodeUrlParam(param: String): String {

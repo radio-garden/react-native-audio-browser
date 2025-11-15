@@ -119,4 +119,34 @@ object BrowserPathHelper {
     val uri = Uri.parse(path)
     return uri.getQueryParameter(CONTEXTUAL_TRACK_PARAM)
   }
+
+  /**
+   * Combines a base URL with a path, ensuring proper slash handling.
+   *
+   * @param baseUrl The base URL (can be null)
+   * @param path The path to append
+   * @return The combined URL with proper slash handling
+   *
+   * Examples:
+   * - buildUrl("http://example.com", "api/test") → "http://example.com/api/test"
+   * - buildUrl("http://example.com/", "/api/test") → "http://example.com/api/test"
+   * - buildUrl(null, "/api/test") → "/api/test"
+   * - buildUrl(null, "http://full.url") → "http://full.url"
+   */
+  fun buildUrl(baseUrl: String?, path: String): String {
+    // If path is already a full URL, return it as-is
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path
+    }
+
+    // If no baseUrl, return path as-is
+    if (baseUrl == null) {
+      return path
+    }
+
+    // Ensure baseUrl ends with / and path doesn't start with /
+    val normalizedBase = "${baseUrl.trimEnd('/')}/"
+    val normalizedPath = path.trimStart('/')
+    return "$normalizedBase$normalizedPath"
+  }
 }

@@ -60,6 +60,7 @@ class BrowserManager {
       field = value
       if (previous != value) {
         onContentChanged?.invoke(value)
+        Timber.d("content changed", content?.title)
       }
     }
 
@@ -693,7 +694,7 @@ class BrowserManager {
       // API configuration
       third = { apiConfig ->
         Timber.d("Resolving browser source via API config")
-        executeApiRequest(apiConfig, routeParams)
+        executeApiRequest(apiConfig, path, routeParams)
       },
     )
   }
@@ -721,7 +722,7 @@ class BrowserManager {
       // API configuration
       third = { apiConfig ->
         Timber.d("Resolving browse source via API config")
-        executeApiRequest(apiConfig, routeParams)
+        executeApiRequest(apiConfig, path, routeParams)
       },
     )
   }
@@ -777,15 +778,16 @@ class BrowserManager {
    */
   private suspend fun executeApiRequest(
     apiConfig: TransformableRequestConfig,
+    path: String,
     routeParams: Map<String, String>,
   ): ResolvedTrack {
     return withContext(Dispatchers.IO) {
-      // 1. Start with base config, apply API config on top
+      // 1. Start with base config, using the navigation path as default
       val baseConfig =
-        config.request
+        config.request?.copy(path = config.request?.path ?: path)
           ?: RequestConfig(
+            path = path,
             method = null,
-            path = null,
             baseUrl = null,
             headers = null,
             query = null,
@@ -806,7 +808,7 @@ class BrowserManager {
             val jsonResolvedTrack = json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
             jsonResolvedTrack.toNitro()
           } else {
-            Timber.w("HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}")
+            Timber.w("HTTP request failed with status ${httpResponse.code} for ${httpRequest.url}: ${httpResponse.body}")
             throw HttpStatusException(httpResponse.code, "Server returned ${httpResponse.code}")
           }
         },
