@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativeBrowser, nativePlayer } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
@@ -14,6 +14,21 @@ export interface PlaybackErrorEvent {
   error?: PlaybackError
 }
 
+type NavigationErrorType = 'content-not-found' | 'network-error' | 'http-error' | 'unknown-error'
+
+export type NavigationError = {
+  code: NavigationErrorType
+  message: string
+  statusCode?: number
+}
+
+/**
+ * Emitted when a navigation error occurs.
+ */
+export interface NavigationErrorEvent {
+  error?: NavigationError
+}
+
 // MARK: - Getters
 
 /**
@@ -21,8 +36,7 @@ export interface PlaybackErrorEvent {
  * @returns The current error or undefined if there is no error
  */
 export function getPlaybackError(): PlaybackError | undefined {
-  const error = nativePlayer.getPlaybackError()
-  return error ?? undefined
+  return nativePlayer.getPlaybackError()
 }
 
 // MARK: - Event Callbacks
@@ -44,4 +58,32 @@ export const onPlaybackError = NativeUpdatedValue.emitterize<PlaybackErrorEvent>
  */
 export function usePlaybackError(): PlaybackError | undefined {
   return useNativeUpdatedValue(getPlaybackError, onPlaybackError, 'error')
+}
+
+// MARK: - Navigation Error
+
+/**
+ * Gets the current navigation error, if any.
+ * @returns The current navigation error or undefined if there is no error
+ */
+export function getNavigationError(): NavigationError | undefined {
+  const error = nativeBrowser.getNavigationError()
+  return error ?? undefined
+}
+
+/**
+ * Subscribes to navigation error events.
+ * @param callback - Called when a navigation error occurs
+ * @returns Cleanup function to unsubscribe
+ */
+export const onNavigationError = NativeUpdatedValue.emitterize<NavigationErrorEvent>(
+  (cb) => (nativeBrowser.onNavigationError = cb)
+)
+
+/**
+ * Hook that returns the current navigation error and updates when it changes.
+ * @returns The current navigation error or undefined
+ */
+export function useNavigationError(): NavigationError | undefined {
+  return useNativeUpdatedValue(getNavigationError, onNavigationError, 'error')
 }

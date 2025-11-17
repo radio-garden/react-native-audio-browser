@@ -3,6 +3,9 @@ package com.audiobrowser
 import androidx.annotation.Keep
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
+import com.audiobrowser.browser.ContentNotFoundException
+import com.audiobrowser.browser.HttpStatusException
+import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.facebook.proguard.annotations.DoNotStrip
@@ -10,6 +13,9 @@ import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.BrowserConfiguration
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NavigationError
+import com.margelo.nitro.audiobrowser.NavigationErrorEvent
+import com.margelo.nitro.audiobrowser.NavigationErrorType
 import com.margelo.nitro.audiobrowser.PlayConfigurationBehavior
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
@@ -125,7 +131,26 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     set(value) {
       if (hasValidConfiguration()) {
         browserManager.config = buildConfig()
-        (value ?: getDefaultPath())?.let { mainScope.launch { browserManager.navigate(it) } }
+        (value ?: getDefaultPath())?.let { path ->
+          clearNavigationError()
+          mainScope.launch {
+            try {
+              browserManager.navigate(path)
+            } catch (e: HttpStatusException) {
+              Timber.e(e, "HTTP error setting path: $path")
+              setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
+            } catch (e: NetworkException) {
+              Timber.e(e, "Network error setting path: $path")
+              setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed")
+            } catch (e: ContentNotFoundException) {
+              Timber.e(e, "Content not found for path: $path")
+              setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "No content configured for path")
+            } catch (e: Exception) {
+              Timber.e(e, "Unexpected error setting path: $path")
+              setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred")
+            }
+          }
+        }
       }
     }
 
@@ -140,61 +165,130 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       browserManager.config = buildConfig()
 
       // Navigate to initial path or default to first tab
-      (value.path ?: getDefaultPath())?.let { mainScope.launch { browserManager.navigate(it) } }
+      (value.path ?: getDefaultPath())?.let { path ->
+        clearNavigationError()
+        mainScope.launch {
+          try {
+            browserManager.navigate(path)
+          } catch (e: HttpStatusException) {
+            Timber.e(e, "HTTP error setting configuration path: $path")
+            setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
+          } catch (e: NetworkException) {
+            Timber.e(e, "Network error setting configuration path: $path")
+            setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed")
+          } catch (e: ContentNotFoundException) {
+            Timber.e(e, "Content not found for configuration path: $path")
+            setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "No content configured for path")
+          } catch (e: Exception) {
+            Timber.e(e, "Unexpected error setting configuration path: $path")
+            setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred")
+          }
+        }
+      }
     }
 
   override var onPathChanged: (String) -> Unit = {}
   override var onContentChanged: (ResolvedTrack?) -> Unit = {}
   override var onTabsChanged: (Array<Track>) -> Unit = {}
+  override var onNavigationError: (NavigationErrorEvent) -> Unit = {}
+
+  private var navigationError: NavigationError? = null
+
+  override fun getNavigationError(): NavigationError? = navigationError
+
+  private fun setNavigationError(code: NavigationErrorType, message: String, statusCode: Double? = null) {
+    navigationError = NavigationError(code, message, statusCode)
+    onNavigationError(NavigationErrorEvent(navigationError))
+  }
+
+  private fun clearNavigationError() {
+    if (navigationError != null) {
+      navigationError = null
+      onNavigationError(NavigationErrorEvent(null))
+    }
+  }
 
   // Browser navigation methods
   override fun navigatePath(path: String) {
+    clearNavigationError()
     mainScope.launch {
-      Timber.d("Navigating to path: $path")
-      browserManager.navigate(path)
+      try {
+        Timber.d("Navigating to path: $path")
+        browserManager.navigate(path)
+      } catch (e: HttpStatusException) {
+        Timber.e(e, "HTTP error navigating to path: $path")
+        setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
+      } catch (e: NetworkException) {
+        Timber.e(e, "Network error navigating to path: $path")
+        setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed")
+      } catch (e: ContentNotFoundException) {
+        Timber.e(e, "Content not found for path: $path")
+        setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "No content configured for path")
+      } catch (e: Exception) {
+        Timber.e(e, "Unexpected error navigating to path: $path")
+        setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred")
+      }
     }
   }
 
   override fun navigateTrack(track: Track) {
+    clearNavigationError()
     mainScope.launch {
-      val url = track.url
-      when {
-        // Check if this is a contextual URL (playable-only track with queue context)
-        url != null && BrowserPathHelper.isContextual(url) -> {
-          Timber.d("Navigating to contextual track URL: $url")
+      try {
+        val url = track.url
+        when {
+          // Check if this is a contextual URL (playable-only track with queue context)
+          url != null && BrowserPathHelper.isContextual(url) -> {
+            Timber.d("Navigating to contextual track URL: $url")
 
-          // Expand the queue from the contextual URL
-          val expanded = browserManager.expandQueueFromContextualUrl(url)
+            // Expand the queue from the contextual URL
+            val expanded = browserManager.expandQueueFromContextualUrl(url)
 
-          if (expanded != null) {
-            val (tracks, startIndex) = expanded
-            Timber.d("Loading expanded queue: ${tracks.size} tracks, starting at index $startIndex")
+            if (expanded != null) {
+              val (tracks, startIndex) = expanded
+              Timber.d("Loading expanded queue: ${tracks.size} tracks, starting at index $startIndex")
 
-            // Replace queue and seek to selected track
-            // Use internal player methods directly to avoid blocking on main thread
-            player.setQueue(tracks, startIndex)
-            player.play()
-          } else {
-            // Fallback: just load the single track
-            Timber.w("Queue expansion failed, loading single track")
+              // Replace queue and seek to selected track
+              // Use internal player methods directly to avoid blocking on main thread
+              player.setQueue(tracks, startIndex)
+              player.play()
+            } else {
+              // Fallback: just load the single track
+              Timber.w("Queue expansion failed, loading single track")
+              player.load(track)
+            }
+          }
+          // Navigate to browsable track to show browsing UI
+          url != null -> {
+            Timber.d("Navigating to browsable track: $url")
+            browserManager.navigate(url)
+          }
+          // If track is playable (has src), load it into player
+          track.src != null -> {
+            Timber.d("Loading playable track into player: ${track.title}")
             player.load(track)
           }
+          else -> {
+            throw IllegalArgumentException(
+              "Track must have either an 'url' or an 'src' property"
+            )
+          }
         }
-        // Navigate to browsable track to show browsing UI
-        url != null -> {
-          Timber.d("Navigating to browsable track: $url")
-          browserManager.navigate(url)
-        }
-        // If track is playable (has src), load it into player
-        track.src != null -> {
-          Timber.d("Loading playable track into player: ${track.title}")
-          player.load(track)
-        }
-        else -> {
-          throw IllegalArgumentException(
-            "Track must have either an 'url' or an 'src' property"
-          )
-        }
+      } catch (e: HttpStatusException) {
+        Timber.e(e, "HTTP error navigating to track: ${track.title}")
+        setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
+      } catch (e: NetworkException) {
+        Timber.e(e, "Network error navigating to track: ${track.title}")
+        setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed")
+      } catch (e: ContentNotFoundException) {
+        Timber.e(e, "Content not found for track: ${track.title}")
+        setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "No content configured for path")
+      } catch (e: IllegalArgumentException) {
+        Timber.e(e, "Invalid track: ${track.title}")
+        setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "Invalid track")
+      } catch (e: Exception) {
+        Timber.e(e, "Unexpected error navigating to track: ${track.title}")
+        setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred")
       }
     }
   }

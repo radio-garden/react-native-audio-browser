@@ -18,6 +18,12 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
+// Forward declaration of `NavigationErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
+// Forward declaration of `NavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationError; }
+// Forward declaration of `NavigationErrorType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
@@ -44,6 +50,9 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include "TrackStyle.hpp"
 #include <functional>
 #include "ResolvedTrack.hpp"
+#include "NavigationErrorEvent.hpp"
+#include "NavigationError.hpp"
+#include "NavigationErrorType.hpp"
 #include "BrowserConfiguration.hpp"
 #include "RequestConfig.hpp"
 #include "HttpMethod.hpp"
@@ -132,6 +141,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) noexcept override {
       _swiftPart.setOnTabsChanged(onTabsChanged);
     }
+    inline std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() noexcept override {
+      auto __result = _swiftPart.getOnNavigationError();
+      return __result;
+    }
+    inline void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) noexcept override {
+      _swiftPart.setOnNavigationError(onNavigationError);
+    }
     inline BrowserConfiguration getConfiguration() noexcept override {
       return _swiftPart.getConfiguration();
     }
@@ -163,6 +179,14 @@ namespace margelo::nitro::audiobrowser {
     }
     inline std::optional<ResolvedTrack> getContent() override {
       auto __result = _swiftPart.getContent();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<NavigationError> getNavigationError() override {
+      auto __result = _swiftPart.getNavigationError();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

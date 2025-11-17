@@ -17,10 +17,12 @@ import {
   Track,
   useActiveTrack,
   useContent,
+  useNavigationError,
   usePath,
   usePlayingState,
   useTabs
 } from 'react-native-audio-browser'
+import { NavigationErrorView } from '../components/NavigationErrorView'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
 
 export function BrowserScreen() {
@@ -28,6 +30,7 @@ export function BrowserScreen() {
   const content = useContent()
   const track = useActiveTrack()
   const tabs = useTabs()
+  const navigationError = useNavigationError()
   const handleBackPress = useBrowserHistory()
 
   const renderItem = ({ item }: { item: Track }) => {
@@ -87,7 +90,16 @@ export function BrowserScreen() {
 
       {/* Content */}
       <View style={styles.content}>
-        {content ? (
+        {navigationError ? (
+          <NavigationErrorView
+            error={navigationError}
+            onRetry={() => {
+              if (path) {
+                void navigate(path)
+              }
+            }}
+          />
+        ) : content ? (
           <>
             <Text style={styles.title}>
               {content?.title ?? path ?? 'Music Browser'}
@@ -293,21 +305,6 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#888888',
     marginTop: 12,
-    fontSize: 16
-  },
-  errorText: {
-    color: '#ff4444',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 16
-  },
-  retryButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8
-  },
-  retryButtonText: {
-    color: '#ffffff',
     fontSize: 16
   },
   activeItem: {

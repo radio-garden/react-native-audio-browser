@@ -13,6 +13,12 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
+// Forward declaration of `NavigationErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
+// Forward declaration of `NavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationError; }
+// Forward declaration of `NavigationErrorType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
@@ -45,6 +51,13 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include "JFunc_void_std__optional_ResolvedTrack_.hpp"
 #include "JResolvedTrack.hpp"
 #include "JFunc_void_std__vector_Track_.hpp"
+#include "NavigationErrorEvent.hpp"
+#include "JFunc_void_NavigationErrorEvent.hpp"
+#include "JNavigationErrorEvent.hpp"
+#include "NavigationError.hpp"
+#include "JNavigationError.hpp"
+#include "NavigationErrorType.hpp"
+#include "JNavigationErrorType.hpp"
 #include "BrowserConfiguration.hpp"
 #include "JBrowserConfiguration.hpp"
 #include "RequestConfig.hpp"
@@ -199,6 +212,25 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__vector_Track_::javaobject> /* onTabsChanged */)>("setOnTabsChanged_cxx");
     method(_javaPart, JFunc_void_std__vector_Track__cxx::fromCpp(onTabsChanged));
   }
+  std::function<void(const NavigationErrorEvent& /* data */)> JHybridAudioBrowserSpec::getOnNavigationError() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_NavigationErrorEvent::javaobject>()>("getOnNavigationError_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const NavigationErrorEvent& /* data */)> {
+      if (__result->isInstanceOf(JFunc_void_NavigationErrorEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_NavigationErrorEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](NavigationErrorEvent data) -> void {
+          return __resultRef->invoke(data);
+        };
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_NavigationErrorEvent::javaobject> /* onNavigationError */)>("setOnNavigationError_cxx");
+    method(_javaPart, JFunc_void_NavigationErrorEvent_cxx::fromCpp(onNavigationError));
+  }
   BrowserConfiguration JHybridAudioBrowserSpec::getConfiguration() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserConfiguration>()>("getConfiguration");
     auto __result = method(_javaPart);
@@ -245,6 +277,11 @@ namespace margelo::nitro::audiobrowser {
   }
   std::optional<ResolvedTrack> JHybridAudioBrowserSpec::getContent() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JResolvedTrack>()>("getContent");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  std::optional<NavigationError> JHybridAudioBrowserSpec::getNavigationError() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JNavigationError>()>("getNavigationError");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }

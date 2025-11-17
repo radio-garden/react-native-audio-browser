@@ -17,8 +17,12 @@
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
+// Forward declaration of `NavigationErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 // Forward declaration of `BrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
+// Forward declaration of `NavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationError; }
 
 #include <string>
 #include <optional>
@@ -26,8 +30,10 @@ namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 #include <vector>
 #include <functional>
 #include "ResolvedTrack.hpp"
+#include "NavigationErrorEvent.hpp"
 #include "BrowserConfiguration.hpp"
 #include <NitroModules/Promise.hpp>
+#include "NavigationError.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -66,6 +72,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnContentChanged(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& onContentChanged) = 0;
       virtual std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() = 0;
       virtual void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) = 0;
+      virtual std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() = 0;
+      virtual void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) = 0;
       virtual BrowserConfiguration getConfiguration() = 0;
       virtual void setConfiguration(const BrowserConfiguration& configuration) = 0;
 
@@ -75,6 +83,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void navigateTrack(const Track& track) = 0;
       virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
       virtual std::optional<ResolvedTrack> getContent() = 0;
+      virtual std::optional<NavigationError> getNavigationError() = 0;
 
     protected:
       // Hybrid Setup

@@ -97,6 +97,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onTabsChanged = value
     }
   
+  abstract var onNavigationError: (data: NavigationErrorEvent) -> Unit
+  
+  private var onNavigationError_cxx: Func_void_NavigationErrorEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_NavigationErrorEvent_java(onNavigationError)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onNavigationError = value
+    }
+  
   @get:DoNotStrip
   @get:Keep
   @set:DoNotStrip
@@ -119,6 +133,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getContent(): ResolvedTrack?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getNavigationError(): NavigationError?
 
   private external fun initHybrid(): HybridData
 

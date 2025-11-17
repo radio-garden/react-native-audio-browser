@@ -58,6 +58,12 @@ namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
+// Forward declaration of `NavigationErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
+// Forward declaration of `NavigationErrorType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
+// Forward declaration of `NavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -161,6 +167,9 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IOSUpdateOptions.hpp"
 #include "MediaRequestConfig.hpp"
 #include "NativeUpdateOptions.hpp"
+#include "NavigationError.hpp"
+#include "NavigationErrorEvent.hpp"
+#include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "Options.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"

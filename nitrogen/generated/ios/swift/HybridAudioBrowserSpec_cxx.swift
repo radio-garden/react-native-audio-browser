@@ -238,6 +238,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onNavigationError: bridge.Func_void_NavigationErrorEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_NavigationErrorEvent in
+        let __closureWrapper = Func_void_NavigationErrorEvent(self.__implementation.onNavigationError)
+        return bridge.create_Func_void_NavigationErrorEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onNavigationError = { () -> (NavigationErrorEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_NavigationErrorEvent(newValue)
+        return { (__data: NavigationErrorEvent) -> Void in
+          __wrappedFunction.call(__data)
+        }
+      }()
+    }
+  }
+  
   public final var configuration: BrowserConfiguration {
     @inline(__always)
     get {
@@ -312,6 +331,24 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__optional_ResolvedTrack__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getNavigationError() -> bridge.Result_std__optional_NavigationError__ {
+    do {
+      let __result = try self.__implementation.getNavigationError()
+      let __resultCpp = { () -> bridge.std__optional_NavigationError_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_NavigationError_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_NavigationError__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_NavigationError__(__exceptionPtr)
     }
   }
 }

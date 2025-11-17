@@ -54,6 +54,12 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `NavigationErrorEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
+// Forward declaration of `NavigationErrorType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
+// Forward declaration of `NavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -159,6 +165,9 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "IOSOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "MediaRequestConfig.hpp"
+#include "NavigationError.hpp"
+#include "NavigationErrorEvent.hpp"
+#include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "Options.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
@@ -399,6 +408,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_std__optional_ResolvedTrack_ create_Func_void_std__optional_ResolvedTrack_(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_std__optional_ResolvedTrack__Wrapper wrap_Func_void_std__optional_ResolvedTrack_(Func_void_std__optional_ResolvedTrack_ value) noexcept {
     return Func_void_std__optional_ResolvedTrack__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<NavigationError>
+  /**
+   * Specialized version of `std::optional<NavigationError>`.
+   */
+  using std__optional_NavigationError_ = std::optional<NavigationError>;
+  inline std::optional<NavigationError> create_std__optional_NavigationError_(const NavigationError& value) noexcept {
+    return std::optional<NavigationError>(value);
+  }
+  inline bool has_value_std__optional_NavigationError_(const std::optional<NavigationError>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NavigationError get_std__optional_NavigationError_(const std::optional<NavigationError>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const NavigationErrorEvent& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const NavigationErrorEvent&)>`.
+   */
+  using Func_void_NavigationErrorEvent = std::function<void(const NavigationErrorEvent& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const NavigationErrorEvent& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_NavigationErrorEvent_Wrapper final {
+  public:
+    explicit Func_void_NavigationErrorEvent_Wrapper(std::function<void(const NavigationErrorEvent& /* data */)>&& func): _function(std::make_unique<std::function<void(const NavigationErrorEvent& /* data */)>>(std::move(func))) {}
+    inline void call(NavigationErrorEvent data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const NavigationErrorEvent& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_NavigationErrorEvent create_Func_void_NavigationErrorEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_NavigationErrorEvent_Wrapper wrap_Func_void_NavigationErrorEvent(Func_void_NavigationErrorEvent value) noexcept {
+    return Func_void_NavigationErrorEvent_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<HttpMethod>
@@ -1052,6 +1098,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_ResolvedTrack__ create_Result_std__optional_ResolvedTrack__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<ResolvedTrack>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<NavigationError>>
+  using Result_std__optional_NavigationError__ = Result<std::optional<NavigationError>>;
+  inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::optional<NavigationError>& value) noexcept {
+    return Result<std::optional<NavigationError>>::withValue(value);
+  }
+  inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<NavigationError>>::withError(error);
   }
   
   // pragma MARK: std::shared_ptr<Promise<void>>

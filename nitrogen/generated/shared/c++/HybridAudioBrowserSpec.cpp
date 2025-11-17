@@ -24,12 +24,15 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onContentChanged", &HybridAudioBrowserSpec::setOnContentChanged);
       prototype.registerHybridGetter("onTabsChanged", &HybridAudioBrowserSpec::getOnTabsChanged);
       prototype.registerHybridSetter("onTabsChanged", &HybridAudioBrowserSpec::setOnTabsChanged);
+      prototype.registerHybridGetter("onNavigationError", &HybridAudioBrowserSpec::getOnNavigationError);
+      prototype.registerHybridSetter("onNavigationError", &HybridAudioBrowserSpec::setOnNavigationError);
       prototype.registerHybridGetter("configuration", &HybridAudioBrowserSpec::getConfiguration);
       prototype.registerHybridSetter("configuration", &HybridAudioBrowserSpec::setConfiguration);
       prototype.registerHybridMethod("navigatePath", &HybridAudioBrowserSpec::navigatePath);
       prototype.registerHybridMethod("navigateTrack", &HybridAudioBrowserSpec::navigateTrack);
       prototype.registerHybridMethod("onSearch", &HybridAudioBrowserSpec::onSearch);
       prototype.registerHybridMethod("getContent", &HybridAudioBrowserSpec::getContent);
+      prototype.registerHybridMethod("getNavigationError", &HybridAudioBrowserSpec::getNavigationError);
     });
   }
 

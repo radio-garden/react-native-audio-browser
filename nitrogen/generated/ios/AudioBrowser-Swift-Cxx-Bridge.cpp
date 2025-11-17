@@ -46,6 +46,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const NavigationErrorEvent& /* data */)>
+  Func_void_NavigationErrorEvent create_Func_void_NavigationErrorEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_NavigationErrorEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const NavigationErrorEvent& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
   // pragma MARK: std::function<void(const RequestConfig& /* result */)>
   Func_void_RequestConfig create_Func_void_RequestConfig(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_RequestConfig::fromUnsafe(swiftClosureWrapper);

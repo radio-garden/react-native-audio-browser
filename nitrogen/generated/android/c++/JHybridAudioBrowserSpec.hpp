@@ -60,6 +60,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnContentChanged(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& onContentChanged) override;
     std::function<void(const std::vector<Track>& /* tabs */)> getOnTabsChanged() override;
     void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) override;
+    std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() override;
+    void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) override;
     BrowserConfiguration getConfiguration() override;
     void setConfiguration(const BrowserConfiguration& configuration) override;
 
@@ -69,6 +71,7 @@ namespace margelo::nitro::audiobrowser {
     void navigateTrack(const Track& track) override;
     std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override;
     std::optional<ResolvedTrack> getContent() override;
+    std::optional<NavigationError> getNavigationError() override;
 
   private:
     friend HybridBase;
