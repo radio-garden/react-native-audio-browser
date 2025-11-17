@@ -67,7 +67,8 @@ namespace margelo::nitro::audiobrowser {
           jni::local_ref<jni::JArrayClass<JAudioMetadata>> __array = jni::JArrayClass<JAudioMetadata>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             const auto& __element = value.metadata[__i];
-            __array->setElement(__i, *JAudioMetadata::fromCpp(__element));
+            auto __elementJni = JAudioMetadata::fromCpp(__element);
+            __array->setElement(__i, *__elementJni);
           }
           return __array;
         }()

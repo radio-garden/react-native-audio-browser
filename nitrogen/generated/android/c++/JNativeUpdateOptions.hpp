@@ -102,7 +102,8 @@ namespace margelo::nitro::audiobrowser {
           jni::local_ref<jni::JArrayClass<JCapability>> __array = jni::JArrayClass<JCapability>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             const auto& __element = value.capabilities.value()[__i];
-            __array->setElement(__i, *JCapability::fromCpp(__element));
+            auto __elementJni = JCapability::fromCpp(__element);
+            __array->setElement(__i, *__elementJni);
           }
           return __array;
         }() : nullptr

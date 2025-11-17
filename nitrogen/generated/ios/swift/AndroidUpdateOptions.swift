@@ -18,7 +18,7 @@ public extension AndroidUpdateOptions {
   /**
    * Create a new instance of `AndroidUpdateOptions`.
    */
-  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Bool?, shuffle: Bool?, ratingType: RatingType?, notificationCapabilities: [Capability]?) {
+  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Bool?, shuffle: Bool?, ratingType: RatingType?, notificationCapabilities: Variant_NullType__Capability_?) {
     self.init({ () -> bridge.std__optional_AppKilledPlaybackBehavior_ in
       if let __unwrappedValue = appKilledPlaybackBehavior {
         return bridge.create_std__optional_AppKilledPlaybackBehavior_(__unwrappedValue)
@@ -43,15 +43,22 @@ public extension AndroidUpdateOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__vector_Capability__ in
+    }(), { () -> bridge.std__optional_std__variant_nitro__NullType__std__vector_Capability___ in
       if let __unwrappedValue = notificationCapabilities {
-        return bridge.create_std__optional_std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
-          var __vector = bridge.create_std__vector_Capability_(__unwrappedValue.count)
-          for __item in __unwrappedValue {
-            __vector.push_back(__item)
+        return bridge.create_std__optional_std__variant_nitro__NullType__std__vector_Capability___({ () -> bridge.std__variant_nitro__NullType__std__vector_Capability__ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_nitro__NullType__std__vector_Capability__(margelo.nitro.NullType.null)
+            case .second(let __value):
+              return bridge.create_std__variant_nitro__NullType__std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
+                var __vector = bridge.create_std__vector_Capability_(__value.count)
+                for __item in __value {
+                  __vector.push_back(__item)
+                }
+                return __vector
+              }())
           }
-          return __vector
-        }())
+        }().variant)
       } else {
         return .init()
       }
@@ -140,13 +147,25 @@ public extension AndroidUpdateOptions {
     }
   }
   
-  var notificationCapabilities: [Capability]? {
+  var notificationCapabilities: Variant_NullType__Capability_? {
     @inline(__always)
     get {
-      return { () -> [Capability]? in
-        if bridge.has_value_std__optional_std__vector_Capability__(self.__notificationCapabilities) {
-          let __unwrapped = bridge.get_std__optional_std__vector_Capability__(self.__notificationCapabilities)
-          return __unwrapped.map({ __item in __item })
+      return { () -> Variant_NullType__Capability_? in
+        if bridge.has_value_std__optional_std__variant_nitro__NullType__std__vector_Capability___(self.__notificationCapabilities) {
+          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__std__vector_Capability___(self.__notificationCapabilities)
+          return { () -> Variant_NullType__Capability_ in
+            let __variant = bridge.std__variant_nitro__NullType__std__vector_Capability__(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first(NullType.null)
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual.map({ __item in __item }))
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
         } else {
           return nil
         }
@@ -154,15 +173,22 @@ public extension AndroidUpdateOptions {
     }
     @inline(__always)
     set {
-      self.__notificationCapabilities = { () -> bridge.std__optional_std__vector_Capability__ in
+      self.__notificationCapabilities = { () -> bridge.std__optional_std__variant_nitro__NullType__std__vector_Capability___ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
-            var __vector = bridge.create_std__vector_Capability_(__unwrappedValue.count)
-            for __item in __unwrappedValue {
-              __vector.push_back(__item)
+          return bridge.create_std__optional_std__variant_nitro__NullType__std__vector_Capability___({ () -> bridge.std__variant_nitro__NullType__std__vector_Capability__ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_nitro__NullType__std__vector_Capability__(margelo.nitro.NullType.null)
+              case .second(let __value):
+                return bridge.create_std__variant_nitro__NullType__std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
+                  var __vector = bridge.create_std__vector_Capability_(__value.count)
+                  for __item in __value {
+                    __vector.push_back(__item)
+                  }
+                  return __vector
+                }())
             }
-            return __vector
-          }())
+          }().variant)
         } else {
           return .init()
         }

@@ -202,6 +202,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"
+#include <NitroModules/Null.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
 #include <exception>

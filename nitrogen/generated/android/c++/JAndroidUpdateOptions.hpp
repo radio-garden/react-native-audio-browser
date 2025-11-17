@@ -15,8 +15,12 @@
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "JCapability.hpp"
 #include "JRatingType.hpp"
+#include "JVariant_NullType_Array_Capability_.hpp"
 #include "RatingType.hpp"
+#include <NitroModules/JNull.hpp>
+#include <NitroModules/Null.hpp>
 #include <optional>
+#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {
@@ -46,23 +50,14 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> shuffle = this->getFieldValue(fieldShuffle);
       static const auto fieldRatingType = clazz->getField<JRatingType>("ratingType");
       jni::local_ref<JRatingType> ratingType = this->getFieldValue(fieldRatingType);
-      static const auto fieldNotificationCapabilities = clazz->getField<jni::JArrayClass<JCapability>>("notificationCapabilities");
-      jni::local_ref<jni::JArrayClass<JCapability>> notificationCapabilities = this->getFieldValue(fieldNotificationCapabilities);
+      static const auto fieldNotificationCapabilities = clazz->getField<JVariant_NullType_Array_Capability_>("notificationCapabilities");
+      jni::local_ref<JVariant_NullType_Array_Capability_> notificationCapabilities = this->getFieldValue(fieldNotificationCapabilities);
       return AndroidUpdateOptions(
         appKilledPlaybackBehavior != nullptr ? std::make_optional(appKilledPlaybackBehavior->toCpp()) : std::nullopt,
         skipSilence != nullptr ? std::make_optional(static_cast<bool>(skipSilence->value())) : std::nullopt,
         shuffle != nullptr ? std::make_optional(static_cast<bool>(shuffle->value())) : std::nullopt,
         ratingType != nullptr ? std::make_optional(ratingType->toCpp()) : std::nullopt,
-        notificationCapabilities != nullptr ? std::make_optional([&]() {
-          size_t __size = notificationCapabilities->size();
-          std::vector<Capability> __vector;
-          __vector.reserve(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = notificationCapabilities->getElement(__i);
-            __vector.push_back(__element->toCpp());
-          }
-          return __vector;
-        }()) : std::nullopt
+        notificationCapabilities != nullptr ? std::make_optional(notificationCapabilities->toCpp()) : std::nullopt
       );
     }
 
@@ -72,7 +67,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JAndroidUpdateOptions::javaobject> fromCpp(const AndroidUpdateOptions& value) {
-      using JSignature = JAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRatingType>, jni::alias_ref<jni::JArrayClass<JCapability>>);
+      using JSignature = JAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_NullType_Array_Capability_>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -81,15 +76,7 @@ namespace margelo::nitro::audiobrowser {
         value.skipSilence.has_value() ? jni::JBoolean::valueOf(value.skipSilence.value()) : nullptr,
         value.shuffle.has_value() ? jni::JBoolean::valueOf(value.shuffle.value()) : nullptr,
         value.ratingType.has_value() ? JRatingType::fromCpp(value.ratingType.value()) : nullptr,
-        value.notificationCapabilities.has_value() ? [&]() {
-          size_t __size = value.notificationCapabilities.value().size();
-          jni::local_ref<jni::JArrayClass<JCapability>> __array = jni::JArrayClass<JCapability>::newArray(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.notificationCapabilities.value()[__i];
-            __array->setElement(__i, *JCapability::fromCpp(__element));
-          }
-          return __array;
-        }() : nullptr
+        value.notificationCapabilities.has_value() ? JVariant_NullType_Array_Capability_::fromCpp(value.notificationCapabilities.value()) : nullptr
       );
     }
   };

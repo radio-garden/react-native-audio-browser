@@ -25,13 +25,13 @@ data class Track(
   val src: String?,
   @DoNotStrip
   @Keep
+  val artwork: String?,
+  @DoNotStrip
+  @Keep
   val title: String,
   @DoNotStrip
   @Keep
   val subtitle: String?,
-  @DoNotStrip
-  @Keep
-  val artwork: String?,
   @DoNotStrip
   @Keep
   val artist: String?,
@@ -61,8 +61,8 @@ data class Track(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String?, src: String?, title: String, subtitle: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?): Track {
-      return Track(url, src, title, subtitle, artwork, artist, album, description, genre, duration, style)
+    private fun fromCpp(url: String?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?): Track {
+      return Track(url, src, artwork, title, subtitle, artist, album, description, genre, duration, style)
     }
   }
 }

@@ -9,7 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.NullType
 
 /**
  * Represents the JavaScript object/struct "UpdateOptions".
@@ -31,7 +31,7 @@ data class UpdateOptions(
   val backwardJumpInterval: Double?,
   @DoNotStrip
   @Keep
-  val progressUpdateEventInterval: Double?,
+  val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
   val capabilities: Array<Capability>?
@@ -46,7 +46,7 @@ data class UpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Double?, capabilities: Array<Capability>?): UpdateOptions {
+    private fun fromCpp(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: Array<Capability>?): UpdateOptions {
       return UpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities)
     }
   }

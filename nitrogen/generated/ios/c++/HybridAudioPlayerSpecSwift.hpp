@@ -156,6 +156,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
+#include <NitroModules/Null.hpp>
 #include "Capability.hpp"
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"

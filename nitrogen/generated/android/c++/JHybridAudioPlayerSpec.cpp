@@ -204,12 +204,16 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
 #include "JRatingType.hpp"
+#include <NitroModules/Null.hpp>
 #include "Capability.hpp"
+#include "JVariant_NullType_Array_Capability_.hpp"
+#include <NitroModules/JNull.hpp>
 #include "JCapability.hpp"
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include "JFeedbackOptions.hpp"
+#include "JVariant_NullType_Double.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "UpdateOptions.hpp"
@@ -1228,7 +1232,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
       for (size_t __i = 0; __i < __size; __i++) {
         const auto& __element = tracks[__i];
-        __array->setElement(__i, *JTrack::fromCpp(__element));
+        auto __elementJni = JTrack::fromCpp(__element);
+        __array->setElement(__i, *__elementJni);
       }
       return __array;
     }(), insertBeforeIndex.has_value() ? jni::JDouble::valueOf(insertBeforeIndex.value()) : nullptr);
@@ -1269,7 +1274,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
       for (size_t __i = 0; __i < __size; __i++) {
         const auto& __element = tracks[__i];
-        __array->setElement(__i, *JTrack::fromCpp(__element));
+        auto __elementJni = JTrack::fromCpp(__element);
+        __array->setElement(__i, *__elementJni);
       }
       return __array;
     }());

@@ -9,7 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.NullType
 
 /**
  * Represents the JavaScript object/struct "Options".
@@ -31,7 +31,7 @@ data class Options(
   val backwardJumpInterval: Double,
   @DoNotStrip
   @Keep
-  val progressUpdateEventInterval: Double?,
+  val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
   val capabilities: Array<Capability>,
@@ -49,7 +49,7 @@ data class Options(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Double?, capabilities: Array<Capability>, repeatMode: RepeatMode): Options {
+    private fun fromCpp(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: Array<Capability>, repeatMode: RepeatMode): Options {
       return Options(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, repeatMode)
     }
   }

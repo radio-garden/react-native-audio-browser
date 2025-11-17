@@ -21,9 +21,14 @@
 #include "JFeedbackOptions.hpp"
 #include "JIOSUpdateOptions.hpp"
 #include "JRatingType.hpp"
+#include "JVariant_NullType_Array_Capability_.hpp"
+#include "JVariant_NullType_Double.hpp"
 #include "RatingType.hpp"
+#include <NitroModules/JNull.hpp>
+#include <NitroModules/Null.hpp>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {
@@ -53,8 +58,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JDouble> forwardJumpInterval = this->getFieldValue(fieldForwardJumpInterval);
       static const auto fieldBackwardJumpInterval = clazz->getField<jni::JDouble>("backwardJumpInterval");
       jni::local_ref<jni::JDouble> backwardJumpInterval = this->getFieldValue(fieldBackwardJumpInterval);
-      static const auto fieldProgressUpdateEventInterval = clazz->getField<jni::JDouble>("progressUpdateEventInterval");
-      jni::local_ref<jni::JDouble> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
+      static const auto fieldProgressUpdateEventInterval = clazz->getField<JVariant_NullType_Double>("progressUpdateEventInterval");
+      jni::local_ref<JVariant_NullType_Double> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
       static const auto fieldCapabilities = clazz->getField<jni::JArrayClass<JCapability>>("capabilities");
       jni::local_ref<jni::JArrayClass<JCapability>> capabilities = this->getFieldValue(fieldCapabilities);
       return UpdateOptions(
@@ -62,7 +67,7 @@ namespace margelo::nitro::audiobrowser {
         ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt,
         forwardJumpInterval != nullptr ? std::make_optional(forwardJumpInterval->value()) : std::nullopt,
         backwardJumpInterval != nullptr ? std::make_optional(backwardJumpInterval->value()) : std::nullopt,
-        progressUpdateEventInterval != nullptr ? std::make_optional(progressUpdateEventInterval->value()) : std::nullopt,
+        progressUpdateEventInterval != nullptr ? std::make_optional(progressUpdateEventInterval->toCpp()) : std::nullopt,
         capabilities != nullptr ? std::make_optional([&]() {
           size_t __size = capabilities->size();
           std::vector<Capability> __vector;
@@ -82,7 +87,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JUpdateOptions::javaobject> fromCpp(const UpdateOptions& value) {
-      using JSignature = JUpdateOptions(jni::alias_ref<JAndroidUpdateOptions>, jni::alias_ref<JIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JArrayClass<JCapability>>);
+      using JSignature = JUpdateOptions(jni::alias_ref<JAndroidUpdateOptions>, jni::alias_ref<JIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JArrayClass<JCapability>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -91,13 +96,14 @@ namespace margelo::nitro::audiobrowser {
         value.ios.has_value() ? JIOSUpdateOptions::fromCpp(value.ios.value()) : nullptr,
         value.forwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.forwardJumpInterval.value()) : nullptr,
         value.backwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.backwardJumpInterval.value()) : nullptr,
-        value.progressUpdateEventInterval.has_value() ? jni::JDouble::valueOf(value.progressUpdateEventInterval.value()) : nullptr,
+        value.progressUpdateEventInterval.has_value() ? JVariant_NullType_Double::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
         value.capabilities.has_value() ? [&]() {
           size_t __size = value.capabilities.value().size();
           jni::local_ref<jni::JArrayClass<JCapability>> __array = jni::JArrayClass<JCapability>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             const auto& __element = value.capabilities.value()[__i];
-            __array->setElement(__i, *JCapability::fromCpp(__element));
+            auto __elementJni = JCapability::fromCpp(__element);
+            __array->setElement(__i, *__elementJni);
           }
           return __array;
         }() : nullptr

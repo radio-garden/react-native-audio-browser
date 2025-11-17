@@ -199,6 +199,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"
+#include <NitroModules/Null.hpp>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/PromiseHolder.hpp>
 #include <NitroModules/Result.hpp>
@@ -1454,6 +1455,50 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
+  // pragma MARK: std::variant<nitro::NullType, std::vector<Capability>>
+  /**
+   * Wrapper struct for `std::variant<nitro::NullType, std::vector<Capability>>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_nitro__NullType__std__vector_Capability__ {
+    std::variant<nitro::NullType, std::vector<Capability>> variant;
+    std__variant_nitro__NullType__std__vector_Capability__(std::variant<nitro::NullType, std::vector<Capability>> variant): variant(variant) { }
+    operator std::variant<nitro::NullType, std::vector<Capability>>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline nitro::NullType get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline std::vector<Capability> get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_nitro__NullType__std__vector_Capability__ create_std__variant_nitro__NullType__std__vector_Capability__(nitro::NullType value) noexcept {
+    return std__variant_nitro__NullType__std__vector_Capability__(value);
+  }
+  inline std__variant_nitro__NullType__std__vector_Capability__ create_std__variant_nitro__NullType__std__vector_Capability__(const std::vector<Capability>& value) noexcept {
+    return std__variant_nitro__NullType__std__vector_Capability__(value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<nitro::NullType, std::vector<Capability>>>
+  /**
+   * Specialized version of `std::optional<std::variant<nitro::NullType, std::vector<Capability>>>`.
+   */
+  using std__optional_std__variant_nitro__NullType__std__vector_Capability___ = std::optional<std::variant<nitro::NullType, std::vector<Capability>>>;
+  inline std::optional<std::variant<nitro::NullType, std::vector<Capability>>> create_std__optional_std__variant_nitro__NullType__std__vector_Capability___(const std::variant<nitro::NullType, std::vector<Capability>>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, std::vector<Capability>>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_nitro__NullType__std__vector_Capability___(const std::optional<std::variant<nitro::NullType, std::vector<Capability>>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<nitro::NullType, std::vector<Capability>> get_std__optional_std__variant_nitro__NullType__std__vector_Capability___(const std::optional<std::variant<nitro::NullType, std::vector<Capability>>>& optional) noexcept {
+    return *optional;
+  }
+  
   // pragma MARK: std::optional<AndroidUpdateOptions>
   /**
    * Specialized version of `std::optional<AndroidUpdateOptions>`.
@@ -1466,6 +1511,50 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline AndroidUpdateOptions get_std__optional_AndroidUpdateOptions_(const std::optional<AndroidUpdateOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<nitro::NullType, double>
+  /**
+   * Wrapper struct for `std::variant<nitro::NullType, double>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_nitro__NullType__double_ {
+    std::variant<nitro::NullType, double> variant;
+    std__variant_nitro__NullType__double_(std::variant<nitro::NullType, double> variant): variant(variant) { }
+    operator std::variant<nitro::NullType, double>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline nitro::NullType get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline double get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_nitro__NullType__double_ create_std__variant_nitro__NullType__double_(nitro::NullType value) noexcept {
+    return std__variant_nitro__NullType__double_(value);
+  }
+  inline std__variant_nitro__NullType__double_ create_std__variant_nitro__NullType__double_(double value) noexcept {
+    return std__variant_nitro__NullType__double_(value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<nitro::NullType, double>>
+  /**
+   * Specialized version of `std::optional<std::variant<nitro::NullType, double>>`.
+   */
+  using std__optional_std__variant_nitro__NullType__double__ = std::optional<std::variant<nitro::NullType, double>>;
+  inline std::optional<std::variant<nitro::NullType, double>> create_std__optional_std__variant_nitro__NullType__double__(const std::variant<nitro::NullType, double>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, double>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<nitro::NullType, double> get_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
     return *optional;
   }
   

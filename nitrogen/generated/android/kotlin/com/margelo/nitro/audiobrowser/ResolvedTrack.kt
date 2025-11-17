@@ -28,13 +28,13 @@ data class ResolvedTrack(
   val src: String?,
   @DoNotStrip
   @Keep
+  val artwork: String?,
+  @DoNotStrip
+  @Keep
   val title: String,
   @DoNotStrip
   @Keep
   val subtitle: String?,
-  @DoNotStrip
-  @Keep
-  val artwork: String?,
   @DoNotStrip
   @Keep
   val artist: String?,
@@ -64,8 +64,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String, children: Array<Track>?, src: String?, title: String, subtitle: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?): ResolvedTrack {
-      return ResolvedTrack(url, children, src, title, subtitle, artwork, artist, album, description, genre, duration, style)
+    private fun fromCpp(url: String, children: Array<Track>?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?): ResolvedTrack {
+      return ResolvedTrack(url, children, src, artwork, title, subtitle, artist, album, description, genre, duration, style)
     }
   }
 }

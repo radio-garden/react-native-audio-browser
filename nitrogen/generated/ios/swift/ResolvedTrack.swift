@@ -18,7 +18,7 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, src: String?, title: String, subtitle: String?, artwork: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?) {
+  init(url: String, children: [Track]?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?) {
     self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
@@ -37,14 +37,14 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), std.string(title), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = subtitle {
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = artwork {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = artwork {
+    }(), std.string(title), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = subtitle {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -153,6 +153,30 @@ public extension ResolvedTrack {
     }
   }
   
+  var artwork: String? {
+    @inline(__always)
+    get {
+      return { () -> String? in
+        if bridge.has_value_std__optional_std__string_(self.__artwork) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__artwork)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__artwork = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
   var title: String {
     @inline(__always)
     get {
@@ -179,30 +203,6 @@ public extension ResolvedTrack {
     @inline(__always)
     set {
       self.__subtitle = { () -> bridge.std__optional_std__string_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var artwork: String? {
-    @inline(__always)
-    get {
-      return { () -> String? in
-        if bridge.has_value_std__optional_std__string_(self.__artwork) {
-          let __unwrapped = bridge.get_std__optional_std__string_(self.__artwork)
-          return String(__unwrapped)
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__artwork = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {

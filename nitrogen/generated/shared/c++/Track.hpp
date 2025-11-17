@@ -39,9 +39,9 @@ namespace margelo::nitro::audiobrowser {
   public:
     std::optional<std::string> url     SWIFT_PRIVATE;
     std::optional<std::string> src     SWIFT_PRIVATE;
+    std::optional<std::string> artwork     SWIFT_PRIVATE;
     std::string title     SWIFT_PRIVATE;
     std::optional<std::string> subtitle     SWIFT_PRIVATE;
-    std::optional<std::string> artwork     SWIFT_PRIVATE;
     std::optional<std::string> artist     SWIFT_PRIVATE;
     std::optional<std::string> album     SWIFT_PRIVATE;
     std::optional<std::string> description     SWIFT_PRIVATE;
@@ -51,7 +51,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     Track() = default;
-    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artwork, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style): url(url), src(src), title(title), subtitle(subtitle), artwork(artwork), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style) {}
+    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::optional<std::string> artwork, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style): url(url), src(src), artwork(artwork), title(title), subtitle(subtitle), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -66,9 +66,9 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::Track(
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "url")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "src")),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artwork")),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "title")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "subtitle")),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artwork")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artist")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "album")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "description")),
@@ -81,9 +81,9 @@ namespace margelo::nitro {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "url", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.url));
       obj.setProperty(runtime, "src", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.src));
+      obj.setProperty(runtime, "artwork", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artwork));
       obj.setProperty(runtime, "title", JSIConverter<std::string>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, "subtitle", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.subtitle));
-      obj.setProperty(runtime, "artwork", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artwork));
       obj.setProperty(runtime, "artist", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artist));
       obj.setProperty(runtime, "album", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.album));
       obj.setProperty(runtime, "description", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.description));
@@ -102,9 +102,9 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "url"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "src"))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artwork"))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "title"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "subtitle"))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artwork"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artist"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "album"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "description"))) return false;

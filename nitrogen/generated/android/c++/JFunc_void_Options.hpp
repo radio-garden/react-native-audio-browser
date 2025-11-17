@@ -20,14 +20,19 @@
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
 #include "JRatingType.hpp"
+#include <NitroModules/Null.hpp>
 #include "Capability.hpp"
 #include <vector>
+#include <variant>
+#include "JVariant_NullType_Array_Capability_.hpp"
+#include <NitroModules/JNull.hpp>
 #include "JCapability.hpp"
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include "JFeedbackOptions.hpp"
 #include <string>
+#include "JVariant_NullType_Double.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
 

@@ -38,12 +38,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
       static const auto fieldSrc = clazz->getField<jni::JString>("src");
       jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
+      static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
+      jni::local_ref<jni::JString> artwork = this->getFieldValue(fieldArtwork);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldSubtitle = clazz->getField<jni::JString>("subtitle");
       jni::local_ref<jni::JString> subtitle = this->getFieldValue(fieldSubtitle);
-      static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
-      jni::local_ref<jni::JString> artwork = this->getFieldValue(fieldArtwork);
       static const auto fieldArtist = clazz->getField<jni::JString>("artist");
       jni::local_ref<jni::JString> artist = this->getFieldValue(fieldArtist);
       static const auto fieldAlbum = clazz->getField<jni::JString>("album");
@@ -59,9 +59,9 @@ namespace margelo::nitro::audiobrowser {
       return Track(
         url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
+        artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
         title->toStdString(),
         subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
-        artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
         artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
         album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
         description != nullptr ? std::make_optional(description->toStdString()) : std::nullopt,
@@ -84,9 +84,9 @@ namespace margelo::nitro::audiobrowser {
         clazz,
         value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
+        value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
         jni::make_jstring(value.title),
         value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,
-        value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
         value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
         value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,

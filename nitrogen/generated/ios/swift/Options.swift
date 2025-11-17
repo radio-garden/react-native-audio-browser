@@ -18,7 +18,7 @@ public extension Options {
   /**
    * Create a new instance of `Options`.
    */
-  init(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Double?, capabilities: [Capability], repeatMode: RepeatMode) {
+  init(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: [Capability], repeatMode: RepeatMode) {
     self.init({ () -> bridge.std__optional_AndroidOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_AndroidOptions_(__unwrappedValue)
@@ -31,9 +31,16 @@ public extension Options {
       } else {
         return .init()
       }
-    }(), forwardJumpInterval, backwardJumpInterval, { () -> bridge.std__optional_double_ in
+    }(), forwardJumpInterval, backwardJumpInterval, { () -> bridge.std__optional_std__variant_nitro__NullType__double__ in
       if let __unwrappedValue = progressUpdateEventInterval {
-        return bridge.create_std__optional_double_(__unwrappedValue)
+        return bridge.create_std__optional_std__variant_nitro__NullType__double__({ () -> bridge.std__variant_nitro__NullType__double_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_nitro__NullType__double_(margelo.nitro.NullType.null)
+            case .second(let __value):
+              return bridge.create_std__variant_nitro__NullType__double_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
@@ -102,16 +109,42 @@ public extension Options {
     }
   }
   
-  var progressUpdateEventInterval: Double? {
+  var progressUpdateEventInterval: Variant_NullType_Double? {
     @inline(__always)
     get {
-      return self.__progressUpdateEventInterval.value
+      return { () -> Variant_NullType_Double? in
+        if bridge.has_value_std__optional_std__variant_nitro__NullType__double__(self.__progressUpdateEventInterval) {
+          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__double__(self.__progressUpdateEventInterval)
+          return { () -> Variant_NullType_Double in
+            let __variant = bridge.std__variant_nitro__NullType__double_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first(NullType.null)
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {
-      self.__progressUpdateEventInterval = { () -> bridge.std__optional_double_ in
+      self.__progressUpdateEventInterval = { () -> bridge.std__optional_std__variant_nitro__NullType__double__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_double_(__unwrappedValue)
+          return bridge.create_std__optional_std__variant_nitro__NullType__double__({ () -> bridge.std__variant_nitro__NullType__double_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_nitro__NullType__double_(margelo.nitro.NullType.null)
+              case .second(let __value):
+                return bridge.create_std__variant_nitro__NullType__double_(__value)
+            }
+          }().variant)
         } else {
           return .init()
         }

@@ -113,7 +113,7 @@ export interface AudioPlayer
   getPlayingState(): PlayingState
   getRepeatMode(): RepeatMode
   setRepeatMode(mode: RepeatMode): void
-  getPlaybackError(): PlaybackError | null
+  getPlaybackError(): PlaybackError | undefined
   retry(): void
 
   // MARK: playlist management

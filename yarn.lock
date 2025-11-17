@@ -6916,7 +6916,7 @@ __metadata:
     react-native: "npm:0.82.0"
     react-native-audio-browser: "npm:*"
     react-native-monorepo-config: "npm:^0.3.0"
-    react-native-nitro-modules: "npm:0.31.4"
+    react-native-nitro-modules: "npm:0.31.6"
     react-native-safe-area-context: "npm:^5.5.2"
     typescript: "npm:^5.9.3"
   languageName: unknown
@@ -10689,18 +10689,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nitrogen@npm:0.31.4":
-  version: 0.31.4
-  resolution: "nitrogen@npm:0.31.4"
+"nitrogen@npm:0.31.6":
+  version: 0.31.6
+  resolution: "nitrogen@npm:0.31.6"
   dependencies:
     chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.31.4"
+    react-native-nitro-modules: "npm:^0.31.6"
     ts-morph: "npm:^27.0.0"
     yargs: "npm:^18.0.0"
     zod: "npm:^4.0.5"
   bin:
     nitrogen: lib/index.js
-  checksum: 10c0/5bb9250716bbe307cfcdcdb148ea5c67c054ee8491060259e0328c8fd4be591f60812f15ccb5eb45f29cd51c3bb117ee30c9b4b77a1ac33172ee0fe694426306
+  checksum: 10c0/0a5ddce4c526fcf65f53ab68f706f959b7c97fb30835da2e35f070ead946ba6b1ed69db2ec65927f6ed11217d1c4494bd6220607ddd115aff29ebd038f1add04
   languageName: node
   linkType: hard
 
@@ -12011,12 +12011,12 @@ __metadata:
     eslint-config-prettier: "npm:^10.1.1"
     eslint-plugin-prettier: "npm:^5.2.3"
     jest: "npm:^29.7.0"
-    nitrogen: "npm:0.31.4"
+    nitrogen: "npm:0.31.6"
     prettier: "npm:^3.0.3"
     react: "npm:19.1.1"
     react-native: "npm:0.82"
     react-native-builder-bob: "npm:^0.37.0"
-    react-native-nitro-modules: "npm:0.31.4"
+    react-native-nitro-modules: "npm:0.31.6"
     semantic-release: "npm:^24.2.9"
     typescript: "npm:^5.8.3"
     typescript-eslint: "npm:^8.46.0"
@@ -12069,13 +12069,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.31.4, react-native-nitro-modules@npm:^0.31.4":
-  version: 0.31.4
-  resolution: "react-native-nitro-modules@npm:0.31.4"
+"react-native-nitro-modules@npm:0.31.6, react-native-nitro-modules@npm:^0.31.6":
+  version: 0.31.6
+  resolution: "react-native-nitro-modules@npm:0.31.6"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/42fd2cc0d7f2bb913e8d757437f3aed3e123d46c79a6aecb6240e868731a0d9ba8fe097b493dc01050a2e2436cf96e978eb5b021b8f14ef0f8445f9e74e59095
+  checksum: 10c0/d2e9eeddc449d0f51ae567b5fb012bfb531364d232e521839beac7c87c1033e13c456cd62c8b93c686a3ad7efc900f31ff1ccdb602dffe02c46d0d29379616ce
   languageName: node
   linkType: hard
 
