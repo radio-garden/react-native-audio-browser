@@ -776,7 +776,7 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setQueue(tracks: Array<Track>): Unit
+  abstract fun setQueue(tracks: Array<Track>, startIndex: Double?, startPositionMs: Double?): Unit
   
   @DoNotStrip
   @Keep

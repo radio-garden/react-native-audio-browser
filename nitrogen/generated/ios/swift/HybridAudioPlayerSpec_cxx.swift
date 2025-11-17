@@ -1508,9 +1508,9 @@ open class HybridAudioPlayerSpec_cxx {
   }
   
   @inline(__always)
-  public final func setQueue(tracks: bridge.std__vector_Track_) -> bridge.Result_void_ {
+  public final func setQueue(tracks: bridge.std__vector_Track_, startIndex: bridge.std__optional_double_, startPositionMs: bridge.std__optional_double_) -> bridge.Result_void_ {
     do {
-      try self.__implementation.setQueue(tracks: tracks.map({ __item in __item }))
+      try self.__implementation.setQueue(tracks: tracks.map({ __item in __item }), startIndex: startIndex.value, startPositionMs: startPositionMs.value)
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

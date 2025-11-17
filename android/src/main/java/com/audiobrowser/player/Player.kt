@@ -556,6 +556,20 @@ class Player(internal val context: Context) {
   }
 
   /**
+   * Sets the queue with new tracks, optionally starting at a specific index and position.
+   * This is more efficient than calling clear() + add() + skipTo() separately.
+   *
+   * @param tracks The tracks to set as the new queue.
+   * @param startIndex The index to start playback from (default: 0).
+   * @param startPositionMs The position in milliseconds to start from (default: 0).
+   */
+  fun setQueue(tracks: Array<Track>, startIndex: Int = 0, startPositionMs: Long = 0) {
+    val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
+    exoPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
+    exoPlayer.prepare()
+  }
+
+  /**
    * Replaces track at index in queue.
    *
    * @throws IllegalArgumentException if index is out of bounds.
@@ -600,8 +614,7 @@ class Player(internal val context: Context) {
 
       if (tracks != null && tracks.isNotEmpty()) {
         Timber.d("Found ${tracks.size} track(s), playing first: ${tracks[0].title}")
-        clear()
-        add(tracks)
+        setQueue(tracks)
         play()
         true
       } else {

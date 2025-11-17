@@ -126,7 +126,7 @@ export interface AudioPlayer
   skipToPrevious(initialPosition?: number): void
   // updateMetadataForTrack(trackIndex: number, metadata: TrackMetadataBase): void
   // updateNowPlayingMetadata(metadata: TrackMetadataBase): void
-  setQueue(tracks: Track[]): void
+  setQueue(tracks: Track[], startIndex?: number, startPositionMs?: number): void
   getQueue(): Track[]
   getTrack(index: number): Track | undefined
   getActiveTrackIndex(): number | undefined

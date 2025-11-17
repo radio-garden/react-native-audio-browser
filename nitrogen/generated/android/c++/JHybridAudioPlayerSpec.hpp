@@ -171,7 +171,7 @@ namespace margelo::nitro::audiobrowser {
     void skip(double index, std::optional<double> initialPosition) override;
     void skipToNext(std::optional<double> initialPosition) override;
     void skipToPrevious(std::optional<double> initialPosition) override;
-    void setQueue(const std::vector<Track>& tracks) override;
+    void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) override;
     std::vector<Track> getQueue() override;
     std::optional<Track> getTrack(double index) override;
     std::optional<double> getActiveTrackIndex() override;

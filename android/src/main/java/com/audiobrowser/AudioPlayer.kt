@@ -285,9 +285,16 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     }
   }
 
-  override fun setQueue(tracks: Array<Track>) = runBlockingOnMain {
-    player.clear()
-    player.add(tracks)
+  override fun setQueue(
+    tracks: Array<Track>,
+    startIndex: Double?,
+    startPositionMs: Double?
+  ) = runBlockingOnMain {
+    player.setQueue(
+      tracks,
+      startIndex?.toInt() ?: 0,
+      startPositionMs?.toLong() ?: 0
+    )
   }
 
   override fun getQueue(): Array<Track> = runBlockingOnMain { player.tracks }

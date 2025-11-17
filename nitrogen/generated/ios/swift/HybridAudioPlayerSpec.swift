@@ -89,7 +89,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func skip(index: Double, initialPosition: Double?) throws -> Void
   func skipToNext(initialPosition: Double?) throws -> Void
   func skipToPrevious(initialPosition: Double?) throws -> Void
-  func setQueue(tracks: [Track]) throws -> Void
+  func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws -> Void
   func getQueue() throws -> [Track]
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?

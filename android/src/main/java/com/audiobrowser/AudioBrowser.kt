@@ -172,9 +172,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
             // Replace queue and seek to selected track
             // Use internal player methods directly to avoid blocking on main thread
-            player.clear()
-            player.add(tracks)
-            player.skipTo(startIndex)
+            player.setQueue(tracks, startIndex)
             player.play()
           } else {
             // Fallback: just load the single track
