@@ -1,7 +1,7 @@
 import { nativePlayer } from '../native'
 import type { Track } from '../types'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 /**
  * Event data for when the active track changes.
@@ -44,7 +44,7 @@ export function getActiveTrackIndex(): number | undefined {
  * @returns Cleanup function to unsubscribe
  */
 export const onActiveTrackChanged =
-  LazyEmitter.emitterize<PlaybackActiveTrackChangedEvent>(
+  NativeUpdatedValue.emitterize<PlaybackActiveTrackChangedEvent>(
     (cb) => (nativePlayer.onPlaybackActiveTrackChanged = cb)
   )
 
@@ -55,5 +55,5 @@ export const onActiveTrackChanged =
  * @returns The current active track or undefined
  */
 export function useActiveTrack(): Track | undefined {
-  return useUpdatedNativeValue(getActiveTrack, onActiveTrackChanged, 'track')
+  return useNativeUpdatedValue(getActiveTrack, onActiveTrackChanged, 'track')
 }

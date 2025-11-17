@@ -1,5 +1,5 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import type { Rating } from './rating'
 
 // MARK: - Types
@@ -98,7 +98,7 @@ export interface AudioMetadataReceivedEvent {
  * @returns Cleanup function to unsubscribe
  */
 export const onMetadataChapterReceived =
-  LazyEmitter.emitterize<AudioMetadataReceivedEvent>(
+  NativeUpdatedValue.emitterize<AudioMetadataReceivedEvent>(
     (cb) => (nativePlayer.onMetadataChapterReceived = cb)
   )
 
@@ -108,7 +108,7 @@ export const onMetadataChapterReceived =
  * @returns Cleanup function to unsubscribe
  */
 export const onMetadataCommonReceived =
-  LazyEmitter.emitterize<AudioCommonMetadataReceivedEvent>(
+  NativeUpdatedValue.emitterize<AudioCommonMetadataReceivedEvent>(
     (cb) => (nativePlayer.onMetadataCommonReceived = cb)
   )
 
@@ -118,6 +118,6 @@ export const onMetadataCommonReceived =
  * @returns Cleanup function to unsubscribe
  */
 export const onMetadataTimedReceived =
-  LazyEmitter.emitterize<AudioMetadataReceivedEvent>(
+  NativeUpdatedValue.emitterize<AudioMetadataReceivedEvent>(
     (cb) => (nativePlayer.onMetadataTimedReceived = cb)
   )

@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
 
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 /**
  * Event data for when playWhenReady changes.
@@ -40,7 +40,7 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlayWhenReadyChanged =
-  LazyEmitter.emitterize<PlaybackPlayWhenReadyChangedEvent>(
+  NativeUpdatedValue.emitterize<PlaybackPlayWhenReadyChangedEvent>(
     (cb) => (nativePlayer.onPlaybackPlayWhenReadyChanged = cb)
   )
 
@@ -57,5 +57,5 @@ export function usePlayWhenReady(): boolean {
     []
   )
 
-  return useUpdatedNativeValue(getPlayWhenReady, subscribe, 'playWhenReady')
+  return useNativeUpdatedValue(getPlayWhenReady, subscribe, 'playWhenReady')
 }

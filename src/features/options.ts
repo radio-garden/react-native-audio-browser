@@ -1,7 +1,7 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
 import { type NullSentinel, wrapNullSentinel } from '../utils/null-sentinel'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 import type { RatingType } from './metadata'
 import type { RepeatMode } from './repeatMode'
 
@@ -393,7 +393,7 @@ export function getOptions(): Options {
  * @param callback - Called when the player options change
  * @returns Cleanup function to unsubscribe
  */
-export const onOptionsChanged = LazyEmitter.emitterize<Options>(
+export const onOptionsChanged = NativeUpdatedValue.emitterize<Options>(
   (cb) => (nativePlayer.onOptionsChanged = cb)
 )
 
@@ -404,5 +404,5 @@ export const onOptionsChanged = LazyEmitter.emitterize<Options>(
  * @returns The current player options
  */
 export function useOptions(): Options {
-  return useUpdatedNativeValue(getOptions, onOptionsChanged)
+  return useNativeUpdatedValue(getOptions, onOptionsChanged)
 }

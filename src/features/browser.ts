@@ -1,7 +1,7 @@
 import { nativeBrowser, nativePlayer } from '../native'
 import type { BrowserConfiguration, ResolvedTrack, Track } from '../types'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 /**
  * Configures the browser with routes, tabs, and other settings.
@@ -42,33 +42,33 @@ export function getPath() {
   return nativeBrowser.path
 }
 
-export const onPathChanged = LazyEmitter.emitterize<string | undefined>(
+export const onPathChanged = NativeUpdatedValue.emitterize<string | undefined>(
   (cb) => (nativeBrowser.onPathChanged = cb)
 )
 
 export function usePath(): string | undefined {
-  return useUpdatedNativeValue(getPath, onPathChanged)
+  return useNativeUpdatedValue(getPath, onPathChanged)
 }
 
 export function getContent(): ResolvedTrack | undefined {
   return nativeBrowser.getContent()
 }
 
-export const onContentChanged = LazyEmitter.emitterize<
+export const onContentChanged = NativeUpdatedValue.emitterize<
   ResolvedTrack | undefined
 >((cb) => (nativeBrowser.onContentChanged = cb))
 
 export function useContent(): ResolvedTrack | undefined {
-  return useUpdatedNativeValue(getContent, onContentChanged)
+  return useNativeUpdatedValue(getContent, onContentChanged)
 }
 export function getTabs(): Track[] | undefined {
   return nativeBrowser.tabs
 }
 
-export const onTabsChanged = LazyEmitter.emitterize<Track[] | undefined>(
+export const onTabsChanged = NativeUpdatedValue.emitterize<Track[] | undefined>(
   (cb) => (nativeBrowser.onTabsChanged = cb)
 )
 
 export function useTabs(): Track[] | undefined {
-  return useUpdatedNativeValue(getTabs, onTabsChanged)
+  return useNativeUpdatedValue(getTabs, onTabsChanged)
 }

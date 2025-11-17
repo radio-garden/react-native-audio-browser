@@ -1,6 +1,6 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 // MARK: - Types
 
@@ -43,7 +43,7 @@ export interface RepeatModeChangedEvent {
  * @returns Cleanup function to unsubscribe
  */
 export const onRepeatModeChanged =
-  LazyEmitter.emitterize<RepeatModeChangedEvent>(
+  NativeUpdatedValue.emitterize<RepeatModeChangedEvent>(
     (cb) => (nativePlayer.onPlaybackRepeatModeChanged = cb)
   )
 
@@ -54,5 +54,5 @@ export const onRepeatModeChanged =
  * @returns The current repeat mode
  */
 export function useRepeatMode(): RepeatMode {
-  return useUpdatedNativeValue(getRepeatMode, onRepeatModeChanged, 'repeatMode')
+  return useNativeUpdatedValue(getRepeatMode, onRepeatModeChanged, 'repeatMode')
 }

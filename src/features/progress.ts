@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 import { onPlaybackChanged } from './playbackState'
 
 // MARK: - Types
@@ -49,7 +49,7 @@ export function getProgress(): Progress {
  * @returns Cleanup function to unsubscribe
  */
 export const onProgressUpdated =
-  LazyEmitter.emitterize<PlaybackProgressUpdatedEvent>(
+  NativeUpdatedValue.emitterize<PlaybackProgressUpdatedEvent>(
     (cb) => (nativePlayer.onPlaybackProgressUpdated = cb)
   )
 
@@ -62,7 +62,7 @@ export const onProgressUpdated =
  * @returns The current playback progress
  */
 export function useProgress(): Progress {
-  return useUpdatedNativeValue(getProgress, onProgressUpdated)
+  return useNativeUpdatedValue(getProgress, onProgressUpdated)
 }
 
 /**

@@ -1,6 +1,6 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 // MARK: - Types
 
@@ -25,7 +25,7 @@ export function getPlayingState(): PlayingState {
  * @param callback - Called when playing or buffering state changes
  * @returns Cleanup function to unsubscribe
  */
-export const onPlayingState = LazyEmitter.emitterize<PlayingState>(
+export const onPlayingState = NativeUpdatedValue.emitterize<PlayingState>(
   (cb) => (nativePlayer.onPlaybackPlayingState = cb)
 )
 
@@ -36,5 +36,5 @@ export const onPlayingState = LazyEmitter.emitterize<PlayingState>(
  * @returns The current playing state (playing and buffering flags)
  */
 export function usePlayingState(): PlayingState {
-  return useUpdatedNativeValue(getPlayingState, onPlayingState)
+  return useNativeUpdatedValue(getPlayingState, onPlayingState)
 }

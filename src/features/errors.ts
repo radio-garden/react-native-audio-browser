@@ -1,6 +1,6 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 export type PlaybackError = {
   code: string
@@ -32,7 +32,7 @@ export function getPlaybackError(): PlaybackError | undefined {
  * @param callback - Called when a playback error occurs
  * @returns Cleanup function to unsubscribe
  */
-export const onPlaybackError = LazyEmitter.emitterize<PlaybackErrorEvent>(
+export const onPlaybackError = NativeUpdatedValue.emitterize<PlaybackErrorEvent>(
   (cb) => (nativePlayer.onPlaybackError = cb)
 )
 
@@ -43,5 +43,5 @@ export const onPlaybackError = LazyEmitter.emitterize<PlaybackErrorEvent>(
  * @returns The current playback error or undefined
  */
 export function usePlaybackError(): PlaybackError | undefined {
-  return useUpdatedNativeValue(getPlaybackError, onPlaybackError, 'error')
+  return useNativeUpdatedValue(getPlaybackError, onPlaybackError, 'error')
 }

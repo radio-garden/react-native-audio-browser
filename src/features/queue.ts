@@ -1,6 +1,6 @@
 import { nativePlayer } from '../native'
 import type { Track } from '../types'
-import { LazyEmitter } from '../utils/LazyEmitter'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Types
 
@@ -146,6 +146,6 @@ export function getQueue(): Track[] {
  * @param callback - Called when playback has paused due to reaching the end of the queue
  * @returns Cleanup function to unsubscribe
  */
-export const onQueueEnded = LazyEmitter.emitterize<PlaybackQueueEndedEvent>(
+export const onQueueEnded = NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
   (cb) => (nativePlayer.onPlaybackQueueEnded = cb)
 )

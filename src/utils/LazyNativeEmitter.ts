@@ -6,16 +6,18 @@ type Callback<T> = (arg: T) => void
  * The native callback is only assigned when the first listener is added, making the emitter
  * creation lightweight with no side effects until actually used.
  *
+ * Use this for optional/rare events like remote controls where most apps won't need to listen.
+ * For critical state changes (playback, progress, etc.), use NativeEmitter instead to ensure
+ * no events are missed.
+ *
  * @example
  * ```typescript
- * let emitter = new LazyEmitter(nativeAudioBrowser.onPlaybackStateChanged)
- *
- * function onPlaybackState(callback: (state: PlaybackState) => void) {
- *   return emitter.addListener(callback)
- * }
+ * export const onRemotePlay = LazyEmitter.emitterize<void>(
+ *   (cb) => (nativePlayer.onRemotePlay = cb)
+ * )
  * ```
  */
-export class LazyEmitter<T> {
+export class LazyNativeEmitter<T> {
   private setter: (callback: (data: T) => void) => void
   private listeners: Set<(arg: T) => void> | undefined
 
@@ -48,7 +50,7 @@ export class LazyEmitter<T> {
   static emitterize<T>(
     setter: (callback: (data: T) => void) => void
   ): (callback: Callback<T>) => () => void {
-    const emitter = new LazyEmitter(setter)
+    const emitter = new LazyNativeEmitter(setter)
     return (callback: Callback<T>) => emitter.addListener(callback)
   }
 }

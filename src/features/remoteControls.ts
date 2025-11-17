@@ -1,5 +1,5 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
+import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 import type {
   HeartRating,
   PercentageRating,
@@ -233,7 +233,7 @@ export function handleRemoteJumpBackward(
  * @param callback - Called when the user presses the bookmark button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteBookmark = LazyEmitter.emitterize<void>(
+export const onRemoteBookmark = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemoteBookmark = cb)
 )
 
@@ -242,7 +242,7 @@ export const onRemoteBookmark = LazyEmitter.emitterize<void>(
  * @param callback - Called when the user presses the dislike button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteDislike = LazyEmitter.emitterize<void>(
+export const onRemoteDislike = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemoteDislike = cb)
 )
 
@@ -252,7 +252,7 @@ export const onRemoteDislike = LazyEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteJumpBackward =
-  LazyEmitter.emitterize<RemoteJumpBackwardEvent>(
+  LazyNativeEmitter.emitterize<RemoteJumpBackwardEvent>(
     (cb) => (nativePlayer.onRemoteJumpBackward = cb)
   )
 
@@ -262,7 +262,7 @@ export const onRemoteJumpBackward =
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteJumpForward =
-  LazyEmitter.emitterize<RemoteJumpForwardEvent>(
+  LazyNativeEmitter.emitterize<RemoteJumpForwardEvent>(
     (cb) => (nativePlayer.onRemoteJumpForward = cb)
   )
 
@@ -271,7 +271,7 @@ export const onRemoteJumpForward =
  * @param callback - Called when the user presses the like button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteLike = LazyEmitter.emitterize<void>(
+export const onRemoteLike = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemoteLike = cb)
 )
 
@@ -280,7 +280,7 @@ export const onRemoteLike = LazyEmitter.emitterize<void>(
  * @param callback - Called when the user presses the next track button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteNext = LazyEmitter.emitterize<void>(
+export const onRemoteNext = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemoteNext = cb)
 )
 
@@ -289,7 +289,7 @@ export const onRemoteNext = LazyEmitter.emitterize<void>(
  * @param callback - Called when the user presses the pause button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemotePause = LazyEmitter.emitterize<void>(
+export const onRemotePause = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemotePause = cb)
 )
 
@@ -298,7 +298,7 @@ export const onRemotePause = LazyEmitter.emitterize<void>(
  * @param callback - Called when the user presses the play button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemotePlay = LazyEmitter.emitterize<void>(
+export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemotePlay = cb)
 )
 
@@ -307,7 +307,7 @@ export const onRemotePlay = LazyEmitter.emitterize<void>(
  * @param callback - Called when the user selects a track from an external device
  * @returns Cleanup function to unsubscribe
  */
-export const onRemotePlayId = LazyEmitter.emitterize<RemotePlayIdEvent>(
+export const onRemotePlayId = LazyNativeEmitter.emitterize<RemotePlayIdEvent>(
   (cb) => (nativePlayer.onRemotePlayId = cb)
 )
 
@@ -316,7 +316,7 @@ export const onRemotePlayId = LazyEmitter.emitterize<RemotePlayIdEvent>(
  * @param callback - Called when the user searches for a track (usually voice search)
  * @returns Cleanup function to unsubscribe
  */
-export const onRemotePlaySearch = LazyEmitter.emitterize<RemotePlaySearchEvent>(
+export const onRemotePlaySearch = LazyNativeEmitter.emitterize<RemotePlaySearchEvent>(
   (cb) => (nativePlayer.onRemotePlaySearch = cb)
 )
 
@@ -325,7 +325,7 @@ export const onRemotePlaySearch = LazyEmitter.emitterize<RemotePlaySearchEvent>(
  * @param callback - Called when the user presses the previous track button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemotePrevious = LazyEmitter.emitterize<void>(
+export const onRemotePrevious = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemotePrevious = cb)
 )
 
@@ -334,7 +334,7 @@ export const onRemotePrevious = LazyEmitter.emitterize<void>(
  * @param callback - Called when the user changes the position of the timeline
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteSeek = LazyEmitter.emitterize<RemoteSeekEvent>(
+export const onRemoteSeek = LazyNativeEmitter.emitterize<RemoteSeekEvent>(
   (cb) => (nativePlayer.onRemoteSeek = cb)
 )
 
@@ -343,7 +343,7 @@ export const onRemoteSeek = LazyEmitter.emitterize<RemoteSeekEvent>(
  * @param callback - Called when the user changes the rating for the track remotely
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteSetRating = LazyEmitter.emitterize<RemoteSetRatingEvent>(
+export const onRemoteSetRating = LazyNativeEmitter.emitterize<RemoteSetRatingEvent>(
   (cb) => (nativePlayer.onRemoteSetRating = cb)
 )
 
@@ -352,7 +352,7 @@ export const onRemoteSetRating = LazyEmitter.emitterize<RemoteSetRatingEvent>(
  * @param callback - Called when the user presses the skip button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteSkip = LazyEmitter.emitterize<RemoteSkipEvent>(
+export const onRemoteSkip = LazyNativeEmitter.emitterize<RemoteSkipEvent>(
   (cb) => (nativePlayer.onRemoteSkip = cb)
 )
 
@@ -361,6 +361,6 @@ export const onRemoteSkip = LazyEmitter.emitterize<RemoteSkipEvent>(
  * @param callback - Called when the user presses the stop button
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteStop = LazyEmitter.emitterize<void>(
+export const onRemoteStop = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativePlayer.onRemoteStop = cb)
 )

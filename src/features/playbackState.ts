@@ -1,6 +1,6 @@
 import { nativePlayer } from '../native'
-import { LazyEmitter } from '../utils/LazyEmitter'
-import { useUpdatedNativeValue } from '../utils/useUpdatedNativeValue'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 import type { PlaybackError } from './errors'
 
 // MARK: - Types
@@ -57,7 +57,7 @@ export function getPlayback(): Playback {
  * @param callback - Called when the playback state changes
  * @returns Cleanup function to unsubscribe
  */
-export const onPlaybackChanged = LazyEmitter.emitterize<Playback>(
+export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
   (cb) => (nativePlayer.onPlaybackChanged = cb)
 )
 
@@ -68,5 +68,5 @@ export const onPlaybackChanged = LazyEmitter.emitterize<Playback>(
  * @returns The current playback state
  */
 export function usePlayback(): Playback {
-  return useUpdatedNativeValue(getPlayback, onPlaybackChanged)
+  return useNativeUpdatedValue(getPlayback, onPlaybackChanged)
 }
