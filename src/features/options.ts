@@ -1,5 +1,4 @@
 import { nativePlayer } from '../native'
-import { type NullSentinel, wrapNullSentinel } from '../utils/null-sentinel'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 import type { RatingType } from './metadata'
@@ -194,7 +193,7 @@ export interface NitroAndroidUpdateOptions {
   skipSilence?: boolean
   shuffle?: boolean
   ratingType?: RatingType
-  notificationCapabilities?: Capability[] | NullSentinel
+  notificationCapabilities?: Capability[] | null
 }
 
 export interface IOSUpdateOptions {
@@ -324,7 +323,7 @@ export interface NativeUpdateOptions {
    * When null, progress events are disabled.
    * @default null
    */
-  progressUpdateEventInterval?: number | NullSentinel
+  progressUpdateEventInterval?: number | null
 
   capabilities?: Capability[]
 }
@@ -350,21 +349,7 @@ export interface NativeUpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
-  nativePlayer.updateOptions({
-    ...options,
-    android: options.android
-      ? {
-          ...options.android,
-          notificationCapabilities: wrapNullSentinel(
-            options.android.notificationCapabilities
-          )
-        }
-      : undefined,
-    ios: options.ios ? { ...options.ios } : undefined,
-    progressUpdateEventInterval: wrapNullSentinel(
-      options.progressUpdateEventInterval
-    )
-  })
+  nativePlayer.updateOptions(options)
 }
 
 // MARK: - Getters
