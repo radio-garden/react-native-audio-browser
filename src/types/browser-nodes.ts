@@ -14,8 +14,6 @@ export interface Track {
    * At least one of `url` or `src` must be defined.
    */
   url?: string
-  title: string
-  subtitle?: string
 
   /**
    * Direct audio source identifier. When present, this track can be played directly.
@@ -32,6 +30,10 @@ export interface Track {
    * Optional artwork URL for the item.
    */
   artwork?: string
+
+  // type?: TrackType
+  title: string
+  subtitle?: string
   artist?: string
   album?: string
   description?: string
