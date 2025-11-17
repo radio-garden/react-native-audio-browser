@@ -9,7 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.NullType
 
 /**
  * Represents the JavaScript object/struct "NitroAndroidUpdateOptions".
@@ -31,7 +31,7 @@ data class NitroAndroidUpdateOptions(
   val ratingType: RatingType?,
   @DoNotStrip
   @Keep
-  val notificationCapabilities: Variant_Array_Capability__NullSentinel?
+  val notificationCapabilities: Variant_NullType_Array_Capability_?
 ) {
   /* primary constructor */
 
@@ -43,7 +43,7 @@ data class NitroAndroidUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, shuffle: Boolean?, ratingType: RatingType?, notificationCapabilities: Variant_Array_Capability__NullSentinel?): NitroAndroidUpdateOptions {
+    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, shuffle: Boolean?, ratingType: RatingType?, notificationCapabilities: Variant_NullType_Array_Capability_?): NitroAndroidUpdateOptions {
       return NitroAndroidUpdateOptions(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, notificationCapabilities)
     }
   }

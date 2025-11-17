@@ -19,13 +19,13 @@
 #include "JFeedbackOptions.hpp"
 #include "JIOSUpdateOptions.hpp"
 #include "JNitroAndroidUpdateOptions.hpp"
-#include "JNullSentinel.hpp"
 #include "JRatingType.hpp"
-#include "JVariant_Array_Capability__NullSentinel.hpp"
-#include "JVariant_Double_NullSentinel.hpp"
+#include "JVariant_NullType_Array_Capability_.hpp"
+#include "JVariant_NullType_Double.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
-#include "NullSentinel.hpp"
 #include "RatingType.hpp"
+#include <NitroModules/JNull.hpp>
+#include <NitroModules/Null.hpp>
 #include <optional>
 #include <string>
 #include <variant>
@@ -58,8 +58,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JDouble> forwardJumpInterval = this->getFieldValue(fieldForwardJumpInterval);
       static const auto fieldBackwardJumpInterval = clazz->getField<jni::JDouble>("backwardJumpInterval");
       jni::local_ref<jni::JDouble> backwardJumpInterval = this->getFieldValue(fieldBackwardJumpInterval);
-      static const auto fieldProgressUpdateEventInterval = clazz->getField<JVariant_Double_NullSentinel>("progressUpdateEventInterval");
-      jni::local_ref<JVariant_Double_NullSentinel> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
+      static const auto fieldProgressUpdateEventInterval = clazz->getField<JVariant_NullType_Double>("progressUpdateEventInterval");
+      jni::local_ref<JVariant_NullType_Double> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
       static const auto fieldCapabilities = clazz->getField<jni::JArrayClass<JCapability>>("capabilities");
       jni::local_ref<jni::JArrayClass<JCapability>> capabilities = this->getFieldValue(fieldCapabilities);
       return NativeUpdateOptions(
@@ -87,7 +87,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeUpdateOptions::javaobject> fromCpp(const NativeUpdateOptions& value) {
-      using JSignature = JNativeUpdateOptions(jni::alias_ref<JNitroAndroidUpdateOptions>, jni::alias_ref<JIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_Double_NullSentinel>, jni::alias_ref<jni::JArrayClass<JCapability>>);
+      using JSignature = JNativeUpdateOptions(jni::alias_ref<JNitroAndroidUpdateOptions>, jni::alias_ref<JIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JArrayClass<JCapability>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -96,7 +96,7 @@ namespace margelo::nitro::audiobrowser {
         value.ios.has_value() ? JIOSUpdateOptions::fromCpp(value.ios.value()) : nullptr,
         value.forwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.forwardJumpInterval.value()) : nullptr,
         value.backwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.backwardJumpInterval.value()) : nullptr,
-        value.progressUpdateEventInterval.has_value() ? JVariant_Double_NullSentinel::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
+        value.progressUpdateEventInterval.has_value() ? JVariant_NullType_Double::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
         value.capabilities.has_value() ? [&]() {
           size_t __size = value.capabilities.value().size();
           jni::local_ref<jni::JArrayClass<JCapability>> __array = jni::JArrayClass<JCapability>::newArray(__size);

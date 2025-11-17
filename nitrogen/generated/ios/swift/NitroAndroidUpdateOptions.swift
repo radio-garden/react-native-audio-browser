@@ -18,7 +18,7 @@ public extension NitroAndroidUpdateOptions {
   /**
    * Create a new instance of `NitroAndroidUpdateOptions`.
    */
-  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Bool?, shuffle: Bool?, ratingType: RatingType?, notificationCapabilities: Variant__Capability__NullSentinel?) {
+  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Bool?, shuffle: Bool?, ratingType: RatingType?, notificationCapabilities: Variant_NullType__Capability_?) {
     self.init({ () -> bridge.std__optional_AppKilledPlaybackBehavior_ in
       if let __unwrappedValue = appKilledPlaybackBehavior {
         return bridge.create_std__optional_AppKilledPlaybackBehavior_(__unwrappedValue)
@@ -43,20 +43,20 @@ public extension NitroAndroidUpdateOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__variant_std__vector_Capability___NullSentinel__ in
+    }(), { () -> bridge.std__optional_std__variant_nitro__NullType__std__vector_Capability___ in
       if let __unwrappedValue = notificationCapabilities {
-        return bridge.create_std__optional_std__variant_std__vector_Capability___NullSentinel__({ () -> bridge.std__variant_std__vector_Capability___NullSentinel_ in
+        return bridge.create_std__optional_std__variant_nitro__NullType__std__vector_Capability___({ () -> bridge.std__variant_nitro__NullType__std__vector_Capability__ in
           switch __unwrappedValue {
             case .first(let __value):
-              return bridge.create_std__variant_std__vector_Capability___NullSentinel_({ () -> bridge.std__vector_Capability_ in
+              return bridge.create_std__variant_nitro__NullType__std__vector_Capability__(margelo.nitro.NullType.null)
+            case .second(let __value):
+              return bridge.create_std__variant_nitro__NullType__std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
                 var __vector = bridge.create_std__vector_Capability_(__value.count)
                 for __item in __value {
                   __vector.push_back(__item)
                 }
                 return __vector
               }())
-            case .second(let __value):
-              return bridge.create_std__variant_std__vector_Capability___NullSentinel_(__value)
           }
         }().variant)
       } else {
@@ -147,21 +147,21 @@ public extension NitroAndroidUpdateOptions {
     }
   }
   
-  var notificationCapabilities: Variant__Capability__NullSentinel? {
+  var notificationCapabilities: Variant_NullType__Capability_? {
     @inline(__always)
     get {
-      return { () -> Variant__Capability__NullSentinel? in
-        if bridge.has_value_std__optional_std__variant_std__vector_Capability___NullSentinel__(self.__notificationCapabilities) {
-          let __unwrapped = bridge.get_std__optional_std__variant_std__vector_Capability___NullSentinel__(self.__notificationCapabilities)
-          return { () -> Variant__Capability__NullSentinel in
-            let __variant = bridge.std__variant_std__vector_Capability___NullSentinel_(__unwrapped)
+      return { () -> Variant_NullType__Capability_? in
+        if bridge.has_value_std__optional_std__variant_nitro__NullType__std__vector_Capability___(self.__notificationCapabilities) {
+          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__std__vector_Capability___(self.__notificationCapabilities)
+          return { () -> Variant_NullType__Capability_ in
+            let __variant = bridge.std__variant_nitro__NullType__std__vector_Capability__(__unwrapped)
             switch __variant.index() {
               case 0:
                 let __actual = __variant.get_0()
-                return .first(__actual.map({ __item in __item }))
+                return .first(NullType.null)
               case 1:
                 let __actual = __variant.get_1()
-                return .second(__actual)
+                return .second(__actual.map({ __item in __item }))
               default:
                 fatalError("Variant can never have index \(__variant.index())!")
             }
@@ -173,20 +173,20 @@ public extension NitroAndroidUpdateOptions {
     }
     @inline(__always)
     set {
-      self.__notificationCapabilities = { () -> bridge.std__optional_std__variant_std__vector_Capability___NullSentinel__ in
+      self.__notificationCapabilities = { () -> bridge.std__optional_std__variant_nitro__NullType__std__vector_Capability___ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__variant_std__vector_Capability___NullSentinel__({ () -> bridge.std__variant_std__vector_Capability___NullSentinel_ in
+          return bridge.create_std__optional_std__variant_nitro__NullType__std__vector_Capability___({ () -> bridge.std__variant_nitro__NullType__std__vector_Capability__ in
             switch __unwrappedValue {
               case .first(let __value):
-                return bridge.create_std__variant_std__vector_Capability___NullSentinel_({ () -> bridge.std__vector_Capability_ in
+                return bridge.create_std__variant_nitro__NullType__std__vector_Capability__(margelo.nitro.NullType.null)
+              case .second(let __value):
+                return bridge.create_std__variant_nitro__NullType__std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
                   var __vector = bridge.create_std__vector_Capability_(__value.count)
                   for __item in __value {
                     __vector.push_back(__item)
                   }
                   return __vector
                 }())
-              case .second(let __value):
-                return bridge.create_std__variant_std__vector_Capability___NullSentinel_(__value)
             }
           }().variant)
         } else {

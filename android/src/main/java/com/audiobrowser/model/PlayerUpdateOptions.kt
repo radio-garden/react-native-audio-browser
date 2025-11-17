@@ -6,8 +6,8 @@ import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.UpdateOptions
-import com.margelo.nitro.audiobrowser.Variant_Array_Capability__NullSentinel
-import com.margelo.nitro.audiobrowser.Variant_Double_NullSentinel
+import com.margelo.nitro.audiobrowser.Variant_NullType_Array_Capability_
+import com.margelo.nitro.audiobrowser.Variant_NullType_Double
 
 /**
  * Update options for the AudioBrowser that can be changed at runtime. These options control player
@@ -40,11 +40,12 @@ data class PlayerUpdateOptions(
   fun updateFromBridge(options: NativeUpdateOptions) {
     options.forwardJumpInterval?.let { forwardJumpInterval = it }
     options.backwardJumpInterval?.let { backwardJumpInterval = it }
+
     options.progressUpdateEventInterval?.let { variant ->
       progressUpdateEventInterval =
         when (variant) {
-          is Variant_Double_NullSentinel.First -> variant.value
-          is Variant_Double_NullSentinel.Second -> null
+          is Variant_NullType_Double.First -> null
+          is Variant_NullType_Double.Second -> variant.value
         }
     }
 
@@ -65,9 +66,8 @@ data class PlayerUpdateOptions(
       androidOptions.notificationCapabilities?.let { variant ->
         notificationCapabilities =
           when (variant) {
-            is Variant_Array_Capability__NullSentinel.First -> variant.value.toList()
-
-            is Variant_Array_Capability__NullSentinel.Second -> null
+            is Variant_NullType_Array_Capability_.First -> null
+            is Variant_NullType_Array_Capability_.Second -> variant.value.toList()
           }
       }
     }
@@ -87,7 +87,7 @@ data class PlayerUpdateOptions(
         skipSilence = skipSilence,
         shuffle = shuffle,
         ratingType = ratingType,
-        notificationCapabilities = nitroNotificationCapabilities,
+        notificationCapabilities = nitroNotificationCapabilities?.let { Variant_NullType_Array_Capability_.create(it) }
       )
 
     return UpdateOptions(
@@ -95,7 +95,7 @@ data class PlayerUpdateOptions(
       ios = null, // iOS options not handled in this class
       forwardJumpInterval = forwardJumpInterval,
       backwardJumpInterval = backwardJumpInterval,
-      progressUpdateEventInterval = progressUpdateEventInterval,
+      progressUpdateEventInterval = progressUpdateEventInterval?.let { Variant_NullType_Double.create(it) },
       capabilities = nitroCapabilities,
     )
   }

@@ -9,7 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.NullType
 
 /**
  * Represents the JavaScript object/struct "NativeUpdateOptions".
@@ -31,7 +31,7 @@ data class NativeUpdateOptions(
   val backwardJumpInterval: Double?,
   @DoNotStrip
   @Keep
-  val progressUpdateEventInterval: Variant_Double_NullSentinel?,
+  val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
   val capabilities: Array<Capability>?
@@ -46,7 +46,7 @@ data class NativeUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: NitroAndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_Double_NullSentinel?, capabilities: Array<Capability>?): NativeUpdateOptions {
+    private fun fromCpp(android: NitroAndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: Array<Capability>?): NativeUpdateOptions {
       return NativeUpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities)
     }
   }

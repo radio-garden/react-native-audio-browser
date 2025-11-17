@@ -14,11 +14,11 @@
 #include "Capability.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "JCapability.hpp"
-#include "JNullSentinel.hpp"
 #include "JRatingType.hpp"
-#include "JVariant_Array_Capability__NullSentinel.hpp"
-#include "NullSentinel.hpp"
+#include "JVariant_NullType_Array_Capability_.hpp"
 #include "RatingType.hpp"
+#include <NitroModules/JNull.hpp>
+#include <NitroModules/Null.hpp>
 #include <optional>
 #include <variant>
 #include <vector>
@@ -50,8 +50,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> shuffle = this->getFieldValue(fieldShuffle);
       static const auto fieldRatingType = clazz->getField<JRatingType>("ratingType");
       jni::local_ref<JRatingType> ratingType = this->getFieldValue(fieldRatingType);
-      static const auto fieldNotificationCapabilities = clazz->getField<JVariant_Array_Capability__NullSentinel>("notificationCapabilities");
-      jni::local_ref<JVariant_Array_Capability__NullSentinel> notificationCapabilities = this->getFieldValue(fieldNotificationCapabilities);
+      static const auto fieldNotificationCapabilities = clazz->getField<JVariant_NullType_Array_Capability_>("notificationCapabilities");
+      jni::local_ref<JVariant_NullType_Array_Capability_> notificationCapabilities = this->getFieldValue(fieldNotificationCapabilities);
       return NitroAndroidUpdateOptions(
         appKilledPlaybackBehavior != nullptr ? std::make_optional(appKilledPlaybackBehavior->toCpp()) : std::nullopt,
         skipSilence != nullptr ? std::make_optional(static_cast<bool>(skipSilence->value())) : std::nullopt,
@@ -67,7 +67,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNitroAndroidUpdateOptions::javaobject> fromCpp(const NitroAndroidUpdateOptions& value) {
-      using JSignature = JNitroAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_Array_Capability__NullSentinel>);
+      using JSignature = JNitroAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_NullType_Array_Capability_>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -76,7 +76,7 @@ namespace margelo::nitro::audiobrowser {
         value.skipSilence.has_value() ? jni::JBoolean::valueOf(value.skipSilence.value()) : nullptr,
         value.shuffle.has_value() ? jni::JBoolean::valueOf(value.shuffle.value()) : nullptr,
         value.ratingType.has_value() ? JRatingType::fromCpp(value.ratingType.value()) : nullptr,
-        value.notificationCapabilities.has_value() ? JVariant_Array_Capability__NullSentinel::fromCpp(value.notificationCapabilities.value()) : nullptr
+        value.notificationCapabilities.has_value() ? JVariant_NullType_Array_Capability_::fromCpp(value.notificationCapabilities.value()) : nullptr
       );
     }
   };

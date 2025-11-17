@@ -18,7 +18,7 @@ public extension NativeUpdateOptions {
   /**
    * Create a new instance of `NativeUpdateOptions`.
    */
-  init(android: NitroAndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_Double_NullSentinel?, capabilities: [Capability]?) {
+  init(android: NitroAndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: [Capability]?) {
     self.init({ () -> bridge.std__optional_NitroAndroidUpdateOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_NitroAndroidUpdateOptions_(__unwrappedValue)
@@ -43,14 +43,14 @@ public extension NativeUpdateOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__variant_double__NullSentinel__ in
+    }(), { () -> bridge.std__optional_std__variant_nitro__NullType__double__ in
       if let __unwrappedValue = progressUpdateEventInterval {
-        return bridge.create_std__optional_std__variant_double__NullSentinel__({ () -> bridge.std__variant_double__NullSentinel_ in
+        return bridge.create_std__optional_std__variant_nitro__NullType__double__({ () -> bridge.std__variant_nitro__NullType__double_ in
           switch __unwrappedValue {
             case .first(let __value):
-              return bridge.create_std__variant_double__NullSentinel_(__value)
+              return bridge.create_std__variant_nitro__NullType__double_(margelo.nitro.NullType.null)
             case .second(let __value):
-              return bridge.create_std__variant_double__NullSentinel_(__value)
+              return bridge.create_std__variant_nitro__NullType__double_(__value)
           }
         }().variant)
       } else {
@@ -139,18 +139,18 @@ public extension NativeUpdateOptions {
     }
   }
   
-  var progressUpdateEventInterval: Variant_Double_NullSentinel? {
+  var progressUpdateEventInterval: Variant_NullType_Double? {
     @inline(__always)
     get {
-      return { () -> Variant_Double_NullSentinel? in
-        if bridge.has_value_std__optional_std__variant_double__NullSentinel__(self.__progressUpdateEventInterval) {
-          let __unwrapped = bridge.get_std__optional_std__variant_double__NullSentinel__(self.__progressUpdateEventInterval)
-          return { () -> Variant_Double_NullSentinel in
-            let __variant = bridge.std__variant_double__NullSentinel_(__unwrapped)
+      return { () -> Variant_NullType_Double? in
+        if bridge.has_value_std__optional_std__variant_nitro__NullType__double__(self.__progressUpdateEventInterval) {
+          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__double__(self.__progressUpdateEventInterval)
+          return { () -> Variant_NullType_Double in
+            let __variant = bridge.std__variant_nitro__NullType__double_(__unwrapped)
             switch __variant.index() {
               case 0:
                 let __actual = __variant.get_0()
-                return .first(__actual)
+                return .first(NullType.null)
               case 1:
                 let __actual = __variant.get_1()
                 return .second(__actual)
@@ -165,14 +165,14 @@ public extension NativeUpdateOptions {
     }
     @inline(__always)
     set {
-      self.__progressUpdateEventInterval = { () -> bridge.std__optional_std__variant_double__NullSentinel__ in
+      self.__progressUpdateEventInterval = { () -> bridge.std__optional_std__variant_nitro__NullType__double__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__variant_double__NullSentinel__({ () -> bridge.std__variant_double__NullSentinel_ in
+          return bridge.create_std__optional_std__variant_nitro__NullType__double__({ () -> bridge.std__variant_nitro__NullType__double_ in
             switch __unwrappedValue {
               case .first(let __value):
-                return bridge.create_std__variant_double__NullSentinel_(__value)
+                return bridge.create_std__variant_nitro__NullType__double_(margelo.nitro.NullType.null)
               case .second(let __value):
-                return bridge.create_std__variant_double__NullSentinel_(__value)
+                return bridge.create_std__variant_nitro__NullType__double_(__value)
             }
           }().variant)
         } else {

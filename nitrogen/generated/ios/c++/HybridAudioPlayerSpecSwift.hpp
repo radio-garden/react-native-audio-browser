@@ -106,8 +106,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
-// Forward declaration of `NullSentinel` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NullSentinel; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
@@ -173,7 +171,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSCategoryPolicy.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
-#include "NullSentinel.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"
