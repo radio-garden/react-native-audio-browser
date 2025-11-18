@@ -82,13 +82,12 @@ const configuration: BrowserConfiguration = {
           artwork: 'https://rntp.dev/example/Rhythm%20City%20(Demo).jpeg',
           duration: 106
         },
-        // TODO: fix m3u8 support on Android:
-        // {
-        //   src: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
-        //   title: 'Whip',
-        //   artist: 'prazkhanal',
-        //   artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg',
-        // },
+        {
+          src: 'https://rntp.dev/example/hls/whip/playlist.m3u8',
+          title: 'Whip',
+          artist: 'prazkhanal',
+          artwork: 'https://rntp.dev/example/hls/whip/whip.jpeg',
+        },
         {
           src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
           title: 'Chapters'

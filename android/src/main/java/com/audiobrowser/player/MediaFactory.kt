@@ -1,6 +1,5 @@
 package com.audiobrowser.player
 
-import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
@@ -13,7 +12,6 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -29,7 +27,11 @@ class MediaFactory(
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
   }
 
-  private val mediaFactory = DefaultMediaSourceFactory(context)
+  private val extractorsFactory = DefaultExtractorsFactory()
+    // TODO: reconsider whether this should be enabled by default:
+    .setConstantBitrateSeekingEnabled(true)
+
+  private val mediaFactory = DefaultMediaSourceFactory(context, extractorsFactory)
 
   override fun setDrmSessionManagerProvider(
     drmSessionManagerProvider: DrmSessionManagerProvider
@@ -87,46 +89,26 @@ class MediaFactory(
     }
   }
 
-  private fun isLocalFile(uri: Uri): Boolean {
-    val scheme = uri.scheme
-    return when (scheme) {
-      null,
-      ContentResolver.SCHEME_FILE,
-      ContentResolver.SCHEME_ANDROID_RESOURCE,
-      ContentResolver.SCHEME_CONTENT,
-      "res" -> true
-      else -> false
-    }
-  }
-
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
     val originalUri = mediaItem.localConfiguration?.uri
     val (finalUrl, headers, userAgent) = getMediaRequestConfig(originalUri!!.toString())
 
-    val local = isLocalFile(finalUrl.toUri())
-    val factory: DataSource.Factory =
-      when {
-        local -> {
-          DefaultDataSource.Factory(context)
-        }
-        finalUrl != null -> {
+    Timber.d("Media URL: $originalUri -> $finalUrl")
+    Timber.d("Media headers: $headers")
+    Timber.d("Media user-agent: $userAgent")
 
-          Timber.d("Media URL: $originalUri -> $finalUrl")
-          Timber.d("Media headers: $headers")
-          Timber.d("Media user-agent: $userAgent")
-
-          DefaultHttpDataSource.Factory().apply {
-            setUserAgent(userAgent)
-            setAllowCrossProtocolRedirects(true)
-            if (headers.isNotEmpty()) {
-              setDefaultRequestProperties(headers)
-            }
-          }
-        }
-        else -> {
-          DefaultDataSource.Factory(context)
+    // DefaultDataSource.Factory handles all URI schemes (file://, content://, http://, https://, etc.)
+    // by routing to the appropriate implementation. We provide a configured HTTP factory for remote URLs.
+    val factory: DataSource.Factory = DefaultDataSource.Factory(
+      context,
+      DefaultHttpDataSource.Factory().apply {
+        setUserAgent(userAgent)
+        setAllowCrossProtocolRedirects(true)
+        if (headers.isNotEmpty()) {
+          setDefaultRequestProperties(headers)
         }
       }
+    )
 
     // Create a new MediaItem with the transformed URL if it changed
     val finalMediaItem =
@@ -137,17 +119,17 @@ class MediaFactory(
         mediaItem
       }
 
-    return ProgressiveMediaSource.Factory(
-        cache?.let {
-          CacheDataSource.Factory()
-            .setCache(it)
-            .setUpstreamDataSourceFactory(factory)
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-        } ?: factory,
-        DefaultExtractorsFactory()
-          // TODO: reconsider whether this should be enabled by default:
-          .setConstantBitrateSeekingEnabled(true),
-      )
+    // Configure data source factory with optional caching
+    val dataSourceFactory = cache?.let {
+      CacheDataSource.Factory()
+        .setCache(it)
+        .setUpstreamDataSourceFactory(factory)
+        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    } ?: factory
+
+    // Use DefaultMediaSourceFactory which supports HLS, DASH, and progressive media
+    return mediaFactory
+      .setDataSourceFactory(dataSourceFactory)
       .createMediaSource(finalMediaItem)
   }
 }
