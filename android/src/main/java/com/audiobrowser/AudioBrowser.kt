@@ -21,6 +21,8 @@ import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.Promise
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -30,6 +32,7 @@ import timber.log.Timber
 @DoNotStrip
 class AudioBrowser : HybridAudioBrowserSpec() {
   private val mainScope = MainScope()
+  private var navigationJob: Job? = null
   private val context =
     NitroModules.applicationContext
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
@@ -133,9 +136,16 @@ class AudioBrowser : HybridAudioBrowserSpec() {
         browserManager.config = buildConfig()
         (value ?: getDefaultPath())?.let { path ->
           clearNavigationError()
-          mainScope.launch {
+
+          // Cancel previous navigation to avoid race conditions
+          navigationJob?.cancel()
+
+          navigationJob = mainScope.launch {
             try {
               browserManager.navigate(path)
+            } catch (e: CancellationException) {
+              // Rethrow to properly cancel - don't set error state for cancelled navigation
+              throw e
             } catch (e: HttpStatusException) {
               Timber.e(e, "HTTP error setting path: $path")
               setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
@@ -167,9 +177,16 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       // Navigate to initial path or default to first tab
       (value.path ?: getDefaultPath())?.let { path ->
         clearNavigationError()
-        mainScope.launch {
+
+        // Cancel previous navigation to avoid race conditions
+        navigationJob?.cancel()
+
+        navigationJob = mainScope.launch {
           try {
             browserManager.navigate(path)
+          } catch (e: CancellationException) {
+            // Rethrow to properly cancel - don't set error state for cancelled navigation
+            throw e
           } catch (e: HttpStatusException) {
             Timber.e(e, "HTTP error setting configuration path: $path")
             setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
@@ -211,10 +228,17 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   // Browser navigation methods
   override fun navigatePath(path: String) {
     clearNavigationError()
-    mainScope.launch {
+
+    // Cancel previous navigation to avoid race conditions
+    navigationJob?.cancel()
+
+    navigationJob = mainScope.launch {
       try {
         Timber.d("Navigating to path: $path")
         browserManager.navigate(path)
+      } catch (e: CancellationException) {
+        // Rethrow to properly cancel - don't set error state for cancelled navigation
+        throw e
       } catch (e: HttpStatusException) {
         Timber.e(e, "HTTP error navigating to path: $path")
         setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
@@ -233,7 +257,11 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
   override fun navigateTrack(track: Track) {
     clearNavigationError()
-    mainScope.launch {
+
+    // Cancel previous navigation to avoid race conditions
+    navigationJob?.cancel()
+
+    navigationJob = mainScope.launch {
       try {
         val url = track.url
         when {
@@ -274,6 +302,9 @@ class AudioBrowser : HybridAudioBrowserSpec() {
             )
           }
         }
+      } catch (e: CancellationException) {
+        // Rethrow to properly cancel - don't set error state for cancelled navigation
+        throw e
       } catch (e: HttpStatusException) {
         Timber.e(e, "HTTP error navigating to track: ${track.title}")
         setNavigationError(NavigationErrorType.HTTP_ERROR, e.message ?: "Server error", e.statusCode.toDouble())
