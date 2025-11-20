@@ -71,10 +71,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>> routes     SWIFT_PRIVATE;
     std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> browse     SWIFT_PRIVATE;
     std::optional<PlayConfigurationBehavior> play     SWIFT_PRIVATE;
+    std::optional<bool> androidControllerOfflineError     SWIFT_PRIVATE;
 
   public:
     BrowserConfiguration() = default;
-    explicit BrowserConfiguration(std::optional<std::string> path, std::optional<RequestConfig> request, std::optional<MediaRequestConfig> media, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>> search, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> tabs, std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>> routes, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> browse, std::optional<PlayConfigurationBehavior> play): path(path), request(request), media(media), search(search), tabs(tabs), routes(routes), browse(browse), play(play) {}
+    explicit BrowserConfiguration(std::optional<std::string> path, std::optional<RequestConfig> request, std::optional<MediaRequestConfig> media, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>> search, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> tabs, std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>> routes, std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> browse, std::optional<PlayConfigurationBehavior> play, std::optional<bool> androidControllerOfflineError): path(path), request(request), media(media), search(search), tabs(tabs), routes(routes), browse(browse), play(play), androidControllerOfflineError(androidControllerOfflineError) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -94,7 +95,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>()>, std::vector<margelo::nitro::audiobrowser::Track>, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "tabs")),
         JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::ResolvedTrack>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::fromJSI(runtime, obj.getProperty(runtime, "routes")),
         JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::ResolvedTrack>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "browse")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::fromJSI(runtime, obj.getProperty(runtime, "play"))
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::fromJSI(runtime, obj.getProperty(runtime, "play")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "androidControllerOfflineError"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::BrowserConfiguration& arg) {
@@ -107,6 +109,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "routes", JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::ResolvedTrack>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::toJSI(runtime, arg.routes));
       obj.setProperty(runtime, "browse", JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::ResolvedTrack>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::toJSI(runtime, arg.browse));
       obj.setProperty(runtime, "play", JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::toJSI(runtime, arg.play));
+      obj.setProperty(runtime, "androidControllerOfflineError", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.androidControllerOfflineError));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -125,6 +128,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::ResolvedTrack>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::TransformableRequestConfig>>>>::canConvert(runtime, obj.getProperty(runtime, "routes"))) return false;
       if (!JSIConverter<std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::ResolvedTrack>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>, margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::TransformableRequestConfig>>>::canConvert(runtime, obj.getProperty(runtime, "browse"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PlayConfigurationBehavior>>::canConvert(runtime, obj.getProperty(runtime, "play"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "androidControllerOfflineError"))) return false;
       return true;
     }
   };

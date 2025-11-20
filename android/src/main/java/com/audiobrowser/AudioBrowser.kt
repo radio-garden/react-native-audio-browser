@@ -47,6 +47,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       tabs = null,
       browse = null,
       play = PlayConfigurationBehavior.SINGLE,
+      androidControllerOfflineError = null,
     )
 
   internal val browserManager =
@@ -75,6 +76,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       tabs = _configuration.tabs,
       browse = _configuration.browse,
       play = _configuration.play,
+      androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
     )
   }
 

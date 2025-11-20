@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Error message shown in Android Auto when network is offline -->
+    <string name="audio_browser_offline_error">No internet connection</string>
+    <string name="audio_browser_offline_error_subtitle">Check your connection and try again</string>
+</resources>

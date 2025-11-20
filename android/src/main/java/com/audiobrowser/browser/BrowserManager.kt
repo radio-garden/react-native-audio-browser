@@ -993,4 +993,5 @@ data class BrowserConfig(
   val tabs: TabsSource? = null,
   val browse: BrowseSource? = null,
   val play: PlayConfigurationBehavior? = null,
+  val androidControllerOfflineError: Boolean = true,
 )

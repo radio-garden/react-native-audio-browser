@@ -85,6 +85,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig> browse = this->getFieldValue(fieldBrowse);
       static const auto fieldPlay = clazz->getField<JPlayConfigurationBehavior>("play");
       jni::local_ref<JPlayConfigurationBehavior> play = this->getFieldValue(fieldPlay);
+      static const auto fieldAndroidControllerOfflineError = clazz->getField<jni::JBoolean>("androidControllerOfflineError");
+      jni::local_ref<jni::JBoolean> androidControllerOfflineError = this->getFieldValue(fieldAndroidControllerOfflineError);
       return BrowserConfiguration(
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         request != nullptr ? std::make_optional(request->toCpp()) : std::nullopt,
@@ -100,7 +102,8 @@ namespace margelo::nitro::audiobrowser {
           return __map;
         }()) : std::nullopt,
         browse != nullptr ? std::make_optional(browse->toCpp()) : std::nullopt,
-        play != nullptr ? std::make_optional(play->toCpp()) : std::nullopt
+        play != nullptr ? std::make_optional(play->toCpp()) : std::nullopt,
+        androidControllerOfflineError != nullptr ? std::make_optional(static_cast<bool>(androidControllerOfflineError->value())) : std::nullopt
       );
     }
 
@@ -110,7 +113,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JBrowserConfiguration::javaobject> fromCpp(const BrowserConfiguration& value) {
-      using JSignature = JBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig>, jni::alias_ref<JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig>, jni::alias_ref<jni::JMap<jni::JString, JBrowserSource>>, jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig>, jni::alias_ref<JPlayConfigurationBehavior>);
+      using JSignature = JBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig>, jni::alias_ref<JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig>, jni::alias_ref<jni::JMap<jni::JString, JBrowserSource>>, jni::alias_ref<JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig>, jni::alias_ref<JPlayConfigurationBehavior>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -128,7 +131,8 @@ namespace margelo::nitro::audiobrowser {
           return __map;
         }() : nullptr,
         value.browse.has_value() ? JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig::fromCpp(value.browse.value()) : nullptr,
-        value.play.has_value() ? JPlayConfigurationBehavior::fromCpp(value.play.value()) : nullptr
+        value.play.has_value() ? JPlayConfigurationBehavior::fromCpp(value.play.value()) : nullptr,
+        value.androidControllerOfflineError.has_value() ? jni::JBoolean::valueOf(value.androidControllerOfflineError.value()) : nullptr
       );
     }
   };

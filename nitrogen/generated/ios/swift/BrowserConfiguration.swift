@@ -18,7 +18,7 @@ public extension BrowserConfiguration {
   /**
    * Create a new instance of `BrowserConfiguration`.
    */
-  init(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant____params__SearchParams_____Promise_Promise__Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig?, routes: Dictionary<String, BrowserSource>?, browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, play: PlayConfigurationBehavior?) {
+  init(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant____params__SearchParams_____Promise_Promise__Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig?, routes: Dictionary<String, BrowserSource>?, browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, play: PlayConfigurationBehavior?, androidControllerOfflineError: Bool?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -122,6 +122,12 @@ public extension BrowserConfiguration {
     }(), { () -> bridge.std__optional_PlayConfigurationBehavior_ in
       if let __unwrappedValue = play {
         return bridge.create_std__optional_PlayConfigurationBehavior_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = androidControllerOfflineError {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -519,6 +525,30 @@ public extension BrowserConfiguration {
       self.__play = { () -> bridge.std__optional_PlayConfigurationBehavior_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_PlayConfigurationBehavior_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var androidControllerOfflineError: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__androidControllerOfflineError) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__androidControllerOfflineError)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__androidControllerOfflineError = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }

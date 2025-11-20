@@ -29,6 +29,9 @@ object BrowserPathHelper {
   /** Search path prefix (full path is /__search?q=query) */
   const val SEARCH_PATH_PREFIX = "/__search"
 
+  /** Offline error placeholder media ID */
+  const val OFFLINE_PATH = "/__offline"
+
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 

@@ -34,6 +34,17 @@ class MediaSessionCallback(private val player: Player) :
   private val commandManager = MediaSessionCommandManager()
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+  // Track which controllers are subscribed to which media IDs
+  private val parentIdSubscriptions = mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
+  private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
+
+  init {
+    // Observe network state changes and notify subscribers
+    player.networkMonitor.observeOnline(scope) { _ ->
+      notifySubscribedChildrenChanged()
+    }
+  }
+
   /**
    * Apply pagination to a list of items. If pageSize is 0 or MAX_VALUE (Android Auto default),
    * returns the full list.
@@ -46,12 +57,33 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
+  /**
+   * Creates an offline error MediaItem.
+   */
+  private fun createOfflineMediaItem(): MediaItem {
+    val errorTitle = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error)
+    val errorSubtitle = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error_subtitle)
+    return MediaItem.Builder()
+      .setMediaId(BrowserPathHelper.OFFLINE_PATH)
+      .setMediaMetadata(
+        MediaMetadata.Builder()
+          .setTitle(errorTitle)
+          .setSubtitle(errorSubtitle)
+          .setIsBrowsable(false)
+          .setIsPlayable(false)
+          .build()
+      )
+      .build()
+  }
+
   fun updateMediaSession(
     mediaSession: MediaSession,
     capabilities: List<Capability>,
     notificationCapabilities: List<Capability>?,
     searchAvailable: Boolean,
   ) {
+    // Store as MediaLibrarySession for notifyChildrenChanged support
+    this.mediaLibrarySession = mediaSession as? MediaLibraryService.MediaLibrarySession
     commandManager.updateMediaSession(
       mediaSession,
       capabilities,
@@ -148,6 +180,12 @@ class MediaSessionCallback(private val player: Player) :
         return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       }
 
+      // Show offline error when offline:
+      if (!player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError) {
+        Timber.w("Network offline - returning error message for: $parentId")
+        return@future LibraryResult.ofItemList(ImmutableList.of(createOfflineMediaItem()), params)
+      }
+
       try {
         val children =
           if (parentId == BrowserPathHelper.RECENT_PATH) {
@@ -202,7 +240,11 @@ class MediaSessionCallback(private val player: Player) :
         return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       }
 
-      // Handle special root IDs
+      // Handle special paths
+      if (mediaId == BrowserPathHelper.OFFLINE_PATH) {
+        return@future LibraryResult.ofItem(createOfflineMediaItem(), null)
+      }
+
       if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {
         return@future LibraryResult.ofItem(
           MediaItem.Builder()
@@ -223,6 +265,43 @@ class MediaSessionCallback(private val player: Player) :
         Timber.e(e, "Error getting item for mediaId: $mediaId")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
+    }
+  }
+
+  override fun onSubscribe(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    parentId: String,
+    params: MediaLibraryService.LibraryParams?,
+  ): ListenableFuture<LibraryResult<Void>> {
+    Timber.d("onSubscribe: ${browser.packageName}, parentId = $parentId")
+
+    parentIdSubscriptions.getOrPut(parentId) { mutableSetOf() }.add(browser)
+    return super.onSubscribe(session, browser, parentId, params)
+  }
+
+  override fun onUnsubscribe(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    parentId: String,
+  ): ListenableFuture<LibraryResult<Void>> {
+    Timber.d("onUnsubscribe: ${browser.packageName}, parentId = $parentId")
+
+    parentIdSubscriptions[parentId]?.remove(browser)
+    if (parentIdSubscriptions[parentId]?.isEmpty() == true) {
+      parentIdSubscriptions.remove(parentId)
+    }
+
+    return super.onUnsubscribe(session, browser, parentId)
+  }
+
+  /**
+   * Notifies all subscribed controllers to refresh their content.
+   * Typically called when network state changes or content updates.
+   */
+  private fun notifySubscribedChildrenChanged() {
+    parentIdSubscriptions.keys.forEach { parentId ->
+      mediaLibrarySession?.notifyChildrenChanged(parentId, Int.MAX_VALUE, null)
     }
   }
 

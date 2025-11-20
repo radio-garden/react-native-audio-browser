@@ -1,4 +1,4 @@
-import type { ResolvedTrack, Track } from './browser-nodes'
+import type { ResolvedTrack, Track } from './browser-nodes.ts'
 
 export type BrowserSourceCallbackParam = {
   path: string
@@ -243,4 +243,18 @@ export type BrowserConfiguration = {
    * @default 'queue'
    */
   play?: PlayConfigurationBehavior
+
+  /**
+   * Show an offline error message in external controllers (Android Auto, Wear OS, Automotive)
+   * when network connectivity is lost.
+   *
+   * When enabled, displays a standard offline error item in the media browser
+   * instead of the normal content when the network is offline.
+   *
+   * Only applies to external Media3 controllers, not in-app browsing.
+   *
+   * @default true
+   * @platform android
+   */
+  androidControllerOfflineError?: boolean
 }

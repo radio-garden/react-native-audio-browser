@@ -21,6 +21,7 @@ import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
+import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
@@ -198,6 +199,7 @@ class Player(internal val context: Context) {
 
   private lateinit var playerListener: PlayerListener
   private var cache: SimpleCache? = null
+  val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
 
   private val progressUpdateManager: PlaybackProgressUpdateManager by lazy {
     PlaybackProgressUpdateManager {
@@ -670,6 +672,7 @@ class Player(internal val context: Context) {
     exoPlayer.release()
     cache?.release()
     cache = null
+    networkMonitor.destroy()
   }
 
   fun seekTo(duration: Long, unit: TimeUnit) {
