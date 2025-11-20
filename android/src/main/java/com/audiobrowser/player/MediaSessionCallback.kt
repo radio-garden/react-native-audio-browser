@@ -209,19 +209,7 @@ class MediaSessionCallback(private val player: Player) :
         LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
       } catch (e: Exception) {
         Timber.e(e, "Error getting children for parentId: $parentId")
-        val errorCode =
-          when (e) {
-            is com.audiobrowser.browser.ContentNotFoundException -> SessionError.ERROR_BAD_VALUE
-            is com.audiobrowser.browser.HttpStatusException -> {
-              when (e.statusCode) {
-                404 -> SessionError.ERROR_BAD_VALUE
-                else -> SessionError.ERROR_UNKNOWN
-              }
-            }
-            is com.audiobrowser.browser.NetworkException -> SessionError.ERROR_UNKNOWN
-            else -> SessionError.ERROR_UNKNOWN
-          }
-        LibraryResult.ofError(errorCode)
+        LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
     }
   }
