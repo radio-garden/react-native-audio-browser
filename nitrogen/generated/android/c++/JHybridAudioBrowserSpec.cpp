@@ -285,5 +285,9 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
+  void JHybridAudioBrowserSpec::notifyContentChanged(const std::string& path) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("notifyContentChanged");
+    method(_javaPart, jni::make_jstring(path));
+  }
 
 } // namespace margelo::nitro::audiobrowser

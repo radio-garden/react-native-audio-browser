@@ -23,5 +23,15 @@ export interface AudioBrowser
   // Error getter
   getNavigationError(): NavigationError | undefined
 
+  // Content notification
+  /**
+   * Notifies external controllers (Android Auto, CarPlay) that content at the given path has changed.
+   * Controllers will refresh their UI if they're currently viewing this path.
+   * Safe to call even if no controllers are subscribed (no-op).
+   *
+   * @param path - The path where content has changed (e.g., '/favorites', '/playlists/123')
+   */
+  notifyContentChanged(path: string): void
+
   configuration: BrowserConfiguration
 }

@@ -351,4 +351,15 @@ open class HybridAudioBrowserSpec_cxx {
       return bridge.create_Result_std__optional_NavigationError__(__exceptionPtr)
     }
   }
+  
+  @inline(__always)
+  public final func notifyContentChanged(path: std.string) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.notifyContentChanged(path: String(path))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
 }

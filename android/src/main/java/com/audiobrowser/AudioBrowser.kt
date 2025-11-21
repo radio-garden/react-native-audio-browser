@@ -337,4 +337,9 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   override fun getContent(): ResolvedTrack? {
     return browserManager.getContent()
   }
+
+  override fun notifyContentChanged(path: String) {
+    Timber.d("Notifying content changed for path: $path")
+    audioPlayer?.player?.notifyContentChanged(path)
+  }
 }

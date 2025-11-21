@@ -193,6 +193,12 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline void notifyContentChanged(const std::string& path) override {
+      auto __result = _swiftPart.notifyContentChanged(path);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
 
   private:
     AudioBrowser::HybridAudioBrowserSpec_cxx _swiftPart;

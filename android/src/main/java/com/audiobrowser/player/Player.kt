@@ -873,4 +873,14 @@ class Player(internal val context: Context) {
   fun getMediaSessionCallback(): MediaLibraryService.MediaLibrarySession.Callback {
     return mediaSessionCallback
   }
+
+  /**
+   * Notifies external controllers (Android Auto, etc.) that content at the given path has changed.
+   * Controllers subscribed to this path will refresh their UI.
+   *
+   * @param path The path where content has changed
+   */
+  fun notifyContentChanged(path: String) {
+    mediaSessionCallback.notifyContentChanged(path)
+  }
 }

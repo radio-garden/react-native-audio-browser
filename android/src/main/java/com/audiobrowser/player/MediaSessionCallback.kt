@@ -285,12 +285,23 @@ class MediaSessionCallback(private val player: Player) :
 
   /**
    * Notifies all subscribed controllers to refresh their content.
-   * Typically called when network state changes or content updates.
+   * Called internally when network state changes to refresh all subscribed paths.
    */
   private fun notifySubscribedChildrenChanged() {
     parentIdSubscriptions.keys.forEach { parentId ->
       mediaLibrarySession?.notifyChildrenChanged(parentId, Int.MAX_VALUE, null)
     }
+  }
+
+  /**
+   * Notifies external controllers that content at the given path has changed.
+   * Controllers subscribed to this path will refresh their UI.
+   *
+   * @param path The path where content has changed
+   */
+  fun notifyContentChanged(path: String) {
+    Timber.d("Notifying content changed for path: $path")
+    mediaLibrarySession?.notifyChildrenChanged(path, Int.MAX_VALUE, null)
   }
 
   override fun onSearch(

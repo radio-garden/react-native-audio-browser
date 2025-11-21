@@ -84,6 +84,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
       virtual std::optional<ResolvedTrack> getContent() = 0;
       virtual std::optional<NavigationError> getNavigationError() = 0;
+      virtual void notifyContentChanged(const std::string& path) = 0;
 
     protected:
       // Hybrid Setup

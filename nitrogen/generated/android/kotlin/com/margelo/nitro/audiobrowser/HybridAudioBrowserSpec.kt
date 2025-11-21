@@ -137,6 +137,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getNavigationError(): NavigationError?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun notifyContentChanged(path: String): Unit
 
   private external fun initHybrid(): HybridData
 
