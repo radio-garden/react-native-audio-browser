@@ -127,6 +127,9 @@ class MediaSessionCommandManager {
       mediaSession.setCustomLayout(controllerInfo, notificationCustomLayout)
       mediaSession.setAvailableCommands(controllerInfo, notificationSessionCommands, notificationPlayerCommands)
     }
+
+    // Broadcast updated layout to all external controllers (Android Auto, etc.)
+    mediaSession.setCustomLayout(customLayout)
   }
 
   /**

@@ -343,4 +343,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     browserManager?.invalidateCache(path)
     audioPlayer?.player?.notifyContentChanged(path)
   }
+
+  override fun setFavorites(favorites: Array<String>) {
+    browserManager?.setFavorites(favorites.toList())
+  }
 }

@@ -10,6 +10,7 @@
 export * from './activeTrack'
 export * from './browser'
 export * from './errors'
+export * from './favorites'
 export * from './metadata'
 export * from './options'
 export * from './playback'

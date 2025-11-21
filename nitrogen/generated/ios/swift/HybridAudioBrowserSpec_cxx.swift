@@ -362,4 +362,15 @@ open class HybridAudioBrowserSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
+  
+  @inline(__always)
+  public final func setFavorites(favorites: bridge.std__vector_std__string_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setFavorites(favorites: favorites.map({ __item in String(__item) }))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
 }

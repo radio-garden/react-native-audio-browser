@@ -34,6 +34,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getContent", &HybridAudioBrowserSpec::getContent);
       prototype.registerHybridMethod("getNavigationError", &HybridAudioBrowserSpec::getNavigationError);
       prototype.registerHybridMethod("notifyContentChanged", &HybridAudioBrowserSpec::notifyContentChanged);
+      prototype.registerHybridMethod("setFavorites", &HybridAudioBrowserSpec::setFavorites);
     });
   }
 

@@ -107,6 +107,12 @@ class MediaSessionCallback(private val player: Player) :
    */
   private fun setFavorited(favorited: Boolean) {
     val currentTrack = player.currentTrack ?: return
+
+    // Update native favorites cache (only tracks with src can be favorited)
+    currentTrack.src?.let { src ->
+      player.browser?.browserManager?.updateFavorite(src, favorited)
+    }
+
     player.setActiveTrackFavorited(favorited)
     val event = FavoriteChangedEvent(player.currentTrack ?: currentTrack, favorited)
     player.callbacks?.onFavoriteChanged(event)

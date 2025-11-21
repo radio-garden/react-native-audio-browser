@@ -141,6 +141,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun notifyContentChanged(path: String): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setFavorites(favorites: Array<String>): Unit
 
   private external fun initHybrid(): HybridData
 

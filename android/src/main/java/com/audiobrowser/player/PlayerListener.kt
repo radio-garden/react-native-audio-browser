@@ -14,6 +14,7 @@ import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
+import timber.log.Timber
 import java.util.Locale
 
 class PlayerListener(private val player: Player) : MediaPlayer.Listener {

@@ -289,5 +289,18 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("notifyContentChanged");
     method(_javaPart, jni::make_jstring(path));
   }
+  void JHybridAudioBrowserSpec::setFavorites(const std::vector<std::string>& favorites) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<jni::JString>> /* favorites */)>("setFavorites");
+    method(_javaPart, [&]() {
+      size_t __size = favorites.size();
+      jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = favorites[__i];
+        auto __elementJni = jni::make_jstring(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }());
+  }
 
 } // namespace margelo::nitro::audiobrowser

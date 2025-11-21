@@ -85,6 +85,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<ResolvedTrack> getContent() = 0;
       virtual std::optional<NavigationError> getNavigationError() = 0;
       virtual void notifyContentChanged(const std::string& path) = 0;
+      virtual void setFavorites(const std::vector<std::string>& favorites) = 0;
 
     protected:
       // Hybrid Setup

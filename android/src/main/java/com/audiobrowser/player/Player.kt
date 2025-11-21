@@ -590,6 +590,12 @@ class Player(internal val context: Context) {
     if (index == C.INDEX_UNSET) return
 
     val currentTrack = this.currentTrack ?: return
+
+    // Update native favorites cache (only tracks with src can be favorited)
+    currentTrack.src?.let { src ->
+      browser?.browserManager?.updateFavorite(src, favorited)
+    }
+
     val updatedTrack = Track(
       url = currentTrack.url,
       src = currentTrack.src,

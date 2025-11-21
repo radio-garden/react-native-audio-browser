@@ -465,6 +465,17 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_NavigationErrorEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::vector<std::string>
+  /**
+   * Specialized version of `std::vector<std::string>`.
+   */
+  using std__vector_std__string_ = std::vector<std::string>;
+  inline std::vector<std::string> create_std__vector_std__string_(size_t size) noexcept {
+    std::vector<std::string> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
   // pragma MARK: std::optional<HttpMethod>
   /**
    * Specialized version of `std::optional<HttpMethod>`.

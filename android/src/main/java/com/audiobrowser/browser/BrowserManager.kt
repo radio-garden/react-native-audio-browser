@@ -82,6 +82,9 @@ class BrowserManager {
   // Cache individual tracks (children) for Media3 MediaItem lookup
   private val trackCache = mutableMapOf<String, Track>()
 
+  // Set of favorited track identifiers (src)
+  private var favoriteIds = setOf<String>()
+
   /**
    * Browser configuration containing routes, search, tabs, and request settings. This can be
    * updated dynamically when the configuration changes.
@@ -103,13 +106,73 @@ class BrowserManager {
   }
 
   /**
+   * Sets the favorited track identifiers. Tracks will have their favorited field
+   * hydrated based on this list during browsing.
+   */
+  fun setFavorites(favorites: List<String>) {
+    favoriteIds = favorites.toSet()
+    Timber.d("Set ${favoriteIds.size} favorite IDs")
+  }
+
+  /**
+   * Updates the favorite state for a single track identifier.
+   * Called when the heart button is tapped in media controllers.
+   */
+  fun updateFavorite(id: String, favorited: Boolean) {
+    favoriteIds = if (favorited) {
+      favoriteIds + id
+    } else {
+      favoriteIds - id
+    }
+    Timber.d("Updated favorite for '$id' to $favorited (total: ${favoriteIds.size})")
+  }
+
+  /**
+   * Hydrates the favorited field on a track based on the favoriteIds set.
+   * Only hydrates if track.favorited is null (doesn't overwrite API-provided values).
+   * Only tracks with src can be favorited.
+   */
+  private fun hydrateFavorite(track: Track): Track {
+    // Don't overwrite API-provided favorites
+    if (track.favorited != null) return track
+    if (favoriteIds.isEmpty()) return track
+
+    val isFavorited = track.src?.let { favoriteIds.contains(it) } ?: false
+    if (!isFavorited) return track
+
+    return Track(
+      url = track.url,
+      src = track.src,
+      artwork = track.artwork,
+      title = track.title,
+      subtitle = track.subtitle,
+      artist = track.artist,
+      album = track.album,
+      description = track.description,
+      genre = track.genre,
+      duration = track.duration,
+      style = track.style,
+      favorited = true,
+    )
+  }
+
+  /**
+   * Hydrates favorites on all children of a ResolvedTrack.
+   */
+  private fun hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {
+    val children = resolvedTrack.children ?: return resolvedTrack
+    val hydratedChildren = children.map { hydrateFavorite(it) }.toTypedArray()
+    return resolvedTrack.copy(children = hydratedChildren)
+  }
+
+  /**
    * Cache a ResolvedTrack at the specified path. Also caches all children tracks. Used for special
    * paths like search results that don't go through normal navigation.
    */
   fun cacheResolvedTrack(path: String, resolvedTrack: ResolvedTrack) {
     resolvedTrackCache[path] = resolvedTrack
 
-    // Cache children tracks for Media3 lookup
+    // Cache children tracks for Media3 lookup (un-hydrated - favorites applied on read)
     resolvedTrack.children?.forEachIndexed { index, track ->
       val trackId = track.url ?: track.src
       if (trackId != null) {
@@ -124,15 +187,18 @@ class BrowserManager {
   /**
    * Get a cached Track by mediaId (url or src), or null if not cached. Used by Media3 to rehydrate
    * MediaItem shells with full track metadata.
+   * Re-hydrates favorites in case setFavoriteStates was called after caching.
    */
   fun getCachedTrack(mediaId: String): Track? {
     val track = trackCache[mediaId]
     if (track != null) {
-      Timber.d("Cache HIT for mediaId='$mediaId' → track='${track.title}'")
+      val hydratedTrack = hydrateFavorite(track)
+      Timber.d("Cache HIT for mediaId='$mediaId' → track='${track.title}', favorited=${hydratedTrack.favorited}")
+      return hydratedTrack
     } else {
       Timber.w("Cache MISS for mediaId='$mediaId'")
+      return null
     }
-    return track
   }
 
   /**
@@ -150,7 +216,7 @@ class BrowserManager {
       // First check if this was a navigated ResolvedTrack
       getCachedResolvedTrack(mediaId)?.let { cachedResolvedTrack ->
         Timber.d("→ Found cached ResolvedTrack: '${cachedResolvedTrack.title}'")
-        return@map cachedResolvedTrack
+        return@map hydrateChildren(cachedResolvedTrack)
       }
 
       // Then check if this is a cached child Track
@@ -295,19 +361,19 @@ class BrowserManager {
       Timber.d(
         "Returning cached ResolvedTrack: url='${it.url}', title='${it.title}', children=${it.children?.size ?: 0}"
       )
-      return it
+      return hydrateChildren(it)
     }
 
     Timber.d("Cache miss, resolving path: '$normalizedPath'")
     val resolvedTrack = resolveUncached(normalizedPath)
 
-    // Cache the resolved track
+    // Cache the resolved track (un-hydrated)
     resolvedTrackCache[normalizedPath] = resolvedTrack
     Timber.d(
       "Cached ResolvedTrack: url='${resolvedTrack.url}', title='${resolvedTrack.title}', children=${resolvedTrack.children?.size ?: 0}"
     )
 
-    return resolvedTrack
+    return hydrateChildren(resolvedTrack)
   }
 
   private suspend fun resolveUncached(path: String): ResolvedTrack {
@@ -333,7 +399,7 @@ class BrowserManager {
           throw ContentNotFoundException(path)
         }
 
-    // Transform and cache children
+    // Transform and cache children (un-hydrated - favorites applied on read)
     val transformedChildren =
       resolvedTrack.children?.mapIndexed { index, track ->
         // Validate that track has stable identifier
@@ -454,7 +520,8 @@ class BrowserManager {
    */
   fun getCachedSearchResults(query: String): Array<Track>? {
     val searchPath = BrowserPathHelper.createSearchPath(query)
-    return getCachedResolvedTrack(searchPath)?.children
+    val cached = getCachedResolvedTrack(searchPath) ?: return null
+    return hydrateChildren(cached).children
   }
 
   /**

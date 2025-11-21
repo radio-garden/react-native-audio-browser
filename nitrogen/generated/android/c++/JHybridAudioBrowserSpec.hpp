@@ -73,6 +73,7 @@ namespace margelo::nitro::audiobrowser {
     std::optional<ResolvedTrack> getContent() override;
     std::optional<NavigationError> getNavigationError() override;
     void notifyContentChanged(const std::string& path) override;
+    void setFavorites(const std::vector<std::string>& favorites) override;
 
   private:
     friend HybridBase;
