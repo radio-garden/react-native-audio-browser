@@ -18,7 +18,7 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(url: String?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?) {
+  init(url: String?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, favorited: Bool?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -76,6 +76,12 @@ public extension Track {
     }(), { () -> bridge.std__optional_TrackStyle_ in
       if let __unwrappedValue = style {
         return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = favorited {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -312,6 +318,30 @@ public extension Track {
       self.__style = { () -> bridge.std__optional_TrackStyle_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var favorited: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__favorited) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__favorited)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__favorited = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }

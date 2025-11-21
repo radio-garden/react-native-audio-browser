@@ -65,6 +65,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     duration = duration,
     src = src,
     style = style.toTrackStyle(),
+    favorited = null,
   )
 }
 
@@ -81,5 +82,6 @@ fun JsonTrack.toNitro(): Track {
     duration = duration,
     src = src,
     style = style.toTrackStyle(),
+    favorited = null,
   )
 }

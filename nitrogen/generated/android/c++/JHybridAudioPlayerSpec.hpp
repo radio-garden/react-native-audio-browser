@@ -106,6 +106,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnRemoteStop(const std::function<void()>& onRemoteStop) override;
     std::function<void(const Options& /* event */)> getOnOptionsChanged() override;
     void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) override;
+    std::function<void(const FavoriteChangedEvent& /* event */)> getOnFavoriteChanged() override;
+    void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) override;
     std::optional<std::function<void()>> getHandleRemoteBookmark() override;
     void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) override;
     std::optional<std::function<void()>> getHandleRemoteDislike() override;
@@ -130,8 +132,6 @@ namespace margelo::nitro::audiobrowser {
     void setHandleRemotePrevious(const std::optional<std::function<void()>>& handleRemotePrevious) override;
     std::optional<std::function<void(const RemoteSeekEvent& /* event */)>> getHandleRemoteSeek() override;
     void setHandleRemoteSeek(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& handleRemoteSeek) override;
-    std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> getHandleRemoteSetRating() override;
-    void setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) override;
     std::optional<std::function<void()>> getHandleRemoteSkip() override;
     void setHandleRemoteSkip(const std::optional<std::function<void()>>& handleRemoteSkip) override;
     std::optional<std::function<void()>> getHandleRemoteStop() override;
@@ -171,6 +171,7 @@ namespace margelo::nitro::audiobrowser {
     void skip(double index, std::optional<double> initialPosition) override;
     void skipToNext(std::optional<double> initialPosition) override;
     void skipToPrevious(std::optional<double> initialPosition) override;
+    void setActiveTrackFavorited(bool favorited) override;
     void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) override;
     std::vector<Track> getQueue() override;
     std::optional<Track> getTrack(double index) override;

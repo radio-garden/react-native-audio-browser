@@ -71,6 +71,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Update last track info for next transition
     player.lastTrack = player.currentTrack
     player.lastIndex = player.currentIndex
+
+    // Update favorite button state for new track
+    player.updateFavoriteButtonState(player.currentTrack?.favorited)
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */

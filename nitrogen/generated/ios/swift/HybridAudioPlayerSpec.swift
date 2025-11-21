@@ -40,6 +40,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var onRemoteSkip: (_ event: RemoteSkipEvent) -> Void { get set }
   var onRemoteStop: () -> Void { get set }
   var onOptionsChanged: (_ event: Options) -> Void { get set }
+  var onFavoriteChanged: (_ event: FavoriteChangedEvent) -> Void { get set }
   var handleRemoteBookmark: (() -> Void)? { get set }
   var handleRemoteDislike: (() -> Void)? { get set }
   var handleRemoteJumpBackward: ((_ event: RemoteJumpBackwardEvent) -> Void)? { get set }
@@ -52,7 +53,6 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var handleRemotePlaySearch: ((_ event: RemotePlaySearchEvent) -> Void)? { get set }
   var handleRemotePrevious: (() -> Void)? { get set }
   var handleRemoteSeek: ((_ event: RemoteSeekEvent) -> Void)? { get set }
-  var handleRemoteSetRating: ((_ event: RemoteSetRatingEvent) -> Void)? { get set }
   var handleRemoteSkip: (() -> Void)? { get set }
   var handleRemoteStop: (() -> Void)? { get set }
 
@@ -89,6 +89,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func skip(index: Double, initialPosition: Double?) throws -> Void
   func skipToNext(initialPosition: Double?) throws -> Void
   func skipToPrevious(initialPosition: Double?) throws -> Void
+  func setActiveTrackFavorited(favorited: Bool) throws -> Void
   func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws -> Void
   func getQueue() throws -> [Track]
   func getTrack(index: Double) throws -> Track?

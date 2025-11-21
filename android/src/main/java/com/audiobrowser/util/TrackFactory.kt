@@ -2,6 +2,7 @@ package com.audiobrowser.util
 
 import android.os.Bundle
 import androidx.core.net.toUri
+import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.margelo.nitro.audiobrowser.Track
@@ -26,6 +27,9 @@ object TrackFactory {
         .setArtworkUri(track.artwork?.toUri())
         .setIsBrowsable(track.src == null)
         .setIsPlayable(track.src != null)
+        .apply {
+          track.favorited?.let { setUserRating(HeartRating(it)) }
+        }
         .build()
 
     val mediaId =

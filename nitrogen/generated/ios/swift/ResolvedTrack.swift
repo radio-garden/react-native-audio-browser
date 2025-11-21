@@ -18,7 +18,7 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?) {
+  init(url: String, children: [Track]?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, favorited: Bool?) {
     self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
@@ -82,6 +82,12 @@ public extension ResolvedTrack {
     }(), { () -> bridge.std__optional_TrackStyle_ in
       if let __unwrappedValue = style {
         return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = favorited {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -335,6 +341,30 @@ public extension ResolvedTrack {
       self.__style = { () -> bridge.std__optional_TrackStyle_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_TrackStyle_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var favorited: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__favorited) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__favorited)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__favorited = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }

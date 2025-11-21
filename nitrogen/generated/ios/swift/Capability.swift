@@ -39,12 +39,8 @@ public extension Capability {
         self = .jumpForward
       case "jump-backward":
         self = .jumpBackward
-      case "set-rating":
-        self = .setRating
-      case "like":
-        self = .like
-      case "dislike":
-        self = .dislike
+      case "favorite":
+        self = .favorite
       case "bookmark":
         self = .bookmark
       default:
@@ -79,12 +75,8 @@ public extension Capability {
         return "jump-forward"
       case .jumpBackward:
         return "jump-backward"
-      case .setRating:
-        return "set-rating"
-      case .like:
-        return "like"
-      case .dislike:
-        return "dislike"
+      case .favorite:
+        return "favorite"
       case .bookmark:
         return "bookmark"
     }

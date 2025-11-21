@@ -82,6 +82,8 @@ namespace margelo::nitro::audiobrowser { enum class Capability; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
@@ -158,6 +160,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "Capability.hpp"
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"
+#include "FavoriteChangedEvent.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
@@ -414,6 +417,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) noexcept override {
       _swiftPart.setOnOptionsChanged(onOptionsChanged);
     }
+    inline std::function<void(const FavoriteChangedEvent& /* event */)> getOnFavoriteChanged() noexcept override {
+      auto __result = _swiftPart.getOnFavoriteChanged();
+      return __result;
+    }
+    inline void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) noexcept override {
+      _swiftPart.setOnFavoriteChanged(onFavoriteChanged);
+    }
     inline std::optional<std::function<void()>> getHandleRemoteBookmark() noexcept override {
       auto __result = _swiftPart.getHandleRemoteBookmark();
       return __result;
@@ -497,13 +507,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setHandleRemoteSeek(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& handleRemoteSeek) noexcept override {
       _swiftPart.setHandleRemoteSeek(handleRemoteSeek);
-    }
-    inline std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> getHandleRemoteSetRating() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteSetRating();
-      return __result;
-    }
-    inline void setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) noexcept override {
-      _swiftPart.setHandleRemoteSetRating(handleRemoteSetRating);
     }
     inline std::optional<std::function<void()>> getHandleRemoteSkip() noexcept override {
       auto __result = _swiftPart.getHandleRemoteSkip();
@@ -730,6 +733,12 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void skipToPrevious(std::optional<double> initialPosition) override {
       auto __result = _swiftPart.skipToPrevious(initialPosition);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setActiveTrackFavorited(bool favorited) override {
+      auto __result = _swiftPart.setActiveTrackFavorited(std::forward<decltype(favorited)>(favorited));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

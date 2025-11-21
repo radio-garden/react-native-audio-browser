@@ -53,6 +53,7 @@ class Player(internal val context: Context) {
   private var options = PlayerUpdateOptions()
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
+  val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
   private val mediaSessionCallback = MediaSessionCallback(this)
 
   lateinit var exoPlayer: ExoPlayer
@@ -199,7 +200,6 @@ class Player(internal val context: Context) {
 
   private lateinit var playerListener: PlayerListener
   private var cache: SimpleCache? = null
-  val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
 
   private val progressUpdateManager: PlaybackProgressUpdateManager by lazy {
     PlaybackProgressUpdateManager {
@@ -579,6 +579,44 @@ class Player(internal val context: Context) {
   fun replaceTrack(index: Int, track: Track) {
     validateIndex(index)
     exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
+  }
+
+  /**
+   * Sets the favorited state of the currently playing track.
+   * Updates the heart icon in media controllers without interrupting playback.
+   */
+  fun setActiveTrackFavorited(favorited: Boolean) {
+    val index = exoPlayer.currentMediaItemIndex
+    if (index == C.INDEX_UNSET) return
+
+    val currentTrack = this.currentTrack ?: return
+    val updatedTrack = Track(
+      url = currentTrack.url,
+      src = currentTrack.src,
+      artwork = currentTrack.artwork,
+      title = currentTrack.title,
+      subtitle = currentTrack.subtitle,
+      artist = currentTrack.artist,
+      album = currentTrack.album,
+      description = currentTrack.description,
+      genre = currentTrack.genre,
+      duration = currentTrack.duration,
+      style = currentTrack.style,
+      favorited = favorited,
+    )
+    exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(updatedTrack))
+
+    // Update the heart button icon in notification/Android Auto
+    updateFavoriteButtonState(favorited)
+  }
+
+  /**
+   * Updates the favorite button icon in the notification/Android Auto.
+   * Call this when track changes or favorite state changes.
+   */
+  internal fun updateFavoriteButtonState(favorited: Boolean?) {
+    if (!::mediaSession.isInitialized) return
+    mediaSessionCallback.commandManager.updateFavoriteState(mediaSession, favorited)
   }
 
   /** Removes all the upcoming tracks, if any (the ones returned by [next]). */

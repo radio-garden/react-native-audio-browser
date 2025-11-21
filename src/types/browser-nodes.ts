@@ -40,6 +40,12 @@ export interface Track {
   genre?: string
   duration?: number
   style?: TrackStyle
+
+  /**
+   * Whether this track is favorited. When the `set-rating` capability is enabled,
+   * displays a filled/empty heart icon in media controllers (notification, Android Auto).
+   */
+  favorited?: boolean
 }
 
 /**

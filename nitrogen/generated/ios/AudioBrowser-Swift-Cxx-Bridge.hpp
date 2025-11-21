@@ -30,6 +30,8 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `HeartRating` to properly resolve imports.
@@ -153,6 +155,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "AudioMetadataReceivedEvent.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"
+#include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
@@ -266,6 +269,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline TrackStyle get_std__optional_TrackStyle_(const std::optional<TrackStyle>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<bool>
+  /**
+   * Specialized version of `std::optional<bool>`.
+   */
+  using std__optional_bool_ = std::optional<bool>;
+  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
+    return std::optional<bool>(value);
+  }
+  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
     return *optional;
   }
   
@@ -1058,21 +1076,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline PlayConfigurationBehavior get_std__optional_PlayConfigurationBehavior_(const std::optional<PlayConfigurationBehavior>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<bool>
-  /**
-   * Specialized version of `std::optional<bool>`.
-   */
-  using std__optional_bool_ = std::optional<bool>;
-  inline std::optional<bool> create_std__optional_bool_(const bool& value) noexcept {
-    return std::optional<bool>(value);
-  }
-  inline bool has_value_std__optional_bool_(const std::optional<bool>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline bool get_std__optional_bool_(const std::optional<bool>& optional) noexcept {
     return *optional;
   }
   
@@ -2052,6 +2055,28 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_Options_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::function<void(const FavoriteChangedEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const FavoriteChangedEvent&)>`.
+   */
+  using Func_void_FavoriteChangedEvent = std::function<void(const FavoriteChangedEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const FavoriteChangedEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_FavoriteChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_FavoriteChangedEvent_Wrapper(std::function<void(const FavoriteChangedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const FavoriteChangedEvent& /* event */)>>(std::move(func))) {}
+    inline void call(FavoriteChangedEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const FavoriteChangedEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_FavoriteChangedEvent create_Func_void_FavoriteChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_FavoriteChangedEvent_Wrapper wrap_Func_void_FavoriteChangedEvent(Func_void_FavoriteChangedEvent value) noexcept {
+    return Func_void_FavoriteChangedEvent_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<std::function<void()>>
   /**
    * Specialized version of `std::optional<std::function<void()>>`.
@@ -2139,21 +2164,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline std::function<void(const RemoteSeekEvent& /* event */)> get_std__optional_std__function_void_const_RemoteSeekEvent_____event______(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>
-  /**
-   * Specialized version of `std::optional<std::function<void(const RemoteSetRatingEvent& / * event * /)>>`.
-   */
-  using std__optional_std__function_void_const_RemoteSetRatingEvent_____event______ = std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>;
-  inline std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> create_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(const std::function<void(const RemoteSetRatingEvent& /* event */)>& value) noexcept {
-    return std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>(value);
-  }
-  inline bool has_value_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::function<void(const RemoteSetRatingEvent& /* event */)> get_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& optional) noexcept {
     return *optional;
   }
   

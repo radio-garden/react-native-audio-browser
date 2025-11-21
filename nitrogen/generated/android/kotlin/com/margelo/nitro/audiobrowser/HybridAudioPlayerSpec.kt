@@ -435,6 +435,20 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
       onOptionsChanged = value
     }
   
+  abstract var onFavoriteChanged: (event: FavoriteChangedEvent) -> Unit
+  
+  private var onFavoriteChanged_cxx: Func_void_FavoriteChangedEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_FavoriteChangedEvent_java(onFavoriteChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onFavoriteChanged = value
+    }
+  
   abstract var handleRemoteBookmark: (() -> Unit)?
   
   private var handleRemoteBookmark_cxx: Func_void?
@@ -603,20 +617,6 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
       handleRemoteSeek = value?.let { it }
     }
   
-  abstract var handleRemoteSetRating: ((event: RemoteSetRatingEvent) -> Unit)?
-  
-  private var handleRemoteSetRating_cxx: Func_void_RemoteSetRatingEvent?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteSetRating?.let { Func_void_RemoteSetRatingEvent_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteSetRating = value?.let { it }
-    }
-  
   abstract var handleRemoteSkip: (() -> Unit)?
   
   private var handleRemoteSkip_cxx: Func_void?
@@ -773,6 +773,10 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun skipToPrevious(initialPosition: Double?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setActiveTrackFavorited(favorited: Boolean): Unit
   
   @DoNotStrip
   @Keep

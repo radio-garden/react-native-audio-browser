@@ -647,6 +647,25 @@ open class HybridAudioPlayerSpec_cxx {
     }
   }
   
+  public final var onFavoriteChanged: bridge.Func_void_FavoriteChangedEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_FavoriteChangedEvent in
+        let __closureWrapper = Func_void_FavoriteChangedEvent(self.__implementation.onFavoriteChanged)
+        return bridge.create_Func_void_FavoriteChangedEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onFavoriteChanged = { () -> (FavoriteChangedEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_FavoriteChangedEvent(newValue)
+        return { (__event: FavoriteChangedEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
+  
   public final var handleRemoteBookmark: bridge.std__optional_std__function_void____ {
     @inline(__always)
     get {
@@ -1021,38 +1040,6 @@ open class HybridAudioPlayerSpec_cxx {
           return { () -> (RemoteSeekEvent) -> Void in
             let __wrappedFunction = bridge.wrap_Func_void_RemoteSeekEvent(__unwrapped)
             return { (__event: RemoteSeekEvent) -> Void in
-              __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteSetRating: bridge.std__optional_std__function_void_const_RemoteSetRatingEvent_____event______ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void_const_RemoteSetRatingEvent_____event______ in
-        if let __unwrappedValue = self.__implementation.handleRemoteSetRating {
-          return bridge.create_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______({ () -> bridge.Func_void_RemoteSetRatingEvent in
-            let __closureWrapper = Func_void_RemoteSetRatingEvent(__unwrappedValue)
-            return bridge.create_Func_void_RemoteSetRatingEvent(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteSetRating = { () -> ((_ event: RemoteSetRatingEvent) -> Void)? in
-        if bridge.has_value_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemoteSetRatingEvent_____event______(newValue)
-          return { () -> (RemoteSetRatingEvent) -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void_RemoteSetRatingEvent(__unwrapped)
-            return { (__event: RemoteSetRatingEvent) -> Void in
               __wrappedFunction.call(__event)
             }
           }()
@@ -1500,6 +1487,17 @@ open class HybridAudioPlayerSpec_cxx {
   public final func skipToPrevious(initialPosition: bridge.std__optional_double_) -> bridge.Result_void_ {
     do {
       try self.__implementation.skipToPrevious(initialPosition: initialPosition.value)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setActiveTrackFavorited(favorited: Bool) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setActiveTrackFavorited(favorited: favorited)
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

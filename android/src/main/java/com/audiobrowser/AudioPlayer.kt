@@ -27,6 +27,7 @@ import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
+import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackErrorEvent
@@ -102,6 +103,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onRemoteSkip: (RemoteSkipEvent) -> Unit = {}
   override var onRemoteStop: () -> Unit = {}
   override var onOptionsChanged: (Options) -> Unit = {}
+  override var onFavoriteChanged: (FavoriteChangedEvent) -> Unit = {}
 
   // MARK: handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -116,7 +118,6 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var handleRemotePlaySearch: ((RemotePlaySearchEvent) -> Unit)? = null
   override var handleRemotePrevious: (() -> Unit)? = null
   override var handleRemoteSeek: ((RemoteSeekEvent) -> Unit)? = null
-  override var handleRemoteSetRating: ((RemoteSetRatingEvent) -> Unit)? = null
   override var handleRemoteSkip: (() -> Unit)? = null
   override var handleRemoteStop: (() -> Unit)? = null
 
@@ -295,6 +296,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
       startIndex?.toInt() ?: 0,
       startPositionMs?.toLong() ?: 0
     )
+  }
+
+  override fun setActiveTrackFavorited(favorited: Boolean) = runBlockingOnMain {
+    player.setActiveTrackFavorited(favorited)
   }
 
   override fun getQueue(): Array<Track> = runBlockingOnMain { player.tracks }
@@ -515,21 +520,16 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
         return handled
       }
 
-      override fun handleRemoteSetRating(event: RemoteSetRatingEvent): Boolean {
-        val handled =
-          this@AudioPlayer.handleRemoteSetRating?.let {
-            it.invoke(event)
-            true
-          } ?: false
-
-        // Defer notification until after set rating operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemoteSetRating(event) }
-
-        return handled
+      override fun onRemoteSetRating(event: RemoteSetRatingEvent) {
+        this@AudioPlayer.onRemoteSetRating(event)
       }
 
       override fun onOptionsChanged(options: PlayerUpdateOptions) {
         //                emitOnOptionsChanged(options.toBridge())
+      }
+
+      override fun onFavoriteChanged(event: FavoriteChangedEvent) {
+        this@AudioPlayer.onFavoriteChanged(event)
       }
     }
 }

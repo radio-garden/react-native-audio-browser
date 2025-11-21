@@ -1,6 +1,9 @@
 import { type HybridObject } from 'react-native-nitro-modules'
 
-import type { PlaybackActiveTrackChangedEvent } from '../features/activeTrack'
+import type {
+  FavoriteChangedEvent,
+  PlaybackActiveTrackChangedEvent
+} from '../features/activeTrack'
 import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
   AudioCommonMetadataReceivedEvent,
@@ -73,6 +76,7 @@ export interface AudioPlayer
   onRemoteSkip: (event: RemoteSkipEvent) => void
   onRemoteStop: () => void
   onOptionsChanged: (event: Options) => void
+  onFavoriteChanged: (event: FavoriteChangedEvent) => void
 
   // MARK: remote handlers
   handleRemoteBookmark: (() => void) | undefined
@@ -89,7 +93,6 @@ export interface AudioPlayer
   handleRemotePlaySearch: ((event: RemotePlaySearchEvent) => void) | undefined
   handleRemotePrevious: (() => void) | undefined
   handleRemoteSeek: ((event: RemoteSeekEvent) => void) | undefined
-  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined
   handleRemoteSkip: (() => void) | undefined
   handleRemoteStop: (() => void) | undefined
 
@@ -124,8 +127,11 @@ export interface AudioPlayer
   skip(index: number, initialPosition?: number): void
   skipToNext(initialPosition?: number): void
   skipToPrevious(initialPosition?: number): void
-  // updateMetadataForTrack(trackIndex: number, metadata: TrackMetadataBase): void
-  // updateNowPlayingMetadata(metadata: TrackMetadataBase): void
+  /**
+   * Sets the favorited state of the currently playing track.
+   * Updates the heart icon in media controllers (notification, Android Auto, CarPlay).
+   */
+  setActiveTrackFavorited(favorited: boolean): void
   setQueue(tracks: Track[], startIndex?: number, startPositionMs?: number): void
   getQueue(): Track[]
   getTrack(index: number): Track | undefined

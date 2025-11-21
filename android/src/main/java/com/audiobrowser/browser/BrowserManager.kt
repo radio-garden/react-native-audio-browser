@@ -94,6 +94,15 @@ class BrowserManager {
   }
 
   /**
+   * Invalidates the cache for a specific path.
+   * The next browse to this path will re-fetch and update trackCache entries.
+   */
+  fun invalidateCache(path: String) {
+    resolvedTrackCache.remove(path)
+    Timber.d("Invalidated cache for path: $path")
+  }
+
+  /**
    * Cache a ResolvedTrack at the specified path. Also caches all children tracks. Used for special
    * paths like search results that don't go through normal navigation.
    */
@@ -560,6 +569,7 @@ class BrowserManager {
           duration = null,
           src = null,
           style = null,
+          favorited = null,
         )
 
       // Cache the search results (this also caches children in trackCache)
@@ -585,6 +595,7 @@ class BrowserManager {
           duration = null,
           src = null,
           style = null,
+          favorited = null,
         )
 
       return emptySearchResult

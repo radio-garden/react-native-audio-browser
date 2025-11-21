@@ -70,6 +70,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onRemoteStop", &HybridAudioPlayerSpec::setOnRemoteStop);
       prototype.registerHybridGetter("onOptionsChanged", &HybridAudioPlayerSpec::getOnOptionsChanged);
       prototype.registerHybridSetter("onOptionsChanged", &HybridAudioPlayerSpec::setOnOptionsChanged);
+      prototype.registerHybridGetter("onFavoriteChanged", &HybridAudioPlayerSpec::getOnFavoriteChanged);
+      prototype.registerHybridSetter("onFavoriteChanged", &HybridAudioPlayerSpec::setOnFavoriteChanged);
       prototype.registerHybridGetter("handleRemoteBookmark", &HybridAudioPlayerSpec::getHandleRemoteBookmark);
       prototype.registerHybridSetter("handleRemoteBookmark", &HybridAudioPlayerSpec::setHandleRemoteBookmark);
       prototype.registerHybridGetter("handleRemoteDislike", &HybridAudioPlayerSpec::getHandleRemoteDislike);
@@ -94,8 +96,6 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("handleRemotePrevious", &HybridAudioPlayerSpec::setHandleRemotePrevious);
       prototype.registerHybridGetter("handleRemoteSeek", &HybridAudioPlayerSpec::getHandleRemoteSeek);
       prototype.registerHybridSetter("handleRemoteSeek", &HybridAudioPlayerSpec::setHandleRemoteSeek);
-      prototype.registerHybridGetter("handleRemoteSetRating", &HybridAudioPlayerSpec::getHandleRemoteSetRating);
-      prototype.registerHybridSetter("handleRemoteSetRating", &HybridAudioPlayerSpec::setHandleRemoteSetRating);
       prototype.registerHybridGetter("handleRemoteSkip", &HybridAudioPlayerSpec::getHandleRemoteSkip);
       prototype.registerHybridSetter("handleRemoteSkip", &HybridAudioPlayerSpec::setHandleRemoteSkip);
       prototype.registerHybridGetter("handleRemoteStop", &HybridAudioPlayerSpec::getHandleRemoteStop);
@@ -132,6 +132,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("skip", &HybridAudioPlayerSpec::skip);
       prototype.registerHybridMethod("skipToNext", &HybridAudioPlayerSpec::skipToNext);
       prototype.registerHybridMethod("skipToPrevious", &HybridAudioPlayerSpec::skipToPrevious);
+      prototype.registerHybridMethod("setActiveTrackFavorited", &HybridAudioPlayerSpec::setActiveTrackFavorited);
       prototype.registerHybridMethod("setQueue", &HybridAudioPlayerSpec::setQueue);
       prototype.registerHybridMethod("getQueue", &HybridAudioPlayerSpec::getQueue);
       prototype.registerHybridMethod("getTrack", &HybridAudioPlayerSpec::getTrack);

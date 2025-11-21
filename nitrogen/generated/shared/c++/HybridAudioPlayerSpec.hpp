@@ -51,6 +51,8 @@ namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
@@ -88,6 +90,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "RemoteSetRatingEvent.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
+#include "FavoriteChangedEvent.hpp"
 #include <optional>
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
@@ -184,6 +187,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnRemoteStop(const std::function<void()>& onRemoteStop) = 0;
       virtual std::function<void(const Options& /* event */)> getOnOptionsChanged() = 0;
       virtual void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) = 0;
+      virtual std::function<void(const FavoriteChangedEvent& /* event */)> getOnFavoriteChanged() = 0;
+      virtual void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteBookmark() = 0;
       virtual void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteDislike() = 0;
@@ -208,8 +213,6 @@ namespace margelo::nitro::audiobrowser {
       virtual void setHandleRemotePrevious(const std::optional<std::function<void()>>& handleRemotePrevious) = 0;
       virtual std::optional<std::function<void(const RemoteSeekEvent& /* event */)>> getHandleRemoteSeek() = 0;
       virtual void setHandleRemoteSeek(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& handleRemoteSeek) = 0;
-      virtual std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> getHandleRemoteSetRating() = 0;
-      virtual void setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteSkip() = 0;
       virtual void setHandleRemoteSkip(const std::optional<std::function<void()>>& handleRemoteSkip) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteStop() = 0;
@@ -249,6 +252,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void skip(double index, std::optional<double> initialPosition) = 0;
       virtual void skipToNext(std::optional<double> initialPosition) = 0;
       virtual void skipToPrevious(std::optional<double> initialPosition) = 0;
+      virtual void setActiveTrackFavorited(bool favorited) = 0;
       virtual void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) = 0;
       virtual std::vector<Track> getQueue() = 0;
       virtual std::optional<Track> getTrack(double index) = 0;

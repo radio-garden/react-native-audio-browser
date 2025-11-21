@@ -18,9 +18,7 @@ export type Capability =
   | 'skip-to-previous'
   | 'jump-forward'
   | 'jump-backward'
-  | 'set-rating'
-  | 'like'
-  | 'dislike'
+  | 'favorite'
   | 'bookmark'
 
 /**

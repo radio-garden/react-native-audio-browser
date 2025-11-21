@@ -77,6 +77,8 @@ namespace margelo::nitro::audiobrowser { enum class Capability; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
@@ -212,6 +214,9 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "FeedbackOptions.hpp"
 #include "JFeedbackOptions.hpp"
 #include "JVariant_NullType_Double.hpp"
+#include "FavoriteChangedEvent.hpp"
+#include "JFunc_void_FavoriteChangedEvent.hpp"
+#include "JFavoriteChangedEvent.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "UpdateOptions.hpp"
@@ -812,6 +817,25 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_Options::javaobject> /* onOptionsChanged */)>("setOnOptionsChanged_cxx");
     method(_javaPart, JFunc_void_Options_cxx::fromCpp(onOptionsChanged));
   }
+  std::function<void(const FavoriteChangedEvent& /* event */)> JHybridAudioPlayerSpec::getOnFavoriteChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_FavoriteChangedEvent::javaobject>()>("getOnFavoriteChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const FavoriteChangedEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_FavoriteChangedEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_FavoriteChangedEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](FavoriteChangedEvent event) -> void {
+          return __resultRef->invoke(event);
+        };
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_FavoriteChangedEvent::javaobject> /* onFavoriteChanged */)>("setOnFavoriteChanged_cxx");
+    method(_javaPart, JFunc_void_FavoriteChangedEvent_cxx::fromCpp(onFavoriteChanged));
+  }
   std::optional<std::function<void()>> JHybridAudioPlayerSpec::getHandleRemoteBookmark() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteBookmark_cxx");
     auto __result = method(_javaPart);
@@ -1040,25 +1064,6 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSeekEvent::javaobject> /* handleRemoteSeek */)>("setHandleRemoteSeek_cxx");
     method(_javaPart, handleRemoteSeek.has_value() ? JFunc_void_RemoteSeekEvent_cxx::fromCpp(handleRemoteSeek.value()) : nullptr);
   }
-  std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>> JHybridAudioPlayerSpec::getHandleRemoteSetRating() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSetRatingEvent::javaobject>()>("getHandleRemoteSetRating_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemoteSetRatingEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSetRatingEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSetRatingEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSetRatingEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioPlayerSpec::setHandleRemoteSetRating(const std::optional<std::function<void(const RemoteSetRatingEvent& /* event */)>>& handleRemoteSetRating) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSetRatingEvent::javaobject> /* handleRemoteSetRating */)>("setHandleRemoteSetRating_cxx");
-    method(_javaPart, handleRemoteSetRating.has_value() ? JFunc_void_RemoteSetRatingEvent_cxx::fromCpp(handleRemoteSetRating.value()) : nullptr);
-  }
   std::optional<std::function<void()>> JHybridAudioPlayerSpec::getHandleRemoteSkip() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteSkip_cxx");
     auto __result = method(_javaPart);
@@ -1260,6 +1265,10 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioPlayerSpec::skipToPrevious(std::optional<double> initialPosition) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* initialPosition */)>("skipToPrevious");
     method(_javaPart, initialPosition.has_value() ? jni::JDouble::valueOf(initialPosition.value()) : nullptr);
+  }
+  void JHybridAudioPlayerSpec::setActiveTrackFavorited(bool favorited) {
+    static const auto method = javaClassStatic()->getMethod<void(jboolean /* favorited */)>("setActiveTrackFavorited");
+    method(_javaPart, favorited);
   }
   void JHybridAudioPlayerSpec::setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* startIndex */, jni::alias_ref<jni::JDouble> /* startPositionMs */)>("setQueue");

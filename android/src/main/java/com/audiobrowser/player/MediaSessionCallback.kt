@@ -1,6 +1,7 @@
 package com.audiobrowser.player
 
 import android.os.Bundle
+import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
@@ -18,6 +19,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.Capability
+import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +33,7 @@ import timber.log.Timber
  */
 class MediaSessionCallback(private val player: Player) :
   MediaLibraryService.MediaLibrarySession.Callback {
-  private val commandManager = MediaSessionCommandManager()
+  internal val commandManager = MediaSessionCommandManager()
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   // Track which controllers are subscribed to which media IDs
@@ -100,12 +102,30 @@ class MediaSessionCallback(private val player: Player) :
     return commandManager.buildConnectionResult(session)
   }
 
+  /**
+   * Updates the favorite state of the current track and emits onFavoriteChanged.
+   */
+  private fun setFavorited(favorited: Boolean) {
+    val currentTrack = player.currentTrack ?: return
+    player.setActiveTrackFavorited(favorited)
+    val event = FavoriteChangedEvent(player.currentTrack ?: currentTrack, favorited)
+    player.callbacks?.onFavoriteChanged(event)
+  }
+
   override fun onCustomCommand(
     session: MediaSession,
     controller: MediaSession.ControllerInfo,
     command: SessionCommand,
     args: Bundle,
   ): ListenableFuture<SessionResult> {
+    // Handle favorite button tap
+    if (command.customAction == MediaSessionCommandManager.CUSTOM_ACTION_FAVORITE) {
+      val currentFavorited = player.currentTrack?.favorited ?: false
+      Timber.d("Favorite button tapped - toggling from $currentFavorited to ${!currentFavorited}")
+      setFavorited(!currentFavorited)
+      return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+    }
+
     commandManager.handleCustomCommand(command, player)
     return super.onCustomCommand(session, controller, command, args)
   }
@@ -115,9 +135,14 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
+    if (rating is HeartRating) {
+      setFavorited(rating.isHeart)
+    }
+
+    // Also emit onRemoteSetRating for listeners
     RatingFactory.media3ToBridge(rating)?.let {
       val event = RemoteSetRatingEvent(it)
-      player.callbacks?.handleRemoteSetRating(event)
+      player.callbacks?.onRemoteSetRating(event)
     }
     return super.onSetRating(session, controller, rating)
   }

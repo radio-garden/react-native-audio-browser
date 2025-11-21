@@ -72,3 +72,19 @@ export const onTabsChanged = NativeUpdatedValue.emitterize<Track[] | undefined>(
 export function useTabs(): Track[] | undefined {
   return useNativeUpdatedValue(getTabs, onTabsChanged)
 }
+
+/**
+ * Notifies external media controllers (Android Auto, CarPlay) that content
+ * at the specified path has changed and should be refreshed.
+ *
+ * @param path - The path where content has changed (e.g., '/favorites')
+ *
+ * @example
+ * ```ts
+ * // After adding a track to favorites
+ * notifyContentChanged('/favorites')
+ * ```
+ */
+export const notifyContentChanged = (path: string): void => {
+  nativeBrowser.notifyContentChanged(path)
+}
