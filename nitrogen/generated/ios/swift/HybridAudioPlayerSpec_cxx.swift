@@ -324,6 +324,40 @@ open class HybridAudioPlayerSpec_cxx {
     }
   }
   
+  public final var onSleepTimerChanged: bridge.Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ in
+        let __closureWrapper = Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(self.__implementation.onSleepTimerChanged)
+        return bridge.create_Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onSleepTimerChanged = { () -> (SleepTimer?) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(newValue)
+        return { (__data: SleepTimer?) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ in
+            if let __unwrappedValue = __data {
+              return bridge.create_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__({ () -> bridge.std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_ in
+                switch __unwrappedValue {
+                  case .first(let __value):
+                    return bridge.create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(margelo.nitro.NullType.null)
+                  case .second(let __value):
+                    return bridge.create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(__value)
+                  case .third(let __value):
+                    return bridge.create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(__value)
+                }
+              }().variant)
+            } else {
+              return .init()
+            }
+          }())
+        }
+      }()
+    }
+  }
+  
   public final var onPlaybackChanged: bridge.Func_void_Playback {
     @inline(__always)
     get {
@@ -1452,6 +1486,61 @@ open class HybridAudioPlayerSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getSleepTimer() -> bridge.Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ {
+    do {
+      let __result = try self.__implementation.getSleepTimer()
+      let __resultCpp = { () -> bridge.std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_ in
+        switch __result {
+          case .first(let __value):
+            return bridge.create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(margelo.nitro.NullType.null)
+          case .second(let __value):
+            return bridge.create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(__value)
+          case .third(let __value):
+            return bridge.create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(__value)
+        }
+      }().variant
+      return bridge.create_Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setSleepTimer(seconds: Double) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setSleepTimer(seconds: seconds)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setSleepTimerToEndOfTrack() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setSleepTimerToEndOfTrack()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func clearSleepTimer() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.clearSleepTimer()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
   

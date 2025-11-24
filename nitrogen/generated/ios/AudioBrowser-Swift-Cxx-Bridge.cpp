@@ -243,6 +243,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>
+  Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ create_Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& data) mutable -> void {
+      swiftClosure.call(data);
+    };
+  }
+  
   // pragma MARK: std::function<void(const Playback& /* data */)>
   Func_void_Playback create_Func_void_Playback(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_Playback::fromUnsafe(swiftClosureWrapper);

@@ -33,6 +33,10 @@ namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
 namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 // Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
+// Forward declaration of `SleepTimerTime` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
+// Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 // Forward declaration of `Playback` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
@@ -83,6 +87,11 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
 #include "RepeatModeChangedEvent.hpp"
+#include <NitroModules/Null.hpp>
+#include "SleepTimerTime.hpp"
+#include "SleepTimerEndOfTrack.hpp"
+#include <variant>
+#include <optional>
 #include "Playback.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
@@ -93,7 +102,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "FavoriteChangedEvent.hpp"
-#include <optional>
 #include "EqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
@@ -157,6 +165,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) = 0;
       virtual std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() = 0;
       virtual void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) = 0;
+      virtual std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() = 0;
+      virtual void setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) = 0;
       virtual std::function<void(const Playback& /* data */)> getOnPlaybackChanged() = 0;
       virtual void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) = 0;
       virtual std::function<void()> getOnRemoteBookmark() = 0;
@@ -253,6 +263,10 @@ namespace margelo::nitro::audiobrowser {
       virtual void setRepeatMode(RepeatMode mode) = 0;
       virtual std::optional<PlaybackError> getPlaybackError() = 0;
       virtual void retry() = 0;
+      virtual std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() = 0;
+      virtual void setSleepTimer(double seconds) = 0;
+      virtual void setSleepTimerToEndOfTrack() = 0;
+      virtual bool clearSleepTimer() = 0;
       virtual void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) = 0;
       virtual void move(double fromIndex, double toIndex) = 0;
       virtual void remove(const std::vector<double>& indexes) = 0;

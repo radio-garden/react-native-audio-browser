@@ -36,6 +36,7 @@
 #include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_RepeatModeChangedEvent.hpp"
+#include "JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__.hpp"
 #include "JFunc_void_Playback.hpp"
 #include "JFunc_void.hpp"
 #include "JFunc_void_RemoteJumpBackwardEvent.hpp"
@@ -81,6 +82,7 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_PlaybackProgressUpdatedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_PlaybackQueueEndedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RepeatModeChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_Playback_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RemoteJumpBackwardEvent_cxx::registerNatives();

@@ -36,6 +36,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onPlaybackQueueEnded", &HybridAudioPlayerSpec::setOnPlaybackQueueEnded);
       prototype.registerHybridGetter("onPlaybackRepeatModeChanged", &HybridAudioPlayerSpec::getOnPlaybackRepeatModeChanged);
       prototype.registerHybridSetter("onPlaybackRepeatModeChanged", &HybridAudioPlayerSpec::setOnPlaybackRepeatModeChanged);
+      prototype.registerHybridGetter("onSleepTimerChanged", &HybridAudioPlayerSpec::getOnSleepTimerChanged);
+      prototype.registerHybridSetter("onSleepTimerChanged", &HybridAudioPlayerSpec::setOnSleepTimerChanged);
       prototype.registerHybridGetter("onPlaybackChanged", &HybridAudioPlayerSpec::getOnPlaybackChanged);
       prototype.registerHybridSetter("onPlaybackChanged", &HybridAudioPlayerSpec::setOnPlaybackChanged);
       prototype.registerHybridGetter("onRemoteBookmark", &HybridAudioPlayerSpec::getOnRemoteBookmark);
@@ -129,6 +131,10 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("setRepeatMode", &HybridAudioPlayerSpec::setRepeatMode);
       prototype.registerHybridMethod("getPlaybackError", &HybridAudioPlayerSpec::getPlaybackError);
       prototype.registerHybridMethod("retry", &HybridAudioPlayerSpec::retry);
+      prototype.registerHybridMethod("getSleepTimer", &HybridAudioPlayerSpec::getSleepTimer);
+      prototype.registerHybridMethod("setSleepTimer", &HybridAudioPlayerSpec::setSleepTimer);
+      prototype.registerHybridMethod("setSleepTimerToEndOfTrack", &HybridAudioPlayerSpec::setSleepTimerToEndOfTrack);
+      prototype.registerHybridMethod("clearSleepTimer", &HybridAudioPlayerSpec::clearSleepTimer);
       prototype.registerHybridMethod("add", &HybridAudioPlayerSpec::add);
       prototype.registerHybridMethod("move", &HybridAudioPlayerSpec::move);
       prototype.registerHybridMethod("remove", &HybridAudioPlayerSpec::remove);

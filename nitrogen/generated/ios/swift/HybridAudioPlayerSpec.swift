@@ -23,6 +23,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var onPlaybackProgressUpdated: (_ data: PlaybackProgressUpdatedEvent) -> Void { get set }
   var onPlaybackQueueEnded: (_ data: PlaybackQueueEndedEvent) -> Void { get set }
   var onPlaybackRepeatModeChanged: (_ data: RepeatModeChangedEvent) -> Void { get set }
+  var onSleepTimerChanged: (_ data: SleepTimer?) -> Void { get set }
   var onPlaybackChanged: (_ data: Playback) -> Void { get set }
   var onRemoteBookmark: () -> Void { get set }
   var onRemoteDislike: () -> Void { get set }
@@ -84,6 +85,10 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func setRepeatMode(mode: RepeatMode) throws -> Void
   func getPlaybackError() throws -> PlaybackError?
   func retry() throws -> Void
+  func getSleepTimer() throws -> SleepTimer
+  func setSleepTimer(seconds: Double) throws -> Void
+  func setSleepTimerToEndOfTrack() throws -> Void
+  func clearSleepTimer() throws -> Bool
   func add(tracks: [Track], insertBeforeIndex: Double?) throws -> Void
   func move(fromIndex: Double, toIndex: Double) throws -> Void
   func remove(indexes: [Double]) throws -> Void

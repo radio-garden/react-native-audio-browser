@@ -18,6 +18,7 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
+import com.margelo.nitro.audiobrowser.SleepTimer
 
 /** Callbacks for all player events. */
 interface Callbacks {
@@ -76,4 +77,7 @@ interface Callbacks {
 
   // Equalizer events
   fun onEqualizerChanged(settings: EqualizerSettings)
+
+  // Sleep timer events
+  fun onSleepTimerChanged(timer: SleepTimer?)
 }

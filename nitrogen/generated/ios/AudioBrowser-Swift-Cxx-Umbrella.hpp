@@ -132,6 +132,10 @@ namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
+// Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
+// Forward declaration of `SleepTimerTime` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -208,6 +212,8 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "ResolvedTrack.hpp"
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
+#include "SleepTimerEndOfTrack.hpp"
+#include "SleepTimerTime.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"

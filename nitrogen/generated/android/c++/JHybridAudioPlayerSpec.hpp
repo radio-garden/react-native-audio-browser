@@ -72,6 +72,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) override;
     std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() override;
     void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) override;
+    std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() override;
+    void setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) override;
     std::function<void(const Playback& /* data */)> getOnPlaybackChanged() override;
     void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) override;
     std::function<void()> getOnRemoteBookmark() override;
@@ -168,6 +170,10 @@ namespace margelo::nitro::audiobrowser {
     void setRepeatMode(RepeatMode mode) override;
     std::optional<PlaybackError> getPlaybackError() override;
     void retry() override;
+    std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() override;
+    void setSleepTimer(double seconds) override;
+    void setSleepTimerToEndOfTrack() override;
+    bool clearSleepTimer() override;
     void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) override;
     void move(double fromIndex, double toIndex) override;
     void remove(const std::vector<double>& indexes) override;

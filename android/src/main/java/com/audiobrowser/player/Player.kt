@@ -40,7 +40,11 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SearchParams
+import com.margelo.nitro.audiobrowser.SleepTimer as NitroSleepTimer
+import com.margelo.nitro.audiobrowser.SleepTimerEndOfTrack
+import com.margelo.nitro.audiobrowser.SleepTimerTime
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.core.NullType
 import java.io.File
 import java.util.concurrent.TimeUnit
 import timber.log.Timber
@@ -57,6 +61,13 @@ class Player(internal val context: Context) {
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
   private var equalizerManager: EqualizerManager? = null
   private val mediaSessionCallback = MediaSessionCallback(this)
+  private val sleepTimer = object : SleepTimer() {
+    override fun onComplete() {
+      Timber.d("Sleep timer completed, stopping playback")
+      stop()
+      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
+    }
+  }
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
@@ -998,6 +1009,71 @@ class Player(internal val context: Context) {
    */
   fun setEqualizerLevels(levels: DoubleArray) {
     equalizerManager?.setLevels(levels)
+  }
+
+  // MARK: - Sleep Timer
+
+  /**
+   * Gets the current sleep timer state.
+   *
+   * @return Sleep timer state or null if no timer is active
+   */
+  fun getSleepTimer(): NitroSleepTimer {
+    return when {
+      sleepTimer.time != null -> {
+        NitroSleepTimer.create(SleepTimerTime(sleepTimer.time!!))
+      }
+      sleepTimer.sleepWhenPlayedToEnd -> {
+        NitroSleepTimer.create(SleepTimerEndOfTrack(true))
+      }
+      else -> {
+        NitroSleepTimer.create(NullType.NULL)
+      }
+    }
+  }
+
+  /**
+   * Sets a sleep timer to stop playback after the specified duration.
+   *
+   * @param seconds Number of seconds until playback stops
+   */
+  fun setSleepTimer(seconds: Double) {
+    sleepTimer.sleepAfter(seconds)
+    callbacks?.onSleepTimerChanged(getSleepTimer())
+  }
+
+  /**
+   * Sets a sleep timer to stop playback when the current track finishes playing.
+   */
+  fun setSleepTimerToEndOfTrack() {
+    sleepTimer.sleepWhenPlayedToEnd()
+    callbacks?.onSleepTimerChanged(getSleepTimer())
+  }
+
+  /**
+   * Clears the active sleep timer.
+   *
+   * @return true if a timer was cleared, false if no timer was active
+   */
+  fun clearSleepTimer(): Boolean {
+    val wasRunning = sleepTimer.clear()
+    if (wasRunning) {
+      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
+    }
+    return wasRunning
+  }
+
+  /**
+   * Checks if the sleep timer is set to end on track completion and stops playback if so.
+   * Called when a track naturally finishes playing.
+   */
+  internal fun checkSleepTimerOnTrackEnd() {
+    if (sleepTimer.sleepWhenPlayedToEnd) {
+      Timber.d("Sleep timer triggered on track end, stopping playback")
+      sleepTimer.clear()
+      stop()
+      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
+    }
   }
 
   /**

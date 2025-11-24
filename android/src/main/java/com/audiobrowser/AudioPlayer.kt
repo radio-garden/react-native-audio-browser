@@ -106,6 +106,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onFavoriteChanged: (FavoriteChangedEvent) -> Unit = {}
   override var onOnlineChanged: (Boolean) -> Unit = {}
   override var onEqualizerChanged: (com.margelo.nitro.audiobrowser.EqualizerSettings) -> Unit = {}
+  override var onSleepTimerChanged: (com.margelo.nitro.audiobrowser.SleepTimer?) -> Unit = {}
 
   // MARK: handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -337,6 +338,21 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     player.setEqualizerLevels(levels)
   }
 
+  override fun getSleepTimer(): com.margelo.nitro.audiobrowser.SleepTimer =
+    runBlockingOnMain { player.getSleepTimer() }
+
+  override fun setSleepTimer(seconds: Double) = runBlockingOnMain {
+    player.setSleepTimer(seconds)
+  }
+
+  override fun setSleepTimerToEndOfTrack() = runBlockingOnMain {
+    player.setSleepTimerToEndOfTrack()
+  }
+
+  override fun clearSleepTimer(): Boolean = runBlockingOnMain {
+    player.clearSleepTimer()
+  }
+
   override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
     launchInScope {
       connectedService =
@@ -559,6 +575,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
       override fun onEqualizerChanged(settings: com.margelo.nitro.audiobrowser.EqualizerSettings) {
         this@AudioPlayer.onEqualizerChanged(settings)
+      }
+
+      override fun onSleepTimerChanged(timer: com.margelo.nitro.audiobrowser.SleepTimer?) {
+        this@AudioPlayer.onSleepTimerChanged(timer)
       }
     }
 }

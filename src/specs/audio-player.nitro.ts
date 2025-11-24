@@ -34,6 +34,7 @@ import type {
   RemoteSkipEvent
 } from '../features/remoteControls'
 import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
+import type { SleepTimer, SleepTimerChangedEvent } from '../features/sleepTimer'
 import type { Track } from '../types'
 import type { AudioBrowser } from './audio-browser.nitro'
 
@@ -70,6 +71,7 @@ export interface AudioPlayer
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
+  onSleepTimerChanged: (data: SleepTimerChangedEvent) => void
   onPlaybackChanged: (data: Playback) => void
   onRemoteBookmark: () => void
   onRemoteDislike: () => void
@@ -129,6 +131,10 @@ export interface AudioPlayer
   setRepeatMode(mode: RepeatMode): void
   getPlaybackError(): PlaybackError | undefined
   retry(): void
+  getSleepTimer(): SleepTimer
+  setSleepTimer(seconds: number): void
+  setSleepTimerToEndOfTrack(): void
+  clearSleepTimer(): boolean
 
   // MARK: playlist management
   add(tracks: Track[], insertBeforeIndex?: number): void

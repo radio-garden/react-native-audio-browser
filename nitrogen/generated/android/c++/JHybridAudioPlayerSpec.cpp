@@ -37,6 +37,10 @@ namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `SleepTimerTime` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
+// Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 // Forward declaration of `Playback` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
@@ -160,6 +164,15 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "JRepeatModeChangedEvent.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
+#include <NitroModules/Null.hpp>
+#include "SleepTimerTime.hpp"
+#include "SleepTimerEndOfTrack.hpp"
+#include <variant>
+#include "JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__.hpp"
+#include "JSleepTimer.hpp"
+#include <NitroModules/JNull.hpp>
+#include "JSleepTimerTime.hpp"
+#include "JSleepTimerEndOfTrack.hpp"
 #include "Playback.hpp"
 #include "JFunc_void_Playback.hpp"
 #include "JPlayback.hpp"
@@ -188,7 +201,6 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "ThumbsRating.hpp"
 #include "StarRating.hpp"
 #include "PercentageRating.hpp"
-#include <variant>
 #include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
 #include "JHeartRating.hpp"
 #include "JThumbsRating.hpp"
@@ -206,10 +218,8 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
 #include "JRatingType.hpp"
-#include <NitroModules/Null.hpp>
 #include "Capability.hpp"
 #include "JVariant_NullType_Array_Capability_.hpp"
-#include <NitroModules/JNull.hpp>
 #include "JCapability.hpp"
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
@@ -499,6 +509,25 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioPlayerSpec::setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RepeatModeChangedEvent::javaobject> /* onPlaybackRepeatModeChanged */)>("setOnPlaybackRepeatModeChanged_cxx");
     method(_javaPart, JFunc_void_RepeatModeChangedEvent_cxx::fromCpp(onPlaybackRepeatModeChanged));
+  }
+  std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> JHybridAudioPlayerSpec::getOnSleepTimerChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__::javaobject>()>("getOnSleepTimerChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> {
+      if (__result->isInstanceOf(JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>> data) -> void {
+          return __resultRef->invoke(data);
+        };
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__::javaobject> /* onSleepTimerChanged */)>("setOnSleepTimerChanged_cxx");
+    method(_javaPart, JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::fromCpp(onSleepTimerChanged));
   }
   std::function<void(const Playback& /* data */)> JHybridAudioPlayerSpec::getOnPlaybackChanged() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_Playback::javaobject>()>("getOnPlaybackChanged_cxx");
@@ -1267,6 +1296,24 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioPlayerSpec::retry() {
     static const auto method = javaClassStatic()->getMethod<void()>("retry");
     method(_javaPart);
+  }
+  std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> JHybridAudioPlayerSpec::getSleepTimer() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JSleepTimer>()>("getSleepTimer");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  void JHybridAudioPlayerSpec::setSleepTimer(double seconds) {
+    static const auto method = javaClassStatic()->getMethod<void(double /* seconds */)>("setSleepTimer");
+    method(_javaPart, seconds);
+  }
+  void JHybridAudioPlayerSpec::setSleepTimerToEndOfTrack() {
+    static const auto method = javaClassStatic()->getMethod<void()>("setSleepTimerToEndOfTrack");
+    method(_javaPart);
+  }
+  bool JHybridAudioPlayerSpec::clearSleepTimer() {
+    static const auto method = javaClassStatic()->getMethod<jboolean()>("clearSleepTimer");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
   }
   void JHybridAudioPlayerSpec::add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* insertBeforeIndex */)>("add");

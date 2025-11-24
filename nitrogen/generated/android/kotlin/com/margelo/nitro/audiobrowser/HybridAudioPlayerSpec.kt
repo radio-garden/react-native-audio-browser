@@ -10,6 +10,7 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
+import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
 import com.margelo.nitro.core.HybridObject
 
@@ -195,6 +196,20 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
     @DoNotStrip
     set(value) {
       onPlaybackRepeatModeChanged = value
+    }
+  
+  abstract var onSleepTimerChanged: (data: SleepTimer?) -> Unit
+  
+  private var onSleepTimerChanged_cxx: Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___java(onSleepTimerChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onSleepTimerChanged = value
     }
   
   abstract var onPlaybackChanged: (data: Playback) -> Unit
@@ -773,6 +788,22 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun retry(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getSleepTimer(): SleepTimer
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setSleepTimer(seconds: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setSleepTimerToEndOfTrack(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clearSleepTimer(): Boolean
   
   @DoNotStrip
   @Keep

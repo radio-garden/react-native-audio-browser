@@ -42,6 +42,10 @@ namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
+// Forward declaration of `SleepTimerTime` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
+// Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 // Forward declaration of `Playback` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Playback; }
 // Forward declaration of `PlaybackState` to properly resolve imports.
@@ -140,6 +144,10 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "PlaybackQueueEndedEvent.hpp"
 #include "RepeatModeChangedEvent.hpp"
 #include "RepeatMode.hpp"
+#include <NitroModules/Null.hpp>
+#include "SleepTimerTime.hpp"
+#include "SleepTimerEndOfTrack.hpp"
+#include <variant>
 #include "Playback.hpp"
 #include "PlaybackState.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
@@ -152,13 +160,11 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "ThumbsRating.hpp"
 #include "StarRating.hpp"
 #include "PercentageRating.hpp"
-#include <variant>
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
-#include <NitroModules/Null.hpp>
 #include "Capability.hpp"
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"
@@ -300,6 +306,13 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) noexcept override {
       _swiftPart.setOnPlaybackRepeatModeChanged(onPlaybackRepeatModeChanged);
+    }
+    inline std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() noexcept override {
+      auto __result = _swiftPart.getOnSleepTimerChanged();
+      return __result;
+    }
+    inline void setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) noexcept override {
+      _swiftPart.setOnSleepTimerChanged(onSleepTimerChanged);
     }
     inline std::function<void(const Playback& /* data */)> getOnPlaybackChanged() noexcept override {
       auto __result = _swiftPart.getOnPlaybackChanged();
@@ -711,6 +724,34 @@ namespace margelo::nitro::audiobrowser {
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
+    }
+    inline std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() override {
+      auto __result = _swiftPart.getSleepTimer();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setSleepTimer(double seconds) override {
+      auto __result = _swiftPart.setSleepTimer(std::forward<decltype(seconds)>(seconds));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setSleepTimerToEndOfTrack() override {
+      auto __result = _swiftPart.setSleepTimerToEndOfTrack();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline bool clearSleepTimer() override {
+      auto __result = _swiftPart.clearSleepTimer();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
     }
     inline void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) override {
       auto __result = _swiftPart.add(tracks, insertBeforeIndex);

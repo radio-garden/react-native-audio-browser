@@ -69,6 +69,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       )
     player.callbacks?.onPlaybackActiveTrackChanged(event)
 
+    // Check if sleep timer should trigger on track end
+    if (reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+      player.checkSleepTimerOnTrackEnd()
+    }
+
     // Update last track info for next transition
     player.lastTrack = player.currentTrack
     player.lastIndex = player.currentIndex

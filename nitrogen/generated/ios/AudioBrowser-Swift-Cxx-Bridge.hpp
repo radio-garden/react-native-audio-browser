@@ -126,6 +126,10 @@ namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
+// Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
+// Forward declaration of `SleepTimerTime` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -205,6 +209,8 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "ResolvedTrack.hpp"
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
+#include "SleepTimerEndOfTrack.hpp"
+#include "SleepTimerTime.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
 #include "Track.hpp"
@@ -1800,6 +1806,78 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RepeatModeChangedEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>
+  /**
+   * Wrapper struct for `std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_ {
+    std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> variant;
+    std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> variant): variant(variant) { }
+    operator std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline nitro::NullType get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline SleepTimerTime get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+    inline SleepTimerEndOfTrack get_2() const noexcept {
+      return std::get<2>(variant);
+    }
+  };
+  inline std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_ create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(nitro::NullType value) noexcept {
+    return std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(value);
+  }
+  inline std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_ create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(const SleepTimerTime& value) noexcept {
+    return std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(value);
+  }
+  inline std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_ create_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(const SleepTimerEndOfTrack& value) noexcept {
+    return std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack_(value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>
+  /**
+   * Specialized version of `std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>`.
+   */
+  using std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ = std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>;
+  inline std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>> create_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(const std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> get_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>
+  /**
+   * Specialized version of `std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>&)>`.
+   */
+  using Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ = std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& / * data * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___Wrapper final {
+  public:
+    explicit Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___Wrapper(std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>&& func): _function(std::make_unique<std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>>(std::move(func))) {}
+    inline void call(std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>> data) const noexcept {
+      _function->operator()(data);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ create_Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___Wrapper wrap_Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ value) noexcept {
+    return Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::function<void(const Playback& /* data */)>
   /**
    * Specialized version of `std::function<void(const Playback&)>`.
@@ -2342,6 +2420,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_PlaybackError__ create_Result_std__optional_PlaybackError__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<PlaybackError>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>
+  using Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ = Result<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>;
+  inline Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ create_Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(const std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>& value) noexcept {
+    return Result<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>::withValue(value);
+  }
+  inline Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ create_Result_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(const std::exception_ptr& error) noexcept {
+    return Result<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>::withError(error);
   }
   
   // pragma MARK: Result<std::vector<Track>>
