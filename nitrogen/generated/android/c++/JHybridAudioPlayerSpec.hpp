@@ -136,6 +136,8 @@ namespace margelo::nitro::audiobrowser {
     void setHandleRemoteSkip(const std::optional<std::function<void()>>& handleRemoteSkip) override;
     std::optional<std::function<void()>> getHandleRemoteStop() override;
     void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) override;
+    std::function<void(bool /* online */)> getOnOnlineChanged() override;
+    void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) override;
 
   public:
     // Methods
@@ -177,6 +179,7 @@ namespace margelo::nitro::audiobrowser {
     std::optional<Track> getTrack(double index) override;
     std::optional<double> getActiveTrackIndex() override;
     std::optional<Track> getActiveTrack() override;
+    bool getOnline() override;
 
   private:
     friend HybridBase;

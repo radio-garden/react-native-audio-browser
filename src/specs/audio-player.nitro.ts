@@ -137,4 +137,8 @@ export interface AudioPlayer
   getTrack(index: number): Track | undefined
   getActiveTrackIndex(): number | undefined
   getActiveTrack(): Track | undefined
+
+  // MARK: network connectivity
+  getOnline(): boolean
+  onOnlineChanged: (online: boolean) => void
 }

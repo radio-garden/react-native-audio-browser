@@ -1113,6 +1113,25 @@ open class HybridAudioPlayerSpec_cxx {
       }()
     }
   }
+  
+  public final var onOnlineChanged: bridge.Func_void_bool {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_bool in
+        let __closureWrapper = Func_void_bool(self.__implementation.onOnlineChanged)
+        return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onOnlineChanged = { () -> (Bool) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
+        return { (__online: Bool) -> Void in
+          __wrappedFunction.call(__online)
+        }
+      }()
+    }
+  }
 
   // Methods
   @inline(__always)
@@ -1585,6 +1604,18 @@ open class HybridAudioPlayerSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__optional_Track__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getOnline() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.getOnline()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
 }

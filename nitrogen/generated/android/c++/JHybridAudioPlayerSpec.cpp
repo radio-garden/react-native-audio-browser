@@ -217,6 +217,7 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "FavoriteChangedEvent.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFavoriteChangedEvent.hpp"
+#include "JFunc_void_bool.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "UpdateOptions.hpp"
@@ -1102,6 +1103,25 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteStop */)>("setHandleRemoteStop_cxx");
     method(_javaPart, handleRemoteStop.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteStop.value()) : nullptr);
   }
+  std::function<void(bool /* online */)> JHybridAudioPlayerSpec::getOnOnlineChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnOnlineChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(bool /* online */)> {
+      if (__result->isInstanceOf(JFunc_void_bool_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_bool_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](bool online) -> void {
+          return __resultRef->invoke(online);
+        };
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onOnlineChanged */)>("setOnOnlineChanged_cxx");
+    method(_javaPart, JFunc_void_bool_cxx::fromCpp(onOnlineChanged));
+  }
 
   // Methods
   std::shared_ptr<Promise<void>> JHybridAudioPlayerSpec::setupPlayer(const PartialSetupPlayerOptions& options) {
@@ -1311,6 +1331,11 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JTrack>()>("getActiveTrack");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  bool JHybridAudioPlayerSpec::getOnline() {
+    static const auto method = javaClassStatic()->getMethod<jboolean()>("getOnline");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
   }
 
 } // namespace margelo::nitro::audiobrowser

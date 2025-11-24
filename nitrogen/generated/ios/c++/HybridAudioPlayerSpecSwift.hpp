@@ -522,6 +522,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) noexcept override {
       _swiftPart.setHandleRemoteStop(handleRemoteStop);
     }
+    inline std::function<void(bool /* online */)> getOnOnlineChanged() noexcept override {
+      auto __result = _swiftPart.getOnOnlineChanged();
+      return __result;
+    }
+    inline void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) noexcept override {
+      _swiftPart.setOnOnlineChanged(onOnlineChanged);
+    }
 
   public:
     // Methods
@@ -775,6 +782,14 @@ namespace margelo::nitro::audiobrowser {
     }
     inline std::optional<Track> getActiveTrack() override {
       auto __result = _swiftPart.getActiveTrack();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline bool getOnline() override {
+      auto __result = _swiftPart.getOnline();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

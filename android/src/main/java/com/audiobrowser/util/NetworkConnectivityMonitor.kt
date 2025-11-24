@@ -32,6 +32,12 @@ class NetworkConnectivityMonitor(private val context: Context) {
   val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
   /**
+   * Gets the current network connectivity state.
+   * @return true if device is online, false otherwise
+   */
+  fun getOnline(): Boolean = _isOnline.value
+
+  /**
    * Observes network state changes and invokes the callback when state changes.
    * The callback is invoked on the scope's dispatcher.
    */

@@ -432,6 +432,16 @@ class Player(internal val context: Context) {
   }
 
   /**
+   * Starts observing network connectivity changes and invokes the callback when state changes.
+   * @param scope The coroutine scope to use for observation
+   */
+  fun observeNetworkConnectivity(scope: kotlinx.coroutines.CoroutineScope) {
+    networkMonitor.observeOnline(scope) { isOnline ->
+      callbacks?.onOnlineChanged(isOnline)
+    }
+  }
+
+  /**
    * Loads a track into the player. If there is a current track, it will be replaced. If the queue
    * is empty, the track will be added.
    *
@@ -879,6 +889,14 @@ class Player(internal val context: Context) {
 
   fun getOptions(): PlayerUpdateOptions {
     return options
+  }
+
+  /**
+   * Gets the current network connectivity state.
+   * @return true if device is online, false otherwise
+   */
+  fun getOnline(): Boolean {
+    return networkMonitor.getOnline()
   }
 
   /**

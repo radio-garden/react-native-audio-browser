@@ -644,6 +644,20 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
     set(value) {
       handleRemoteStop = value?.let { it }
     }
+  
+  abstract var onOnlineChanged: (online: Boolean) -> Unit
+  
+  private var onOnlineChanged_cxx: Func_void_bool
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_bool_java(onOnlineChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onOnlineChanged = value
+    }
 
   // Methods
   @DoNotStrip
@@ -797,6 +811,10 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getActiveTrack(): Track?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getOnline(): Boolean
 
   private external fun initHybrid(): HybridData
 

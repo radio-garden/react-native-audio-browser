@@ -55,6 +55,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var handleRemoteSeek: ((_ event: RemoteSeekEvent) -> Void)? { get set }
   var handleRemoteSkip: (() -> Void)? { get set }
   var handleRemoteStop: (() -> Void)? { get set }
+  var onOnlineChanged: (_ online: Bool) -> Void { get set }
 
   // Methods
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
@@ -95,6 +96,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
+  func getOnline() throws -> Bool
 }
 
 public extension HybridAudioPlayerSpec_protocol {

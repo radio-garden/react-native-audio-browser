@@ -47,6 +47,7 @@
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JFunc_void_Options.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
+#include "JFunc_void_bool.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::audiobrowser {
@@ -90,6 +91,7 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_RemoteSkipEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_Options_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_FavoriteChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
 
     // Register Nitro Hybrid Objects
     HybridObjectRegistry::registerHybridObjectConstructor(

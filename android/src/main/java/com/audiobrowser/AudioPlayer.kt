@@ -104,6 +104,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onRemoteStop: () -> Unit = {}
   override var onOptionsChanged: (Options) -> Unit = {}
   override var onFavoriteChanged: (FavoriteChangedEvent) -> Unit = {}
+  override var onOnlineChanged: (Boolean) -> Unit = {}
 
   // MARK: handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -318,6 +319,8 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
   override fun getActiveTrack(): Track? = runBlockingOnMain { player.currentTrack }
 
+  override fun getOnline(): Boolean = runBlockingOnMain { player.getOnline() }
+
   override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
     launchInScope {
       connectedService =
@@ -325,6 +328,8 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           player.setCallbacks(callbacks)
           player.applyOptions(updateOptions)
           player.setup(setupOptions)
+          // Start observing network connectivity changes
+          player.observeNetworkConnectivity(mainScope)
         }
 
       // Apply audio browser if it was registered before service connected
@@ -530,6 +535,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
       override fun onFavoriteChanged(event: FavoriteChangedEvent) {
         this@AudioPlayer.onFavoriteChanged(event)
+      }
+
+      override fun onOnlineChanged(online: Boolean) {
+        this@AudioPlayer.onOnlineChanged(online)
       }
     }
 }

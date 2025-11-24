@@ -69,4 +69,7 @@ interface Callbacks {
 
   // Favorite events
   fun onFavoriteChanged(event: FavoriteChangedEvent)
+
+  // Network connectivity events
+  fun onOnlineChanged(online: Boolean)
 }
