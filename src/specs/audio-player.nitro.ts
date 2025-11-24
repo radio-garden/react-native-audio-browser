@@ -1,7 +1,7 @@
 import { type HybridObject } from 'react-native-nitro-modules'
 
+import type { FavoriteChangedEvent } from '../features'
 import type {
-  FavoriteChangedEvent,
   PlaybackActiveTrackChangedEvent
 } from '../features/activeTrack'
 import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'

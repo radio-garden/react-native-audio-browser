@@ -1,4 +1,42 @@
-import { nativeBrowser } from '../native'
+import { nativeBrowser, nativePlayer } from '../native'
+import type { Track } from '../types'
+import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+
+/**
+ * Event data for when the favorite state of the active track changes.
+ * Emitted when the user taps the heart button in a media controller (notification, Android Auto, CarPlay).
+ */
+export interface FavoriteChangedEvent {
+  /** The track whose favorite state changed. */
+  track: Track
+  /** The new favorite state. */
+  favorited: boolean
+}
+
+/**
+ * Subscribes to favorite state change events.
+ * Called when the user taps the heart button in a media controller.
+ * The native side has already updated the track's favorite state and UI.
+ *
+ * @param callback - Called with the track and its new favorite state
+ * @returns Cleanup function to unsubscribe
+ *
+ * @example
+ * ```ts
+ * const unsubscribe = onFavoriteChanged.addListener(({ track, favorited }) => {
+ *   // Persist the change to your backend/storage
+ *   if (favorited) {
+ *     addToFavorites(track)
+ *   } else {
+ *     removeFromFavorites(track)
+ *   }
+ * })
+ * ```
+ */
+export const onFavoriteChanged =
+  NativeUpdatedValue.emitterize<FavoriteChangedEvent>(
+    (cb) => (nativePlayer.onFavoriteChanged = cb)
+  )
 
 /**
  * Sets the list of favorited track source identifiers.
