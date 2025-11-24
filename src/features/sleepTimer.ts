@@ -76,12 +76,30 @@ export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
 // MARK: - Hooks
 
 /**
+ * Hook that returns whether a sleep timer is currently active.
+ * This is a lightweight alternative to useSleepTimer when you only need to know if a timer is set.
+ *
+ * @returns true if any sleep timer is active, false otherwise
+ */
+export function useSleepTimerActive(): boolean {
+  const [isActive, setIsActive] = useState(() => getSleepTimer() !== null)
+
+  useEffect(() => {
+    return onSleepTimerChanged.addListener((timer) => {
+      setIsActive(timer !== null)
+    })
+  }, [])
+
+  return isActive
+}
+
+/**
  * Hook that returns the current sleep timer state and time left.
  *
  * Note that time left is not updated when the app is in the background.
  *
  * @param params - Optional configuration object
- * @param params.updateInterval - ms interval at which the time left is updated. Defaults to 60000 (1 minute).
+ * @param params.updateInterval - ms interval at which the time left is updated. Defaults to 1000 (1 second).
  * @param params.inactive - Whether the app is in the background. If true, time left updates are paused.
  * @returns The current sleep timer state with secondsLeft calculated
  */
@@ -89,7 +107,7 @@ export function useSleepTimer(params?: {
   updateInterval?: number
   inactive?: boolean
 }): SleepTimerState | undefined {
-  const updateInterval = params?.updateInterval ?? 60000
+  const updateInterval = params?.updateInterval ?? 1000
   const inactive = params?.inactive ?? false
 
   const [state, setState] = useState<SleepTimerState | undefined>(() => {
@@ -126,11 +144,15 @@ export function useSleepTimer(params?: {
 
     // In order to make time update reaching 0 sync with firing of completion,
     // first wait for the next interval to start before starting update loop
-    let timeoutId = setTimeout(() => {
+    const initialTimeoutId = setTimeout(() => {
       update()
-      timeoutId = setInterval(update, updateInterval)
+      intervalId = setInterval(update, updateInterval)
     }, updateInterval - (time % updateInterval))
-    const clear = () => clearInterval(timeoutId)
+    let intervalId: ReturnType<typeof setInterval> | undefined
+    const clear = () => {
+      clearTimeout(initialTimeoutId)
+      if (intervalId) clearInterval(intervalId)
+    }
     update()
     return clear
   }, [inactive, time, updateInterval])
