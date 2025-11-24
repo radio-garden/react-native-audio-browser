@@ -37,6 +37,17 @@ import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
 import type { Track } from '../types'
 import type { AudioBrowser } from './audio-browser.nitro'
 
+export type EqualizerSettings = {
+  activePreset?: string
+  bandCount: number
+  bandLevels: number[]
+  centerBandFrequencies: number[]
+  enabled: boolean
+  lowerBandLevelLimit: number
+  presets: string[]
+  upperBandLevelLimit: number
+}
+
 export interface AudioPlayer
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
   // MARK: init and config
@@ -141,4 +152,11 @@ export interface AudioPlayer
   // MARK: network connectivity
   getOnline(): boolean
   onOnlineChanged: (online: boolean) => void
+
+  // MARK: equalizer (Android only)
+  getEqualizerSettings(): EqualizerSettings | undefined
+  setEqualizerEnabled(enabled: boolean): void
+  setEqualizerPreset(preset: string): void
+  setEqualizerLevels(levels: number[]): void
+  onEqualizerChanged: (settings: EqualizerSettings) => void
 }

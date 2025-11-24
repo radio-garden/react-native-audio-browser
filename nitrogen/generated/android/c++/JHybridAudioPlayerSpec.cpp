@@ -79,6 +79,8 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `EqualizerSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
@@ -218,6 +220,9 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFavoriteChangedEvent.hpp"
 #include "JFunc_void_bool.hpp"
+#include "EqualizerSettings.hpp"
+#include "JFunc_void_EqualizerSettings.hpp"
+#include "JEqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "UpdateOptions.hpp"
@@ -1122,6 +1127,25 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onOnlineChanged */)>("setOnOnlineChanged_cxx");
     method(_javaPart, JFunc_void_bool_cxx::fromCpp(onOnlineChanged));
   }
+  std::function<void(const EqualizerSettings& /* settings */)> JHybridAudioPlayerSpec::getOnEqualizerChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_EqualizerSettings::javaobject>()>("getOnEqualizerChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const EqualizerSettings& /* settings */)> {
+      if (__result->isInstanceOf(JFunc_void_EqualizerSettings_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_EqualizerSettings_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](EqualizerSettings settings) -> void {
+          return __resultRef->invoke(settings);
+        };
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_EqualizerSettings::javaobject> /* onEqualizerChanged */)>("setOnEqualizerChanged_cxx");
+    method(_javaPart, JFunc_void_EqualizerSettings_cxx::fromCpp(onEqualizerChanged));
+  }
 
   // Methods
   std::shared_ptr<Promise<void>> JHybridAudioPlayerSpec::setupPlayer(const PartialSetupPlayerOptions& options) {
@@ -1336,6 +1360,28 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<jboolean()>("getOnline");
     auto __result = method(_javaPart);
     return static_cast<bool>(__result);
+  }
+  std::optional<EqualizerSettings> JHybridAudioPlayerSpec::getEqualizerSettings() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JEqualizerSettings>()>("getEqualizerSettings");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  void JHybridAudioPlayerSpec::setEqualizerEnabled(bool enabled) {
+    static const auto method = javaClassStatic()->getMethod<void(jboolean /* enabled */)>("setEqualizerEnabled");
+    method(_javaPart, enabled);
+  }
+  void JHybridAudioPlayerSpec::setEqualizerPreset(const std::string& preset) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* preset */)>("setEqualizerPreset");
+    method(_javaPart, jni::make_jstring(preset));
+  }
+  void JHybridAudioPlayerSpec::setEqualizerLevels(const std::vector<double>& levels) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayDouble> /* levels */)>("setEqualizerLevels");
+    method(_javaPart, [&]() {
+      size_t __size = levels.size();
+      jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
+      __array->setRegion(0, __size, levels.data());
+      return __array;
+    }());
   }
 
 } // namespace margelo::nitro::audiobrowser

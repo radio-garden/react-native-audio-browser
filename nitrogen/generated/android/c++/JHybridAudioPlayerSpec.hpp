@@ -138,6 +138,8 @@ namespace margelo::nitro::audiobrowser {
     void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) override;
     std::function<void(bool /* online */)> getOnOnlineChanged() override;
     void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) override;
+    std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() override;
+    void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) override;
 
   public:
     // Methods
@@ -180,6 +182,10 @@ namespace margelo::nitro::audiobrowser {
     std::optional<double> getActiveTrackIndex() override;
     std::optional<Track> getActiveTrack() override;
     bool getOnline() override;
+    std::optional<EqualizerSettings> getEqualizerSettings() override;
+    void setEqualizerEnabled(bool enabled) override;
+    void setEqualizerPreset(const std::string& preset) override;
+    void setEqualizerLevels(const std::vector<double>& levels) override;
 
   private:
     friend HybridBase;

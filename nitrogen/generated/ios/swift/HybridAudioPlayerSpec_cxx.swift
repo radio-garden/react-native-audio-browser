@@ -1132,6 +1132,25 @@ open class HybridAudioPlayerSpec_cxx {
       }()
     }
   }
+  
+  public final var onEqualizerChanged: bridge.Func_void_EqualizerSettings {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_EqualizerSettings in
+        let __closureWrapper = Func_void_EqualizerSettings(self.__implementation.onEqualizerChanged)
+        return bridge.create_Func_void_EqualizerSettings(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onEqualizerChanged = { () -> (EqualizerSettings) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_EqualizerSettings(newValue)
+        return { (__settings: EqualizerSettings) -> Void in
+          __wrappedFunction.call(__settings)
+        }
+      }()
+    }
+  }
 
   // Methods
   @inline(__always)
@@ -1616,6 +1635,57 @@ open class HybridAudioPlayerSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getEqualizerSettings() -> bridge.Result_std__optional_EqualizerSettings__ {
+    do {
+      let __result = try self.__implementation.getEqualizerSettings()
+      let __resultCpp = { () -> bridge.std__optional_EqualizerSettings_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_EqualizerSettings_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_EqualizerSettings__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_EqualizerSettings__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setEqualizerEnabled(enabled: Bool) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setEqualizerEnabled(enabled: enabled)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setEqualizerPreset(preset: std.string) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setEqualizerPreset(preset: String(preset))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setEqualizerLevels(levels: bridge.std__vector_double_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setEqualizerLevels(levels: levels.map({ __item in __item }))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
 }

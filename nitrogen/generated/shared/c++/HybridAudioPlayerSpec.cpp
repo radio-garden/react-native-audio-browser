@@ -102,6 +102,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("handleRemoteStop", &HybridAudioPlayerSpec::setHandleRemoteStop);
       prototype.registerHybridGetter("onOnlineChanged", &HybridAudioPlayerSpec::getOnOnlineChanged);
       prototype.registerHybridSetter("onOnlineChanged", &HybridAudioPlayerSpec::setOnOnlineChanged);
+      prototype.registerHybridGetter("onEqualizerChanged", &HybridAudioPlayerSpec::getOnEqualizerChanged);
+      prototype.registerHybridSetter("onEqualizerChanged", &HybridAudioPlayerSpec::setOnEqualizerChanged);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioPlayerSpec::setupPlayer);
       prototype.registerHybridMethod("updateOptions", &HybridAudioPlayerSpec::updateOptions);
       prototype.registerHybridMethod("getOptions", &HybridAudioPlayerSpec::getOptions);
@@ -141,6 +143,10 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getActiveTrackIndex", &HybridAudioPlayerSpec::getActiveTrackIndex);
       prototype.registerHybridMethod("getActiveTrack", &HybridAudioPlayerSpec::getActiveTrack);
       prototype.registerHybridMethod("getOnline", &HybridAudioPlayerSpec::getOnline);
+      prototype.registerHybridMethod("getEqualizerSettings", &HybridAudioPlayerSpec::getEqualizerSettings);
+      prototype.registerHybridMethod("setEqualizerEnabled", &HybridAudioPlayerSpec::setEqualizerEnabled);
+      prototype.registerHybridMethod("setEqualizerPreset", &HybridAudioPlayerSpec::setEqualizerPreset);
+      prototype.registerHybridMethod("setEqualizerLevels", &HybridAudioPlayerSpec::setEqualizerLevels);
     });
   }
 

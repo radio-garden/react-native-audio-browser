@@ -105,6 +105,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onOptionsChanged: (Options) -> Unit = {}
   override var onFavoriteChanged: (FavoriteChangedEvent) -> Unit = {}
   override var onOnlineChanged: (Boolean) -> Unit = {}
+  override var onEqualizerChanged: (com.margelo.nitro.audiobrowser.EqualizerSettings) -> Unit = {}
 
   // MARK: handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -320,6 +321,21 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override fun getActiveTrack(): Track? = runBlockingOnMain { player.currentTrack }
 
   override fun getOnline(): Boolean = runBlockingOnMain { player.getOnline() }
+
+  override fun getEqualizerSettings(): com.margelo.nitro.audiobrowser.EqualizerSettings? =
+    runBlockingOnMain { player.getEqualizerSettings() }
+
+  override fun setEqualizerEnabled(enabled: Boolean) = runBlockingOnMain {
+    player.setEqualizerEnabled(enabled)
+  }
+
+  override fun setEqualizerPreset(preset: String) = runBlockingOnMain {
+    player.setEqualizerPreset(preset)
+  }
+
+  override fun setEqualizerLevels(levels: DoubleArray) = runBlockingOnMain {
+    player.setEqualizerLevels(levels)
+  }
 
   override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
     launchInScope {
@@ -539,6 +555,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
       override fun onOnlineChanged(online: Boolean) {
         this@AudioPlayer.onOnlineChanged(online)
+      }
+
+      override fun onEqualizerChanged(settings: com.margelo.nitro.audiobrowser.EqualizerSettings) {
+        this@AudioPlayer.onEqualizerChanged(settings)
       }
     }
 }

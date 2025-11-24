@@ -658,6 +658,20 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
     set(value) {
       onOnlineChanged = value
     }
+  
+  abstract var onEqualizerChanged: (settings: EqualizerSettings) -> Unit
+  
+  private var onEqualizerChanged_cxx: Func_void_EqualizerSettings
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_EqualizerSettings_java(onEqualizerChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onEqualizerChanged = value
+    }
 
   // Methods
   @DoNotStrip
@@ -815,6 +829,22 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getOnline(): Boolean
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getEqualizerSettings(): EqualizerSettings?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setEqualizerEnabled(enabled: Boolean): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setEqualizerPreset(preset: String): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setEqualizerLevels(levels: DoubleArray): Unit
 
   private external fun initHybrid(): HybridData
 

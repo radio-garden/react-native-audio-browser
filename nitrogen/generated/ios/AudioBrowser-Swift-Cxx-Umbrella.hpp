@@ -32,6 +32,8 @@ namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `EqualizerSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
@@ -156,6 +158,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "BrowserConfiguration.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"
+#include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
 #include "HeartRating.hpp"

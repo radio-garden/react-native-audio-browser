@@ -84,6 +84,8 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `EqualizerSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
@@ -161,6 +163,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include "FavoriteChangedEvent.hpp"
+#include "EqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
@@ -529,6 +532,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) noexcept override {
       _swiftPart.setOnOnlineChanged(onOnlineChanged);
     }
+    inline std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() noexcept override {
+      auto __result = _swiftPart.getOnEqualizerChanged();
+      return __result;
+    }
+    inline void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) noexcept override {
+      _swiftPart.setOnEqualizerChanged(onEqualizerChanged);
+    }
 
   public:
     // Methods
@@ -795,6 +805,32 @@ namespace margelo::nitro::audiobrowser {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline std::optional<EqualizerSettings> getEqualizerSettings() override {
+      auto __result = _swiftPart.getEqualizerSettings();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setEqualizerEnabled(bool enabled) override {
+      auto __result = _swiftPart.setEqualizerEnabled(std::forward<decltype(enabled)>(enabled));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setEqualizerPreset(const std::string& preset) override {
+      auto __result = _swiftPart.setEqualizerPreset(preset);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setEqualizerLevels(const std::vector<double>& levels) override {
+      auto __result = _swiftPart.setEqualizerLevels(levels);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
 
   private:

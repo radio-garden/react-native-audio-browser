@@ -9,6 +9,7 @@
 
 export * from './activeTrack'
 export * from './browser'
+export * from './equalizer'
 export * from './errors'
 export * from './favorites'
 export * from './metadata'

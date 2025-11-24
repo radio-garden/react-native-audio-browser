@@ -4,6 +4,7 @@ import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
@@ -72,4 +73,7 @@ interface Callbacks {
 
   // Network connectivity events
   fun onOnlineChanged(online: Boolean)
+
+  // Equalizer events
+  fun onEqualizerChanged(settings: EqualizerSettings)
 }

@@ -56,6 +56,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var handleRemoteSkip: (() -> Void)? { get set }
   var handleRemoteStop: (() -> Void)? { get set }
   var onOnlineChanged: (_ online: Bool) -> Void { get set }
+  var onEqualizerChanged: (_ settings: EqualizerSettings) -> Void { get set }
 
   // Methods
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
@@ -97,6 +98,10 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
   func getOnline() throws -> Bool
+  func getEqualizerSettings() throws -> EqualizerSettings?
+  func setEqualizerEnabled(enabled: Bool) throws -> Void
+  func setEqualizerPreset(preset: String) throws -> Void
+  func setEqualizerLevels(levels: [Double]) throws -> Void
 }
 
 public extension HybridAudioPlayerSpec_protocol {

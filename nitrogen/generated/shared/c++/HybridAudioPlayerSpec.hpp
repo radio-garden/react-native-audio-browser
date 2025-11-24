@@ -53,6 +53,8 @@ namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `EqualizerSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
@@ -92,6 +94,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "Options.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include <optional>
+#include "EqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
@@ -103,6 +106,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
 #include <vector>
+#include <string>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -219,6 +223,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) = 0;
       virtual std::function<void(bool /* online */)> getOnOnlineChanged() = 0;
       virtual void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) = 0;
+      virtual std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() = 0;
+      virtual void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) = 0;
 
     public:
       // Methods
@@ -261,6 +267,10 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<double> getActiveTrackIndex() = 0;
       virtual std::optional<Track> getActiveTrack() = 0;
       virtual bool getOnline() = 0;
+      virtual std::optional<EqualizerSettings> getEqualizerSettings() = 0;
+      virtual void setEqualizerEnabled(bool enabled) = 0;
+      virtual void setEqualizerPreset(const std::string& preset) = 0;
+      virtual void setEqualizerLevels(const std::vector<double>& levels) = 0;
 
     protected:
       // Hybrid Setup

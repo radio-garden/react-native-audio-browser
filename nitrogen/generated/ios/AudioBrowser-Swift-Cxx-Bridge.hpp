@@ -30,6 +30,8 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `EqualizerSettings` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
@@ -155,6 +157,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "AudioMetadataReceivedEvent.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "Capability.hpp"
+#include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
 #include "HeartRating.hpp"
@@ -2211,6 +2214,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_bool_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<EqualizerSettings>
+  /**
+   * Specialized version of `std::optional<EqualizerSettings>`.
+   */
+  using std__optional_EqualizerSettings_ = std::optional<EqualizerSettings>;
+  inline std::optional<EqualizerSettings> create_std__optional_EqualizerSettings_(const EqualizerSettings& value) noexcept {
+    return std::optional<EqualizerSettings>(value);
+  }
+  inline bool has_value_std__optional_EqualizerSettings_(const std::optional<EqualizerSettings>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline EqualizerSettings get_std__optional_EqualizerSettings_(const std::optional<EqualizerSettings>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const EqualizerSettings& /* settings */)>
+  /**
+   * Specialized version of `std::function<void(const EqualizerSettings&)>`.
+   */
+  using Func_void_EqualizerSettings = std::function<void(const EqualizerSettings& /* settings */)>;
+  /**
+   * Wrapper class for a `std::function<void(const EqualizerSettings& / * settings * /)>`, this can be used from Swift.
+   */
+  class Func_void_EqualizerSettings_Wrapper final {
+  public:
+    explicit Func_void_EqualizerSettings_Wrapper(std::function<void(const EqualizerSettings& /* settings */)>&& func): _function(std::make_unique<std::function<void(const EqualizerSettings& /* settings */)>>(std::move(func))) {}
+    inline void call(EqualizerSettings settings) const noexcept {
+      _function->operator()(settings);
+    }
+  private:
+    std::unique_ptr<std::function<void(const EqualizerSettings& /* settings */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_EqualizerSettings create_Func_void_EqualizerSettings(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_EqualizerSettings_Wrapper wrap_Func_void_EqualizerSettings(Func_void_EqualizerSettings value) noexcept {
+    return Func_void_EqualizerSettings_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridAudioPlayerSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridAudioPlayerSpec>`.
@@ -2329,6 +2369,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_double__ create_Result_std__optional_double__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<double>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<EqualizerSettings>>
+  using Result_std__optional_EqualizerSettings__ = Result<std::optional<EqualizerSettings>>;
+  inline Result_std__optional_EqualizerSettings__ create_Result_std__optional_EqualizerSettings__(const std::optional<EqualizerSettings>& value) noexcept {
+    return Result<std::optional<EqualizerSettings>>::withValue(value);
+  }
+  inline Result_std__optional_EqualizerSettings__ create_Result_std__optional_EqualizerSettings__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<EqualizerSettings>>::withError(error);
   }
 
 } // namespace margelo::nitro::audiobrowser::bridge::swift

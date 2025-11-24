@@ -21,6 +21,7 @@ import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
+import com.audiobrowser.util.EqualizerManager
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
@@ -54,6 +55,7 @@ class Player(internal val context: Context) {
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
+  private var equalizerManager: EqualizerManager? = null
   private val mediaSessionCallback = MediaSessionCallback(this)
 
   lateinit var exoPlayer: ExoPlayer
@@ -417,6 +419,9 @@ class Player(internal val context: Context) {
       playerListener = PlayerListener(this)
       forwardingPlayer.addListener(playerListener)
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
+
+      // Initialize equalizer with audio session ID
+      initializeEqualizer()
     } else {
       // Re-setup - re-add listener and update MediaSession
       forwardingPlayer.addListener(playerListener)
@@ -727,6 +732,8 @@ class Player(internal val context: Context) {
     cache?.release()
     cache = null
     networkMonitor.destroy()
+    equalizerManager?.release()
+    equalizerManager = null
   }
 
   fun seekTo(duration: Long, unit: TimeUnit) {
@@ -897,6 +904,100 @@ class Player(internal val context: Context) {
    */
   fun getOnline(): Boolean {
     return networkMonitor.getOnline()
+  }
+
+  /**
+   * Initializes the equalizer with the player's audio session ID.
+   */
+  private fun initializeEqualizer() {
+    try {
+      val audioSessionId = exoPlayer.audioSessionId
+      equalizerManager = EqualizerManager(audioSessionId).apply {
+        setOnSettingsChanged { settings ->
+          callbacks?.onEqualizerChanged(settings)
+        }
+      }
+      Timber.d("Equalizer initialized with session ID: $audioSessionId")
+    } catch (e: Exception) {
+      Timber.e(e, "Failed to initialize equalizer")
+      equalizerManager = null
+    }
+  }
+
+  /**
+   * Reinitializes the equalizer when the audio session ID changes.
+   * Preserves current settings (enabled state, preset, or custom levels).
+   */
+  internal fun reinitializeEqualizer(newAudioSessionId: Int) {
+    val oldManager = equalizerManager
+    if (oldManager == null || oldManager.audioSessionId == newAudioSessionId) {
+      return
+    }
+
+    try {
+      // Capture current settings before releasing old equalizer
+      val currentSettings = oldManager.getSettings()
+
+      // Release old equalizer
+      oldManager.release()
+
+      // Create new equalizer with new session ID
+      equalizerManager = EqualizerManager(newAudioSessionId).apply {
+        setOnSettingsChanged { settings ->
+          callbacks?.onEqualizerChanged(settings)
+        }
+      }
+
+      // Restore previous settings if available
+      currentSettings?.let { settings ->
+        if (settings.activePreset != null) {
+          // Restore preset
+          equalizerManager?.setPreset(settings.activePreset)
+        } else if (settings.enabled) {
+          // Restore custom levels
+          equalizerManager?.setLevels(settings.bandLevels)
+        }
+        // Restore enabled state
+        equalizerManager?.setEnabled(settings.enabled)
+      }
+
+      Timber.d("Equalizer reinitialized for new session ID: $newAudioSessionId")
+    } catch (e: Exception) {
+      Timber.e(e, "Failed to reinitialize equalizer")
+      equalizerManager = null
+    }
+  }
+
+  /**
+   * Gets the current equalizer settings.
+   * @return Current equalizer settings or null if not available
+   */
+  fun getEqualizerSettings(): com.margelo.nitro.audiobrowser.EqualizerSettings? {
+    return equalizerManager?.getSettings()
+  }
+
+  /**
+   * Enables or disables the equalizer.
+   * @param enabled true to enable, false to disable
+   */
+  fun setEqualizerEnabled(enabled: Boolean) {
+    equalizerManager?.setEnabled(enabled)
+  }
+
+  /**
+   * Applies a preset to the equalizer.
+   * @param preset Name of the preset to apply
+   */
+  fun setEqualizerPreset(preset: String) {
+    equalizerManager?.setPreset(preset)
+  }
+
+  /**
+   * Sets custom band levels for the equalizer.
+   * @param levels Array of level values in millibels for each band
+   */
+  fun setEqualizerLevels(levels: DoubleArray) {
+    equalizerManager?.setLevels(levels)
   }
 
   /**

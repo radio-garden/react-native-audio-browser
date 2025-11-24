@@ -165,4 +165,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   override fun onRepeatModeChanged(repeatMode: Int) {
     player.callbacks?.onPlaybackRepeatModeChanged(RepeatModeFactory.fromMedia3(repeatMode))
   }
+
+  override fun onAudioSessionIdChanged(audioSessionId: Int) {
+    Timber.d("Audio session ID changed to: $audioSessionId")
+    player.reinitializeEqualizer(audioSessionId)
+  }
 }
