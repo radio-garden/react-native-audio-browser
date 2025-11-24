@@ -1,5 +1,3 @@
-import { useCallback } from 'react'
-
 import { nativePlayer } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
@@ -51,11 +49,5 @@ export const onPlayWhenReadyChanged =
  * @returns The current playWhenReady state
  */
 export function usePlayWhenReady(): boolean {
-  const subscribe = useCallback(
-    (callback: (event: PlaybackPlayWhenReadyChangedEvent) => void) =>
-      onPlayWhenReadyChanged(callback),
-    []
-  )
-
-  return useNativeUpdatedValue(getPlayWhenReady, subscribe, 'playWhenReady')
+  return useNativeUpdatedValue(getPlayWhenReady, onPlayWhenReadyChanged, 'playWhenReady')
 }

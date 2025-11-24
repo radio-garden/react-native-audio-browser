@@ -101,7 +101,7 @@ export function usePolledProgress(updateInterval = 1000): Progress {
     }
 
     // Update immediately on playback state changes
-    const unsubscribeState = onPlaybackChanged(update)
+    const unsubscribeState = onPlaybackChanged.addListener(update)
 
     const poll = () => {
       update()
