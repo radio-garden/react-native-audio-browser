@@ -10,9 +10,9 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
@@ -74,6 +74,8 @@ class Player(internal val context: Context) {
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
   private lateinit var mediaFactory: MediaFactory
+  private lateinit var loadControl: DynamicLoadControl
+  private var automaticBufferManager: AutomaticBufferManager? = null
 
   private var _browser: AudioBrowser? = null
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
@@ -391,19 +393,26 @@ class Player(internal val context: Context) {
     // Recreate ExoPlayer with new setup options
     val renderer = DefaultRenderersFactory(context)
     renderer.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-    val loadControl = run {
+
+    // Create bandwidth meter for adaptive bitrate selection in HLS/DASH
+    val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
+
+    loadControl = run {
       val minBuffer = setupOptions.minBuffer.toInt()
       val maxBuffer = setupOptions.maxBuffer.toInt()
       val playBuffer = setupOptions.playBuffer.toInt()
-      val defaultRebufferMultiplier = 2
-      // DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS / DEFAULT_BUFFER_FOR_PLAYBACK_MS
-      val playAfterRebuffer =
-        setupOptions.rebufferBuffer?.toInt() ?: (playBuffer * defaultRebufferMultiplier)
+      // When automatic (rebufferBuffer is null), start at playBuffer and let AutomaticBufferManager adjust
+      // When fixed (rebufferBuffer is set), use that value
+      val playAfterRebuffer = setupOptions.rebufferBuffer?.toInt() ?: playBuffer
       val backBuffer = setupOptions.backBuffer.toInt()
-      DefaultLoadControl.Builder()
-        .setBufferDurationsMs(minBuffer, maxBuffer, playBuffer, playAfterRebuffer)
-        .setBackBuffer(backBuffer, false)
-        .build()
+      val config = BufferConfig(
+        minBufferMs = minBuffer,
+        maxBufferMs = maxBuffer,
+        bufferForPlaybackMs = playBuffer,
+        bufferForPlaybackAfterRebufferMs = playAfterRebuffer,
+        backBufferMs = backBuffer
+      )
+      DynamicLoadControl(initialConfig = config)
     }
     // Create MediaFactory with reference to browser for media URL transformation
     // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio focus)
@@ -411,12 +420,14 @@ class Player(internal val context: Context) {
       context,
       cache,
       setupOptions.retryPolicy,
-      shouldRetry = { exoPlayer.playWhenReady }
+      shouldRetry = { exoPlayer.playWhenReady },
+      transferListener = bandwidthMeter,
     ) { url -> browser?.getMediaRequestConfig(url) }
 
     exoPlayer =
       ExoPlayer.Builder(context)
         .setRenderersFactory(renderer)
+        .setBandwidthMeter(bandwidthMeter)
         .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
         .setMediaSourceFactory(mediaFactory)
         .setWakeMode(
@@ -472,6 +483,28 @@ class Player(internal val context: Context) {
       }
 
       setPlaybackState(PlaybackState.NONE)
+    }
+
+    // Set up automatic buffer management if enabled
+    setupAutomaticBufferManager(setupOptions.automaticBuffer)
+  }
+
+  /**
+   * Sets up or tears down the automatic buffer manager based on the enabled flag.
+   */
+  private fun setupAutomaticBufferManager(enabled: Boolean) {
+    // Detach existing manager if any
+    automaticBufferManager?.detach()
+
+    if (enabled) {
+      val defaultConfig = loadControl.getBufferConfig()
+      automaticBufferManager = AutomaticBufferManager(loadControl, defaultConfig).also {
+        it.attach(exoPlayer)
+      }
+      Timber.d("Automatic buffer management enabled")
+    } else {
+      automaticBufferManager = null
+      Timber.d("Automatic buffer management disabled")
     }
   }
 
@@ -767,6 +800,8 @@ class Player(internal val context: Context) {
   fun destroy() {
     stop()
     forwardingPlayer.removeListener(playerListener)
+    automaticBufferManager?.detach()
+    automaticBufferManager = null
     exoPlayer.release()
     cache?.release()
     cache = null
@@ -1159,5 +1194,35 @@ class Player(internal val context: Context) {
     exoPlayer.currentMediaItem?.mediaId?.let { url ->
       playbackStateStore.save(url, position)
     }
+  }
+
+  // MARK: - Buffer Configuration
+
+  /**
+   * Updates the buffer configuration at runtime.
+   *
+   * The new configuration takes effect immediately for future buffering decisions.
+   * Already-buffered data is not affected.
+   *
+   * @param config The new buffer configuration to apply.
+   */
+  fun updateBufferConfig(config: BufferConfig) {
+    loadControl.updateBufferConfig(config)
+  }
+
+  /**
+   * Gets the current buffer configuration.
+   *
+   * @return The current buffer configuration.
+   */
+  fun getBufferConfig(): BufferConfig {
+    return loadControl.getBufferConfig()
+  }
+
+  /**
+   * Resets the buffer configuration to defaults.
+   */
+  fun resetBufferConfig() {
+    loadControl.resetToDefaults()
   }
 }

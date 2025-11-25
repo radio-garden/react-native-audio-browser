@@ -18,15 +18,21 @@ public extension PartialAndroidSetupPlayerOptions {
   /**
    * Create a new instance of `PartialAndroidSetupPlayerOptions`.
    */
-  init(audioOffload: Variant_Bool_AndroidAudioOffloadSettings, retry: Variant_Bool_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Bool?, wakeMode: AndroidPlayerWakeMode?) {
-    self.init({ () -> bridge.std__variant_bool__AndroidAudioOffloadSettings_ in
-      switch audioOffload {
-        case .first(let __value):
-          return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
-        case .second(let __value):
-          return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
+  init(audioOffload: Variant_Bool_AndroidAudioOffloadSettings?, retry: Variant_Bool_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Bool?, wakeMode: AndroidPlayerWakeMode?) {
+    self.init({ () -> bridge.std__optional_std__variant_bool__AndroidAudioOffloadSettings__ in
+      if let __unwrappedValue = audioOffload {
+        return bridge.create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__({ () -> bridge.std__variant_bool__AndroidAudioOffloadSettings_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
+            case .second(let __value):
+              return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
+          }
+        }().variant)
+      } else {
+        return .init()
       }
-    }().variant, { () -> bridge.std__optional_std__variant_bool__RetryConfig__ in
+    }(), { () -> bridge.std__optional_std__variant_bool__RetryConfig__ in
       if let __unwrappedValue = retry {
         return bridge.create_std__optional_std__variant_bool__RetryConfig__({ () -> bridge.std__variant_bool__RetryConfig_ in
           switch __unwrappedValue {
@@ -90,33 +96,46 @@ public extension PartialAndroidSetupPlayerOptions {
     }())
   }
 
-  var audioOffload: Variant_Bool_AndroidAudioOffloadSettings {
+  var audioOffload: Variant_Bool_AndroidAudioOffloadSettings? {
     @inline(__always)
     get {
-      return { () -> Variant_Bool_AndroidAudioOffloadSettings in
-        let __variant = bridge.std__variant_bool__AndroidAudioOffloadSettings_(self.__audioOffload)
-        switch __variant.index() {
-          case 0:
-            let __actual = __variant.get_0()
-            return .first(__actual)
-          case 1:
-            let __actual = __variant.get_1()
-            return .second(__actual)
-          default:
-            fatalError("Variant can never have index \(__variant.index())!")
+      return { () -> Variant_Bool_AndroidAudioOffloadSettings? in
+        if bridge.has_value_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(self.__audioOffload) {
+          let __unwrapped = bridge.get_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(self.__audioOffload)
+          return { () -> Variant_Bool_AndroidAudioOffloadSettings in
+            let __variant = bridge.std__variant_bool__AndroidAudioOffloadSettings_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first(__actual)
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
+        } else {
+          return nil
         }
       }()
     }
     @inline(__always)
     set {
-      self.__audioOffload = { () -> bridge.std__variant_bool__AndroidAudioOffloadSettings_ in
-        switch newValue {
-          case .first(let __value):
-            return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
-          case .second(let __value):
-            return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
+      self.__audioOffload = { () -> bridge.std__optional_std__variant_bool__AndroidAudioOffloadSettings__ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__({ () -> bridge.std__variant_bool__AndroidAudioOffloadSettings_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
+              case .second(let __value):
+                return bridge.create_std__variant_bool__AndroidAudioOffloadSettings_(__value)
+            }
+          }().variant)
+        } else {
+          return .init()
         }
-      }().variant
+      }()
     }
   }
   

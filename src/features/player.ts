@@ -177,8 +177,24 @@ export type RetryConfig = {
  */
 export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 
+/**
+ * Android-specific player setup options.
+ */
 export type PartialAndroidSetupPlayerOptions = {
-  audioOffload: boolean | AndroidAudioOffloadSettings
+  /**
+   * Enable audio offload for power-efficient playback.
+   *
+   * When enabled, audio decoding is offloaded to dedicated hardware, reducing
+   * CPU usage and extending battery life during long playback sessions.
+   *
+   * - `true`: Enable with default settings (gapless + rate change support required)
+   * - `false`/`undefined`: Disabled
+   * - `{ gaplessSupportRequired: boolean, rateChangeSupportRequired: boolean }`:
+   *   Enable with specific requirements for gapless playback and playback rate changes
+   *
+   * @default false
+   */
+  audioOffload?: boolean | AndroidAudioOffloadSettings
 
   /**
    * Retry policy for load errors (network failures, timeouts, etc.)
@@ -221,10 +237,18 @@ export type PartialAndroidSetupPlayerOptions = {
    * Duration of media in ms that must be buffered for playback to resume
    * after a rebuffer (when the buffer runs empty during playback).
    *
-   * When not specified, defaults to playBuffer * 2 (maintaining ExoPlayer's
-   * default ratio). Should be >= playBuffer for optimal behavior.
+   * By default (when not set), uses automatic mode:
+   * - Starts at `playBuffer` value
+   * - On rebuffer, measures how fast the buffer drained
+   * - Calculates how much buffer is needed to sustain 60s of playback
+   * - Increases threshold accordingly (up to 8000ms max)
+   * - Resets when changing tracks
    *
-   * @default playBuffer * 2
+   * Set to a number for a fixed threshold in ms. Should be >= playBuffer,
+   * otherwise playback may rebuffer repeatedly (resuming with less buffer
+   * than initial start).
+   *
+   * @default undefined (automatic)
    */
   rebufferBuffer?: number
 

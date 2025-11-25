@@ -50,6 +50,13 @@ data class PlayerSetupOptions(
   var audioOffload: AudioOffloadOptions? = null,
   var retryPolicy: RetryPolicy = RetryPolicy.Default,
 ) {
+  /**
+   * Whether automatic buffer management is enabled.
+   * True when rebufferBuffer is not explicitly set (null).
+   */
+  val automaticBuffer: Boolean
+    get() = rebufferBuffer == null
+
   fun update(options: PartialSetupPlayerOptions) {
     // Cross-platform audio engine options
     options.minBuffer?.let { minBuffer = it }

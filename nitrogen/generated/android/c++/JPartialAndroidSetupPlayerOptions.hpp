@@ -63,7 +63,7 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldWakeMode = clazz->getField<JAndroidPlayerWakeMode>("wakeMode");
       jni::local_ref<JAndroidPlayerWakeMode> wakeMode = this->getFieldValue(fieldWakeMode);
       return PartialAndroidSetupPlayerOptions(
-        audioOffload->toCpp(),
+        audioOffload != nullptr ? std::make_optional(audioOffload->toCpp()) : std::nullopt,
         retry != nullptr ? std::make_optional(retry->toCpp()) : std::nullopt,
         maxBuffer != nullptr ? std::make_optional(maxBuffer->value()) : std::nullopt,
         backBuffer != nullptr ? std::make_optional(backBuffer->value()) : std::nullopt,
@@ -87,7 +87,7 @@ namespace margelo::nitro::audiobrowser {
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        JVariant_Boolean_AndroidAudioOffloadSettings::fromCpp(value.audioOffload),
+        value.audioOffload.has_value() ? JVariant_Boolean_AndroidAudioOffloadSettings::fromCpp(value.audioOffload.value()) : nullptr,
         value.retry.has_value() ? JVariant_Boolean_RetryConfig::fromCpp(value.retry.value()) : nullptr,
         value.maxBuffer.has_value() ? jni::JDouble::valueOf(value.maxBuffer.value()) : nullptr,
         value.backBuffer.has_value() ? jni::JDouble::valueOf(value.backBuffer.value()) : nullptr,

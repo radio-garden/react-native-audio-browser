@@ -7,6 +7,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
@@ -23,6 +24,7 @@ class MediaFactory(
   private val cache: SimpleCache?,
   private val retryPolicy: RetryPolicy,
   private val shouldRetry: () -> Boolean,
+  private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
 
@@ -115,16 +117,16 @@ class MediaFactory(
 
     // DefaultDataSource.Factory handles all URI schemes (file://, content://, http://, https://, etc.)
     // by routing to the appropriate implementation. We provide a configured HTTP factory for remote URLs.
-    val factory: DataSource.Factory = DefaultDataSource.Factory(
-      context,
-      DefaultHttpDataSource.Factory().apply {
-        setUserAgent(userAgent)
-        setAllowCrossProtocolRedirects(true)
-        if (headers.isNotEmpty()) {
-          setDefaultRequestProperties(headers)
-        }
+    val httpFactory = DefaultHttpDataSource.Factory().apply {
+      setUserAgent(userAgent)
+      setAllowCrossProtocolRedirects(true)
+      if (headers.isNotEmpty()) {
+        setDefaultRequestProperties(headers)
       }
-    )
+      // Connect transfer listener for bandwidth measurement
+      transferListener?.let { setTransferListener(it) }
+    }
+    val factory: DataSource.Factory = DefaultDataSource.Factory(context, httpFactory)
 
     // Create a new MediaItem with the transformed URL if it changed
     val finalMediaItem =

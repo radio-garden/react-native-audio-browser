@@ -19,7 +19,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class PartialAndroidSetupPlayerOptions(
   @DoNotStrip
   @Keep
-  val audioOffload: Variant_Boolean_AndroidAudioOffloadSettings,
+  val audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?,
   @DoNotStrip
   @Keep
   val retry: Variant_Boolean_RetryConfig?,
@@ -58,7 +58,7 @@ data class PartialAndroidSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(audioOffload: Variant_Boolean_AndroidAudioOffloadSettings, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
+    private fun fromCpp(audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
       return PartialAndroidSetupPlayerOptions(audioOffload, retry, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
     }
   }

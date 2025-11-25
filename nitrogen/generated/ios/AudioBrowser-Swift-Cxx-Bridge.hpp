@@ -1213,6 +1213,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__AndroidAudioOffloadSettings_(value);
   }
   
+  // pragma MARK: std::optional<std::variant<bool, AndroidAudioOffloadSettings>>
+  /**
+   * Specialized version of `std::optional<std::variant<bool, AndroidAudioOffloadSettings>>`.
+   */
+  using std__optional_std__variant_bool__AndroidAudioOffloadSettings__ = std::optional<std::variant<bool, AndroidAudioOffloadSettings>>;
+  inline std::optional<std::variant<bool, AndroidAudioOffloadSettings>> create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::variant<bool, AndroidAudioOffloadSettings>& value) noexcept {
+    return std::optional<std::variant<bool, AndroidAudioOffloadSettings>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::optional<std::variant<bool, AndroidAudioOffloadSettings>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<bool, AndroidAudioOffloadSettings> get_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::optional<std::variant<bool, AndroidAudioOffloadSettings>>& optional) noexcept {
+    return *optional;
+  }
+  
   // pragma MARK: std::variant<bool, RetryConfig>
   /**
    * Wrapper struct for `std::variant<bool, RetryConfig>`.
