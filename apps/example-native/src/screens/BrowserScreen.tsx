@@ -1,4 +1,3 @@
-import Icon from '@react-native-vector-icons/fontawesome6'
 import React, { useState } from 'react'
 import {
   ActivityIndicator,
@@ -11,20 +10,15 @@ import {
 } from 'react-native'
 import {
   navigate,
-  skipToNext,
-  skipToPrevious,
-  togglePlayback,
   Track,
   useActiveTrack,
   useContent,
   useNavigationError,
   usePath,
-  usePlayingState,
-  useTabs,
-  useSleepTimerActive,
-  useEqualizerSettings
+  useTabs
 } from 'react-native-audio-browser'
 import { EqualizerModal } from '../components/EqualizerModal'
+import { MiniPlayer } from '../components/MiniPlayer'
 import { NavigationErrorView } from '../components/NavigationErrorView'
 import { SleepTimerModal } from '../components/SleepTimerModal'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
@@ -33,18 +27,16 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 export function BrowserScreen() {
   const path = usePath()
   const content = useContent()
-  const track = useActiveTrack()
+  const activeTrack = useActiveTrack()
   const tabs = useTabs()
   const navigationError = useNavigationError()
   const handleBackPress = useBrowserHistory()
   const [showEqualizer, setShowEqualizer] = useState(false)
   const [showSleepTimer, setShowSleepTimer] = useState(false)
-  const sleepTimerActive = useSleepTimerActive()
-  const equalizerSettings = useEqualizerSettings()
   const showLoading = useDebouncedValue(!content, true)
 
   const renderItem = ({ item }: { item: Track }) => {
-    const isActive = 'src' in item && track?.src === item.src
+    const isActive = 'src' in item && activeTrack?.src === item.src
 
     return (
       <TouchableOpacity
@@ -83,8 +75,6 @@ export function BrowserScreen() {
       </TouchableOpacity>
     )
   }
-
-  const playingState = usePlayingState()
 
   return (
     <View style={styles.container}>
@@ -133,90 +123,10 @@ export function BrowserScreen() {
         ) : null}
       </View>
 
-      {/* Mini Player */}
-      {track && (
-        <View style={styles.miniPlayer}>
-          <View style={styles.miniPlayerInfo}>
-            {track.artwork ? (
-              <Image
-                source={{ uri: track.artwork }}
-                style={styles.miniPlayerArtwork}
-              />
-            ) : (
-              <View style={styles.miniPlayerArtworkPlaceholder}>
-                <Text style={styles.miniPlayerArtworkEmoji}>🎵</Text>
-              </View>
-            )}
-            <View style={styles.miniPlayerText}>
-              <Text style={styles.miniPlayerTitle} numberOfLines={1}>
-                {track.title}
-              </Text>
-              <Text style={styles.miniPlayerArtist} numberOfLines={1}>
-                {track.artist || 'Unknown Artist'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.miniPlayerControls}>
-            <TouchableOpacity
-              style={styles.miniControlButton}
-              onPress={() => skipToPrevious()}
-            >
-              <Icon
-                name="backward-step"
-                size={20}
-                color="white"
-                iconStyle="solid"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.miniControlButton, styles.playPauseButton]}
-              onPress={togglePlayback}
-            >
-              <Icon
-                name={playingState.playing ? 'pause' : 'play'}
-                size={20}
-                color="white"
-                iconStyle="solid"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.miniControlButton}
-              onPress={() => skipToNext()}
-            >
-              <Icon
-                name="forward-step"
-                size={20}
-                color="white"
-                iconStyle="solid"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.miniControlButton}
-              onPress={() => setShowEqualizer(true)}
-            >
-              <View style={{ transform: [{ rotate: '90deg' }] }}>
-                <Icon
-                  name="sliders"
-                  size={20}
-                  color={equalizerSettings?.enabled ? '#007AFF' : 'white'}
-                  iconStyle="solid"
-                />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.miniControlButton}
-              onPress={() => setShowSleepTimer(true)}
-            >
-              <Icon
-                name="moon"
-                size={20}
-                color={sleepTimerActive ? '#007AFF' : 'white'}
-                iconStyle="solid"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      <MiniPlayer
+        onEqualizerPress={() => setShowEqualizer(true)}
+        onSleepTimerPress={() => setShowSleepTimer(true)}
+      />
 
       {/* Tab Bar */}
       {tabs && tabs.length > 0 && (
@@ -387,67 +297,5 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#007AFF',
     fontWeight: '600'
-  },
-  miniPlayer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#1a1a1a',
-    borderTopWidth: 1,
-    borderTopColor: '#333333',
-    padding: 12
-  },
-  miniPlayerInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12
-  },
-  miniPlayerArtwork: {
-    width: 48,
-    height: 48,
-    borderRadius: 4,
-    marginRight: 12
-  },
-  miniPlayerArtworkPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 4,
-    backgroundColor: '#333333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12
-  },
-  miniPlayerArtworkEmoji: {
-    fontSize: 24
-  },
-  miniPlayerText: {
-    flex: 1
-  },
-  miniPlayerTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 2
-  },
-  miniPlayerArtist: {
-    fontSize: 12,
-    color: '#888888'
-  },
-  miniPlayerControls: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  miniControlButton: {
-    padding: 8,
-    marginLeft: 4
-  },
-  playPauseButton: {
-    width: 36,
-    alignItems: 'center'
-  },
-  miniControlText: {
-    fontSize: 20,
-    color: '#ffffff'
   }
 })
