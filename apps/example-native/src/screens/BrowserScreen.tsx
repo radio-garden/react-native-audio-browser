@@ -1,3 +1,4 @@
+import Icon from '@react-native-vector-icons/fontawesome6'
 import React, { useState } from 'react'
 import {
   ActivityIndicator,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   navigate,
   Track,
@@ -25,6 +27,7 @@ import { useBrowserHistory } from '../hooks/useBrowserHistory'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 export function BrowserScreen() {
+  const insets = useSafeAreaInsets()
   const path = usePath()
   const content = useContent()
   const activeTrack = useActiveTrack()
@@ -36,7 +39,7 @@ export function BrowserScreen() {
   const showLoading = useDebouncedValue(!content, true)
 
   const renderItem = ({ item }: { item: Track }) => {
-    const isActive = 'src' in item && activeTrack?.src === item.src
+    const isActive = item.src != null && activeTrack?.src === item.src
 
     return (
       <TouchableOpacity
@@ -69,8 +72,10 @@ export function BrowserScreen() {
         </View>
         {item.artwork ? (
           <Image source={{ uri: item.artwork }} style={styles.itemArtwork} />
+        ) : item.src ? (
+          <Icon name="music" size={16} color="#ffffff" iconStyle="solid" />
         ) : (
-          <Text style={styles.itemIcon}>{item.src ? '🎵' : '📁'}</Text>
+          <Icon name="chevron-right" size={14} color="#ffffff" iconStyle="solid" />
         )}
       </TouchableOpacity>
     )
@@ -79,10 +84,15 @@ export function BrowserScreen() {
   return (
     <View style={styles.container}>
       {/* Header with back button and current path */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          { marginTop: -insets.top, paddingTop: 16 + insets.top }
+        ]}
+      >
         {handleBackPress && (
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Icon name="chevron-left" size={18} color="#888888" iconStyle="solid" />
           </TouchableOpacity>
         )}
         <Text style={styles.pathText}>{path}</Text>
@@ -130,7 +140,12 @@ export function BrowserScreen() {
 
       {/* Tab Bar */}
       {tabs && tabs.length > 0 && (
-        <View style={styles.tabBar}>
+        <View
+          style={[
+            styles.tabBar,
+            { marginBottom: -insets.bottom, paddingBottom: insets.bottom }
+          ]}
+        >
           {tabs.map((tab, index) => (
             <TouchableOpacity
               key={index}
@@ -174,15 +189,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333333'
+    backgroundColor: '#1a1a1a'
   },
   backButton: {
     marginRight: 12
-  },
-  backButtonText: {
-    color: '#007AFF',
-    fontSize: 16
   },
   pathText: {
     flex: 1,
@@ -192,13 +202,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 16
+    paddingTop: 16
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 16
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16
   },
   playAllButton: {
     backgroundColor: '#007AFF',
@@ -240,10 +252,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666'
   },
-  itemIcon: {
-    fontSize: 24,
-    marginLeft: 12
-  },
   itemArtwork: {
     width: 48,
     height: 48,
@@ -262,9 +270,7 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   activeItem: {
-    backgroundColor: '#1a1a1a',
-    borderLeftWidth: 3,
-    borderLeftColor: '#007AFF'
+    backgroundColor: '#1a1a1a'
   },
   activeItemTitle: {
     color: '#007AFF'
@@ -278,10 +284,7 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#1a1a1a',
-    borderTopWidth: 1,
-    borderTopColor: '#333333',
-    paddingTop: 10,
-    paddingBottom: 10
+    paddingTop: 10
   },
   tab: {
     flex: 1,
