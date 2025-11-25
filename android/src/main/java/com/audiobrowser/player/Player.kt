@@ -62,6 +62,7 @@ class Player(internal val context: Context) {
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
   private var equalizerManager: EqualizerManager? = null
   private val mediaSessionCallback = MediaSessionCallback(this)
+  internal val playbackStateStore = PlaybackStateStore(context)
   private val sleepTimer = object : SleepTimer() {
     override fun onComplete() {
       Timber.d("Sleep timer completed, stopping playback")
@@ -1142,5 +1143,15 @@ class Player(internal val context: Context) {
    */
   fun notifyContentChanged(path: String) {
     mediaSessionCallback.notifyContentChanged(path)
+  }
+
+  /**
+   * Saves the current playback state (URL + position) for later resumption.
+   * Called on pause and other key events to ensure we can resume from the correct position.
+   */
+  internal fun savePlaybackStateForResumption() {
+    exoPlayer.currentMediaItem?.mediaId?.let { url ->
+      playbackStateStore.save(url, position)
+    }
   }
 }

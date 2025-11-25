@@ -80,6 +80,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // Update favorite button state for new track
     player.updateFavoriteButtonState(player.currentTrack?.favorited)
+
+    // Persist playback state for resumption (use mediaId which is the contextual URL)
+    mediaItem?.mediaId?.let { url ->
+      player.playbackStateStore.save(url, 0)
+    }
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
@@ -91,6 +96,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     if (newPlayingState != player.playingState) {
       player.playingState = newPlayingState
       player.callbacks?.onPlaybackPlayingState(player.playingState)
+    }
+
+    // Persist position on pause for resumption
+    if (!playWhenReady) {
+      player.savePlaybackStateForResumption()
     }
   }
 
