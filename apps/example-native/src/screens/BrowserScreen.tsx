@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/fontawesome6'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -20,9 +20,13 @@ import {
   useNavigationError,
   usePath,
   usePlayingState,
-  useTabs
+  useTabs,
+  useSleepTimerActive,
+  useEqualizerSettings
 } from 'react-native-audio-browser'
+import { EqualizerModal } from '../components/EqualizerModal'
 import { NavigationErrorView } from '../components/NavigationErrorView'
+import { SleepTimerModal } from '../components/SleepTimerModal'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
 
 export function BrowserScreen() {
@@ -32,6 +36,10 @@ export function BrowserScreen() {
   const tabs = useTabs()
   const navigationError = useNavigationError()
   const handleBackPress = useBrowserHistory()
+  const [showEqualizer, setShowEqualizer] = useState(false)
+  const [showSleepTimer, setShowSleepTimer] = useState(false)
+  const sleepTimerActive = useSleepTimerActive()
+  const equalizerSettings = useEqualizerSettings()
 
   const renderItem = ({ item }: { item: Track }) => {
     const isActive = 'src' in item && track?.src === item.src
@@ -180,6 +188,30 @@ export function BrowserScreen() {
                 iconStyle="solid"
               />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.miniControlButton}
+              onPress={() => setShowEqualizer(true)}
+            >
+              <View style={{ transform: [{ rotate: '90deg' }] }}>
+                <Icon
+                  name="sliders"
+                  size={20}
+                  color={equalizerSettings?.enabled ? '#007AFF' : 'white'}
+                  iconStyle="solid"
+                />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.miniControlButton}
+              onPress={() => setShowSleepTimer(true)}
+            >
+              <Icon
+                name="moon"
+                size={20}
+                color={sleepTimerActive ? '#007AFF' : 'white'}
+                iconStyle="solid"
+              />
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -207,6 +239,16 @@ export function BrowserScreen() {
           ))}
         </View>
       )}
+
+      <EqualizerModal
+        visible={showEqualizer}
+        onClose={() => setShowEqualizer(false)}
+      />
+
+      <SleepTimerModal
+        visible={showSleepTimer}
+        onClose={() => setShowSleepTimer(false)}
+      />
     </View>
   )
 }
