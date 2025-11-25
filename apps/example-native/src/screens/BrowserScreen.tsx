@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/fontawesome6'
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -28,6 +28,7 @@ import { EqualizerModal } from '../components/EqualizerModal'
 import { NavigationErrorView } from '../components/NavigationErrorView'
 import { SleepTimerModal } from '../components/SleepTimerModal'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 export function BrowserScreen() {
   const path = usePath()
@@ -40,6 +41,7 @@ export function BrowserScreen() {
   const [showSleepTimer, setShowSleepTimer] = useState(false)
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
+  const showLoading = useDebouncedValue(!content, true)
 
   const renderItem = ({ item }: { item: Track }) => {
     const isActive = 'src' in item && track?.src === item.src
@@ -107,28 +109,28 @@ export function BrowserScreen() {
               }
             }}
           />
-        ) : content ? (
-          <>
-            <Text style={styles.title}>
-              {content?.title ?? path ?? 'Music Browser'}
-            </Text>
-
-            <FlatList
-              data={content?.children || []}
-              renderItem={renderItem}
-              keyExtractor={(item, index) => `${item.title}-${index}`}
-              style={styles.list}
-              showsVerticalScrollIndicator={false}
-            />
-          </>
-        ) : (
+        ) : showLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.loadingText}>
               Loading {path ? path : ''}...
             </Text>
           </View>
-        )}
+        ) : content ? (
+          <>
+            <Text style={styles.title}>
+              {content.title ?? path ?? 'Music Browser'}
+            </Text>
+
+            <FlatList
+              data={content.children || []}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => `${item.title}-${index}`}
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          </>
+        ) : null}
       </View>
 
       {/* Mini Player */}

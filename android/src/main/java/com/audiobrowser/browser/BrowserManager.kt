@@ -506,6 +506,7 @@ class BrowserManager {
     Timber.d("Navigating to path: $path")
 
     this.path = path
+    this.content = null  // Clear content immediately to show loading state
     val content = resolve(path)
     this.content = content
     return content
