@@ -204,12 +204,10 @@ class MediaSessionCallback(private val player: Player) :
       "onGetChildren: {parentId: $parentId, page: $page, pageSize: $pageSize, isSearchPath: ${BrowserPathHelper.isSpecialPath(parentId)} }"
     )
     return scope.future {
-      val browserManager = player.browser?.browserManager
-
-      if (browserManager == null) {
-        Timber.w("AudioBrowser not registered - media browsing not available")
-        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-      }
+      // Wait for browser to be registered if it's not available yet
+      val browserManager = player.awaitBrowser().also {
+        Timber.d("Browser ready, proceeding with onGetChildren")
+      }.browserManager
 
       // Show offline error when offline:
       if (!player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError) {
@@ -252,14 +250,7 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<LibraryResult<MediaItem>> {
     Timber.Forest.d("onGetItem: ${browser.packageName}, mediaId = $mediaId")
     return scope.future {
-      val browserManager = player.browser?.browserManager
-
-      if (browserManager == null) {
-        Timber.w("AudioBrowser not registered - media browsing not available")
-        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-      }
-
-      // Handle special paths
+      // Handle special paths first (these don't need browser)
       if (mediaId == BrowserPathHelper.OFFLINE_PATH) {
         return@future LibraryResult.ofItem(createOfflineMediaItem(), null)
       }
@@ -275,6 +266,9 @@ class MediaSessionCallback(private val player: Player) :
           null,
         )
       }
+
+      // Wait for browser to be registered if it's not available yet
+      val browserManager = player.awaitBrowser().browserManager
 
       try {
         val resolvedTrack = browserManager.resolve(mediaId)
@@ -333,6 +327,15 @@ class MediaSessionCallback(private val player: Player) :
   fun notifyContentChanged(path: String) {
     Timber.d("Notifying content changed for path: $path")
     mediaLibrarySession?.notifyChildrenChanged(path, Int.MAX_VALUE, null)
+  }
+
+  /**
+   * Called when the browser becomes available after a cold start.
+   * Notifies all subscribed controllers to refresh their content.
+   */
+  fun notifyBrowserReady() {
+    Timber.d("Browser ready - notifying ${parentIdSubscriptions.size} subscribed paths")
+    notifySubscribedChildrenChanged()
   }
 
   override fun onSearch(
@@ -430,12 +433,9 @@ class MediaSessionCallback(private val player: Player) :
     )
 
     return scope.future {
-      val browserManager =
-        player.browser?.browserManager
-          ?: throw IllegalStateException("BrowserManager not available")
-
-      // Resolve media items for playback (handles queue expansion and cache lookups)
-      browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+      // Wait for browser to be registered if it's not available yet
+      player.awaitBrowser().browserManager
+        .resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
     }
   }
 

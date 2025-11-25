@@ -47,6 +47,7 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.NullType
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CompletableDeferred
 import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
@@ -72,23 +73,43 @@ class Player(internal val context: Context) {
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
   private lateinit var mediaFactory: MediaFactory
-  var browser: AudioBrowser? = null
+
+  private var _browser: AudioBrowser? = null
+  private var browserRegistered = CompletableDeferred<AudioBrowser>()
+
+  var browser: AudioBrowser?
+    get() = _browser
     set(value) {
-      field = value
-      // Update MediaSession commands when browser becomes available with search configured
-      // Only update if search is available, since default state is "no search"
-      if (::mediaSession.isInitialized) {
-        val searchAvailable = value?.browserManager?.config?.search != null
-        if (searchAvailable) {
-          mediaSessionCallback.updateMediaSession(
-            mediaSession,
-            options.capabilities,
-            options.notificationCapabilities,
-            searchAvailable,
-          )
+      _browser = value
+      value?.let { audioBrowser ->
+        // Complete the deferred when browser is registered
+        if (!browserRegistered.isCompleted) {
+          Timber.d("Browser registered - completing deferred")
+          browserRegistered.complete(audioBrowser)
+          // Notify any subscribed controllers that content is now available
+          // This handles the cold-start case where AA subscribed before browser was ready
+          mediaSessionCallback.notifyBrowserReady()
+        }
+        // Update MediaSession commands when browser becomes available with search configured
+        // Only update if search is available, since default state is "no search"
+        if (::mediaSession.isInitialized) {
+          val searchAvailable = audioBrowser.browserManager.config.search != null
+          if (searchAvailable) {
+            mediaSessionCallback.updateMediaSession(
+              mediaSession,
+              options.capabilities,
+              options.notificationCapabilities,
+              searchAvailable,
+            )
+          }
         }
       }
     }
+
+  /**
+   * Suspends until the browser is registered. Should be called from coroutine context.
+   */
+  suspend fun awaitBrowser(): AudioBrowser = browser ?: browserRegistered.await()
 
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.

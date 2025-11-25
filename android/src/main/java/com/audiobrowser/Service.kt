@@ -89,8 +89,11 @@ class Service : MediaLibraryService() {
     player.setMediaSession(mediaSession)
 
     // Bind headless service once at startup for JS task execution
-    val headlessIntent = Intent(applicationContext, HeadlessTaskService::class.java)
-    bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
+    Intent(applicationContext, HeadlessTaskService::class.java).also { headlessIntent ->
+      Timber.d("Binding to HeadlessTaskService for JS execution")
+      val bound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
+      Timber.d("HeadlessTaskService bind result: $bound")
+    }
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
