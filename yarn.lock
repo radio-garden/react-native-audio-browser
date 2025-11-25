@@ -3126,6 +3126,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-community/slider@npm:^5.1.1":
+  version: 5.1.1
+  resolution: "@react-native-community/slider@npm:5.1.1"
+  checksum: 10c0/d32bc014b4464fc4e3672da0e98ef6cc622a31e32d053b93f22ac1ddd39431454774442cbb088490626a52d16ba189c092fa0c59464de6779a6e6381f555ea04
+  languageName: node
+  linkType: hard
+
 "@react-native-vector-icons/common@npm:^12.4.0":
   version: 12.4.0
   resolution: "@react-native-vector-icons/common@npm:12.4.0"
@@ -6900,6 +6907,7 @@ __metadata:
     "@react-native-community/cli": "npm:20.0.0"
     "@react-native-community/cli-platform-android": "npm:20.0.0"
     "@react-native-community/cli-platform-ios": "npm:20.0.0"
+    "@react-native-community/slider": "npm:^5.1.1"
     "@react-native-vector-icons/fontawesome6": "npm:^12.0.1"
     "@react-native/babel-preset": "npm:0.82.0"
     "@react-native/eslint-config": "npm:0.82.0"

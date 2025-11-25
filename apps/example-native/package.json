@@ -30,6 +30,7 @@
     "types": "tsc --noEmit true"
   },
   "dependencies": {
+    "@react-native-community/slider": "^5.1.1",
     "@react-native-vector-icons/fontawesome6": "^12.0.1",
     "@react-native/new-app-screen": "0.82.0",
     "common-app": "*",
