@@ -26,9 +26,12 @@
 #include "JIOSCategoryPolicy.hpp"
 #include "JPartialAndroidSetupPlayerOptions.hpp"
 #include "JPartialIOSSetupPlayerOptions.hpp"
+#include "JRetryConfig.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
+#include "JVariant_Boolean_RetryConfig.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include "PartialIOSSetupPlayerOptions.hpp"
+#include "RetryConfig.hpp"
 #include <optional>
 #include <variant>
 #include <vector>

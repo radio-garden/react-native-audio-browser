@@ -99,6 +99,8 @@ namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `AndroidAudioContentType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
@@ -250,6 +252,9 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "AndroidAudioOffloadSettings.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
 #include "JAndroidAudioOffloadSettings.hpp"
+#include "RetryConfig.hpp"
+#include "JVariant_Boolean_RetryConfig.hpp"
+#include "JRetryConfig.hpp"
 #include "AndroidAudioContentType.hpp"
 #include "JAndroidAudioContentType.hpp"
 #include "AndroidPlayerWakeMode.hpp"

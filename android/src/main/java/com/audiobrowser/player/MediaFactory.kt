@@ -14,12 +14,15 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
+import com.audiobrowser.model.RetryPolicy
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import timber.log.Timber
 
 class MediaFactory(
   private val context: Context,
   private val cache: SimpleCache?,
+  private val retryPolicy: RetryPolicy,
+  private val shouldRetry: () -> Boolean,
   private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
 
@@ -31,7 +34,20 @@ class MediaFactory(
     // TODO: reconsider whether this should be enabled by default:
     .setConstantBitrateSeekingEnabled(true)
 
-  private val mediaFactory = DefaultMediaSourceFactory(context, extractorsFactory)
+  private val mediaFactory = DefaultMediaSourceFactory(context, extractorsFactory).apply {
+    // Only apply custom retry policy if not using default ExoPlayer behavior
+    when (retryPolicy) {
+      is RetryPolicy.Default -> {
+        // Use ExoPlayer's default load error handling
+      }
+      is RetryPolicy.Infinite -> {
+        setLoadErrorHandlingPolicy(RetryLoadErrorHandlingPolicy(maxRetries = null, shouldRetry = shouldRetry))
+      }
+      is RetryPolicy.Limited -> {
+        setLoadErrorHandlingPolicy(RetryLoadErrorHandlingPolicy(maxRetries = retryPolicy.maxRetries, shouldRetry = shouldRetry))
+      }
+    }
+  }
 
   override fun setDrmSessionManagerProvider(
     drmSessionManagerProvider: DrmSessionManagerProvider

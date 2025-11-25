@@ -25,6 +25,8 @@
 
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `AndroidAudioContentType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
@@ -32,6 +34,7 @@ namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 
 #include "AndroidAudioOffloadSettings.hpp"
 #include <variant>
+#include "RetryConfig.hpp"
 #include <optional>
 #include "AndroidAudioContentType.hpp"
 #include "AndroidPlayerWakeMode.hpp"
@@ -44,6 +47,7 @@ namespace margelo::nitro::audiobrowser {
   struct PartialAndroidSetupPlayerOptions {
   public:
     std::variant<bool, AndroidAudioOffloadSettings> audioOffload     SWIFT_PRIVATE;
+    std::optional<std::variant<bool, RetryConfig>> retry     SWIFT_PRIVATE;
     std::optional<double> maxBuffer     SWIFT_PRIVATE;
     std::optional<double> backBuffer     SWIFT_PRIVATE;
     std::optional<double> playBuffer     SWIFT_PRIVATE;
@@ -55,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     PartialAndroidSetupPlayerOptions() = default;
-    explicit PartialAndroidSetupPlayerOptions(std::variant<bool, AndroidAudioOffloadSettings> audioOffload, std::optional<double> maxBuffer, std::optional<double> backBuffer, std::optional<double> playBuffer, std::optional<double> rebufferBuffer, std::optional<double> maxCacheSize, std::optional<AndroidAudioContentType> audioContentType, std::optional<bool> handleAudioBecomingNoisy, std::optional<AndroidPlayerWakeMode> wakeMode): audioOffload(audioOffload), maxBuffer(maxBuffer), backBuffer(backBuffer), playBuffer(playBuffer), rebufferBuffer(rebufferBuffer), maxCacheSize(maxCacheSize), audioContentType(audioContentType), handleAudioBecomingNoisy(handleAudioBecomingNoisy), wakeMode(wakeMode) {}
+    explicit PartialAndroidSetupPlayerOptions(std::variant<bool, AndroidAudioOffloadSettings> audioOffload, std::optional<std::variant<bool, RetryConfig>> retry, std::optional<double> maxBuffer, std::optional<double> backBuffer, std::optional<double> playBuffer, std::optional<double> rebufferBuffer, std::optional<double> maxCacheSize, std::optional<AndroidAudioContentType> audioContentType, std::optional<bool> handleAudioBecomingNoisy, std::optional<AndroidPlayerWakeMode> wakeMode): audioOffload(audioOffload), retry(retry), maxBuffer(maxBuffer), backBuffer(backBuffer), playBuffer(playBuffer), rebufferBuffer(rebufferBuffer), maxCacheSize(maxCacheSize), audioContentType(audioContentType), handleAudioBecomingNoisy(handleAudioBecomingNoisy), wakeMode(wakeMode) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -69,6 +73,7 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions(
         JSIConverter<std::variant<bool, margelo::nitro::audiobrowser::AndroidAudioOffloadSettings>>::fromJSI(runtime, obj.getProperty(runtime, "audioOffload")),
+        JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "retry")),
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "maxBuffer")),
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "backBuffer")),
         JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "playBuffer")),
@@ -82,6 +87,7 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "audioOffload", JSIConverter<std::variant<bool, margelo::nitro::audiobrowser::AndroidAudioOffloadSettings>>::toJSI(runtime, arg.audioOffload));
+      obj.setProperty(runtime, "retry", JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::toJSI(runtime, arg.retry));
       obj.setProperty(runtime, "maxBuffer", JSIConverter<std::optional<double>>::toJSI(runtime, arg.maxBuffer));
       obj.setProperty(runtime, "backBuffer", JSIConverter<std::optional<double>>::toJSI(runtime, arg.backBuffer));
       obj.setProperty(runtime, "playBuffer", JSIConverter<std::optional<double>>::toJSI(runtime, arg.playBuffer));
@@ -101,6 +107,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::variant<bool, margelo::nitro::audiobrowser::AndroidAudioOffloadSettings>>::canConvert(runtime, obj.getProperty(runtime, "audioOffload"))) return false;
+      if (!JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::canConvert(runtime, obj.getProperty(runtime, "retry"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "maxBuffer"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "backBuffer"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "playBuffer"))) return false;

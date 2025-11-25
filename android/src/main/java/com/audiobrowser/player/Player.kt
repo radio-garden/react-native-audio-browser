@@ -406,7 +406,13 @@ class Player(internal val context: Context) {
         .build()
     }
     // Create MediaFactory with reference to browser for media URL transformation
-    mediaFactory = MediaFactory(context, cache) { url -> browser?.getMediaRequestConfig(url) }
+    // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio focus)
+    mediaFactory = MediaFactory(
+      context,
+      cache,
+      setupOptions.retryPolicy,
+      shouldRetry = { exoPlayer.playWhenReady }
+    ) { url -> browser?.getMediaRequestConfig(url) }
 
     exoPlayer =
       ExoPlayer.Builder(context)

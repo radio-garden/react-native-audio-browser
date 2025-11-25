@@ -158,6 +158,16 @@ export interface AndroidAudioOffloadSettings {
 }
 
 /**
+ * Configuration for limited retry behavior.
+ */
+export type RetryConfig = {
+  /**
+   * Maximum number of retry attempts before giving up.
+   */
+  maxRetries: number
+}
+
+/**
  * AndroidWakeMode options:
  * - `'none'`: No wake locks are held. The device may go to sleep during playback.
  * - `'local'`: Holds a PowerManager.WakeLock during playback to prevent CPU sleep.
@@ -169,6 +179,18 @@ export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 
 export type PartialAndroidSetupPlayerOptions = {
   audioOffload: boolean | AndroidAudioOffloadSettings
+
+  /**
+   * Retry policy for load errors (network failures, timeouts, etc.)
+   * - `true`: Retry indefinitely with exponential backoff (good for streaming)
+   * - `false`/`undefined`: Use ExoPlayer's default behavior (limited retries, surfaces errors)
+   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
+   *
+   * Exponential backoff delays: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped)
+   *
+   * @default false
+   */
+  retry?: boolean | RetryConfig
 
   /**
    * Maximum duration of media that the player will attempt to buffer in ms.
@@ -261,6 +283,18 @@ export interface AndroidSetupPlayerOptions {
    * @see https://developer.android.com/media/media3/exoplayer/track-selection#audioOffload
    */
   audioOffload: boolean | AndroidAudioOffloadSettings
+
+  /**
+   * Retry policy for load errors (network failures, timeouts, etc.)
+   * - `true`: Retry indefinitely with exponential backoff (good for streaming)
+   * - `false`/`undefined`: Use ExoPlayer's default behavior (limited retries, surfaces errors)
+   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
+   *
+   * Exponential backoff delays: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped)
+   *
+   * @default false
+   */
+  retry: boolean | RetryConfig
 
   /**
    * Maximum duration of media that the player will attempt to buffer in seconds.

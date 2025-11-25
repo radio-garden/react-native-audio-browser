@@ -5,6 +5,7 @@ import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
+import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
 
 /**
  * Audio offload preferences for power-efficient playback. When this object exists, offload is
@@ -14,6 +15,20 @@ data class AudioOffloadOptions(
   val gaplessSupportRequired: Boolean = true,
   val rateChangeSupportRequired: Boolean = true,
 )
+
+/**
+ * Retry policy for load errors (network failures, timeouts, etc.)
+ */
+sealed class RetryPolicy {
+  /** Use ExoPlayer's default behavior (limited retries, surfaces errors) */
+  data object Default : RetryPolicy()
+
+  /** Retry indefinitely with exponential backoff */
+  data object Infinite : RetryPolicy()
+
+  /** Retry up to maxRetries times with exponential backoff */
+  data class Limited(val maxRetries: Int) : RetryPolicy()
+}
 
 /**
  * Setup options for the AudioBrowser that are applied once during player initialization. These
@@ -33,6 +48,7 @@ data class PlayerSetupOptions(
   var handleAudioBecomingNoisy: Boolean = true,
   var wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
   var audioOffload: AudioOffloadOptions? = null,
+  var retryPolicy: RetryPolicy = RetryPolicy.Default,
 ) {
   fun update(options: PartialSetupPlayerOptions) {
     // Cross-platform audio engine options
@@ -60,6 +76,17 @@ data class PlayerSetupOptions(
                 gaplessSupportRequired = settings.gaplessSupportRequired ?: false,
                 rateChangeSupportRequired = settings.rateChangeSupportRequired ?: false,
               )
+            }
+          }
+      }
+      android.retry?.let {
+        retryPolicy =
+          when (it) {
+            is Variant_Boolean_RetryConfig.First -> {
+              if (it.value) RetryPolicy.Infinite else RetryPolicy.Default
+            }
+            is Variant_Boolean_RetryConfig.Second -> {
+              RetryPolicy.Limited(it.value.maxRetries.toInt())
             }
           }
       }
