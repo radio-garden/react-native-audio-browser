@@ -1,5 +1,15 @@
 # Claude Development Notes
 
+## Building
+
+### Android
+
+Compile Kotlin code from the example app directory:
+
+```bash
+cd apps/example-native/android && ./gradlew :react-native-audio-browser:compileDebugKotlin
+```
+
 ## Breaking Changes Policy
 
 This is an **alpha product** - we do not care about breaking changes. Feel free to make any necessary API changes to improve the codebase.
