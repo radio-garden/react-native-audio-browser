@@ -256,6 +256,9 @@ class Service : MediaLibraryService() {
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
+    // Unbind from HeadlessTaskService to avoid ServiceConnection leak
+    unbindService(headlessConnection)
+
     Timber.d("Releasing media session and destroying player")
     if (::mediaSession.isInitialized) {
       mediaSession.release()
