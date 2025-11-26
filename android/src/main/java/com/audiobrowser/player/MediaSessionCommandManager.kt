@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import android.os.Bundle
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.session.CommandButton
+import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaSession
 import androidx.media3.session.R
 import androidx.media3.session.SessionCommand
@@ -125,6 +126,22 @@ class MediaSessionCommandManager {
       buildSessionCommandsAndLayout(effectiveNotificationCapabilities, searchAvailable, favorited)
     notificationSessionCommands = notifSessionCommands
     notificationCustomLayout = notifCustomLayout
+
+    // Set slot reservation extras to prevent custom buttons from filling skip button slots
+    // Only reserve slots if the capability is enabled (so the slot shows empty when unavailable)
+    // If capability is disabled entirely, don't reserve (let custom buttons use that space)
+    val sessionExtras =
+      Bundle().apply {
+        putBoolean(
+          MediaConstants.EXTRAS_KEY_SLOT_RESERVATION_SEEK_TO_NEXT,
+          capabilities.contains(Capability.SKIP_TO_NEXT),
+        )
+        putBoolean(
+          MediaConstants.EXTRAS_KEY_SLOT_RESERVATION_SEEK_TO_PREV,
+          capabilities.contains(Capability.SKIP_TO_PREVIOUS),
+        )
+      }
+    mediaSession.setSessionExtras(sessionExtras)
 
     // Apply configuration to MediaSession notification controller
     mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
