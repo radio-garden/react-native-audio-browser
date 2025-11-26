@@ -8,6 +8,8 @@ import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
   AudioCommonMetadataReceivedEvent,
   AudioMetadataReceivedEvent,
+  NowPlayingMetadata,
+  NowPlayingUpdate,
   PlaybackMetadata
 } from '../features/metadata'
 import type {
@@ -91,6 +93,7 @@ export interface AudioPlayer
   onRemoteStop: () => void
   onOptionsChanged: (event: Options) => void
   onFavoriteChanged: (event: FavoriteChangedEvent) => void
+  onNowPlayingChanged: (metadata: NowPlayingMetadata) => void
 
   // MARK: remote handlers
   handleRemoteBookmark: (() => void) | undefined
@@ -159,6 +162,17 @@ export interface AudioPlayer
   getTrack(index: number): Track | undefined
   getActiveTrackIndex(): number | undefined
   getActiveTrack(): Track | undefined
+
+  // MARK: now playing metadata
+  /**
+   * Updates the now playing notification metadata.
+   * Pass null to clear overrides and revert to track metadata.
+   */
+  updateNowPlaying(update: NowPlayingUpdate | undefined): void
+  /**
+   * Gets the current now playing metadata (override if set, else track metadata).
+   */
+  getNowPlaying(): NowPlayingMetadata | undefined
 
   // MARK: network connectivity
   getOnline(): boolean

@@ -48,6 +48,7 @@
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JFunc_void_Options.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
+#include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JFunc_void_bool.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
@@ -94,6 +95,7 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_RemoteSkipEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_Options_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_FavoriteChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_NowPlayingMetadata_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
 

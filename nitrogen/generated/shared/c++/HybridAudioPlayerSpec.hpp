@@ -59,6 +59,8 @@ namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `NowPlayingMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
@@ -75,6 +77,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
@@ -104,6 +108,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "FavoriteChangedEvent.hpp"
+#include "NowPlayingMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
@@ -114,6 +119,7 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "Progress.hpp"
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
+#include "NowPlayingUpdate.hpp"
 #include <string>
 
 namespace margelo::nitro::audiobrowser {
@@ -205,6 +211,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) = 0;
       virtual std::function<void(const FavoriteChangedEvent& /* event */)> getOnFavoriteChanged() = 0;
       virtual void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) = 0;
+      virtual std::function<void(const NowPlayingMetadata& /* metadata */)> getOnNowPlayingChanged() = 0;
+      virtual void setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteBookmark() = 0;
       virtual void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteDislike() = 0;
@@ -283,6 +291,8 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<Track> getTrack(double index) = 0;
       virtual std::optional<double> getActiveTrackIndex() = 0;
       virtual std::optional<Track> getActiveTrack() = 0;
+      virtual void updateNowPlaying(const std::optional<NowPlayingUpdate>& update) = 0;
+      virtual std::optional<NowPlayingMetadata> getNowPlaying() = 0;
       virtual bool getOnline() = 0;
       virtual std::optional<EqualizerSettings> getEqualizerSettings() = 0;
       virtual void setEqualizerEnabled(bool enabled) = 0;

@@ -88,6 +88,8 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `NowPlayingMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
@@ -126,6 +128,8 @@ namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
@@ -171,6 +175,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include "FavoriteChangedEvent.hpp"
+#include "NowPlayingMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
@@ -192,6 +197,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include <memory>
 #include "HybridAudioBrowserSpec.hpp"
 #include "Progress.hpp"
+#include "NowPlayingUpdate.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -449,6 +455,13 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) noexcept override {
       _swiftPart.setOnFavoriteChanged(onFavoriteChanged);
+    }
+    inline std::function<void(const NowPlayingMetadata& /* metadata */)> getOnNowPlayingChanged() noexcept override {
+      auto __result = _swiftPart.getOnNowPlayingChanged();
+      return __result;
+    }
+    inline void setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) noexcept override {
+      _swiftPart.setOnNowPlayingChanged(onNowPlayingChanged);
     }
     inline std::optional<std::function<void()>> getHandleRemoteBookmark() noexcept override {
       auto __result = _swiftPart.getHandleRemoteBookmark();
@@ -849,6 +862,20 @@ namespace margelo::nitro::audiobrowser {
     }
     inline std::optional<Track> getActiveTrack() override {
       auto __result = _swiftPart.getActiveTrack();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void updateNowPlaying(const std::optional<NowPlayingUpdate>& update) override {
+      auto __result = _swiftPart.updateNowPlaying(update);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline std::optional<NowPlayingMetadata> getNowPlaying() override {
+      auto __result = _swiftPart.getNowPlaying();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

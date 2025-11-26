@@ -478,6 +478,20 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
       onFavoriteChanged = value
     }
   
+  abstract var onNowPlayingChanged: (metadata: NowPlayingMetadata) -> Unit
+  
+  private var onNowPlayingChanged_cxx: Func_void_NowPlayingMetadata
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_NowPlayingMetadata_java(onNowPlayingChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onNowPlayingChanged = value
+    }
+  
   abstract var handleRemoteBookmark: (() -> Unit)?
   
   private var handleRemoteBookmark_cxx: Func_void?
@@ -874,6 +888,14 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getActiveTrack(): Track?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun updateNowPlaying(update: NowPlayingUpdate?): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getNowPlaying(): NowPlayingMetadata?
   
   @DoNotStrip
   @Keep

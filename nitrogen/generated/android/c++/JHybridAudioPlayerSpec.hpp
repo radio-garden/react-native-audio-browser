@@ -112,6 +112,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnOptionsChanged(const std::function<void(const Options& /* event */)>& onOptionsChanged) override;
     std::function<void(const FavoriteChangedEvent& /* event */)> getOnFavoriteChanged() override;
     void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) override;
+    std::function<void(const NowPlayingMetadata& /* metadata */)> getOnNowPlayingChanged() override;
+    void setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) override;
     std::optional<std::function<void()>> getHandleRemoteBookmark() override;
     void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) override;
     std::optional<std::function<void()>> getHandleRemoteDislike() override;
@@ -190,6 +192,8 @@ namespace margelo::nitro::audiobrowser {
     std::optional<Track> getTrack(double index) override;
     std::optional<double> getActiveTrackIndex() override;
     std::optional<Track> getActiveTrack() override;
+    void updateNowPlaying(const std::optional<NowPlayingUpdate>& update) override;
+    std::optional<NowPlayingMetadata> getNowPlaying() override;
     bool getOnline() override;
     std::optional<EqualizerSettings> getEqualizerSettings() override;
     void setEqualizerEnabled(bool enabled) override;

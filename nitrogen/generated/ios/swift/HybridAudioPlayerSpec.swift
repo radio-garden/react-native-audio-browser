@@ -43,6 +43,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var onRemoteStop: () -> Void { get set }
   var onOptionsChanged: (_ event: Options) -> Void { get set }
   var onFavoriteChanged: (_ event: FavoriteChangedEvent) -> Void { get set }
+  var onNowPlayingChanged: (_ metadata: NowPlayingMetadata) -> Void { get set }
   var handleRemoteBookmark: (() -> Void)? { get set }
   var handleRemoteDislike: (() -> Void)? { get set }
   var handleRemoteJumpBackward: ((_ event: RemoteJumpBackwardEvent) -> Void)? { get set }
@@ -104,6 +105,8 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func getTrack(index: Double) throws -> Track?
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
+  func updateNowPlaying(update: NowPlayingUpdate?) throws -> Void
+  func getNowPlaying() throws -> NowPlayingMetadata?
   func getOnline() throws -> Bool
   func getEqualizerSettings() throws -> EqualizerSettings?
   func setEqualizerEnabled(enabled: Bool) throws -> Void

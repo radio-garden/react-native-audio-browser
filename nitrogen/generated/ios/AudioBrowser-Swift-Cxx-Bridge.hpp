@@ -66,6 +66,10 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NowPlayingMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
 // Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
@@ -181,6 +185,8 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NowPlayingMetadata.hpp"
+#include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include "PartialIOSSetupPlayerOptions.hpp"
@@ -2231,6 +2237,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_FavoriteChangedEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>
+  /**
+   * Specialized version of `std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>`.
+   */
+  using std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ = std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>;
+  inline std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>> create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>& value) noexcept {
+    return std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating> get_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(const std::optional<std::variant<HeartRating, ThumbsRating, StarRating, PercentageRating>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const NowPlayingMetadata& /* metadata */)>
+  /**
+   * Specialized version of `std::function<void(const NowPlayingMetadata&)>`.
+   */
+  using Func_void_NowPlayingMetadata = std::function<void(const NowPlayingMetadata& /* metadata */)>;
+  /**
+   * Wrapper class for a `std::function<void(const NowPlayingMetadata& / * metadata * /)>`, this can be used from Swift.
+   */
+  class Func_void_NowPlayingMetadata_Wrapper final {
+  public:
+    explicit Func_void_NowPlayingMetadata_Wrapper(std::function<void(const NowPlayingMetadata& /* metadata */)>&& func): _function(std::make_unique<std::function<void(const NowPlayingMetadata& /* metadata */)>>(std::move(func))) {}
+    inline void call(NowPlayingMetadata metadata) const noexcept {
+      _function->operator()(metadata);
+    }
+  private:
+    std::unique_ptr<std::function<void(const NowPlayingMetadata& /* metadata */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_NowPlayingMetadata create_Func_void_NowPlayingMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_NowPlayingMetadata_Wrapper wrap_Func_void_NowPlayingMetadata(Func_void_NowPlayingMetadata value) noexcept {
+    return Func_void_NowPlayingMetadata_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<std::function<void()>>
   /**
    * Specialized version of `std::optional<std::function<void()>>`.
@@ -2330,6 +2373,36 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     std::vector<double> vector;
     vector.reserve(size);
     return vector;
+  }
+  
+  // pragma MARK: std::optional<NowPlayingUpdate>
+  /**
+   * Specialized version of `std::optional<NowPlayingUpdate>`.
+   */
+  using std__optional_NowPlayingUpdate_ = std::optional<NowPlayingUpdate>;
+  inline std::optional<NowPlayingUpdate> create_std__optional_NowPlayingUpdate_(const NowPlayingUpdate& value) noexcept {
+    return std::optional<NowPlayingUpdate>(value);
+  }
+  inline bool has_value_std__optional_NowPlayingUpdate_(const std::optional<NowPlayingUpdate>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NowPlayingUpdate get_std__optional_NowPlayingUpdate_(const std::optional<NowPlayingUpdate>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<NowPlayingMetadata>
+  /**
+   * Specialized version of `std::optional<NowPlayingMetadata>`.
+   */
+  using std__optional_NowPlayingMetadata_ = std::optional<NowPlayingMetadata>;
+  inline std::optional<NowPlayingMetadata> create_std__optional_NowPlayingMetadata_(const NowPlayingMetadata& value) noexcept {
+    return std::optional<NowPlayingMetadata>(value);
+  }
+  inline bool has_value_std__optional_NowPlayingMetadata_(const std::optional<NowPlayingMetadata>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NowPlayingMetadata get_std__optional_NowPlayingMetadata_(const std::optional<NowPlayingMetadata>& optional) noexcept {
+    return *optional;
   }
   
   // pragma MARK: std::function<void(bool /* online */)>
@@ -2518,6 +2591,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_double__ create_Result_std__optional_double__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<double>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<NowPlayingMetadata>>
+  using Result_std__optional_NowPlayingMetadata__ = Result<std::optional<NowPlayingMetadata>>;
+  inline Result_std__optional_NowPlayingMetadata__ create_Result_std__optional_NowPlayingMetadata__(const std::optional<NowPlayingMetadata>& value) noexcept {
+    return Result<std::optional<NowPlayingMetadata>>::withValue(value);
+  }
+  inline Result_std__optional_NowPlayingMetadata__ create_Result_std__optional_NowPlayingMetadata__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<NowPlayingMetadata>>::withError(error);
   }
   
   // pragma MARK: Result<std::optional<EqualizerSettings>>

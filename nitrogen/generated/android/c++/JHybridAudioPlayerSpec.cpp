@@ -83,6 +83,8 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `NowPlayingMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `UpdateOptions` to properly resolve imports.
@@ -121,6 +123,8 @@ namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
@@ -232,6 +236,9 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "FavoriteChangedEvent.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFavoriteChangedEvent.hpp"
+#include "NowPlayingMetadata.hpp"
+#include "JFunc_void_NowPlayingMetadata.hpp"
+#include "JNowPlayingMetadata.hpp"
 #include "JFunc_void_bool.hpp"
 #include "EqualizerSettings.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
@@ -277,6 +284,8 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include <memory>
 #include "HybridAudioBrowserSpec.hpp"
 #include "JHybridAudioBrowserSpec.hpp"
+#include "NowPlayingUpdate.hpp"
+#include "JNowPlayingUpdate.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -896,6 +905,25 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_FavoriteChangedEvent::javaobject> /* onFavoriteChanged */)>("setOnFavoriteChanged_cxx");
     method(_javaPart, JFunc_void_FavoriteChangedEvent_cxx::fromCpp(onFavoriteChanged));
   }
+  std::function<void(const NowPlayingMetadata& /* metadata */)> JHybridAudioPlayerSpec::getOnNowPlayingChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_NowPlayingMetadata::javaobject>()>("getOnNowPlayingChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const NowPlayingMetadata& /* metadata */)> {
+      if (__result->isInstanceOf(JFunc_void_NowPlayingMetadata_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_NowPlayingMetadata_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](NowPlayingMetadata metadata) -> void {
+          return __resultRef->invoke(metadata);
+        };
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_NowPlayingMetadata::javaobject> /* onNowPlayingChanged */)>("setOnNowPlayingChanged_cxx");
+    method(_javaPart, JFunc_void_NowPlayingMetadata_cxx::fromCpp(onNowPlayingChanged));
+  }
   std::optional<std::function<void()>> JHybridAudioPlayerSpec::getHandleRemoteBookmark() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteBookmark_cxx");
     auto __result = method(_javaPart);
@@ -1429,6 +1457,15 @@ namespace margelo::nitro::audiobrowser {
   }
   std::optional<Track> JHybridAudioPlayerSpec::getActiveTrack() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JTrack>()>("getActiveTrack");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  void JHybridAudioPlayerSpec::updateNowPlaying(const std::optional<NowPlayingUpdate>& update) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JNowPlayingUpdate> /* update */)>("updateNowPlaying");
+    method(_javaPart, update.has_value() ? JNowPlayingUpdate::fromCpp(update.value()) : nullptr);
+  }
+  std::optional<NowPlayingMetadata> JHybridAudioPlayerSpec::getNowPlaying() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JNowPlayingMetadata>()>("getNowPlaying");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }

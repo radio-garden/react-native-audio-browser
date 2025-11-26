@@ -38,6 +38,18 @@ export interface NowPlayingMetadata extends TrackMetadataBase {
   elapsedTime?: number
 }
 
+/**
+ * Metadata update for the now playing notification.
+ * Pass to `updateNowPlaying()` to override what's shown in the notification/lock screen.
+ * Pass `null` to clear overrides and revert to track metadata.
+ */
+export type NowPlayingUpdate = {
+  /** Title shown in notification */
+  title?: string
+  /** Artist shown in notification */
+  artist?: string
+}
+
 export interface PlaybackMetadata {
   source: string
   title?: string
@@ -110,6 +122,16 @@ export const onMetadataChapterReceived =
 export const onMetadataCommonReceived =
   NativeUpdatedValue.emitterize<AudioCommonMetadataReceivedEvent>(
     (cb) => (nativePlayer.onMetadataCommonReceived = cb)
+  )
+
+/**
+ * Subscribes to playback metadata events (ICY/ID3 from live streams).
+ * @param callback - Called when stream metadata is received (title, artist from ICY/ID3 tags)
+ * @returns Cleanup function to unsubscribe
+ */
+export const onPlaybackMetadata =
+  NativeUpdatedValue.emitterize<PlaybackMetadata>(
+    (cb) => (nativePlayer.onPlaybackMetadata = cb)
   )
 
 /**

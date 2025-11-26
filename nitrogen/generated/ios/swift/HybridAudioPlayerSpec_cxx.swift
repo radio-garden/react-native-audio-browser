@@ -725,6 +725,25 @@ open class HybridAudioPlayerSpec_cxx {
     }
   }
   
+  public final var onNowPlayingChanged: bridge.Func_void_NowPlayingMetadata {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_NowPlayingMetadata in
+        let __closureWrapper = Func_void_NowPlayingMetadata(self.__implementation.onNowPlayingChanged)
+        return bridge.create_Func_void_NowPlayingMetadata(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onNowPlayingChanged = { () -> (NowPlayingMetadata) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_NowPlayingMetadata(newValue)
+        return { (__metadata: NowPlayingMetadata) -> Void in
+          __wrappedFunction.call(__metadata)
+        }
+      }()
+    }
+  }
+  
   public final var handleRemoteBookmark: bridge.std__optional_std__function_void____ {
     @inline(__always)
     get {
@@ -1748,6 +1767,35 @@ open class HybridAudioPlayerSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__optional_Track__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func updateNowPlaying(update: bridge.std__optional_NowPlayingUpdate_) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.updateNowPlaying(update: update.value)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getNowPlaying() -> bridge.Result_std__optional_NowPlayingMetadata__ {
+    do {
+      let __result = try self.__implementation.getNowPlaying()
+      let __resultCpp = { () -> bridge.std__optional_NowPlayingMetadata_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_NowPlayingMetadata_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_NowPlayingMetadata__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_NowPlayingMetadata__(__exceptionPtr)
     }
   }
   
