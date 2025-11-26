@@ -9,7 +9,11 @@ type TrackListItemProps = {
   onPress: () => void
 }
 
-export function TrackListItem({ track, isActive, onPress }: TrackListItemProps) {
+export function TrackListItem({
+  track,
+  isActive,
+  onPress
+}: TrackListItemProps) {
   return (
     <TouchableOpacity
       style={[styles.item, isActive && styles.activeItem]}
@@ -34,12 +38,19 @@ export function TrackListItem({ track, isActive, onPress }: TrackListItemProps) 
           </Text>
         )}
       </View>
-      {track.artwork ? (
-        <Image source={{ uri: track.artwork }} style={styles.itemArtwork} />
-      ) : track.src ? (
-        <Icon name="music" size={16} color="#ffffff" iconStyle="solid" />
+      {track.src ? (
+        track.artwork ? (
+          <Image source={{ uri: track.artwork }} style={styles.itemArtwork} />
+        ) : (
+          <Icon name="music" size={16} color="#ffffff" iconStyle="solid" />
+        )
       ) : (
-        <Icon name="chevron-right" size={14} color="#ffffff" iconStyle="solid" />
+        <Icon
+          name="chevron-right"
+          size={14}
+          color="#ffffff"
+          iconStyle="solid"
+        />
       )}
     </TouchableOpacity>
   )
