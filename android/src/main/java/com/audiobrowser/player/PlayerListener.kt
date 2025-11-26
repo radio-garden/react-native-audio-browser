@@ -82,6 +82,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Update favorite button state for new track
     player.updateFavoriteButtonState(player.currentTrack?.favorited)
 
+    // Clear now playing override when track changes (new track = clean slate)
+    player.clearNowPlayingOverride()
+
+    // Notify JS of the now playing metadata for the new track
+    player.getNowPlaying()?.let { player.callbacks?.onNowPlayingChanged(it) }
+
     // Persist playback state for resumption (use mediaId which is the contextual URL)
     mediaItem?.mediaId?.let { url -> player.playbackStateStore.save(url, 0) }
   }

@@ -6,6 +6,7 @@ import com.audiobrowser.model.TimedMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -74,6 +75,9 @@ interface Callbacks {
 
   // Favorite events
   fun onFavoriteChanged(event: FavoriteChangedEvent)
+
+  // Now playing metadata events
+  fun onNowPlayingChanged(metadata: NowPlayingMetadata)
 
   // Network connectivity events
   fun onOnlineChanged(online: Boolean)

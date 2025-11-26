@@ -25,6 +25,8 @@ import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.HybridAudioPlayerSpec
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
+import com.margelo.nitro.audiobrowser.NowPlayingMetadata
+import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
@@ -110,6 +112,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onRemoteStop: () -> Unit = {}
   override var onOptionsChanged: (Options) -> Unit = {}
   override var onFavoriteChanged: (FavoriteChangedEvent) -> Unit = {}
+  override var onNowPlayingChanged: (NowPlayingMetadata) -> Unit = {}
   override var onOnlineChanged: (Boolean) -> Unit = {}
   override var onEqualizerChanged: (com.margelo.nitro.audiobrowser.EqualizerSettings) -> Unit = {}
   override var onSleepTimerChanged: (com.margelo.nitro.audiobrowser.SleepTimer?) -> Unit = {}
@@ -323,6 +326,12 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   }
 
   override fun getActiveTrack(): Track? = runBlockingOnMain { player.currentTrack }
+
+  override fun updateNowPlaying(update: NowPlayingUpdate?) = runBlockingOnMain {
+    player.updateNowPlaying(update)
+  }
+
+  override fun getNowPlaying(): NowPlayingMetadata? = runBlockingOnMain { player.getNowPlaying() }
 
   override fun getOnline(): Boolean = runBlockingOnMain { player.getOnline() }
 
@@ -580,6 +589,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
       override fun onFavoriteChanged(event: FavoriteChangedEvent) {
         post { this@AudioPlayer.onFavoriteChanged(event) }
+      }
+
+      override fun onNowPlayingChanged(metadata: NowPlayingMetadata) {
+        post { this@AudioPlayer.onNowPlayingChanged(metadata) }
       }
 
       override fun onOnlineChanged(online: Boolean) {

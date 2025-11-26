@@ -30,6 +30,8 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.NowPlayingMetadata
+import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -283,6 +285,9 @@ class Player(internal val context: Context) {
 
   internal var playbackState: PlaybackState = PlaybackState.NONE
     private set
+
+  /** Current now playing metadata override (null = use track metadata) */
+  private var nowPlayingOverride: NowPlayingUpdate? = null
 
   fun getPlayback(): Playback {
     return Playback(playbackState, playbackError)
@@ -759,6 +764,78 @@ class Player(internal val context: Context) {
   fun toggleActiveTrackFavorited() {
     val currentTrack = this.currentTrack ?: return
     setActiveTrackFavorited(currentTrack.favorited != true)
+  }
+
+  // MARK: - Now Playing Metadata
+
+  /**
+   * Updates the now playing notification metadata.
+   * Pass null to clear overrides and revert to track metadata.
+   */
+  fun updateNowPlaying(update: NowPlayingUpdate?) {
+    nowPlayingOverride = update
+    applyNowPlayingMetadata()
+  }
+
+  /**
+   * Gets the current now playing metadata (override if set, else track metadata).
+   */
+  fun getNowPlaying(): NowPlayingMetadata? {
+    val track = currentTrack ?: return null
+    val override = nowPlayingOverride
+
+    return NowPlayingMetadata(
+      elapsedTime = null,
+      title = override?.title ?: track.title,
+      album = track.album,
+      artist = override?.artist ?: track.artist,
+      duration = track.duration,
+      artwork = track.artwork,
+      description = track.description,
+      mediaId = track.src ?: track.url,
+      genre = track.genre,
+      rating = null, // TODO: map track.favorited to rating if needed
+    )
+  }
+
+  /**
+   * Clears the now playing override when track changes.
+   * Called from PlayerListener.onMediaItemTransition.
+   */
+  internal fun clearNowPlayingOverride() {
+    nowPlayingOverride = null
+  }
+
+  /**
+   * Applies the current now playing metadata to the media notification.
+   * Uses the override if set, otherwise uses track metadata.
+   */
+  private fun applyNowPlayingMetadata() {
+    val index = currentIndex ?: return
+    val track = currentTrack ?: return
+    val override = nowPlayingOverride
+
+    val currentMediaItem = exoPlayer.getMediaItemAt(index)
+    val updatedMetadata =
+      currentMediaItem.mediaMetadata
+        .buildUpon()
+        .setTitle(override?.title ?: track.title)
+        .setDisplayTitle(override?.title ?: track.title)
+        .setArtist(override?.artist ?: track.artist)
+        .build()
+
+    val updatedMediaItem =
+      currentMediaItem
+        .buildUpon()
+        .setUri(currentMediaItem.localConfiguration?.uri)
+        .setMediaMetadata(updatedMetadata)
+        .setTag(track)
+        .build()
+
+    exoPlayer.replaceMediaItem(index, updatedMediaItem)
+
+    // Notify JS of the now playing metadata change
+    getNowPlaying()?.let { callbacks?.onNowPlayingChanged(it) }
   }
 
   /**
