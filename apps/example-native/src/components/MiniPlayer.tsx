@@ -15,6 +15,7 @@ import {
   togglePlayback,
   useActiveTrack,
   useEqualizerSettings,
+  useNowPlaying,
   usePlaybackError,
   usePlayingState,
   useSleepTimerActive
@@ -30,18 +31,21 @@ export function MiniPlayer({
   onSleepTimerPress
 }: MiniPlayerProps) {
   const track = useActiveTrack()
+  const nowPlaying = useNowPlaying()
   const playingState = usePlayingState()
   const playbackError = usePlaybackError()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
 
-  if (!track) return null
+  if (!nowPlaying || !track) return null
+
+  const { title, artist, artwork } = nowPlaying
 
   return (
     <View style={styles.container}>
       <View style={styles.info}>
-        {track.artwork ? (
-          <Image source={{ uri: track.artwork }} style={styles.artwork} />
+        {artwork ? (
+          <Image source={{ uri: artwork }} style={styles.artwork} />
         ) : (
           <View style={styles.artworkPlaceholder}>
             <Text style={styles.artworkEmoji}>🎵</Text>
@@ -49,13 +53,13 @@ export function MiniPlayer({
         )}
         <View style={styles.text}>
           <Text style={styles.title} numberOfLines={1}>
-            {track.title}
+            {title}
           </Text>
           <Text
             style={[styles.artist, playbackError && styles.error]}
             numberOfLines={1}
           >
-            {playbackError?.message || track.artist || 'Unknown Artist'}
+            {playbackError?.message ?? artist}
           </Text>
         </View>
       </View>
