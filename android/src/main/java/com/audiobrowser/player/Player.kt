@@ -986,8 +986,13 @@ class Player(internal val context: Context) {
 
   /** Initializes the equalizer with the player's audio session ID. */
   private fun initializeEqualizer() {
+    val audioSessionId = exoPlayer.audioSessionId
+    if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+      Timber.d("Skipping equalizer init - no audio session yet, will init on first playback")
+      return
+    }
+
     try {
-      val audioSessionId = exoPlayer.audioSessionId
       equalizerManager =
         EqualizerManager(audioSessionId).apply {
           setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
@@ -1001,11 +1006,30 @@ class Player(internal val context: Context) {
 
   /**
    * Reinitializes the equalizer when the audio session ID changes. Preserves current settings
-   * (enabled state, preset, or custom levels).
+   * (enabled state, preset, or custom levels). Also handles first-time initialization when
+   * the equalizer was skipped at startup due to unset audio session ID.
    */
   internal fun reinitializeEqualizer(newAudioSessionId: Int) {
     val oldManager = equalizerManager
-    if (oldManager == null || oldManager.audioSessionId == newAudioSessionId) {
+
+    // First-time initialization (skipped at startup because session was unset)
+    if (oldManager == null) {
+      Timber.d("First-time equalizer initialization with session ID: $newAudioSessionId")
+      try {
+        equalizerManager =
+          EqualizerManager(newAudioSessionId).apply {
+            setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
+          }
+        Timber.d("Equalizer initialized with session ID: $newAudioSessionId")
+      } catch (e: Exception) {
+        Timber.e(e, "Failed to initialize equalizer")
+        equalizerManager = null
+      }
+      return
+    }
+
+    // Same session ID, no need to reinitialize
+    if (oldManager.audioSessionId == newAudioSessionId) {
       return
     }
 
