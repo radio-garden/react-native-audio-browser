@@ -22,6 +22,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var onPlaybackPlayingState: (_ data: PlayingState) -> Void { get set }
   var onPlaybackProgressUpdated: (_ data: PlaybackProgressUpdatedEvent) -> Void { get set }
   var onPlaybackQueueEnded: (_ data: PlaybackQueueEndedEvent) -> Void { get set }
+  var onPlaybackQueueChanged: (_ queue: [Track]) -> Void { get set }
   var onPlaybackRepeatModeChanged: (_ data: RepeatModeChangedEvent) -> Void { get set }
   var onSleepTimerChanged: (_ data: SleepTimer?) -> Void { get set }
   var onPlaybackChanged: (_ data: Playback) -> Void { get set }

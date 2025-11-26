@@ -24,7 +24,7 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * Represents the Java/Kotlin callback `(tabs: Array<Track>) -> Unit`.
+   * Represents the Java/Kotlin callback `(queue: Array<Track>) -> Unit`.
    * This can be passed around between C++ and Java/Kotlin.
    */
   struct JFunc_void_std__vector_Track_: public jni::JavaClass<JFunc_void_std__vector_Track_> {
@@ -35,13 +35,13 @@ namespace margelo::nitro::audiobrowser {
     /**
      * Invokes the function this `JFunc_void_std__vector_Track_` instance holds through JNI.
      */
-    void invoke(const std::vector<Track>& tabs) const {
-      static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tabs */)>("invoke");
+    void invoke(const std::vector<Track>& queue) const {
+      static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* queue */)>("invoke");
       method(self(), [&]() {
-        size_t __size = tabs.size();
+        size_t __size = queue.size();
         jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
         for (size_t __i = 0; __i < __size; __i++) {
-          const auto& __element = tabs[__i];
+          const auto& __element = queue[__i];
           auto __elementJni = JTrack::fromCpp(__element);
           __array->setElement(__i, *__elementJni);
         }
@@ -55,7 +55,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct JFunc_void_std__vector_Track__cxx final: public jni::HybridClass<JFunc_void_std__vector_Track__cxx, JFunc_void_std__vector_Track_> {
   public:
-    static jni::local_ref<JFunc_void_std__vector_Track_::javaobject> fromCpp(const std::function<void(const std::vector<Track>& /* tabs */)>& func) {
+    static jni::local_ref<JFunc_void_std__vector_Track_::javaobject> fromCpp(const std::function<void(const std::vector<Track>& /* queue */)>& func) {
       return JFunc_void_std__vector_Track__cxx::newObjectCxxArgs(func);
     }
 
@@ -63,13 +63,13 @@ namespace margelo::nitro::audiobrowser {
     /**
      * Invokes the C++ `std::function<...>` this `JFunc_void_std__vector_Track__cxx` instance holds.
      */
-    void invoke_cxx(jni::alias_ref<jni::JArrayClass<JTrack>> tabs) {
+    void invoke_cxx(jni::alias_ref<jni::JArrayClass<JTrack>> queue) {
       _func([&]() {
-              size_t __size = tabs->size();
+              size_t __size = queue->size();
               std::vector<Track> __vector;
               __vector.reserve(__size);
               for (size_t __i = 0; __i < __size; __i++) {
-                auto __element = tabs->getElement(__i);
+                auto __element = queue->getElement(__i);
                 __vector.push_back(__element->toCpp());
               }
               return __vector;
@@ -78,7 +78,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     [[nodiscard]]
-    inline const std::function<void(const std::vector<Track>& /* tabs */)>& getFunction() const {
+    inline const std::function<void(const std::vector<Track>& /* queue */)>& getFunction() const {
       return _func;
     }
 
@@ -89,11 +89,11 @@ namespace margelo::nitro::audiobrowser {
     }
 
   private:
-    explicit JFunc_void_std__vector_Track__cxx(const std::function<void(const std::vector<Track>& /* tabs */)>& func): _func(func) { }
+    explicit JFunc_void_std__vector_Track__cxx(const std::function<void(const std::vector<Track>& /* queue */)>& func): _func(func) { }
 
   private:
     friend HybridBase;
-    std::function<void(const std::vector<Track>& /* tabs */)> _func;
+    std::function<void(const std::vector<Track>& /* queue */)> _func;
   };
 
 } // namespace margelo::nitro::audiobrowser

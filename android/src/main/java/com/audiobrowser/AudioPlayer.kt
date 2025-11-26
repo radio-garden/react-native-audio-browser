@@ -71,6 +71,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
   /** Post callback to main handler for consistent async delivery to JS - avoids deadlocks */
   private fun post(block: () -> Unit) = handler.post(block)
+
   private var connectedService: Service? = null
   private var audioBrowser: AudioBrowser? = null
   private val context =
@@ -97,6 +98,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onPlaybackPlayingState: (data: PlayingState) -> Unit = {}
   override var onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) -> Unit = {}
   override var onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) -> Unit = {}
+  override var onPlaybackQueueChanged: (queue: Array<Track>) -> Unit = {}
   override var onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) -> Unit = {}
   override var onRemotePlay: (() -> Unit) = {}
   override var onRemotePlayId: (RemotePlayIdEvent) -> Unit = {}
@@ -438,6 +440,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
         post { this@AudioPlayer.onPlaybackQueueEnded(event) }
       }
 
+      override fun onPlaybackQueueChanged(queue: Array<Track>) {
+        post { this@AudioPlayer.onPlaybackQueueChanged(queue) }
+      }
+
       override fun onPlaybackRepeatModeChanged(event: RepeatMode) {
         post { this@AudioPlayer.onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event)) }
       }
@@ -447,7 +453,9 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
       }
 
       override fun onMetadataCommonReceived(metadata: AudioMetadata) {
-        post { this@AudioPlayer.onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata)) }
+        post {
+          this@AudioPlayer.onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
+        }
       }
 
       override fun onMetadataTimedReceived(metadata: TimedMetadata) {

@@ -305,6 +305,31 @@ open class HybridAudioPlayerSpec_cxx {
     }
   }
   
+  public final var onPlaybackQueueChanged: bridge.Func_void_std__vector_Track_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_std__vector_Track_ in
+        let __closureWrapper = Func_void_std__vector_Track_(self.__implementation.onPlaybackQueueChanged)
+        return bridge.create_Func_void_std__vector_Track_(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onPlaybackQueueChanged = { () -> ([Track]) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__vector_Track_(newValue)
+        return { (__queue: [Track]) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__vector_Track_ in
+            var __vector = bridge.create_std__vector_Track_(__queue.count)
+            for __item in __queue {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
+        }
+      }()
+    }
+  }
+  
   public final var onPlaybackRepeatModeChanged: bridge.Func_void_RepeatModeChangedEvent {
     @inline(__always)
     get {

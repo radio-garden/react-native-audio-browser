@@ -110,10 +110,11 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
 
   override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
     val bufferedDurationUs = parameters.bufferedDurationUs
-    val targetUs = adjustForPlaybackSpeed(
-      if (parameters.rebuffering) bufferForPlaybackAfterRebufferUs else bufferForPlaybackUs,
-      parameters.playbackSpeed,
-    )
+    val targetUs =
+      adjustForPlaybackSpeed(
+        if (parameters.rebuffering) bufferForPlaybackAfterRebufferUs else bufferForPlaybackUs,
+        parameters.playbackSpeed,
+      )
     val shouldStart = bufferedDurationUs >= targetUs
     if (shouldStart && !parameters.rebuffering) {
       logStartupTime(bufferedDurationUs / 1000)
@@ -159,5 +160,4 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     // Reset allocator when released
     allocator.reset()
   }
-
 }

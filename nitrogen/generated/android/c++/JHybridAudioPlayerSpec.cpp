@@ -161,6 +161,7 @@ namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
 #include "PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JPlaybackQueueEndedEvent.hpp"
+#include "JFunc_void_std__vector_Track_.hpp"
 #include "RepeatModeChangedEvent.hpp"
 #include "JFunc_void_RepeatModeChangedEvent.hpp"
 #include "JRepeatModeChangedEvent.hpp"
@@ -495,6 +496,25 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioPlayerSpec::setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackQueueEndedEvent::javaobject> /* onPlaybackQueueEnded */)>("setOnPlaybackQueueEnded_cxx");
     method(_javaPart, JFunc_void_PlaybackQueueEndedEvent_cxx::fromCpp(onPlaybackQueueEnded));
+  }
+  std::function<void(const std::vector<Track>& /* queue */)> JHybridAudioPlayerSpec::getOnPlaybackQueueChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__vector_Track_::javaobject>()>("getOnPlaybackQueueChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const std::vector<Track>& /* queue */)> {
+      if (__result->isInstanceOf(JFunc_void_std__vector_Track__cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__vector_Track__cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return [__resultRef](std::vector<Track> queue) -> void {
+          return __resultRef->invoke(queue);
+        };
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnPlaybackQueueChanged(const std::function<void(const std::vector<Track>& /* queue */)>& onPlaybackQueueChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__vector_Track_::javaobject> /* onPlaybackQueueChanged */)>("setOnPlaybackQueueChanged_cxx");
+    method(_javaPart, JFunc_void_std__vector_Track__cxx::fromCpp(onPlaybackQueueChanged));
   }
   std::function<void(const RepeatModeChangedEvent& /* data */)> JHybridAudioPlayerSpec::getOnPlaybackRepeatModeChanged() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RepeatModeChangedEvent::javaobject>()>("getOnPlaybackRepeatModeChanged_cxx");

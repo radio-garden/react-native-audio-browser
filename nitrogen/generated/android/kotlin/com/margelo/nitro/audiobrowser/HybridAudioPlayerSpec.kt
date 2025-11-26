@@ -184,6 +184,20 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
       onPlaybackQueueEnded = value
     }
   
+  abstract var onPlaybackQueueChanged: (queue: Array<Track>) -> Unit
+  
+  private var onPlaybackQueueChanged_cxx: Func_void_std__vector_Track_
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_std__vector_Track__java(onPlaybackQueueChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onPlaybackQueueChanged = value
+    }
+  
   abstract var onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) -> Unit
   
   private var onPlaybackRepeatModeChanged_cxx: Func_void_RepeatModeChangedEvent

@@ -19,6 +19,7 @@ import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SleepTimer
+import com.margelo.nitro.audiobrowser.Track
 
 /** Callbacks for all player events. */
 interface Callbacks {
@@ -34,6 +35,8 @@ interface Callbacks {
   fun onPlaybackPlayingState(event: PlayingState)
 
   fun onPlaybackQueueEnded(event: PlaybackQueueEndedEvent)
+
+  fun onPlaybackQueueChanged(queue: Array<Track>)
 
   fun onPlaybackRepeatModeChanged(event: RepeatMode)
 

@@ -70,6 +70,7 @@ export interface AudioPlayer
   onPlaybackPlayingState: (data: PlayingState) => void
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
+  onPlaybackQueueChanged: (queue: Track[]) => void
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
   onSleepTimerChanged: (data: SleepTimerChangedEvent) => void
   onPlaybackChanged: (data: Playback) => void

@@ -14,7 +14,7 @@ import dalvik.annotation.optimization.FastNative
 
 
 /**
- * Represents the JavaScript callback `(tabs: array) => void`.
+ * Represents the JavaScript callback `(queue: array) => void`.
  * This can be either implemented in C++ (in which case it might be a callback coming from JS),
  * or in Kotlin/Java (in which case it is a native callback).
  */
@@ -28,11 +28,11 @@ fun interface Func_void_std__vector_Track_: (Array<Track>) -> Unit {
    */
   @DoNotStrip
   @Keep
-  override fun invoke(tabs: Array<Track>): Unit
+  override fun invoke(queue: Array<Track>): Unit
 }
 
 /**
- * Represents the JavaScript callback `(tabs: array) => void`.
+ * Represents the JavaScript callback `(queue: array) => void`.
  * This is implemented in C++, via a `std::function<...>`.
  * The callback might be coming from JS.
  */
@@ -56,15 +56,15 @@ class Func_void_std__vector_Track__cxx: Func_void_std__vector_Track_ {
 
   @DoNotStrip
   @Keep
-  override fun invoke(tabs: Array<Track>): Unit
-    = invoke_cxx(tabs)
+  override fun invoke(queue: Array<Track>): Unit
+    = invoke_cxx(queue)
 
   @FastNative
-  private external fun invoke_cxx(tabs: Array<Track>): Unit
+  private external fun invoke_cxx(queue: Array<Track>): Unit
 }
 
 /**
- * Represents the JavaScript callback `(tabs: array) => void`.
+ * Represents the JavaScript callback `(queue: array) => void`.
  * This is implemented in Java/Kotlin, via a `(Array<Track>) -> Unit`.
  * The callback is always coming from native.
  */
@@ -74,7 +74,7 @@ class Func_void_std__vector_Track__cxx: Func_void_std__vector_Track_ {
 class Func_void_std__vector_Track__java(private val function: (Array<Track>) -> Unit): Func_void_std__vector_Track_ {
   @DoNotStrip
   @Keep
-  override fun invoke(tabs: Array<Track>): Unit {
-    return this.function(tabs)
+  override fun invoke(queue: Array<Track>): Unit {
+    return this.function(queue)
   }
 }

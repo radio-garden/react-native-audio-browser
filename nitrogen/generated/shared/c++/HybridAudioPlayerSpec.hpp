@@ -31,6 +31,8 @@ namespace margelo::nitro::audiobrowser { struct PlayingState; }
 namespace margelo::nitro::audiobrowser { struct PlaybackProgressUpdatedEvent; }
 // Forward declaration of `PlaybackQueueEndedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RepeatModeChangedEvent; }
 // Forward declaration of `SleepTimerTime` to properly resolve imports.
@@ -67,8 +69,6 @@ namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
-// Forward declaration of `Track` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
@@ -86,6 +86,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "PlayingState.hpp"
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
+#include "Track.hpp"
+#include <vector>
 #include "RepeatModeChangedEvent.hpp"
 #include <NitroModules/Null.hpp>
 #include "SleepTimerTime.hpp"
@@ -109,11 +111,9 @@ namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 #include "UpdateOptions.hpp"
 #include <memory>
 #include "HybridAudioBrowserSpec.hpp"
-#include "Track.hpp"
 #include "Progress.hpp"
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
-#include <vector>
 #include <string>
 
 namespace margelo::nitro::audiobrowser {
@@ -163,6 +163,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) = 0;
       virtual std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() = 0;
       virtual void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) = 0;
+      virtual std::function<void(const std::vector<Track>& /* queue */)> getOnPlaybackQueueChanged() = 0;
+      virtual void setOnPlaybackQueueChanged(const std::function<void(const std::vector<Track>& /* queue */)>& onPlaybackQueueChanged) = 0;
       virtual std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() = 0;
       virtual void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) = 0;
       virtual std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() = 0;

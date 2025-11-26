@@ -1,6 +1,7 @@
 import { nativePlayer } from '../native'
 import type { Track } from '../types'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
 // MARK: - Types
 
@@ -149,3 +150,23 @@ export function getQueue(): Track[] {
 export const onQueueEnded = NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
   (cb) => (nativePlayer.onPlaybackQueueEnded = cb)
 )
+
+/**
+ * Subscribes to queue change events.
+ * Called when tracks are added, removed, reordered, or when track metadata changes.
+ * @param callback - Called with the updated queue
+ * @returns Cleanup function to unsubscribe
+ */
+export const onQueueChanged = NativeUpdatedValue.emitterize<Track[]>(
+  (cb) => (nativePlayer.onPlaybackQueueChanged = cb)
+)
+
+// MARK: - Hooks
+
+/**
+ * Hook that returns the current queue and updates when it changes.
+ * @returns The current queue
+ */
+export function useQueue(): Track[] {
+  return useNativeUpdatedValue(getQueue, onQueueChanged)
+}

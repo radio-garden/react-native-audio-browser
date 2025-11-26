@@ -34,6 +34,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onPlaybackProgressUpdated", &HybridAudioPlayerSpec::setOnPlaybackProgressUpdated);
       prototype.registerHybridGetter("onPlaybackQueueEnded", &HybridAudioPlayerSpec::getOnPlaybackQueueEnded);
       prototype.registerHybridSetter("onPlaybackQueueEnded", &HybridAudioPlayerSpec::setOnPlaybackQueueEnded);
+      prototype.registerHybridGetter("onPlaybackQueueChanged", &HybridAudioPlayerSpec::getOnPlaybackQueueChanged);
+      prototype.registerHybridSetter("onPlaybackQueueChanged", &HybridAudioPlayerSpec::setOnPlaybackQueueChanged);
       prototype.registerHybridGetter("onPlaybackRepeatModeChanged", &HybridAudioPlayerSpec::getOnPlaybackRepeatModeChanged);
       prototype.registerHybridSetter("onPlaybackRepeatModeChanged", &HybridAudioPlayerSpec::setOnPlaybackRepeatModeChanged);
       prototype.registerHybridGetter("onSleepTimerChanged", &HybridAudioPlayerSpec::getOnSleepTimerChanged);

@@ -5,6 +5,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player as MediaPlayer
+import androidx.media3.common.Timeline
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.util.MetadataAdapter
@@ -177,6 +178,17 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   override fun onRepeatModeChanged(repeatMode: Int) {
     player.callbacks?.onPlaybackRepeatModeChanged(RepeatModeFactory.fromMedia3(repeatMode))
+  }
+
+  /**
+   * Called when the timeline changes (playlist add/remove/reorder). We use this to emit queue
+   * changed events to JS.
+   */
+  override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+    // Only emit for playlist changes, not initial load or other reasons
+    if (reason == MediaPlayer.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
+      player.callbacks?.onPlaybackQueueChanged(player.tracks)
+    }
   }
 
   override fun onAudioSessionIdChanged(audioSessionId: Int) {

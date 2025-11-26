@@ -303,6 +303,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) noexcept override {
       _swiftPart.setOnPlaybackQueueEnded(onPlaybackQueueEnded);
     }
+    inline std::function<void(const std::vector<Track>& /* queue */)> getOnPlaybackQueueChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackQueueChanged();
+      return __result;
+    }
+    inline void setOnPlaybackQueueChanged(const std::function<void(const std::vector<Track>& /* queue */)>& onPlaybackQueueChanged) noexcept override {
+      _swiftPart.setOnPlaybackQueueChanged(onPlaybackQueueChanged);
+    }
     inline std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() noexcept override {
       auto __result = _swiftPart.getOnPlaybackRepeatModeChanged();
       return __result;

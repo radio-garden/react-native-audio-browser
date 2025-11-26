@@ -70,6 +70,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) override;
     std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() override;
     void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) override;
+    std::function<void(const std::vector<Track>& /* queue */)> getOnPlaybackQueueChanged() override;
+    void setOnPlaybackQueueChanged(const std::function<void(const std::vector<Track>& /* queue */)>& onPlaybackQueueChanged) override;
     std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() override;
     void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) override;
     std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() override;

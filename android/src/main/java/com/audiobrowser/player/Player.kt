@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.database.StandaloneDatabaseProvider
@@ -28,7 +29,9 @@ import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.Playback
+import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
 import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
@@ -698,6 +701,7 @@ class Player(internal val context: Context) {
     // Update native favorites cache (only tracks with src can be favorited)
     currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
 
+    // Create updated Track with new favorited state
     val updatedTrack =
       Track(
         url = currentTrack.url,
@@ -713,10 +717,42 @@ class Player(internal val context: Context) {
         style = currentTrack.style,
         favorited = favorited,
       )
-    exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(updatedTrack))
+
+    // Use buildUpon() on the existing MediaItem to update only the metadata
+    // This preserves internal references and avoids playback interruption
+    // Note: setTag() requires setUri() to be called, so we must re-set the URI
+    val currentMediaItem = exoPlayer.getMediaItemAt(index)
+    val updatedMetadata =
+      currentMediaItem.mediaMetadata.buildUpon().setUserRating(HeartRating(favorited)).build()
+    val updatedMediaItem =
+      currentMediaItem
+        .buildUpon()
+        .setUri(currentMediaItem.localConfiguration?.uri)
+        .setMediaMetadata(updatedMetadata)
+        .setTag(updatedTrack)
+        .build()
+
+    exoPlayer.replaceMediaItem(index, updatedMediaItem)
 
     // Update the heart button icon in notification/Android Auto
     updateFavoriteButtonState(favorited)
+
+    // Notify JS of the favorite state change
+    callbacks?.onFavoriteChanged(FavoriteChangedEvent(updatedTrack, favorited))
+
+    // Emit active track changed so useActiveTrack() hook updates
+    val activeTrackEvent =
+      PlaybackActiveTrackChangedEvent(
+        lastIndex = index.toDouble(),
+        lastTrack = currentTrack,
+        lastPosition = exoPlayer.currentPosition.toSeconds(),
+        index = index.toDouble(),
+        track = updatedTrack,
+      )
+    callbacks?.onPlaybackActiveTrackChanged(activeTrackEvent)
+
+    // Emit queue changed so useQueue() hook updates
+    callbacks?.onPlaybackQueueChanged(tracks)
   }
 
   /** Toggles the favorited state of the currently playing track. */
@@ -1028,8 +1064,8 @@ class Player(internal val context: Context) {
 
   /**
    * Reinitializes the equalizer when the audio session ID changes. Preserves current settings
-   * (enabled state, preset, or custom levels). Also handles first-time initialization when
-   * the equalizer was skipped at startup due to unset audio session ID.
+   * (enabled state, preset, or custom levels). Also handles first-time initialization when the
+   * equalizer was skipped at startup due to unset audio session ID.
    */
   internal fun reinitializeEqualizer(newAudioSessionId: Int) {
     val oldManager = equalizerManager
