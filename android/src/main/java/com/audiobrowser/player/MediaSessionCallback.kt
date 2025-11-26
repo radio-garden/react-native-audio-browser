@@ -127,7 +127,9 @@ class MediaSessionCallback(private val player: Player) :
       return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }
 
-    commandManager.handleCustomCommand(command, player)
+    if (commandManager.handleCustomCommand(command, player)) {
+      return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+    }
     return super.onCustomCommand(session, controller, command, args)
   }
 
