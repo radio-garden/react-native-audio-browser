@@ -69,16 +69,16 @@ export function EqualizerView() {
       <View style={styles.header}>
         <Text style={styles.title}>Equalizer</Text>
         <TouchableOpacity
-          style={[styles.toggleButton, settings.enabled && styles.toggleButtonActive]}
+          style={[
+            styles.toggleButton,
+            settings.enabled && styles.toggleButtonActive
+          ]}
           onPress={handleToggle}
         >
           <Text
-            style={[
-              styles.toggleButtonText,
-              settings.enabled && styles.toggleButtonTextActive
-            ]}
+            style={[styles.toggleButtonText, styles.toggleButtonTextActive]}
           >
-            {settings.enabled ? 'ON' : 'OFF'}
+            {settings.enabled ? 'DISABLE' : 'ENABLE'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -96,14 +96,17 @@ export function EqualizerView() {
               key={preset}
               style={[
                 styles.presetButton,
-                settings.activePreset === preset && styles.presetButtonActive
+                settings.enabled &&
+                  settings.activePreset === preset &&
+                  styles.presetButtonActive
               ]}
               onPress={() => handlePresetPress(preset)}
             >
               <Text
                 style={[
                   styles.presetButtonText,
-                  settings.activePreset === preset &&
+                  settings.enabled &&
+                    settings.activePreset === preset &&
                     styles.presetButtonTextActive
                 ]}
               >
