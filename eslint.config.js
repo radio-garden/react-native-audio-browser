@@ -30,7 +30,7 @@ export default typescriptEslint.config(
       },
     },
     rules: {
-
+      '@typescript-eslint/require-await': 'off',
     },
   },
   // react-native
