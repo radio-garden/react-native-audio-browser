@@ -4,6 +4,8 @@ import androidx.media3.common.C
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.analytics.PlayerId
+import androidx.media3.exoplayer.source.TrackGroupArray
+import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.upstream.Allocator
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import timber.log.Timber
@@ -139,6 +141,18 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     allocator.reset()
     prepareStartTimeMs = System.currentTimeMillis()
     playbackStarted = false
+  }
+
+  override fun onTracksSelected(
+    parameters: LoadControl.Parameters,
+    trackGroups: TrackGroupArray,
+    trackSelections: Array<out ExoTrackSelection?>,
+  ) {
+    // Required by LoadControl interface - buffer config is managed via updateBufferConfig()
+  }
+
+  override fun onStopped(playerId: PlayerId) {
+    // Required by LoadControl interface
   }
 
   override fun onReleased(playerId: PlayerId) {
