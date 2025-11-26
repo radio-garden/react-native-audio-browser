@@ -80,12 +80,16 @@ namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `RatingType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RatingType; }
-// Forward declaration of `Capability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
+// Forward declaration of `ButtonCapability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `Capability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
@@ -171,9 +175,11 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
-#include "Capability.hpp"
+#include "NotificationButtonLayout.hpp"
+#include "ButtonCapability.hpp"
 #include "IOSOptions.hpp"
 #include "FeedbackOptions.hpp"
+#include "Capability.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "EqualizerSettings.hpp"

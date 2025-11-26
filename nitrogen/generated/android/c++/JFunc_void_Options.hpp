@@ -21,18 +21,22 @@
 #include "RatingType.hpp"
 #include "JRatingType.hpp"
 #include <NitroModules/Null.hpp>
-#include "Capability.hpp"
-#include <vector>
+#include "NotificationButtonLayout.hpp"
 #include <variant>
-#include "JVariant_NullType_Array_Capability_.hpp"
+#include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
-#include "JCapability.hpp"
+#include "JNotificationButtonLayout.hpp"
+#include "ButtonCapability.hpp"
+#include "JButtonCapability.hpp"
+#include <vector>
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include "JFeedbackOptions.hpp"
 #include <string>
 #include "JVariant_NullType_Double.hpp"
+#include "Capability.hpp"
+#include "JCapability.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
 

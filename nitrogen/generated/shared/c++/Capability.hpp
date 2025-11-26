@@ -29,18 +29,18 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (Capability).
    */
   enum class Capability {
-    PLAY      SWIFT_NAME(play) = 0,
-    PLAY_FROM_ID      SWIFT_NAME(playFromId) = 1,
-    PLAY_FROM_SEARCH      SWIFT_NAME(playFromSearch) = 2,
-    PAUSE      SWIFT_NAME(pause) = 3,
-    STOP      SWIFT_NAME(stop) = 4,
-    SEEK_TO      SWIFT_NAME(seekTo) = 5,
-    SKIP      SWIFT_NAME(skip) = 6,
-    SKIP_TO_NEXT      SWIFT_NAME(skipToNext) = 7,
-    SKIP_TO_PREVIOUS      SWIFT_NAME(skipToPrevious) = 8,
-    JUMP_FORWARD      SWIFT_NAME(jumpForward) = 9,
-    JUMP_BACKWARD      SWIFT_NAME(jumpBackward) = 10,
-    FAVORITE      SWIFT_NAME(favorite) = 11,
+    SKIP_TO_PREVIOUS      SWIFT_NAME(skipToPrevious) = 0,
+    SKIP_TO_NEXT      SWIFT_NAME(skipToNext) = 1,
+    JUMP_BACKWARD      SWIFT_NAME(jumpBackward) = 2,
+    JUMP_FORWARD      SWIFT_NAME(jumpForward) = 3,
+    FAVORITE      SWIFT_NAME(favorite) = 4,
+    PLAY      SWIFT_NAME(play) = 5,
+    PLAY_FROM_ID      SWIFT_NAME(playFromId) = 6,
+    PLAY_FROM_SEARCH      SWIFT_NAME(playFromSearch) = 7,
+    PAUSE      SWIFT_NAME(pause) = 8,
+    STOP      SWIFT_NAME(stop) = 9,
+    SEEK_TO      SWIFT_NAME(seekTo) = 10,
+    SKIP      SWIFT_NAME(skip) = 11,
     BOOKMARK      SWIFT_NAME(bookmark) = 12,
   } CLOSED_ENUM;
 
@@ -54,6 +54,11 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::Capability fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("skip-to-previous"): return margelo::nitro::audiobrowser::Capability::SKIP_TO_PREVIOUS;
+        case hashString("skip-to-next"): return margelo::nitro::audiobrowser::Capability::SKIP_TO_NEXT;
+        case hashString("jump-backward"): return margelo::nitro::audiobrowser::Capability::JUMP_BACKWARD;
+        case hashString("jump-forward"): return margelo::nitro::audiobrowser::Capability::JUMP_FORWARD;
+        case hashString("favorite"): return margelo::nitro::audiobrowser::Capability::FAVORITE;
         case hashString("play"): return margelo::nitro::audiobrowser::Capability::PLAY;
         case hashString("play-from-id"): return margelo::nitro::audiobrowser::Capability::PLAY_FROM_ID;
         case hashString("play-from-search"): return margelo::nitro::audiobrowser::Capability::PLAY_FROM_SEARCH;
@@ -61,11 +66,6 @@ namespace margelo::nitro {
         case hashString("stop"): return margelo::nitro::audiobrowser::Capability::STOP;
         case hashString("seek-to"): return margelo::nitro::audiobrowser::Capability::SEEK_TO;
         case hashString("skip"): return margelo::nitro::audiobrowser::Capability::SKIP;
-        case hashString("skip-to-next"): return margelo::nitro::audiobrowser::Capability::SKIP_TO_NEXT;
-        case hashString("skip-to-previous"): return margelo::nitro::audiobrowser::Capability::SKIP_TO_PREVIOUS;
-        case hashString("jump-forward"): return margelo::nitro::audiobrowser::Capability::JUMP_FORWARD;
-        case hashString("jump-backward"): return margelo::nitro::audiobrowser::Capability::JUMP_BACKWARD;
-        case hashString("favorite"): return margelo::nitro::audiobrowser::Capability::FAVORITE;
         case hashString("bookmark"): return margelo::nitro::audiobrowser::Capability::BOOKMARK;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum Capability - invalid value!");
@@ -73,6 +73,11 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::Capability arg) {
       switch (arg) {
+        case margelo::nitro::audiobrowser::Capability::SKIP_TO_PREVIOUS: return JSIConverter<std::string>::toJSI(runtime, "skip-to-previous");
+        case margelo::nitro::audiobrowser::Capability::SKIP_TO_NEXT: return JSIConverter<std::string>::toJSI(runtime, "skip-to-next");
+        case margelo::nitro::audiobrowser::Capability::JUMP_BACKWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-backward");
+        case margelo::nitro::audiobrowser::Capability::JUMP_FORWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-forward");
+        case margelo::nitro::audiobrowser::Capability::FAVORITE: return JSIConverter<std::string>::toJSI(runtime, "favorite");
         case margelo::nitro::audiobrowser::Capability::PLAY: return JSIConverter<std::string>::toJSI(runtime, "play");
         case margelo::nitro::audiobrowser::Capability::PLAY_FROM_ID: return JSIConverter<std::string>::toJSI(runtime, "play-from-id");
         case margelo::nitro::audiobrowser::Capability::PLAY_FROM_SEARCH: return JSIConverter<std::string>::toJSI(runtime, "play-from-search");
@@ -80,11 +85,6 @@ namespace margelo::nitro {
         case margelo::nitro::audiobrowser::Capability::STOP: return JSIConverter<std::string>::toJSI(runtime, "stop");
         case margelo::nitro::audiobrowser::Capability::SEEK_TO: return JSIConverter<std::string>::toJSI(runtime, "seek-to");
         case margelo::nitro::audiobrowser::Capability::SKIP: return JSIConverter<std::string>::toJSI(runtime, "skip");
-        case margelo::nitro::audiobrowser::Capability::SKIP_TO_NEXT: return JSIConverter<std::string>::toJSI(runtime, "skip-to-next");
-        case margelo::nitro::audiobrowser::Capability::SKIP_TO_PREVIOUS: return JSIConverter<std::string>::toJSI(runtime, "skip-to-previous");
-        case margelo::nitro::audiobrowser::Capability::JUMP_FORWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-forward");
-        case margelo::nitro::audiobrowser::Capability::JUMP_BACKWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-backward");
-        case margelo::nitro::audiobrowser::Capability::FAVORITE: return JSIConverter<std::string>::toJSI(runtime, "favorite");
         case margelo::nitro::audiobrowser::Capability::BOOKMARK: return JSIConverter<std::string>::toJSI(runtime, "bookmark");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert Capability to JS - invalid value: "
@@ -97,6 +97,11 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("skip-to-previous"):
+        case hashString("skip-to-next"):
+        case hashString("jump-backward"):
+        case hashString("jump-forward"):
+        case hashString("favorite"):
         case hashString("play"):
         case hashString("play-from-id"):
         case hashString("play-from-search"):
@@ -104,11 +109,6 @@ namespace margelo::nitro {
         case hashString("stop"):
         case hashString("seek-to"):
         case hashString("skip"):
-        case hashString("skip-to-next"):
-        case hashString("skip-to-previous"):
-        case hashString("jump-forward"):
-        case hashString("jump-backward"):
-        case hashString("favorite"):
         case hashString("bookmark"):
           return true;
         default:

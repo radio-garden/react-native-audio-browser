@@ -28,6 +28,8 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `ButtonCapability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -66,6 +68,8 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
@@ -166,6 +170,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
 #include "BrowserSourceCallbackParam.hpp"
+#include "ButtonCapability.hpp"
 #include "Capability.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -185,6 +190,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
@@ -1439,27 +1445,57 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::vector<Capability>
+  // pragma MARK: std::optional<ButtonCapability>
   /**
-   * Specialized version of `std::vector<Capability>`.
+   * Specialized version of `std::optional<ButtonCapability>`.
    */
-  using std__vector_Capability_ = std::vector<Capability>;
-  inline std::vector<Capability> create_std__vector_Capability_(size_t size) noexcept {
-    std::vector<Capability> vector;
+  using std__optional_ButtonCapability_ = std::optional<ButtonCapability>;
+  inline std::optional<ButtonCapability> create_std__optional_ButtonCapability_(const ButtonCapability& value) noexcept {
+    return std::optional<ButtonCapability>(value);
+  }
+  inline bool has_value_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ButtonCapability get_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<ButtonCapability>
+  /**
+   * Specialized version of `std::vector<ButtonCapability>`.
+   */
+  using std__vector_ButtonCapability_ = std::vector<ButtonCapability>;
+  inline std::vector<ButtonCapability> create_std__vector_ButtonCapability_(size_t size) noexcept {
+    std::vector<ButtonCapability> vector;
     vector.reserve(size);
     return vector;
   }
   
-  // pragma MARK: std::variant<nitro::NullType, std::vector<Capability>>
+  // pragma MARK: std::optional<std::vector<ButtonCapability>>
   /**
-   * Wrapper struct for `std::variant<nitro::NullType, std::vector<Capability>>`.
+   * Specialized version of `std::optional<std::vector<ButtonCapability>>`.
+   */
+  using std__optional_std__vector_ButtonCapability__ = std::optional<std::vector<ButtonCapability>>;
+  inline std::optional<std::vector<ButtonCapability>> create_std__optional_std__vector_ButtonCapability__(const std::vector<ButtonCapability>& value) noexcept {
+    return std::optional<std::vector<ButtonCapability>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<ButtonCapability> get_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<nitro::NullType, NotificationButtonLayout>
+  /**
+   * Wrapper struct for `std::variant<nitro::NullType, NotificationButtonLayout>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_nitro__NullType__std__vector_Capability__ {
-    std::variant<nitro::NullType, std::vector<Capability>> variant;
-    std__variant_nitro__NullType__std__vector_Capability__(std::variant<nitro::NullType, std::vector<Capability>> variant): variant(variant) { }
-    operator std::variant<nitro::NullType, std::vector<Capability>>() const noexcept {
+  struct std__variant_nitro__NullType__NotificationButtonLayout_ {
+    std::variant<nitro::NullType, NotificationButtonLayout> variant;
+    std__variant_nitro__NullType__NotificationButtonLayout_(std::variant<nitro::NullType, NotificationButtonLayout> variant): variant(variant) { }
+    operator std::variant<nitro::NullType, NotificationButtonLayout>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
@@ -1468,29 +1504,29 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     inline nitro::NullType get_0() const noexcept {
       return std::get<0>(variant);
     }
-    inline std::vector<Capability> get_1() const noexcept {
+    inline NotificationButtonLayout get_1() const noexcept {
       return std::get<1>(variant);
     }
   };
-  inline std__variant_nitro__NullType__std__vector_Capability__ create_std__variant_nitro__NullType__std__vector_Capability__(nitro::NullType value) noexcept {
-    return std__variant_nitro__NullType__std__vector_Capability__(value);
+  inline std__variant_nitro__NullType__NotificationButtonLayout_ create_std__variant_nitro__NullType__NotificationButtonLayout_(nitro::NullType value) noexcept {
+    return std__variant_nitro__NullType__NotificationButtonLayout_(value);
   }
-  inline std__variant_nitro__NullType__std__vector_Capability__ create_std__variant_nitro__NullType__std__vector_Capability__(const std::vector<Capability>& value) noexcept {
-    return std__variant_nitro__NullType__std__vector_Capability__(value);
+  inline std__variant_nitro__NullType__NotificationButtonLayout_ create_std__variant_nitro__NullType__NotificationButtonLayout_(const NotificationButtonLayout& value) noexcept {
+    return std__variant_nitro__NullType__NotificationButtonLayout_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<nitro::NullType, std::vector<Capability>>>
+  // pragma MARK: std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>
   /**
-   * Specialized version of `std::optional<std::variant<nitro::NullType, std::vector<Capability>>>`.
+   * Specialized version of `std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>`.
    */
-  using std__optional_std__variant_nitro__NullType__std__vector_Capability___ = std::optional<std::variant<nitro::NullType, std::vector<Capability>>>;
-  inline std::optional<std::variant<nitro::NullType, std::vector<Capability>>> create_std__optional_std__variant_nitro__NullType__std__vector_Capability___(const std::variant<nitro::NullType, std::vector<Capability>>& value) noexcept {
-    return std::optional<std::variant<nitro::NullType, std::vector<Capability>>>(value);
+  using std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ = std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>;
+  inline std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::variant<nitro::NullType, NotificationButtonLayout>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>(value);
   }
-  inline bool has_value_std__optional_std__variant_nitro__NullType__std__vector_Capability___(const std::optional<std::variant<nitro::NullType, std::vector<Capability>>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<nitro::NullType, std::vector<Capability>> get_std__optional_std__variant_nitro__NullType__std__vector_Capability___(const std::optional<std::variant<nitro::NullType, std::vector<Capability>>>& optional) noexcept {
+  inline std::variant<nitro::NullType, NotificationButtonLayout> get_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
     return *optional;
   }
   
@@ -1581,6 +1617,17 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std::variant<nitro::NullType, double> get_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::vector<Capability>
+  /**
+   * Specialized version of `std::vector<Capability>`.
+   */
+  using std__vector_Capability_ = std::vector<Capability>;
+  inline std::vector<Capability> create_std__vector_Capability_(size_t size) noexcept {
+    std::vector<Capability> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::optional<std::vector<Capability>>

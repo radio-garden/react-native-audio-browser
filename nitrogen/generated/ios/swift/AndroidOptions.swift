@@ -18,21 +18,15 @@ public extension AndroidOptions {
   /**
    * Create a new instance of `AndroidOptions`.
    */
-  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Bool, shuffle: Bool, ratingType: RatingType, notificationCapabilities: Variant_NullType__Capability_?) {
-    self.init(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, { () -> bridge.std__optional_std__variant_nitro__NullType__std__vector_Capability___ in
-      if let __unwrappedValue = notificationCapabilities {
-        return bridge.create_std__optional_std__variant_nitro__NullType__std__vector_Capability___({ () -> bridge.std__variant_nitro__NullType__std__vector_Capability__ in
+  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Bool, shuffle: Bool, ratingType: RatingType, notificationButtons: Variant_NullType_NotificationButtonLayout?) {
+    self.init(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, { () -> bridge.std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ in
+      if let __unwrappedValue = notificationButtons {
+        return bridge.create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__({ () -> bridge.std__variant_nitro__NullType__NotificationButtonLayout_ in
           switch __unwrappedValue {
             case .first(let __value):
-              return bridge.create_std__variant_nitro__NullType__std__vector_Capability__(margelo.nitro.NullType.null)
+              return bridge.create_std__variant_nitro__NullType__NotificationButtonLayout_(margelo.nitro.NullType.null)
             case .second(let __value):
-              return bridge.create_std__variant_nitro__NullType__std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
-                var __vector = bridge.create_std__vector_Capability_(__value.count)
-                for __item in __value {
-                  __vector.push_back(__item)
-                }
-                return __vector
-              }())
+              return bridge.create_std__variant_nitro__NullType__NotificationButtonLayout_(__value)
           }
         }().variant)
       } else {
@@ -85,21 +79,21 @@ public extension AndroidOptions {
     }
   }
   
-  var notificationCapabilities: Variant_NullType__Capability_? {
+  var notificationButtons: Variant_NullType_NotificationButtonLayout? {
     @inline(__always)
     get {
-      return { () -> Variant_NullType__Capability_? in
-        if bridge.has_value_std__optional_std__variant_nitro__NullType__std__vector_Capability___(self.__notificationCapabilities) {
-          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__std__vector_Capability___(self.__notificationCapabilities)
-          return { () -> Variant_NullType__Capability_ in
-            let __variant = bridge.std__variant_nitro__NullType__std__vector_Capability__(__unwrapped)
+      return { () -> Variant_NullType_NotificationButtonLayout? in
+        if bridge.has_value_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(self.__notificationButtons) {
+          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(self.__notificationButtons)
+          return { () -> Variant_NullType_NotificationButtonLayout in
+            let __variant = bridge.std__variant_nitro__NullType__NotificationButtonLayout_(__unwrapped)
             switch __variant.index() {
               case 0:
                 let __actual = __variant.get_0()
                 return .first(NullType.null)
               case 1:
                 let __actual = __variant.get_1()
-                return .second(__actual.map({ __item in __item }))
+                return .second(__actual)
               default:
                 fatalError("Variant can never have index \(__variant.index())!")
             }
@@ -111,20 +105,14 @@ public extension AndroidOptions {
     }
     @inline(__always)
     set {
-      self.__notificationCapabilities = { () -> bridge.std__optional_std__variant_nitro__NullType__std__vector_Capability___ in
+      self.__notificationButtons = { () -> bridge.std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__variant_nitro__NullType__std__vector_Capability___({ () -> bridge.std__variant_nitro__NullType__std__vector_Capability__ in
+          return bridge.create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__({ () -> bridge.std__variant_nitro__NullType__NotificationButtonLayout_ in
             switch __unwrappedValue {
               case .first(let __value):
-                return bridge.create_std__variant_nitro__NullType__std__vector_Capability__(margelo.nitro.NullType.null)
+                return bridge.create_std__variant_nitro__NullType__NotificationButtonLayout_(margelo.nitro.NullType.null)
               case .second(let __value):
-                return bridge.create_std__variant_nitro__NullType__std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
-                  var __vector = bridge.create_std__vector_Capability_(__value.count)
-                  for __item in __value {
-                    __vector.push_back(__item)
-                  }
-                  return __vector
-                }())
+                return bridge.create_std__variant_nitro__NullType__NotificationButtonLayout_(__value)
             }
           }().variant)
         } else {

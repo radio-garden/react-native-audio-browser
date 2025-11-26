@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +80,7 @@ class MediaSessionCallback(private val player: Player) :
   fun updateMediaSession(
     mediaSession: MediaSession,
     capabilities: List<Capability>,
-    notificationCapabilities: List<Capability>?,
+    notificationButtons: NotificationButtonLayout?,
     searchAvailable: Boolean,
   ) {
     // Store as MediaLibrarySession for notifyChildrenChanged support
@@ -87,7 +88,7 @@ class MediaSessionCallback(private val player: Player) :
     commandManager.updateMediaSession(
       mediaSession,
       capabilities,
-      notificationCapabilities,
+      notificationButtons,
       searchAvailable,
     )
   }

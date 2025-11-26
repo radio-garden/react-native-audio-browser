@@ -27,14 +27,13 @@
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `RatingType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class RatingType; }
-// Forward declaration of `Capability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 
 #include "AppKilledPlaybackBehavior.hpp"
 #include "RatingType.hpp"
 #include <NitroModules/Null.hpp>
-#include "Capability.hpp"
-#include <vector>
+#include "NotificationButtonLayout.hpp"
 #include <variant>
 #include <optional>
 
@@ -49,11 +48,11 @@ namespace margelo::nitro::audiobrowser {
     bool skipSilence     SWIFT_PRIVATE;
     bool shuffle     SWIFT_PRIVATE;
     RatingType ratingType     SWIFT_PRIVATE;
-    std::optional<std::variant<nitro::NullType, std::vector<Capability>>> notificationCapabilities     SWIFT_PRIVATE;
+    std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> notificationButtons     SWIFT_PRIVATE;
 
   public:
     AndroidOptions() = default;
-    explicit AndroidOptions(AppKilledPlaybackBehavior appKilledPlaybackBehavior, bool skipSilence, bool shuffle, RatingType ratingType, std::optional<std::variant<nitro::NullType, std::vector<Capability>>> notificationCapabilities): appKilledPlaybackBehavior(appKilledPlaybackBehavior), skipSilence(skipSilence), shuffle(shuffle), ratingType(ratingType), notificationCapabilities(notificationCapabilities) {}
+    explicit AndroidOptions(AppKilledPlaybackBehavior appKilledPlaybackBehavior, bool skipSilence, bool shuffle, RatingType ratingType, std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> notificationButtons): appKilledPlaybackBehavior(appKilledPlaybackBehavior), skipSilence(skipSilence), shuffle(shuffle), ratingType(ratingType), notificationButtons(notificationButtons) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -70,7 +69,7 @@ namespace margelo::nitro {
         JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, "skipSilence")),
         JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, "shuffle")),
         JSIConverter<margelo::nitro::audiobrowser::RatingType>::fromJSI(runtime, obj.getProperty(runtime, "ratingType")),
-        JSIConverter<std::optional<std::variant<nitro::NullType, std::vector<margelo::nitro::audiobrowser::Capability>>>>::fromJSI(runtime, obj.getProperty(runtime, "notificationCapabilities"))
+        JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::NotificationButtonLayout>>>::fromJSI(runtime, obj.getProperty(runtime, "notificationButtons"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::AndroidOptions& arg) {
@@ -79,7 +78,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "skipSilence", JSIConverter<bool>::toJSI(runtime, arg.skipSilence));
       obj.setProperty(runtime, "shuffle", JSIConverter<bool>::toJSI(runtime, arg.shuffle));
       obj.setProperty(runtime, "ratingType", JSIConverter<margelo::nitro::audiobrowser::RatingType>::toJSI(runtime, arg.ratingType));
-      obj.setProperty(runtime, "notificationCapabilities", JSIConverter<std::optional<std::variant<nitro::NullType, std::vector<margelo::nitro::audiobrowser::Capability>>>>::toJSI(runtime, arg.notificationCapabilities));
+      obj.setProperty(runtime, "notificationButtons", JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::NotificationButtonLayout>>>::toJSI(runtime, arg.notificationButtons));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -94,7 +93,7 @@ namespace margelo::nitro {
       if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, "skipSilence"))) return false;
       if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, "shuffle"))) return false;
       if (!JSIConverter<margelo::nitro::audiobrowser::RatingType>::canConvert(runtime, obj.getProperty(runtime, "ratingType"))) return false;
-      if (!JSIConverter<std::optional<std::variant<nitro::NullType, std::vector<margelo::nitro::audiobrowser::Capability>>>>::canConvert(runtime, obj.getProperty(runtime, "notificationCapabilities"))) return false;
+      if (!JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::NotificationButtonLayout>>>::canConvert(runtime, obj.getProperty(runtime, "notificationButtons"))) return false;
       return true;
     }
   };

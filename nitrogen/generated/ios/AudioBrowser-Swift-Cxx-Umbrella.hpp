@@ -30,6 +30,8 @@ namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `ButtonCapability` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -70,6 +72,8 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
@@ -167,6 +171,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AudioMetadataReceivedEvent.hpp"
 #include "BrowserConfiguration.hpp"
 #include "BrowserSourceCallbackParam.hpp"
+#include "ButtonCapability.hpp"
 #include "Capability.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -187,6 +192,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"

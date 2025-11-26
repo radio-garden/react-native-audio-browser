@@ -109,7 +109,7 @@ class Player(internal val context: Context) {
             mediaSessionCallback.updateMediaSession(
               mediaSession,
               options.capabilities,
-              options.notificationCapabilities,
+              options.notificationButtons,
               searchAvailable,
             )
           }
@@ -1036,8 +1036,8 @@ class Player(internal val context: Context) {
     val backwardJumpIntervalChanged =
       previousOptions.backwardJumpInterval != options.backwardJumpInterval
     val capabilitiesChanged = previousOptions.capabilities != options.capabilities
-    val notificationCapabilitiesChanged =
-      previousOptions.notificationCapabilities != options.notificationCapabilities
+    val notificationButtonsChanged =
+      previousOptions.notificationButtons != options.notificationButtons
     val appKilledPlaybackBehaviorChanged =
       previousOptions.appKilledPlaybackBehavior != options.appKilledPlaybackBehavior
 
@@ -1049,7 +1049,7 @@ class Player(internal val context: Context) {
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged ||
         capabilitiesChanged ||
-        notificationCapabilitiesChanged ||
+        notificationButtonsChanged ||
         appKilledPlaybackBehaviorChanged
 
     // Apply only changed properties
@@ -1069,12 +1069,12 @@ class Player(internal val context: Context) {
       setProgressUpdateInterval(options.progressUpdateEventInterval)
     }
 
-    if (capabilitiesChanged || notificationCapabilitiesChanged) {
+    if (capabilitiesChanged || notificationButtonsChanged) {
       val searchAvailable = browser?.browserManager?.config?.search != null
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
-        options.notificationCapabilities,
+        options.notificationButtons,
         searchAvailable,
       )
     }

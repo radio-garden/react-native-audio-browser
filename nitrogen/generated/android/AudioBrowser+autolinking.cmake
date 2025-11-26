@@ -44,7 +44,7 @@ target_sources(
   ../nitrogen/generated/android/c++/JHybridAudioPlayerSpec.cpp
   ../nitrogen/generated/android/c++/JSleepTimer.cpp
   ../nitrogen/generated/android/c++/JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.cpp
-  ../nitrogen/generated/android/c++/JVariant_NullType_Array_Capability_.cpp
+  ../nitrogen/generated/android/c++/JVariant_NullType_NotificationButtonLayout.cpp
   ../nitrogen/generated/android/c++/JVariant_NullType_Double.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_RetryConfig.cpp

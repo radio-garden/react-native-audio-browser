@@ -11,18 +11,22 @@
 #include "NativeUpdateOptions.hpp"
 
 #include "AppKilledPlaybackBehavior.hpp"
+#include "ButtonCapability.hpp"
 #include "Capability.hpp"
 #include "FeedbackOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
+#include "JButtonCapability.hpp"
 #include "JCapability.hpp"
 #include "JFeedbackOptions.hpp"
 #include "JIOSUpdateOptions.hpp"
 #include "JNitroAndroidUpdateOptions.hpp"
+#include "JNotificationButtonLayout.hpp"
 #include "JRatingType.hpp"
-#include "JVariant_NullType_Array_Capability_.hpp"
 #include "JVariant_NullType_Double.hpp"
+#include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NotificationButtonLayout.hpp"
 #include "RatingType.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>

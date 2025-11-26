@@ -31,7 +31,7 @@ data class AndroidOptions(
   val ratingType: RatingType,
   @DoNotStrip
   @Keep
-  val notificationCapabilities: Variant_NullType_Array_Capability_?
+  val notificationButtons: Variant_NullType_NotificationButtonLayout?
 ) {
   /* primary constructor */
 
@@ -43,8 +43,8 @@ data class AndroidOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Boolean, shuffle: Boolean, ratingType: RatingType, notificationCapabilities: Variant_NullType_Array_Capability_?): AndroidOptions {
-      return AndroidOptions(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, notificationCapabilities)
+    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Boolean, shuffle: Boolean, ratingType: RatingType, notificationButtons: Variant_NullType_NotificationButtonLayout?): AndroidOptions {
+      return AndroidOptions(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, notificationButtons)
     }
   }
 }

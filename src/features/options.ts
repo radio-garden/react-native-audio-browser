@@ -22,6 +22,57 @@ export type Capability =
   | 'bookmark'
 
 /**
+ * Capabilities that can be assigned to notification button slots.
+ * This is a subset of Capability that represents buttons users can interact with.
+ */
+export type ButtonCapability =
+  | 'skip-to-previous'
+  | 'skip-to-next'
+  | 'jump-backward'
+  | 'jump-forward'
+  | 'favorite'
+
+/**
+ * Configuration for notification button layout on Android.
+ * Allows explicit control over which buttons appear in which slots.
+ *
+ * Slot behavior:
+ * - **Omit a slot**: Derive from capabilities (smart default)
+ * - **Set to null**: Explicitly empty slot
+ * - **Set to capability**: Show that button in that slot
+ *
+ * @example
+ * ```typescript
+ * // Podcast-style: jump buttons as primary
+ * notificationButtons: {
+ *   back: 'jump-backward',
+ *   forward: 'jump-forward',
+ *   overflow: ['favorite']
+ * }
+ *
+ * // Music-style: skip as primary, jump as secondary
+ * notificationButtons: {
+ *   back: 'skip-to-previous',
+ *   forward: 'skip-to-next',
+ *   backSecondary: 'jump-backward',
+ *   forwardSecondary: 'jump-forward'
+ * }
+ * ```
+ */
+export type NotificationButtonLayout = {
+  /** Primary back position (SLOT_BACK) - typically previous track or jump backward */
+  back?: ButtonCapability | null
+  /** Primary forward position (SLOT_FORWARD) - typically next track or jump forward */
+  forward?: ButtonCapability | null
+  /** Secondary back position (SLOT_BACK_SECONDARY) */
+  backSecondary?: ButtonCapability | null
+  /** Secondary forward position (SLOT_FORWARD_SECONDARY) */
+  forwardSecondary?: ButtonCapability | null
+  /** Additional buttons in overflow area (SLOT_OVERFLOW) */
+  overflow?: ButtonCapability[]
+}
+
+/**
  * AppKilledPlaybackBehavior options:
  * - `'continue-playback'`: This option will continue playing audio in the
  *   background when the app is removed from recents. The notification remains.
@@ -131,16 +182,14 @@ export interface AndroidOptions {
   ratingType: RatingType
 
   /**
-   * Android-specific capabilities that control which buttons appear in
-   * notifications only. This does NOT affect other controllers like
-   * Bluetooth, Android Auto, or lock screen.
+   * Slot-based button layout for Android notifications.
+   * Provides explicit control over which buttons appear in which positions.
    *
-   * When null, defaults to the global capabilities.
-   * Use an empty array to show no notification buttons.
+   * When not specified, button layout is derived from capabilities.
    *
    * @platform android
    */
-  notificationCapabilities: Capability[] | null
+  notificationButtons: NotificationButtonLayout | null
 }
 
 export interface AndroidUpdateOptions {
@@ -174,16 +223,14 @@ export interface AndroidUpdateOptions {
   ratingType?: RatingType
 
   /**
-   * Android-specific capabilities that control which buttons appear in
-   * notifications only. This does NOT affect other controllers like
-   * Bluetooth, Android Auto, or lock screen.
+   * Slot-based button layout for Android notifications.
+   * Provides explicit control over which buttons appear in which positions.
    *
-   * When null, defaults to the global capabilities.
-   * Use an empty array to show no notification buttons.
+   * When not specified, button layout is derived from capabilities.
    *
    * @platform android
    */
-  notificationCapabilities?: Capability[] | null
+  notificationButtons?: NotificationButtonLayout | null
 }
 
 export interface NitroAndroidUpdateOptions {
@@ -191,7 +238,7 @@ export interface NitroAndroidUpdateOptions {
   skipSilence?: boolean
   shuffle?: boolean
   ratingType?: RatingType
-  notificationCapabilities?: Capability[] | null
+  notificationButtons?: NotificationButtonLayout | null
 }
 
 export interface IOSUpdateOptions {

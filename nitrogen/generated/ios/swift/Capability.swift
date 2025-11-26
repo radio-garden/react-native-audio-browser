@@ -17,6 +17,16 @@ public extension Capability {
    */
   init?(fromString string: String) {
     switch string {
+      case "skip-to-previous":
+        self = .skipToPrevious
+      case "skip-to-next":
+        self = .skipToNext
+      case "jump-backward":
+        self = .jumpBackward
+      case "jump-forward":
+        self = .jumpForward
+      case "favorite":
+        self = .favorite
       case "play":
         self = .play
       case "play-from-id":
@@ -31,16 +41,6 @@ public extension Capability {
         self = .seekTo
       case "skip":
         self = .skip
-      case "skip-to-next":
-        self = .skipToNext
-      case "skip-to-previous":
-        self = .skipToPrevious
-      case "jump-forward":
-        self = .jumpForward
-      case "jump-backward":
-        self = .jumpBackward
-      case "favorite":
-        self = .favorite
       case "bookmark":
         self = .bookmark
       default:
@@ -53,6 +53,16 @@ public extension Capability {
    */
   var stringValue: String {
     switch self {
+      case .skipToPrevious:
+        return "skip-to-previous"
+      case .skipToNext:
+        return "skip-to-next"
+      case .jumpBackward:
+        return "jump-backward"
+      case .jumpForward:
+        return "jump-forward"
+      case .favorite:
+        return "favorite"
       case .play:
         return "play"
       case .playFromId:
@@ -67,16 +77,6 @@ public extension Capability {
         return "seek-to"
       case .skip:
         return "skip"
-      case .skipToNext:
-        return "skip-to-next"
-      case .skipToPrevious:
-        return "skip-to-previous"
-      case .jumpForward:
-        return "jump-forward"
-      case .jumpBackward:
-        return "jump-backward"
-      case .favorite:
-        return "favorite"
       case .bookmark:
         return "bookmark"
     }

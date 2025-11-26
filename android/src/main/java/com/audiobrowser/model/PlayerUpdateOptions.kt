@@ -4,10 +4,11 @@ import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
+import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.UpdateOptions
-import com.margelo.nitro.audiobrowser.Variant_NullType_Array_Capability_
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
+import com.margelo.nitro.audiobrowser.Variant_NullType_NotificationButtonLayout
 
 /**
  * Update options for the AudioBrowser that can be changed at runtime. These options control player
@@ -28,7 +29,9 @@ data class PlayerUpdateOptions(
       Capability.SKIP_TO_PREVIOUS,
       Capability.SEEK_TO,
     ),
-  var notificationCapabilities: List<Capability>? = null,
+
+  // Notification button layout (null = derive from capabilities)
+  var notificationButtons: NotificationButtonLayout? = null,
 
   // Android-specific runtime options (all under android.* in JS)
   var ratingType: NitroRatingType? = null,
@@ -63,11 +66,12 @@ data class PlayerUpdateOptions(
 
       androidOptions.shuffle?.let { shuffle = it }
 
-      androidOptions.notificationCapabilities?.let { variant ->
-        notificationCapabilities =
+      // Handle notificationButtons - variant allows distinguishing undefined from null
+      androidOptions.notificationButtons?.let { variant ->
+        notificationButtons =
           when (variant) {
-            is Variant_NullType_Array_Capability_.First -> null
-            is Variant_NullType_Array_Capability_.Second -> variant.value.toList()
+            is Variant_NullType_NotificationButtonLayout.First -> null
+            is Variant_NullType_NotificationButtonLayout.Second -> variant.value
           }
       }
     }
@@ -77,9 +81,6 @@ data class PlayerUpdateOptions(
     // Convert capabilities
     val nitroCapabilities = capabilities.toTypedArray()
 
-    // Convert notification capabilities
-    val nitroNotificationCapabilities = notificationCapabilities?.toTypedArray()
-
     // Create Android options
     val androidOptions =
       AndroidUpdateOptions(
@@ -87,8 +88,8 @@ data class PlayerUpdateOptions(
         skipSilence = skipSilence,
         shuffle = shuffle,
         ratingType = ratingType,
-        notificationCapabilities =
-          nitroNotificationCapabilities?.let { Variant_NullType_Array_Capability_.create(it) },
+        notificationButtons =
+          notificationButtons?.let { Variant_NullType_NotificationButtonLayout.create(it) },
       )
 
     return UpdateOptions(
