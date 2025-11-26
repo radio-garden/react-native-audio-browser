@@ -67,6 +67,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
   private var setupOptions = PlayerSetupOptions()
   private val mainScope = MainScope()
+  private val handler = Handler(Looper.getMainLooper())
+
+  /** Post callback to main handler for consistent async delivery to JS - avoids deadlocks */
+  private fun post(block: () -> Unit) = handler.post(block)
   private var connectedService: Service? = null
   private var audioBrowser: AudioBrowser? = null
   private val context =
@@ -298,6 +302,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     player.setActiveTrackFavorited(favorited)
   }
 
+  override fun toggleActiveTrackFavorited() = runBlockingOnMain {
+    player.toggleActiveTrackFavorited()
+  }
+
   override fun getQueue(): Array<Track> = runBlockingOnMain { player.tracks }
 
   override fun getTrack(index: Double): Track? = runBlockingOnMain {
@@ -402,50 +410,52 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   val callbacks =
     object : Callbacks {
       override fun onPlaybackChanged(playback: Playback) {
-        this@AudioPlayer.onPlaybackChanged(playback)
+        post { this@AudioPlayer.onPlaybackChanged(playback) }
       }
 
       override fun onPlaybackActiveTrackChanged(event: PlaybackActiveTrackChangedEvent) {
-        this@AudioPlayer.onPlaybackActiveTrackChanged(event)
+        post { this@AudioPlayer.onPlaybackActiveTrackChanged(event) }
       }
 
       override fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent) {
-        this@AudioPlayer.onPlaybackProgressUpdated(event)
+        post { this@AudioPlayer.onPlaybackProgressUpdated(event) }
       }
 
       override fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent) {
-        this@AudioPlayer.onPlaybackPlayWhenReadyChanged(event)
+        post { this@AudioPlayer.onPlaybackPlayWhenReadyChanged(event) }
       }
 
       override fun onPlaybackPlayingState(event: PlayingState) {
-        Timber.d(
-          "AudioPlayer forwarding PlayingState to JS: playing=${event.playing}, buffering=${event.buffering}"
-        )
-        this@AudioPlayer.onPlaybackPlayingState(event)
+        post {
+          Timber.d(
+            "AudioPlayer forwarding PlayingState to JS: playing=${event.playing}, buffering=${event.buffering}"
+          )
+          this@AudioPlayer.onPlaybackPlayingState(event)
+        }
       }
 
       override fun onPlaybackQueueEnded(event: PlaybackQueueEndedEvent) {
-        this@AudioPlayer.onPlaybackQueueEnded(event)
+        post { this@AudioPlayer.onPlaybackQueueEnded(event) }
       }
 
       override fun onPlaybackRepeatModeChanged(event: RepeatMode) {
-        this@AudioPlayer.onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event))
+        post { this@AudioPlayer.onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event)) }
       }
 
       override fun onPlaybackError(error: PlaybackError?) {
-        this@AudioPlayer.onPlaybackError(PlaybackErrorEvent(error))
+        post { this@AudioPlayer.onPlaybackError(PlaybackErrorEvent(error)) }
       }
 
       override fun onMetadataCommonReceived(metadata: AudioMetadata) {
-        this@AudioPlayer.onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
+        post { this@AudioPlayer.onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata)) }
       }
 
       override fun onMetadataTimedReceived(metadata: TimedMetadata) {
-        this@AudioPlayer.onMetadataTimedReceived(metadata.toNitro())
+        post { this@AudioPlayer.onMetadataTimedReceived(metadata.toNitro()) }
       }
 
       override fun onPlaybackMetadata(metadata: PlaybackMetadata) {
-        this@AudioPlayer.onPlaybackMetadata(metadata.toNitro())
+        post { this@AudioPlayer.onPlaybackMetadata(metadata.toNitro()) }
       }
 
       override fun handleRemotePlay(): Boolean {
@@ -456,7 +466,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after play operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemotePlay() }
+        post { this@AudioPlayer.onRemotePlay() }
 
         return handled
       }
@@ -469,7 +479,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after pause operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemotePause() }
+        post { this@AudioPlayer.onRemotePause() }
 
         return handled
       }
@@ -482,7 +492,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after stop operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemoteStop() }
+        post { this@AudioPlayer.onRemoteStop() }
 
         return handled
       }
@@ -495,7 +505,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after next operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemoteNext() }
+        post { this@AudioPlayer.onRemoteNext() }
 
         return handled
       }
@@ -508,7 +518,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after previous operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemotePrevious() }
+        post { this@AudioPlayer.onRemotePrevious() }
 
         return handled
       }
@@ -521,7 +531,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after jump forward operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemoteJumpForward(event) }
+        post { this@AudioPlayer.onRemoteJumpForward(event) }
 
         return handled
       }
@@ -534,7 +544,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after jump backward operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemoteJumpBackward(event) }
+        post { this@AudioPlayer.onRemoteJumpBackward(event) }
 
         return handled
       }
@@ -547,33 +557,33 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           } ?: false
 
         // Defer notification until after seek operation completes
-        Handler(Looper.getMainLooper()).post { this@AudioPlayer.onRemoteSeek(event) }
+        post { this@AudioPlayer.onRemoteSeek(event) }
 
         return handled
       }
 
       override fun onRemoteSetRating(event: RemoteSetRatingEvent) {
-        this@AudioPlayer.onRemoteSetRating(event)
+        post { this@AudioPlayer.onRemoteSetRating(event) }
       }
 
       override fun onOptionsChanged(options: PlayerUpdateOptions) {
-        //                emitOnOptionsChanged(options.toBridge())
+        // Not currently emitted to JS
       }
 
       override fun onFavoriteChanged(event: FavoriteChangedEvent) {
-        this@AudioPlayer.onFavoriteChanged(event)
+        post { this@AudioPlayer.onFavoriteChanged(event) }
       }
 
       override fun onOnlineChanged(online: Boolean) {
-        this@AudioPlayer.onOnlineChanged(online)
+        post { this@AudioPlayer.onOnlineChanged(online) }
       }
 
       override fun onEqualizerChanged(settings: com.margelo.nitro.audiobrowser.EqualizerSettings) {
-        this@AudioPlayer.onEqualizerChanged(settings)
+        post { this@AudioPlayer.onEqualizerChanged(settings) }
       }
 
       override fun onSleepTimerChanged(timer: com.margelo.nitro.audiobrowser.SleepTimer?) {
-        this@AudioPlayer.onSleepTimerChanged(timer)
+        post { this@AudioPlayer.onSleepTimerChanged(timer) }
       }
     }
 }

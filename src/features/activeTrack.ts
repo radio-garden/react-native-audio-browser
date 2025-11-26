@@ -36,27 +36,6 @@ export function getActiveTrackIndex(): number | undefined {
   return nativePlayer.getActiveTrackIndex() ?? undefined
 }
 
-// MARK: - Setters
-
-/**
- * Sets the favorited state of the currently playing track.
- * Updates the heart icon in media controllers (notification, Android Auto).
- *
- * Use this for programmatic favorite changes (e.g., from a favorite button in your app).
- * For heart button taps from media controllers, use `onFavoriteChanged` instead -
- * the native side handles those automatically.
- *
- * @param favorited - Whether the track is favorited
- *
- * @example
- * ```ts
- * setActiveTrackFavorited(true)
- * ```
- */
-export function setActiveTrackFavorited(favorited: boolean): void {
-  nativePlayer.setActiveTrackFavorited(favorited)
-}
-
 // MARK: - Event Callbacks
 
 /**

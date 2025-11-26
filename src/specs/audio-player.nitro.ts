@@ -149,6 +149,10 @@ export interface AudioPlayer
    * Updates the heart icon in media controllers (notification, Android Auto, CarPlay).
    */
   setActiveTrackFavorited(favorited: boolean): void
+  /**
+   * Toggles the favorited state of the currently playing track.
+   */
+  toggleActiveTrackFavorited(): void
   setQueue(tracks: Track[], startIndex?: number, startPositionMs?: number): void
   getQueue(): Track[]
   getTrack(index: number): Track | undefined

@@ -839,6 +839,10 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun toggleActiveTrackFavorited(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun setQueue(tracks: Array<Track>, startIndex: Double?, startPositionMs: Double?): Unit
   
   @DoNotStrip

@@ -1366,6 +1366,10 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jboolean /* favorited */)>("setActiveTrackFavorited");
     method(_javaPart, favorited);
   }
+  void JHybridAudioPlayerSpec::toggleActiveTrackFavorited() {
+    static const auto method = javaClassStatic()->getMethod<void()>("toggleActiveTrackFavorited");
+    method(_javaPart);
+  }
   void JHybridAudioPlayerSpec::setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* startIndex */, jni::alias_ref<jni::JDouble> /* startPositionMs */)>("setQueue");
     method(_javaPart, [&]() {

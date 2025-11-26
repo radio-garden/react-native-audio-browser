@@ -2,6 +2,69 @@ import { nativeBrowser, nativePlayer } from '../native'
 import type { Track } from '../types'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
+// MARK: - Setters
+
+/**
+ * Sets the favorited state of the currently playing track.
+ * Updates the heart icon in media controllers (notification, Android Auto).
+ *
+ * Use this for programmatic favorite changes (e.g., from a favorite button in your app).
+ * For heart button taps from media controllers, use `onFavoriteChanged` instead -
+ * the native side handles those automatically.
+ *
+ * @param favorited - Whether the track is favorited
+ *
+ * @example
+ * ```ts
+ * setActiveTrackFavorited(true)
+ * ```
+ */
+export function setActiveTrackFavorited(favorited: boolean): void {
+  nativePlayer.setActiveTrackFavorited(favorited)
+}
+
+/**
+ * Toggles the favorited state of the currently playing track.
+ *
+ * @example
+ * ```ts
+ * // In a button handler
+ * toggleActiveTrackFavorited()
+ * ```
+ */
+export function toggleActiveTrackFavorited(): void {
+  nativePlayer.toggleActiveTrackFavorited()
+}
+
+/**
+ * Sets the list of favorited track source identifiers.
+ *
+ * This syncs your app's favorites with the native favorites cache, enabling
+ * the heart button in media controllers (notification, Android Auto, CarPlay)
+ * to show the correct state.
+ *
+ * Note: This is only needed if the tracks provided to AudioBrowser do not
+ * include the `favorited` field. If your API already includes favorite state in
+ * track responses, the native favorites cache is populated automatically during browsing.
+ *
+ * When the heart button is tapped in media controllers or when you call
+ * `setActiveTrackFavorited()`, the native favorites cache is automatically
+ * updated. You only need to call this on app launch to hydrate the cache.
+ *
+ * @param favorites - Array of favorited track `src` values
+ *
+ * @example
+ * ```ts
+ * const favoriteSrcs = await loadFavoritesFromStorage()
+ * setFavorites(favoriteSrcs)
+ * ```
+ */
+export function setFavorites(favorites: string[]): void {
+  nativeBrowser.setFavorites(favorites)
+}
+
+// MARK: - Event Callbacks
+
 /**
  * Event data for when the favorite state of the active track changes.
  * Emitted when the user taps the heart button in a media controller (notification, Android Auto, CarPlay).
@@ -37,30 +100,3 @@ export const onFavoriteChanged =
   NativeUpdatedValue.emitterize<FavoriteChangedEvent>(
     (cb) => (nativePlayer.onFavoriteChanged = cb)
   )
-
-/**
- * Sets the list of favorited track source identifiers.
- *
- * This syncs your app's favorites with the native favorites cache, enabling
- * the heart button in media controllers (notification, Android Auto, CarPlay)
- * to show the correct state.
- *
- * Note: This is only needed if the tracks provided to AudioBrowser do not
- * include the `favorited` field. If your API already includes favorite state in
- * track responses, the native cache is populated automatically during browsing.
- *
- * When the heart button is tapped in media controllers or when you call
- * `setActiveTrackFavorited()`, the native favorites cache is automatically
- * updated. You only need to call this on app launch to hydrate the cache.
- *
- * @param favorites - Array of favorited track `src` values
- *
- * @example
- * ```ts
- * const favoriteSrcs = await loadFavoritesFromStorage()
- * setFavorites(favoriteSrcs)
- * ```
- */
-export function setFavorites(favorites: string[]): void {
-  nativeBrowser.setFavorites(favorites)
-}

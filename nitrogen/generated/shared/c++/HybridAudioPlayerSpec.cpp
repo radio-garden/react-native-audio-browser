@@ -143,6 +143,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("skipToNext", &HybridAudioPlayerSpec::skipToNext);
       prototype.registerHybridMethod("skipToPrevious", &HybridAudioPlayerSpec::skipToPrevious);
       prototype.registerHybridMethod("setActiveTrackFavorited", &HybridAudioPlayerSpec::setActiveTrackFavorited);
+      prototype.registerHybridMethod("toggleActiveTrackFavorited", &HybridAudioPlayerSpec::toggleActiveTrackFavorited);
       prototype.registerHybridMethod("setQueue", &HybridAudioPlayerSpec::setQueue);
       prototype.registerHybridMethod("getQueue", &HybridAudioPlayerSpec::getQueue);
       prototype.registerHybridMethod("getTrack", &HybridAudioPlayerSpec::getTrack);

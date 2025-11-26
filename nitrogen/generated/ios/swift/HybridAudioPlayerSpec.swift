@@ -97,6 +97,7 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func skipToNext(initialPosition: Double?) throws -> Void
   func skipToPrevious(initialPosition: Double?) throws -> Void
   func setActiveTrackFavorited(favorited: Bool) throws -> Void
+  func toggleActiveTrackFavorited() throws -> Void
   func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws -> Void
   func getQueue() throws -> [Track]
   func getTrack(index: Double) throws -> Track?

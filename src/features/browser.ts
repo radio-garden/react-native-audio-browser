@@ -88,3 +88,26 @@ export function useTabs(): Track[] | undefined {
 export const notifyContentChanged = (path: string): void => {
   nativeBrowser.notifyContentChanged(path)
 }
+
+/**
+ * Returns whether search functionality is configured via `configureBrowser({ search: ... })`.
+ */
+export function hasSearch(): boolean {
+  return !!nativeBrowser.configuration.search
+}
+
+/**
+ * Searches for tracks using the configured search source.
+ *
+ * @param query - The search query string
+ * @returns Promise resolving to an array of matching tracks
+ *
+ * @example
+ * ```ts
+ * const results = await search('jazz')
+ * console.log(`Found ${results.length} tracks`)
+ * ```
+ */
+export async function search(query: string): Promise<Track[]> {
+  return nativeBrowser.onSearch(query)
+}

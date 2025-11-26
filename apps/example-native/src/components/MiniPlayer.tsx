@@ -11,6 +11,7 @@ import {
 import {
   skipToNext,
   skipToPrevious,
+  toggleActiveTrackFavorited,
   togglePlayback,
   useActiveTrack,
   useEqualizerSettings,
@@ -59,6 +60,17 @@ export function MiniPlayer({
         </View>
       </View>
       <View style={styles.controls}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={toggleActiveTrackFavorited}
+        >
+          <Icon
+            name="heart"
+            size={20}
+            color="white"
+            iconStyle={track.favorited ? 'solid' : 'regular'}
+          />
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.controlButton}
           onPress={() => skipToPrevious()}

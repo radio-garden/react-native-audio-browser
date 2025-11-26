@@ -55,7 +55,6 @@ import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
 class Player(internal val context: Context) {
-
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
     get() = options.appKilledPlaybackBehavior
 
@@ -720,6 +719,12 @@ class Player(internal val context: Context) {
     updateFavoriteButtonState(favorited)
   }
 
+  /** Toggles the favorited state of the currently playing track. */
+  fun toggleActiveTrackFavorited() {
+    val currentTrack = this.currentTrack ?: return
+    setActiveTrackFavorited(currentTrack.favorited != true)
+  }
+
   /**
    * Updates the favorite button icon in the notification/Android Auto. Call this when track changes
    * or favorite state changes.
@@ -858,8 +863,8 @@ class Player(internal val context: Context) {
         callbacks?.onPlaybackError(null)
       }
 
-      val playbackState = Playback(state, playbackError)
-      callbacks?.onPlaybackChanged(playbackState)
+      val playback = Playback(state, playbackError)
+      callbacks?.onPlaybackChanged(playback)
 
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state
