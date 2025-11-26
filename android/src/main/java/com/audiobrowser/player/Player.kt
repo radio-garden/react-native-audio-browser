@@ -47,7 +47,10 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.NullType
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 @SuppressLint("RestrictedApi")
@@ -110,8 +113,22 @@ class Player(internal val context: Context) {
       }
     }
 
-  /** Suspends until the browser is registered. Should be called from coroutine context. */
-  suspend fun awaitBrowser(): AudioBrowser = browser ?: browserRegistered.await()
+  /**
+   * Suspends until the browser is registered, with a timeout.
+   *
+   * @throws TimeoutCancellationException if browser is not registered within timeout
+   */
+  suspend fun awaitBrowser(): AudioBrowser =
+    browser
+      ?: try {
+        withTimeout(10.seconds) {
+          Timber.d("Waiting for browser registration...")
+          browserRegistered.await()
+        }
+      } catch (e: TimeoutCancellationException) {
+        Timber.e("Timed out waiting for browser registration (10s)")
+        throw e
+      }
 
   /**
    * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
@@ -737,9 +754,9 @@ class Player(internal val context: Context) {
    * @return true if search succeeded and playback started, false otherwise
    */
   suspend fun playFromSearch(params: SearchParams): Boolean {
-    val browserManager = browser?.browserManager ?: return false
-
     return try {
+      val browserManager = awaitBrowser().browserManager
+
       Timber.d(
         "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
       )
