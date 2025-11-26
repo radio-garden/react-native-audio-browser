@@ -21,13 +21,13 @@ import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.AudioCommonMetadataReceivedEvent
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent
+import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.HybridAudioPlayerSpec
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
-import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackErrorEvent
@@ -289,17 +289,10 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     }
   }
 
-  override fun setQueue(
-    tracks: Array<Track>,
-    startIndex: Double?,
-    startPositionMs: Double?
-  ) = runBlockingOnMain {
-    player.setQueue(
-      tracks,
-      startIndex?.toInt() ?: 0,
-      startPositionMs?.toLong() ?: 0
-    )
-  }
+  override fun setQueue(tracks: Array<Track>, startIndex: Double?, startPositionMs: Double?) =
+    runBlockingOnMain {
+      player.setQueue(tracks, startIndex?.toInt() ?: 0, startPositionMs?.toLong() ?: 0)
+    }
 
   override fun setActiveTrackFavorited(favorited: Boolean) = runBlockingOnMain {
     player.setActiveTrackFavorited(favorited)
@@ -324,7 +317,9 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override fun getOnline(): Boolean = runBlockingOnMain { player.getOnline() }
 
   override fun getEqualizerSettings(): com.margelo.nitro.audiobrowser.EqualizerSettings? =
-    runBlockingOnMain { player.getEqualizerSettings() }
+    runBlockingOnMain {
+      player.getEqualizerSettings()
+    }
 
   override fun setEqualizerEnabled(enabled: Boolean) = runBlockingOnMain {
     player.setEqualizerEnabled(enabled)
@@ -338,20 +333,17 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     player.setEqualizerLevels(levels)
   }
 
-  override fun getSleepTimer(): com.margelo.nitro.audiobrowser.SleepTimer =
-    runBlockingOnMain { player.getSleepTimer() }
-
-  override fun setSleepTimer(seconds: Double) = runBlockingOnMain {
-    player.setSleepTimer(seconds)
+  override fun getSleepTimer(): com.margelo.nitro.audiobrowser.SleepTimer = runBlockingOnMain {
+    player.getSleepTimer()
   }
+
+  override fun setSleepTimer(seconds: Double) = runBlockingOnMain { player.setSleepTimer(seconds) }
 
   override fun setSleepTimerToEndOfTrack() = runBlockingOnMain {
     player.setSleepTimerToEndOfTrack()
   }
 
-  override fun clearSleepTimer(): Boolean = runBlockingOnMain {
-    player.clearSleepTimer()
-  }
+  override fun clearSleepTimer(): Boolean = runBlockingOnMain { player.clearSleepTimer() }
 
   override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
     launchInScope {
@@ -426,6 +418,9 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
       }
 
       override fun onPlaybackPlayingState(event: PlayingState) {
+        Timber.d(
+          "AudioPlayer forwarding PlayingState to JS: playing=${event.playing}, buffering=${event.buffering}"
+        )
         this@AudioPlayer.onPlaybackPlayingState(event)
       }
 

@@ -37,14 +37,13 @@ class MediaSessionCallback(private val player: Player) :
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   // Track which controllers are subscribed to which media IDs
-  private val parentIdSubscriptions = mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
+  private val parentIdSubscriptions =
+    mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
 
   init {
     // Observe network state changes and notify subscribers
-    player.networkMonitor.observeOnline(scope) { _ ->
-      notifySubscribedChildrenChanged()
-    }
+    player.networkMonitor.observeOnline(scope) { _ -> notifySubscribedChildrenChanged() }
   }
 
   /**
@@ -59,12 +58,11 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
-  /**
-   * Creates an offline error MediaItem.
-   */
+  /** Creates an offline error MediaItem. */
   private fun createOfflineMediaItem(): MediaItem {
     val errorTitle = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error)
-    val errorSubtitle = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error_subtitle)
+    val errorSubtitle =
+      player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error_subtitle)
     return MediaItem.Builder()
       .setMediaId(BrowserPathHelper.OFFLINE_PATH)
       .setMediaMetadata(
@@ -102,16 +100,12 @@ class MediaSessionCallback(private val player: Player) :
     return commandManager.buildConnectionResult(session)
   }
 
-  /**
-   * Updates the favorite state of the current track and emits onFavoriteChanged.
-   */
+  /** Updates the favorite state of the current track and emits onFavoriteChanged. */
   private fun setFavorited(favorited: Boolean) {
     val currentTrack = player.currentTrack ?: return
 
     // Update native favorites cache (only tracks with src can be favorited)
-    currentTrack.src?.let { src ->
-      player.browser?.browserManager?.updateFavorite(src, favorited)
-    }
+    currentTrack.src?.let { src -> player.browser?.browserManager?.updateFavorite(src, favorited) }
 
     player.setActiveTrackFavorited(favorited)
     val event = FavoriteChangedEvent(player.currentTrack ?: currentTrack, favorited)
@@ -205,12 +199,16 @@ class MediaSessionCallback(private val player: Player) :
     )
     return scope.future {
       // Wait for browser to be registered if it's not available yet
-      val browserManager = player.awaitBrowser().also {
-        Timber.d("Browser ready, proceeding with onGetChildren")
-      }.browserManager
+      val browserManager =
+        player
+          .awaitBrowser()
+          .also { Timber.d("Browser ready, proceeding with onGetChildren") }
+          .browserManager
 
       // Show offline error when offline:
-      if (!player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError) {
+      if (
+        !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
+      ) {
         Timber.w("Network offline - returning error message for: $parentId")
         return@future LibraryResult.ofItemList(ImmutableList.of(createOfflineMediaItem()), params)
       }
@@ -309,8 +307,8 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Notifies all subscribed controllers to refresh their content.
-   * Called internally when network state changes to refresh all subscribed paths.
+   * Notifies all subscribed controllers to refresh their content. Called internally when network
+   * state changes to refresh all subscribed paths.
    */
   private fun notifySubscribedChildrenChanged() {
     parentIdSubscriptions.keys.forEach { parentId ->
@@ -319,8 +317,8 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Notifies external controllers that content at the given path has changed.
-   * Controllers subscribed to this path will refresh their UI.
+   * Notifies external controllers that content at the given path has changed. Controllers
+   * subscribed to this path will refresh their UI.
    *
    * @param path The path where content has changed
    */
@@ -330,8 +328,8 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Called when the browser becomes available after a cold start.
-   * Notifies all subscribed controllers to refresh their content.
+   * Called when the browser becomes available after a cold start. Notifies all subscribed
+   * controllers to refresh their content.
    */
   fun notifyBrowserReady() {
     Timber.d("Browser ready - notifying ${parentIdSubscriptions.size} subscribed paths")
@@ -434,16 +432,19 @@ class MediaSessionCallback(private val player: Player) :
 
     return scope.future {
       // Wait for browser to be registered if it's not available yet
-      player.awaitBrowser().browserManager
+      player
+        .awaitBrowser()
+        .browserManager
         .resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
     }
   }
 
   /**
-   * Handles playback resumption requests from the system (Bluetooth play button, car head unit, etc.).
+   * Handles playback resumption requests from the system (Bluetooth play button, car head unit,
+   * etc.).
    *
-   * Reads the persisted playback state (URL + position) and expands it into a full queue
-   * using the browse callback. This enables seamless resumption after app restart.
+   * Reads the persisted playback state (URL + position) and expands it into a full queue using the
+   * browse callback. This enables seamless resumption after app restart.
    *
    * Note: This method is marked deprecated in Media3 but is still the recommended way to handle
    * playback resumption for background playback.
@@ -459,25 +460,31 @@ class MediaSessionCallback(private val player: Player) :
 
     return scope.future {
       // Read persisted playback state
-      val persistedState = player.playbackStateStore.get()
-        ?: run {
-          Timber.w("onPlaybackResumption: No persisted playback state found")
-          throw IllegalStateException("No playback state to resume")
-        }
+      val persistedState =
+        player.playbackStateStore.get()
+          ?: run {
+            Timber.w("onPlaybackResumption: No persisted playback state found")
+            throw IllegalStateException("No playback state to resume")
+          }
 
-      Timber.d("onPlaybackResumption: Resuming from url=${persistedState.url}, positionMs=${persistedState.positionMs}")
+      Timber.d(
+        "onPlaybackResumption: Resuming from url=${persistedState.url}, positionMs=${persistedState.positionMs}"
+      )
 
       // Wait for browser to be available (JS needs to have configured it)
       val browserManager = player.awaitBrowser().browserManager
 
       // Expand the URL into a full queue
-      val (tracks, selectedIndex) = browserManager.expandQueueFromContextualUrl(persistedState.url)
-        ?: run {
-          Timber.w("onPlaybackResumption: Failed to expand queue from URL: ${persistedState.url}")
-          throw IllegalStateException("Failed to restore playback queue")
-        }
+      val (tracks, selectedIndex) =
+        browserManager.expandQueueFromContextualUrl(persistedState.url)
+          ?: run {
+            Timber.w("onPlaybackResumption: Failed to expand queue from URL: ${persistedState.url}")
+            throw IllegalStateException("Failed to restore playback queue")
+          }
 
-      Timber.d("onPlaybackResumption: Restored ${tracks.size} tracks, starting at index $selectedIndex")
+      Timber.d(
+        "onPlaybackResumption: Restored ${tracks.size} tracks, starting at index $selectedIndex"
+      )
 
       // Convert to Media3 MediaItems
       val mediaItems = tracks.map(TrackFactory::toMedia3)

@@ -87,7 +87,8 @@ data class PlayerUpdateOptions(
         skipSilence = skipSilence,
         shuffle = shuffle,
         ratingType = ratingType,
-        notificationCapabilities = nitroNotificationCapabilities?.let { Variant_NullType_Array_Capability_.create(it) }
+        notificationCapabilities =
+          nitroNotificationCapabilities?.let { Variant_NullType_Array_Capability_.create(it) },
       )
 
     return UpdateOptions(
@@ -95,7 +96,8 @@ data class PlayerUpdateOptions(
       ios = null, // iOS options not handled in this class
       forwardJumpInterval = forwardJumpInterval,
       backwardJumpInterval = backwardJumpInterval,
-      progressUpdateEventInterval = progressUpdateEventInterval?.let { Variant_NullType_Double.create(it) },
+      progressUpdateEventInterval =
+        progressUpdateEventInterval?.let { Variant_NullType_Double.create(it) },
       capabilities = nitroCapabilities,
     )
   }

@@ -32,24 +32,33 @@ class MediaFactory(
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
   }
 
-  private val extractorsFactory = DefaultExtractorsFactory()
-    // TODO: reconsider whether this should be enabled by default:
-    .setConstantBitrateSeekingEnabled(true)
+  private val extractorsFactory =
+    DefaultExtractorsFactory()
+      // TODO: reconsider whether this should be enabled by default:
+      .setConstantBitrateSeekingEnabled(true)
 
-  private val mediaFactory = DefaultMediaSourceFactory(context, extractorsFactory).apply {
-    // Only apply custom retry policy if not using default ExoPlayer behavior
-    when (retryPolicy) {
-      is RetryPolicy.Default -> {
-        // Use ExoPlayer's default load error handling
-      }
-      is RetryPolicy.Infinite -> {
-        setLoadErrorHandlingPolicy(RetryLoadErrorHandlingPolicy(maxRetries = null, shouldRetry = shouldRetry))
-      }
-      is RetryPolicy.Limited -> {
-        setLoadErrorHandlingPolicy(RetryLoadErrorHandlingPolicy(maxRetries = retryPolicy.maxRetries, shouldRetry = shouldRetry))
+  private val mediaFactory =
+    DefaultMediaSourceFactory(context, extractorsFactory).apply {
+      // Only apply custom retry policy if not using default ExoPlayer behavior
+      when (retryPolicy) {
+        is RetryPolicy.Default -> {
+          // Use ExoPlayer's default load error handling
+        }
+        is RetryPolicy.Infinite -> {
+          setLoadErrorHandlingPolicy(
+            RetryLoadErrorHandlingPolicy(maxRetries = null, shouldRetry = shouldRetry)
+          )
+        }
+        is RetryPolicy.Limited -> {
+          setLoadErrorHandlingPolicy(
+            RetryLoadErrorHandlingPolicy(
+              maxRetries = retryPolicy.maxRetries,
+              shouldRetry = shouldRetry,
+            )
+          )
+        }
       }
     }
-  }
 
   override fun setDrmSessionManagerProvider(
     drmSessionManagerProvider: DrmSessionManagerProvider
@@ -76,7 +85,9 @@ class MediaFactory(
   ): Triple<String, Map<String, String>, String> {
     return try {
       val requestConfig = getRequestConfig(originalUrl)
-      Timber.d("Got media request config for URL '$originalUrl': path=${requestConfig?.path}, baseUrl=${requestConfig?.baseUrl}, headers=${requestConfig?.headers}, userAgent=${requestConfig?.userAgent}")
+      Timber.d(
+        "Got media request config for URL '$originalUrl': path=${requestConfig?.path}, baseUrl=${requestConfig?.baseUrl}, headers=${requestConfig?.headers}, userAgent=${requestConfig?.userAgent}"
+      )
       if (requestConfig != null) {
         val path = requestConfig.path ?: ""
         val baseUrl = requestConfig.baseUrl
@@ -115,17 +126,20 @@ class MediaFactory(
     Timber.d("Media headers: $headers")
     Timber.d("Media user-agent: $userAgent")
 
-    // DefaultDataSource.Factory handles all URI schemes (file://, content://, http://, https://, etc.)
-    // by routing to the appropriate implementation. We provide a configured HTTP factory for remote URLs.
-    val httpFactory = DefaultHttpDataSource.Factory().apply {
-      setUserAgent(userAgent)
-      setAllowCrossProtocolRedirects(true)
-      if (headers.isNotEmpty()) {
-        setDefaultRequestProperties(headers)
+    // DefaultDataSource.Factory handles all URI schemes (file://, content://, http://, https://,
+    // etc.)
+    // by routing to the appropriate implementation. We provide a configured HTTP factory for remote
+    // URLs.
+    val httpFactory =
+      DefaultHttpDataSource.Factory().apply {
+        setUserAgent(userAgent)
+        setAllowCrossProtocolRedirects(true)
+        if (headers.isNotEmpty()) {
+          setDefaultRequestProperties(headers)
+        }
+        // Connect transfer listener for bandwidth measurement
+        transferListener?.let { setTransferListener(it) }
       }
-      // Connect transfer listener for bandwidth measurement
-      transferListener?.let { setTransferListener(it) }
-    }
     val factory: DataSource.Factory = DefaultDataSource.Factory(context, httpFactory)
 
     // Create a new MediaItem with the transformed URL if it changed
@@ -138,16 +152,15 @@ class MediaFactory(
       }
 
     // Configure data source factory with optional caching
-    val dataSourceFactory = cache?.let {
-      CacheDataSource.Factory()
-        .setCache(it)
-        .setUpstreamDataSourceFactory(factory)
-        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-    } ?: factory
+    val dataSourceFactory =
+      cache?.let {
+        CacheDataSource.Factory()
+          .setCache(it)
+          .setUpstreamDataSourceFactory(factory)
+          .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+      } ?: factory
 
     // Use DefaultMediaSourceFactory which supports HLS, DASH, and progressive media
-    return mediaFactory
-      .setDataSourceFactory(dataSourceFactory)
-      .createMediaSource(finalMediaItem)
+    return mediaFactory.setDataSourceFactory(dataSourceFactory).createMediaSource(finalMediaItem)
   }
 }

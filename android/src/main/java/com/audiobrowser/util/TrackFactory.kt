@@ -27,9 +27,7 @@ object TrackFactory {
         .setArtworkUri(track.artwork?.toUri())
         .setIsBrowsable(track.src == null)
         .setIsPlayable(track.src != null)
-        .apply {
-          track.favorited?.let { setUserRating(HeartRating(it)) }
-        }
+        .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
         .build()
 
     val mediaId =

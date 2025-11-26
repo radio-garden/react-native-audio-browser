@@ -97,8 +97,8 @@ class BrowserManager {
   }
 
   /**
-   * Invalidates the cache for a specific path.
-   * The next browse to this path will re-fetch and update trackCache entries.
+   * Invalidates the cache for a specific path. The next browse to this path will re-fetch and
+   * update trackCache entries.
    */
   fun invalidateCache(path: String) {
     resolvedTrackCache.remove(path)
@@ -106,8 +106,8 @@ class BrowserManager {
   }
 
   /**
-   * Sets the favorited track identifiers. Tracks will have their favorited field
-   * hydrated based on this list during browsing.
+   * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
+   * this list during browsing.
    */
   fun setFavorites(favorites: List<String>) {
     favoriteIds = favorites.toSet()
@@ -115,22 +115,23 @@ class BrowserManager {
   }
 
   /**
-   * Updates the favorite state for a single track identifier.
-   * Called when the heart button is tapped in media controllers.
+   * Updates the favorite state for a single track identifier. Called when the heart button is
+   * tapped in media controllers.
    */
   fun updateFavorite(id: String, favorited: Boolean) {
-    favoriteIds = if (favorited) {
-      favoriteIds + id
-    } else {
-      favoriteIds - id
-    }
+    favoriteIds =
+      if (favorited) {
+        favoriteIds + id
+      } else {
+        favoriteIds - id
+      }
     Timber.d("Updated favorite for '$id' to $favorited (total: ${favoriteIds.size})")
   }
 
   /**
-   * Hydrates the favorited field on a track based on the favoriteIds set.
-   * Only hydrates if track.favorited is null (doesn't overwrite API-provided values).
-   * Only tracks with src can be favorited.
+   * Hydrates the favorited field on a track based on the favoriteIds set. Only hydrates if
+   * track.favorited is null (doesn't overwrite API-provided values). Only tracks with src can be
+   * favorited.
    */
   private fun hydrateFavorite(track: Track): Track {
     // Don't overwrite API-provided favorites
@@ -156,9 +157,7 @@ class BrowserManager {
     )
   }
 
-  /**
-   * Hydrates favorites on all children of a ResolvedTrack.
-   */
+  /** Hydrates favorites on all children of a ResolvedTrack. */
   private fun hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {
     val children = resolvedTrack.children ?: return resolvedTrack
     val hydratedChildren = children.map { hydrateFavorite(it) }.toTypedArray()
@@ -186,14 +185,16 @@ class BrowserManager {
 
   /**
    * Get a cached Track by mediaId (url or src), or null if not cached. Used by Media3 to rehydrate
-   * MediaItem shells with full track metadata.
-   * Re-hydrates favorites in case setFavoriteStates was called after caching.
+   * MediaItem shells with full track metadata. Re-hydrates favorites in case setFavoriteStates was
+   * called after caching.
    */
   fun getCachedTrack(mediaId: String): Track? {
     val track = trackCache[mediaId]
     if (track != null) {
       val hydratedTrack = hydrateFavorite(track)
-      Timber.d("Cache HIT for mediaId='$mediaId' → track='${track.title}', favorited=${hydratedTrack.favorited}")
+      Timber.d(
+        "Cache HIT for mediaId='$mediaId' → track='${track.title}', favorited=${hydratedTrack.favorited}"
+      )
       return hydratedTrack
     } else {
       Timber.w("Cache MISS for mediaId='$mediaId'")
@@ -506,7 +507,7 @@ class BrowserManager {
     Timber.d("Navigating to path: $path")
 
     this.path = path
-    this.content = null  // Clear content immediately to show loading state
+    this.content = null // Clear content immediately to show loading state
     val content = resolve(path)
     this.content = content
     return content
@@ -887,7 +888,9 @@ class BrowserManager {
             val jsonResolvedTrack = json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
             jsonResolvedTrack.toNitro()
           } else {
-            Timber.w("HTTP request failed with status ${httpResponse.code} for ${httpRequest.url}: ${httpResponse.body}")
+            Timber.w(
+              "HTTP request failed with status ${httpResponse.code} for ${httpRequest.url}: ${httpResponse.body}"
+            )
             throw HttpStatusException(httpResponse.code, "Server returned ${httpResponse.code}")
           }
         },

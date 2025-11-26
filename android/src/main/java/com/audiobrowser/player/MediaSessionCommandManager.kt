@@ -36,7 +36,8 @@ class MediaSessionCommandManager {
     private set
 
   /** Current player commands configuration for notification controller */
-  var notificationPlayerCommands: MediaPlayer.Commands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+  var notificationPlayerCommands: MediaPlayer.Commands =
+    MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
     private set
 
   /** Current session commands configuration for external controllers */
@@ -75,7 +76,8 @@ class MediaSessionCommandManager {
     playerCommands = buildPlayerCommands(defaultCapabilities)
     notificationPlayerCommands = buildPlayerCommands(defaultCapabilities)
 
-    val (extSessionCommands, extCustomLayout) = buildSessionCommandsAndLayout(defaultCapabilities, searchAvailable = false, favorited = null)
+    val (extSessionCommands, extCustomLayout) =
+      buildSessionCommandsAndLayout(defaultCapabilities, searchAvailable = false, favorited = null)
     sessionCommands = extSessionCommands
     customLayout = extCustomLayout
 
@@ -112,20 +114,26 @@ class MediaSessionCommandManager {
 
     // Build commands for external controllers (global capabilities)
     playerCommands = buildPlayerCommands(capabilities)
-    val (extSessionCommands, extCustomLayout) = buildSessionCommandsAndLayout(capabilities, searchAvailable, favorited)
+    val (extSessionCommands, extCustomLayout) =
+      buildSessionCommandsAndLayout(capabilities, searchAvailable, favorited)
     sessionCommands = extSessionCommands
     customLayout = extCustomLayout
 
     // Build commands for notification (notification capabilities)
     notificationPlayerCommands = buildPlayerCommands(effectiveNotificationCapabilities)
-    val (notifSessionCommands, notifCustomLayout) = buildSessionCommandsAndLayout(effectiveNotificationCapabilities, searchAvailable, favorited)
+    val (notifSessionCommands, notifCustomLayout) =
+      buildSessionCommandsAndLayout(effectiveNotificationCapabilities, searchAvailable, favorited)
     notificationSessionCommands = notifSessionCommands
     notificationCustomLayout = notifCustomLayout
 
     // Apply configuration to MediaSession notification controller
     mediaSession.mediaNotificationControllerInfo?.let { controllerInfo ->
       mediaSession.setCustomLayout(controllerInfo, notificationCustomLayout)
-      mediaSession.setAvailableCommands(controllerInfo, notificationSessionCommands, notificationPlayerCommands)
+      mediaSession.setAvailableCommands(
+        controllerInfo,
+        notificationSessionCommands,
+        notificationPlayerCommands,
+      )
     }
 
     // Broadcast updated layout to all external controllers (Android Auto, etc.)
@@ -133,11 +141,13 @@ class MediaSessionCommandManager {
   }
 
   /**
-   * Updates the favorite button state and reapplies the custom layout.
-   * Call this when the current track changes or when favorite state is toggled.
+   * Updates the favorite button state and reapplies the custom layout. Call this when the current
+   * track changes or when favorite state is toggled.
    */
   fun updateFavoriteState(mediaSession: MediaSession, favorited: Boolean?) {
-    Timber.Forest.d("updateFavoriteState called: currentFavorited=$currentFavorited, newFavorited=$favorited")
+    Timber.Forest.d(
+      "updateFavoriteState called: currentFavorited=$currentFavorited, newFavorited=$favorited"
+    )
     if (currentFavorited == favorited) {
       Timber.Forest.d("Favorite state unchanged, skipping update")
       return
@@ -146,12 +156,18 @@ class MediaSessionCommandManager {
     currentFavorited = favorited
 
     // Rebuild both layouts with new favorite state
-    val (extSessionCommands, extCustomLayout) = buildSessionCommandsAndLayout(currentCapabilities, currentSearchAvailable, favorited)
+    val (extSessionCommands, extCustomLayout) =
+      buildSessionCommandsAndLayout(currentCapabilities, currentSearchAvailable, favorited)
     sessionCommands = extSessionCommands
     customLayout = extCustomLayout
     Timber.Forest.d("Built external customLayout with ${customLayout.size} buttons")
 
-    val (notifSessionCommands, notifCustomLayout) = buildSessionCommandsAndLayout(currentNotificationCapabilities, currentSearchAvailable, favorited)
+    val (notifSessionCommands, notifCustomLayout) =
+      buildSessionCommandsAndLayout(
+        currentNotificationCapabilities,
+        currentSearchAvailable,
+        favorited,
+      )
     notificationSessionCommands = notifSessionCommands
     notificationCustomLayout = notifCustomLayout
 
@@ -162,8 +178,9 @@ class MediaSessionCommandManager {
     }
 
     // Broadcast updated layout to all other connected controllers (Android Auto, etc.)
-//    Timber.Forest.d("Broadcasting customLayout to all controllers: ${customLayout.map { it.displayName }}")
-//    mediaSession.setCustomLayout(customLayout)
+    //    Timber.Forest.d("Broadcasting customLayout to all controllers: ${customLayout.map {
+    // it.displayName }}")
+    //    mediaSession.setCustomLayout(customLayout)
   }
 
   /**
@@ -308,11 +325,12 @@ class MediaSessionCommandManager {
 
     // Add favorite button when FAVORITE capability is enabled
     if (capabilities.contains(Capability.FAVORITE)) {
-      val heartIcon = if (favorited == true) {
-        CommandButton.ICON_HEART_FILLED
-      } else {
-        CommandButton.ICON_HEART_UNFILLED
-      }
+      val heartIcon =
+        if (favorited == true) {
+          CommandButton.ICON_HEART_FILLED
+        } else {
+          CommandButton.ICON_HEART_UNFILLED
+        }
       val displayName = if (favorited == true) "Remove from favorites" else "Add to favorites"
       val favoriteCommand = SessionCommand(CUSTOM_ACTION_FAVORITE, Bundle())
 

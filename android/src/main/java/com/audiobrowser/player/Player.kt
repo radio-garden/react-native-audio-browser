@@ -63,13 +63,14 @@ class Player(internal val context: Context) {
   private var equalizerManager: EqualizerManager? = null
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(context)
-  private val sleepTimer = object : SleepTimer() {
-    override fun onComplete() {
-      Timber.d("Sleep timer completed, stopping playback")
-      stop()
-      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
+  private val sleepTimer =
+    object : SleepTimer() {
+      override fun onComplete() {
+        Timber.d("Sleep timer completed, stopping playback")
+        stop()
+        callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
+      }
     }
-  }
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
@@ -109,9 +110,7 @@ class Player(internal val context: Context) {
       }
     }
 
-  /**
-   * Suspends until the browser is registered. Should be called from coroutine context.
-   */
+  /** Suspends until the browser is registered. Should be called from coroutine context. */
   suspend fun awaitBrowser(): AudioBrowser = browser ?: browserRegistered.await()
 
   /**
@@ -401,28 +400,34 @@ class Player(internal val context: Context) {
       val minBuffer = setupOptions.minBuffer.toInt()
       val maxBuffer = setupOptions.maxBuffer.toInt()
       val playBuffer = setupOptions.playBuffer.toInt()
-      // When automatic (rebufferBuffer is null), start at playBuffer and let AutomaticBufferManager adjust
+      // When automatic (rebufferBuffer is null), start at playBuffer and let AutomaticBufferManager
+      // adjust
       // When fixed (rebufferBuffer is set), use that value
       val playAfterRebuffer = setupOptions.rebufferBuffer?.toInt() ?: playBuffer
       val backBuffer = setupOptions.backBuffer.toInt()
-      val config = BufferConfig(
-        minBufferMs = minBuffer,
-        maxBufferMs = maxBuffer,
-        bufferForPlaybackMs = playBuffer,
-        bufferForPlaybackAfterRebufferMs = playAfterRebuffer,
-        backBufferMs = backBuffer
-      )
+      val config =
+        BufferConfig(
+          minBufferMs = minBuffer,
+          maxBufferMs = maxBuffer,
+          bufferForPlaybackMs = playBuffer,
+          bufferForPlaybackAfterRebufferMs = playAfterRebuffer,
+          backBufferMs = backBuffer,
+        )
       DynamicLoadControl(initialConfig = config)
     }
     // Create MediaFactory with reference to browser for media URL transformation
-    // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio focus)
-    mediaFactory = MediaFactory(
-      context,
-      cache,
-      setupOptions.retryPolicy,
-      shouldRetry = { exoPlayer.playWhenReady },
-      transferListener = bandwidthMeter,
-    ) { url -> browser?.getMediaRequestConfig(url) }
+    // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio
+    // focus)
+    mediaFactory =
+      MediaFactory(
+        context,
+        cache,
+        setupOptions.retryPolicy,
+        shouldRetry = { exoPlayer.playWhenReady },
+        transferListener = bandwidthMeter,
+      ) { url ->
+        browser?.getMediaRequestConfig(url)
+      }
 
     exoPlayer =
       ExoPlayer.Builder(context)
@@ -489,18 +494,15 @@ class Player(internal val context: Context) {
     setupAutomaticBufferManager(setupOptions.automaticBuffer)
   }
 
-  /**
-   * Sets up or tears down the automatic buffer manager based on the enabled flag.
-   */
+  /** Sets up or tears down the automatic buffer manager based on the enabled flag. */
   private fun setupAutomaticBufferManager(enabled: Boolean) {
     // Detach existing manager if any
     automaticBufferManager?.detach()
 
     if (enabled) {
       val defaultConfig = loadControl.getBufferConfig()
-      automaticBufferManager = AutomaticBufferManager(loadControl, defaultConfig).also {
-        it.attach(exoPlayer)
-      }
+      automaticBufferManager =
+        AutomaticBufferManager(loadControl, defaultConfig).also { it.attach(exoPlayer) }
       Timber.d("Automatic buffer management enabled")
     } else {
       automaticBufferManager = null
@@ -510,12 +512,11 @@ class Player(internal val context: Context) {
 
   /**
    * Starts observing network connectivity changes and invokes the callback when state changes.
+   *
    * @param scope The coroutine scope to use for observation
    */
   fun observeNetworkConnectivity(scope: kotlinx.coroutines.CoroutineScope) {
-    networkMonitor.observeOnline(scope) { isOnline ->
-      callbacks?.onOnlineChanged(isOnline)
-    }
+    networkMonitor.observeOnline(scope) { isOnline -> callbacks?.onOnlineChanged(isOnline) }
   }
 
   /**
@@ -645,8 +646,8 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Sets the queue with new tracks, optionally starting at a specific index and position.
-   * This is more efficient than calling clear() + add() + skipTo() separately.
+   * Sets the queue with new tracks, optionally starting at a specific index and position. This is
+   * more efficient than calling clear() + add() + skipTo() separately.
    *
    * @param tracks The tracks to set as the new queue.
    * @param startIndex The index to start playback from (default: 0).
@@ -669,8 +670,8 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Sets the favorited state of the currently playing track.
-   * Updates the heart icon in media controllers without interrupting playback.
+   * Sets the favorited state of the currently playing track. Updates the heart icon in media
+   * controllers without interrupting playback.
    */
   fun setActiveTrackFavorited(favorited: Boolean) {
     val index = exoPlayer.currentMediaItemIndex
@@ -679,24 +680,23 @@ class Player(internal val context: Context) {
     val currentTrack = this.currentTrack ?: return
 
     // Update native favorites cache (only tracks with src can be favorited)
-    currentTrack.src?.let { src ->
-      browser?.browserManager?.updateFavorite(src, favorited)
-    }
+    currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
 
-    val updatedTrack = Track(
-      url = currentTrack.url,
-      src = currentTrack.src,
-      artwork = currentTrack.artwork,
-      title = currentTrack.title,
-      subtitle = currentTrack.subtitle,
-      artist = currentTrack.artist,
-      album = currentTrack.album,
-      description = currentTrack.description,
-      genre = currentTrack.genre,
-      duration = currentTrack.duration,
-      style = currentTrack.style,
-      favorited = favorited,
-    )
+    val updatedTrack =
+      Track(
+        url = currentTrack.url,
+        src = currentTrack.src,
+        artwork = currentTrack.artwork,
+        title = currentTrack.title,
+        subtitle = currentTrack.subtitle,
+        artist = currentTrack.artist,
+        album = currentTrack.album,
+        description = currentTrack.description,
+        genre = currentTrack.genre,
+        duration = currentTrack.duration,
+        style = currentTrack.style,
+        favorited = favorited,
+      )
     exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(updatedTrack))
 
     // Update the heart button icon in notification/Android Auto
@@ -704,8 +704,8 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Updates the favorite button icon in the notification/Android Auto.
-   * Call this when track changes or favorite state changes.
+   * Updates the favorite button icon in the notification/Android Auto. Call this when track changes
+   * or favorite state changes.
    */
   internal fun updateFavoriteButtonState(favorited: Boolean?) {
     if (!::mediaSession.isInitialized) return
@@ -858,6 +858,9 @@ class Player(internal val context: Context) {
       progressUpdateManager.onPlaybackStateChanged(state)
       val newPlayingState = PlayingStateFactory.derive(playWhenReady, state)
       if (newPlayingState != playingState) {
+        Timber.d(
+          "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
+        )
         playingState = newPlayingState
         callbacks?.onPlaybackPlayingState(playingState)
       }
@@ -974,23 +977,21 @@ class Player(internal val context: Context) {
 
   /**
    * Gets the current network connectivity state.
+   *
    * @return true if device is online, false otherwise
    */
   fun getOnline(): Boolean {
     return networkMonitor.getOnline()
   }
 
-  /**
-   * Initializes the equalizer with the player's audio session ID.
-   */
+  /** Initializes the equalizer with the player's audio session ID. */
   private fun initializeEqualizer() {
     try {
       val audioSessionId = exoPlayer.audioSessionId
-      equalizerManager = EqualizerManager(audioSessionId).apply {
-        setOnSettingsChanged { settings ->
-          callbacks?.onEqualizerChanged(settings)
+      equalizerManager =
+        EqualizerManager(audioSessionId).apply {
+          setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
         }
-      }
       Timber.d("Equalizer initialized with session ID: $audioSessionId")
     } catch (e: Exception) {
       Timber.e(e, "Failed to initialize equalizer")
@@ -999,8 +1000,8 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Reinitializes the equalizer when the audio session ID changes.
-   * Preserves current settings (enabled state, preset, or custom levels).
+   * Reinitializes the equalizer when the audio session ID changes. Preserves current settings
+   * (enabled state, preset, or custom levels).
    */
   internal fun reinitializeEqualizer(newAudioSessionId: Int) {
     val oldManager = equalizerManager
@@ -1016,11 +1017,10 @@ class Player(internal val context: Context) {
       oldManager.release()
 
       // Create new equalizer with new session ID
-      equalizerManager = EqualizerManager(newAudioSessionId).apply {
-        setOnSettingsChanged { settings ->
-          callbacks?.onEqualizerChanged(settings)
+      equalizerManager =
+        EqualizerManager(newAudioSessionId).apply {
+          setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
         }
-      }
 
       // Restore previous settings if available
       currentSettings?.let { settings ->
@@ -1044,6 +1044,7 @@ class Player(internal val context: Context) {
 
   /**
    * Gets the current equalizer settings.
+   *
    * @return Current equalizer settings or null if not available
    */
   fun getEqualizerSettings(): com.margelo.nitro.audiobrowser.EqualizerSettings? {
@@ -1052,6 +1053,7 @@ class Player(internal val context: Context) {
 
   /**
    * Enables or disables the equalizer.
+   *
    * @param enabled true to enable, false to disable
    */
   fun setEqualizerEnabled(enabled: Boolean) {
@@ -1060,6 +1062,7 @@ class Player(internal val context: Context) {
 
   /**
    * Applies a preset to the equalizer.
+   *
    * @param preset Name of the preset to apply
    */
   fun setEqualizerPreset(preset: String) {
@@ -1068,6 +1071,7 @@ class Player(internal val context: Context) {
 
   /**
    * Sets custom band levels for the equalizer.
+   *
    * @param levels Array of level values in millibels for each band
    */
   fun setEqualizerLevels(levels: DoubleArray) {
@@ -1105,9 +1109,7 @@ class Player(internal val context: Context) {
     callbacks?.onSleepTimerChanged(getSleepTimer())
   }
 
-  /**
-   * Sets a sleep timer to stop playback when the current track finishes playing.
-   */
+  /** Sets a sleep timer to stop playback when the current track finishes playing. */
   fun setSleepTimerToEndOfTrack() {
     sleepTimer.sleepWhenPlayedToEnd()
     callbacks?.onSleepTimerChanged(getSleepTimer())
@@ -1127,8 +1129,8 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Checks if the sleep timer is set to end on track completion and stops playback if so.
-   * Called when a track naturally finishes playing.
+   * Checks if the sleep timer is set to end on track completion and stops playback if so. Called
+   * when a track naturally finishes playing.
    */
   internal fun checkSleepTimerOnTrackEnd() {
     if (sleepTimer.sleepWhenPlayedToEnd) {
@@ -1187,13 +1189,11 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Saves the current playback state (URL + position) for later resumption.
-   * Called on pause and other key events to ensure we can resume from the correct position.
+   * Saves the current playback state (URL + position) for later resumption. Called on pause and
+   * other key events to ensure we can resume from the correct position.
    */
   internal fun savePlaybackStateForResumption() {
-    exoPlayer.currentMediaItem?.mediaId?.let { url ->
-      playbackStateStore.save(url, position)
-    }
+    exoPlayer.currentMediaItem?.mediaId?.let { url -> playbackStateStore.save(url, position) }
   }
 
   // MARK: - Buffer Configuration
@@ -1201,8 +1201,8 @@ class Player(internal val context: Context) {
   /**
    * Updates the buffer configuration at runtime.
    *
-   * The new configuration takes effect immediately for future buffering decisions.
-   * Already-buffered data is not affected.
+   * The new configuration takes effect immediately for future buffering decisions. Already-buffered
+   * data is not affected.
    *
    * @param config The new buffer configuration to apply.
    */
@@ -1219,9 +1219,7 @@ class Player(internal val context: Context) {
     return loadControl.getBufferConfig()
   }
 
-  /**
-   * Resets the buffer configuration to defaults.
-   */
+  /** Resets the buffer configuration to defaults. */
   fun resetBufferConfig() {
     loadControl.resetToDefaults()
   }

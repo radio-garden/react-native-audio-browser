@@ -14,8 +14,8 @@ import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
-import timber.log.Timber
 import java.util.Locale
+import timber.log.Timber
 
 class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   /** Called when there is metadata associated with the current playback time. */
@@ -82,9 +82,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.updateFavoriteButtonState(player.currentTrack?.favorited)
 
     // Persist playback state for resumption (use mediaId which is the contextual URL)
-    mediaItem?.mediaId?.let { url ->
-      player.playbackStateStore.save(url, 0)
-    }
+    mediaItem?.mediaId?.let { url -> player.playbackStateStore.save(url, 0) }
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */

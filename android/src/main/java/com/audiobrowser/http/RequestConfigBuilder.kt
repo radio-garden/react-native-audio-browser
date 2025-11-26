@@ -1,6 +1,5 @@
 package com.audiobrowser.http
 
-import android.net.Uri
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -64,17 +63,16 @@ object RequestConfigBuilder {
     } ?: mergeConfig(base, convertToRequestConfig(override)) // Only merge if no transform
   }
 
-  suspend fun mergeConfig(
-    base: RequestConfig,
-    override: MediaRequestConfig,
-  ): MediaRequestConfig {
+  suspend fun mergeConfig(base: RequestConfig, override: MediaRequestConfig): MediaRequestConfig {
     // Apply transform function if provided - transform result wins completely
     val finalConfig: RequestConfig =
       override.transform?.let { transformFn ->
         try {
           Timber.d("Invoking media transform for URL: ${base.path}")
           val transformed = transformFn.invoke(base, null).await().await()
-          Timber.d("Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}")
+          Timber.d(
+            "Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
+          )
           transformed
         } catch (e: Exception) {
           Timber.e(e, "Failed to apply media transform function, using base config")

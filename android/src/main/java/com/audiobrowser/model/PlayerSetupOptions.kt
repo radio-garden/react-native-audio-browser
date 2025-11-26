@@ -16,9 +16,7 @@ data class AudioOffloadOptions(
   val rateChangeSupportRequired: Boolean = true,
 )
 
-/**
- * Retry policy for load errors (network failures, timeouts, etc.)
- */
+/** Retry policy for load errors (network failures, timeouts, etc.) */
 sealed class RetryPolicy {
   /** Use ExoPlayer's default behavior (limited retries, surfaces errors) */
   data object Default : RetryPolicy()
@@ -51,8 +49,8 @@ data class PlayerSetupOptions(
   var retryPolicy: RetryPolicy = RetryPolicy.Default,
 ) {
   /**
-   * Whether automatic buffer management is enabled.
-   * True when rebufferBuffer is not explicitly set (null).
+   * Whether automatic buffer management is enabled. True when rebufferBuffer is not explicitly set
+   * (null).
    */
   val automaticBuffer: Boolean
     get() = rebufferBuffer == null
