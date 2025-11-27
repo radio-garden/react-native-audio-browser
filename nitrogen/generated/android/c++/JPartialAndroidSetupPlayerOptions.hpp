@@ -19,7 +19,10 @@
 #include "JRetryConfig.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
 #include "JVariant_Boolean_RetryConfig.hpp"
+#include "JVariant_NullType_Double.hpp"
 #include "RetryConfig.hpp"
+#include <NitroModules/JNull.hpp>
+#include <NitroModules/Null.hpp>
 #include <optional>
 #include <variant>
 
@@ -52,8 +55,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JDouble> backBuffer = this->getFieldValue(fieldBackBuffer);
       static const auto fieldPlayBuffer = clazz->getField<jni::JDouble>("playBuffer");
       jni::local_ref<jni::JDouble> playBuffer = this->getFieldValue(fieldPlayBuffer);
-      static const auto fieldRebufferBuffer = clazz->getField<jni::JDouble>("rebufferBuffer");
-      jni::local_ref<jni::JDouble> rebufferBuffer = this->getFieldValue(fieldRebufferBuffer);
+      static const auto fieldRebufferBuffer = clazz->getField<JVariant_NullType_Double>("rebufferBuffer");
+      jni::local_ref<JVariant_NullType_Double> rebufferBuffer = this->getFieldValue(fieldRebufferBuffer);
       static const auto fieldMaxCacheSize = clazz->getField<jni::JDouble>("maxCacheSize");
       jni::local_ref<jni::JDouble> maxCacheSize = this->getFieldValue(fieldMaxCacheSize);
       static const auto fieldAudioContentType = clazz->getField<JAndroidAudioContentType>("audioContentType");
@@ -68,7 +71,7 @@ namespace margelo::nitro::audiobrowser {
         maxBuffer != nullptr ? std::make_optional(maxBuffer->value()) : std::nullopt,
         backBuffer != nullptr ? std::make_optional(backBuffer->value()) : std::nullopt,
         playBuffer != nullptr ? std::make_optional(playBuffer->value()) : std::nullopt,
-        rebufferBuffer != nullptr ? std::make_optional(rebufferBuffer->value()) : std::nullopt,
+        rebufferBuffer != nullptr ? std::make_optional(rebufferBuffer->toCpp()) : std::nullopt,
         maxCacheSize != nullptr ? std::make_optional(maxCacheSize->value()) : std::nullopt,
         audioContentType != nullptr ? std::make_optional(audioContentType->toCpp()) : std::nullopt,
         handleAudioBecomingNoisy != nullptr ? std::make_optional(static_cast<bool>(handleAudioBecomingNoisy->value())) : std::nullopt,
@@ -82,7 +85,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialAndroidSetupPlayerOptions::javaobject> fromCpp(const PartialAndroidSetupPlayerOptions& value) {
-      using JSignature = JPartialAndroidSetupPlayerOptions(jni::alias_ref<JVariant_Boolean_AndroidAudioOffloadSettings>, jni::alias_ref<JVariant_Boolean_RetryConfig>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JAndroidAudioContentType>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JAndroidPlayerWakeMode>);
+      using JSignature = JPartialAndroidSetupPlayerOptions(jni::alias_ref<JVariant_Boolean_AndroidAudioOffloadSettings>, jni::alias_ref<JVariant_Boolean_RetryConfig>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JAndroidAudioContentType>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JAndroidPlayerWakeMode>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -92,7 +95,7 @@ namespace margelo::nitro::audiobrowser {
         value.maxBuffer.has_value() ? jni::JDouble::valueOf(value.maxBuffer.value()) : nullptr,
         value.backBuffer.has_value() ? jni::JDouble::valueOf(value.backBuffer.value()) : nullptr,
         value.playBuffer.has_value() ? jni::JDouble::valueOf(value.playBuffer.value()) : nullptr,
-        value.rebufferBuffer.has_value() ? jni::JDouble::valueOf(value.rebufferBuffer.value()) : nullptr,
+        value.rebufferBuffer.has_value() ? JVariant_NullType_Double::fromCpp(value.rebufferBuffer.value()) : nullptr,
         value.maxCacheSize.has_value() ? jni::JDouble::valueOf(value.maxCacheSize.value()) : nullptr,
         value.audioContentType.has_value() ? JAndroidAudioContentType::fromCpp(value.audioContentType.value()) : nullptr,
         value.handleAudioBecomingNoisy.has_value() ? jni::JBoolean::valueOf(value.handleAudioBecomingNoisy.value()) : nullptr,

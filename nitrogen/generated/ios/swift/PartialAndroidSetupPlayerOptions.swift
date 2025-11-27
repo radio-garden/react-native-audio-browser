@@ -18,7 +18,7 @@ public extension PartialAndroidSetupPlayerOptions {
   /**
    * Create a new instance of `PartialAndroidSetupPlayerOptions`.
    */
-  init(audioOffload: Variant_Bool_AndroidAudioOffloadSettings?, retry: Variant_Bool_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Bool?, wakeMode: AndroidPlayerWakeMode?) {
+  init(audioOffload: Variant_Bool_AndroidAudioOffloadSettings?, retry: Variant_Bool_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Bool?, wakeMode: AndroidPlayerWakeMode?) {
     self.init({ () -> bridge.std__optional_std__variant_bool__AndroidAudioOffloadSettings__ in
       if let __unwrappedValue = audioOffload {
         return bridge.create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__({ () -> bridge.std__variant_bool__AndroidAudioOffloadSettings_ in
@@ -63,9 +63,16 @@ public extension PartialAndroidSetupPlayerOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_double_ in
+    }(), { () -> bridge.std__optional_std__variant_nitro__NullType__double__ in
       if let __unwrappedValue = rebufferBuffer {
-        return bridge.create_std__optional_double_(__unwrappedValue)
+        return bridge.create_std__optional_std__variant_nitro__NullType__double__({ () -> bridge.std__variant_nitro__NullType__double_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_nitro__NullType__double_(margelo.nitro.NullType.null)
+            case .second(let __value):
+              return bridge.create_std__variant_nitro__NullType__double_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
@@ -233,16 +240,42 @@ public extension PartialAndroidSetupPlayerOptions {
     }
   }
   
-  var rebufferBuffer: Double? {
+  var rebufferBuffer: Variant_NullType_Double? {
     @inline(__always)
     get {
-      return self.__rebufferBuffer.value
+      return { () -> Variant_NullType_Double? in
+        if bridge.has_value_std__optional_std__variant_nitro__NullType__double__(self.__rebufferBuffer) {
+          let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__double__(self.__rebufferBuffer)
+          return { () -> Variant_NullType_Double in
+            let __variant = bridge.std__variant_nitro__NullType__double_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first(NullType.null)
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
     }
     @inline(__always)
     set {
-      self.__rebufferBuffer = { () -> bridge.std__optional_double_ in
+      self.__rebufferBuffer = { () -> bridge.std__optional_std__variant_nitro__NullType__double__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_double_(__unwrappedValue)
+          return bridge.create_std__optional_std__variant_nitro__NullType__double__({ () -> bridge.std__variant_nitro__NullType__double_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_nitro__NullType__double_(margelo.nitro.NullType.null)
+              case .second(let __value):
+                return bridge.create_std__variant_nitro__NullType__double_(__value)
+            }
+          }().variant)
         } else {
           return .init()
         }

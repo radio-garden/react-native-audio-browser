@@ -63,7 +63,7 @@ data class PlayerSetupOptions(
     options.android?.let { android ->
       android.maxBuffer?.let { maxBuffer = it }
       android.playBuffer?.let { playBuffer = it }
-      android.rebufferBuffer?.let { rebufferBuffer = it }
+      android.rebufferBuffer?.let { rebufferBuffer = it.asSecondOrNull() }
       android.backBuffer?.let { backBuffer = it }
       android.maxCacheSize?.let { maxCacheSize = it }
       android.handleAudioBecomingNoisy?.let { handleAudioBecomingNoisy = it }

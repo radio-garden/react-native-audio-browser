@@ -405,7 +405,7 @@ class Player(internal val context: Context) {
       cache =
         SimpleCache(
           File(context.cacheDir, "RNAB"),
-          LeastRecentlyUsedCacheEvictor(setupOptions.maxCacheSize.toLong() * 1000), // kb to bytes
+          LeastRecentlyUsedCacheEvictor(setupOptions.maxCacheSize.toLong() * 1_000_000), // MB to bytes
           StandaloneDatabaseProvider(context),
         )
     } else {

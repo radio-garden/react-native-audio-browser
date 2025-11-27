@@ -237,7 +237,7 @@ export type PartialAndroidSetupPlayerOptions = {
    * Duration of media in ms that must be buffered for playback to resume
    * after a rebuffer (when the buffer runs empty during playback).
    *
-   * By default (when not set), uses automatic mode:
+   * When null (the default), uses automatic mode:
    * - Starts at `playBuffer` value
    * - On rebuffer, measures how fast the buffer drained
    * - Calculates how much buffer is needed to sustain 60s of playback
@@ -248,9 +248,9 @@ export type PartialAndroidSetupPlayerOptions = {
    * otherwise playback may rebuffer repeatedly (resuming with less buffer
    * than initial start).
    *
-   * @default undefined (automatic)
+   * @default null (automatic)
    */
-  rebufferBuffer?: number
+  rebufferBuffer?: number | null
 
   /**
    * Maximum cache size in MB.
@@ -321,16 +321,16 @@ export interface AndroidSetupPlayerOptions {
   retry: boolean | RetryConfig
 
   /**
-   * Maximum duration of media that the player will attempt to buffer in seconds.
+   * Maximum duration of media that the player will attempt to buffer in ms.
    * Max buffer may not be lower than min buffer.
    *
    * @throws Will throw if max buffer is lower than min buffer.
-   * @default 50
+   * @default 50000
    */
   maxBuffer: number
 
   /**
-   * Duration in seconds that should be kept in the buffer behind the current
+   * Duration in ms that should be kept in the buffer behind the current
    * playhead time.
    *
    * @default 0
@@ -338,26 +338,34 @@ export interface AndroidSetupPlayerOptions {
   backBuffer: number
 
   /**
-   * Duration of media in seconds that must be buffered for playback to start or
+   * Duration of media in ms that must be buffered for playback to start or
    * resume following a user action such as a seek.
    *
-   * @default 2.5
+   * @default 2500
    */
   playBuffer: number
 
   /**
-   * Duration of media in seconds that must be buffered for playback to resume
+   * Duration of media in ms that must be buffered for playback to resume
    * after a rebuffer (when the buffer runs empty during playback).
    *
-   * When not specified, defaults to playBuffer * 1.6 (maintaining ExoPlayer's
-   * default ratio). Should be >= playBuffer for optimal behavior.
+   * When null (the default), uses automatic mode:
+   * - Starts at `playBuffer` value
+   * - On rebuffer, measures how fast the buffer drained
+   * - Calculates how much buffer is needed to sustain 60s of playback
+   * - Increases threshold accordingly (up to 8000ms max)
+   * - Resets when changing tracks
    *
-   * @default playBuffer * 1.6
+   * Set to a number for a fixed threshold in ms. Should be >= playBuffer,
+   * otherwise playback may rebuffer repeatedly (resuming with less buffer
+   * than initial start).
+   *
+   * @default null (automatic)
    */
-  rebufferBuffer: number
+  rebufferBuffer: number | null
 
   /**
-   * Maximum cache size in kilobytes.
+   * Maximum cache size in MB.
    *
    * @default 0
    */

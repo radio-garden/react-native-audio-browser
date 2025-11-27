@@ -9,7 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.NullType
 
 /**
  * Represents the JavaScript object/struct "PartialAndroidSetupPlayerOptions".
@@ -34,7 +34,7 @@ data class PartialAndroidSetupPlayerOptions(
   val playBuffer: Double?,
   @DoNotStrip
   @Keep
-  val rebufferBuffer: Double?,
+  val rebufferBuffer: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
   val maxCacheSize: Double?,
@@ -58,7 +58,7 @@ data class PartialAndroidSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
+    private fun fromCpp(audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
       return PartialAndroidSetupPlayerOptions(audioOffload, retry, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
     }
   }

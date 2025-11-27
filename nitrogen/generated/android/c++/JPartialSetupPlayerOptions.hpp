@@ -29,9 +29,12 @@
 #include "JRetryConfig.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
 #include "JVariant_Boolean_RetryConfig.hpp"
+#include "JVariant_NullType_Double.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include "PartialIOSSetupPlayerOptions.hpp"
 #include "RetryConfig.hpp"
+#include <NitroModules/JNull.hpp>
+#include <NitroModules/Null.hpp>
 #include <optional>
 #include <variant>
 #include <vector>
