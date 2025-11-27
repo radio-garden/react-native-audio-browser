@@ -55,7 +55,10 @@ data class ResolvedTrack(
   val style: TrackStyle?,
   @DoNotStrip
   @Keep
-  val favorited: Boolean?
+  val favorited: Boolean?,
+  @DoNotStrip
+  @Keep
+  val groupTitle: String?
 ) {
   /* primary constructor */
 
@@ -67,8 +70,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String, children: Array<Track>?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, favorited: Boolean?): ResolvedTrack {
-      return ResolvedTrack(url, children, src, artwork, title, subtitle, artist, album, description, genre, duration, style, favorited)
+    private fun fromCpp(url: String, children: Array<Track>?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, favorited: Boolean?, groupTitle: String?): ResolvedTrack {
+      return ResolvedTrack(url, children, src, artwork, title, subtitle, artist, album, description, genre, duration, style, favorited, groupTitle)
     }
   }
 }

@@ -2,6 +2,7 @@ package com.audiobrowser.util
 
 import android.os.Bundle
 import androidx.core.net.toUri
+import androidx.media.utils.MediaConstants
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -17,6 +18,12 @@ object TrackFactory {
   }
 
   fun toMedia3(track: Track): MediaItem {
+    val extras = Bundle().apply {
+      track.groupTitle?.let {
+        putString(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE, it)
+      }
+    }
+
     val mediaMetadata =
       MediaMetadata.Builder()
         .setTitle(track.title)
@@ -27,6 +34,7 @@ object TrackFactory {
         .setArtworkUri(track.artwork?.toUri())
         .setIsBrowsable(track.src == null)
         .setIsPlayable(track.src != null)
+        .setExtras(extras)
         .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
         .build()
 
@@ -36,14 +44,6 @@ object TrackFactory {
         ?: throw IllegalArgumentException(
           "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
         )
-
-    val extras = Bundle()
-
-    //  private val playableExtras = bundleOf(
-    //   MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_SINGLE_ITEM
-    //   MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_STATUS
-    //   MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE
-    // )
 
     return MediaItem.Builder()
       .setMediaId(mediaId)

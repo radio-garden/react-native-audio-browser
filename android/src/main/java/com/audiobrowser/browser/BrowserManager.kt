@@ -141,6 +141,7 @@ class BrowserManager {
       duration = track.duration,
       style = track.style,
       favorited = true,
+      groupTitle = track.groupTitle,
     )
   }
 
@@ -594,6 +595,7 @@ class BrowserManager {
           src = null,
           style = null,
           favorited = null,
+          groupTitle = null,
         )
 
       // Cache search results for getCachedSearchResults()
@@ -624,6 +626,7 @@ class BrowserManager {
           src = null,
           style = null,
           favorited = null,
+          groupTitle = null,
         )
 
       return emptySearchResult

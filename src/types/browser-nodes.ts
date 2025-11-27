@@ -46,6 +46,13 @@ export interface Track {
    * displays a filled/empty heart icon in media controllers (notification, Android Auto).
    */
   favorited?: boolean
+
+  /**
+   * Group title for section headers in Android Auto/AAOS.
+   * Items with the same groupTitle are displayed under a shared section header.
+   * Items must be contiguous to form a single group.
+   */
+  groupTitle?: string
 }
 
 /**

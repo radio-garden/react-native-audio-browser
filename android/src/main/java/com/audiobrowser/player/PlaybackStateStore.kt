@@ -151,6 +151,7 @@ class PlaybackStateStore(private val player: Player) {
       put("duration", track.duration)
       put("style", track.style?.name)
       put("favorited", track.favorited)
+      put("groupTitle", track.groupTitle)
     }.toString()
 
   private fun trackFromJson(json: String): Track? =
@@ -169,6 +170,7 @@ class PlaybackStateStore(private val player: Player) {
         duration = if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration") else null,
         style = obj.optString("style").takeIf { it.isNotEmpty() }?.let { runCatching { TrackStyle.valueOf(it) }.getOrNull() },
         favorited = if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited") else null,
+        groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
       )
     }.onFailure { e ->
       Timber.w(e, "Failed to parse persisted track JSON")
