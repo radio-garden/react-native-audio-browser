@@ -15,13 +15,15 @@ graph TD
         AP[AudioPlayer.kt]
         ABP[AudioBrowserPackage.kt]
         CB[Callbacks.kt]
+        TA[TypeAliases.kt]
     end
 
     subgraph "Browser System"
-        BM[BrowserManager.kt<br/>- Route Resolution<br/>- Dual Cache System<br/>- Contextual URLs]
+        BM[BrowserManager.kt<br/>- Route Resolution<br/>- LRU Track Cache<br/>- Contextual URLs<br/>- Favorite Hydration]
         SR[SimpleRouter.kt]
         JM[JsonModels.kt]
         RM[RouteMatch.kt]
+        BPH[BrowserPathHelper.kt<br/>- Contextual URL Building<br/>- Special Paths]
     end
 
     subgraph "HTTP Layer"
@@ -30,16 +32,29 @@ graph TD
     end
 
     subgraph "Player System"
-        P[Player.kt]
-        MF[MediaFactory.kt]
-        MSC[MediaSessionCallback.kt<br/>- Media3 Integration<br/>- Cache Lookup]
+        P[Player.kt<br/>- ExoPlayer Wrapper<br/>- Sleep Timer<br/>- Now Playing]
+        MF[MediaFactory.kt<br/>- URL Transform<br/>- Caching<br/>- Retry Policy]
+        MSC[MediaSessionCallback.kt<br/>- Media3 Integration<br/>- Queue Expansion<br/>- Voice Search]
         MSCM[MediaSessionCommandManager.kt]
         PPUM[PlaybackProgressUpdateManager.kt]
         PL[PlayerListener.kt]
+        PSS[PlaybackStateStore.kt<br/>- State Persistence<br/>- Resumption]
+    end
+
+    subgraph "Buffer Management"
+        DLC[DynamicLoadControl.kt<br/>- Runtime Config<br/>- Startup Timing]
+        ABM[AutomaticBufferManager.kt<br/>- Drain Rate Calc<br/>- Adaptive Thresholds]
+        RLEHP[RetryLoadErrorHandlingPolicy.kt<br/>- Exponential Backoff<br/>- HTTP Status Handling]
+    end
+
+    subgraph "Audio Features"
+        ST[SleepTimer.kt<br/>- Time-based<br/>- End of Track]
+        EM[EqualizerManager.kt<br/>- Presets<br/>- Band Levels]
+        NCM[NetworkConnectivityMonitor.kt<br/>- Online State<br/>- StateFlow]
     end
 
     subgraph "Android Service"
-        S[Service.kt]
+        S[Service.kt<br/>- MediaLibraryService<br/>- Voice Search Handler]
         HTS[HeadlessTaskService.kt]
     end
 
@@ -48,6 +63,7 @@ graph TD
         PSO[PlayerSetupOptions.kt]
         PUO[PlayerUpdateOptions.kt]
         TM[TimedMetadata.kt]
+        BC[BufferConfig]
     end
 
     subgraph "Utilities"
@@ -75,6 +91,7 @@ graph TD
     BM --> RM
     BM --> HC
     BM --> JM
+    BM --> BPH
     HC --> RCB
 
     AP --> P
@@ -83,20 +100,30 @@ graph TD
 
     P --> MF
     P --> MSC
-    P --> MSCM
     P --> PPUM
     P --> PL
-    P --> PM
+    P --> PSS
+    P --> DLC
+    P --> ST
+    P --> EM
+    P --> NCM
+
+    MF --> RLEHP
+
+    DLC --> ABM
+
+    MSC --> MSCM
 
     S --> P
     S --> MS
     S --> MLB
+    S --> HTS
 
     P --> M3
     MS --> M3
 
     %% Media3 Integration Flow
-    MSC -->|Cache Lookup| BM
+    MSC -->|Cache Lookup<br/>Queue Expansion| BM
     MSC --> TF
     MSC --> RTF
 
@@ -113,23 +140,30 @@ graph TD
     AB -.->|Media Config| AP
 
     %% Cache Flow
-    BM -.->|resolvedTrackCache<br/>trackCache| MSC
+    BM -.->|trackCache LRU| MSC
+
+    %% State Persistence Flow
+    PSS -.->|SharedPreferences| P
 
     classDef nitro fill:#e1f5fe
     classDef browser fill:#f3e5f5
     classDef http fill:#e8f5e8
     classDef player fill:#fff3e0
-    classDef service fill:#fce4ec
+    classDef buffer fill:#e8eaf6
+    classDef audio fill:#fce4ec
+    classDef service fill:#ffebee
     classDef model fill:#fff9c4
     classDef util fill:#f1f8e9
     classDef media3 fill:#e0e0e0
 
-    class AB,AP,ABP,CB nitro
-    class BM,SR,JM,RM browser
+    class AB,AP,ABP,CB,TA nitro
+    class BM,SR,JM,RM,BPH browser
     class HC,RCB http
-    class P,MF,MSC,MSCM,PPUM,PL player
+    class P,MF,MSC,MSCM,PPUM,PL,PSS player
+    class DLC,ABM,RLEHP buffer
+    class ST,EM,NCM audio
     class S,HTS service
-    class PM,PSO,PUO,TM model
+    class PM,PSO,PUO,TM,BC model
     class TF,RTF,MA,PSF,RF,RMF,AACTF util
     class M3,MS,MLB media3
 ```
@@ -141,18 +175,24 @@ graph TD
 - **AudioPlayer.kt**: Main Nitro module for audio playback, manages Player lifecycle
 - **AudioBrowserPackage.kt**: React Native package registration
 - **Callbacks.kt**: Interface defining all player event callbacks for JS communication
+- **TypeAliases.kt**: Readable type aliases for generated Nitro variant types
 
 ### Browser System
-- **BrowserManager.kt**: Core navigation logic with dual-cache system
+- **BrowserManager.kt**: Core navigation logic with LRU cache system
   - Route resolution and path matching
   - HTTP API execution and response processing
-  - `resolvedTrackCache`: Caches ResolvedTrack containers by path
-  - `trackCache`: Caches individual Track objects by mediaId (url or contextual url)
+  - `trackCache`: LRU cache (3000 items) for individual Track objects by mediaId (url or src)
   - Contextual URL generation for playable-only tracks
   - Track validation ensuring stable identifiers
+  - Favorite hydration from native favorites cache
+  - Queue expansion from contextual URLs for Android Auto
 - **SimpleRouter.kt**: Client-side route matching with parameter extraction
 - **JsonModels.kt**: JSON serialization models for API responses
 - **RouteMatch.kt**: Data class for route matching results
+- **BrowserPathHelper.kt**: Utility for browser path and contextual URL handling
+  - Special system paths: `/__root`, `/__recent`, `/__search?q=`, `/__offline`
+  - Contextual URL building: `{parentPath}?__trackId={trackSrc}`
+  - URL construction with proper slash handling
 
 ### HTTP Layer
 - **HttpClient.kt**: OkHttp wrapper for API requests
@@ -160,17 +200,61 @@ graph TD
 
 ### Player System
 - **Player.kt**: Core audio player implementation wrapping Media3 ExoPlayer
+  - Integrates sleep timer, equalizer, and network monitoring
+  - Now playing metadata override support
+  - Favorite state management
+  - Buffer configuration control
 - **MediaFactory.kt**: Creates Media3 MediaItems from tracks with HTTP configuration
+  - URL transformation via browser's media request config
+  - Optional disk caching via SimpleCache
+  - Retry policy application
 - **MediaSessionCallback.kt**: Handles media session commands and Media3 integration
   - Implements MediaLibraryService callbacks (onGetChildren, onGetItem, onSetMediaItems)
+  - Queue expansion from contextual URLs for Android Auto album playback
+  - Voice search handling via BrowserManager.searchPlayable()
   - Performs cache lookups via BrowserManager for MediaItem rehydration
-  - Handles root items and special IDs
 - **MediaSessionCommandManager.kt**: Manages available media session commands based on capabilities
 - **PlaybackProgressUpdateManager.kt**: Manages playback progress updates and seeking
 - **PlayerListener.kt**: Handles ExoPlayer state changes and events
+- **PlaybackStateStore.kt**: Persists playback state for resumption
+  - Stores track, position, repeat mode, shuffle, and playback speed
+  - Periodic position saving during playback
+  - Live stream position handling (uses C.TIME_UNSET for live edge)
+
+### Buffer Management
+- **DynamicLoadControl.kt**: Custom LoadControl with runtime-configurable buffer thresholds
+  - Mutable buffer parameters (min, max, play, rebuffer, back)
+  - Startup timing logging
+  - Thread-safe with @Volatile fields
+- **AutomaticBufferManager.kt**: Adaptive buffer management based on network conditions
+  - Monitors playback for rebuffer events
+  - Calculates drain rate and adjusts rebuffer threshold
+  - Target: sustain 60 seconds of playback without rebuffering
+  - Resets on media item transition (station change)
+- **RetryLoadErrorHandlingPolicy.kt**: Custom error handling with exponential backoff
+  - Retries on network errors (connection, timeout)
+  - Retries on specific HTTP status codes (408, 429, 5xx)
+  - Configurable max retries or infinite mode
+  - Respects playWhenReady state (no retry when paused)
+
+### Audio Features
+- **SleepTimer.kt**: Sleep timer with two modes
+  - Time-based: stops after specified duration
+  - End of track: stops when current track finishes
+- **EqualizerManager.kt**: Android Equalizer audio effect wrapper
+  - Preset application and custom band levels
+  - Settings change callbacks
+  - Audio session ID management
+- **NetworkConnectivityMonitor.kt**: Network state monitoring
+  - Uses ConnectivityManager.NetworkCallback
+  - Exposes StateFlow for reactive updates
+  - Validates internet capability
 
 ### Android Service Layer
 - **Service.kt**: MediaLibraryService implementation for background playback and Android Auto
+  - Voice search intent parsing (MEDIA_PLAY_FROM_SEARCH)
+  - App killed playback behavior handling
+  - External controller detection
 - **HeadlessTaskService.kt**: Handles headless tasks when app is backgrounded
 
 ### Data Models
@@ -178,6 +262,7 @@ graph TD
 - **PlayerSetupOptions.kt**: Configuration options for initial player setup
 - **PlayerUpdateOptions.kt**: Configuration options for runtime player updates
 - **TimedMetadata.kt**: Time-based metadata for playback events
+- **BufferConfig**: Data class for buffer configuration (min, max, play, rebuffer, back)
 
 ### Utility Layer
 - **TrackFactory.kt**: Converts Nitro Track objects to/from Media3 MediaItems
@@ -193,51 +278,91 @@ graph TD
 ### Browser Navigation Flow
 1. **JS** calls `audioBrowser.navigate(path)`
 2. **AudioBrowser.kt** receives call via Nitro bridge
-3. **BrowserManager.kt** checks `resolvedTrackCache` for cached result
-4. On cache miss: performs route resolution using **SimpleRouter.kt**
-5. For API routes: **HttpClient.kt** executes HTTP request via **RequestConfigBuilder.kt**
-6. **JsonModels.kt** deserializes response to Nitro types
-7. **BrowserManager** transforms children:
+3. **BrowserManager.kt** performs route resolution using **SimpleRouter.kt**
+4. For API routes: **HttpClient.kt** executes HTTP request via **RequestConfigBuilder.kt**
+5. **JsonModels.kt** deserializes response to Nitro types
+6. **BrowserManager** transforms children:
    - Validates all tracks have stable identifiers (url or src)
-   - Browsable tracks: cached by original url
-   - Playable-only tracks: generates contextual URL using `__trackId` parameter
-8. Caches result in `resolvedTrackCache` and populates `trackCache`
-9. Result flows back through Nitro bridge to **JS**
+   - Browsable tracks: keep original url
+   - Playable-only tracks: generates contextual URL using `__trackId` parameter via **BrowserPathHelper.kt**
+   - Hydrates favorite state from native favorites cache
+7. Caches children in `trackCache` (LRU, 3000 items) for Media3 lookups
+8. Result flows back through Nitro bridge to **JS**
 
 ### Audio Playback Flow (JS-initiated)
 1. **JS** calls `audioPlayer.play(tracks)`
 2. **AudioPlayer.kt** receives call and forwards to **Player.kt**
 3. **TrackFactory.kt** converts tracks to Media3 MediaItems
 4. **MediaFactory.kt** applies HTTP configuration for media URLs
-5. **Player.kt** loads MediaItems into **Media3 ExoPlayer**
-6. **Service.kt** manages **MediaSession** for system integration
-7. Playback events flow back through **PlayerListener.kt** to **Callbacks.kt** to **JS**
+5. **DynamicLoadControl** manages buffering with configurable thresholds
+6. **Player.kt** loads MediaItems into **Media3 ExoPlayer**
+7. **Service.kt** manages **MediaSession** for system integration
+8. **PlaybackStateStore.kt** persists position periodically
+9. Playback events flow back through **PlayerListener.kt** to **Callbacks.kt** to **JS**
 
 ### Media3 Integration Flow (Android Auto / External Controllers)
 1. **Media3** calls `MediaSessionCallback.onGetChildren(parentId)`
-2. **BrowserManager** resolves path (with caching) and returns children with contextual URLs
+2. **BrowserManager** resolves path and returns children with contextual URLs
 3. User selects track → **Media3** calls `MediaSessionCallback.onSetMediaItems(mediaItems)`
-4. **MediaSessionCallback** performs two-tier cache lookup:
-   - First checks `resolvedTrackCache` for navigated containers
-   - Then checks `trackCache` for individual tracks by mediaId
-5. **Cache hit**: Full metadata retrieved and converted to Media3 MediaItem
-6. **Cache miss**: Falls back to shell MediaItem (metadata may be incomplete)
-7. **Player.kt** loads MediaItems into **Media3 ExoPlayer**
+4. **MediaSessionCallback** handles queue expansion for single-item selections:
+   - If contextual URL: resolves parent container, filters playable tracks, finds selected index
+   - Expands to full album/playlist (or single track if `singleTrack=true`)
+5. **MediaSessionCallback** performs cache lookup via `BrowserManager.getCachedTrack(mediaId)`:
+   - Direct lookup by url or src
+   - Extracts src from contextual URL if needed
+6. **Cache hit**: Full metadata retrieved and converted to Media3 MediaItem
+7. **Cache miss**: Throws IllegalStateException (indicates bug)
+8. **Player.kt** loads MediaItems into **Media3 ExoPlayer**
+
+### Voice Search Flow
+1. **Service.kt** receives `MEDIA_PLAY_FROM_SEARCH` intent
+2. Parses intent into **SearchParams** (mode, query, artist, album, etc.)
+3. **Player.playFromSearch()** calls **BrowserManager.searchPlayable()**
+4. **BrowserManager** executes search via configured search source (callback or API)
+5. If first result is browsable-only, resolves it to get playable children
+6. Filters to playable tracks and returns
+7. **Player.kt** sets queue and starts playback
 
 ### Contextual URL System
 - **Purpose**: Provide stable identifiers for playable-only tracks (tracks with `src` but no `url`)
 - **Format**: `{parentPath}?__trackId={trackSrc}` (e.g., `/library/radio?__trackId=song.mp3`)
-- **Normalization**: When resolving contextual URLs, extracts parent path to resolve container
+- **Handled by**: **BrowserPathHelper.kt**
+  - `build(parentPath, trackId)`: Creates contextual URL
+  - `extractTrackId(path)`: Extracts src from contextual URL
+  - `stripTrackId(url)`: Gets parent path for container resolution
+  - `isContextual(path)`: Checks if URL contains `__trackId` parameter
 - **Benefits**:
   - Media3 can reference tracks without browsable URLs
-  - Cache lookup works consistently
-  - Parent context preserved for proper resolution
+  - Queue expansion retrieves full album/playlist context
+  - Cache lookup works consistently via src extraction
+
+### Buffer Management Flow
+1. **Player.setup()** creates **DynamicLoadControl** with initial config
+2. If `automaticBuffer=true`, creates **AutomaticBufferManager**
+3. During playback, **AutomaticBufferManager** monitors:
+   - Tracks buffer level at playback start
+   - Detects rebuffer events (STATE_BUFFERING after STATE_READY)
+   - Calculates drain rate: `initialBuffer / playbackDuration`
+4. On rebuffer: calculates optimal buffer for 60s playback
+5. Updates **DynamicLoadControl** with new `bufferForPlaybackAfterRebufferMs`
+6. Resets to defaults on media item transition
+
+### State Persistence Flow
+1. **PlaybackStateStore** observes player state
+2. On track change: saves track, position, repeat mode, shuffle, speed
+3. During playback: periodic position save every 5 seconds
+4. On pause/stop: final position save
+5. On app restart: **restore()** loads persisted state
+6. Settings (repeat, shuffle, speed) applied directly to player
+7. Track and position returned for queue setup by caller
 
 ### Media URL Transformation
-1. **AudioBrowser.kt** provides media configuration
-2. **AudioPlayer.kt** registers with AudioBrowser for URL transformation
-3. During playback, **MediaFactory.kt** applies transformation to track URLs
-4. HTTP headers and authentication flow through to Media3 for secure playback
+1. **AudioBrowser.kt** provides media configuration via `getMediaRequestConfig()`
+2. **Player.kt** registers AudioBrowser reference
+3. During playback, **MediaFactory.kt** calls `getRequestConfig(originalUrl)`
+4. **BrowserPathHelper.buildUrl()** combines baseUrl with path
+5. HTTP headers and authentication applied to DataSource
+6. Optional disk caching via **SimpleCache**
 
 ## Threading Model
 
