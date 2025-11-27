@@ -469,9 +469,7 @@ class MediaSessionCallback(private val player: Player) :
       val state =
         if (playback) {
           // restore() sets player properties which must happen on main thread
-          withContext(Dispatchers.Main) {
-            player.playbackStateStore.restore()
-          }
+          withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
         } else {
           player.playbackStateStore.get()
         }

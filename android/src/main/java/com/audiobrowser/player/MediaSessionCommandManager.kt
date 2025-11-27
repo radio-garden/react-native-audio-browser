@@ -121,7 +121,12 @@ class MediaSessionCommandManager {
 
     // Build notification button preferences with explicit slots
     val (notifSessionCommands, notifButtonPrefs) =
-      buildNotificationButtonPreferences(capabilities, notificationButtons, searchAvailable, favorited)
+      buildNotificationButtonPreferences(
+        capabilities,
+        notificationButtons,
+        searchAvailable,
+        favorited,
+      )
     notificationSessionCommands = notifSessionCommands
     notificationCustomLayout = notifButtonPrefs
 
@@ -347,8 +352,8 @@ class MediaSessionCommandManager {
   }
 
   /**
-   * Builds notification button preferences with explicit slot assignments.
-   * If notificationButtons is null, derives button layout from capabilities.
+   * Builds notification button preferences with explicit slot assignments. If notificationButtons
+   * is null, derives button layout from capabilities.
    */
   private fun buildNotificationButtonPreferences(
     capabilities: List<Capability>,
@@ -413,7 +418,9 @@ class MediaSessionCommandManager {
         }
         ButtonCapability.FAVORITE -> {
           if (capabilities.contains(Capability.FAVORITE)) {
-            val heartIcon = if (favorited == true) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED
+            val heartIcon =
+              if (favorited == true) CommandButton.ICON_HEART_FILLED
+              else CommandButton.ICON_HEART_UNFILLED
             val displayName = if (favorited == true) "Remove from favorites" else "Add to favorites"
             val command = SessionCommand(CUSTOM_ACTION_FAVORITE, Bundle())
             sessionCommandsBuilder.add(command)
@@ -451,29 +458,43 @@ class MediaSessionCommandManager {
 
       // Back slot: skip-to-previous, or jump-backward if no skip
       if (hasSkipPrevious) {
-        createButton(ButtonCapability.SKIP_TO_PREVIOUS, CommandButton.SLOT_BACK)?.let { buttons.add(it) }
+        createButton(ButtonCapability.SKIP_TO_PREVIOUS, CommandButton.SLOT_BACK)?.let {
+          buttons.add(it)
+        }
       } else if (capabilities.contains(Capability.JUMP_BACKWARD)) {
-        createButton(ButtonCapability.JUMP_BACKWARD, CommandButton.SLOT_BACK)?.let { buttons.add(it) }
+        createButton(ButtonCapability.JUMP_BACKWARD, CommandButton.SLOT_BACK)?.let {
+          buttons.add(it)
+        }
       }
 
       // Forward slot: skip-to-next, or jump-forward if no skip
       if (hasSkipNext) {
-        createButton(ButtonCapability.SKIP_TO_NEXT, CommandButton.SLOT_FORWARD)?.let { buttons.add(it) }
+        createButton(ButtonCapability.SKIP_TO_NEXT, CommandButton.SLOT_FORWARD)?.let {
+          buttons.add(it)
+        }
       } else if (capabilities.contains(Capability.JUMP_FORWARD)) {
-        createButton(ButtonCapability.JUMP_FORWARD, CommandButton.SLOT_FORWARD)?.let { buttons.add(it) }
+        createButton(ButtonCapability.JUMP_FORWARD, CommandButton.SLOT_FORWARD)?.let {
+          buttons.add(it)
+        }
       }
 
       // Secondary slots for jump buttons if skip buttons are present
       if (hasSkipPrevious && capabilities.contains(Capability.JUMP_BACKWARD)) {
-        createButton(ButtonCapability.JUMP_BACKWARD, CommandButton.SLOT_BACK_SECONDARY)?.let { buttons.add(it) }
+        createButton(ButtonCapability.JUMP_BACKWARD, CommandButton.SLOT_BACK_SECONDARY)?.let {
+          buttons.add(it)
+        }
       }
       if (hasSkipNext && capabilities.contains(Capability.JUMP_FORWARD)) {
-        createButton(ButtonCapability.JUMP_FORWARD, CommandButton.SLOT_FORWARD_SECONDARY)?.let { buttons.add(it) }
+        createButton(ButtonCapability.JUMP_FORWARD, CommandButton.SLOT_FORWARD_SECONDARY)?.let {
+          buttons.add(it)
+        }
       }
 
       // Overflow: favorite
       if (capabilities.contains(Capability.FAVORITE)) {
-        createButton(ButtonCapability.FAVORITE, CommandButton.SLOT_OVERFLOW)?.let { buttons.add(it) }
+        createButton(ButtonCapability.FAVORITE, CommandButton.SLOT_OVERFLOW)?.let {
+          buttons.add(it)
+        }
       }
     }
 
@@ -482,8 +503,8 @@ class MediaSessionCommandManager {
   }
 
   /**
-   * Builds player commands for the notification controller based on the button layout.
-   * This enables the commands needed for the buttons that will be shown.
+   * Builds player commands for the notification controller based on the button layout. This enables
+   * the commands needed for the buttons that will be shown.
    */
   private fun buildNotificationPlayerCommands(
     capabilities: List<Capability>,
@@ -502,14 +523,18 @@ class MediaSessionCommandManager {
     val showJumpForward: Boolean
 
     if (notificationButtons != null) {
-      showSkipPrevious = notificationButtons.back == ButtonCapability.SKIP_TO_PREVIOUS ||
-        notificationButtons.backSecondary == ButtonCapability.SKIP_TO_PREVIOUS
-      showSkipNext = notificationButtons.forward == ButtonCapability.SKIP_TO_NEXT ||
-        notificationButtons.forwardSecondary == ButtonCapability.SKIP_TO_NEXT
-      showJumpBackward = notificationButtons.back == ButtonCapability.JUMP_BACKWARD ||
-        notificationButtons.backSecondary == ButtonCapability.JUMP_BACKWARD
-      showJumpForward = notificationButtons.forward == ButtonCapability.JUMP_FORWARD ||
-        notificationButtons.forwardSecondary == ButtonCapability.JUMP_FORWARD
+      showSkipPrevious =
+        notificationButtons.back == ButtonCapability.SKIP_TO_PREVIOUS ||
+          notificationButtons.backSecondary == ButtonCapability.SKIP_TO_PREVIOUS
+      showSkipNext =
+        notificationButtons.forward == ButtonCapability.SKIP_TO_NEXT ||
+          notificationButtons.forwardSecondary == ButtonCapability.SKIP_TO_NEXT
+      showJumpBackward =
+        notificationButtons.back == ButtonCapability.JUMP_BACKWARD ||
+          notificationButtons.backSecondary == ButtonCapability.JUMP_BACKWARD
+      showJumpForward =
+        notificationButtons.forward == ButtonCapability.JUMP_FORWARD ||
+          notificationButtons.forwardSecondary == ButtonCapability.JUMP_FORWARD
     } else {
       // Default derivation from capabilities
       val hasSkipPrevious = capabilities.contains(Capability.SKIP_TO_PREVIOUS)
