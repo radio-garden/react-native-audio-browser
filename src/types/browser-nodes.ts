@@ -39,7 +39,32 @@ export interface Track {
   description?: string
   genre?: string
   duration?: number
+
+  /**
+   * Display style for this item in Android Auto/AAOS.
+   * - 'list': Display as a list row
+   * - 'grid': Display as a grid tile
+   *
+   * On Android: when `artwork` is an `android.resource://` URI
+   * (e.g., `android.resource://com.myapp/drawable/ic_folder`), the library
+   * automatically uses 'category' styling which adds margins around the icon
+   * and enables system tinting for vector drawables.
+   *
+   * @see https://developer.android.com/training/cars/media#default-content-style
+   */
   style?: TrackStyle
+
+  /**
+   * Display style for this item's children in Android Auto/AAOS.
+   * Only applies to browsable items (containers/folders).
+   * - 'list': Display children as list rows
+   * - 'grid': Display children as grid tiles
+   *
+   * Must be set on the item when it appears as a child in a parent's list.
+   * Android Auto reads the extras at that point to determine how to display
+   * the folder's contents when navigated into.
+   */
+  childrenStyle?: TrackStyle
 
   /**
    * Whether this track is favorited. When the `set-rating` capability is enabled,

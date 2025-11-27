@@ -1,8 +1,6 @@
 package com.audiobrowser.util
 
-import android.os.Bundle
 import androidx.core.net.toUri
-import androidx.media.utils.MediaConstants
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -18,11 +16,7 @@ object TrackFactory {
   }
 
   fun toMedia3(track: Track): MediaItem {
-    val extras = Bundle().apply {
-      track.groupTitle?.let {
-        putString(MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE, it)
-      }
-    }
+    val extras = MediaExtrasBuilder.build(track)
 
     val mediaMetadata =
       MediaMetadata.Builder()

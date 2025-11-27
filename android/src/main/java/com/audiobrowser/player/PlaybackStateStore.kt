@@ -76,23 +76,24 @@ class PlaybackStateStore(private val player: Player) {
     launchPeriodicSave()
   }
 
-    /** Resets the periodic save timer on track change to avoid redundant saves shortly after. */
-    fun resetPeriodicSave() {
-      periodicSaveJob?.cancel()
-      periodicSaveJob = null
-      launchPeriodicSave()
-    }
+  /** Resets the periodic save timer on track change to avoid redundant saves shortly after. */
+  fun resetPeriodicSave() {
+    periodicSaveJob?.cancel()
+    periodicSaveJob = null
+    launchPeriodicSave()
+  }
 
   private fun launchPeriodicSave() {
     if (!player.playWhenReady) return
-    periodicSaveJob = scope.launch {
-      while (true) {
-        delay(PERIODIC_SAVE_INTERVAL_MS)
-        if (!player.isCurrentItemLive) {
-          savePosition()
+    periodicSaveJob =
+      scope.launch {
+        while (true) {
+          delay(PERIODIC_SAVE_INTERVAL_MS)
+          if (!player.isCurrentItemLive) {
+            savePosition()
+          }
         }
       }
-    }
   }
 
   /** Stops periodic position saving and saves final position. Call when playback stops. */
@@ -125,9 +126,7 @@ class PlaybackStateStore(private val player: Player) {
   fun savePosition() {
     val positionMs = if (player.isCurrentItemLive) C.TIME_UNSET else player.position
 
-    prefs.edit {
-      putLong(KEY_POSITION_MS, positionMs)
-    }
+    prefs.edit { putLong(KEY_POSITION_MS, positionMs) }
     Timber.d("Saved position: positionMs=$positionMs")
   }
 
@@ -138,49 +137,64 @@ class PlaybackStateStore(private val player: Player) {
   }
 
   private fun trackToJson(track: Track): String =
-    JSONObject().apply {
-      put("url", track.url)
-      put("src", track.src)
-      put("title", track.title)
-      put("subtitle", track.subtitle)
-      put("artist", track.artist)
-      put("album", track.album)
-      put("artwork", track.artwork)
-      put("description", track.description)
-      put("genre", track.genre)
-      put("duration", track.duration)
-      put("style", track.style?.name)
-      put("favorited", track.favorited)
-      put("groupTitle", track.groupTitle)
-    }.toString()
+    JSONObject()
+      .apply {
+        put("url", track.url)
+        put("src", track.src)
+        put("title", track.title)
+        put("subtitle", track.subtitle)
+        put("artist", track.artist)
+        put("album", track.album)
+        put("artwork", track.artwork)
+        put("description", track.description)
+        put("genre", track.genre)
+        put("duration", track.duration)
+        put("style", track.style?.name)
+        put("childrenStyle", track.childrenStyle?.name)
+        put("favorited", track.favorited)
+        put("groupTitle", track.groupTitle)
+      }
+      .toString()
 
   private fun trackFromJson(json: String): Track? =
     runCatching {
-      val obj = JSONObject(json)
-      Track(
-        url = obj.optString("url").takeIf { it.isNotEmpty() },
-        src = obj.optString("src").takeIf { it.isNotEmpty() },
-        title = obj.getString("title"),
-        subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
-        artist = obj.optString("artist").takeIf { it.isNotEmpty() },
-        album = obj.optString("album").takeIf { it.isNotEmpty() },
-        artwork = obj.optString("artwork").takeIf { it.isNotEmpty() },
-        description = obj.optString("description").takeIf { it.isNotEmpty() },
-        genre = obj.optString("genre").takeIf { it.isNotEmpty() },
-        duration = if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration") else null,
-        style = obj.optString("style").takeIf { it.isNotEmpty() }?.let { runCatching { TrackStyle.valueOf(it) }.getOrNull() },
-        favorited = if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited") else null,
-        groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
-      )
-    }.onFailure { e ->
-      Timber.w(e, "Failed to parse persisted track JSON")
-    }.getOrNull()
+        val obj = JSONObject(json)
+        Track(
+          url = obj.optString("url").takeIf { it.isNotEmpty() },
+          src = obj.optString("src").takeIf { it.isNotEmpty() },
+          title = obj.getString("title"),
+          subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
+          artist = obj.optString("artist").takeIf { it.isNotEmpty() },
+          album = obj.optString("album").takeIf { it.isNotEmpty() },
+          artwork = obj.optString("artwork").takeIf { it.isNotEmpty() },
+          description = obj.optString("description").takeIf { it.isNotEmpty() },
+          genre = obj.optString("genre").takeIf { it.isNotEmpty() },
+          duration =
+            if (obj.has("duration") && !obj.isNull("duration")) obj.getDouble("duration") else null,
+          style =
+            obj
+              .optString("style")
+              .takeIf { it.isNotEmpty() }
+              ?.let { runCatching { TrackStyle.valueOf(it) }.getOrNull() },
+          childrenStyle =
+            obj
+              .optString("childrenStyle")
+              .takeIf { it.isNotEmpty() }
+              ?.let { runCatching { TrackStyle.valueOf(it) }.getOrNull() },
+          favorited =
+            if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
+            else null,
+          groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
+        )
+      }
+      .onFailure { e -> Timber.w(e, "Failed to parse persisted track JSON") }
+      .getOrNull()
 
   /**
    * Restores player settings from persisted state and returns the state for queue setup.
    *
-   * Applies repeatMode, shuffleMode, and playbackSpeed to the player. The caller is responsible
-   * for using the returned url and positionMs to set up the playback queue.
+   * Applies repeatMode, shuffleMode, and playbackSpeed to the player. The caller is responsible for
+   * using the returned url and positionMs to set up the playback queue.
    *
    * @return PersistedState if available, null otherwise
    */

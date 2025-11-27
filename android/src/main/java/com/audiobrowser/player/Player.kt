@@ -405,7 +405,9 @@ class Player(internal val context: Context) {
       cache =
         SimpleCache(
           File(context.cacheDir, "RNAB"),
-          LeastRecentlyUsedCacheEvictor(setupOptions.maxCacheSize.toLong() * 1_000_000), // MB to bytes
+          LeastRecentlyUsedCacheEvictor(
+            setupOptions.maxCacheSize.toLong() * 1_000_000
+          ), // MB to bytes
           StandaloneDatabaseProvider(context),
         )
     } else {
@@ -720,6 +722,7 @@ class Player(internal val context: Context) {
         genre = currentTrack.genre,
         duration = currentTrack.duration,
         style = currentTrack.style,
+        childrenStyle = currentTrack.childrenStyle,
         favorited = favorited,
         groupTitle = currentTrack.groupTitle,
       )
@@ -770,17 +773,15 @@ class Player(internal val context: Context) {
   // MARK: - Now Playing Metadata
 
   /**
-   * Updates the now playing notification metadata.
-   * Pass null to clear overrides and revert to track metadata.
+   * Updates the now playing notification metadata. Pass null to clear overrides and revert to track
+   * metadata.
    */
   fun updateNowPlaying(update: NowPlayingUpdate?) {
     nowPlayingOverride = update
     applyNowPlayingMetadata()
   }
 
-  /**
-   * Gets the current now playing metadata (override if set, else track metadata).
-   */
+  /** Gets the current now playing metadata (override if set, else track metadata). */
   fun getNowPlaying(): NowPlayingMetadata? {
     val track = currentTrack ?: return null
     val override = nowPlayingOverride
@@ -800,16 +801,16 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Clears the now playing override when track changes.
-   * Called from PlayerListener.onMediaItemTransition.
+   * Clears the now playing override when track changes. Called from
+   * PlayerListener.onMediaItemTransition.
    */
   internal fun clearNowPlayingOverride() {
     nowPlayingOverride = null
   }
 
   /**
-   * Applies the current now playing metadata to the media notification.
-   * Uses the override if set, otherwise uses track metadata.
+   * Applies the current now playing metadata to the media notification. Uses the override if set,
+   * otherwise uses track metadata.
    */
   private fun applyNowPlayingMetadata() {
     val index = currentIndex ?: return

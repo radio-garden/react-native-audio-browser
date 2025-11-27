@@ -8,6 +8,8 @@ import com.margelo.nitro.audiobrowser.ResolvedTrack
 object ResolvedTrackFactory {
 
   fun toMedia3(resolvedTrack: ResolvedTrack): MediaItem {
+    val extras = MediaExtrasBuilder.build(resolvedTrack)
+
     val mediaMetadata =
       MediaMetadata.Builder()
         .setTitle(resolvedTrack.title)
@@ -18,6 +20,7 @@ object ResolvedTrackFactory {
         .setArtworkUri(resolvedTrack.artwork?.toUri())
         .setIsBrowsable(resolvedTrack.src == null)
         .setIsPlayable(resolvedTrack.src != null)
+        .setExtras(extras)
         .build()
 
     return MediaItem.Builder()

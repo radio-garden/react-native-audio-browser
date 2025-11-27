@@ -8,7 +8,6 @@ import com.audiobrowser.TabsSource
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
-import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
@@ -140,6 +139,7 @@ class BrowserManager {
       genre = track.genre,
       duration = track.duration,
       style = track.style,
+      childrenStyle = track.childrenStyle,
       favorited = true,
       groupTitle = track.groupTitle,
     )
@@ -152,9 +152,7 @@ class BrowserManager {
     return resolvedTrack.copy(children = hydratedChildren)
   }
 
-  /**
-   * Cache a track by both url and src for O(1) lookup from either key.
-   */
+  /** Cache a track by both url and src for O(1) lookup from either key. */
   private fun cacheTrack(track: Track) {
     track.url?.let { trackCache.put(it, track) }
     track.src?.let { trackCache.put(it, track) }
@@ -400,8 +398,8 @@ class BrowserManager {
   /**
    * Expands a contextual URL into a queue of playable tracks.
    *
-   * Used when navigating to a track to load it with its full album/playlist context.
-   * Returns only the selected track if singleTrack is true.
+   * Used when navigating to a track to load it with its full album/playlist context. Returns only
+   * the selected track if singleTrack is true.
    *
    * @param contextualUrl The contextual URL (e.g., "/album?__trackId=song.mp3")
    * @return Pair of (tracks array, selected track index), or null if expansion fails
@@ -594,6 +592,7 @@ class BrowserManager {
           duration = null,
           src = null,
           style = null,
+          childrenStyle = null,
           favorited = null,
           groupTitle = null,
         )
@@ -604,7 +603,9 @@ class BrowserManager {
 
       // Cache individual tracks for Media3 lookups
       cacheChildren(searchResolvedTrack)
-      Timber.d("Cached search results for query: ${params.query} with ${searchResults.size} results")
+      Timber.d(
+        "Cached search results for query: ${params.query} with ${searchResults.size} results"
+      )
 
       return searchResolvedTrack
     } catch (e: Exception) {
@@ -625,6 +626,7 @@ class BrowserManager {
           duration = null,
           src = null,
           style = null,
+          childrenStyle = null,
           favorited = null,
           groupTitle = null,
         )

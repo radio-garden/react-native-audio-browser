@@ -24,6 +24,7 @@ data class JsonResolvedTrack(
   val children: List<JsonTrack>? = null,
   val src: String? = null,
   val style: String? = null,
+  val childrenStyle: String? = null,
   val groupTitle: String? = null,
 )
 
@@ -41,6 +42,7 @@ data class JsonTrack(
   val duration: Double? = null,
   val src: String? = null,
   val style: String? = null,
+  val childrenStyle: String? = null,
   val groupTitle: String? = null,
 )
 
@@ -67,6 +69,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     duration = duration,
     src = src,
     style = style.toTrackStyle(),
+    childrenStyle = childrenStyle.toTrackStyle(),
     favorited = null,
     groupTitle = groupTitle,
   )
@@ -85,6 +88,7 @@ fun JsonTrack.toNitro(): Track {
     duration = duration,
     src = src,
     style = style.toTrackStyle(),
+    childrenStyle = childrenStyle.toTrackStyle(),
     favorited = null,
     groupTitle = groupTitle,
   )
