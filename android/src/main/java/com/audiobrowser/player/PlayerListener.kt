@@ -4,6 +4,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.Timeline
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
@@ -88,8 +89,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Notify JS of the now playing metadata for the new track
     player.getNowPlaying()?.let { player.callbacks?.onNowPlayingChanged(it) }
 
-    // Persist playback state for resumption
     player.playbackStateStore.save()
+    player.playbackStateStore.resetPeriodicSave()
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
@@ -103,9 +104,10 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       player.callbacks?.onPlaybackPlayingState(player.playingState)
     }
 
-    // Persist position on pause for resumption
-    if (!playWhenReady) {
-      player.playbackStateStore.save()
+    if (playWhenReady) {
+      player.playbackStateStore.startPeriodicSave()
+    } else {
+      player.playbackStateStore.stopPeriodicSave()
     }
   }
 
@@ -183,7 +185,17 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onRepeatModeChanged(repeatMode: Int) {
-    player.callbacks?.onPlaybackRepeatModeChanged(RepeatModeFactory.fromMedia3(repeatMode))
+    val mode = RepeatModeFactory.fromMedia3(repeatMode)
+    player.callbacks?.onPlaybackRepeatModeChanged(mode)
+    player.playbackStateStore.repeatMode = mode
+  }
+
+  override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+    player.playbackStateStore.shuffleEnabled = shuffleModeEnabled
+  }
+
+  override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+    player.playbackStateStore.playbackSpeed = playbackParameters.speed
   }
 
   /**

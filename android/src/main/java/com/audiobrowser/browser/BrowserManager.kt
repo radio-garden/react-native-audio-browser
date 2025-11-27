@@ -1,5 +1,6 @@
 package com.audiobrowser.browser
 
+import android.util.LruCache
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
 import com.audiobrowser.SearchSource
@@ -76,11 +77,12 @@ class BrowserManager {
       }
     }
 
-  // Cache resolved tracks by mediaId/path to avoid redundant HTTP requests
-  private val resolvedTrackCache = mutableMapOf<String, ResolvedTrack>()
+  // LRU cache for individual tracks - keyed by both url and src for O(1) lookup
+  private val trackCache = LruCache<String, Track>(3000)
 
-  // Cache individual tracks (children) for Media3 MediaItem lookup
-  private val trackCache = mutableMapOf<String, Track>()
+  // Cache for search results - keyed by query string
+  private var lastSearchQuery: String? = null
+  private var lastSearchResults: Array<Track>? = null
 
   // Set of favorited track identifiers (src)
   private var favoriteIds = setOf<String>()
@@ -90,20 +92,6 @@ class BrowserManager {
    * updated dynamically when the configuration changes.
    */
   var config: BrowserConfig = BrowserConfig()
-
-  /** Get a cached ResolvedTrack by mediaId/path, or null if not cached. */
-  fun getCachedResolvedTrack(mediaId: String): ResolvedTrack? {
-    return resolvedTrackCache[mediaId]
-  }
-
-  /**
-   * Invalidates the cache for a specific path. The next browse to this path will re-fetch and
-   * update trackCache entries.
-   */
-  fun invalidateCache(path: String) {
-    resolvedTrackCache.remove(path)
-    Timber.d("Invalidated cache for path: $path")
-  }
 
   /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
@@ -165,22 +153,15 @@ class BrowserManager {
   }
 
   /**
-   * Cache a ResolvedTrack at the specified path. Also caches all children tracks. Used for special
-   * paths like search results that don't go through normal navigation.
+   * Cache a track by both url and src for O(1) lookup from either key.
    */
-  fun cacheResolvedTrack(path: String, resolvedTrack: ResolvedTrack) {
-    resolvedTrackCache[path] = resolvedTrack
+  private fun cacheTrack(track: Track) {
+    track.url?.let { trackCache.put(it, track) }
+    track.src?.let { trackCache.put(it, track) }
+  }
 
-    // Cache children tracks for Media3 lookup (un-hydrated - favorites applied on read)
-    resolvedTrack.children?.forEachIndexed { index, track ->
-      val trackId = track.url ?: track.src
-      if (trackId != null) {
-        Timber.d("[$path] Child[$index] '${track.title}': Cached with id=$trackId")
-        trackCache[trackId] = track
-      } else {
-        Timber.w("[$path] Child[$index] '${track.title}': Skipped - no url or src")
-      }
-    }
+  private fun cacheChildren(resolvedTrack: ResolvedTrack) {
+    resolvedTrack.children?.forEach { track -> cacheTrack(track) }
   }
 
   /**
@@ -189,38 +170,38 @@ class BrowserManager {
    * called after caching.
    */
   fun getCachedTrack(mediaId: String): Track? {
-    val track = trackCache[mediaId]
-    if (track != null) {
+    // Try direct lookup first (matches url or src)
+    trackCache.get(mediaId)?.let { track ->
       val hydratedTrack = hydrateFavorite(track)
-      Timber.d(
-        "Cache HIT for mediaId='$mediaId' → track='${track.title}', favorited=${hydratedTrack.favorited}"
-      )
+      Timber.d("Cache HIT for mediaId='$mediaId' → '${track.title}'")
       return hydratedTrack
-    } else {
-      Timber.w("Cache MISS for mediaId='$mediaId'")
-      return null
     }
+
+    // Try extracting src from contextual URL
+    val trackId = BrowserPathHelper.extractTrackId(mediaId)
+    if (trackId != null) {
+      trackCache.get(trackId)?.let { track ->
+        val hydratedTrack = hydrateFavorite(track)
+        Timber.d("Cache HIT (extracted src) for mediaId='$mediaId' → '${track.title}'")
+        return hydratedTrack
+      }
+    }
+
+    Timber.w("Cache MISS for mediaId='$mediaId'")
+    return null
   }
 
   /**
-   * Resolves multiple media IDs from cache. Checks both ResolvedTrack cache (for containers) and
-   * Track cache (for individual items). Throws IllegalStateException if any mediaId is not found in
-   * cache.
+   * Resolves multiple media IDs from cache. Throws IllegalStateException if any mediaId is not
+   * found in cache.
    *
    * @param mediaIds The media IDs to resolve
-   * @return List of resolved items (can be mixed ResolvedTrack and Track)
+   * @return List of Track objects
    */
-  fun resolveMediaIdsFromCache(mediaIds: List<String>): List<Any> {
+  fun resolveMediaIdsFromCache(mediaIds: List<String>): List<Track> {
     return mediaIds.map { mediaId ->
       Timber.d("=== Resolving from cache: mediaId='$mediaId' ===")
 
-      // First check if this was a navigated ResolvedTrack
-      getCachedResolvedTrack(mediaId)?.let { cachedResolvedTrack ->
-        Timber.d("→ Found cached ResolvedTrack: '${cachedResolvedTrack.title}'")
-        return@map hydrateChildren(cachedResolvedTrack)
-      }
-
-      // Then check if this is a cached child Track
       getCachedTrack(mediaId)?.let { cachedTrack ->
         Timber.d("→ Found cached Track: '${cachedTrack.title}'")
         return@map cachedTrack
@@ -319,17 +300,10 @@ class BrowserManager {
 
     // No expansion - resolve from cache
     val mediaIds = mediaItems.map { it.mediaId }
-    val cachedItems = resolveMediaIdsFromCache(mediaIds)
+    val cachedTracks = resolveMediaIdsFromCache(mediaIds)
 
     // Convert to Media3 MediaItems
-    val resolvedMediaItems =
-      cachedItems.map { item ->
-        when (item) {
-          is ResolvedTrack -> ResolvedTrackFactory.toMedia3(item)
-          is Track -> TrackFactory.toMedia3(item)
-          else -> throw IllegalStateException("Unexpected item type: ${item::class.simpleName}")
-        }
-      }
+    val resolvedMediaItems = cachedTracks.map { track -> TrackFactory.toMedia3(track) }
 
     return MediaSession.MediaItemsWithStartPosition(resolvedMediaItems, startIndex, startPositionMs)
   }
@@ -357,22 +331,11 @@ class BrowserManager {
       Timber.d("Stripped __trackId from contextual URL: '$normalizedPath'")
     }
 
-    // Check cache with normalized path
-    resolvedTrackCache[normalizedPath]?.let {
-      Timber.d(
-        "Returning cached ResolvedTrack: url='${it.url}', title='${it.title}', children=${it.children?.size ?: 0}"
-      )
-      return hydrateChildren(it)
-    }
-
-    Timber.d("Cache miss, resolving path: '$normalizedPath'")
+    // Always fetch fresh data for navigation (no stale data)
     val resolvedTrack = resolveUncached(normalizedPath)
 
-    // Cache the resolved track (un-hydrated)
-    resolvedTrackCache[normalizedPath] = resolvedTrack
-    Timber.d(
-      "Cached ResolvedTrack: url='${resolvedTrack.url}', title='${resolvedTrack.title}', children=${resolvedTrack.children?.size ?: 0}"
-    )
+    // Cache children for Media3 track lookups (getCachedTrack)
+    cacheChildren(resolvedTrack)
 
     return hydrateChildren(resolvedTrack)
   }
@@ -400,7 +363,7 @@ class BrowserManager {
           throw ContentNotFoundException(path)
         }
 
-    // Transform and cache children (un-hydrated - favorites applied on read)
+    // Transform children: generate contextual URLs for playable-only tracks
     val transformedChildren =
       resolvedTrack.children?.mapIndexed { index, track ->
         // Validate that track has stable identifier
@@ -409,9 +372,8 @@ class BrowserManager {
         // Only generate contextual URLs for playable-only tracks (no url, just src)
         // Browsable tracks keep their original url
         if (track.url != null) {
-          // Track is browsable - keep original url and cache by it
+          // Track is browsable - keep original url
           Timber.d("[$path] Child[$index] '${track.title}': Browsable with url=${track.url}")
-          trackCache[track.url] = track
           track
         } else {
           // Track is playable-only - generate contextual URL for Media3
@@ -422,7 +384,6 @@ class BrowserManager {
           Timber.d(
             "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
           )
-          trackCache[contextualUrl] = trackWithContextualUrl
 
           trackWithContextualUrl
         }
@@ -521,9 +482,8 @@ class BrowserManager {
    * @return Array of Track results, or null if not found
    */
   fun getCachedSearchResults(query: String): Array<Track>? {
-    val searchPath = BrowserPathHelper.createSearchPath(query)
-    val cached = getCachedResolvedTrack(searchPath) ?: return null
-    return hydrateChildren(cached).children
+    if (query != lastSearchQuery) return null
+    return lastSearchResults?.map { hydrateFavorite(it) }?.toTypedArray()
   }
 
   /**
@@ -641,9 +601,13 @@ class BrowserManager {
           favorited = null,
         )
 
-      // Cache the search results (this also caches children in trackCache)
-      cacheResolvedTrack(searchPath, searchResolvedTrack)
-      Timber.d("Cached search results at path: $searchPath with ${searchResults.size} results")
+      // Cache search results for getCachedSearchResults()
+      lastSearchQuery = params.query
+      lastSearchResults = searchResults
+
+      // Cache individual tracks for Media3 lookups
+      cacheChildren(searchResolvedTrack)
+      Timber.d("Cached search results for query: ${params.query} with ${searchResults.size} results")
 
       return searchResolvedTrack
     } catch (e: Exception) {
@@ -734,14 +698,10 @@ class BrowserManager {
           emptyArray()
         })
 
-    // Validate and cache tabs for Media3 MediaItem lookup
+    // Validate tabs have stable identifiers
     tabs.forEachIndexed { index, tab ->
       validateTrack(tab, "Tab")
-
-      val tabId = tab.url ?: tab.src!!
-
-      Timber.d("[TABS] Tab[$index] '${tab.title}': Cached with id=$tabId")
-      trackCache[tabId] = tab
+      Timber.d("[TABS] Tab[$index] '${tab.title}': url=${tab.url}")
     }
 
     this.tabs = tabs

@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.guava.future
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -467,7 +468,10 @@ class MediaSessionCallback(private val player: Player) :
       // When playback=false, system is just gathering info for UI (e.g., boot-time notification)
       val state =
         if (playback) {
-          player.playbackStateStore.restore()
+          // restore() sets player properties which must happen on main thread
+          withContext(Dispatchers.Main) {
+            player.playbackStateStore.restore()
+          }
         } else {
           player.playbackStateStore.get()
         }
@@ -476,30 +480,34 @@ class MediaSessionCallback(private val player: Player) :
             throw IllegalStateException("No playback state to resume")
           }
 
-      Timber.d(
-        "Resuming from url=${state.url}, positionMs=${state.positionMs}"
-      )
+      val url = state.track.url
+      Timber.d("Resuming from url=$url, positionMs=${state.positionMs}")
 
       // Wait for browser to be available (JS needs to have configured it)
       val browserManager = player.awaitBrowser().browserManager
 
-      // Expand the URL into a full queue
-      val (tracks, selectedIndex) =
-        browserManager.expandQueueFromContextualUrl(state.url)
-          ?: run {
-            Timber.w("Failed to expand queue from URL: ${state.url}")
-            throw IllegalStateException("Failed to restore playback queue")
-          }
+      // Try to expand the URL into a full queue
+      val expanded = url?.let { browserManager.expandQueueFromContextualUrl(it) }
 
-      Timber.d(
-        "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
-      )
-
-      MediaSession.MediaItemsWithStartPosition(
-        ImmutableList.copyOf(TrackFactory.toMedia3(tracks)),
-        selectedIndex,
-        state.positionMs,
-      )
+      if (expanded != null) {
+        val (tracks, selectedIndex) = expanded
+        Timber.d(
+          "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
+        )
+        MediaSession.MediaItemsWithStartPosition(
+          ImmutableList.copyOf(TrackFactory.toMedia3(tracks)),
+          selectedIndex,
+          state.positionMs,
+        )
+      } else {
+        // Fallback: play just the stored track
+        Timber.d("Queue expansion failed, using stored track: ${state.track.title}")
+        MediaSession.MediaItemsWithStartPosition(
+          ImmutableList.of(TrackFactory.toMedia3(state.track)),
+          0,
+          state.positionMs,
+        )
+      }
     }
   }
 }

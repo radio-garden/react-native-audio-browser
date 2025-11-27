@@ -988,6 +988,10 @@ class Player(internal val context: Context) {
             PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
         }
+        // Reset saved position to 0 so resumption starts from beginning (only when not repeating)
+        if (repeatMode == RepeatMode.OFF) {
+          playbackStateStore.savePositionZero()
+        }
       }
 
       progressUpdateManager.onPlaybackStateChanged(state)
