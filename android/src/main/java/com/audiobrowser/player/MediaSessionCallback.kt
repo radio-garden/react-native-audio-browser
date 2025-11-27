@@ -446,32 +446,38 @@ class MediaSessionCallback(private val player: Player) :
    * Handles playback resumption requests from the system (Bluetooth play button, car head unit,
    * etc.).
    *
-   * Reads the persisted playback state (URL + position) and expands it into a full queue using the
-   * browse callback. This enables seamless resumption after app restart.
+   * Reads the persisted playback state (URL + position + settings) and expands it into a full queue
+   * using the browse callback. This enables seamless resumption after app restart with the same
+   * player settings (repeat mode, shuffle, playback speed).
    *
-   * Note: This method is marked deprecated in Media3 but is still the recommended way to handle
-   * playback resumption for background playback.
-   *
+   * @param mediaSession The media session
+   * @param controller The controller requesting resumption
+   * @param playback True if playback should start, false if just gathering info for UI
    * @see https://developer.android.com/media/media3/session/background-playback#resumption
    */
-  @Deprecated("Deprecated in Media3 but still required for playback resumption")
   override fun onPlaybackResumption(
     mediaSession: MediaSession,
     controller: MediaSession.ControllerInfo,
+    playback: Boolean,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-    Timber.d("onPlaybackResumption: ${controller.packageName}")
+    Timber.d("${controller.packageName}, playback=$playback")
 
     return scope.future {
-      // Read persisted playback state
-      val persistedState =
-        player.playbackStateStore.get()
+      // Get persisted state - only restore player settings if we're actually going to play
+      // When playback=false, system is just gathering info for UI (e.g., boot-time notification)
+      val state =
+        if (playback) {
+          player.playbackStateStore.restore()
+        } else {
+          player.playbackStateStore.get()
+        }
           ?: run {
-            Timber.w("onPlaybackResumption: No persisted playback state found")
+            Timber.w("No persisted playback state found")
             throw IllegalStateException("No playback state to resume")
           }
 
       Timber.d(
-        "onPlaybackResumption: Resuming from url=${persistedState.url}, positionMs=${persistedState.positionMs}"
+        "Resuming from url=${state.url}, positionMs=${state.positionMs}"
       )
 
       // Wait for browser to be available (JS needs to have configured it)
@@ -479,23 +485,20 @@ class MediaSessionCallback(private val player: Player) :
 
       // Expand the URL into a full queue
       val (tracks, selectedIndex) =
-        browserManager.expandQueueFromContextualUrl(persistedState.url)
+        browserManager.expandQueueFromContextualUrl(state.url)
           ?: run {
-            Timber.w("onPlaybackResumption: Failed to expand queue from URL: ${persistedState.url}")
+            Timber.w("Failed to expand queue from URL: ${state.url}")
             throw IllegalStateException("Failed to restore playback queue")
           }
 
       Timber.d(
-        "onPlaybackResumption: Restored ${tracks.size} tracks, starting at index $selectedIndex"
+        "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
       )
 
-      // Convert to Media3 MediaItems
-      val mediaItems = tracks.map(TrackFactory::toMedia3)
-
       MediaSession.MediaItemsWithStartPosition(
-        ImmutableList.copyOf(mediaItems),
+        ImmutableList.copyOf(TrackFactory.toMedia3(tracks)),
         selectedIndex,
-        persistedState.positionMs,
+        state.positionMs,
       )
     }
   }

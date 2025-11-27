@@ -69,7 +69,7 @@ class Player(internal val context: Context) {
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
   private var equalizerManager: EqualizerManager? = null
   private val mediaSessionCallback = MediaSessionCallback(this)
-  internal val playbackStateStore = PlaybackStateStore(context)
+  internal val playbackStateStore = PlaybackStateStore(this)
   private val sleepTimer =
     object : SleepTimer() {
       override fun onComplete() {
@@ -1347,13 +1347,9 @@ class Player(internal val context: Context) {
     mediaSessionCallback.notifyContentChanged(path)
   }
 
-  /**
-   * Saves the current playback state (URL + position) for later resumption. Called on pause and
-   * other key events to ensure we can resume from the correct position.
-   */
-  internal fun savePlaybackStateForResumption() {
-    exoPlayer.currentMediaItem?.mediaId?.let { url -> playbackStateStore.save(url, position) }
-  }
+  /** Returns true if the current media item is a live stream. */
+  val isCurrentItemLive: Boolean
+    get() = exoPlayer.isCurrentMediaItemLive
 
   // MARK: - Buffer Configuration
 

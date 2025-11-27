@@ -88,8 +88,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Notify JS of the now playing metadata for the new track
     player.getNowPlaying()?.let { player.callbacks?.onNowPlayingChanged(it) }
 
-    // Persist playback state for resumption (use mediaId which is the contextual URL)
-    mediaItem?.mediaId?.let { url -> player.playbackStateStore.save(url, 0) }
+    // Persist playback state for resumption
+    player.playbackStateStore.save()
   }
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
@@ -105,7 +105,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // Persist position on pause for resumption
     if (!playWhenReady) {
-      player.savePlaybackStateForResumption()
+      player.playbackStateStore.save()
     }
   }
 
