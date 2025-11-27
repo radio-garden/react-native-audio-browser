@@ -88,8 +88,6 @@ namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
-// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -200,7 +198,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "PartialIOSSetupPlayerOptions.hpp"
 #include "PartialSetupPlayerOptions.hpp"
 #include "PercentageRating.hpp"
-#include "PlayConfigurationBehavior.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"

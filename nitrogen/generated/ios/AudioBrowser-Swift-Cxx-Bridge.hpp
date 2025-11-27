@@ -82,8 +82,6 @@ namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions
 namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
-// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -197,7 +195,6 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include "PartialIOSSetupPlayerOptions.hpp"
 #include "PercentageRating.hpp"
-#include "PlayConfigurationBehavior.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
@@ -1096,21 +1093,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<PlayConfigurationBehavior>
-  /**
-   * Specialized version of `std::optional<PlayConfigurationBehavior>`.
-   */
-  using std__optional_PlayConfigurationBehavior_ = std::optional<PlayConfigurationBehavior>;
-  inline std::optional<PlayConfigurationBehavior> create_std__optional_PlayConfigurationBehavior_(const PlayConfigurationBehavior& value) noexcept {
-    return std::optional<PlayConfigurationBehavior>(value);
-  }
-  inline bool has_value_std__optional_PlayConfigurationBehavior_(const std::optional<PlayConfigurationBehavior>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline PlayConfigurationBehavior get_std__optional_PlayConfigurationBehavior_(const std::optional<PlayConfigurationBehavior>& optional) noexcept {
     return *optional;
   }
   

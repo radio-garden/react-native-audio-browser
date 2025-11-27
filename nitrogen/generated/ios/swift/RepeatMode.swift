@@ -17,12 +17,12 @@ public extension RepeatMode {
    */
   init?(fromString string: String) {
     switch string {
-      case "queue":
-        self = .queue
       case "off":
         self = .off
       case "track":
         self = .track
+      case "queue":
+        self = .queue
       default:
         return nil
     }
@@ -33,12 +33,12 @@ public extension RepeatMode {
    */
   var stringValue: String {
     switch self {
-      case .queue:
-        return "queue"
       case .off:
         return "off"
       case .track:
         return "track"
+      case .queue:
+        return "queue"
     }
   }
 }

@@ -122,13 +122,6 @@ export type TabsSource =
  */
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
-export type PlayConfigurationBehavior = 'single' | 'queue'
-
-export type PlayConfigurationHandler = (
-  track: Track,
-  parent?: ResolvedTrack
-) => void
-
 export type BrowserConfiguration = {
   /**
    * Initial navigation path. Setting this triggers initial navigation to the specified path.
@@ -233,16 +226,12 @@ export type BrowserConfiguration = {
   browse?: BrowserSource
 
   /**
-   * Configuration for track playback behavior when user selects a track.
-   * Controls how the audio queue is set up when playback starts.
+   * When true, only play the selected track without queuing siblings.
+   * When false (default), replace queue with all tracks from parent context and start at selected track.
    *
-   * Can be either a simple behavior string or a custom handler function:
-   * - 'queue': Replace queue with all tracks from parent context, start at selected track (default)
-   * - 'single': Replace queue with just the selected track
-   *
-   * @default 'queue'
+   * @default false
    */
-  play?: PlayConfigurationBehavior
+  singleTrack?: boolean
 
   /**
    * Show an offline error message in external controllers (Android Auto, Wear OS, Automotive)

@@ -16,7 +16,6 @@ import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NavigationError
 import com.margelo.nitro.audiobrowser.NavigationErrorEvent
 import com.margelo.nitro.audiobrowser.NavigationErrorType
-import com.margelo.nitro.audiobrowser.PlayConfigurationBehavior
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
@@ -46,7 +45,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       routes = null,
       tabs = null,
       browse = null,
-      play = PlayConfigurationBehavior.SINGLE,
+      singleTrack = null,
       androidControllerOfflineError = null,
     )
 
@@ -75,7 +74,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       routes = _configuration.routes,
       tabs = _configuration.tabs,
       browse = _configuration.browse,
-      play = _configuration.play,
+      singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
     )
   }

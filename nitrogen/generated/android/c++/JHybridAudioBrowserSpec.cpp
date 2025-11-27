@@ -35,8 +35,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
-// Forward declaration of `PlayConfigurationBehavior` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 
 #include <string>
 #include <optional>
@@ -87,8 +85,6 @@ namespace margelo::nitro::audiobrowser { enum class PlayConfigurationBehavior; }
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
 #include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.hpp"
-#include "PlayConfigurationBehavior.hpp"
-#include "JPlayConfigurationBehavior.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
