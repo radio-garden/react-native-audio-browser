@@ -171,6 +171,14 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onPlayerError(error: PlaybackException) {
+    // Handle live stream recovery when playback position falls behind the live window
+    if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+      Timber.d("Playback fell behind live window, recovering to live edge")
+      player.exoPlayer.seekToDefaultPosition()
+      player.exoPlayer.prepare()
+      return
+    }
+
     val playbackError =
       PlaybackError(
         error.errorCodeName
