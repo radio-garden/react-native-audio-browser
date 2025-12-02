@@ -1,34 +1,32 @@
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
-const { getDefaultConfig } = require('@react-native/metro-config');
-const { withMetroConfig } = require('react-native-monorepo-config');
 
 const root = path.resolve(__dirname, '..', '..');
-// const commonAppPath = path.resolve(__dirname, '..', 'common-app');
 
 /**
  * Metro configuration
  * https://facebook.github.io/metro/docs/configuration
  *
- * @type {import('metro-config').MetroConfig}
+ * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = withMetroConfig(getDefaultConfig(__dirname), {
-  root,
-  dirname: __dirname,
-});
+const config = {
+  watchFolders: [root],
 
-// Add watchFolders to watch common-app
-config.watchFolders = [
-  root,
-  // commonAppPath,
-];
+  resolver: {
+    nodeModulesPaths: [
+      path.resolve(__dirname, 'node_modules'),
+      path.resolve(root, 'node_modules'),
+    ],
+  },
 
-// Ensure node_modules are resolved correctly
-config.resolver = {
-  ...config.resolver,
-  nodeModulesPaths: [
-    path.resolve(__dirname, 'node_modules'),
-    path.resolve(root, 'node_modules'),
-  ],
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
 };
 
-module.exports = config;
+module.exports = mergeConfig(getDefaultConfig(__dirname), config);
