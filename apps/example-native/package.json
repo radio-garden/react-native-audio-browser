@@ -20,7 +20,7 @@
     "format": "prettier --write src App.tsx",
     "ios:build": "react-native build-ios --mode Debug",
     "ios:ide": "open ios/*.xcworkspace",
-    "ios:rebuild": "cd ios && pod install && cd .. && yarn ios",
+    "ios:rebuild": "cd ios && pod install && cd .. && bun run ios",
     "ios:sim": "react-native run-ios --simulator=\"iPhone\"",
     "ios": "react-native run-ios --simulator='iPhone 16'",
     "lint": "eslint . --max-warnings=0 --fix",
@@ -36,8 +36,8 @@
     "common-app": "*",
     "react": "19.1.1",
     "react-native": "0.82.0",
-    "react-native-audio-browser": "*",
     "react-native-nitro-modules": "0.31.6",
+    "react-native-audio-browser": "link:react-native-audio-browser",
     "react-native-safe-area-context": "^5.5.2"
   },
   "devDependencies": {
