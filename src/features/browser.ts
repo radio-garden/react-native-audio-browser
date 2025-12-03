@@ -1,10 +1,12 @@
 import { nativeBrowser, nativePlayer } from '../native'
 import type {
+  NativeBrowserConfiguration,
+  NativeRouteEntry,
+} from '../types/browser-native'
+import type {
   BrowserConfiguration,
   BrowserSource,
   BrowserSourceCallback,
-  NativeBrowserConfiguration,
-  NativeRouteEntry,
   ResolvedTrack,
   RouteConfig,
   SearchSource,

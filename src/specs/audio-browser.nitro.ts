@@ -1,7 +1,8 @@
 import { type HybridObject } from 'react-native-nitro-modules';
 
 import type { NavigationError, NavigationErrorEvent } from '../features/errors';
-import type { NativeBrowserConfiguration, ResolvedTrack, Track } from '../types';
+import type { NativeBrowserConfiguration } from '../types/browser-native';
+import type { ResolvedTrack, Track } from '../types';
 
 export interface AudioBrowser
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
