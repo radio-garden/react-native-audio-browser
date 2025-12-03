@@ -10,12 +10,17 @@
 #include <fbjni/fbjni.h>
 #include "PlaybackActiveTrackChangedEvent.hpp"
 
+#include "HttpMethod.hpp"
+#include "ImageSource.hpp"
+#include "JHttpMethod.hpp"
+#include "JImageSource.hpp"
 #include "JTrack.hpp"
 #include "JTrackStyle.hpp"
 #include "Track.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace margelo::nitro::audiobrowser {
 

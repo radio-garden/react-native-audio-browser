@@ -8,6 +8,7 @@ import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
+import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -93,10 +94,10 @@ class BrowserManager {
 
   /**
    * Callback to transform artwork URLs for tracks.
-   * Takes a track and optional per-route artwork config, returns transformed URL or null.
+   * Takes a track and optional per-route artwork config, returns ImageSource or null.
    * Injected by AudioBrowser when artwork config is set.
    */
-  var artworkUrlResolver: (suspend (Track, MediaRequestConfig?) -> String?)? = null
+  var artworkUrlResolver: (suspend (Track, MediaRequestConfig?) -> ImageSource?)? = null
 
   /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
@@ -138,6 +139,7 @@ class BrowserManager {
       url = track.url,
       src = track.src,
       artwork = track.artwork,
+      artworkSource = track.artworkSource,
       title = track.title,
       subtitle = track.subtitle,
       artist = track.artist,
@@ -412,13 +414,14 @@ class BrowserManager {
   }
 
   /**
-   * Transforms a track's artwork URL using the configured resolver.
+   * Transforms a track's artwork using the configured resolver.
+   * Populates artworkSource with the transformed ImageSource, keeping artwork unchanged.
    * Handles all edge cases: undefined returns, errors, missing artwork.
    */
   private suspend fun transformArtworkUrl(
     track: Track,
     artworkConfig: MediaRequestConfig?,
-    resolver: suspend (Track, MediaRequestConfig?) -> String?,
+    resolver: suspend (Track, MediaRequestConfig?) -> ImageSource?,
     path: String,
     index: Int,
   ): Track {
@@ -428,26 +431,24 @@ class BrowserManager {
     }
 
     return try {
-      val transformedUrl = resolver(track, artworkConfig)
+      val imageSource = resolver(track, artworkConfig)
 
       when {
-        // resolve returned undefined → no artwork
-        transformedUrl == null -> {
-          Timber.d("[$path] Child[$index] '${track.title}': Artwork resolver returned null, clearing artwork")
-          track.copy(artwork = null)
+        // resolve returned null → no artwork source
+        imageSource == null -> {
+          Timber.d("[$path] Child[$index] '${track.title}': Artwork resolver returned null, no artworkSource")
+          track.copy(artworkSource = null)
         }
-        // resolve returned a URL → use it
-        transformedUrl != track.artwork -> {
-          Timber.d("[$path] Child[$index] '${track.title}': Artwork transformed: ${track.artwork} → $transformedUrl")
-          track.copy(artwork = transformedUrl)
+        // resolve returned ImageSource → set artworkSource
+        else -> {
+          Timber.d("[$path] Child[$index] '${track.title}': artworkSource set: ${imageSource.uri}")
+          track.copy(artworkSource = imageSource)
         }
-        // URL unchanged
-        else -> track
       }
     } catch (e: Exception) {
-      // resolve threw → log error, clear artwork to avoid broken images
-      Timber.e(e, "[$path] Child[$index] '${track.title}': Artwork transform failed, clearing artwork")
-      track.copy(artwork = null)
+      // resolve threw → log error, clear artworkSource to avoid broken images
+      Timber.e(e, "[$path] Child[$index] '${track.title}': Artwork transform failed, clearing artworkSource")
+      track.copy(artworkSource = null)
     }
   }
 
@@ -635,6 +636,7 @@ class BrowserManager {
           title = "Search: ${params.query}",
           children = searchResults,
           artwork = null,
+          artworkSource = null,
           artist = null,
           description = null,
           subtitle = null,
@@ -669,6 +671,7 @@ class BrowserManager {
           title = "Search: ${params.query}",
           children = emptyArray(),
           artwork = null,
+          artworkSource = null,
           artist = null,
           description = null,
           subtitle = null,

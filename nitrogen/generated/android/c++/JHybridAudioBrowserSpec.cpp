@@ -9,6 +9,10 @@
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `ImageSource` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageSource; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
@@ -23,8 +27,6 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
-// Forward declaration of `HttpMethod` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -41,6 +43,11 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 #include "Track.hpp"
 #include <vector>
 #include "JTrack.hpp"
+#include "ImageSource.hpp"
+#include "JImageSource.hpp"
+#include "HttpMethod.hpp"
+#include "JHttpMethod.hpp"
+#include <unordered_map>
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
 #include <functional>
@@ -62,12 +69,9 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 #include "JTransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include <unordered_map>
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include <NitroModules/JPromise.hpp>
 #include "JRequestConfig.hpp"
-#include "HttpMethod.hpp"
-#include "JHttpMethod.hpp"
 #include "MediaRequestConfig.hpp"
 #include "JMediaRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"

@@ -58,6 +58,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `ImageSource` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
@@ -185,6 +187,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
 #include "IOSUpdateOptions.hpp"
+#include "ImageSource.hpp"
 #include "MediaRequestConfig.hpp"
 #include "NativeBrowserConfiguration.hpp"
 #include "NativeRouteEntry.hpp"

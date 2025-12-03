@@ -746,6 +746,7 @@ class Player(internal val context: Context) {
         url = currentTrack.url,
         src = currentTrack.src,
         artwork = currentTrack.artwork,
+        artworkSource = currentTrack.artworkSource,
         title = currentTrack.title,
         subtitle = currentTrack.subtitle,
         artist = currentTrack.artist,

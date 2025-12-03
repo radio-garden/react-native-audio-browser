@@ -15,6 +15,7 @@ import coil3.toBitmap
 import com.audiobrowser.http.RequestConfigBuilder
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
@@ -159,20 +160,19 @@ class CoilBitmapLoader(
   }
 
   /**
-   * Transforms an artwork URL for a specific track, supporting the resolve() callback.
+   * Transforms an artwork URL for a specific track, returning a complete ImageSource.
    *
-   * This is used when pre-transforming artwork URLs before passing tracks to Media3,
-   * which is necessary because Media3 doesn't support custom headers for artwork.
-   *
-   * Note: Headers are NOT applied when using this method since the resulting URL
-   * will be loaded by Media3's internal image loader (or Android Auto) which don't
-   * support custom headers. Use query parameters for authentication instead.
+   * Returns an ImageSource containing:
+   * - uri: Transformed URL with query parameters for authentication
+   * - method: HTTP method (if configured)
+   * - headers: Merged headers including User-Agent and Content-Type
+   * - body: Request body (if configured)
    *
    * @param track The track whose artwork URL should be transformed
    * @param perRouteConfig Optional per-route artwork config that overrides global config
-   * @return The transformed artwork URL, or null if resolve returns undefined or track has no artwork and no resolve callback
+   * @return ImageSource ready for React Native's Image component, or null if no artwork
    */
-  suspend fun transformArtworkUrlForTrack(track: Track, perRouteConfig: MediaRequestConfig? = null): String? {
+  suspend fun transformArtworkUrlForTrack(track: Track, perRouteConfig: MediaRequestConfig? = null): ImageSource? {
     val globalConfig = getArtworkConfig()
 
     // Determine effective artwork config: per-route overrides global
@@ -183,9 +183,9 @@ class CoilBitmapLoader(
       return null
     }
 
-    // If no artwork config, just return the original artwork URL
+    // If no artwork config, just return the original artwork URL as a simple ImageSource
     if (effectiveArtworkConfig == null) {
-      return track.artwork
+      return track.artwork?.let { ImageSource(uri = it, method = null, headers = null, body = null) }
     }
 
     return try {
@@ -239,7 +239,21 @@ class CoilBitmapLoader(
         }
 
       // Build final URL
-      RequestConfigBuilder.buildUrl(transformedConfig)
+      val uri = RequestConfigBuilder.buildUrl(transformedConfig)
+
+      // Build headers map, merging explicit headers with userAgent and contentType
+      val headers = buildHeadersMap(
+        transformedConfig.headers?.toMap(),
+        transformedConfig.userAgent,
+        transformedConfig.contentType,
+      )
+
+      ImageSource(
+        uri = uri,
+        method = transformedConfig.method,
+        headers = headers,
+        body = transformedConfig.body,
+      )
     } catch (e: Exception) {
       Timber.e(e, "Failed to transform artwork URL for track: ${track.title}")
       // On error, return null to clear artwork and avoid broken images
@@ -248,9 +262,35 @@ class CoilBitmapLoader(
   }
 
   /**
+   * Builds a headers map, merging explicit headers with userAgent and contentType.
+   */
+  private fun buildHeadersMap(
+    headers: Map<String, String>?,
+    userAgent: String?,
+    contentType: String?,
+  ): Map<String, String>? {
+    val mergedHeaders = mutableMapOf<String, String>()
+
+    // Add explicit headers
+    headers?.let { mergedHeaders.putAll(it) }
+
+    // Add User-Agent if present and not already set
+    if (userAgent != null && !mergedHeaders.containsKey("User-Agent")) {
+      mergedHeaders["User-Agent"] = userAgent
+    }
+
+    // Add Content-Type if present and not already set
+    if (contentType != null && !mergedHeaders.containsKey("Content-Type")) {
+      mergedHeaders["Content-Type"] = contentType
+    }
+
+    return mergedHeaders.ifEmpty { null }
+  }
+
+  /**
    * Blocking version of [transformArtworkUrlForTrack] for use in synchronous contexts.
    */
-  fun transformArtworkUrlForTrackBlocking(track: Track, perRouteConfig: MediaRequestConfig? = null): String? {
+  fun transformArtworkUrlForTrackBlocking(track: Track, perRouteConfig: MediaRequestConfig? = null): ImageSource? {
     return runBlocking { transformArtworkUrlForTrack(track, perRouteConfig) }
   }
 }

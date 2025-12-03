@@ -23,6 +23,8 @@
 #include <string>
 #include <unordered_map>
 #include "JTrack.hpp"
+#include "ImageSource.hpp"
+#include "JImageSource.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
 

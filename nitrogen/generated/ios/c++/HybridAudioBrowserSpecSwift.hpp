@@ -14,6 +14,10 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `ImageSource` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageSource; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
@@ -28,8 +32,6 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
-// Forward declaration of `HttpMethod` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -45,6 +47,9 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 #include <optional>
 #include "Track.hpp"
 #include <vector>
+#include "ImageSource.hpp"
+#include "HttpMethod.hpp"
+#include <unordered_map>
 #include "TrackStyle.hpp"
 #include <functional>
 #include "ResolvedTrack.hpp"
@@ -54,8 +59,6 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 #include "TransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include <unordered_map>
-#include "HttpMethod.hpp"
 #include "MediaRequestConfig.hpp"
 #include "NativeRouteEntry.hpp"
 #include "BrowserSourceCallbackParam.hpp"

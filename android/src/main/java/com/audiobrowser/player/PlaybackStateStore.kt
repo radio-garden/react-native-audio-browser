@@ -167,6 +167,7 @@ class PlaybackStateStore(private val player: Player) {
           artist = obj.optString("artist").takeIf { it.isNotEmpty() },
           album = obj.optString("album").takeIf { it.isNotEmpty() },
           artwork = obj.optString("artwork").takeIf { it.isNotEmpty() },
+          artworkSource = null, // Not persisted - will be re-transformed on browse
           description = obj.optString("description").takeIf { it.isNotEmpty() },
           genre = obj.optString("genre").takeIf { it.isNotEmpty() },
           duration =

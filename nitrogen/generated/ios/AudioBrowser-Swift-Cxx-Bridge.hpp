@@ -54,6 +54,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
+// Forward declaration of `ImageSource` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -171,6 +173,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
+#include "ImageSource.hpp"
 #include "MediaRequestConfig.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NavigationError.hpp"
@@ -246,6 +249,76 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::optional<ImageSource>
+  /**
+   * Specialized version of `std::optional<ImageSource>`.
+   */
+  using std__optional_ImageSource_ = std::optional<ImageSource>;
+  inline std::optional<ImageSource> create_std__optional_ImageSource_(const ImageSource& value) noexcept {
+    return std::optional<ImageSource>(value);
+  }
+  inline bool has_value_std__optional_ImageSource_(const std::optional<ImageSource>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ImageSource get_std__optional_ImageSource_(const std::optional<ImageSource>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<HttpMethod>
+  /**
+   * Specialized version of `std::optional<HttpMethod>`.
+   */
+  using std__optional_HttpMethod_ = std::optional<HttpMethod>;
+  inline std::optional<HttpMethod> create_std__optional_HttpMethod_(const HttpMethod& value) noexcept {
+    return std::optional<HttpMethod>(value);
+  }
+  inline bool has_value_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline HttpMethod get_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::unordered_map<std::string, std::string>>
+  /**
+   * Specialized version of `std::optional<std::unordered_map<std::string, std::string>>`.
+   */
+  using std__optional_std__unordered_map_std__string__std__string__ = std::optional<std::unordered_map<std::string, std::string>>;
+  inline std::optional<std::unordered_map<std::string, std::string>> create_std__optional_std__unordered_map_std__string__std__string__(const std::unordered_map<std::string, std::string>& value) noexcept {
+    return std::optional<std::unordered_map<std::string, std::string>>(value);
+  }
+  inline bool has_value_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::unordered_map<std::string, std::string> get_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::unordered_map<std::string, std::string>
+  /**
+   * Specialized version of `std::unordered_map<std::string, std::string>`.
+   */
+  using std__unordered_map_std__string__std__string_ = std::unordered_map<std::string, std::string>;
+  inline std::unordered_map<std::string, std::string> create_std__unordered_map_std__string__std__string_(size_t size) noexcept {
+    std::unordered_map<std::string, std::string> map;
+    map.reserve(size);
+    return map;
+  }
+  inline std::vector<std::string> get_std__unordered_map_std__string__std__string__keys(const std__unordered_map_std__string__std__string_& map) noexcept {
+    std::vector<std::string> keys;
+    keys.reserve(map.size());
+    for (const auto& entry : map) {
+      keys.push_back(entry.first);
+    }
+    return keys;
+  }
+  inline std::string get_std__unordered_map_std__string__std__string__value(const std__unordered_map_std__string__std__string_& map, const std::string& key) noexcept {
+    return map.find(key)->second;
+  }
+  inline void emplace_std__unordered_map_std__string__std__string_(std__unordered_map_std__string__std__string_& map, const std::string& key, const std::string& value) noexcept {
+    map.emplace(key, value);
   }
   
   // pragma MARK: std::optional<double>
@@ -601,61 +674,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_RequestConfig create_Func_void_RequestConfig(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_RequestConfig_Wrapper wrap_Func_void_RequestConfig(Func_void_RequestConfig value) noexcept {
     return Func_void_RequestConfig_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::optional<HttpMethod>
-  /**
-   * Specialized version of `std::optional<HttpMethod>`.
-   */
-  using std__optional_HttpMethod_ = std::optional<HttpMethod>;
-  inline std::optional<HttpMethod> create_std__optional_HttpMethod_(const HttpMethod& value) noexcept {
-    return std::optional<HttpMethod>(value);
-  }
-  inline bool has_value_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline HttpMethod get_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<std::unordered_map<std::string, std::string>>
-  /**
-   * Specialized version of `std::optional<std::unordered_map<std::string, std::string>>`.
-   */
-  using std__optional_std__unordered_map_std__string__std__string__ = std::optional<std::unordered_map<std::string, std::string>>;
-  inline std::optional<std::unordered_map<std::string, std::string>> create_std__optional_std__unordered_map_std__string__std__string__(const std::unordered_map<std::string, std::string>& value) noexcept {
-    return std::optional<std::unordered_map<std::string, std::string>>(value);
-  }
-  inline bool has_value_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::unordered_map<std::string, std::string> get_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::unordered_map<std::string, std::string>
-  /**
-   * Specialized version of `std::unordered_map<std::string, std::string>`.
-   */
-  using std__unordered_map_std__string__std__string_ = std::unordered_map<std::string, std::string>;
-  inline std::unordered_map<std::string, std::string> create_std__unordered_map_std__string__std__string_(size_t size) noexcept {
-    std::unordered_map<std::string, std::string> map;
-    map.reserve(size);
-    return map;
-  }
-  inline std::vector<std::string> get_std__unordered_map_std__string__std__string__keys(const std__unordered_map_std__string__std__string_& map) noexcept {
-    std::vector<std::string> keys;
-    keys.reserve(map.size());
-    for (const auto& entry : map) {
-      keys.push_back(entry.first);
-    }
-    return keys;
-  }
-  inline std::string get_std__unordered_map_std__string__std__string__value(const std__unordered_map_std__string__std__string_& map, const std::string& key) noexcept {
-    return map.find(key)->second;
-  }
-  inline void emplace_std__unordered_map_std__string__std__string_(std__unordered_map_std__string__std__string_& map, const std::string& key, const std::string& value) noexcept {
-    map.emplace(key, value);
   }
   
   // pragma MARK: std::optional<MediaRequestConfig>

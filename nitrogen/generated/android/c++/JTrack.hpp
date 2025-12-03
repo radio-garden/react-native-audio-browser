@@ -10,10 +10,15 @@
 #include <fbjni/fbjni.h>
 #include "Track.hpp"
 
+#include "HttpMethod.hpp"
+#include "ImageSource.hpp"
+#include "JHttpMethod.hpp"
+#include "JImageSource.hpp"
 #include "JTrackStyle.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -40,6 +45,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
       static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
       jni::local_ref<jni::JString> artwork = this->getFieldValue(fieldArtwork);
+      static const auto fieldArtworkSource = clazz->getField<JImageSource>("artworkSource");
+      jni::local_ref<JImageSource> artworkSource = this->getFieldValue(fieldArtworkSource);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldSubtitle = clazz->getField<jni::JString>("subtitle");
@@ -66,6 +73,7 @@ namespace margelo::nitro::audiobrowser {
         url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
+        artworkSource != nullptr ? std::make_optional(artworkSource->toCpp()) : std::nullopt,
         title->toStdString(),
         subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
         artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
@@ -86,7 +94,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
-      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>);
+      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JImageSource>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -94,6 +102,7 @@ namespace margelo::nitro::audiobrowser {
         value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
+        value.artworkSource.has_value() ? JImageSource::fromCpp(value.artworkSource.value()) : nullptr,
         jni::make_jstring(value.title),
         value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,
         value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,

@@ -17,6 +17,11 @@
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
+#include "ImageSource.hpp"
+#include "JImageSource.hpp"
+#include "HttpMethod.hpp"
+#include "JHttpMethod.hpp"
+#include <unordered_map>
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
 

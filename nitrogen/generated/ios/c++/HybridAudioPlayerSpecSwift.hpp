@@ -24,6 +24,10 @@ namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `ImageSource` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageSource; }
+// Forward declaration of `HttpMethod` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -141,6 +145,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "PlaybackMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "Track.hpp"
+#include "ImageSource.hpp"
+#include "HttpMethod.hpp"
+#include <unordered_map>
 #include "TrackStyle.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"

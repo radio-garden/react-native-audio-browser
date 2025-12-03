@@ -1,4 +1,27 @@
+import type { HttpMethod } from './browser'
+
 export type TrackStyle = 'list' | 'grid'
+
+/**
+ * Image source for React Native's `<Image>` component.
+ * Contains all information needed to load an image, including URL transformation
+ * and authentication headers.
+ *
+ * @example
+ * ```tsx
+ * <Image source={track.artworkSource} />
+ * ```
+ */
+export interface ImageSource {
+  /** Transformed URL with query parameters for authentication */
+  uri: string
+  /** HTTP method (usually GET for images) */
+  method?: HttpMethod
+  /** HTTP headers including User-Agent and Content-Type if configured */
+  headers?: Record<string, string>
+  /** HTTP body for POST requests (rare for images) */
+  body?: string
+}
 
 // export interface BrowserSection {
 //   title: string
@@ -27,9 +50,29 @@ export interface Track {
   src?: string
 
   /**
-   * Optional artwork URL for the item.
+   * Artwork URL for the item.
+   *
+   * The artwork URL is also returned by native in the `artworkSource` property
+   * for use in an `<Image>` component, which will contain the transformed version
+   * if `artwork` configuration is set in `BrowserConfiguration` or a route.
    */
   artwork?: string
+
+  /**
+   * Ready-to-use image source for React Native's `<Image>` component.
+   *
+   * **Output only** - automatically populated when tracks are retrieved from
+   * AudioBrowser. Do not set this manually.
+   *
+   * Contains the transformed URL and any required headers based on the
+   * `artwork` configuration in `BrowserConfiguration`.
+   *
+   * @example
+   * ```tsx
+   * <Image source={audioBrowser.currentTrack?.artworkSource} />
+   * ```
+   */
+  readonly artworkSource?: ImageSource
 
   // type?: TrackType
   title: string

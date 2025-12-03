@@ -19,7 +19,7 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, src: String?, artwork: String?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?) {
+  init(url: String, children: [Track]?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?) {
     self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
@@ -41,6 +41,12 @@ public extension ResolvedTrack {
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = artwork {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_ImageSource_ in
+      if let __unwrappedValue = artworkSource {
+        return bridge.create_std__optional_ImageSource_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -189,6 +195,23 @@ public extension ResolvedTrack {
       self.__artwork = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var artworkSource: ImageSource? {
+    @inline(__always)
+    get {
+      return self.__artworkSource.value
+    }
+    @inline(__always)
+    set {
+      self.__artworkSource = { () -> bridge.std__optional_ImageSource_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_ImageSource_(__unwrappedValue)
         } else {
           return .init()
         }

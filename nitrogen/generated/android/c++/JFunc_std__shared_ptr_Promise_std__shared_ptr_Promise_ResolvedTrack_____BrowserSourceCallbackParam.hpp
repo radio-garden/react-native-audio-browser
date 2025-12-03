@@ -22,10 +22,14 @@
 #include <vector>
 #include <optional>
 #include "JTrack.hpp"
+#include "ImageSource.hpp"
+#include "JImageSource.hpp"
+#include "HttpMethod.hpp"
+#include "JHttpMethod.hpp"
+#include <unordered_map>
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
-#include <unordered_map>
 
 namespace margelo::nitro::audiobrowser {
 
