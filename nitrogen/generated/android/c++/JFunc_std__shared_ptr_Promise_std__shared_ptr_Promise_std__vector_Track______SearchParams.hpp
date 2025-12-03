@@ -15,6 +15,7 @@
 #include <NitroModules/Promise.hpp>
 #include "SearchParams.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JTrack.hpp"
 #include <string>
@@ -82,7 +83,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx final: public jni::HybridClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx, JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams> {
+  class JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx final: public jni::HybridClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx, JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams> {
   public:
     static jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams::javaobject> fromCpp(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>& func) {
       return JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::newObjectCxxArgs(func);

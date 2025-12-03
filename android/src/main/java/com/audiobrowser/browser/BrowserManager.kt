@@ -7,10 +7,11 @@ import com.audiobrowser.SearchSource
 import com.audiobrowser.TabsSource
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
+import com.audiobrowser.RouteSource
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.TrackFactory
-import com.margelo.nitro.audiobrowser.BrowserSource
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
+import com.margelo.nitro.audiobrowser.RouteConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
@@ -345,11 +346,11 @@ class BrowserManager {
         ?.takeUnless { it.isEmpty() }
         ?.let { routes ->
           router.findBestMatch(path, routes)?.let { (routePattern, match) ->
-            val browserSource = routes[routePattern]!!
+            val routeSource = routes[routePattern]!!
             val routeParams = match.params
 
             Timber.d("Matched route: $routePattern with params: $routeParams")
-            resolveBrowserSource(browserSource, path, routeParams)
+            resolveRouteSource(routeSource, path, routeParams)
           }
         }
         ?: config.browse?.let { browseSource ->
@@ -709,34 +710,53 @@ class BrowserManager {
   }
 
   /**
-   * Resolve a BrowserSource into a BrowserList. Handles the three possible types: static
-   * BrowserList, callback, or API config.
+   * Resolve a RouteSource into a ResolvedTrack. Handles the four possible types: callback, static
+   * ResolvedTrack, API config, or RouteConfig.
    */
-  private suspend fun resolveBrowserSource(
-    source: BrowserSource,
+  private suspend fun resolveRouteSource(
+    source: RouteSource,
     path: String,
     routeParams: Map<String, String>,
   ): ResolvedTrack {
     return source.match(
       // Callback function
       first = { callback ->
-        Timber.d("Resolving browser source via callback")
+        Timber.d("Resolving route source via callback")
         val param = BrowserSourceCallbackParam(path, routeParams)
         val promise = callback.invoke(param)
         val innerPromise = promise.await()
         innerPromise.await()
       },
-      // Static BrowserList
+      // Static ResolvedTrack
       second = { staticList ->
-        Timber.d("Resolving browser source via static list")
+        Timber.d("Resolving route source via static list")
         staticList
       },
       // API configuration
       third = { apiConfig ->
-        Timber.d("Resolving browser source via API config")
+        Timber.d("Resolving route source via API config")
         executeApiRequest(apiConfig, path, routeParams)
       },
+      // RouteConfig with optional browse, media, artwork
+      fourth = { routeConfig ->
+        Timber.d("Resolving route source via RouteConfig")
+        resolveRouteConfig(routeConfig, path, routeParams)
+      },
     )
+  }
+
+  /**
+   * Resolve a RouteConfig by delegating to its browse source if present.
+   * RouteConfig may also have media/artwork overrides which are handled separately.
+   */
+  private suspend fun resolveRouteConfig(
+    routeConfig: RouteConfig,
+    path: String,
+    routeParams: Map<String, String>,
+  ): ResolvedTrack {
+    val browseSource = routeConfig.browse
+      ?: throw ContentNotFoundException(path)
+    return resolveBrowseSource(browseSource, path, routeParams)
   }
 
   /** Resolve a BrowseSource (which doesn't include static BrowserList option). */
@@ -824,7 +844,9 @@ class BrowserManager {
     return withContext(Dispatchers.IO) {
       // 1. Start with base config, using the navigation path as default
       val baseConfig =
-        config.request?.copy(path = config.request?.path ?: path)
+        config.request?.let { req ->
+          RequestConfigBuilder.toRequestConfig(req).copy(path = req.path ?: path)
+        }
           ?: RequestConfig(
             path = path,
             method = null,
@@ -880,7 +902,7 @@ class BrowserManager {
       try {
         // 1. Start with base config
         val baseConfig =
-          config.request
+          config.request?.let { RequestConfigBuilder.toRequestConfig(it) }
             ?: RequestConfig(
               method = null,
               path = null,
@@ -958,7 +980,7 @@ class BrowserManager {
       try {
         // 1. Start with base config
         val baseConfig =
-          config.request
+          config.request?.let { RequestConfigBuilder.toRequestConfig(it) }
             ?: RequestConfig(
               method = null,
               path = null,
@@ -1028,10 +1050,11 @@ typealias BrowseSource =
   Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
 
 data class BrowserConfig(
-  val request: RequestConfig? = null,
+  val request: TransformableRequestConfig? = null,
   val media: MediaRequestConfig? = null,
+  val artwork: MediaRequestConfig? = null,
   val search: SearchSource? = null,
-  val routes: Map<String, BrowserSource>? = null,
+  val routes: Map<String, RouteSource>? = null,
   val tabs: TabsSource? = null,
   val browse: BrowseSource? = null,
   val singleTrack: Boolean = false,

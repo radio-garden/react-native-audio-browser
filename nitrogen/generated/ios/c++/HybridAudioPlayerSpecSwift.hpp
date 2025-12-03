@@ -124,14 +124,10 @@ namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
-// Forward declaration of `Progress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 
@@ -198,11 +194,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "IOSUpdateOptions.hpp"
-#include "UpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"
 #include <memory>
 #include "HybridAudioBrowserSpec.hpp"
-#include "Progress.hpp"
 #include "NowPlayingUpdate.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"

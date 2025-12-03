@@ -14,6 +14,7 @@
 #include <NitroModules/Promise.hpp>
 #include "Track.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
@@ -73,7 +74,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx final: public jni::HybridClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx, JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track> {
+  class JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx final: public jni::HybridClass<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx, JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track> {
   public:
     static jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track::javaobject> fromCpp(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>& func) {
       return JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx::newObjectCxxArgs(func);

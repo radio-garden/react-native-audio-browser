@@ -12,6 +12,7 @@
 
 #include "FavoriteChangedEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JFavoriteChangedEvent.hpp"
 #include "Track.hpp"
 #include "JTrack.hpp"
@@ -45,7 +46,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_FavoriteChangedEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_FavoriteChangedEvent_cxx final: public jni::HybridClass<JFunc_void_FavoriteChangedEvent_cxx, JFunc_void_FavoriteChangedEvent> {
+  class JFunc_void_FavoriteChangedEvent_cxx final: public jni::HybridClass<JFunc_void_FavoriteChangedEvent_cxx, JFunc_void_FavoriteChangedEvent> {
   public:
     static jni::local_ref<JFunc_void_FavoriteChangedEvent::javaobject> fromCpp(const std::function<void(const FavoriteChangedEvent& /* event */)>& func) {
       return JFunc_void_FavoriteChangedEvent_cxx::newObjectCxxArgs(func);

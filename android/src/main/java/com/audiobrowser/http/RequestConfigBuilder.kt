@@ -60,7 +60,7 @@ object RequestConfigBuilder {
         Timber.e(e, "Failed to apply transform function, using base config")
         base
       }
-    } ?: mergeConfig(base, convertToRequestConfig(override)) // Only merge if no transform
+    } ?: mergeConfig(base, toRequestConfig(override)) // Only merge if no transform
   }
 
   suspend fun mergeConfig(base: RequestConfig, override: MediaRequestConfig): MediaRequestConfig {
@@ -105,9 +105,7 @@ object RequestConfigBuilder {
     )
   }
 
-  private fun convertToRequestConfig(
-    transformableConfig: TransformableRequestConfig
-  ): RequestConfig {
+  fun toRequestConfig(transformableConfig: TransformableRequestConfig): RequestConfig {
     return RequestConfig(
       path = transformableConfig.path,
       method = transformableConfig.method,
@@ -117,6 +115,19 @@ object RequestConfigBuilder {
       body = transformableConfig.body,
       contentType = transformableConfig.contentType,
       userAgent = transformableConfig.userAgent,
+    )
+  }
+
+  fun toRequestConfig(mediaConfig: MediaRequestConfig): RequestConfig {
+    return RequestConfig(
+      path = mediaConfig.path,
+      method = mediaConfig.method,
+      baseUrl = mediaConfig.baseUrl,
+      headers = mediaConfig.headers,
+      query = mediaConfig.query,
+      body = mediaConfig.body,
+      contentType = mediaConfig.contentType,
+      userAgent = mediaConfig.userAgent,
     )
   }
 
@@ -142,7 +153,7 @@ object RequestConfigBuilder {
     }
   }
 
-  private fun buildUrl(config: RequestConfig): String {
+  internal fun buildUrl(config: RequestConfig): String {
     val path = config.path ?: ""
     val baseUrl = config.baseUrl
 

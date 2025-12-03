@@ -7,7 +7,6 @@
 
 import Foundation
 import NitroModules
-import NitroModules
 
 /// See ``HybridAudioPlayerSpec``
 public protocol HybridAudioPlayerSpec_protocol: HybridObject {

@@ -12,6 +12,7 @@
 
 #include "RemoteSetRatingEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JRemoteSetRatingEvent.hpp"
 #include "HeartRating.hpp"
 #include "ThumbsRating.hpp"
@@ -49,7 +50,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_RemoteSetRatingEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_RemoteSetRatingEvent_cxx final: public jni::HybridClass<JFunc_void_RemoteSetRatingEvent_cxx, JFunc_void_RemoteSetRatingEvent> {
+  class JFunc_void_RemoteSetRatingEvent_cxx final: public jni::HybridClass<JFunc_void_RemoteSetRatingEvent_cxx, JFunc_void_RemoteSetRatingEvent> {
   public:
     static jni::local_ref<JFunc_void_RemoteSetRatingEvent::javaobject> fromCpp(const std::function<void(const RemoteSetRatingEvent& /* event */)>& func) {
       return JFunc_void_RemoteSetRatingEvent_cxx::newObjectCxxArgs(func);

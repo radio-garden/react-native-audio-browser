@@ -12,6 +12,7 @@
 
 #include "PlaybackErrorEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JPlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
 #include <optional>
@@ -43,7 +44,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_PlaybackErrorEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_PlaybackErrorEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackErrorEvent_cxx, JFunc_void_PlaybackErrorEvent> {
+  class JFunc_void_PlaybackErrorEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackErrorEvent_cxx, JFunc_void_PlaybackErrorEvent> {
   public:
     static jni::local_ref<JFunc_void_PlaybackErrorEvent::javaobject> fromCpp(const std::function<void(const PlaybackErrorEvent& /* data */)>& func) {
       return JFunc_void_PlaybackErrorEvent_cxx::newObjectCxxArgs(func);

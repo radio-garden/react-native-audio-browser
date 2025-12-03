@@ -15,6 +15,7 @@
 #include "JHttpMethod.hpp"
 #include "JRequestConfig.hpp"
 #include "RequestConfig.hpp"
+#include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include <NitroModules/Promise.hpp>
 #include <functional>
@@ -66,9 +67,7 @@ namespace margelo::nitro::audiobrowser {
             return downcast->cthis()->getFunction();
           } else {
             auto transformRef = jni::make_global(transform);
-            return [transformRef](RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
-              return transformRef->invoke(request,routeParams);
-            };
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__, std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(RequestConfig, std::optional<std::unordered_map<std::string, std::string>>)>(std::move(transformRef));
           }
         }()) : std::nullopt,
         method != nullptr ? std::make_optional(method->toCpp()) : std::nullopt,

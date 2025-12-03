@@ -11,6 +11,7 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.BrowserConfiguration
+import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NavigationError
@@ -41,6 +42,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       path = null,
       request = null,
       media = null,
+      artwork = null,
       search = null,
       routes = null,
       tabs = null,
@@ -80,6 +82,18 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   }
 
   /**
+   * Returns the artwork configuration for use by CoilBitmapLoader.
+   * This provides access to the base request config and artwork-specific config.
+   */
+  fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
+    val artworkConfig = _configuration.artwork ?: return null
+    val baseConfig =
+      _configuration.request?.let { RequestConfigBuilder.toRequestConfig(it) }
+        ?: RequestConfig(null, null, null, null, null, null, null, null)
+    return CoilBitmapLoader.ArtworkConfig(baseConfig, artworkConfig)
+  }
+
+  /**
    * Creates a request config for media URL transformation by merging base and media configs.
    * Returns null if no media configuration is set.
    */
@@ -89,7 +103,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     return try {
       // Create base request config with the original URL as path
       val baseConfig =
-        _configuration.request ?: RequestConfig(null, null, null, null, null, null, null, null)
+        _configuration.request?.let { RequestConfigBuilder.toRequestConfig(it) }
+          ?: RequestConfig(null, null, null, null, null, null, null, null)
       val urlRequestConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
       val mergedBaseConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
 

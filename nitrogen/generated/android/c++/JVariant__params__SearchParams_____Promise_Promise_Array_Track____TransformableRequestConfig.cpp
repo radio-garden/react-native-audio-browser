@@ -16,16 +16,14 @@ namespace margelo::nitro::audiobrowser {
       // It's a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>`
       auto jniValue = static_cast<const JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig_impl::First*>(this)->getValue();
       return [&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)> {
-      if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::javaobject>(jniValue);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto jniValueRef = jni::make_global(jniValue);
-        return [jniValueRef](SearchParams params) -> std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> {
-          return jniValueRef->invoke(params);
-        };
-      }
-    }();
+        if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::javaClassStatic())) [[likely]] {
+          auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::javaobject>(jniValue);
+          return downcast->cthis()->getFunction();
+        } else {
+          auto jniValueRef = jni::make_global(jniValue);
+          return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams, std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(SearchParams)>(std::move(jniValueRef));
+        }
+      }();
     } else if (isInstanceOf(JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig_impl::Second::javaClassStatic())) {
       // It's a `TransformableRequestConfig`
       auto jniValue = static_cast<const JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig_impl::Second*>(this)->getValue();

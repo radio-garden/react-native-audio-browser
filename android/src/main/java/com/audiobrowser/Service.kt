@@ -10,11 +10,17 @@ import android.os.IBinder
 import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.MainThread
+import androidx.annotation.OptIn
 import androidx.core.net.toUri
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import coil3.ImageLoader
+import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.SearchMode
 import com.margelo.nitro.audiobrowser.SearchParams
@@ -30,6 +36,7 @@ class Service : MediaLibraryService() {
   private val binder = LocalBinder()
   private val scope = MainScope()
   private lateinit var mediaSession: MediaLibrarySession
+  private lateinit var imageLoader: ImageLoader
 
   // Headless service binding
   private val headlessConnection: ServiceConnection =
@@ -39,6 +46,7 @@ class Service : MediaLibraryService() {
       override fun onServiceDisconnected(className: ComponentName) {}
     }
 
+  @OptIn(UnstableApi::class)
   override fun onCreate() {
     super.onCreate()
 
@@ -67,6 +75,21 @@ class Service : MediaLibraryService() {
 
     player = Player(this)
     player.setup(PlayerSetupOptions())
+
+    // Create shared Coil ImageLoader with SVG support
+    imageLoader =
+      ImageLoader.Builder(this)
+        .components { add(SvgDecoder.Factory()) }
+        .build()
+
+    // Create CoilBitmapLoader for artwork loading with custom headers/auth support
+    val coilBitmapLoader =
+      CoilBitmapLoader(
+        context = this,
+        imageLoader = imageLoader,
+        getArtworkConfig = { player.browser?.getArtworkConfig() },
+      )
+
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -76,6 +99,8 @@ class Service : MediaLibraryService() {
       }
     mediaSession =
       MediaLibrarySession.Builder(this, player.forwardingPlayer, player.getMediaSessionCallback())
+        // Use Coil for artwork loading (enables custom headers, SVG support)
+        .setBitmapLoader(CacheBitmapLoader(coilBitmapLoader))
         // https://github.com/androidx/media/issues/1218
         .setSessionActivity(
           PendingIntent.getActivity(

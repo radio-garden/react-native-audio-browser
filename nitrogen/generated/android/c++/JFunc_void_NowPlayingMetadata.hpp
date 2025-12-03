@@ -12,6 +12,7 @@
 
 #include "NowPlayingMetadata.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JNowPlayingMetadata.hpp"
 #include <optional>
 #include <string>
@@ -51,7 +52,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_NowPlayingMetadata that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_NowPlayingMetadata_cxx final: public jni::HybridClass<JFunc_void_NowPlayingMetadata_cxx, JFunc_void_NowPlayingMetadata> {
+  class JFunc_void_NowPlayingMetadata_cxx final: public jni::HybridClass<JFunc_void_NowPlayingMetadata_cxx, JFunc_void_NowPlayingMetadata> {
   public:
     static jni::local_ref<JFunc_void_NowPlayingMetadata::javaobject> fromCpp(const std::function<void(const NowPlayingMetadata& /* metadata */)>& func) {
       return JFunc_void_NowPlayingMetadata_cxx::newObjectCxxArgs(func);

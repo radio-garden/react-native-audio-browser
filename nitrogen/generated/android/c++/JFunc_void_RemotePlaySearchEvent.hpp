@@ -12,6 +12,7 @@
 
 #include "RemotePlaySearchEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JRemotePlaySearchEvent.hpp"
 #include <string>
 
@@ -40,7 +41,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_RemotePlaySearchEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_RemotePlaySearchEvent_cxx final: public jni::HybridClass<JFunc_void_RemotePlaySearchEvent_cxx, JFunc_void_RemotePlaySearchEvent> {
+  class JFunc_void_RemotePlaySearchEvent_cxx final: public jni::HybridClass<JFunc_void_RemotePlaySearchEvent_cxx, JFunc_void_RemotePlaySearchEvent> {
   public:
     static jni::local_ref<JFunc_void_RemotePlaySearchEvent::javaobject> fromCpp(const std::function<void(const RemotePlaySearchEvent& /* event */)>& func) {
       return JFunc_void_RemotePlaySearchEvent_cxx::newObjectCxxArgs(func);

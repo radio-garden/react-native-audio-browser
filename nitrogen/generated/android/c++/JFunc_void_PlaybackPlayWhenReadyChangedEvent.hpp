@@ -12,6 +12,7 @@
 
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JPlaybackPlayWhenReadyChangedEvent.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -39,7 +40,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_PlaybackPlayWhenReadyChangedEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx, JFunc_void_PlaybackPlayWhenReadyChangedEvent> {
+  class JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx, JFunc_void_PlaybackPlayWhenReadyChangedEvent> {
   public:
     static jni::local_ref<JFunc_void_PlaybackPlayWhenReadyChangedEvent::javaobject> fromCpp(const std::function<void(const PlaybackPlayWhenReadyChangedEvent& /* data */)>& func) {
       return JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::newObjectCxxArgs(func);

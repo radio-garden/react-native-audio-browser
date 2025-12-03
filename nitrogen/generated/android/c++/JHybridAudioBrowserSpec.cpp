@@ -19,22 +19,22 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NavigationErrorType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
-// Forward declaration of `BrowserConfiguration` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
+// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
-// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
-// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `RouteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 
 #include <string>
 #include <optional>
@@ -45,6 +45,7 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 #include "JTrackStyle.hpp"
 #include <functional>
 #include "JFunc_void_std__string.hpp"
+#include <NitroModules/JNICallable.hpp>
 #include "ResolvedTrack.hpp"
 #include "JFunc_void_std__optional_ResolvedTrack_.hpp"
 #include "JResolvedTrack.hpp"
@@ -56,35 +57,36 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 #include "JNavigationError.hpp"
 #include "NavigationErrorType.hpp"
 #include "JNavigationErrorType.hpp"
-#include "BrowserConfiguration.hpp"
 #include "JBrowserConfiguration.hpp"
+#include "TransformableRequestConfig.hpp"
+#include "JTransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
+#include <NitroModules/Promise.hpp>
+#include <unordered_map>
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include <NitroModules/JPromise.hpp>
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
-#include <unordered_map>
+#include "BrowserSourceCallbackParam.hpp"
+#include <variant>
+#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
+#include "JBrowserSourceCallbackParam.hpp"
 #include "MediaRequestConfig.hpp"
 #include "JMediaRequestConfig.hpp"
-#include <NitroModules/Promise.hpp>
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
-#include <NitroModules/JPromise.hpp>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "SearchParams.hpp"
-#include "TransformableRequestConfig.hpp"
-#include <variant>
 #include "JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JSearchParams.hpp"
 #include "SearchMode.hpp"
 #include "JSearchMode.hpp"
-#include "JTransformableRequestConfig.hpp"
 #include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
-#include "BrowserSourceCallbackParam.hpp"
-#include "JBrowserSource.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
-#include "JBrowserSourceCallbackParam.hpp"
-#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.hpp"
+#include "RouteConfig.hpp"
+#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig.hpp"
+#include "JRouteConfig.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -160,9 +162,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::string path) -> void {
-          return __resultRef->invoke(path);
-        };
+        return JNICallable<JFunc_void_std__string, void(std::string)>(std::move(__resultRef));
       }
     }();
   }
@@ -179,9 +179,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::optional<ResolvedTrack> content) -> void {
-          return __resultRef->invoke(content);
-        };
+        return JNICallable<JFunc_void_std__optional_ResolvedTrack_, void(std::optional<ResolvedTrack>)>(std::move(__resultRef));
       }
     }();
   }
@@ -198,9 +196,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::vector<Track> tabs) -> void {
-          return __resultRef->invoke(tabs);
-        };
+        return JNICallable<JFunc_void_std__vector_Track_, void(std::vector<Track>)>(std::move(__resultRef));
       }
     }();
   }
@@ -217,9 +213,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](NavigationErrorEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_NavigationErrorEvent, void(NavigationErrorEvent)>(std::move(__resultRef));
       }
     }();
   }

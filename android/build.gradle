@@ -187,6 +187,11 @@ dependencies {
   // JSON parsing
   implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
 
+  // Image loading with Coil (for authenticated artwork, SVG support)
+  implementation("io.coil-kt.coil3:coil:3.3.0")
+  implementation("io.coil-kt.coil3:coil-svg:3.3.0")
+  implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
+
   // Testing dependencies
   testImplementation 'junit:junit:4.13.2'
   testImplementation 'org.mockito:mockito-core:5.8.0'

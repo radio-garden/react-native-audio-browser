@@ -13,6 +13,7 @@
 #include "Track.hpp"
 #include <vector>
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JTrack.hpp"
 #include <string>
 #include <optional>
@@ -53,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_std__vector_Track_ that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_std__vector_Track__cxx final: public jni::HybridClass<JFunc_void_std__vector_Track__cxx, JFunc_void_std__vector_Track_> {
+  class JFunc_void_std__vector_Track__cxx final: public jni::HybridClass<JFunc_void_std__vector_Track__cxx, JFunc_void_std__vector_Track_> {
   public:
     static jni::local_ref<JFunc_void_std__vector_Track_::javaobject> fromCpp(const std::function<void(const std::vector<Track>& /* queue */)>& func) {
       return JFunc_void_std__vector_Track__cxx::newObjectCxxArgs(func);

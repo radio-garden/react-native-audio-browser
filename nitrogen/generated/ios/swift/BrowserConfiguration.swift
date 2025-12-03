@@ -5,6 +5,7 @@
 /// Copyright © 2025 Marc Rousavy @ Margelo
 ///
 
+import Foundation
 import NitroModules
 
 /**
@@ -18,21 +19,45 @@ public extension BrowserConfiguration {
   /**
    * Create a new instance of `BrowserConfiguration`.
    */
-  init(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant____params__SearchParams_____Promise_Promise__Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig?, routes: Dictionary<String, BrowserSource>?, browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, singleTrack: Bool?, androidControllerOfflineError: Bool?) {
+  init(path: String?, request: TransformableRequestConfig?, browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, search: Variant____params__SearchParams_____Promise_Promise__Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise__Track_____Track__TransformableRequestConfig?, routes: Dictionary<String, Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig>?, singleTrack: Bool?, androidControllerOfflineError: Bool?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_RequestConfig_ in
+    }(), { () -> bridge.std__optional_TransformableRequestConfig_ in
       if let __unwrappedValue = request {
-        return bridge.create_std__optional_RequestConfig_(__unwrappedValue)
+        return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ in
+      if let __unwrappedValue = browse {
+        return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
+                let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__value)
+                return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
+              }())
+            case .second(let __value):
+              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+            case .third(let __value):
+              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
     }(), { () -> bridge.std__optional_MediaRequestConfig_ in
       if let __unwrappedValue = media {
+        return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_MediaRequestConfig_ in
+      if let __unwrappedValue = artwork {
         return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
       } else {
         return .init()
@@ -77,45 +102,29 @@ public extension BrowserConfiguration {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___ in
+    }(), { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___ in
       if let __unwrappedValue = routes {
-        return bridge.create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___({ () -> bridge.std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ in
-          var __map = bridge.create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(__unwrappedValue.count)
+        return bridge.create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___({ () -> bridge.std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__ in
+          var __map = bridge.create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__(__unwrappedValue.count)
           for (__k, __v) in __unwrappedValue {
-            bridge.emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(&__map, std.string(__k), { () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ in
+            bridge.emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__(&__map, std.string(__k), { () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ in
               switch __v {
                 case .first(let __value):
-                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
+                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
                     let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__value)
                     return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
                   }())
                 case .second(let __value):
-                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
                 case .third(let __value):
-                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
+                case .fourth(let __value):
+                  return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
               }
             }().variant)
           }
           return __map
         }())
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ in
-      if let __unwrappedValue = browse {
-        return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ in
-          switch __unwrappedValue {
-            case .first(let __value):
-              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
-                let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__value)
-                return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
-              }())
-            case .second(let __value):
-              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
-            case .third(let __value):
-              return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
-          }
-        }().variant)
       } else {
         return .init()
       }
@@ -158,16 +167,93 @@ public extension BrowserConfiguration {
     }
   }
   
-  var request: RequestConfig? {
+  var request: TransformableRequestConfig? {
     @inline(__always)
     get {
       return self.__request.value
     }
     @inline(__always)
     set {
-      self.__request = { () -> bridge.std__optional_RequestConfig_ in
+      self.__request = { () -> bridge.std__optional_TransformableRequestConfig_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_RequestConfig_(__unwrappedValue)
+          return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig? {
+    @inline(__always)
+    get {
+      return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig? in
+        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(self.__browse) {
+          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(self.__browse)
+          return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig in
+            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<ResolvedTrack>> in
+                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__actual)
+                  return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<ResolvedTrack>> in
+                    let __result = __wrappedFunction.call(__param)
+                    return { () -> Promise<Promise<ResolvedTrack>> in
+                      let __promise = Promise<Promise<ResolvedTrack>>()
+                      let __resolver = { (__result: Promise<ResolvedTrack>) in
+                        __promise.resolve(withResult: __result)
+                      }
+                      let __rejecter = { (__error: Error) in
+                        __promise.reject(withError: __error)
+                      }
+                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_ResolvedTrack__ in
+                        let __closureWrapper = Func_void_std__shared_ptr_Promise_ResolvedTrack__(__resolver)
+                        return bridge.create_Func_void_std__shared_ptr_Promise_ResolvedTrack__(__closureWrapper.toUnsafe())
+                      }()
+                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                      }()
+                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack____(__result)
+                      __promiseHolder.addOnResolvedListener(__resolverCpp)
+                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                      return __promise
+                    }()
+                  }
+                }())
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              case 2:
+                let __actual = __variant.get_2()
+                return .third(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__browse = { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
+                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__value)
+                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
+                }())
+              case .second(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+              case .third(let __value):
+                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+            }
+          }().variant)
         } else {
           return .init()
         }
@@ -183,6 +269,23 @@ public extension BrowserConfiguration {
     @inline(__always)
     set {
       self.__media = { () -> bridge.std__optional_MediaRequestConfig_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var artwork: MediaRequestConfig? {
+    @inline(__always)
+    get {
+      return self.__artwork.value
+    }
+    @inline(__always)
+    set {
+      self.__artwork = { () -> bridge.std__optional_MediaRequestConfig_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
         } else {
@@ -347,19 +450,19 @@ public extension BrowserConfiguration {
     }
   }
   
-  var routes: Dictionary<String, BrowserSource>? {
+  var routes: Dictionary<String, Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig>? {
     @inline(__always)
     get {
-      return { () -> Dictionary<String, BrowserSource>? in
-        if bridge.has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___(self.__routes) {
-          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___(self.__routes)
-          return { () -> Dictionary<String, BrowserSource> in
-            var __dictionary = Dictionary<String, BrowserSource>(minimumCapacity: __unwrapped.size())
-            let __keys = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___keys(__unwrapped)
+      return { () -> Dictionary<String, Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig>? in
+        if bridge.has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___(self.__routes) {
+          let __unwrapped = bridge.get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___(self.__routes)
+          return { () -> Dictionary<String, Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig> in
+            var __dictionary = Dictionary<String, Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig>(minimumCapacity: __unwrapped.size())
+            let __keys = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___keys(__unwrapped)
             for __key in __keys {
-              let __value = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___value(__unwrapped, __key)
-              __dictionary[String(__key)] = { () -> BrowserSource in
-                let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+              let __value = bridge.get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___value(__unwrapped, __key)
+              __dictionary[String(__key)] = { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig in
+                let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
                 switch __variant.index() {
                   case 0:
                     let __actual = __variant.get_0()
@@ -396,6 +499,9 @@ public extension BrowserConfiguration {
                   case 2:
                     let __actual = __variant.get_2()
                     return .third(__actual)
+                  case 3:
+                    let __actual = __variant.get_3()
+                    return .fourth(__actual)
                   default:
                     fatalError("Variant can never have index \(__variant.index())!")
                 }
@@ -410,104 +516,29 @@ public extension BrowserConfiguration {
     }
     @inline(__always)
     set {
-      self.__routes = { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___ in
+      self.__routes = { () -> bridge.std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___({ () -> bridge.std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ in
-            var __map = bridge.create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(__unwrappedValue.count)
+          return bridge.create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___({ () -> bridge.std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__ in
+            var __map = bridge.create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__(__unwrappedValue.count)
             for (__k, __v) in __unwrappedValue {
-              bridge.emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(&__map, std.string(__k), { () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ in
+              bridge.emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__(&__map, std.string(__k), { () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ in
                 switch __v {
                   case .first(let __value):
-                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
                       let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__value)
                       return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
                     }())
                   case .second(let __value):
-                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
                   case .third(let __value):
-                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
+                  case .fourth(let __value):
+                    return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(__value)
                 }
               }().variant)
             }
             return __map
           }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var browse: Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig? {
-    @inline(__always)
-    get {
-      return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig? in
-        if bridge.has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(self.__browse) {
-          let __unwrapped = bridge.get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(self.__browse)
-          return { () -> Variant____param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig in
-            let __variant = bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__unwrapped)
-            switch __variant.index() {
-              case 0:
-                let __actual = __variant.get_0()
-                return .first({ () -> (BrowserSourceCallbackParam) -> Promise<Promise<ResolvedTrack>> in
-                  let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__actual)
-                  return { (__param: BrowserSourceCallbackParam) -> Promise<Promise<ResolvedTrack>> in
-                    let __result = __wrappedFunction.call(__param)
-                    return { () -> Promise<Promise<ResolvedTrack>> in
-                      let __promise = Promise<Promise<ResolvedTrack>>()
-                      let __resolver = { (__result: Promise<ResolvedTrack>) in
-                        __promise.resolve(withResult: __result)
-                      }
-                      let __rejecter = { (__error: Error) in
-                        __promise.reject(withError: __error)
-                      }
-                      let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_ResolvedTrack__ in
-                        let __closureWrapper = Func_void_std__shared_ptr_Promise_ResolvedTrack__(__resolver)
-                        return bridge.create_Func_void_std__shared_ptr_Promise_ResolvedTrack__(__closureWrapper.toUnsafe())
-                      }()
-                      let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
-                        let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
-                        return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
-                      }()
-                      let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack____(__result)
-                      __promiseHolder.addOnResolvedListener(__resolverCpp)
-                      __promiseHolder.addOnRejectedListener(__rejecterCpp)
-                      return __promise
-                    }()
-                  }
-                }())
-              case 1:
-                let __actual = __variant.get_1()
-                return .second(__actual)
-              case 2:
-                let __actual = __variant.get_2()
-                return .third(__actual)
-              default:
-                fatalError("Variant can never have index \(__variant.index())!")
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__browse = { () -> bridge.std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__({ () -> bridge.std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ in
-            switch __unwrappedValue {
-              case .first(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam in
-                  let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__value)
-                  return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(__closureWrapper.toUnsafe())
-                }())
-              case .second(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
-              case .third(let __value):
-                return bridge.create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(__value)
-            }
-          }().variant)
         } else {
           return .init()
         }

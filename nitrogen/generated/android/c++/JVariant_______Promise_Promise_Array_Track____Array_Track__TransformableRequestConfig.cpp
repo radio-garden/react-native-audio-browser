@@ -16,29 +16,27 @@ namespace margelo::nitro::audiobrowser {
       // It's a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`
       auto jniValue = static_cast<const JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig_impl::First*>(this)->getValue();
       return [&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()> {
-      if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______cxx::javaobject>(jniValue);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto jniValueRef = jni::make_global(jniValue);
-        return [jniValueRef]() -> std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> {
-          return jniValueRef->invoke();
-        };
-      }
-    }();
+        if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______cxx::javaClassStatic())) [[likely]] {
+          auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______cxx::javaobject>(jniValue);
+          return downcast->cthis()->getFunction();
+        } else {
+          auto jniValueRef = jni::make_global(jniValue);
+          return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____, std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>(std::move(jniValueRef));
+        }
+      }();
     } else if (isInstanceOf(JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig_impl::Second::javaClassStatic())) {
       // It's a `std::vector<Track>`
       auto jniValue = static_cast<const JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig_impl::Second*>(this)->getValue();
       return [&]() {
-      size_t __size = jniValue->size();
-      std::vector<Track> __vector;
-      __vector.reserve(__size);
-      for (size_t __i = 0; __i < __size; __i++) {
-        auto __element = jniValue->getElement(__i);
-        __vector.push_back(__element->toCpp());
-      }
-      return __vector;
-    }();
+        size_t __size = jniValue->size();
+        std::vector<Track> __vector;
+        __vector.reserve(__size);
+        for (size_t __i = 0; __i < __size; __i++) {
+          auto __element = jniValue->getElement(__i);
+          __vector.push_back(__element->toCpp());
+        }
+        return __vector;
+      }();
     } else if (isInstanceOf(JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig_impl::Third::javaClassStatic())) {
       // It's a `TransformableRequestConfig`
       auto jniValue = static_cast<const JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig_impl::Third*>(this)->getValue();

@@ -12,6 +12,7 @@
 
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JPlaybackActiveTrackChangedEvent.hpp"
 #include <optional>
 #include "Track.hpp"
@@ -45,7 +46,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_PlaybackActiveTrackChangedEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_PlaybackActiveTrackChangedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackActiveTrackChangedEvent_cxx, JFunc_void_PlaybackActiveTrackChangedEvent> {
+  class JFunc_void_PlaybackActiveTrackChangedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackActiveTrackChangedEvent_cxx, JFunc_void_PlaybackActiveTrackChangedEvent> {
   public:
     static jni::local_ref<JFunc_void_PlaybackActiveTrackChangedEvent::javaobject> fromCpp(const std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>& func) {
       return JFunc_void_PlaybackActiveTrackChangedEvent_cxx::newObjectCxxArgs(func);

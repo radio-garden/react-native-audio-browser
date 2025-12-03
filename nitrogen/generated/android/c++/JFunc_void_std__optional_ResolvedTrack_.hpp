@@ -13,6 +13,7 @@
 #include "ResolvedTrack.hpp"
 #include <optional>
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JResolvedTrack.hpp"
 #include <string>
 #include "Track.hpp"
@@ -46,7 +47,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_std__optional_ResolvedTrack_ that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_std__optional_ResolvedTrack__cxx final: public jni::HybridClass<JFunc_void_std__optional_ResolvedTrack__cxx, JFunc_void_std__optional_ResolvedTrack_> {
+  class JFunc_void_std__optional_ResolvedTrack__cxx final: public jni::HybridClass<JFunc_void_std__optional_ResolvedTrack__cxx, JFunc_void_std__optional_ResolvedTrack_> {
   public:
     static jni::local_ref<JFunc_void_std__optional_ResolvedTrack_::javaobject> fromCpp(const std::function<void(const std::optional<ResolvedTrack>& /* content */)>& func) {
       return JFunc_void_std__optional_ResolvedTrack__cxx::newObjectCxxArgs(func);

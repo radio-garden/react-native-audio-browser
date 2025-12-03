@@ -12,6 +12,7 @@
 
 #include "PlaybackMetadata.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JPlaybackMetadata.hpp"
 #include <string>
 #include <optional>
@@ -41,7 +42,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_PlaybackMetadata that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_PlaybackMetadata_cxx final: public jni::HybridClass<JFunc_void_PlaybackMetadata_cxx, JFunc_void_PlaybackMetadata> {
+  class JFunc_void_PlaybackMetadata_cxx final: public jni::HybridClass<JFunc_void_PlaybackMetadata_cxx, JFunc_void_PlaybackMetadata> {
   public:
     static jni::local_ref<JFunc_void_PlaybackMetadata::javaobject> fromCpp(const std::function<void(const PlaybackMetadata& /* data */)>& func) {
       return JFunc_void_PlaybackMetadata_cxx::newObjectCxxArgs(func);

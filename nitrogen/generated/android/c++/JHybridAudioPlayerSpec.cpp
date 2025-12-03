@@ -91,14 +91,10 @@ namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
-// Forward declaration of `Progress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
@@ -133,6 +129,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
 #include "JFunc_void_AudioMetadataReceivedEvent.hpp"
+#include <NitroModules/JNICallable.hpp>
 #include "JAudioMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include <vector>
@@ -253,13 +250,11 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JEqualizerSettings.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
-#include "UpdateOptions.hpp"
 #include "JUpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"
 #include "JAndroidUpdateOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "JIOSUpdateOptions.hpp"
-#include "Progress.hpp"
 #include "JProgress.hpp"
 #include "PartialSetupPlayerOptions.hpp"
 #include "JPartialSetupPlayerOptions.hpp"
@@ -333,9 +328,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](AudioMetadataReceivedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_AudioMetadataReceivedEvent, void(AudioMetadataReceivedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -352,9 +345,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](AudioCommonMetadataReceivedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_AudioCommonMetadataReceivedEvent, void(AudioCommonMetadataReceivedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -371,9 +362,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](AudioMetadataReceivedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_AudioMetadataReceivedEvent, void(AudioMetadataReceivedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -390,9 +379,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackMetadata data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlaybackMetadata, void(PlaybackMetadata)>(std::move(__resultRef));
       }
     }();
   }
@@ -409,9 +396,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackActiveTrackChangedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlaybackActiveTrackChangedEvent, void(PlaybackActiveTrackChangedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -428,9 +413,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackErrorEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlaybackErrorEvent, void(PlaybackErrorEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -447,9 +430,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackPlayWhenReadyChangedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlaybackPlayWhenReadyChangedEvent, void(PlaybackPlayWhenReadyChangedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -466,9 +447,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlayingState data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlayingState, void(PlayingState)>(std::move(__resultRef));
       }
     }();
   }
@@ -485,9 +464,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackProgressUpdatedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlaybackProgressUpdatedEvent, void(PlaybackProgressUpdatedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -504,9 +481,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](PlaybackQueueEndedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_PlaybackQueueEndedEvent, void(PlaybackQueueEndedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -523,9 +498,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::vector<Track> queue) -> void {
-          return __resultRef->invoke(queue);
-        };
+        return JNICallable<JFunc_void_std__vector_Track_, void(std::vector<Track>)>(std::move(__resultRef));
       }
     }();
   }
@@ -542,9 +515,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RepeatModeChangedEvent data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_RepeatModeChangedEvent, void(RepeatModeChangedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -561,9 +532,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>> data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__, void(std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>)>(std::move(__resultRef));
       }
     }();
   }
@@ -580,9 +549,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](Playback data) -> void {
-          return __resultRef->invoke(data);
-        };
+        return JNICallable<JFunc_void_Playback, void(Playback)>(std::move(__resultRef));
       }
     }();
   }
@@ -599,9 +566,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -618,9 +583,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -637,9 +600,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpBackwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteJumpBackwardEvent, void(RemoteJumpBackwardEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -656,9 +617,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpForwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteJumpForwardEvent, void(RemoteJumpForwardEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -675,9 +634,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -694,9 +651,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -713,9 +668,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -732,9 +685,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -751,9 +702,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlayIdEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemotePlayIdEvent, void(RemotePlayIdEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -770,9 +719,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlaySearchEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemotePlaySearchEvent, void(RemotePlaySearchEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -789,9 +736,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -808,9 +753,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSeekEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteSeekEvent, void(RemoteSeekEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -827,9 +770,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSetRatingEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteSetRatingEvent, void(RemoteSetRatingEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -846,9 +787,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSkipEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteSkipEvent, void(RemoteSkipEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -865,9 +804,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }();
   }
@@ -884,9 +821,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](Options event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_Options, void(Options)>(std::move(__resultRef));
       }
     }();
   }
@@ -903,9 +838,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](FavoriteChangedEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_FavoriteChangedEvent, void(FavoriteChangedEvent)>(std::move(__resultRef));
       }
     }();
   }
@@ -922,9 +855,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](NowPlayingMetadata metadata) -> void {
-          return __resultRef->invoke(metadata);
-        };
+        return JNICallable<JFunc_void_NowPlayingMetadata, void(NowPlayingMetadata)>(std::move(__resultRef));
       }
     }();
   }
@@ -941,9 +872,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -960,9 +889,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -979,9 +906,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpBackwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteJumpBackwardEvent, void(RemoteJumpBackwardEvent)>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -998,9 +923,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteJumpForwardEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteJumpForwardEvent, void(RemoteJumpForwardEvent)>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1017,9 +940,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1036,9 +957,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1055,9 +974,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1074,9 +991,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1093,9 +1008,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlayIdEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemotePlayIdEvent, void(RemotePlayIdEvent)>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1112,9 +1025,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemotePlaySearchEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemotePlaySearchEvent, void(RemotePlaySearchEvent)>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1131,9 +1042,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1150,9 +1059,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](RemoteSeekEvent event) -> void {
-          return __resultRef->invoke(event);
-        };
+        return JNICallable<JFunc_void_RemoteSeekEvent, void(RemoteSeekEvent)>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1169,9 +1076,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1188,9 +1093,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef]() -> void {
-          return __resultRef->invoke();
-        };
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
       }
     }()) : std::nullopt;
   }
@@ -1207,9 +1110,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](bool online) -> void {
-          return __resultRef->invoke(online);
-        };
+        return JNICallable<JFunc_void_bool, void(bool)>(std::move(__resultRef));
       }
     }();
   }
@@ -1226,9 +1127,7 @@ namespace margelo::nitro::audiobrowser {
         return downcast->cthis()->getFunction();
       } else {
         auto __resultRef = jni::make_global(__result);
-        return [__resultRef](EqualizerSettings settings) -> void {
-          return __resultRef->invoke(settings);
-        };
+        return JNICallable<JFunc_void_EqualizerSettings, void(EqualizerSettings)>(std::move(__resultRef));
       }
     }();
   }

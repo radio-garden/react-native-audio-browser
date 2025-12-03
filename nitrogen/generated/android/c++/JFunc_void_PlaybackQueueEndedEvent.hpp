@@ -12,6 +12,7 @@
 
 #include "PlaybackQueueEndedEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JPlaybackQueueEndedEvent.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -39,7 +40,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_PlaybackQueueEndedEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_PlaybackQueueEndedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackQueueEndedEvent_cxx, JFunc_void_PlaybackQueueEndedEvent> {
+  class JFunc_void_PlaybackQueueEndedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackQueueEndedEvent_cxx, JFunc_void_PlaybackQueueEndedEvent> {
   public:
     static jni::local_ref<JFunc_void_PlaybackQueueEndedEvent::javaobject> fromCpp(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& func) {
       return JFunc_void_PlaybackQueueEndedEvent_cxx::newObjectCxxArgs(func);

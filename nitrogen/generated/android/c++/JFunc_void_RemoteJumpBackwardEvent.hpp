@@ -12,6 +12,7 @@
 
 #include "RemoteJumpBackwardEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JRemoteJumpBackwardEvent.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -39,7 +40,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_RemoteJumpBackwardEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_RemoteJumpBackwardEvent_cxx final: public jni::HybridClass<JFunc_void_RemoteJumpBackwardEvent_cxx, JFunc_void_RemoteJumpBackwardEvent> {
+  class JFunc_void_RemoteJumpBackwardEvent_cxx final: public jni::HybridClass<JFunc_void_RemoteJumpBackwardEvent_cxx, JFunc_void_RemoteJumpBackwardEvent> {
   public:
     static jni::local_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject> fromCpp(const std::function<void(const RemoteJumpBackwardEvent& /* event */)>& func) {
       return JFunc_void_RemoteJumpBackwardEvent_cxx::newObjectCxxArgs(func);

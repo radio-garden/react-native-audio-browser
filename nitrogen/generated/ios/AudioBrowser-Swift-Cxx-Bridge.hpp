@@ -16,8 +16,6 @@ namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
-// Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
@@ -56,8 +54,6 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
-// Forward declaration of `IOSUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -66,20 +62,12 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 // Forward declaration of `NavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
-// Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
-// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
-// Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
-// Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 // Forward declaration of `PercentageRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
@@ -130,6 +118,8 @@ namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `RouteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
@@ -162,7 +152,6 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidOptions.hpp"
 #include "AndroidPlayerWakeMode.hpp"
-#include "AndroidUpdateOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
@@ -182,18 +171,13 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
-#include "IOSUpdateOptions.hpp"
 #include "MediaRequestConfig.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
-#include "NitroAndroidUpdateOptions.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
-#include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
-#include "PartialAndroidSetupPlayerOptions.hpp"
-#include "PartialIOSSetupPlayerOptions.hpp"
 #include "PercentageRating.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
@@ -219,6 +203,7 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "RequestConfig.hpp"
 #include "ResolvedTrack.hpp"
 #include "RetryConfig.hpp"
+#include "RouteConfig.hpp"
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
 #include "SleepTimerEndOfTrack.hpp"
@@ -497,131 +482,57 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
-  // pragma MARK: std::optional<HttpMethod>
+  // pragma MARK: std::optional<TransformableRequestConfig>
   /**
-   * Specialized version of `std::optional<HttpMethod>`.
+   * Specialized version of `std::optional<TransformableRequestConfig>`.
    */
-  using std__optional_HttpMethod_ = std::optional<HttpMethod>;
-  inline std::optional<HttpMethod> create_std__optional_HttpMethod_(const HttpMethod& value) noexcept {
-    return std::optional<HttpMethod>(value);
+  using std__optional_TransformableRequestConfig_ = std::optional<TransformableRequestConfig>;
+  inline std::optional<TransformableRequestConfig> create_std__optional_TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std::optional<TransformableRequestConfig>(value);
   }
-  inline bool has_value_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
+  inline bool has_value_std__optional_TransformableRequestConfig_(const std::optional<TransformableRequestConfig>& optional) noexcept {
     return optional.has_value();
   }
-  inline HttpMethod get_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
+  inline TransformableRequestConfig get_std__optional_TransformableRequestConfig_(const std::optional<TransformableRequestConfig>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::unordered_map<std::string, std::string>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>
   /**
-   * Specialized version of `std::unordered_map<std::string, std::string>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>>`.
    */
-  using std__unordered_map_std__string__std__string_ = std::unordered_map<std::string, std::string>;
-  inline std::unordered_map<std::string, std::string> create_std__unordered_map_std__string__std__string_(size_t size) noexcept {
-    std::unordered_map<std::string, std::string> map;
-    map.reserve(size);
-    return map;
+  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(value);
   }
-  inline std::vector<std::string> get_std__unordered_map_std__string__std__string__keys(const std__unordered_map_std__string__std__string_& map) noexcept {
-    std::vector<std::string> keys;
-    keys.reserve(map.size());
-    for (const auto& entry : map) {
-      keys.push_back(entry.first);
-    }
-    return keys;
-  }
-  inline std::string get_std__unordered_map_std__string__std__string__value(const std__unordered_map_std__string__std__string_& map, const std::string& key) noexcept {
-    return map.find(key)->second;
-  }
-  inline void emplace_std__unordered_map_std__string__std__string_(std__unordered_map_std__string__std__string_& map, const std::string& key, const std::string& value) noexcept {
-    map.emplace(key, value);
-  }
-  
-  // pragma MARK: std::optional<std::unordered_map<std::string, std::string>>
-  /**
-   * Specialized version of `std::optional<std::unordered_map<std::string, std::string>>`.
-   */
-  using std__optional_std__unordered_map_std__string__std__string__ = std::optional<std::unordered_map<std::string, std::string>>;
-  inline std::optional<std::unordered_map<std::string, std::string>> create_std__optional_std__unordered_map_std__string__std__string__(const std::unordered_map<std::string, std::string>& value) noexcept {
-    return std::optional<std::unordered_map<std::string, std::string>>(value);
-  }
-  inline bool has_value_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::unordered_map<std::string, std::string> get_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::optional<RequestConfig>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
   /**
-   * Specialized version of `std::optional<RequestConfig>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
    */
-  using std__optional_RequestConfig_ = std::optional<RequestConfig>;
-  inline std::optional<RequestConfig> create_std__optional_RequestConfig_(const RequestConfig& value) noexcept {
-    return std::optional<RequestConfig>(value);
-  }
-  inline bool has_value_std__optional_RequestConfig_(const std::optional<RequestConfig>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline RequestConfig get_std__optional_RequestConfig_(const std::optional<RequestConfig>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<RequestConfig>>
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>;
   /**
-   * Specialized version of `std::shared_ptr<Promise<RequestConfig>>`.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>`, this can be used from Swift.
    */
-  using std__shared_ptr_Promise_RequestConfig__ = std::shared_ptr<Promise<RequestConfig>>;
-  inline std::shared_ptr<Promise<RequestConfig>> create_std__shared_ptr_Promise_RequestConfig__() noexcept {
-    return Promise<RequestConfig>::create();
-  }
-  inline PromiseHolder<RequestConfig> wrap_std__shared_ptr_Promise_RequestConfig__(std::shared_ptr<Promise<RequestConfig>> promise) noexcept {
-    return PromiseHolder<RequestConfig>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const RequestConfig& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const RequestConfig&)>`.
-   */
-  using Func_void_RequestConfig = std::function<void(const RequestConfig& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const RequestConfig& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_RequestConfig_Wrapper final {
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper final {
   public:
-    explicit Func_void_RequestConfig_Wrapper(std::function<void(const RequestConfig& /* result */)>&& func): _function(std::make_unique<std::function<void(const RequestConfig& /* result */)>>(std::move(func))) {}
-    inline void call(RequestConfig result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const RequestConfig& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_RequestConfig create_Func_void_RequestConfig(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_RequestConfig_Wrapper wrap_Func_void_RequestConfig(Func_void_RequestConfig value) noexcept {
-    return Func_void_RequestConfig_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>
-  /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track&)>`.
-   */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& / * track * /)>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(Track track) const noexcept {
-      auto __result = _function->operator()(track);
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
+      auto __result = _function->operator()(request, routeParams);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>
@@ -658,295 +569,143 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_std__shared_ptr_Promise_RequestConfig___Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>
+  // pragma MARK: std::shared_ptr<Promise<RequestConfig>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& / * track * /)>>`.
+   * Specialized version of `std::shared_ptr<Promise<RequestConfig>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(value);
+  using std__shared_ptr_Promise_RequestConfig__ = std::shared_ptr<Promise<RequestConfig>>;
+  inline std::shared_ptr<Promise<RequestConfig>> create_std__shared_ptr_Promise_RequestConfig__() noexcept {
+    return Promise<RequestConfig>::create();
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>& optional) noexcept {
-    return *optional;
+  inline PromiseHolder<RequestConfig> wrap_std__shared_ptr_Promise_RequestConfig__(std::shared_ptr<Promise<RequestConfig>> promise) noexcept {
+    return PromiseHolder<RequestConfig>(std::move(promise));
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
+  // pragma MARK: std::function<void(const RequestConfig& /* result */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
+   * Specialized version of `std::function<void(const RequestConfig&)>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>;
+  using Func_void_RequestConfig = std::function<void(const RequestConfig& /* result */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const RequestConfig& / * result * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper final {
+  class Func_void_RequestConfig_Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
-      auto __result = _function->operator()(request, routeParams);
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>
-  /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>>`.
-   */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(value);
-  }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<MediaRequestConfig>
-  /**
-   * Specialized version of `std::optional<MediaRequestConfig>`.
-   */
-  using std__optional_MediaRequestConfig_ = std::optional<MediaRequestConfig>;
-  inline std::optional<MediaRequestConfig> create_std__optional_MediaRequestConfig_(const MediaRequestConfig& value) noexcept {
-    return std::optional<MediaRequestConfig>(value);
-  }
-  inline bool has_value_std__optional_MediaRequestConfig_(const std::optional<MediaRequestConfig>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline MediaRequestConfig get_std__optional_MediaRequestConfig_(const std::optional<MediaRequestConfig>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<SearchMode>
-  /**
-   * Specialized version of `std::optional<SearchMode>`.
-   */
-  using std__optional_SearchMode_ = std::optional<SearchMode>;
-  inline std::optional<SearchMode> create_std__optional_SearchMode_(const SearchMode& value) noexcept {
-    return std::optional<SearchMode>(value);
-  }
-  inline bool has_value_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline SearchMode get_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>
-  /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams&)>`.
-   */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call(SearchParams params) const noexcept {
-      auto __result = _function->operator()(params);
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>`.
-   */
-  using std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ = std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>;
-  inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____() noexcept {
-    return Promise<std::shared_ptr<Promise<std::vector<Track>>>>::create();
-  }
-  inline PromiseHolder<std::shared_ptr<Promise<std::vector<Track>>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> promise) noexcept {
-    return PromiseHolder<std::shared_ptr<Promise<std::vector<Track>>>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>&)>`.
-   */
-  using Func_void_std__shared_ptr_Promise_std__vector_Track___ = std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper final {
-  public:
-    explicit Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper(std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>>(std::move(func))) {}
-    inline void call(std::shared_ptr<Promise<std::vector<Track>>> result) const noexcept {
+    explicit Func_void_RequestConfig_Wrapper(std::function<void(const RequestConfig& /* result */)>&& func): _function(std::make_unique<std::function<void(const RequestConfig& /* result */)>>(std::move(func))) {}
+    inline void call(RequestConfig result) const noexcept {
       _function->operator()(result);
     }
   private:
-    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>> _function;
+    std::unique_ptr<std::function<void(const RequestConfig& /* result */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_std__shared_ptr_Promise_std__vector_Track___ create_Func_void_std__shared_ptr_Promise_std__vector_Track___(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper wrap_Func_void_std__shared_ptr_Promise_std__vector_Track___(Func_void_std__shared_ptr_Promise_std__vector_Track___ value) noexcept {
-    return Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper(std::move(value));
+  Func_void_RequestConfig create_Func_void_RequestConfig(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RequestConfig_Wrapper wrap_Func_void_RequestConfig(Func_void_RequestConfig value) noexcept {
+    return Func_void_RequestConfig_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>
+  // pragma MARK: std::optional<HttpMethod>
   /**
-   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>, TransformableRequestConfig>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
+   * Specialized version of `std::optional<HttpMethod>`.
    */
-  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ {
-    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> variant;
-    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> variant): variant(variant) { }
-    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)> get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline TransformableRequestConfig get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-  };
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(value);
+  using std__optional_HttpMethod_ = std::optional<HttpMethod>;
+  inline std::optional<HttpMethod> create_std__optional_HttpMethod_(const HttpMethod& value) noexcept {
+    return std::optional<HttpMethod>(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(value);
-  }
-  
-  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>
-  /**
-   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>, TransformableRequestConfig>>`.
-   */
-  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>;
-  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>& value) noexcept {
-    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>& optional) noexcept {
+  inline bool has_value_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>& optional) noexcept {
+  inline HttpMethod get_std__optional_HttpMethod_(const std::optional<HttpMethod>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>
+  // pragma MARK: std::optional<std::unordered_map<std::string, std::string>>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`.
+   * Specialized version of `std::optional<std::unordered_map<std::string, std::string>>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call() const noexcept {
-      auto __result = _function->operator()();
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper(std::move(value));
+  using std__optional_std__unordered_map_std__string__std__string__ = std::optional<std::unordered_map<std::string, std::string>>;
+  inline std::optional<std::unordered_map<std::string, std::string>> create_std__optional_std__unordered_map_std__string__std__string__(const std::unordered_map<std::string, std::string>& value) noexcept {
+    return std::optional<std::unordered_map<std::string, std::string>>(value);
+  }
+  inline bool has_value_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::unordered_map<std::string, std::string> get_std__optional_std__unordered_map_std__string__std__string__(const std::optional<std::unordered_map<std::string, std::string>>& optional) noexcept {
+    return *optional;
   }
   
-  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>
+  // pragma MARK: std::unordered_map<std::string, std::string>
   /**
-   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>`.
+   * Specialized version of `std::unordered_map<std::string, std::string>`.
+   */
+  using std__unordered_map_std__string__std__string_ = std::unordered_map<std::string, std::string>;
+  inline std::unordered_map<std::string, std::string> create_std__unordered_map_std__string__std__string_(size_t size) noexcept {
+    std::unordered_map<std::string, std::string> map;
+    map.reserve(size);
+    return map;
+  }
+  inline std::vector<std::string> get_std__unordered_map_std__string__std__string__keys(const std__unordered_map_std__string__std__string_& map) noexcept {
+    std::vector<std::string> keys;
+    keys.reserve(map.size());
+    for (const auto& entry : map) {
+      keys.push_back(entry.first);
+    }
+    return keys;
+  }
+  inline std::string get_std__unordered_map_std__string__std__string__value(const std__unordered_map_std__string__std__string_& map, const std::string& key) noexcept {
+    return map.find(key)->second;
+  }
+  inline void emplace_std__unordered_map_std__string__std__string_(std__unordered_map_std__string__std__string_& map, const std::string& key, const std::string& value) noexcept {
+    map.emplace(key, value);
+  }
+  
+  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>
+  /**
+   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig>>`.
+   */
+  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>;
+  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>& value) noexcept {
+    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>
+  /**
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ {
-    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> variant;
-    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> variant): variant(variant) { }
-    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>() const noexcept {
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
       return variant.index();
     }
-    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()> get_0() const noexcept {
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)> get_0() const noexcept {
       return std::get<0>(variant);
     }
-    inline std::vector<Track> get_1() const noexcept {
+    inline ResolvedTrack get_1() const noexcept {
       return std::get<1>(variant);
     }
     inline TransformableRequestConfig get_2() const noexcept {
       return std::get<2>(variant);
     }
   };
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const std::vector<Track>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(const ResolvedTrack& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(value);
   }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
-  }
-  
-  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>
-  /**
-   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>`.
-   */
-  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>;
-  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>& value) noexcept {
-    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<ResolvedTrack>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<ResolvedTrack>>`.
-   */
-  using std__shared_ptr_Promise_ResolvedTrack__ = std::shared_ptr<Promise<ResolvedTrack>>;
-  inline std::shared_ptr<Promise<ResolvedTrack>> create_std__shared_ptr_Promise_ResolvedTrack__() noexcept {
-    return Promise<ResolvedTrack>::create();
-  }
-  inline PromiseHolder<ResolvedTrack> wrap_std__shared_ptr_Promise_ResolvedTrack__(std::shared_ptr<Promise<ResolvedTrack>> promise) noexcept {
-    return PromiseHolder<ResolvedTrack>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const ResolvedTrack& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const ResolvedTrack&)>`.
-   */
-  using Func_void_ResolvedTrack = std::function<void(const ResolvedTrack& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const ResolvedTrack& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_ResolvedTrack_Wrapper final {
-  public:
-    explicit Func_void_ResolvedTrack_Wrapper(std::function<void(const ResolvedTrack& /* result */)>&& func): _function(std::make_unique<std::function<void(const ResolvedTrack& /* result */)>>(std::move(func))) {}
-    inline void call(ResolvedTrack result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const ResolvedTrack& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_ResolvedTrack create_Func_void_ResolvedTrack(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_ResolvedTrack_Wrapper wrap_Func_void_ResolvedTrack(Func_void_ResolvedTrack value) noexcept {
-    return Func_void_ResolvedTrack_Wrapper(std::move(value));
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(value);
   }
   
   // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>
@@ -1006,16 +765,332 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_std__shared_ptr_Promise_ResolvedTrack___Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>
+  // pragma MARK: std::shared_ptr<Promise<ResolvedTrack>>
   /**
-   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig>`.
+   * Specialized version of `std::shared_ptr<Promise<ResolvedTrack>>`.
+   */
+  using std__shared_ptr_Promise_ResolvedTrack__ = std::shared_ptr<Promise<ResolvedTrack>>;
+  inline std::shared_ptr<Promise<ResolvedTrack>> create_std__shared_ptr_Promise_ResolvedTrack__() noexcept {
+    return Promise<ResolvedTrack>::create();
+  }
+  inline PromiseHolder<ResolvedTrack> wrap_std__shared_ptr_Promise_ResolvedTrack__(std::shared_ptr<Promise<ResolvedTrack>> promise) noexcept {
+    return PromiseHolder<ResolvedTrack>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const ResolvedTrack& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const ResolvedTrack&)>`.
+   */
+  using Func_void_ResolvedTrack = std::function<void(const ResolvedTrack& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const ResolvedTrack& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_ResolvedTrack_Wrapper final {
+  public:
+    explicit Func_void_ResolvedTrack_Wrapper(std::function<void(const ResolvedTrack& /* result */)>&& func): _function(std::make_unique<std::function<void(const ResolvedTrack& /* result */)>>(std::move(func))) {}
+    inline void call(ResolvedTrack result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const ResolvedTrack& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_ResolvedTrack create_Func_void_ResolvedTrack(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_ResolvedTrack_Wrapper wrap_Func_void_ResolvedTrack(Func_void_ResolvedTrack value) noexcept {
+    return Func_void_ResolvedTrack_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<MediaRequestConfig>
+  /**
+   * Specialized version of `std::optional<MediaRequestConfig>`.
+   */
+  using std__optional_MediaRequestConfig_ = std::optional<MediaRequestConfig>;
+  inline std::optional<MediaRequestConfig> create_std__optional_MediaRequestConfig_(const MediaRequestConfig& value) noexcept {
+    return std::optional<MediaRequestConfig>(value);
+  }
+  inline bool has_value_std__optional_MediaRequestConfig_(const std::optional<MediaRequestConfig>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline MediaRequestConfig get_std__optional_MediaRequestConfig_(const std::optional<MediaRequestConfig>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& / * track * /)>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& / * track * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(Track track) const noexcept {
+      auto __result = _function->operator()(track);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>
+  /**
+   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>, TransformableRequestConfig>>`.
+   */
+  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>;
+  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>& value) noexcept {
+    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>
+  /**
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>, TransformableRequestConfig>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ {
-    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> variant;
-    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> variant): variant(variant) { }
-    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>() const noexcept {
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>, TransformableRequestConfig>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)> get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline TransformableRequestConfig get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(value);
+  }
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______const_SearchParams_____params_______TransformableRequestConfig_(value);
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& / * params * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call(SearchParams params) const noexcept {
+      auto __result = _function->operator()(params);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>`.
+   */
+  using std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ = std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>;
+  inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____() noexcept {
+    return Promise<std::shared_ptr<Promise<std::vector<Track>>>>::create();
+  }
+  inline PromiseHolder<std::shared_ptr<Promise<std::vector<Track>>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> promise) noexcept {
+    return PromiseHolder<std::shared_ptr<Promise<std::vector<Track>>>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>&)>`.
+   */
+  using Func_void_std__shared_ptr_Promise_std__vector_Track___ = std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper final {
+  public:
+    explicit Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper(std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::shared_ptr<Promise<std::vector<Track>>> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<std::vector<Track>>>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__shared_ptr_Promise_std__vector_Track___ create_Func_void_std__shared_ptr_Promise_std__vector_Track___(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper wrap_Func_void_std__shared_ptr_Promise_std__vector_Track___(Func_void_std__shared_ptr_Promise_std__vector_Track___ value) noexcept {
+    return Func_void_std__shared_ptr_Promise_std__vector_Track____Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<SearchMode>
+  /**
+   * Specialized version of `std::optional<SearchMode>`.
+   */
+  using std__optional_SearchMode_ = std::optional<SearchMode>;
+  inline std::optional<SearchMode> create_std__optional_SearchMode_(const SearchMode& value) noexcept {
+    return std::optional<SearchMode>(value);
+  }
+  inline bool has_value_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline SearchMode get_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>
+  /**
+   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>`.
+   */
+  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>;
+  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>& value) noexcept {
+    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>
+  /**
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>, std::vector<Track>, TransformableRequestConfig>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()> get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline std::vector<Track> get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+    inline TransformableRequestConfig get_2() const noexcept {
+      return std::get<2>(variant);
+    }
+  };
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
+  }
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const std::vector<Track>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
+  }
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track__________std__vector_Track___TransformableRequestConfig_(value);
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`.
+   */
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>> call() const noexcept {
+      auto __result = _function->operator()();
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>()>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>>
+  /**
+   * Specialized version of `std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>>`.
+   */
+  using std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___ = std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>>;
+  inline std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>> create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___(const std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>& value) noexcept {
+    return std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>>(value);
+  }
+  inline bool has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>> get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>
+  /**
+   * Specialized version of `std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>`.
+   */
+  using std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__ = std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>>;
+  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>> create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__(size_t size) noexcept {
+    std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>> map;
+    map.reserve(size);
+    return map;
+  }
+  inline std::vector<std::string> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___keys(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__& map) noexcept {
+    std::vector<std::string> keys;
+    keys.reserve(map.size());
+    for (const auto& entry : map) {
+      keys.push_back(entry.first);
+    }
+    return keys;
+  }
+  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig___value(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__& map, const std::string& key) noexcept {
+    return map.find(key)->second;
+  }
+  inline void emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__(std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig__& map, const std::string& key, const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>& value) noexcept {
+    map.emplace(key, value);
+  }
+  
+  // pragma MARK: std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>
+  /**
+   * Wrapper struct for `std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ {
+    std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig> variant;
+    std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig> variant): variant(variant) { }
+    operator std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig, RouteConfig>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
@@ -1030,70 +1105,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     inline TransformableRequestConfig get_2() const noexcept {
       return std::get<2>(variant);
     }
-  };
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(value);
-  }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(const ResolvedTrack& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(value);
-  }
-  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(const TransformableRequestConfig& value) noexcept {
-    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig_(value);
-  }
-  
-  // pragma MARK: std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>
-  /**
-   * Specialized version of `std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig>>`.
-   */
-  using std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ = std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>;
-  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> create_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(size_t size) noexcept {
-    std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> map;
-    map.reserve(size);
-    return map;
-  }
-  inline std::vector<std::string> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___keys(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__& map) noexcept {
-    std::vector<std::string> keys;
-    keys.reserve(map.size());
-    for (const auto& entry : map) {
-      keys.push_back(entry.first);
+    inline RouteConfig get_3() const noexcept {
+      return std::get<3>(variant);
     }
-    return keys;
+  };
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(value);
   }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> get_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___value(const std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__& map, const std::string& key) noexcept {
-    return map.find(key)->second;
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(const ResolvedTrack& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(value);
   }
-  inline void emplace_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__& map, const std::string& key, const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>& value) noexcept {
-    map.emplace(key, value);
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(const TransformableRequestConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(value);
   }
-  
-  // pragma MARK: std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>>
-  /**
-   * Specialized version of `std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig>>>`.
-   */
-  using std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___ = std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>>;
-  inline std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>> create_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___(const std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>& value) noexcept {
-    return std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>>(value);
-  }
-  inline bool has_value_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> get_std__optional_std__unordered_map_std__string__std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig___(const std::optional<std::unordered_map<std::string, std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>
-  /**
-   * Specialized version of `std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>, ResolvedTrack, TransformableRequestConfig>>`.
-   */
-  using std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__ = std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>;
-  inline std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>> create_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>& value) noexcept {
-    return std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig> get_std__optional_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__(const std::optional<std::variant<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>, ResolvedTrack, TransformableRequestConfig>>& optional) noexcept {
-    return *optional;
+  inline std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_ create_std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(const RouteConfig& value) noexcept {
+    return std__variant_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param_______ResolvedTrack__TransformableRequestConfig__RouteConfig_(value);
   }
   
   // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
@@ -1178,6 +1204,36 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<PartialAndroidSetupPlayerOptions>
+  /**
+   * Specialized version of `std::optional<PartialAndroidSetupPlayerOptions>`.
+   */
+  using std__optional_PartialAndroidSetupPlayerOptions_ = std::optional<PartialAndroidSetupPlayerOptions>;
+  inline std::optional<PartialAndroidSetupPlayerOptions> create_std__optional_PartialAndroidSetupPlayerOptions_(const PartialAndroidSetupPlayerOptions& value) noexcept {
+    return std::optional<PartialAndroidSetupPlayerOptions>(value);
+  }
+  inline bool has_value_std__optional_PartialAndroidSetupPlayerOptions_(const std::optional<PartialAndroidSetupPlayerOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PartialAndroidSetupPlayerOptions get_std__optional_PartialAndroidSetupPlayerOptions_(const std::optional<PartialAndroidSetupPlayerOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::variant<bool, AndroidAudioOffloadSettings>>
+  /**
+   * Specialized version of `std::optional<std::variant<bool, AndroidAudioOffloadSettings>>`.
+   */
+  using std__optional_std__variant_bool__AndroidAudioOffloadSettings__ = std::optional<std::variant<bool, AndroidAudioOffloadSettings>>;
+  inline std::optional<std::variant<bool, AndroidAudioOffloadSettings>> create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::variant<bool, AndroidAudioOffloadSettings>& value) noexcept {
+    return std::optional<std::variant<bool, AndroidAudioOffloadSettings>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::optional<std::variant<bool, AndroidAudioOffloadSettings>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<bool, AndroidAudioOffloadSettings> get_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::optional<std::variant<bool, AndroidAudioOffloadSettings>>& optional) noexcept {
+    return *optional;
+  }
+  
   // pragma MARK: std::variant<bool, AndroidAudioOffloadSettings>
   /**
    * Wrapper struct for `std::variant<bool, AndroidAudioOffloadSettings>`.
@@ -1207,18 +1263,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__AndroidAudioOffloadSettings_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<bool, AndroidAudioOffloadSettings>>
+  // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
   /**
-   * Specialized version of `std::optional<std::variant<bool, AndroidAudioOffloadSettings>>`.
+   * Specialized version of `std::optional<std::variant<bool, RetryConfig>>`.
    */
-  using std__optional_std__variant_bool__AndroidAudioOffloadSettings__ = std::optional<std::variant<bool, AndroidAudioOffloadSettings>>;
-  inline std::optional<std::variant<bool, AndroidAudioOffloadSettings>> create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::variant<bool, AndroidAudioOffloadSettings>& value) noexcept {
-    return std::optional<std::variant<bool, AndroidAudioOffloadSettings>>(value);
+  using std__optional_std__variant_bool__RetryConfig__ = std::optional<std::variant<bool, RetryConfig>>;
+  inline std::optional<std::variant<bool, RetryConfig>> create_std__optional_std__variant_bool__RetryConfig__(const std::variant<bool, RetryConfig>& value) noexcept {
+    return std::optional<std::variant<bool, RetryConfig>>(value);
   }
-  inline bool has_value_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::optional<std::variant<bool, AndroidAudioOffloadSettings>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<bool, AndroidAudioOffloadSettings> get_std__optional_std__variant_bool__AndroidAudioOffloadSettings__(const std::optional<std::variant<bool, AndroidAudioOffloadSettings>>& optional) noexcept {
+  inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
     return *optional;
   }
   
@@ -1251,18 +1307,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__RetryConfig_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
+  // pragma MARK: std::optional<std::variant<nitro::NullType, double>>
   /**
-   * Specialized version of `std::optional<std::variant<bool, RetryConfig>>`.
+   * Specialized version of `std::optional<std::variant<nitro::NullType, double>>`.
    */
-  using std__optional_std__variant_bool__RetryConfig__ = std::optional<std::variant<bool, RetryConfig>>;
-  inline std::optional<std::variant<bool, RetryConfig>> create_std__optional_std__variant_bool__RetryConfig__(const std::variant<bool, RetryConfig>& value) noexcept {
-    return std::optional<std::variant<bool, RetryConfig>>(value);
+  using std__optional_std__variant_nitro__NullType__double__ = std::optional<std::variant<nitro::NullType, double>>;
+  inline std::optional<std::variant<nitro::NullType, double>> create_std__optional_std__variant_nitro__NullType__double__(const std::variant<nitro::NullType, double>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, double>>(value);
   }
-  inline bool has_value_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+  inline std::variant<nitro::NullType, double> get_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
     return *optional;
   }
   
@@ -1295,21 +1351,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_nitro__NullType__double_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<nitro::NullType, double>>
-  /**
-   * Specialized version of `std::optional<std::variant<nitro::NullType, double>>`.
-   */
-  using std__optional_std__variant_nitro__NullType__double__ = std::optional<std::variant<nitro::NullType, double>>;
-  inline std::optional<std::variant<nitro::NullType, double>> create_std__optional_std__variant_nitro__NullType__double__(const std::variant<nitro::NullType, double>& value) noexcept {
-    return std::optional<std::variant<nitro::NullType, double>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::variant<nitro::NullType, double> get_std__optional_std__variant_nitro__NullType__double__(const std::optional<std::variant<nitro::NullType, double>>& optional) noexcept {
-    return *optional;
-  }
-  
   // pragma MARK: std::optional<AndroidAudioContentType>
   /**
    * Specialized version of `std::optional<AndroidAudioContentType>`.
@@ -1340,18 +1381,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<PartialAndroidSetupPlayerOptions>
+  // pragma MARK: std::optional<PartialIOSSetupPlayerOptions>
   /**
-   * Specialized version of `std::optional<PartialAndroidSetupPlayerOptions>`.
+   * Specialized version of `std::optional<PartialIOSSetupPlayerOptions>`.
    */
-  using std__optional_PartialAndroidSetupPlayerOptions_ = std::optional<PartialAndroidSetupPlayerOptions>;
-  inline std::optional<PartialAndroidSetupPlayerOptions> create_std__optional_PartialAndroidSetupPlayerOptions_(const PartialAndroidSetupPlayerOptions& value) noexcept {
-    return std::optional<PartialAndroidSetupPlayerOptions>(value);
+  using std__optional_PartialIOSSetupPlayerOptions_ = std::optional<PartialIOSSetupPlayerOptions>;
+  inline std::optional<PartialIOSSetupPlayerOptions> create_std__optional_PartialIOSSetupPlayerOptions_(const PartialIOSSetupPlayerOptions& value) noexcept {
+    return std::optional<PartialIOSSetupPlayerOptions>(value);
   }
-  inline bool has_value_std__optional_PartialAndroidSetupPlayerOptions_(const std::optional<PartialAndroidSetupPlayerOptions>& optional) noexcept {
+  inline bool has_value_std__optional_PartialIOSSetupPlayerOptions_(const std::optional<PartialIOSSetupPlayerOptions>& optional) noexcept {
     return optional.has_value();
   }
-  inline PartialAndroidSetupPlayerOptions get_std__optional_PartialAndroidSetupPlayerOptions_(const std::optional<PartialAndroidSetupPlayerOptions>& optional) noexcept {
+  inline PartialIOSSetupPlayerOptions get_std__optional_PartialIOSSetupPlayerOptions_(const std::optional<PartialIOSSetupPlayerOptions>& optional) noexcept {
     return *optional;
   }
   
@@ -1385,17 +1426,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::vector<IOSCategoryOptions>
-  /**
-   * Specialized version of `std::vector<IOSCategoryOptions>`.
-   */
-  using std__vector_IOSCategoryOptions_ = std::vector<IOSCategoryOptions>;
-  inline std::vector<IOSCategoryOptions> create_std__vector_IOSCategoryOptions_(size_t size) noexcept {
-    std::vector<IOSCategoryOptions> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
   // pragma MARK: std::optional<std::vector<IOSCategoryOptions>>
   /**
    * Specialized version of `std::optional<std::vector<IOSCategoryOptions>>`.
@@ -1409,6 +1439,17 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std::vector<IOSCategoryOptions> get_std__optional_std__vector_IOSCategoryOptions__(const std::optional<std::vector<IOSCategoryOptions>>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::vector<IOSCategoryOptions>
+  /**
+   * Specialized version of `std::vector<IOSCategoryOptions>`.
+   */
+  using std__vector_IOSCategoryOptions_ = std::vector<IOSCategoryOptions>;
+  inline std::vector<IOSCategoryOptions> create_std__vector_IOSCategoryOptions_(size_t size) noexcept {
+    std::vector<IOSCategoryOptions> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::optional<IOSCategoryPolicy>
@@ -1426,18 +1467,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<PartialIOSSetupPlayerOptions>
+  // pragma MARK: std::optional<NitroAndroidUpdateOptions>
   /**
-   * Specialized version of `std::optional<PartialIOSSetupPlayerOptions>`.
+   * Specialized version of `std::optional<NitroAndroidUpdateOptions>`.
    */
-  using std__optional_PartialIOSSetupPlayerOptions_ = std::optional<PartialIOSSetupPlayerOptions>;
-  inline std::optional<PartialIOSSetupPlayerOptions> create_std__optional_PartialIOSSetupPlayerOptions_(const PartialIOSSetupPlayerOptions& value) noexcept {
-    return std::optional<PartialIOSSetupPlayerOptions>(value);
+  using std__optional_NitroAndroidUpdateOptions_ = std::optional<NitroAndroidUpdateOptions>;
+  inline std::optional<NitroAndroidUpdateOptions> create_std__optional_NitroAndroidUpdateOptions_(const NitroAndroidUpdateOptions& value) noexcept {
+    return std::optional<NitroAndroidUpdateOptions>(value);
   }
-  inline bool has_value_std__optional_PartialIOSSetupPlayerOptions_(const std::optional<PartialIOSSetupPlayerOptions>& optional) noexcept {
+  inline bool has_value_std__optional_NitroAndroidUpdateOptions_(const std::optional<NitroAndroidUpdateOptions>& optional) noexcept {
     return optional.has_value();
   }
-  inline PartialIOSSetupPlayerOptions get_std__optional_PartialIOSSetupPlayerOptions_(const std::optional<PartialIOSSetupPlayerOptions>& optional) noexcept {
+  inline NitroAndroidUpdateOptions get_std__optional_NitroAndroidUpdateOptions_(const std::optional<NitroAndroidUpdateOptions>& optional) noexcept {
     return *optional;
   }
   
@@ -1471,44 +1512,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<ButtonCapability>
+  // pragma MARK: std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>
   /**
-   * Specialized version of `std::optional<ButtonCapability>`.
+   * Specialized version of `std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>`.
    */
-  using std__optional_ButtonCapability_ = std::optional<ButtonCapability>;
-  inline std::optional<ButtonCapability> create_std__optional_ButtonCapability_(const ButtonCapability& value) noexcept {
-    return std::optional<ButtonCapability>(value);
+  using std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ = std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>;
+  inline std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::variant<nitro::NullType, NotificationButtonLayout>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>(value);
   }
-  inline bool has_value_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
     return optional.has_value();
   }
-  inline ButtonCapability get_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::vector<ButtonCapability>
-  /**
-   * Specialized version of `std::vector<ButtonCapability>`.
-   */
-  using std__vector_ButtonCapability_ = std::vector<ButtonCapability>;
-  inline std::vector<ButtonCapability> create_std__vector_ButtonCapability_(size_t size) noexcept {
-    std::vector<ButtonCapability> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
-  // pragma MARK: std::optional<std::vector<ButtonCapability>>
-  /**
-   * Specialized version of `std::optional<std::vector<ButtonCapability>>`.
-   */
-  using std__optional_std__vector_ButtonCapability__ = std::optional<std::vector<ButtonCapability>>;
-  inline std::optional<std::vector<ButtonCapability>> create_std__optional_std__vector_ButtonCapability__(const std::vector<ButtonCapability>& value) noexcept {
-    return std::optional<std::vector<ButtonCapability>>(value);
-  }
-  inline bool has_value_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::vector<ButtonCapability> get_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
+  inline std::variant<nitro::NullType, NotificationButtonLayout> get_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
     return *optional;
   }
   
@@ -1541,33 +1556,59 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_nitro__NullType__NotificationButtonLayout_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>
+  // pragma MARK: std::optional<ButtonCapability>
   /**
-   * Specialized version of `std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>`.
+   * Specialized version of `std::optional<ButtonCapability>`.
    */
-  using std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ = std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>;
-  inline std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::variant<nitro::NullType, NotificationButtonLayout>& value) noexcept {
-    return std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>(value);
+  using std__optional_ButtonCapability_ = std::optional<ButtonCapability>;
+  inline std::optional<ButtonCapability> create_std__optional_ButtonCapability_(const ButtonCapability& value) noexcept {
+    return std::optional<ButtonCapability>(value);
   }
-  inline bool has_value_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
+  inline bool has_value_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<nitro::NullType, NotificationButtonLayout> get_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
+  inline ButtonCapability get_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::optional<NitroAndroidUpdateOptions>
+  // pragma MARK: std::optional<std::vector<ButtonCapability>>
   /**
-   * Specialized version of `std::optional<NitroAndroidUpdateOptions>`.
+   * Specialized version of `std::optional<std::vector<ButtonCapability>>`.
    */
-  using std__optional_NitroAndroidUpdateOptions_ = std::optional<NitroAndroidUpdateOptions>;
-  inline std::optional<NitroAndroidUpdateOptions> create_std__optional_NitroAndroidUpdateOptions_(const NitroAndroidUpdateOptions& value) noexcept {
-    return std::optional<NitroAndroidUpdateOptions>(value);
+  using std__optional_std__vector_ButtonCapability__ = std::optional<std::vector<ButtonCapability>>;
+  inline std::optional<std::vector<ButtonCapability>> create_std__optional_std__vector_ButtonCapability__(const std::vector<ButtonCapability>& value) noexcept {
+    return std::optional<std::vector<ButtonCapability>>(value);
   }
-  inline bool has_value_std__optional_NitroAndroidUpdateOptions_(const std::optional<NitroAndroidUpdateOptions>& optional) noexcept {
+  inline bool has_value_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
     return optional.has_value();
   }
-  inline NitroAndroidUpdateOptions get_std__optional_NitroAndroidUpdateOptions_(const std::optional<NitroAndroidUpdateOptions>& optional) noexcept {
+  inline std::vector<ButtonCapability> get_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<ButtonCapability>
+  /**
+   * Specialized version of `std::vector<ButtonCapability>`.
+   */
+  using std__vector_ButtonCapability_ = std::vector<ButtonCapability>;
+  inline std::vector<ButtonCapability> create_std__vector_ButtonCapability_(size_t size) noexcept {
+    std::vector<ButtonCapability> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::optional<IOSUpdateOptions>
+  /**
+   * Specialized version of `std::optional<IOSUpdateOptions>`.
+   */
+  using std__optional_IOSUpdateOptions_ = std::optional<IOSUpdateOptions>;
+  inline std::optional<IOSUpdateOptions> create_std__optional_IOSUpdateOptions_(const IOSUpdateOptions& value) noexcept {
+    return std::optional<IOSUpdateOptions>(value);
+  }
+  inline bool has_value_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSUpdateOptions get_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
     return *optional;
   }
   
@@ -1586,32 +1627,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<IOSUpdateOptions>
-  /**
-   * Specialized version of `std::optional<IOSUpdateOptions>`.
-   */
-  using std__optional_IOSUpdateOptions_ = std::optional<IOSUpdateOptions>;
-  inline std::optional<IOSUpdateOptions> create_std__optional_IOSUpdateOptions_(const IOSUpdateOptions& value) noexcept {
-    return std::optional<IOSUpdateOptions>(value);
-  }
-  inline bool has_value_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline IOSUpdateOptions get_std__optional_IOSUpdateOptions_(const std::optional<IOSUpdateOptions>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::vector<Capability>
-  /**
-   * Specialized version of `std::vector<Capability>`.
-   */
-  using std__vector_Capability_ = std::vector<Capability>;
-  inline std::vector<Capability> create_std__vector_Capability_(size_t size) noexcept {
-    std::vector<Capability> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
   // pragma MARK: std::optional<std::vector<Capability>>
   /**
    * Specialized version of `std::optional<std::vector<Capability>>`.
@@ -1625,6 +1640,17 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std::vector<Capability> get_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::vector<Capability>
+  /**
+   * Specialized version of `std::vector<Capability>`.
+   */
+  using std__vector_Capability_ = std::vector<Capability>;
+  inline std::vector<Capability> create_std__vector_Capability_(size_t size) noexcept {
+    std::vector<Capability> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::optional<AndroidUpdateOptions>

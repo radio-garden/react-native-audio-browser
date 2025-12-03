@@ -12,6 +12,7 @@
 
 #include "NavigationErrorEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JNavigationErrorEvent.hpp"
 #include "NavigationError.hpp"
 #include <optional>
@@ -45,7 +46,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_NavigationErrorEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_NavigationErrorEvent_cxx final: public jni::HybridClass<JFunc_void_NavigationErrorEvent_cxx, JFunc_void_NavigationErrorEvent> {
+  class JFunc_void_NavigationErrorEvent_cxx final: public jni::HybridClass<JFunc_void_NavigationErrorEvent_cxx, JFunc_void_NavigationErrorEvent> {
   public:
     static jni::local_ref<JFunc_void_NavigationErrorEvent::javaobject> fromCpp(const std::function<void(const NavigationErrorEvent& /* data */)>& func) {
       return JFunc_void_NavigationErrorEvent_cxx::newObjectCxxArgs(func);

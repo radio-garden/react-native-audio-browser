@@ -12,6 +12,7 @@
 
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include <functional>
+#include <NitroModules/JNICallable.hpp>
 #include "JPlaybackProgressUpdatedEvent.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -39,7 +40,7 @@ namespace margelo::nitro::audiobrowser {
   /**
    * An implementation of Func_void_PlaybackProgressUpdatedEvent that is backed by a C++ implementation (using `std::function<...>`)
    */
-  struct JFunc_void_PlaybackProgressUpdatedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackProgressUpdatedEvent_cxx, JFunc_void_PlaybackProgressUpdatedEvent> {
+  class JFunc_void_PlaybackProgressUpdatedEvent_cxx final: public jni::HybridClass<JFunc_void_PlaybackProgressUpdatedEvent_cxx, JFunc_void_PlaybackProgressUpdatedEvent> {
   public:
     static jni::local_ref<JFunc_void_PlaybackProgressUpdatedEvent::javaobject> fromCpp(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& func) {
       return JFunc_void_PlaybackProgressUpdatedEvent_cxx::newObjectCxxArgs(func);

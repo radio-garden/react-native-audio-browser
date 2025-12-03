@@ -17,6 +17,7 @@
 #include "TransformableRequestConfig.hpp"
 #include <variant>
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
+#include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JResolvedTrack.hpp"
 #include <string>

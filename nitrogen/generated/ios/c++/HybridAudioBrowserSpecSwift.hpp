@@ -24,22 +24,22 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NavigationErrorType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
-// Forward declaration of `BrowserConfiguration` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
+// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
-// Forward declaration of `TransformableRequestConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
-// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
+// Forward declaration of `RouteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 
 #include <string>
 #include <optional>
@@ -51,17 +51,17 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorType.hpp"
-#include "BrowserConfiguration.hpp"
-#include "RequestConfig.hpp"
-#include "HttpMethod.hpp"
-#include <unordered_map>
-#include "MediaRequestConfig.hpp"
-#include <NitroModules/Promise.hpp>
-#include "SearchParams.hpp"
 #include "TransformableRequestConfig.hpp"
-#include <variant>
-#include "SearchMode.hpp"
+#include "RequestConfig.hpp"
+#include <NitroModules/Promise.hpp>
+#include <unordered_map>
+#include "HttpMethod.hpp"
 #include "BrowserSourceCallbackParam.hpp"
+#include <variant>
+#include "MediaRequestConfig.hpp"
+#include "SearchParams.hpp"
+#include "SearchMode.hpp"
+#include "RouteConfig.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 

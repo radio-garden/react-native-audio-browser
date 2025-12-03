@@ -136,6 +136,8 @@ namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `RouteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
@@ -222,6 +224,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "RequestConfig.hpp"
 #include "ResolvedTrack.hpp"
 #include "RetryConfig.hpp"
+#include "RouteConfig.hpp"
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
 #include "SleepTimerEndOfTrack.hpp"

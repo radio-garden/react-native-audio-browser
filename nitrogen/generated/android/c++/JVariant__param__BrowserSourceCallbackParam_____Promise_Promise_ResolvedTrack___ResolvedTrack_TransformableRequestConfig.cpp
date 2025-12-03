@@ -16,16 +16,14 @@ namespace margelo::nitro::audiobrowser {
       // It's a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>`
       auto jniValue = static_cast<const JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_impl::First*>(this)->getValue();
       return [&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)> {
-      if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::javaobject>(jniValue);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto jniValueRef = jni::make_global(jniValue);
-        return [jniValueRef](BrowserSourceCallbackParam param) -> std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>> {
-          return jniValueRef->invoke(param);
-        };
-      }
-    }();
+        if (jniValue->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::javaClassStatic())) [[likely]] {
+          auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::javaobject>(jniValue);
+          return downcast->cthis()->getFunction();
+        } else {
+          auto jniValueRef = jni::make_global(jniValue);
+          return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam, std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(BrowserSourceCallbackParam)>(std::move(jniValueRef));
+        }
+      }();
     } else if (isInstanceOf(JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_impl::Second::javaClassStatic())) {
       // It's a `ResolvedTrack`
       auto jniValue = static_cast<const JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_impl::Second*>(this)->getValue();

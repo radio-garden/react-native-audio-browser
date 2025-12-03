@@ -22,10 +22,16 @@ data class BrowserConfiguration(
   val path: String?,
   @DoNotStrip
   @Keep
-  val request: RequestConfig?,
+  val request: TransformableRequestConfig?,
+  @DoNotStrip
+  @Keep
+  val browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?,
   @DoNotStrip
   @Keep
   val media: MediaRequestConfig?,
+  @DoNotStrip
+  @Keep
+  val artwork: MediaRequestConfig?,
   @DoNotStrip
   @Keep
   val search: Variant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig?,
@@ -34,10 +40,7 @@ data class BrowserConfiguration(
   val tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?,
   @DoNotStrip
   @Keep
-  val routes: Map<String, BrowserSource>?,
-  @DoNotStrip
-  @Keep
-  val browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?,
+  val routes: Map<String, Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig>?,
   @DoNotStrip
   @Keep
   val singleTrack: Boolean?,
@@ -55,8 +58,8 @@ data class BrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: RequestConfig?, media: MediaRequestConfig?, search: Variant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, BrowserSource>?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?): BrowserConfiguration {
-      return BrowserConfiguration(path, request, media, search, tabs, routes, browse, singleTrack, androidControllerOfflineError)
+    private fun fromCpp(path: String?, request: TransformableRequestConfig?, browse: Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, search: Variant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig?, tabs: Variant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig?, routes: Map<String, Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?): BrowserConfiguration {
+      return BrowserConfiguration(path, request, browse, media, artwork, search, tabs, routes, singleTrack, androidControllerOfflineError)
     }
   }
 }
