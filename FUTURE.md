@@ -47,38 +47,6 @@ type RetryConfig = {
 - Risk of misconfiguration (e.g., multiplier < 1)
 - Current defaults work well for most streaming use cases
 
-## SVG Artwork Support
-
-Media3's `BitmapLoader` doesn't support SVG - `BitmapFactory.decodeStream()` returns null for SVG files. This means SVG artwork URLs won't display in Android Auto, media notifications, or lock screen controls.
-
-**Potential solutions:**
-
-1. **Coil with coil-svg** (recommended):
-   ```kotlin
-   // build.gradle.kts
-   implementation("io.coil-kt:coil:2.5.0")
-   implementation("io.coil-kt:coil-svg:2.5.0")
-   ```
-   Coil is a modern Kotlin-first image loader with built-in SVG support via `SvgDecoder`.
-
-2. **AndroidSVG directly** - Lower-level library for SVG rendering
-
-**Implementation approach:**
-- Create custom `BitmapLoader` for Media3's `MediaSession`
-- Detect SVG by extension (`.svg`) or content-type (`image/svg+xml`)
-- Use Coil/AndroidSVG to decode SVG to Bitmap
-- Fall back to default loader for raster images
-
-**Trade-offs:**
-- Adds dependency (Coil ~2MB or AndroidSVG ~200KB)
-- Extra complexity in artwork loading path
-- Server-side conversion to PNG/WebP is simpler and more reliable
-- **No tinting**: SVG→Bitmap loses VectorDrawable tinting capability (see "Remote Vector Drawables" below)
-
-**References:**
-- [Coil SVG documentation](https://coil-kt.github.io/coil/svgs/)
-- [Issue #262: MediaMetadata vector drawable support](https://github.com/androidx/media/issues/262)
-
 ## Auto-Update Now Playing from Stream Metadata
 
 Once `updateNowPlaying()` is implemented (see TODO-now-playing-metadata.md), consider adding automatic mode for radio streams.
@@ -156,42 +124,6 @@ Currently we only support search-based. URI-based requires a partnership with Go
 **References:**
 - https://developer.android.com/guide/topics/media-apps/interacting-with-assistant
 - https://developers.google.com/search/docs/appearance/structured-data/media-actions
-
-## onAndroidForegroundServiceStartNotAllowed Callback
-
-Android 12+ restricts starting foreground services from the background. When an external controller (Bluetooth, car head unit) tries to resume playback while the app is killed, the service may fail to start silently.
-
-**Current behavior:** Silent failure - user presses play, nothing happens.
-
-**Potential API:**
-```typescript
-setup({
-  callbacks: {
-    onAndroidForegroundServiceStartNotAllowed: () => {
-      // Trigger local notification, log analytics, etc.
-    }
-  }
-})
-```
-
-**Implementation:**
-- Override `MediaSessionService.Listener.onForegroundServiceStartNotAllowedException()`
-- Trigger headless JS task via existing `HeadlessTaskService`
-- JS callback can schedule notification, track analytics, store state
-
-**Benefits:**
-- App developers can customize recovery UX
-- Analytics visibility into this edge case
-- Consistent with library's JS-first philosophy
-
-**Trade-offs:**
-- HeadlessTaskService needs to be running (it's bound at startup, so should be fine)
-- Edge case that most users won't encounter
-- Native-only notification (like Media3 demo) might be simpler
-
-**References:**
-- Media3 session demo `DemoPlaybackService.kt:225-247`
-- https://developer.android.com/about/versions/12/behavior-changes-12#foreground-service-launch-restrictions
 
 ## Animated Artwork on Lock Screen
 
