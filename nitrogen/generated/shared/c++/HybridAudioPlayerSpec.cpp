@@ -110,6 +110,10 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onOnlineChanged", &HybridAudioPlayerSpec::setOnOnlineChanged);
       prototype.registerHybridGetter("onEqualizerChanged", &HybridAudioPlayerSpec::getOnEqualizerChanged);
       prototype.registerHybridSetter("onEqualizerChanged", &HybridAudioPlayerSpec::setOnEqualizerChanged);
+      prototype.registerHybridGetter("onBatteryWarningPendingChanged", &HybridAudioPlayerSpec::getOnBatteryWarningPendingChanged);
+      prototype.registerHybridSetter("onBatteryWarningPendingChanged", &HybridAudioPlayerSpec::setOnBatteryWarningPendingChanged);
+      prototype.registerHybridGetter("onBatteryOptimizationStatusChanged", &HybridAudioPlayerSpec::getOnBatteryOptimizationStatusChanged);
+      prototype.registerHybridSetter("onBatteryOptimizationStatusChanged", &HybridAudioPlayerSpec::setOnBatteryOptimizationStatusChanged);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioPlayerSpec::setupPlayer);
       prototype.registerHybridMethod("updateOptions", &HybridAudioPlayerSpec::updateOptions);
       prototype.registerHybridMethod("getOptions", &HybridAudioPlayerSpec::getOptions);
@@ -160,6 +164,10 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("setEqualizerEnabled", &HybridAudioPlayerSpec::setEqualizerEnabled);
       prototype.registerHybridMethod("setEqualizerPreset", &HybridAudioPlayerSpec::setEqualizerPreset);
       prototype.registerHybridMethod("setEqualizerLevels", &HybridAudioPlayerSpec::setEqualizerLevels);
+      prototype.registerHybridMethod("getBatteryWarningPending", &HybridAudioPlayerSpec::getBatteryWarningPending);
+      prototype.registerHybridMethod("getBatteryOptimizationStatus", &HybridAudioPlayerSpec::getBatteryOptimizationStatus);
+      prototype.registerHybridMethod("dismissBatteryWarning", &HybridAudioPlayerSpec::dismissBatteryWarning);
+      prototype.registerHybridMethod("openBatterySettings", &HybridAudioPlayerSpec::openBatterySettings);
     });
   }
 

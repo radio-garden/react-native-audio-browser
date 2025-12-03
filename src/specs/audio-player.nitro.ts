@@ -1,6 +1,11 @@
 import { type HybridObject } from 'react-native-nitro-modules'
 
-import type { FavoriteChangedEvent } from '../features'
+import type {
+  BatteryOptimizationStatus,
+  BatteryOptimizationStatusChangedEvent,
+  BatteryWarningPendingChangedEvent,
+  FavoriteChangedEvent
+} from '../features'
 import type {
   PlaybackActiveTrackChangedEvent
 } from '../features/activeTrack'
@@ -184,4 +189,50 @@ export interface AudioPlayer
   setEqualizerPreset(preset: string): void
   setEqualizerLevels(levels: number[]): void
   onEqualizerChanged: (settings: EqualizerSettings) => void
+
+  // MARK: battery optimization (Android only)
+  /**
+   * Check if a battery warning is pending.
+   * Returns true if a foreground service start was blocked and the user hasn't dismissed
+   * the warning or fixed their battery settings.
+   * Auto-clears when battery status becomes unrestricted.
+   * Always returns false on iOS.
+   */
+  getBatteryWarningPending(): boolean
+  /**
+   * Get the current battery optimization status.
+   * - `unrestricted`: App can run freely in background
+   * - `optimized`: System may limit background work (default)
+   * - `restricted`: Background services blocked
+   * Always returns `unrestricted` on iOS.
+   */
+  getBatteryOptimizationStatus(): BatteryOptimizationStatus
+  /**
+   * Dismiss the battery warning without fixing settings.
+   * Call this when the user chooses to ignore the warning.
+   * No-op on iOS.
+   */
+  dismissBatteryWarning(): void
+  /**
+   * Open the system battery settings for this app.
+   * No-op on iOS.
+   */
+  openBatterySettings(): void
+  /**
+   * Called when battery warning pending state changes.
+   * Fires when: failure occurs (true), dismissBatteryWarning() called (false),
+   * or status becomes unrestricted (false).
+   * Never fires on iOS.
+   */
+  onBatteryWarningPendingChanged: (
+    event: BatteryWarningPendingChangedEvent
+  ) => void
+  /**
+   * Called when battery optimization status changes.
+   * Fires when user returns from settings with a different status.
+   * Never fires on iOS.
+   */
+  onBatteryOptimizationStatusChanged: (
+    event: BatteryOptimizationStatusChangedEvent
+  ) => void
 }

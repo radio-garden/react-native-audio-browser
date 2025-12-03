@@ -8,6 +8,7 @@
  */
 
 export * from './activeTrack'
+export * from './battery'
 export * from './browser'
 export * from './equalizer'
 export * from './errors'

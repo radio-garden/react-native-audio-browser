@@ -715,6 +715,34 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
     set(value) {
       onEqualizerChanged = value
     }
+  
+  abstract var onBatteryWarningPendingChanged: (event: BatteryWarningPendingChangedEvent) -> Unit
+  
+  private var onBatteryWarningPendingChanged_cxx: Func_void_BatteryWarningPendingChangedEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_BatteryWarningPendingChangedEvent_java(onBatteryWarningPendingChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onBatteryWarningPendingChanged = value
+    }
+  
+  abstract var onBatteryOptimizationStatusChanged: (event: BatteryOptimizationStatusChangedEvent) -> Unit
+  
+  private var onBatteryOptimizationStatusChanged_cxx: Func_void_BatteryOptimizationStatusChangedEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_BatteryOptimizationStatusChangedEvent_java(onBatteryOptimizationStatusChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onBatteryOptimizationStatusChanged = value
+    }
 
   // Methods
   @DoNotStrip
@@ -916,6 +944,22 @@ abstract class HybridAudioPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun setEqualizerLevels(levels: DoubleArray): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getBatteryWarningPending(): Boolean
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getBatteryOptimizationStatus(): BatteryOptimizationStatus
+  
+  @DoNotStrip
+  @Keep
+  abstract fun dismissBatteryWarning(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun openBatterySettings(): Unit
 
   private external fun initHybrid(): HybridData
 

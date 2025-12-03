@@ -26,6 +26,12 @@ namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent
 namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
+// Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `ButtonCapability` to properly resolve imports.
@@ -171,6 +177,9 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
+#include "BatteryOptimizationStatus.hpp"
+#include "BatteryOptimizationStatusChangedEvent.hpp"
+#include "BatteryWarningPendingChangedEvent.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "ButtonCapability.hpp"
 #include "Capability.hpp"

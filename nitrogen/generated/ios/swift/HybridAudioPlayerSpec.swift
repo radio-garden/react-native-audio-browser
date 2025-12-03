@@ -59,6 +59,8 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   var handleRemoteStop: (() -> Void)? { get set }
   var onOnlineChanged: (_ online: Bool) -> Void { get set }
   var onEqualizerChanged: (_ settings: EqualizerSettings) -> Void { get set }
+  var onBatteryWarningPendingChanged: (_ event: BatteryWarningPendingChangedEvent) -> Void { get set }
+  var onBatteryOptimizationStatusChanged: (_ event: BatteryOptimizationStatusChangedEvent) -> Void { get set }
 
   // Methods
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
@@ -111,6 +113,10 @@ public protocol HybridAudioPlayerSpec_protocol: HybridObject {
   func setEqualizerEnabled(enabled: Bool) throws -> Void
   func setEqualizerPreset(preset: String) throws -> Void
   func setEqualizerLevels(levels: [Double]) throws -> Void
+  func getBatteryWarningPending() throws -> Bool
+  func getBatteryOptimizationStatus() throws -> BatteryOptimizationStatus
+  func dismissBatteryWarning() throws -> Void
+  func openBatterySettings() throws -> Void
 }
 
 public extension HybridAudioPlayerSpec_protocol {

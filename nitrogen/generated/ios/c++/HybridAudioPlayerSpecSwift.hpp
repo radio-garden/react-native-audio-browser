@@ -100,6 +100,12 @@ namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
+// Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
@@ -186,6 +192,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "EqualizerSettings.hpp"
+#include "BatteryWarningPendingChangedEvent.hpp"
+#include "BatteryOptimizationStatusChangedEvent.hpp"
+#include "BatteryOptimizationStatus.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
@@ -582,6 +591,20 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) noexcept override {
       _swiftPart.setOnEqualizerChanged(onEqualizerChanged);
     }
+    inline std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() noexcept override {
+      auto __result = _swiftPart.getOnBatteryWarningPendingChanged();
+      return __result;
+    }
+    inline void setOnBatteryWarningPendingChanged(const std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>& onBatteryWarningPendingChanged) noexcept override {
+      _swiftPart.setOnBatteryWarningPendingChanged(onBatteryWarningPendingChanged);
+    }
+    inline std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)> getOnBatteryOptimizationStatusChanged() noexcept override {
+      auto __result = _swiftPart.getOnBatteryOptimizationStatusChanged();
+      return __result;
+    }
+    inline void setOnBatteryOptimizationStatusChanged(const std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>& onBatteryOptimizationStatusChanged) noexcept override {
+      _swiftPart.setOnBatteryOptimizationStatusChanged(onBatteryOptimizationStatusChanged);
+    }
 
   public:
     // Methods
@@ -919,6 +942,34 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setEqualizerLevels(const std::vector<double>& levels) override {
       auto __result = _swiftPart.setEqualizerLevels(levels);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline bool getBatteryWarningPending() override {
+      auto __result = _swiftPart.getBatteryWarningPending();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline BatteryOptimizationStatus getBatteryOptimizationStatus() override {
+      auto __result = _swiftPart.getBatteryOptimizationStatus();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void dismissBatteryWarning() override {
+      auto __result = _swiftPart.dismissBatteryWarning();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void openBatterySettings() override {
+      auto __result = _swiftPart.openBatterySettings();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

@@ -24,6 +24,12 @@ namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent
 namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
+// Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
+// Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `ButtonCapability` to properly resolve imports.
@@ -158,6 +164,9 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
+#include "BatteryOptimizationStatus.hpp"
+#include "BatteryOptimizationStatusChangedEvent.hpp"
+#include "BatteryWarningPendingChangedEvent.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "ButtonCapability.hpp"
 #include "Capability.hpp"
@@ -2345,6 +2354,50 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_EqualizerSettings_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const BatteryWarningPendingChangedEvent&)>`.
+   */
+  using Func_void_BatteryWarningPendingChangedEvent = std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const BatteryWarningPendingChangedEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_BatteryWarningPendingChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_BatteryWarningPendingChangedEvent_Wrapper(std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>>(std::move(func))) {}
+    inline void call(BatteryWarningPendingChangedEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_BatteryWarningPendingChangedEvent create_Func_void_BatteryWarningPendingChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_BatteryWarningPendingChangedEvent_Wrapper wrap_Func_void_BatteryWarningPendingChangedEvent(Func_void_BatteryWarningPendingChangedEvent value) noexcept {
+    return Func_void_BatteryWarningPendingChangedEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const BatteryOptimizationStatusChangedEvent&)>`.
+   */
+  using Func_void_BatteryOptimizationStatusChangedEvent = std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const BatteryOptimizationStatusChangedEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_BatteryOptimizationStatusChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_BatteryOptimizationStatusChangedEvent_Wrapper(std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>>(std::move(func))) {}
+    inline void call(BatteryOptimizationStatusChangedEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_BatteryOptimizationStatusChangedEvent create_Func_void_BatteryOptimizationStatusChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_BatteryOptimizationStatusChangedEvent_Wrapper wrap_Func_void_BatteryOptimizationStatusChangedEvent(Func_void_BatteryOptimizationStatusChangedEvent value) noexcept {
+    return Func_void_BatteryOptimizationStatusChangedEvent_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridAudioPlayerSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridAudioPlayerSpec>`.
@@ -2490,6 +2543,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_EqualizerSettings__ create_Result_std__optional_EqualizerSettings__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<EqualizerSettings>>::withError(error);
+  }
+  
+  // pragma MARK: Result<BatteryOptimizationStatus>
+  using Result_BatteryOptimizationStatus_ = Result<BatteryOptimizationStatus>;
+  inline Result_BatteryOptimizationStatus_ create_Result_BatteryOptimizationStatus_(BatteryOptimizationStatus value) noexcept {
+    return Result<BatteryOptimizationStatus>::withValue(std::move(value));
+  }
+  inline Result_BatteryOptimizationStatus_ create_Result_BatteryOptimizationStatus_(const std::exception_ptr& error) noexcept {
+    return Result<BatteryOptimizationStatus>::withError(error);
   }
 
 } // namespace margelo::nitro::audiobrowser::bridge::swift

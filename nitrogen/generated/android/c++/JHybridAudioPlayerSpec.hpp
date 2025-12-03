@@ -146,6 +146,10 @@ namespace margelo::nitro::audiobrowser {
     void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) override;
     std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() override;
     void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) override;
+    std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() override;
+    void setOnBatteryWarningPendingChanged(const std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>& onBatteryWarningPendingChanged) override;
+    std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)> getOnBatteryOptimizationStatusChanged() override;
+    void setOnBatteryOptimizationStatusChanged(const std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>& onBatteryOptimizationStatusChanged) override;
 
   public:
     // Methods
@@ -199,6 +203,10 @@ namespace margelo::nitro::audiobrowser {
     void setEqualizerEnabled(bool enabled) override;
     void setEqualizerPreset(const std::string& preset) override;
     void setEqualizerLevels(const std::vector<double>& levels) override;
+    bool getBatteryWarningPending() override;
+    BatteryOptimizationStatus getBatteryOptimizationStatus() override;
+    void dismissBatteryWarning() override;
+    void openBatterySettings() override;
 
   private:
     friend HybridBase;

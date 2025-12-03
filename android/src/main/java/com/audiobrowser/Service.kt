@@ -16,12 +16,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaSessionService
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.SearchMode
@@ -32,13 +34,24 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+/**
+ * MediaLibraryService for background audio playback and Android Auto/external controller support.
+ *
+ * Implements [MediaSessionService.Listener] to receive [onForegroundServiceStartNotAllowedException]
+ * callbacks when Android 12+ blocks foreground service starts from background (e.g., Bluetooth
+ * resume while app is killed). This allows us to record the failure and notify the user on their
+ * next session.
+ */
 @MainThread
-class Service : MediaLibraryService() {
+class Service : MediaLibraryService(), MediaSessionService.Listener {
   lateinit var player: Player
   private val binder = LocalBinder()
   private val scope = MainScope()
   private lateinit var mediaSession: MediaLibrarySession
   private lateinit var imageLoader: ImageLoader
+
+  // Callback for battery warning events to notify JS layer
+  var onBatteryWarningPendingChanged: ((Boolean) -> Unit)? = null
 
   // Headless service binding
   private val headlessConnection: ServiceConnection =
@@ -122,6 +135,9 @@ class Service : MediaLibraryService() {
           )
         )
         .build()
+
+    // Register this service as a listener to catch foreground service start exceptions
+    setListener(this)
     player.setMediaSession(mediaSession)
 
     // Bind headless service once at startup for JS task execution
@@ -287,6 +303,18 @@ class Service : MediaLibraryService() {
   override fun onUnbind(intent: Intent?): Boolean {
     Timber.d("onUnbind called - action: ${intent?.action}, package: ${intent?.`package`}")
     return super.onUnbind(intent)
+  }
+
+  /**
+   * Called when Android 12+ blocks a foreground service start from background.
+   * This happens when an external controller (Bluetooth, car head unit) tries to resume
+   * playback while the app is killed and battery restrictions are in place.
+   */
+  @OptIn(UnstableApi::class)
+  override fun onForegroundServiceStartNotAllowedException() {
+    Timber.w("Foreground service start blocked by Android - recording battery warning")
+    BatteryWarningStore.recordFailure(this)
+    onBatteryWarningPendingChanged?.invoke(true)
   }
 
   override fun onDestroy() {

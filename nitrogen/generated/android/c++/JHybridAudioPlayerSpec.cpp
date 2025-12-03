@@ -95,6 +95,12 @@ namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
+// Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 // Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
@@ -257,6 +263,14 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "EqualizerSettings.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JEqualizerSettings.hpp"
+#include "BatteryWarningPendingChangedEvent.hpp"
+#include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
+#include "JBatteryWarningPendingChangedEvent.hpp"
+#include "BatteryOptimizationStatusChangedEvent.hpp"
+#include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
+#include "JBatteryOptimizationStatusChangedEvent.hpp"
+#include "BatteryOptimizationStatus.hpp"
+#include "JBatteryOptimizationStatus.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JUpdateOptions.hpp"
@@ -1144,6 +1158,40 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_EqualizerSettings::javaobject> /* onEqualizerChanged */)>("setOnEqualizerChanged_cxx");
     method(_javaPart, JFunc_void_EqualizerSettings_cxx::fromCpp(onEqualizerChanged));
   }
+  std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> JHybridAudioPlayerSpec::getOnBatteryWarningPendingChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_BatteryWarningPendingChangedEvent::javaobject>()>("getOnBatteryWarningPendingChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_BatteryWarningPendingChangedEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_BatteryWarningPendingChangedEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_BatteryWarningPendingChangedEvent, void(BatteryWarningPendingChangedEvent)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnBatteryWarningPendingChanged(const std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>& onBatteryWarningPendingChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_BatteryWarningPendingChangedEvent::javaobject> /* onBatteryWarningPendingChanged */)>("setOnBatteryWarningPendingChanged_cxx");
+    method(_javaPart, JFunc_void_BatteryWarningPendingChangedEvent_cxx::fromCpp(onBatteryWarningPendingChanged));
+  }
+  std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)> JHybridAudioPlayerSpec::getOnBatteryOptimizationStatusChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_BatteryOptimizationStatusChangedEvent::javaobject>()>("getOnBatteryOptimizationStatusChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_BatteryOptimizationStatusChangedEvent, void(BatteryOptimizationStatusChangedEvent)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioPlayerSpec::setOnBatteryOptimizationStatusChanged(const std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>& onBatteryOptimizationStatusChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_BatteryOptimizationStatusChangedEvent::javaobject> /* onBatteryOptimizationStatusChanged */)>("setOnBatteryOptimizationStatusChanged_cxx");
+    method(_javaPart, JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::fromCpp(onBatteryOptimizationStatusChanged));
+  }
 
   // Methods
   std::shared_ptr<Promise<void>> JHybridAudioPlayerSpec::setupPlayer(const PartialSetupPlayerOptions& options) {
@@ -1411,6 +1459,24 @@ namespace margelo::nitro::audiobrowser {
       __array->setRegion(0, __size, levels.data());
       return __array;
     }());
+  }
+  bool JHybridAudioPlayerSpec::getBatteryWarningPending() {
+    static const auto method = javaClassStatic()->getMethod<jboolean()>("getBatteryWarningPending");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
+  BatteryOptimizationStatus JHybridAudioPlayerSpec::getBatteryOptimizationStatus() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBatteryOptimizationStatus>()>("getBatteryOptimizationStatus");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  void JHybridAudioPlayerSpec::dismissBatteryWarning() {
+    static const auto method = javaClassStatic()->getMethod<void()>("dismissBatteryWarning");
+    method(_javaPart);
+  }
+  void JHybridAudioPlayerSpec::openBatterySettings() {
+    static const auto method = javaClassStatic()->getMethod<void()>("openBatterySettings");
+    method(_javaPart);
   }
 
 } // namespace margelo::nitro::audiobrowser

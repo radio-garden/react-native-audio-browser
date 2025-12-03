@@ -50,6 +50,8 @@
 #include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JFunc_void_bool.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
+#include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
+#include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::audiobrowser {
@@ -96,12 +98,14 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_NowPlayingMetadata_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_BatteryWarningPendingChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::registerNatives();
 
     // Register Nitro Hybrid Objects
     HybridObjectRegistry::registerHybridObjectConstructor(
       "AudioBrowser",
       []() -> std::shared_ptr<HybridObject> {
-        static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/margelo/nitro/audiobrowser/AudioBrowser");
+        static DefaultConstructableObject<JHybridAudioBrowserSpec::javaobject> object("com/audiobrowser/AudioBrowser");
         auto instance = object.create();
         return instance->cthis()->shared();
       }
@@ -109,7 +113,7 @@ int initialize(JavaVM* vm) {
     HybridObjectRegistry::registerHybridObjectConstructor(
       "AudioPlayer",
       []() -> std::shared_ptr<HybridObject> {
-        static DefaultConstructableObject<JHybridAudioPlayerSpec::javaobject> object("com/margelo/nitro/audiobrowser/AudioPlayer");
+        static DefaultConstructableObject<JHybridAudioPlayerSpec::javaobject> object("com/audiobrowser/AudioPlayer");
         auto instance = object.create();
         return instance->cthis()->shared();
       }

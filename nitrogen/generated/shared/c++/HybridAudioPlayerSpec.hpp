@@ -63,6 +63,10 @@ namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
+// Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
+// Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
@@ -79,6 +83,8 @@ namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 
 #include "AudioMetadataReceivedEvent.hpp"
 #include <functional>
@@ -110,6 +116,8 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "EqualizerSettings.hpp"
+#include "BatteryWarningPendingChangedEvent.hpp"
+#include "BatteryOptimizationStatusChangedEvent.hpp"
 #include <NitroModules/Promise.hpp>
 #include "PartialSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
@@ -121,6 +129,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "PlaybackError.hpp"
 #include "NowPlayingUpdate.hpp"
 #include <string>
+#include "BatteryOptimizationStatus.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -245,6 +254,10 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) = 0;
       virtual std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() = 0;
       virtual void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) = 0;
+      virtual std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() = 0;
+      virtual void setOnBatteryWarningPendingChanged(const std::function<void(const BatteryWarningPendingChangedEvent& /* event */)>& onBatteryWarningPendingChanged) = 0;
+      virtual std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)> getOnBatteryOptimizationStatusChanged() = 0;
+      virtual void setOnBatteryOptimizationStatusChanged(const std::function<void(const BatteryOptimizationStatusChangedEvent& /* event */)>& onBatteryOptimizationStatusChanged) = 0;
 
     public:
       // Methods
@@ -298,6 +311,10 @@ namespace margelo::nitro::audiobrowser {
       virtual void setEqualizerEnabled(bool enabled) = 0;
       virtual void setEqualizerPreset(const std::string& preset) = 0;
       virtual void setEqualizerLevels(const std::vector<double>& levels) = 0;
+      virtual bool getBatteryWarningPending() = 0;
+      virtual BatteryOptimizationStatus getBatteryOptimizationStatus() = 0;
+      virtual void dismissBatteryWarning() = 0;
+      virtual void openBatterySettings() = 0;
 
     protected:
       // Hybrid Setup

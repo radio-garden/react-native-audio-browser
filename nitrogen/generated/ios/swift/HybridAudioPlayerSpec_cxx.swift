@@ -1228,6 +1228,44 @@ open class HybridAudioPlayerSpec_cxx {
       }()
     }
   }
+  
+  public final var onBatteryWarningPendingChanged: bridge.Func_void_BatteryWarningPendingChangedEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_BatteryWarningPendingChangedEvent in
+        let __closureWrapper = Func_void_BatteryWarningPendingChangedEvent(self.__implementation.onBatteryWarningPendingChanged)
+        return bridge.create_Func_void_BatteryWarningPendingChangedEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onBatteryWarningPendingChanged = { () -> (BatteryWarningPendingChangedEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_BatteryWarningPendingChangedEvent(newValue)
+        return { (__event: BatteryWarningPendingChangedEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
+  
+  public final var onBatteryOptimizationStatusChanged: bridge.Func_void_BatteryOptimizationStatusChangedEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_BatteryOptimizationStatusChangedEvent in
+        let __closureWrapper = Func_void_BatteryOptimizationStatusChangedEvent(self.__implementation.onBatteryOptimizationStatusChanged)
+        return bridge.create_Func_void_BatteryOptimizationStatusChangedEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onBatteryOptimizationStatusChanged = { () -> (BatteryOptimizationStatusChangedEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_BatteryOptimizationStatusChangedEvent(newValue)
+        return { (__event: BatteryOptimizationStatusChangedEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
 
   // Methods
   @inline(__always)
@@ -1854,6 +1892,52 @@ open class HybridAudioPlayerSpec_cxx {
   public final func setEqualizerLevels(levels: bridge.std__vector_double_) -> bridge.Result_void_ {
     do {
       try self.__implementation.setEqualizerLevels(levels: levels.map({ __item in __item }))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getBatteryWarningPending() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.getBatteryWarningPending()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getBatteryOptimizationStatus() -> bridge.Result_BatteryOptimizationStatus_ {
+    do {
+      let __result = try self.__implementation.getBatteryOptimizationStatus()
+      let __resultCpp = __result
+      return bridge.create_Result_BatteryOptimizationStatus_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_BatteryOptimizationStatus_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func dismissBatteryWarning() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.dismissBatteryWarning()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func openBatterySettings() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.openBatterySettings()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

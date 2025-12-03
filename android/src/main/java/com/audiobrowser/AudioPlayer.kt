@@ -8,6 +8,9 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.annotation.Keep
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
@@ -18,9 +21,14 @@ import com.audiobrowser.model.TimedMetadata
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
+import com.audiobrowser.util.BatteryOptimizationHelper
+import com.audiobrowser.util.BatteryWarningStore
 import com.margelo.nitro.audiobrowser.AudioCommonMetadataReceivedEvent
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent
+import com.margelo.nitro.audiobrowser.BatteryOptimizationStatus
+import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
+import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.HybridAudioPlayerSpec
@@ -116,6 +124,9 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var onOnlineChanged: (Boolean) -> Unit = {}
   override var onEqualizerChanged: (com.margelo.nitro.audiobrowser.EqualizerSettings) -> Unit = {}
   override var onSleepTimerChanged: (com.margelo.nitro.audiobrowser.SleepTimer?) -> Unit = {}
+  override var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Unit = {}
+  override var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Unit =
+    {}
 
   // MARK: handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -133,6 +144,13 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var handleRemoteSkip: (() -> Unit)? = null
   override var handleRemoteStop: (() -> Unit)? = null
 
+  /** Lifecycle observer to check battery status when app comes to foreground */
+  private val lifecycleObserver = object : DefaultLifecycleObserver {
+    override fun onStart(owner: LifecycleOwner) {
+      checkBatteryStatusChange()
+    }
+  }
+
   init {
     // Auto-bind to service if it's already running
     launchInScope {
@@ -149,6 +167,9 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
         Timber.e(e, "Failed to auto-bind to AudioBrowserService during initialization")
       }
     }
+
+    // Observe app lifecycle to check battery status on foreground
+    ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
   }
 
   override fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit> {
@@ -364,6 +385,66 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
 
   override fun clearSleepTimer(): Boolean = runBlockingOnMain { player.clearSleepTimer() }
 
+  // MARK: battery optimization (Android only)
+
+  /** Track last known status for change detection */
+  private var lastKnownBatteryStatus: BatteryOptimizationHelper.Status? = null
+
+  override fun getBatteryWarningPending(): Boolean {
+    val rawPending = BatteryWarningStore.isWarningPending(context)
+    val status = BatteryOptimizationHelper.getStatus(context)
+
+    // Auto-clear if status is now unrestricted
+    return if (rawPending && status == BatteryOptimizationHelper.Status.UNRESTRICTED) {
+      BatteryWarningStore.clearWarning(context)
+      post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(false)) }
+      false
+    } else {
+      rawPending
+    }
+  }
+
+  override fun getBatteryOptimizationStatus(): BatteryOptimizationStatus {
+    return BatteryOptimizationHelper.getStatus(context).toNitro()
+  }
+
+  override fun dismissBatteryWarning() {
+    BatteryWarningStore.clearWarning(context)
+    post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(false)) }
+  }
+
+  override fun openBatterySettings() {
+    BatteryOptimizationHelper.openSettings(context)
+  }
+
+  /**
+   * Check if battery status changed since last check and fire events if so.
+   * Called automatically when app comes to foreground via ProcessLifecycleOwner.
+   */
+  private fun checkBatteryStatusChange() {
+    val currentStatus = BatteryOptimizationHelper.getStatus(context)
+    if (lastKnownBatteryStatus != null && lastKnownBatteryStatus != currentStatus) {
+      post { onBatteryOptimizationStatusChanged(BatteryOptimizationStatusChangedEvent(currentStatus.toNitro())) }
+
+      // Auto-clear warning if now unrestricted
+      if (currentStatus == BatteryOptimizationHelper.Status.UNRESTRICTED &&
+        BatteryWarningStore.isWarningPending(context)
+      ) {
+        BatteryWarningStore.clearWarning(context)
+        post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(false)) }
+      }
+    }
+    lastKnownBatteryStatus = currentStatus
+  }
+
+  private fun BatteryOptimizationHelper.Status.toNitro(): BatteryOptimizationStatus {
+    return when (this) {
+      BatteryOptimizationHelper.Status.UNRESTRICTED -> BatteryOptimizationStatus.UNRESTRICTED
+      BatteryOptimizationHelper.Status.OPTIMIZED -> BatteryOptimizationStatus.OPTIMIZED
+      BatteryOptimizationHelper.Status.RESTRICTED -> BatteryOptimizationStatus.RESTRICTED
+    }
+  }
+
   override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
     launchInScope {
       connectedService =
@@ -373,7 +454,16 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           player.setup(setupOptions)
           // Start observing network connectivity changes
           player.observeNetworkConnectivity(mainScope)
+          }
+
+      // Wire up battery warning callback from service
+      connectedService?.onBatteryWarningPendingChanged = { pending ->
+        post {
+          this@AudioPlayer.onBatteryWarningPendingChanged(
+            BatteryWarningPendingChangedEvent(pending)
+          )
         }
+      }
 
       // Apply audio browser if it was registered before service connected
       audioBrowser?.let { connectedService?.player?.browser = it }
