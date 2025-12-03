@@ -37,10 +37,10 @@ import timber.log.Timber
 /**
  * MediaLibraryService for background audio playback and Android Auto/external controller support.
  *
- * Implements [MediaSessionService.Listener] to receive [onForegroundServiceStartNotAllowedException]
- * callbacks when Android 12+ blocks foreground service starts from background (e.g., Bluetooth
- * resume while app is killed). This allows us to record the failure and notify the user on their
- * next session.
+ * Implements [MediaSessionService.Listener] to receive
+ * [onForegroundServiceStartNotAllowedException] callbacks when Android 12+ blocks foreground
+ * service starts from background (e.g., Bluetooth resume while app is killed). This allows us to
+ * record the failure and notify the user on their next session.
  */
 @MainThread
 class Service : MediaLibraryService(), MediaSessionService.Listener {
@@ -96,11 +96,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     imageLoader =
       ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
-        .diskCache {
-          DiskCache.Builder()
-            .directory(cacheDir.resolve("artwork"))
-            .build()
-        }
+        .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).build() }
         .build()
 
     // Create CoilBitmapLoader for artwork loading with custom headers/auth support
@@ -306,9 +302,9 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   }
 
   /**
-   * Called when Android 12+ blocks a foreground service start from background.
-   * This happens when an external controller (Bluetooth, car head unit) tries to resume
-   * playback while the app is killed and battery restrictions are in place.
+   * Called when Android 12+ blocks a foreground service start from background. This happens when an
+   * external controller (Bluetooth, car head unit) tries to resume playback while the app is killed
+   * and battery restrictions are in place.
    */
   @OptIn(UnstableApi::class)
   override fun onForegroundServiceStartNotAllowedException() {

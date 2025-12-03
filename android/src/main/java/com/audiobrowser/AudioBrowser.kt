@@ -8,12 +8,12 @@ import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.CoilBitmapLoader
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.NitroModules
-import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
-import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NavigationError
 import com.margelo.nitro.audiobrowser.NavigationErrorEvent
 import com.margelo.nitro.audiobrowser.NavigationErrorType
@@ -77,8 +77,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   }
 
   /**
-   * Returns the artwork configuration for use by CoilBitmapLoader.
-   * This provides access to the base request config and artwork-specific config.
+   * Returns the artwork configuration for use by CoilBitmapLoader. This provides access to the base
+   * request config and artwork-specific config.
    */
   fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
     val artworkConfig = _configuration.artwork ?: return null

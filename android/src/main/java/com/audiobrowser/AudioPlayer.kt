@@ -18,11 +18,11 @@ import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.model.TimedMetadata
+import com.audiobrowser.util.BatteryOptimizationHelper
+import com.audiobrowser.util.BatteryWarningStore
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
-import com.audiobrowser.util.BatteryOptimizationHelper
-import com.audiobrowser.util.BatteryWarningStore
 import com.margelo.nitro.audiobrowser.AudioCommonMetadataReceivedEvent
 import com.margelo.nitro.audiobrowser.AudioMetadata
 import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent
@@ -145,11 +145,12 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   override var handleRemoteStop: (() -> Unit)? = null
 
   /** Lifecycle observer to check battery status when app comes to foreground */
-  private val lifecycleObserver = object : DefaultLifecycleObserver {
-    override fun onStart(owner: LifecycleOwner) {
-      checkBatteryStatusChange()
+  private val lifecycleObserver =
+    object : DefaultLifecycleObserver {
+      override fun onStart(owner: LifecycleOwner) {
+        checkBatteryStatusChange()
+      }
     }
-  }
 
   init {
     // Auto-bind to service if it's already running
@@ -418,17 +419,22 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
   }
 
   /**
-   * Check if battery status changed since last check and fire events if so.
-   * Called automatically when app comes to foreground via ProcessLifecycleOwner.
+   * Check if battery status changed since last check and fire events if so. Called automatically
+   * when app comes to foreground via ProcessLifecycleOwner.
    */
   private fun checkBatteryStatusChange() {
     val currentStatus = BatteryOptimizationHelper.getStatus(context)
     if (lastKnownBatteryStatus != null && lastKnownBatteryStatus != currentStatus) {
-      post { onBatteryOptimizationStatusChanged(BatteryOptimizationStatusChangedEvent(currentStatus.toNitro())) }
+      post {
+        onBatteryOptimizationStatusChanged(
+          BatteryOptimizationStatusChangedEvent(currentStatus.toNitro())
+        )
+      }
 
       // Auto-clear warning if now unrestricted
-      if (currentStatus == BatteryOptimizationHelper.Status.UNRESTRICTED &&
-        BatteryWarningStore.isWarningPending(context)
+      if (
+        currentStatus == BatteryOptimizationHelper.Status.UNRESTRICTED &&
+          BatteryWarningStore.isWarningPending(context)
       ) {
         BatteryWarningStore.clearWarning(context)
         post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(false)) }
@@ -454,7 +460,7 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
           player.setup(setupOptions)
           // Start observing network connectivity changes
           player.observeNetworkConnectivity(mainScope)
-          }
+        }
 
       // Wire up battery warning callback from service
       connectedService?.onBatteryWarningPendingChanged = { pending ->

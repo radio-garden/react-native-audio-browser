@@ -93,9 +93,8 @@ class BrowserManager {
   var config: BrowserConfig = BrowserConfig()
 
   /**
-   * Callback to transform artwork URLs for tracks.
-   * Takes a track and optional per-route artwork config, returns ImageSource or null.
-   * Injected by AudioBrowser when artwork config is set.
+   * Callback to transform artwork URLs for tracks. Takes a track and optional per-route artwork
+   * config, returns ImageSource or null. Injected by AudioBrowser when artwork config is set.
    */
   var artworkUrlResolver: (suspend (Track, MediaRequestConfig?) -> ImageSource?)? = null
 
@@ -355,11 +354,12 @@ class BrowserManager {
     }
 
     // Find best matching route
-    val (routeEntry, routeParams) = findBestRouteMatch(path, routes)
-      ?: run {
-        Timber.e("No route matched for path: $path")
-        throw ContentNotFoundException(path)
-      }
+    val (routeEntry, routeParams) =
+      findBestRouteMatch(path, routes)
+        ?: run {
+          Timber.e("No route matched for path: $path")
+          throw ContentNotFoundException(path)
+        }
 
     Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
 
@@ -370,40 +370,52 @@ class BrowserManager {
     val effectiveArtworkConfig = routeEntry.artwork ?: config.artwork
 
     // Transform children: generate contextual URLs and transform artwork URLs
-    val transformedChildren = resolvedTrack.children?.let { children ->
-      coroutineScope {
-        children.mapIndexed { index, track ->
-          async {
-            // Validate that track has stable identifier
-            validateTrack(track, "Child track")
+    val transformedChildren =
+      resolvedTrack.children?.let { children ->
+        coroutineScope {
+          children
+            .mapIndexed { index, track ->
+              async {
+                // Validate that track has stable identifier
+                validateTrack(track, "Child track")
 
-            var transformedTrack = track
+                var transformedTrack = track
 
-            // Generate contextual URLs for playable-only tracks (no url, just src)
-            if (track.url == null) {
-              // Track is playable-only - generate contextual URL for Media3
-              // Safe to use !! because validateTrack ensures (url != null || src != null)
-              val contextualUrl = BrowserPathHelper.build(path, track.src!!)
-              transformedTrack = transformedTrack.copy(url = contextualUrl)
+                // Generate contextual URLs for playable-only tracks (no url, just src)
+                if (track.url == null) {
+                  // Track is playable-only - generate contextual URL for Media3
+                  // Safe to use !! because validateTrack ensures (url != null || src != null)
+                  val contextualUrl = BrowserPathHelper.build(path, track.src!!)
+                  transformedTrack = transformedTrack.copy(url = contextualUrl)
 
-              Timber.d(
-                "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
-              )
-            } else {
-              Timber.d("[$path] Child[$index] '${track.title}': Browsable with url=${track.url}")
+                  Timber.d(
+                    "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
+                  )
+                } else {
+                  Timber.d(
+                    "[$path] Child[$index] '${track.title}': Browsable with url=${track.url}"
+                  )
+                }
+
+                // Transform artwork URL if resolver is configured
+                val resolver = artworkUrlResolver
+                if (resolver != null) {
+                  transformedTrack =
+                    transformArtworkUrl(
+                      transformedTrack,
+                      effectiveArtworkConfig,
+                      resolver,
+                      path,
+                      index,
+                    )
+                }
+
+                transformedTrack
+              }
             }
-
-            // Transform artwork URL if resolver is configured
-            val resolver = artworkUrlResolver
-            if (resolver != null) {
-              transformedTrack = transformArtworkUrl(transformedTrack, effectiveArtworkConfig, resolver, path, index)
-            }
-
-            transformedTrack
-          }
-        }.awaitAll()
+            .awaitAll()
+        }
       }
-    }
 
     // Return resolved track with transformed children
     return if (transformedChildren != null) {
@@ -414,9 +426,9 @@ class BrowserManager {
   }
 
   /**
-   * Transforms a track's artwork using the configured resolver.
-   * Populates artworkSource with the transformed ImageSource, keeping artwork unchanged.
-   * Handles all edge cases: undefined returns, errors, missing artwork.
+   * Transforms a track's artwork using the configured resolver. Populates artworkSource with the
+   * transformed ImageSource, keeping artwork unchanged. Handles all edge cases: undefined returns,
+   * errors, missing artwork.
    */
   private suspend fun transformArtworkUrl(
     track: Track,
@@ -436,7 +448,9 @@ class BrowserManager {
       when {
         // resolve returned null → no artwork source
         imageSource == null -> {
-          Timber.d("[$path] Child[$index] '${track.title}': Artwork resolver returned null, no artworkSource")
+          Timber.d(
+            "[$path] Child[$index] '${track.title}': Artwork resolver returned null, no artworkSource"
+          )
           track.copy(artworkSource = null)
         }
         // resolve returned ImageSource → set artworkSource
@@ -447,7 +461,10 @@ class BrowserManager {
       }
     } catch (e: Exception) {
       // resolve threw → log error, clear artworkSource to avoid broken images
-      Timber.e(e, "[$path] Child[$index] '${track.title}': Artwork transform failed, clearing artworkSource")
+      Timber.e(
+        e,
+        "[$path] Child[$index] '${track.title}': Artwork transform failed, clearing artworkSource",
+      )
       track.copy(artworkSource = null)
     }
   }
@@ -769,17 +786,15 @@ class BrowserManager {
   }
 
   /**
-   * Find the best matching route entry for a path.
-   * Uses SimpleRouter for pattern matching, with __default__ as lowest priority fallback.
+   * Find the best matching route entry for a path. Uses SimpleRouter for pattern matching, with
+   * __default__ as lowest priority fallback.
    */
   private fun findBestRouteMatch(
     path: String,
     routes: Array<NativeRouteEntry>,
   ): Pair<NativeRouteEntry, Map<String, String>>? {
     // Convert to map for router compatibility, excluding default fallback
-    val routeMap = routes
-      .filter { it.path != DEFAULT_ROUTE_PATH }
-      .associateBy { it.path }
+    val routeMap = routes.filter { it.path != DEFAULT_ROUTE_PATH }.associateBy { it.path }
 
     // Try to find a specific route match
     router.findBestMatch(path, routeMap)?.let { (routePattern, match) ->
@@ -788,16 +803,18 @@ class BrowserManager {
     }
 
     // Fall back to default route if present
-    routes.find { it.path == DEFAULT_ROUTE_PATH }?.let { defaultRoute ->
-      return Pair(defaultRoute, emptyMap())
-    }
+    routes
+      .find { it.path == DEFAULT_ROUTE_PATH }
+      ?.let { defaultRoute ->
+        return Pair(defaultRoute, emptyMap())
+      }
 
     return null
   }
 
   /**
-   * Resolve a NativeRouteEntry into a ResolvedTrack.
-   * The entry has flattened browse options: callback, config, or static.
+   * Resolve a NativeRouteEntry into a ResolvedTrack. The entry has flattened browse options:
+   * callback, config, or static.
    */
   private suspend fun resolveRouteEntry(
     entry: NativeRouteEntry,
@@ -827,8 +844,7 @@ class BrowserManager {
   }
 
   /**
-   * Resolve search via the __search__ route entry.
-   * The entry has searchCallback or searchConfig.
+   * Resolve search via the __search__ route entry. The entry has searchCallback or searchConfig.
    */
   private suspend fun resolveSearch(params: SearchParams): Array<Track> {
     val routes = config.routes ?: return emptyArray()
@@ -857,8 +873,8 @@ class BrowserManager {
   }
 
   /**
-   * Resolve tabs via the __tabs__ route entry.
-   * Returns children of the resolved track, or empty array if no tabs configured.
+   * Resolve tabs via the __tabs__ route entry. Returns children of the resolved track, or empty
+   * array if no tabs configured.
    */
   private suspend fun resolveTabs(): Array<Track> {
     val routes = config.routes ?: return emptyArray()
@@ -1014,7 +1030,6 @@ class BrowserManager {
       }
     }
   }
-
 }
 
 /** Exception thrown when no content is configured for a requested path. */
@@ -1028,14 +1043,15 @@ class HttpStatusException(val statusCode: Int, message: String) : Exception(mess
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /**
- * Configuration object that holds all browser settings.
- * Uses flattened structure matching NativeBrowserConfiguration from JS.
+ * Configuration object that holds all browser settings. Uses flattened structure matching
+ * NativeBrowserConfiguration from JS.
  */
 data class BrowserConfig(
   val request: TransformableRequestConfig? = null,
   val media: MediaRequestConfig? = null,
   val artwork: MediaRequestConfig? = null,
-  // Routes as array with flattened entries (includes __tabs__, __search__, and __default__ special routes)
+  // Routes as array with flattened entries (includes __tabs__, __search__, and __default__ special
+  // routes)
   val routes: Array<NativeRouteEntry>? = null,
   // Behavior
   val singleTrack: Boolean = false,

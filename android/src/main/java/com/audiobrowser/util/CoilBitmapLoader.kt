@@ -47,13 +47,8 @@ class CoilBitmapLoader(
 
   private val scope = CoroutineScope(Dispatchers.IO)
 
-  /**
-   * Configuration for artwork requests including headers and URL transformation.
-   */
-  data class ArtworkConfig(
-    val baseConfig: RequestConfig?,
-    val artworkConfig: MediaRequestConfig?,
-  )
+  /** Configuration for artwork requests including headers and URL transformation. */
+  data class ArtworkConfig(val baseConfig: RequestConfig?, val artworkConfig: MediaRequestConfig?)
 
   override fun supportsMimeType(mimeType: String): Boolean {
     return mimeType.startsWith("image/") ||
@@ -147,7 +142,8 @@ class CoilBitmapLoader(
       val finalConfig = RequestConfigBuilder.mergeConfig(mergedBaseConfig, artworkConfig)
 
       // Build final URL
-      val finalUrl = RequestConfigBuilder.buildUrl(RequestConfigBuilder.toRequestConfig(finalConfig))
+      val finalUrl =
+        RequestConfigBuilder.buildUrl(RequestConfigBuilder.toRequestConfig(finalConfig))
 
       // Extract headers
       val headers = finalConfig.headers?.toMap() ?: emptyMap()
@@ -172,7 +168,10 @@ class CoilBitmapLoader(
    * @param perRouteConfig Optional per-route artwork config that overrides global config
    * @return ImageSource ready for React Native's Image component, or null if no artwork
    */
-  suspend fun transformArtworkUrlForTrack(track: Track, perRouteConfig: MediaRequestConfig? = null): ImageSource? {
+  suspend fun transformArtworkUrlForTrack(
+    track: Track,
+    perRouteConfig: MediaRequestConfig? = null,
+  ): ImageSource? {
     val globalConfig = getArtworkConfig()
 
     // Determine effective artwork config: per-route overrides global
@@ -185,20 +184,25 @@ class CoilBitmapLoader(
 
     // If no artwork config, just return the original artwork URL as a simple ImageSource
     if (effectiveArtworkConfig == null) {
-      return track.artwork?.let { ImageSource(uri = it, method = null, headers = null, body = null) }
+      return track.artwork?.let {
+        ImageSource(uri = it, method = null, headers = null, body = null)
+      }
     }
 
     return try {
       // Create base config
-      val baseConfig = globalConfig?.baseConfig ?: RequestConfig(null, null, null, null, null, null, null, null)
+      val baseConfig =
+        globalConfig?.baseConfig ?: RequestConfig(null, null, null, null, null, null, null, null)
 
       // Start with base config, using track.artwork as the default path if present
-      var mergedConfig = if (track.artwork != null) {
-        val urlRequestConfig = RequestConfig(null, track.artwork, null, null, null, null, null, null)
-        RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
-      } else {
-        baseConfig
-      }
+      var mergedConfig =
+        if (track.artwork != null) {
+          val urlRequestConfig =
+            RequestConfig(null, track.artwork, null, null, null, null, null, null)
+          RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
+        } else {
+          baseConfig
+        }
 
       // If there's a resolve callback, call it to get per-track config
       // The resolve callback receives the track and can return:
@@ -233,7 +237,8 @@ class CoilBitmapLoader(
       // Apply transform callback if present
       val transformedConfig =
         if (effectiveArtworkConfig.transform != null) {
-          effectiveArtworkConfig.transform.invoke(mergedConfig, null)?.await()?.await() ?: mergedConfig
+          effectiveArtworkConfig.transform.invoke(mergedConfig, null)?.await()?.await()
+            ?: mergedConfig
         } else {
           mergedConfig
         }
@@ -242,11 +247,12 @@ class CoilBitmapLoader(
       val uri = RequestConfigBuilder.buildUrl(transformedConfig)
 
       // Build headers map, merging explicit headers with userAgent and contentType
-      val headers = buildHeadersMap(
-        transformedConfig.headers?.toMap(),
-        transformedConfig.userAgent,
-        transformedConfig.contentType,
-      )
+      val headers =
+        buildHeadersMap(
+          transformedConfig.headers?.toMap(),
+          transformedConfig.userAgent,
+          transformedConfig.contentType,
+        )
 
       ImageSource(
         uri = uri,
@@ -261,9 +267,7 @@ class CoilBitmapLoader(
     }
   }
 
-  /**
-   * Builds a headers map, merging explicit headers with userAgent and contentType.
-   */
+  /** Builds a headers map, merging explicit headers with userAgent and contentType. */
   private fun buildHeadersMap(
     headers: Map<String, String>?,
     userAgent: String?,
@@ -287,10 +291,11 @@ class CoilBitmapLoader(
     return mergedHeaders.ifEmpty { null }
   }
 
-  /**
-   * Blocking version of [transformArtworkUrlForTrack] for use in synchronous contexts.
-   */
-  fun transformArtworkUrlForTrackBlocking(track: Track, perRouteConfig: MediaRequestConfig? = null): ImageSource? {
+  /** Blocking version of [transformArtworkUrlForTrack] for use in synchronous contexts. */
+  fun transformArtworkUrlForTrackBlocking(
+    track: Track,
+    perRouteConfig: MediaRequestConfig? = null,
+  ): ImageSource? {
     return runBlocking { transformArtworkUrlForTrack(track, perRouteConfig) }
   }
 }

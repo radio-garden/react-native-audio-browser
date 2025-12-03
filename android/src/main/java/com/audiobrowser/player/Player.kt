@@ -18,11 +18,11 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
-import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
+import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.EqualizerManager
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
@@ -90,15 +90,15 @@ class Player(internal val context: Context) {
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
-  /** Set the CoilBitmapLoader for artwork URL transformation. Called from Service after creation. */
+  /**
+   * Set the CoilBitmapLoader for artwork URL transformation. Called from Service after creation.
+   */
   var coilBitmapLoader: CoilBitmapLoader?
     get() = _coilBitmapLoader
     set(value) {
       _coilBitmapLoader = value
       // If browser is already set, wire up the resolver
-      _browser?.let { audioBrowser ->
-        wireUpArtworkResolver(audioBrowser, value)
-      }
+      _browser?.let { audioBrowser -> wireUpArtworkResolver(audioBrowser, value) }
     }
 
   var browser: AudioBrowser?
@@ -133,8 +133,8 @@ class Player(internal val context: Context) {
     }
 
   /**
-   * Wires up the artwork URL resolver between BrowserManager and CoilBitmapLoader.
-   * This enables artwork URL transformation during browse-time (Phase 2).
+   * Wires up the artwork URL resolver between BrowserManager and CoilBitmapLoader. This enables
+   * artwork URL transformation during browse-time (Phase 2).
    */
   private fun wireUpArtworkResolver(audioBrowser: AudioBrowser, loader: CoilBitmapLoader?) {
     val browserManager = audioBrowser.browserManager
