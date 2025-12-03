@@ -6,13 +6,6 @@
 - [ ] Investigate what volume is doing - probably a multiplier on top of system volume (0.0-1.0 range?)
 - [ ] Restore volume in PlaybackStateStore (persist and restore volume level across sessions)
 
-## Battery Optimization
-
-- [ ] Handle `onForegroundServiceStartNotAllowedException` by persisting the event
-- [ ] On next app boot, check if this occurred and surface it to JS (callback or getter)
-- [ ] Let apps prompt users to disable battery optimization for background playback reliability
-- [ ] Reference: `MediaSessionService.Listener.onForegroundServiceStartNotAllowedException()`
-
 ## Voice Search / MEDIA_PLAY_FROM_SEARCH
 
 - [ ] Silent failure in voice search (Service.kt:92-106):
