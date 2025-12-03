@@ -10,7 +10,7 @@ import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.NitroModules
-import com.margelo.nitro.audiobrowser.BrowserConfiguration
+import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -38,15 +38,12 @@ class AudioBrowser : HybridAudioBrowserSpec() {
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
   private var _configuration =
-    BrowserConfiguration(
+    NativeBrowserConfiguration(
       path = null,
       request = null,
       media = null,
       artwork = null,
-      search = null,
       routes = null,
-      tabs = null,
-      browse = null,
       singleTrack = null,
       androidControllerOfflineError = null,
     )
@@ -72,10 +69,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     return BrowserConfig(
       request = _configuration.request,
       media = _configuration.media,
-      search = _configuration.search,
+      artwork = _configuration.artwork,
       routes = _configuration.routes,
-      tabs = _configuration.tabs,
-      browse = _configuration.browse,
       singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
     )
@@ -122,9 +117,8 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   }
 
   private fun hasValidConfiguration(): Boolean {
-    return _configuration.tabs != null ||
-      _configuration.routes?.isNotEmpty() == true ||
-      _configuration.browse != null
+    // Need at least one browsable route (not just search)
+    return _configuration.routes?.any { it.path != BrowserManager.SEARCH_ROUTE_PATH } == true
   }
 
   private fun getDefaultPath(): String? {
@@ -198,7 +192,7 @@ class AudioBrowser : HybridAudioBrowserSpec() {
     get() = browserManager.getTabs()
     set(value) {}
 
-  override var configuration: BrowserConfiguration
+  override var configuration: NativeBrowserConfiguration
     get() = _configuration
     set(value) {
       _configuration = value

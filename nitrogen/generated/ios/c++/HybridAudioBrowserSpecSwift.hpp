@@ -30,16 +30,16 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
-// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `NativeRouteEntry` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
-// Forward declaration of `RouteConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 
 #include <string>
 #include <optional>
@@ -56,12 +56,11 @@ namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 #include <NitroModules/Promise.hpp>
 #include <unordered_map>
 #include "HttpMethod.hpp"
-#include "BrowserSourceCallbackParam.hpp"
-#include <variant>
 #include "MediaRequestConfig.hpp"
+#include "NativeRouteEntry.hpp"
+#include "BrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
 #include "SearchMode.hpp"
-#include "RouteConfig.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -145,10 +144,10 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) noexcept override {
       _swiftPart.setOnNavigationError(onNavigationError);
     }
-    inline BrowserConfiguration getConfiguration() noexcept override {
+    inline NativeBrowserConfiguration getConfiguration() noexcept override {
       return _swiftPart.getConfiguration();
     }
-    inline void setConfiguration(const BrowserConfiguration& configuration) noexcept override {
+    inline void setConfiguration(const NativeBrowserConfiguration& configuration) noexcept override {
       _swiftPart.setConfiguration(std::forward<decltype(configuration)>(configuration));
     }
 

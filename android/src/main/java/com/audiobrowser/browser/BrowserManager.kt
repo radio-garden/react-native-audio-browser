@@ -3,22 +3,18 @@ package com.audiobrowser.browser
 import android.util.LruCache
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
-import com.audiobrowser.SearchSource
-import com.audiobrowser.TabsSource
 import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
-import com.audiobrowser.RouteSource
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
-import com.margelo.nitro.audiobrowser.RouteConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
-import com.margelo.nitro.audiobrowser.Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -340,25 +336,19 @@ class BrowserManager {
   }
 
   private suspend fun resolveUncached(path: String): ResolvedTrack {
-    // Resolve the track from routes or browse fallback
+    // Resolve the track from routes (including wildcard '*' for root browse)
     val resolvedTrack =
       config.routes
         ?.takeUnless { it.isEmpty() }
         ?.let { routes ->
-          router.findBestMatch(path, routes)?.let { (routePattern, match) ->
-            val routeSource = routes[routePattern]!!
-            val routeParams = match.params
-
-            Timber.d("Matched route: $routePattern with params: $routeParams")
-            resolveRouteSource(routeSource, path, routeParams)
+          // Find best matching route
+          findBestRouteMatch(path, routes)?.let { (routeEntry, routeParams) ->
+            Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
+            resolveRouteEntry(routeEntry, path, routeParams)
           }
         }
-        ?: config.browse?.let { browseSource ->
-          Timber.d("No route matched, using browse fallback")
-          resolveBrowseSource(browseSource, path, emptyMap())
-        }
         ?: run {
-          Timber.e("No route matched and no browse fallback configured for path: $path")
+          Timber.e("No route matched for path: $path")
           throw ContentNotFoundException(path)
         }
 
@@ -571,12 +561,7 @@ class BrowserManager {
 
     try {
       // Execute search
-      val searchResults =
-        config.search?.let { searchSource -> resolveSearchSource(searchSource, params) }
-          ?: run {
-            Timber.w("Search requested but no search source configured")
-            emptyArray()
-          }
+      val searchResults = resolveSearch(params)
 
       // Create ResolvedTrack
       val searchResolvedTrack =
@@ -692,12 +677,7 @@ class BrowserManager {
 
     Timber.d("Getting navigation tabs")
 
-    val tabs =
-      (config.tabs?.let { tabsSource -> resolveTabsSource(tabsSource) }
-        ?: run {
-          Timber.d("No tabs configured")
-          emptyArray()
-        })
+    val tabs = resolveTabs()
 
     // Validate tabs have stable identifiers
     tabs.forEachIndexed { index, tab ->
@@ -709,127 +689,123 @@ class BrowserManager {
     return tabs
   }
 
-  /**
-   * Resolve a RouteSource into a ResolvedTrack. Handles the four possible types: callback, static
-   * ResolvedTrack, API config, or RouteConfig.
-   */
-  private suspend fun resolveRouteSource(
-    source: RouteSource,
-    path: String,
-    routeParams: Map<String, String>,
-  ): ResolvedTrack {
-    return source.match(
-      // Callback function
-      first = { callback ->
-        Timber.d("Resolving route source via callback")
-        val param = BrowserSourceCallbackParam(path, routeParams)
-        val promise = callback.invoke(param)
-        val innerPromise = promise.await()
-        innerPromise.await()
-      },
-      // Static ResolvedTrack
-      second = { staticList ->
-        Timber.d("Resolving route source via static list")
-        staticList
-      },
-      // API configuration
-      third = { apiConfig ->
-        Timber.d("Resolving route source via API config")
-        executeApiRequest(apiConfig, path, routeParams)
-      },
-      // RouteConfig with optional browse, media, artwork
-      fourth = { routeConfig ->
-        Timber.d("Resolving route source via RouteConfig")
-        resolveRouteConfig(routeConfig, path, routeParams)
-      },
-    )
+  companion object {
+    /** Internal path used for the default/root browse source */
+    internal const val DEFAULT_ROUTE_PATH = "__default__"
+
+    /** Internal path used for navigation tabs */
+    internal const val TABS_ROUTE_PATH = "__tabs__"
+
+    /** Internal path used for search */
+    internal const val SEARCH_ROUTE_PATH = "__search__"
   }
 
   /**
-   * Resolve a RouteConfig by delegating to its browse source if present.
-   * RouteConfig may also have media/artwork overrides which are handled separately.
+   * Find the best matching route entry for a path.
+   * Uses SimpleRouter for pattern matching, with __default__ as lowest priority fallback.
    */
-  private suspend fun resolveRouteConfig(
-    routeConfig: RouteConfig,
+  private fun findBestRouteMatch(
     path: String,
-    routeParams: Map<String, String>,
-  ): ResolvedTrack {
-    val browseSource = routeConfig.browse
-      ?: throw ContentNotFoundException(path)
-    return resolveBrowseSource(browseSource, path, routeParams)
-  }
+    routes: Array<NativeRouteEntry>,
+  ): Pair<NativeRouteEntry, Map<String, String>>? {
+    // Convert to map for router compatibility, excluding default fallback
+    val routeMap = routes
+      .filter { it.path != DEFAULT_ROUTE_PATH }
+      .associateBy { it.path }
 
-  /** Resolve a BrowseSource (which doesn't include static BrowserList option). */
-  private suspend fun resolveBrowseSource(
-    source: BrowseSource,
-    path: String,
-    routeParams: Map<String, String>,
-  ): ResolvedTrack {
-    return source.match(
-      // Callback function
-      first = { callback ->
-        Timber.d("Resolving browse source via callback")
-        val param = BrowserSourceCallbackParam(path, routeParams)
-        val promise = callback.invoke(param)
-        val innerPromise = promise.await()
-        innerPromise.await()
-      },
-      // Static BrowserList
-      second = { staticList ->
-        Timber.d("Resolving browse source via static list")
-        staticList
-      },
-      // API configuration
-      third = { apiConfig ->
-        Timber.d("Resolving browse source via API config")
-        executeApiRequest(apiConfig, path, routeParams)
-      },
-    )
-  }
+    // Try to find a specific route match
+    router.findBestMatch(path, routeMap)?.let { (routePattern, match) ->
+      val routeEntry = routeMap[routePattern]!!
+      return Pair(routeEntry, match.params)
+    }
 
-  /** Resolve a SearchSource into Track results. */
-  private suspend fun resolveSearchSource(
-    source: SearchSource,
-    params: SearchParams,
-  ): Array<Track> {
-    return source.match(
-      // Callback function
-      first = { callback ->
-        Timber.d("Resolving search source via callback")
-        val promise = callback.invoke(params)
-        val innerPromise = promise.await()
-        innerPromise.await()
-      },
-      // API configuration
-      second = { apiConfig ->
-        Timber.d("Resolving search source via API config")
-        executeSearchApiRequest(apiConfig, params)
-      },
-    )
+    // Fall back to default route if present
+    routes.find { it.path == DEFAULT_ROUTE_PATH }?.let { defaultRoute ->
+      return Pair(defaultRoute, emptyMap())
+    }
+
+    return null
   }
 
   /**
-   * Resolve a TabsSource into BrowserLink array. Handles the three possible types: static array,
-   * callback, or API config.
+   * Resolve a NativeRouteEntry into a ResolvedTrack.
+   * The entry has flattened browse options: callback, config, or static.
    */
-  private suspend fun resolveTabsSource(source: TabsSource): Array<Track> {
-    return source.match(
-      // Callback function
-      first = { callback ->
-        Timber.d("Resolving tabs source via callback")
-        callback.invoke().await().await()
-      },
-      // Static array of BrowserLink
-      second = { staticTabs ->
-        Timber.d("Resolving tabs source via static array")
-        staticTabs
-      },
-      // API configuration
-      third = { apiConfig ->
-        Timber.d("Resolving tabs source via API config")
-        executeTabsApiRequest(apiConfig)
-      },
-    )
+  private suspend fun resolveRouteEntry(
+    entry: NativeRouteEntry,
+    path: String,
+    routeParams: Map<String, String>,
+  ): ResolvedTrack {
+    // Priority: callback > config > static
+    entry.browseCallback?.let { callback ->
+      Timber.d("Resolving route via callback")
+      val param = BrowserSourceCallbackParam(path, routeParams)
+      val promise = callback.invoke(param)
+      val innerPromise = promise.await()
+      return innerPromise.await()
+    }
+
+    entry.browseConfig?.let { apiConfig ->
+      Timber.d("Resolving route via API config")
+      return executeApiRequest(apiConfig, path, routeParams)
+    }
+
+    entry.browseStatic?.let { staticTrack ->
+      Timber.d("Resolving route via static track")
+      return staticTrack
+    }
+
+    throw ContentNotFoundException(path)
+  }
+
+  /**
+   * Resolve search via the __search__ route entry.
+   * The entry has searchCallback or searchConfig.
+   */
+  private suspend fun resolveSearch(params: SearchParams): Array<Track> {
+    val routes = config.routes ?: return emptyArray()
+
+    // Find the __search__ route entry
+    val searchEntry = routes.find { it.path == SEARCH_ROUTE_PATH }
+    if (searchEntry == null) {
+      Timber.w("No search route configured")
+      return emptyArray()
+    }
+
+    searchEntry.searchCallback?.let { callback ->
+      Timber.d("Resolving search via callback")
+      val promise = callback.invoke(params)
+      val innerPromise = promise.await()
+      return innerPromise.await()
+    }
+
+    searchEntry.searchConfig?.let { apiConfig ->
+      Timber.d("Resolving search via API config")
+      return executeSearchApiRequest(apiConfig, params)
+    }
+
+    Timber.w("Search route has no callback or config")
+    return emptyArray()
+  }
+
+  /**
+   * Resolve tabs via the __tabs__ route entry.
+   * Returns children of the resolved track, or empty array if no tabs configured.
+   */
+  private suspend fun resolveTabs(): Array<Track> {
+    val routes = config.routes ?: return emptyArray()
+
+    // Find the __tabs__ route entry
+    val tabsEntry = routes.find { it.path == TABS_ROUTE_PATH }
+    if (tabsEntry == null) {
+      Timber.d("No tabs route configured")
+      return emptyArray()
+    }
+
+    Timber.d("Resolving tabs via route entry")
+    val resolvedTrack = resolveRouteEntry(tabsEntry, TABS_ROUTE_PATH, emptyMap())
+
+    return resolvedTrack.children ?: emptyArray()
   }
 
   /**
@@ -971,65 +947,6 @@ class BrowserManager {
     }
   }
 
-  /**
-   * Execute an API request for tabs. Expects the API to return a BrowserList with BrowserLink
-   * children.
-   */
-  private suspend fun executeTabsApiRequest(apiConfig: TransformableRequestConfig): Array<Track> {
-    return withContext(Dispatchers.IO) {
-      try {
-        // 1. Start with base config
-        val baseConfig =
-          config.request?.let { RequestConfigBuilder.toRequestConfig(it) }
-            ?: RequestConfig(
-              method = null,
-              path = null,
-              baseUrl = null,
-              headers = null,
-              query = null,
-              body = null,
-              contentType = null,
-              userAgent = null,
-            )
-
-        // 2. Merge configs with default path of '/' for tabs
-        val mergedConfig =
-          RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, emptyMap<String, String>())
-
-        // 3. Build and execute HTTP request
-        val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
-        val response = httpClient.request(httpRequest)
-
-        response.fold(
-          onSuccess = { httpResponse ->
-            if (httpResponse.isSuccessful) {
-              // 4. Parse response as ResolvedTrack
-              val jsonResolvedTrack = json.decodeFromString<JsonResolvedTrack>(httpResponse.body)
-              val resolvedTrack = jsonResolvedTrack.toNitro()
-
-              // 5. Extract Track items from the resolved track
-              resolvedTrack.children
-                ?: throw IllegalStateException(
-                  "Expected browsed ResolvedTrack to have a children array"
-                )
-            } else {
-              Timber.w(
-                "Tabs HTTP request failed with status ${httpResponse.code}: ${httpResponse.body}"
-              )
-              emptyArray()
-            }
-          },
-          onFailure = { exception ->
-            Timber.e(exception, "Tabs HTTP request failed")
-            emptyArray()
-          },
-        )
-      } catch (e: Exception) {
-        Timber.e(e, "Error executing tabs API request")
-        emptyArray()
-      }
-    }
-  }
 }
 
 /** Exception thrown when no content is configured for a requested path. */
@@ -1043,20 +960,23 @@ class HttpStatusException(val statusCode: Int, message: String) : Exception(mess
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /**
- * Configuration object that holds all browser settings. This will be passed from AudioBrowser.kt to
- * contain all the configured sources.
+ * Configuration object that holds all browser settings.
+ * Uses flattened structure matching NativeBrowserConfiguration from JS.
  */
-typealias BrowseSource =
-  Variant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig
-
 data class BrowserConfig(
   val request: TransformableRequestConfig? = null,
   val media: MediaRequestConfig? = null,
   val artwork: MediaRequestConfig? = null,
-  val search: SearchSource? = null,
-  val routes: Map<String, RouteSource>? = null,
-  val tabs: TabsSource? = null,
-  val browse: BrowseSource? = null,
+  // Routes as array with flattened entries (includes __tabs__, __search__, and __default__ special routes)
+  val routes: Array<NativeRouteEntry>? = null,
+  // Behavior
   val singleTrack: Boolean = false,
   val androidControllerOfflineError: Boolean = true,
-)
+) {
+  /** Returns true if search functionality is configured (either callback or config). */
+  val hasSearch: Boolean
+    get() {
+      val searchEntry = routes?.find { it.path == BrowserManager.SEARCH_ROUTE_PATH }
+      return searchEntry?.searchCallback != null || searchEntry?.searchConfig != null
+    }
+}

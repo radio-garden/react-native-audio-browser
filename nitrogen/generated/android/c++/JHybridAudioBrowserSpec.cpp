@@ -25,16 +25,16 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
-// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `NativeRouteEntry` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
+// Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
-// Forward declaration of `RouteConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 
 #include <string>
 #include <optional>
@@ -57,7 +57,7 @@ namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 #include "JNavigationError.hpp"
 #include "NavigationErrorType.hpp"
 #include "JNavigationErrorType.hpp"
-#include "JBrowserConfiguration.hpp"
+#include "JNativeBrowserConfiguration.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
@@ -68,25 +68,19 @@ namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
-#include "BrowserSourceCallbackParam.hpp"
-#include <variant>
-#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
-#include "JBrowserSourceCallbackParam.hpp"
 #include "MediaRequestConfig.hpp"
 #include "JMediaRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
+#include "NativeRouteEntry.hpp"
+#include "JNativeRouteEntry.hpp"
+#include "BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
+#include "JBrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
-#include "JVariant__params__SearchParams_____Promise_Promise_Array_Track____TransformableRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JSearchParams.hpp"
 #include "SearchMode.hpp"
 #include "JSearchMode.hpp"
-#include "JVariant_______Promise_Promise_Array_Track____Array_Track__TransformableRequestConfig.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track_____.hpp"
-#include "RouteConfig.hpp"
-#include "JVariant__param__BrowserSourceCallbackParam_____Promise_Promise_ResolvedTrack___ResolvedTrack_TransformableRequestConfig_RouteConfig.hpp"
-#include "JRouteConfig.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -221,14 +215,14 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_NavigationErrorEvent::javaobject> /* onNavigationError */)>("setOnNavigationError_cxx");
     method(_javaPart, JFunc_void_NavigationErrorEvent_cxx::fromCpp(onNavigationError));
   }
-  BrowserConfiguration JHybridAudioBrowserSpec::getConfiguration() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JBrowserConfiguration>()>("getConfiguration");
+  NativeBrowserConfiguration JHybridAudioBrowserSpec::getConfiguration() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JNativeBrowserConfiguration>()>("getConfiguration");
     auto __result = method(_javaPart);
     return __result->toCpp();
   }
-  void JHybridAudioBrowserSpec::setConfiguration(const BrowserConfiguration& configuration) {
-    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JBrowserConfiguration> /* configuration */)>("setConfiguration");
-    method(_javaPart, JBrowserConfiguration::fromCpp(configuration));
+  void JHybridAudioBrowserSpec::setConfiguration(const NativeBrowserConfiguration& configuration) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JNativeBrowserConfiguration> /* configuration */)>("setConfiguration");
+    method(_javaPart, JNativeBrowserConfiguration::fromCpp(configuration));
   }
 
   // Methods

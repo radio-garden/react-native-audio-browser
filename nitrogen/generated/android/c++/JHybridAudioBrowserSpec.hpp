@@ -62,8 +62,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) override;
     std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() override;
     void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) override;
-    BrowserConfiguration getConfiguration() override;
-    void setConfiguration(const BrowserConfiguration& configuration) override;
+    NativeBrowserConfiguration getConfiguration() override;
+    void setConfiguration(const NativeBrowserConfiguration& configuration) override;
 
   public:
     // Methods

@@ -400,3 +400,55 @@ export type BrowserConfiguration = {
    */
   androidControllerOfflineError?: boolean
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Native Configuration Types
+// ─────────────────────────────────────────────────────────────────────────────
+// These types are used internally by the native bridge. They flatten union types
+// into separate optional properties to reduce generated code complexity.
+// Users should use BrowserConfiguration, not these types directly.
+
+/**
+ * Flattened route entry for native bridge.
+ * @internal
+ */
+export interface NativeRouteEntry {
+  path: string
+  // Browse source (flattened)
+  browseCallback?: BrowserSourceCallback
+  browseConfig?: TransformableRequestConfig
+  browseStatic?: ResolvedTrack
+  // Search source (only used for __search__ route)
+  searchCallback?: SearchSourceCallback
+  searchConfig?: TransformableRequestConfig
+  // Per-route media/artwork config
+  media?: MediaRequestConfig
+  artwork?: MediaRequestConfig
+}
+
+/**
+ * Flattened browser configuration for native bridge.
+ * Converts union types to separate optional properties for simpler native code generation.
+ * @internal
+ */
+export interface NativeBrowserConfiguration {
+  path?: string
+
+  // Request defaults
+  request?: TransformableRequestConfig
+
+  // Global media/artwork config (applied when route doesn't override)
+  media?: MediaRequestConfig
+  artwork?: MediaRequestConfig
+
+  // Routes as array - includes:
+  // - Explicit routes from config.routes
+  // - Root browse as __default__ entry
+  // - Tabs as __tabs__ entry (returns ResolvedTrack with children for navigation tabs)
+  // - Search as __search__ entry (has searchCallback or searchConfig)
+  routes?: NativeRouteEntry[]
+
+  // Behavior
+  singleTrack?: boolean
+  androidControllerOfflineError?: boolean
+}

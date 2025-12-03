@@ -356,7 +356,7 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       // Check if search is configured
-      if (browserManager.config.search == null) {
+      if (!browserManager.config.hasSearch) {
         Timber.w("Search requested but no search source configured")
         return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
       }

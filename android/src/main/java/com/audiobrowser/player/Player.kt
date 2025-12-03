@@ -104,7 +104,7 @@ class Player(internal val context: Context) {
         // Update MediaSession commands when browser becomes available with search configured
         // Only update if search is available, since default state is "no search"
         if (::mediaSession.isInitialized) {
-          val searchAvailable = audioBrowser.browserManager.config.search != null
+          val searchAvailable = audioBrowser.browserManager.config.hasSearch
           if (searchAvailable) {
             mediaSessionCallback.updateMediaSession(
               mediaSession,
@@ -1076,7 +1076,7 @@ class Player(internal val context: Context) {
     }
 
     if (capabilitiesChanged || notificationButtonsChanged) {
-      val searchAvailable = browser?.browserManager?.config?.search != null
+      val searchAvailable = browser?.browserManager?.config?.hasSearch ?: false
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,

@@ -19,8 +19,8 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
-// Forward declaration of `BrowserConfiguration` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
+// Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
 // Forward declaration of `NavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 
@@ -31,7 +31,7 @@ namespace margelo::nitro::audiobrowser { struct NavigationError; }
 #include <functional>
 #include "ResolvedTrack.hpp"
 #include "NavigationErrorEvent.hpp"
-#include "BrowserConfiguration.hpp"
+#include "NativeBrowserConfiguration.hpp"
 #include <NitroModules/Promise.hpp>
 #include "NavigationError.hpp"
 
@@ -74,8 +74,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) = 0;
       virtual std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() = 0;
       virtual void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) = 0;
-      virtual BrowserConfiguration getConfiguration() = 0;
-      virtual void setConfiguration(const BrowserConfiguration& configuration) = 0;
+      virtual NativeBrowserConfiguration getConfiguration() = 0;
+      virtual void setConfiguration(const NativeBrowserConfiguration& configuration) = 0;
 
     public:
       // Methods

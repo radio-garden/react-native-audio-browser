@@ -115,7 +115,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
-  abstract var configuration: BrowserConfiguration
+  abstract var configuration: NativeBrowserConfiguration
 
   // Methods
   @DoNotStrip

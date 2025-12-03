@@ -26,8 +26,6 @@ namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent
 namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
-// Forward declaration of `BrowserConfiguration` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct BrowserConfiguration; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `ButtonCapability` to properly resolve imports.
@@ -62,6 +60,10 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
+// Forward declaration of `NativeRouteEntry` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -136,8 +138,6 @@ namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
-// Forward declaration of `RouteConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RouteConfig; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
@@ -169,7 +169,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
-#include "BrowserConfiguration.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "ButtonCapability.hpp"
 #include "Capability.hpp"
@@ -187,6 +186,8 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IOSOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "MediaRequestConfig.hpp"
+#include "NativeBrowserConfiguration.hpp"
+#include "NativeRouteEntry.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorEvent.hpp"
@@ -224,7 +225,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "RequestConfig.hpp"
 #include "ResolvedTrack.hpp"
 #include "RetryConfig.hpp"
-#include "RouteConfig.hpp"
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
 #include "SleepTimerEndOfTrack.hpp"

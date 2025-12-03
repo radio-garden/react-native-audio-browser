@@ -17,7 +17,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onContentChanged: (_ content: ResolvedTrack?) -> Void { get set }
   var onTabsChanged: (_ tabs: [Track]) -> Void { get set }
   var onNavigationError: (_ data: NavigationErrorEvent) -> Void { get set }
-  var configuration: BrowserConfiguration { get set }
+  var configuration: NativeBrowserConfiguration { get set }
 
   // Methods
   func navigatePath(path: String) throws -> Void

@@ -256,7 +256,7 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var configuration: BrowserConfiguration {
+  public final var configuration: NativeBrowserConfiguration {
     @inline(__always)
     get {
       return self.__implementation.configuration
