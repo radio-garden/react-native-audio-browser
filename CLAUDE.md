@@ -17,7 +17,6 @@ This is an **alpha product** - we do not care about breaking changes. Feel free 
 ## Architecture
 
 - Uses **Nitro Modules** most functionality can be sync / blocking in nature
-- Typescript: default to using types over interfaces
 - For user facing callbacks always work with a param object
 
 ## Nitro
