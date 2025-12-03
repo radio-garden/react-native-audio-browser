@@ -88,11 +88,104 @@ export interface RequestConfig {
   userAgent?: string
 }
 
+/**
+ * Request configuration that supports async transformation.
+ * Extends RequestConfig with a transform callback for dynamic request modification.
+ *
+ * The transform callback receives the merged request config and can modify it
+ * before the request is made. This is useful for adding dynamic headers,
+ * signing URLs, or other request-time modifications.
+ *
+ * @example
+ * ```typescript
+ * const config: TransformableRequestConfig = {
+ *   baseUrl: 'https://api.example.com',
+ *   transform: async (request) => ({
+ *     ...request,
+ *     headers: {
+ *       ...request.headers,
+ *       'Authorization': `Bearer ${await getAccessToken()}`
+ *     }
+ *   })
+ * }
+ * ```
+ */
 export interface TransformableRequestConfig extends RequestConfig {
   transform?: RequestConfigTransformer
 }
 
+/**
+ * Configuration for media resource requests (audio streams, artwork images).
+ * Extends TransformableRequestConfig with per-track resolution capabilities.
+ *
+ * Used for both `media` (audio streaming) and `artwork` (image loading) configuration
+ * in BrowserConfiguration.
+ *
+ * ## Configuration Hierarchy
+ *
+ * When a request is made, configs are merged in this order (later overrides earlier):
+ * 1. `request` (base config) - shared settings like user agent, common headers
+ * 2. `media`/`artwork` config - resource-specific settings
+ * 3. `resolve(track)` result - per-track overrides (if provided)
+ * 4. `transform(request)` result - final modifications (if provided)
+ *
+ * ## Usage Patterns
+ *
+ * **Simple CDN configuration:**
+ * ```typescript
+ * media: {
+ *   baseUrl: 'https://audio.cdn.example.com',
+ *   headers: { 'X-API-Key': 'your-api-key' }
+ * }
+ * ```
+ *
+ * **Per-track URL resolution:**
+ * ```typescript
+ * media: {
+ *   resolve: async (track) => ({
+ *     baseUrl: 'https://audio.cdn.example.com',
+ *     path: `/streams/${track.src}`,
+ *     query: { token: await getSignedToken(track.src) }
+ *   })
+ * }
+ * ```
+ *
+ * **Dynamic request signing:**
+ * ```typescript
+ * artwork: {
+ *   baseUrl: 'https://images.cdn.example.com',
+ *   transform: async (request) => ({
+ *     ...request,
+ *     query: { ...request.query, sig: await signUrl(request.path) }
+ *   })
+ * }
+ * ```
+ *
+ * @see BrowserConfiguration.media - Audio stream configuration
+ * @see BrowserConfiguration.artwork - Image/artwork configuration
+ */
 export interface MediaRequestConfig extends TransformableRequestConfig {
+  /**
+   * Per-track request resolution callback.
+   *
+   * Called for each track to generate the final request configuration.
+   * Receives the full Track object, allowing URL generation based on
+   * track metadata (artist, album, src, etc.).
+   *
+   * The returned config is merged with base configs, then passed to
+   * `transform` if provided.
+   *
+   * @param track - The track being requested
+   * @returns Request configuration for this specific track
+   *
+   * @example
+   * ```typescript
+   * resolve: async (track) => ({
+   *   path: `/audio/${track.artist}/${track.album}/${track.src}`,
+   *   query: { quality: 'high' }
+   * })
+   * ```
+   */
   resolve?: (track: Track) => Promise<RequestConfig>
 }
 
@@ -102,6 +195,29 @@ export type BrowserSource =
   | TransformableRequestConfig
 
 export type RouteSource = BrowserSourceCallback | TransformableRequestConfig
+
+/**
+ * Route configuration with per-route media and artwork overrides.
+ *
+ * @example
+ * ```typescript
+ * routes: {
+ *   '/premium': {
+ *     browse: async () => fetchPremiumContent(),
+ *     media: { baseUrl: 'https://premium-audio.cdn.com' },
+ *     artwork: { baseUrl: 'https://premium-images.cdn.com' }
+ *   }
+ * }
+ * ```
+ */
+export type RouteConfig = {
+  /** Override browse config for this route. */
+  browse?: BrowserSource
+  /** Override media config for this route. */
+  media?: MediaRequestConfig
+  /** Override artwork config for this route. */
+  artwork?: MediaRequestConfig
+}
 
 export type TabsSourceCallback = () => Promise<Track[]>
 /**
@@ -128,14 +244,54 @@ export type BrowserConfiguration = {
    */
   path?: string | undefined
 
-  /**
-   * Base request configuration applied to all HTTP requests.
-   * Merged with specific configurations (browse, search, media) where specific settings override base settings.
-   * Useful for shared settings like user agent, common headers / request parameters (e.g., API keys, locale), or base URL.
-   */
-  request?: RequestConfig
+  // ─── Request Defaults (applied to all requests) ────────────────────────────
 
+  /**
+   * Shared request settings applied to all HTTP requests (browse, search, media, artwork).
+   * Specific configs override these defaults.
+   */
+  request?: TransformableRequestConfig
+
+  // ─── Content Configuration ─────────────────────────────────────────────────
+
+  /** Default browse source when no matching route is found. */
+  browse?: BrowserSource
+
+  /** Media/audio stream request configuration. */
   media?: MediaRequestConfig
+
+  /**
+   * Configuration for artwork/image requests.
+   * Used to transform artwork URLs for CDNs that require different authentication tokens,
+   * base URLs, or query parameters than audio requests.
+   *
+   * Artwork URLs are transformed when tracks are processed (before being passed to media controllers
+   * like Android Auto). This is different from media requests which are transformed at playback time.
+   *
+   * Note: Since media controllers load images directly from URLs, HTTP headers cannot be applied
+   * to artwork requests. Use query parameters for authentication tokens if your CDN supports it.
+   *
+   * @example
+   * ```typescript
+   * // Different CDN for images with signed URL parameters
+   * artwork: {
+   *   baseUrl: 'https://images.cdn.example.com',
+   *   query: { token: 'image-auth-token' }
+   * }
+   *
+   * // Per-track artwork URL resolution using track metadata
+   * artwork: {
+   *   resolve: async (track) => ({
+   *     baseUrl: 'https://images.cdn.example.com',
+   *     path: `/covers/${track.artist}/${track.album}.jpg`,
+   *     query: { token: await getSignedToken(track) }
+   *   })
+   * }
+   * ```
+   */
+  artwork?: MediaRequestConfig
+
+  // ─── Navigation ────────────────────────────────────────────────────────────
 
   /**
    * Configuration for search functionality.
@@ -201,29 +357,26 @@ export type BrowserConfiguration = {
   tabs?: TabsSource
 
   /**
-   * Route-specific configurations for handling navigation paths.
-   * Maps URL paths to their corresponding sources (static content, API configs, or callbacks).
+   * Route-specific configurations. Maps URL paths to browse sources.
+   * Routes match by prefix, most specific (most slashes) wins.
    *
-   * Optional - if not provided, all navigation uses the browse fallback.
-   * Routes match paths that start with the route key, with specificity (most slashes wins).
+   * Can be a simple `BrowserSource` or extended `RouteConfig` with media/artwork overrides.
    *
    * @example
    * ```typescript
    * routes: {
-   *   '/favorites': {
-   *     transform: async (request) => ({
-   *       ...request,
-   *       body: JSON.stringify({ ids: await getFavoriteIds() })
-   *     })
-   *   },
+   *   '/favorites': async () => getFavorites(),
    *   '/artists': { baseUrl: 'https://music-api.com' },
-   *   '/artists/premium': { baseUrl: 'https://premium-api.com' } // More specific, wins for /artists/premium/*
+   *   '/premium': {
+   *     browse: { baseUrl: 'https://premium-api.com' },
+   *     artwork: { baseUrl: 'https://premium-images.cdn.com' }
+   *   }
    * }
    * ```
    */
-  routes?: Record<string, BrowserSource>
+  routes?: Record<string, BrowserSource | RouteConfig>
 
-  browse?: BrowserSource
+  // ─── Behavior ──────────────────────────────────────────────────────────────
 
   /**
    * When true, only play the selected track without queuing siblings.
