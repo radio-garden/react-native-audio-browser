@@ -39,8 +39,8 @@ export function TrackListItem({
         )}
       </View>
       {track.src ? (
-        track.artwork ? (
-          <Image source={{ uri: track.artwork }} style={styles.itemArtwork} />
+        track.artworkSource ? (
+          <Image source={track.artworkSource} style={styles.itemArtwork} />
         ) : (
           <Icon name="music" size={16} color="#ffffff" iconStyle="solid" />
         )
