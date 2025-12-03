@@ -15,15 +15,16 @@ graph TD
         AP[AudioPlayer.kt]
         ABP[AudioBrowserPackage.kt]
         CB[Callbacks.kt]
-        TA[TypeAliases.kt]
     end
 
     subgraph "Browser System"
         BM[BrowserManager.kt<br/>- Route Resolution<br/>- LRU Track Cache<br/>- Contextual URLs<br/>- Favorite Hydration]
+        BC[BrowserConfig<br/>- Flattened Config<br/>- Route Entries]
         SR[SimpleRouter.kt]
         JM[JsonModels.kt]
         RM[RouteMatch.kt]
         BPH[BrowserPathHelper.kt<br/>- Contextual URL Building<br/>- Special Paths]
+        EX[Exceptions<br/>- ContentNotFoundException<br/>- HttpStatusException<br/>- NetworkException]
     end
 
     subgraph "HTTP Layer"
@@ -63,7 +64,7 @@ graph TD
         PSO[PlayerSetupOptions.kt]
         PUO[PlayerUpdateOptions.kt]
         TM[TimedMetadata.kt]
-        BC[BufferConfig]
+        BFC[BufferConfig]
     end
 
     subgraph "Utilities"
@@ -74,6 +75,13 @@ graph TD
         RF[RatingFactory.kt]
         RMF[RepeatModeFactory.kt]
         AACTF[AndroidAudioContentTypeFactory.kt]
+        MEB[MediaExtrasBuilder.kt<br/>- Android Auto Styling<br/>- Content Style Mapping]
+        CBL[CoilBitmapLoader.kt<br/>- Custom Headers<br/>- SVG Support<br/>- Artwork Transform]
+    end
+
+    subgraph "Extensions"
+        NEX[NumberExt.kt<br/>- toSeconds/toMilliseconds]
+        EEX[EnumExtensions.kt<br/>- find by value]
     end
 
     subgraph "Media3 Framework"
@@ -87,11 +95,13 @@ graph TD
     JS --> AP
 
     AB --> BM
+    BM --> BC
     BM --> SR
     BM --> RM
     BM --> HC
     BM --> JM
     BM --> BPH
+    BM --> EX
     HC --> RCB
 
     AP --> P
@@ -107,6 +117,7 @@ graph TD
     P --> ST
     P --> EM
     P --> NCM
+    P --> CBL
 
     MF --> RLEHP
 
@@ -118,6 +129,7 @@ graph TD
     S --> MS
     S --> MLB
     S --> HTS
+    S --> CBL
 
     P --> M3
     MS --> M3
@@ -129,12 +141,18 @@ graph TD
 
     %% Factory Usage
     TF --> M3
+    TF --> MEB
     RTF --> M3
+    RTF --> MEB
     MA --> M3
     PSF --> P
     RF --> P
     RMF --> P
     AACTF --> P
+
+    %% Artwork Loading Flow
+    CBL -->|URL Transform| RCB
+    CBL -->|Artwork Config| AB
 
     %% Configuration Flow
     AB -.->|Media Config| AP
@@ -155,16 +173,18 @@ graph TD
     classDef model fill:#fff9c4
     classDef util fill:#f1f8e9
     classDef media3 fill:#e0e0e0
+    classDef extension fill:#e3f2fd
 
-    class AB,AP,ABP,CB,TA nitro
-    class BM,SR,JM,RM,BPH browser
+    class AB,AP,ABP,CB nitro
+    class BM,BC,SR,JM,RM,BPH,EX browser
     class HC,RCB http
     class P,MF,MSC,MSCM,PPUM,PL,PSS player
     class DLC,ABM,RLEHP buffer
     class ST,EM,NCM audio
     class S,HTS service
-    class PM,PSO,PUO,TM,BC model
-    class TF,RTF,MA,PSF,RF,RMF,AACTF util
+    class PM,PSO,PUO,TM,BFC model
+    class TF,RTF,MA,PSF,RF,RMF,AACTF,MEB,CBL util
+    class NEX,EEX extension
     class M3,MS,MLB media3
 ```
 
@@ -175,7 +195,6 @@ graph TD
 - **AudioPlayer.kt**: Main Nitro module for audio playback, manages Player lifecycle
 - **AudioBrowserPackage.kt**: React Native package registration
 - **Callbacks.kt**: Interface defining all player event callbacks for JS communication
-- **TypeAliases.kt**: Readable type aliases for generated Nitro variant types
 
 ### Browser System
 - **BrowserManager.kt**: Core navigation logic with LRU cache system
@@ -186,6 +205,10 @@ graph TD
   - Track validation ensuring stable identifiers
   - Favorite hydration from native favorites cache
   - Queue expansion from contextual URLs for Android Auto
+- **BrowserConfig**: Data class holding all browser settings
+  - Flattened structure matching NativeBrowserConfiguration from JS
+  - Contains routes array with special routes (__tabs__, __search__, __default__)
+  - Behavior flags: singleTrack, androidControllerOfflineError
 - **SimpleRouter.kt**: Client-side route matching with parameter extraction
 - **JsonModels.kt**: JSON serialization models for API responses
 - **RouteMatch.kt**: Data class for route matching results
@@ -193,6 +216,10 @@ graph TD
   - Special system paths: `/__root`, `/__recent`, `/__search?q=`, `/__offline`
   - Contextual URL building: `{parentPath}?__trackId={trackSrc}`
   - URL construction with proper slash handling
+- **Exceptions**: Custom exception types for browser errors
+  - `ContentNotFoundException`: No content configured for requested path
+  - `HttpStatusException`: HTTP request failed with non-2xx status
+  - `NetworkException`: Network request failed (connection error, timeout)
 
 ### HTTP Layer
 - **HttpClient.kt**: OkHttp wrapper for API requests
@@ -272,6 +299,22 @@ graph TD
 - **RatingFactory.kt**: Handles rating conversions between Media3 and Nitro
 - **RepeatModeFactory.kt**: Maps repeat mode between Nitro and Media3
 - **AndroidAudioContentTypeFactory.kt**: Maps audio content types
+- **MediaExtrasBuilder.kt**: Builds MediaMetadata extras for Android Auto/AAOS
+  - Maps TrackStyle to MediaConstants content style values
+  - Handles android.resource:// URIs with category variants for icons
+  - Group title, single item style, browsable/playable children style
+- **CoilBitmapLoader.kt**: Custom BitmapLoader using Coil for image loading
+  - Custom HTTP headers support for authenticated CDNs
+  - SVG support via coil-svg
+  - Artwork URL transformation with resolve/transform callbacks
+  - Returns ImageSource with uri, headers, method, body for React Native
+
+### Extensions
+- **NumberExt.kt**: Numeric conversion extensions
+  - `toSeconds()`: Convert milliseconds to seconds
+  - `toMilliseconds()`: Convert seconds to milliseconds
+- **EnumExtensions.kt**: Enum utility extensions
+  - `find()`: Find enum value by property lookup
 
 ## Data Flow
 
@@ -363,6 +406,16 @@ graph TD
 4. **BrowserPathHelper.buildUrl()** combines baseUrl with path
 5. HTTP headers and authentication applied to DataSource
 6. Optional disk caching via **SimpleCache**
+
+### Artwork URL Transformation
+1. **Service.kt** creates **CoilBitmapLoader** with artwork config callback
+2. **CoilBitmapLoader** receives artwork URLs from Media3 notifications
+3. For each URL, calls `getArtworkConfig()` to get current configuration
+4. **RequestConfigBuilder** merges base config with artwork-specific config
+5. If `resolve` callback configured: calls JS to get per-track config
+6. If `transform` callback configured: allows final URL manipulation
+7. Returns transformed URL with custom headers for Coil to load
+8. For JS-side tracks: `transformArtworkUrlForTrack()` returns **ImageSource** with full request details
 
 ## Threading Model
 
