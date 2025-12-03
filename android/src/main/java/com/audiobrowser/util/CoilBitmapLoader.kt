@@ -169,40 +169,59 @@ class CoilBitmapLoader(
    * support custom headers. Use query parameters for authentication instead.
    *
    * @param track The track whose artwork URL should be transformed
-   * @return The transformed artwork URL, or null if track has no artwork
+   * @param perRouteConfig Optional per-route artwork config that overrides global config
+   * @return The transformed artwork URL, or null if resolve returns undefined or track has no artwork and no resolve callback
    */
-  suspend fun transformArtworkUrlForTrack(track: Track): String? {
-    val artworkUrl = track.artwork ?: return null
+  suspend fun transformArtworkUrlForTrack(track: Track, perRouteConfig: MediaRequestConfig? = null): String? {
+    val globalConfig = getArtworkConfig()
 
-    val config = getArtworkConfig()
-    if (config == null || config.artworkConfig == null) {
-      return artworkUrl
+    // Determine effective artwork config: per-route overrides global
+    val effectiveArtworkConfig = perRouteConfig ?: globalConfig?.artworkConfig
+
+    // If no artwork config and no track.artwork, nothing to transform
+    if (effectiveArtworkConfig == null && track.artwork == null) {
+      return null
+    }
+
+    // If no artwork config, just return the original artwork URL
+    if (effectiveArtworkConfig == null) {
+      return track.artwork
     }
 
     return try {
-      val artworkConfig = config.artworkConfig
+      // Create base config
+      val baseConfig = globalConfig?.baseConfig ?: RequestConfig(null, null, null, null, null, null, null, null)
 
-      // Create base config with original URL as path
-      val baseConfig =
-        config.baseConfig ?: RequestConfig(null, null, null, null, null, null, null, null)
-
-      val urlRequestConfig = RequestConfig(null, artworkUrl, null, null, null, null, null, null)
-      var mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
+      // Start with base config, using track.artwork as the default path if present
+      var mergedConfig = if (track.artwork != null) {
+        val urlRequestConfig = RequestConfig(null, track.artwork, null, null, null, null, null, null)
+        RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
+      } else {
+        baseConfig
+      }
 
       // If there's a resolve callback, call it to get per-track config
-      val resolvedConfig = artworkConfig.resolve?.invoke(track)?.await()?.await()
+      // The resolve callback receives the track and can return:
+      // - RequestConfig with path/query/etc for URL generation
+      // - undefined to indicate no artwork
+      val resolvedConfig = effectiveArtworkConfig.resolve?.invoke(track)?.await()?.await()
+
+      // If resolve callback exists and returned null, that means no artwork
+      if (effectiveArtworkConfig.resolve != null && resolvedConfig == null) {
+        return null
+      }
 
       // Apply artwork base config (static fields only, not resolve)
       val artworkStaticConfig =
         RequestConfig(
-          artworkConfig.method,
-          artworkConfig.path,
-          artworkConfig.baseUrl,
-          artworkConfig.headers,
-          artworkConfig.query,
-          artworkConfig.body,
-          artworkConfig.contentType,
-          artworkConfig.userAgent,
+          effectiveArtworkConfig.method,
+          effectiveArtworkConfig.path,
+          effectiveArtworkConfig.baseUrl,
+          effectiveArtworkConfig.headers,
+          effectiveArtworkConfig.query,
+          effectiveArtworkConfig.body,
+          effectiveArtworkConfig.contentType,
+          effectiveArtworkConfig.userAgent,
         )
       mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, artworkStaticConfig)
 
@@ -213,8 +232,8 @@ class CoilBitmapLoader(
 
       // Apply transform callback if present
       val transformedConfig =
-        if (artworkConfig.transform != null) {
-          artworkConfig.transform.invoke(mergedConfig, null)?.await()?.await() ?: mergedConfig
+        if (effectiveArtworkConfig.transform != null) {
+          effectiveArtworkConfig.transform.invoke(mergedConfig, null)?.await()?.await() ?: mergedConfig
         } else {
           mergedConfig
         }
@@ -223,14 +242,15 @@ class CoilBitmapLoader(
       RequestConfigBuilder.buildUrl(transformedConfig)
     } catch (e: Exception) {
       Timber.e(e, "Failed to transform artwork URL for track: ${track.title}")
-      artworkUrl
+      // On error, return null to clear artwork and avoid broken images
+      null
     }
   }
 
   /**
    * Blocking version of [transformArtworkUrlForTrack] for use in synchronous contexts.
    */
-  fun transformArtworkUrlForTrackBlocking(track: Track): String? {
-    return runBlocking { transformArtworkUrlForTrack(track) }
+  fun transformArtworkUrlForTrackBlocking(track: Track, perRouteConfig: MediaRequestConfig? = null): String? {
+    return runBlocking { transformArtworkUrlForTrack(track, perRouteConfig) }
   }
 }

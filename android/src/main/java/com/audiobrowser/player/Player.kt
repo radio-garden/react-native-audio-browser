@@ -18,6 +18,7 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
+import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -87,6 +88,18 @@ class Player(internal val context: Context) {
 
   private var _browser: AudioBrowser? = null
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
+  private var _coilBitmapLoader: CoilBitmapLoader? = null
+
+  /** Set the CoilBitmapLoader for artwork URL transformation. Called from Service after creation. */
+  var coilBitmapLoader: CoilBitmapLoader?
+    get() = _coilBitmapLoader
+    set(value) {
+      _coilBitmapLoader = value
+      // If browser is already set, wire up the resolver
+      _browser?.let { audioBrowser ->
+        wireUpArtworkResolver(audioBrowser, value)
+      }
+    }
 
   var browser: AudioBrowser?
     get() = _browser
@@ -114,8 +127,27 @@ class Player(internal val context: Context) {
             )
           }
         }
+        // Wire up artwork URL resolver if CoilBitmapLoader is available
+        wireUpArtworkResolver(audioBrowser, _coilBitmapLoader)
       }
     }
+
+  /**
+   * Wires up the artwork URL resolver between BrowserManager and CoilBitmapLoader.
+   * This enables artwork URL transformation during browse-time (Phase 2).
+   */
+  private fun wireUpArtworkResolver(audioBrowser: AudioBrowser, loader: CoilBitmapLoader?) {
+    val browserManager = audioBrowser.browserManager
+    if (loader != null) {
+      Timber.d("Wiring up artwork URL resolver")
+      browserManager.artworkUrlResolver = { track, perRouteConfig ->
+        loader.transformArtworkUrlForTrack(track, perRouteConfig)
+      }
+    } else {
+      Timber.d("CoilBitmapLoader not available - artwork URL transformation disabled")
+      browserManager.artworkUrlResolver = null
+    }
+  }
 
   /**
    * Suspends until the browser is registered, with a timeout.

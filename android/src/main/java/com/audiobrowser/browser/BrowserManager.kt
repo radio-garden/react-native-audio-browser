@@ -16,6 +16,9 @@ import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import timber.log.Timber
@@ -87,6 +90,13 @@ class BrowserManager {
    * updated dynamically when the configuration changes.
    */
   var config: BrowserConfig = BrowserConfig()
+
+  /**
+   * Callback to transform artwork URLs for tracks.
+   * Takes a track and optional per-route artwork config, returns transformed URL or null.
+   * Injected by AudioBrowser when artwork config is set.
+   */
+  var artworkUrlResolver: (suspend (Track, MediaRequestConfig?) -> String?)? = null
 
   /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
@@ -336,53 +346,108 @@ class BrowserManager {
   }
 
   private suspend fun resolveUncached(path: String): ResolvedTrack {
-    // Resolve the track from routes (including wildcard '*' for root browse)
-    val resolvedTrack =
-      config.routes
-        ?.takeUnless { it.isEmpty() }
-        ?.let { routes ->
-          // Find best matching route
-          findBestRouteMatch(path, routes)?.let { (routeEntry, routeParams) ->
-            Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
-            resolveRouteEntry(routeEntry, path, routeParams)
-          }
-        }
-        ?: run {
-          Timber.e("No route matched for path: $path")
-          throw ContentNotFoundException(path)
-        }
+    val routes = config.routes
+    if (routes.isNullOrEmpty()) {
+      Timber.e("No routes configured for path: $path")
+      throw ContentNotFoundException(path)
+    }
 
-    // Transform children: generate contextual URLs for playable-only tracks
-    val transformedChildren =
-      resolvedTrack.children?.mapIndexed { index, track ->
-        // Validate that track has stable identifier
-        validateTrack(track, "Child track")
-
-        // Only generate contextual URLs for playable-only tracks (no url, just src)
-        // Browsable tracks keep their original url
-        if (track.url != null) {
-          // Track is browsable - keep original url
-          Timber.d("[$path] Child[$index] '${track.title}': Browsable with url=${track.url}")
-          track
-        } else {
-          // Track is playable-only - generate contextual URL for Media3
-          // Safe to use !! because validateTrack ensures (url != null || src != null)
-          val contextualUrl = BrowserPathHelper.build(path, track.src!!)
-          val trackWithContextualUrl = track.copy(url = contextualUrl)
-
-          Timber.d(
-            "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
-          )
-
-          trackWithContextualUrl
-        }
+    // Find best matching route
+    val (routeEntry, routeParams) = findBestRouteMatch(path, routes)
+      ?: run {
+        Timber.e("No route matched for path: $path")
+        throw ContentNotFoundException(path)
       }
+
+    Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
+
+    // Resolve the track from the route
+    val resolvedTrack = resolveRouteEntry(routeEntry, path, routeParams)
+
+    // Get effective artwork config: per-route overrides global
+    val effectiveArtworkConfig = routeEntry.artwork ?: config.artwork
+
+    // Transform children: generate contextual URLs and transform artwork URLs
+    val transformedChildren = resolvedTrack.children?.let { children ->
+      coroutineScope {
+        children.mapIndexed { index, track ->
+          async {
+            // Validate that track has stable identifier
+            validateTrack(track, "Child track")
+
+            var transformedTrack = track
+
+            // Generate contextual URLs for playable-only tracks (no url, just src)
+            if (track.url == null) {
+              // Track is playable-only - generate contextual URL for Media3
+              // Safe to use !! because validateTrack ensures (url != null || src != null)
+              val contextualUrl = BrowserPathHelper.build(path, track.src!!)
+              transformedTrack = transformedTrack.copy(url = contextualUrl)
+
+              Timber.d(
+                "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
+              )
+            } else {
+              Timber.d("[$path] Child[$index] '${track.title}': Browsable with url=${track.url}")
+            }
+
+            // Transform artwork URL if resolver is configured
+            val resolver = artworkUrlResolver
+            if (resolver != null) {
+              transformedTrack = transformArtworkUrl(transformedTrack, effectiveArtworkConfig, resolver, path, index)
+            }
+
+            transformedTrack
+          }
+        }.awaitAll()
+      }
+    }
 
     // Return resolved track with transformed children
     return if (transformedChildren != null) {
       resolvedTrack.copy(children = transformedChildren.toTypedArray())
     } else {
       resolvedTrack
+    }
+  }
+
+  /**
+   * Transforms a track's artwork URL using the configured resolver.
+   * Handles all edge cases: undefined returns, errors, missing artwork.
+   */
+  private suspend fun transformArtworkUrl(
+    track: Track,
+    artworkConfig: MediaRequestConfig?,
+    resolver: suspend (Track, MediaRequestConfig?) -> String?,
+    path: String,
+    index: Int,
+  ): Track {
+    // No artwork config and no track.artwork - nothing to transform
+    if (artworkConfig == null && track.artwork == null) {
+      return track
+    }
+
+    return try {
+      val transformedUrl = resolver(track, artworkConfig)
+
+      when {
+        // resolve returned undefined → no artwork
+        transformedUrl == null -> {
+          Timber.d("[$path] Child[$index] '${track.title}': Artwork resolver returned null, clearing artwork")
+          track.copy(artwork = null)
+        }
+        // resolve returned a URL → use it
+        transformedUrl != track.artwork -> {
+          Timber.d("[$path] Child[$index] '${track.title}': Artwork transformed: ${track.artwork} → $transformedUrl")
+          track.copy(artwork = transformedUrl)
+        }
+        // URL unchanged
+        else -> track
+      }
+    } catch (e: Exception) {
+      // resolve threw → log error, clear artwork to avoid broken images
+      Timber.e(e, "[$path] Child[$index] '${track.title}': Artwork transform failed, clearing artwork")
+      track.copy(artwork = null)
     }
   }
 

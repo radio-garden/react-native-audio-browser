@@ -17,6 +17,8 @@ import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
 import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
@@ -76,10 +78,16 @@ class Service : MediaLibraryService() {
     player = Player(this)
     player.setup(PlayerSetupOptions())
 
-    // Create shared Coil ImageLoader with SVG support
+    // Create shared Coil ImageLoader with SVG support and disk caching
+    // Disk cache uses Coil defaults: 2% of disk space, max ~250MB
     imageLoader =
       ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
+        .diskCache {
+          DiskCache.Builder()
+            .directory(cacheDir.resolve("artwork"))
+            .build()
+        }
         .build()
 
     // Create CoilBitmapLoader for artwork loading with custom headers/auth support
@@ -89,6 +97,9 @@ class Service : MediaLibraryService() {
         imageLoader = imageLoader,
         getArtworkConfig = { player.browser?.getArtworkConfig() },
       )
+
+    // Store reference in Player for artwork URL transformation during browsing
+    player.coilBitmapLoader = coilBitmapLoader
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
