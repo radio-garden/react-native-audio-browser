@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import typedocSidebar from '../api/typedoc-sidebar.json'
 
 export default defineConfig({
   title: 'Audio Browser',
@@ -8,10 +9,14 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
 
+  ignoreDeadLinks: true,
+
   themeConfig: {
     search: {
       provider: 'local'
     },
+
+    outline: false,
 
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
@@ -35,16 +40,7 @@ export default defineConfig({
           ]
         }
       ],
-      '/api/': [
-        {
-          text: 'API Reference',
-          items: [
-            { text: 'Overview', link: '/api/' },
-            { text: 'Track', link: '/api/track' },
-            { text: 'Events', link: '/api/events' }
-          ]
-        }
-      ]
+      '/api/': typedocSidebar
     },
 
     socialLinks: [

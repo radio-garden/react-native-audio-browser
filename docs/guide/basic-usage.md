@@ -1,3 +1,3 @@
-# API Reference
+# Basic Usage
 
 Documentation coming soon.

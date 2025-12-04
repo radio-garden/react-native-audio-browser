@@ -4,10 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "vitepress dev",
-    "build": "vitepress build",
-    "preview": "vitepress preview"
+    "build": "bun run typedoc && vitepress build",
+    "preview": "vitepress preview",
+    "typedoc": "typedoc && bun scripts/transform-sidebar.ts && bun scripts/clean-markdown.ts"
   },
   "devDependencies": {
+    "typedoc": "^0.28.15",
+    "typedoc-plugin-markdown": "^4.9.0",
+    "typedoc-vitepress-theme": "^1.1.2",
     "vitepress": "^1.6.4"
   }
 }

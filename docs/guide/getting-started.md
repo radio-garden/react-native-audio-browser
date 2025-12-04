@@ -2,11 +2,25 @@
 
 ## Installation
 
-```bash
+::: code-group
+
+```bash [npm]
 npm install react-native-audio-browser react-native-nitro-modules
-# or
+```
+
+```bash [yarn]
 yarn add react-native-audio-browser react-native-nitro-modules
 ```
+
+```bash [pnpm]
+pnpm add react-native-audio-browser react-native-nitro-modules
+```
+
+```bash [bun]
+bun add react-native-audio-browser react-native-nitro-modules
+```
+
+:::
 
 ## Basic Setup
 
