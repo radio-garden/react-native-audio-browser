@@ -1,0 +1,53 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["../src/features/*.ts", "../src/features/*/index.ts", "../src/types/*.ts"],
+  "entryPointStrategy": "expand",
+  "exclude": ["**/features/index.ts"],
+  "out": "./api",
+  "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme", "./plugins/sort-by-base-name.ts"],
+  "outputFileStrategy": "members",
+  "membersWithOwnFile": [],
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "disableSources": true,
+  "useCodeBlocks": true,
+  "entryFileName": "index",
+  "excludeNotDocumented": false,
+  "sort": ["source-order"],
+  "excludeGroups": true,
+  "docsRoot": ".",
+  "sidebar": {
+    "autoConfiguration": true,
+    "pretty": true
+  },
+  "textContentMappings": {
+    "title.indexPage": "API Reference",
+    "title.modulePage": "{name}"
+  },
+  "indexFormat": "table",
+  "parametersFormat": "table",
+  "typeDeclarationFormat": "table",
+  "interfacePropertiesFormat": "table",
+  "classPropertiesFormat": "table",
+  "enumMembersFormat": "table",
+  "propertyMembersFormat": "table",
+  "tableColumnSettings": {
+    "hideModifiers": true,
+    "hideOverrides": true,
+    "hideInherited": true
+  },
+  "blockTags": [
+    "@default",
+    "@defaultValue",
+    "@deprecated",
+    "@example",
+    "@param",
+    "@privateRemarks",
+    "@remarks",
+    "@returns",
+    "@see",
+    "@throws",
+    "@platform",
+    "@sidebar"
+  ]
+}
