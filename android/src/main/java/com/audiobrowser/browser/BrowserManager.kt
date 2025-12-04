@@ -543,6 +543,26 @@ class BrowserManager {
   }
 
   /**
+   * Refresh the current path's content without changing navigation state.
+   * Used for background refreshes (e.g., when content changes via notifyContentChanged).
+   * Errors are silently ignored since this is a best-effort refresh.
+   */
+  suspend fun refresh() {
+    val currentPath = path
+    Timber.d("Refreshing content for path: $currentPath")
+
+    try {
+      val content = resolve(currentPath)
+      // Only update if still on the same path (user didn't navigate away)
+      if (path == currentPath) {
+        this.content = content
+      }
+    } catch (e: Exception) {
+      Timber.e(e, "Error refreshing content for path: $currentPath")
+    }
+  }
+
+  /**
    * Get cached search results for a query. Used by Media3 onGetSearchResult() callback to retrieve
    * previously executed search.
    *

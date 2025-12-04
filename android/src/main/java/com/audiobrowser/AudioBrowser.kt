@@ -408,7 +408,14 @@ class AudioBrowser : HybridAudioBrowserSpec() {
 
   override fun notifyContentChanged(path: String) {
     Timber.d("Notifying content changed for path: $path")
+
+    // Notify external media controllers (Android Auto)
     audioPlayer?.player?.notifyContentChanged(path)
+
+    // If we're currently viewing this path, refresh the content
+    if (browserManager.getPath() == path) {
+      mainScope.launch { browserManager.refresh() }
+    }
   }
 
   override fun setFavorites(favorites: Array<String>) {
