@@ -79,6 +79,11 @@ class BrowserManager {
   // LRU cache for individual tracks - keyed by both url and src for O(1) lookup
   private val trackCache = LruCache<String, Track>(3000)
 
+  // LRU cache for resolved content - keyed by path
+  // Keeps recently visited paths cached for fast back navigation and tab switching
+  // Invalidated via invalidateContentCache() when content changes
+  private val contentCache = LruCache<String, ResolvedTrack>(20)
+
   // Cache for search results - keyed by query string
   private var lastSearchQuery: String? = null
   private var lastSearchResults: Array<Track>? = null
@@ -326,8 +331,8 @@ class BrowserManager {
     }
   }
 
-  suspend fun resolve(path: String): ResolvedTrack {
-    Timber.d("=== RESOLVE: path='$path' ===")
+  suspend fun resolve(path: String, useCache: Boolean = true): ResolvedTrack {
+    Timber.d("=== RESOLVE: path='$path' (useCache=$useCache) ===")
 
     // Strip __trackId from contextual URLs (e.g., "/library/radio?__trackId=song.mp3" →
     // "/library/radio")
@@ -337,13 +342,40 @@ class BrowserManager {
       Timber.d("Stripped __trackId from contextual URL: '$normalizedPath'")
     }
 
-    // Always fetch fresh data for navigation (no stale data)
+    // Check content cache first
+    if (useCache) {
+      contentCache.get(normalizedPath)?.let { cached ->
+        Timber.d("Content cache HIT for path='$normalizedPath'")
+        // Re-hydrate favorites in case they changed since caching
+        return hydrateChildren(cached)
+      }
+      Timber.d("Content cache MISS for path='$normalizedPath'")
+    }
+
     val resolvedTrack = resolveUncached(normalizedPath)
+
+    // Cache the resolved content for future navigation
+    contentCache.put(normalizedPath, resolvedTrack)
 
     // Cache children for Media3 track lookups (getCachedTrack)
     cacheChildren(resolvedTrack)
 
     return hydrateChildren(resolvedTrack)
+  }
+
+  /**
+   * Invalidates the content cache for a specific path.
+   * Called when content at that path has changed (e.g., via notifyContentChanged).
+   *
+   * @param path The container path to invalidate (e.g., "/library/radio")
+   * @throws IllegalArgumentException if passed a contextual URL (contains __trackId)
+   */
+  fun invalidateContentCache(path: String) {
+    require(!BrowserPathHelper.isContextual(path)) {
+      "invalidateContentCache() expects a container path, not a contextual URL: $path"
+    }
+    contentCache.remove(path)
+    Timber.d("Invalidated content cache for path='$path'")
   }
 
   private suspend fun resolveUncached(path: String): ResolvedTrack {
@@ -545,14 +577,14 @@ class BrowserManager {
   /**
    * Refresh the current path's content without changing navigation state.
    * Used for background refreshes (e.g., when content changes via notifyContentChanged).
-   * Errors are silently ignored since this is a best-effort refresh.
+   * Bypasses content cache to fetch fresh data. Errors are silently ignored.
    */
   suspend fun refresh() {
     val currentPath = path
     Timber.d("Refreshing content for path: $currentPath")
 
     try {
-      val content = resolve(currentPath)
+      val content = resolve(currentPath, useCache = false)
       // Only update if still on the same path (user didn't navigate away)
       if (path == currentPath) {
         this.content = content

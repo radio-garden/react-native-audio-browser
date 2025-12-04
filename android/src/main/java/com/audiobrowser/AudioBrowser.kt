@@ -409,6 +409,9 @@ class AudioBrowser : HybridAudioBrowserSpec() {
   override fun notifyContentChanged(path: String) {
     Timber.d("Notifying content changed for path: $path")
 
+    // Invalidate cached content so future navigations fetch fresh data
+    browserManager.invalidateContentCache(path)
+
     // Notify external media controllers (Android Auto)
     audioPlayer?.player?.notifyContentChanged(path)
 
