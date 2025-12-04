@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
+import { prefixOrder } from './base-name'
 
 interface SidebarItem {
   text: string
@@ -51,8 +52,8 @@ function parseSourceForNames(content: string, subpath?: string): ParsedFunction[
     const jsdoc = match[1] || ''
     const name = match[2] || match[3]
 
-    // Skip if marked with @nosidebar or @internal
-    if (jsdoc.includes('@nosidebar') || jsdoc.includes('@internal')) {
+    // Skip if marked with @internal
+    if (jsdoc.includes('@internal')) {
       continue
     }
 
@@ -82,17 +83,25 @@ function getBaseName(name: string): string {
   return base.charAt(0).toUpperCase() + base.slice(1).replace(/([A-Z])/g, ' $1')
 }
 
-// Get the best function for a base name (prefer use > get > set > handle > on > other)
+// Get the best function for a base name
+// Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > (no prefix, uppercase)
 function getBestFunction(baseName: string, allFuncs: ParsedFunction[]): ParsedFunction | undefined {
   const normalized = baseName.replace(/ /g, '').toLowerCase()
 
-  // Priority order for anchor selection (must match typedoc plugin)
-  const prefixes = ['use', 'get', 'set', 'update', 'toggle', 'handle', 'on', 'has', '']
-  for (const prefix of prefixes) {
+  // First: exact lowercase match (method with no prefix)
+  const exactMatch = allFuncs.find(f => f.name.toLowerCase() === normalized && /^[a-z]/.test(f.name))
+  if (exactMatch) return exactMatch
+
+  // Then: prefixed lowercase matches (methods)
+  for (const prefix of prefixOrder) {
     const candidate = prefix + normalized
-    const match = allFuncs.find(f => f.name.toLowerCase() === candidate)
+    const match = allFuncs.find(f => f.name.toLowerCase() === candidate && /^[a-z]/.test(f.name))
     if (match) return match
   }
+
+  // Last: uppercase matches (types)
+  const typeMatch = allFuncs.find(f => f.name.toLowerCase() === normalized && /^[A-Z]/.test(f.name))
+  if (typeMatch) return typeMatch
 
   // Fallback: find any name containing this base
   return allFuncs.find(f => f.name.toLowerCase().includes(normalized))
