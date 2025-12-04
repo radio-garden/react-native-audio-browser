@@ -381,15 +381,15 @@ class BrowserManager {
 
                 var transformedTrack = track
 
-                // Generate contextual URLs for playable-only tracks (no url, just src)
-                if (track.url == null) {
-                  // Track is playable-only - generate contextual URL for Media3
-                  // Safe to use !! because validateTrack ensures (url != null || src != null)
-                  val contextualUrl = BrowserPathHelper.build(path, track.src!!)
+                // Generate contextual URLs for playable tracks
+                // Always regenerate to reflect the current browsing context, not the original context
+                // (e.g., a track favorited from an album should use /favorites context when browsed there)
+                if (track.src != null) {
+                  val contextualUrl = BrowserPathHelper.build(path, track.src)
                   transformedTrack = transformedTrack.copy(url = contextualUrl)
 
                   Timber.d(
-                    "[$path] Child[$index] '${track.title}': Playable-only, generated contextualUrl=$contextualUrl (src=${track.src})"
+                    "[$path] Child[$index] '${track.title}': Playable, contextualUrl=$contextualUrl (src=${track.src})"
                   )
                 } else {
                   Timber.d(
