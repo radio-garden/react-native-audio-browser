@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 import typedocSidebar from '../api/typedoc-sidebar.json'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'Audio Browser',
   description: 'React Native audio module with browsable navigation trees and native Android Auto/CarPlay integration.',
 
@@ -47,4 +48,4 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/radio-garden/react-native-audio-browser' }
     ]
   }
-})
+}))
