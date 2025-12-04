@@ -38,7 +38,10 @@ export function stop(): void {
 }
 
 /**
- * Retries the current item when the playback state is `State.Error`.
+ * Retries playing the current item when the playback state is `'error'`.
+ *
+ * @see {@link PlaybackState}
+ * @see {@link usePlayback}
  */
 export function retry(): void {
   nativePlayer.retry()

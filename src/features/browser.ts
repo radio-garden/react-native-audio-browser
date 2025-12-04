@@ -292,6 +292,8 @@ export function hasSearch(): boolean {
  * @param query - The search query string
  * @returns Promise resolving to an array of matching tracks
  *
+ * @see {@link configureBrowser}
+ *
  * @example
  * ```ts
  * const results = await search('jazz')
