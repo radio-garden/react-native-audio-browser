@@ -170,7 +170,8 @@ class AudioPlayer : HybridAudioPlayerSpec(), ServiceConnection {
     }
 
     // Observe app lifecycle to check battery status on foreground
-    ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
+    // Must run on main thread as required by LifecycleRegistry.addObserver
+    handler.post { ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver) }
   }
 
   override fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit> {
