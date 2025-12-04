@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vitepress dev",
+    "dev": "bun run typedoc && vitepress dev",
     "build": "bun run typedoc && vitepress build",
     "preview": "vitepress preview",
     "typedoc": "typedoc && bun scripts/transform-sidebar.ts && bun scripts/clean-markdown.ts"
