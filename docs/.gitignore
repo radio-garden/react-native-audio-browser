@@ -31,8 +31,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .vitepress/cache
 .vitepress/dist
 
-# typedoc generated
-api/
+# typedoc generated (except index.md)
+api/*
+!api/index.md
 
 # IntelliJ based IDEs
 .idea
