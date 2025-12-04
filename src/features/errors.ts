@@ -14,7 +14,10 @@ export interface PlaybackErrorEvent {
   error?: PlaybackError
 }
 
-type NavigationErrorType = 'content-not-found' | 'network-error' | 'http-error' | 'unknown-error'
+/**
+ * Type of navigation error that occurred.
+ */
+export type NavigationErrorType = 'content-not-found' | 'network-error' | 'http-error' | 'unknown-error'
 
 export type NavigationError = {
   code: NavigationErrorType

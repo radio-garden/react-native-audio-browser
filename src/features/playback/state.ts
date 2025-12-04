@@ -1,7 +1,7 @@
-import { nativePlayer } from '../native'
-import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
-import type { PlaybackError } from './errors'
+import { nativePlayer } from '../../native'
+import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
+import type { PlaybackError } from '../errors'
 
 // MARK: - Types
 
@@ -44,7 +44,7 @@ export type Playback = {
 
 /**
  * Gets the playback state and error (if any) of the player.
- * @see https://rntp.dev/docs/api/constants/state
+ * @see {@link PlaybackState} for possible state values
  */
 export function getPlayback(): Playback {
   return nativePlayer.getPlayback()

@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativePlayer } from '../../native'
 // MARK: - Getters
 
 /**

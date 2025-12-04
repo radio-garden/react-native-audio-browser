@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativePlayer } from '../../native'
 
 // MARK: - Types
 
@@ -513,7 +513,6 @@ export interface PlayerOptions {
 /**
  * Initializes the player with the specified options.
  * @param options - The options to initialize the player with.
- * @see https://rntp.dev/docs/api/functions/lifecycle
  */
 export async function setupPlayer(
   options: PartialSetupPlayerOptions = {}

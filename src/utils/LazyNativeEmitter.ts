@@ -1,6 +1,8 @@
+/** @internal */
 type Callback<T> = (arg: T) => void
 
 /**
+ * @internal
  * A lightweight event emitter that lazily bridges native callbacks to multiple JavaScript listeners.
  *
  * The native callback is only assigned when the first listener is added, making the emitter

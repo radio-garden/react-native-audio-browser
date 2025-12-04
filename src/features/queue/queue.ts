@@ -1,7 +1,7 @@
-import { nativePlayer } from '../native'
-import type { Track } from '../types'
-import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
+import { nativePlayer } from '../../native'
+import type { Track } from '../../types'
+import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
 // MARK: - Types
 

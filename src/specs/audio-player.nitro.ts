@@ -8,7 +8,7 @@ import type {
 } from '../features'
 import type {
   PlaybackActiveTrackChangedEvent
-} from '../features/activeTrack'
+} from '../features/queue/activeTrack'
 import type { PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
   AudioCommonMetadataReceivedEvent,
@@ -20,17 +20,17 @@ import type {
 import type {
   NativeUpdateOptions,
   Options,
-  UpdateOptions
-} from '../features/options'
-import type { Playback } from '../features/playbackState'
-import type { PartialSetupPlayerOptions } from '../features/player'
-import type { PlayingState } from '../features/playingState'
-import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playWhenReady'
+  UpdateOptions,
+  PartialSetupPlayerOptions
+} from '../features/player'
+import type { Playback } from '../features/playback/state'
+import type { PlayingState } from '../features/playback/playing'
+import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playback/playWhenReady'
 import type {
   PlaybackProgressUpdatedEvent,
   Progress
-} from '../features/progress'
-import type { PlaybackQueueEndedEvent } from '../features/queue'
+} from '../features/playback/progress'
+import type { PlaybackQueueEndedEvent } from '../features/queue/queue'
 import type {
   RemoteJumpBackwardEvent,
   RemoteJumpForwardEvent,
@@ -40,7 +40,7 @@ import type {
   RemoteSetRatingEvent,
   RemoteSkipEvent
 } from '../features/remoteControls'
-import type { RepeatMode, RepeatModeChangedEvent } from '../features/repeatMode'
+import type { RepeatMode, RepeatModeChangedEvent } from '../features/queue/repeatMode'
 import type { SleepTimer, SleepTimerChangedEvent } from '../features/sleepTimer'
 import type { Track } from '../types'
 import type { AudioBrowser } from './audio-browser.nitro'

@@ -1,8 +1,8 @@
-import { nativePlayer } from '../native'
-import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
-import type { RatingType } from './metadata'
-import type { RepeatMode } from './repeatMode'
+import { nativePlayer } from '../../native'
+import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
+import type { RatingType } from '../metadata'
+import type { RepeatMode } from '../queue/repeatMode'
 
 // MARK: - Types
 
@@ -380,7 +380,7 @@ export interface NativeUpdateOptions {
  * Pass only the properties you want to change - all properties are optional.
  *
  * @param options - The partial options to update. Only changed properties need to be specified.
- * @see https://rntp.dev/docs/api/functions/player#updateoptionsoptions
+ * @see {@link getOptions} to get current options
  * @example
  * ```typescript
  * // Update single property

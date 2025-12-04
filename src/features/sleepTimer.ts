@@ -162,7 +162,12 @@ export function useSleepTimer(params?: {
 
 // MARK: - Private Helpers
 
-type SleepTimerState =
+/**
+ * State returned by `useSleepTimer` hook.
+ * - Time-based timer includes `secondsLeft` countdown
+ * - End-of-track timer includes `sleepWhenPlayedToEnd` flag
+ */
+export type SleepTimerState =
   | { time: number; secondsLeft: number }
   | { sleepWhenPlayedToEnd: boolean }
 

@@ -1,6 +1,6 @@
-import { nativePlayer } from '../native'
-import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
+import { nativePlayer } from '../../native'
+import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
 /**
  * Event data for when playWhenReady changes.

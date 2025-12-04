@@ -1,6 +1,8 @@
+/** @internal */
 type Callback<T> = (arg: T) => void
 
 /**
+ * @internal
  * Bridges native value changes to JavaScript, storing the latest value for immediate access.
  *
  * Subscribes to native changes immediately at module load to ensure no updates are missed.

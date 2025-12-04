@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
-import { nativePlayer } from '../native'
-import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
-import { onPlaybackChanged } from './playbackState'
+import { nativePlayer } from '../../native'
+import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
+import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
+import { onPlaybackChanged } from './state'
 
 // MARK: - Types
 
 export interface Progress {
   /**
    * The playback position of the current track in seconds.
-   * See https://rntp.dev/docs/api/functions/player#getposition
    **/
   position: number
-  /** The duration of the current track in seconds.
-   * See https://rntp.dev/docs/api/functions/player#getduration
+  /**
+   * The duration of the current track in seconds.
    **/
   duration: number
   /**
