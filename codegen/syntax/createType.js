@@ -1,0 +1,401 @@
+import { ts, Type as TSMorphType } from 'ts-morph';
+import { BooleanType } from './types/BooleanType.js';
+import { NumberType } from './types/NumberType.js';
+import { StringType } from './types/StringType.js';
+import { BigIntType } from './types/BigIntType.js';
+import { VoidType } from './types/VoidType.js';
+import { ArrayType } from './types/ArrayType.js';
+import { FunctionType } from './types/FunctionType.js';
+import { PromiseType } from './types/PromiseType.js';
+import { RecordType } from './types/RecordType.js';
+import { ArrayBufferType } from './types/ArrayBufferType.js';
+import { EnumType } from './types/EnumType.js';
+import { HybridObjectType } from './types/HybridObjectType.js';
+import { StructType } from './types/StructType.js';
+import { OptionalType } from './types/OptionalType.js';
+import { NamedWrappingType } from './types/NamedWrappingType.js';
+import { getInterfaceProperties } from './getInterfaceProperties.js';
+import { VariantType } from './types/VariantType.js';
+import { MapType } from './types/MapType.js';
+import { TupleType } from './types/TupleType.js';
+import { isAnyHybridSubclass, isDirectlyAnyHybridObject, isHybridView, } from '../getPlatformSpecs.js';
+import { AnyHybridObjectType } from './types/AnyHybridObjectType.js';
+import { ErrorType } from './types/ErrorType.js';
+import { getBaseTypes, getHybridObjectNitroModuleConfig } from '../utils.js';
+import { DateType } from './types/DateType.js';
+import { NitroConfig } from '../config/NitroConfig.js';
+import { CustomType } from './types/CustomType.js';
+import { isSyncFunction, isArrayBuffer, isCustomType, isDate, isError, isMap, isPromise, isRecord, } from './isCoreType.js';
+import { getCustomTypeConfig } from './getCustomTypeConfig.js';
+import { compareLooselyness } from './helpers.js';
+import { NullType } from './types/NullType.js';
+function getHybridObjectName(type) {
+    const symbol = isHybridView(type) ? type.getAliasSymbol() : type.getSymbol();
+    if (symbol == null) {
+        throw new Error(`Cannot get name of \`${type.getText()}\` - symbol not found!`);
+    }
+    return symbol.getEscapedName();
+}
+function getFunctionCallSignature(func) {
+    const callSignatures = func.getCallSignatures();
+    const callSignature = callSignatures[0];
+    if (callSignatures.length !== 1 || callSignature == null) {
+        throw new Error(`Function overloads are not supported in Nitrogen! (in ${func.getText()})`);
+    }
+    return callSignature;
+}
+function removeDuplicates(types) {
+    return types.filter((t1, index, array) => {
+        const firstIndexOfType = array.findIndex((t2) => t1.getCode('c++') === t2.getCode('c++'));
+        return firstIndexOfType === index;
+    });
+}
+function getArguments(type, typename, count) {
+    const typeArguments = type.getTypeArguments();
+    if (typeArguments.length === count) {
+        return typeArguments;
+    }
+    const aliasTypeArguments = type.getAliasTypeArguments();
+    if (aliasTypeArguments.length === count) {
+        return aliasTypeArguments;
+    }
+    throw new Error(`Type ${type.getText()} looks like a ${typename}, but has ${typeArguments.length} or ${aliasTypeArguments.length} type arguments instead of ${count}!`);
+}
+export function createNamedType(language, name, type, isOptional) {
+    if (name.startsWith('__')) {
+        throw new Error(`Name cannot start with two underscores (__) as this is reserved syntax for Nitrogen! (In ${type.getText()})`);
+    }
+    return new NamedWrappingType(name, createType(language, type, isOptional));
+}
+export function createVoidType() {
+    return new VoidType();
+}
+const knownTypes = {
+    'c++': new Map(),
+    'swift': new Map(),
+    'kotlin': new Map(),
+};
+// Tracks struct types currently being processed to detect direct property cycles
+const processingStructs = {
+    'c++': new Set(),
+    'swift': new Set(),
+    'kotlin': new Set(),
+};
+// Tracks whether we're inside a reference type (function, promise, array) where
+// struct references are allowed because they become pointers/references in C++
+let insideReferenceType = false;
+/**
+ * Creates a struct type with cycle detection.
+ * Throws an error if a direct cyclic struct property reference is detected.
+ * References through functions/promises/arrays are allowed (they're reference types).
+ */
+function createStructWithCycleDetection(language, key, typename, type) {
+    if (processingStructs[language].has(key) && !insideReferenceType) {
+        // Direct cyclic reference detected - this struct has a property that is the same struct type
+        throw new Error(`Cyclic struct reference detected: "${typename}" references itself directly or indirectly. ` +
+            `Structs cannot have cyclic references because they are value types with fixed size in C++ and Swift. ` +
+            `See: https://nitro.margelo.com/docs/types/custom-structs#cyclic-references-are-not-supported`);
+    }
+    // Check if we already have this type fully created
+    const existing = knownTypes[language].get(key);
+    if (existing != null) {
+        return existing;
+    }
+    const struct = new StructType(typename, () => getInterfaceProperties(language, type));
+    knownTypes[language].set(key, struct);
+    processingStructs[language].add(key);
+    // Access properties to trigger lazy initialization (see StructType.ensureInitialized).
+    // Use try/finally to ensure we clean up even if initialization throws.
+    try {
+        struct.properties;
+    }
+    catch (error) {
+        // Remove from knownTypes if cycle detection (or other error) fails,
+        // so it won't appear in umbrella files
+        knownTypes[language].delete(key);
+        throw error;
+    }
+    finally {
+        processingStructs[language].delete(key);
+    }
+    return struct;
+}
+/**
+ * Wraps createType calls that are inside reference types (functions, promises, arrays).
+ * Struct references inside these are allowed because they become pointers in C++.
+ */
+function createTypeInsideReference(language, type, isOptional) {
+    const wasInsideReferenceType = insideReferenceType;
+    insideReferenceType = true;
+    try {
+        return createType(language, type, isOptional);
+    }
+    finally {
+        insideReferenceType = wasInsideReferenceType;
+    }
+}
+/**
+ * Get a list of all currently known complex types.
+ */
+export function getAllKnownTypes(language) {
+    if (language != null) {
+        // Get types for the given language
+        return Array.from(knownTypes[language].values());
+    }
+    else {
+        // Get types for all languages alltogether
+        const allMaps = Object.values(knownTypes);
+        return allMaps.flatMap((m) => Array.from(m.values()));
+    }
+}
+function getTypeId(type, isOptional) {
+    const symbol = type.getSymbol();
+    let key = type.getText();
+    if (symbol != null) {
+        key += '_' + symbol.getFullyQualifiedName();
+    }
+    if (isOptional)
+        key += '?';
+    return key;
+}
+export function addKnownType(key, type, language) {
+    if (knownTypes[language].has(key)) {
+        // type is already known
+        return;
+    }
+    knownTypes[language].set(key, type);
+}
+/**
+ * Create a new type (or return it from cache if it is already known)
+ */
+export function createType(language, type, isOptional) {
+    const key = getTypeId(type, isOptional);
+    // Check if we already have this type, but only if it's not a struct that might be cyclic.
+    // For structs, we need to go through createStructWithCycleDetection to detect cycles.
+    if (key != null && knownTypes[language].has(key)) {
+        const known = knownTypes[language].get(key);
+        // Skip the cache if this is a struct currently being processed (potential cycle)
+        const isProcessingStruct = processingStructs[language].has(key);
+        if (!isProcessingStruct && isOptional === known instanceof OptionalType) {
+            return known;
+        }
+    }
+    const get = () => {
+        if (isOptional) {
+            const wrapping = createType(language, type, false);
+            return new OptionalType(wrapping);
+        }
+        if (type.isNull()) {
+            return new NullType();
+        }
+        else if (type.isBoolean() || type.isBooleanLiteral()) {
+            return new BooleanType();
+        }
+        else if (type.isNumber() || type.isNumberLiteral()) {
+            if (type.isEnumLiteral()) {
+                // An enum is just a number, that's why it's a number literal.
+                // Get the base of the literal, which would be our enum's definition.
+                const baseType = type.getBaseTypeOfLiteralType();
+                if (!baseType.isEnum()) {
+                    // The base of the literal is not the enum definition, we need to throw.
+                    throw new Error(`The enum "${type.getLiteralValue()}" (${type.getText()}) is either a single-value-enum, or an enum-literal. Use a separately defined enum with at least 2 cases instead!`);
+                }
+                // Call createType(...) now with the enum type.
+                return createType(language, baseType, isOptional);
+            }
+            return new NumberType();
+        }
+        else if (type.isString()) {
+            return new StringType();
+        }
+        else if (type.isBigInt() || type.isBigIntLiteral()) {
+            return new BigIntType();
+        }
+        else if (type.isVoid()) {
+            return new VoidType();
+        }
+        else if (type.isArray()) {
+            // Arrays are reference types - struct references inside are allowed
+            const arrayElementType = type.getArrayElementTypeOrThrow();
+            const elementType = createTypeInsideReference(language, arrayElementType, false);
+            return new ArrayType(elementType);
+        }
+        else if (type.isTuple()) {
+            const itemTypes = type
+                .getTupleElements()
+                .map((t) => createType(language, t, t.isNullable()));
+            return new TupleType(itemTypes);
+        }
+        else if (type.getCallSignatures().length > 0) {
+            // It's a function! Functions are reference types - struct references inside are allowed
+            const callSignature = getFunctionCallSignature(type);
+            const funcReturnType = callSignature.getReturnType();
+            const isReturnOptional = funcReturnType
+                .getUnionTypes()
+                .some((t) => t.isUndefined());
+            const returnType = createTypeInsideReference(language, funcReturnType, isReturnOptional);
+            const parameters = callSignature.getParameters().map((p) => {
+                const declaration = p.getValueDeclarationOrThrow();
+                const parameterType = p.getTypeAtLocation(declaration);
+                const isNullable = parameterType.isNullable() || p.isOptional();
+                // Function parameters are also inside the reference type
+                const wasInsideReferenceType = insideReferenceType;
+                insideReferenceType = true;
+                try {
+                    return createNamedType(language, p.getName(), parameterType, isNullable);
+                }
+                finally {
+                    insideReferenceType = wasInsideReferenceType;
+                }
+            });
+            const isSync = isSyncFunction(type);
+            return new FunctionType(returnType, parameters, isSync);
+        }
+        else if (isPromise(type)) {
+            // It's a Promise! Promises are reference types - struct references inside are allowed
+            const [promiseResolvingType] = getArguments(type, 'Promise', 1);
+            const isResolvingOptional = promiseResolvingType
+                .getUnionTypes()
+                .some((t) => t.isUndefined());
+            const resolvingType = createTypeInsideReference(language, promiseResolvingType, isResolvingOptional);
+            return new PromiseType(resolvingType);
+        }
+        else if (isRecord(type)) {
+            // Record<K, V> -> unordered_map<K, V>
+            // Records are reference types - struct references inside are allowed
+            const [keyTypeT, valueTypeT] = getArguments(type, 'Record', 2);
+            const keyType = createTypeInsideReference(language, keyTypeT, false);
+            const valueType = createTypeInsideReference(language, valueTypeT, false);
+            return new RecordType(keyType, valueType);
+        }
+        else if (isArrayBuffer(type)) {
+            // ArrayBuffer
+            return new ArrayBufferType();
+        }
+        else if (isMap(type)) {
+            // Map
+            return new MapType();
+        }
+        else if (isDate(type)) {
+            // Date
+            return new DateType();
+        }
+        else if (isError(type)) {
+            // Error
+            return new ErrorType();
+        }
+        else if (isCustomType(type)) {
+            // Custom C++ type (manually written)
+            const { name, config } = getCustomTypeConfig(type);
+            return new CustomType(name, config);
+        }
+        else if (type.isEnum()) {
+            // It is an enum. We need to generate a C++ declaration for the enum
+            const typename = type.getSymbolOrThrow().getEscapedName();
+            const declaration = type.getSymbolOrThrow().getValueDeclarationOrThrow();
+            const enumDeclaration = declaration.asKindOrThrow(ts.SyntaxKind.EnumDeclaration);
+            return new EnumType(typename, enumDeclaration);
+        }
+        else if (type.isUnion()) {
+            // It is some kind of union;
+            // - of string literals (then it's an enum)
+            // - of type `T | undefined` (then it's just optional `T`)
+            // - of different types (then it's a variant `A | B | C`)
+            const types = type.getUnionTypes();
+            const nonNullTypes = types.filter((t) => !t.isNull() && !t.isUndefined() && !t.isVoid());
+            const isEnumUnion = nonNullTypes.every((t) => t.isStringLiteral());
+            if (isEnumUnion) {
+                // It consists only of string literaly - that means it's describing an enum!
+                const symbol = type.getNonNullableType().getAliasSymbol();
+                if (symbol == null) {
+                    // If there is no alias, it is an inline union instead of a separate type declaration!
+                    throw new Error(`Inline union types ("${type.getText()}") are not supported by Nitrogen!\n` +
+                        `Extract the union to a separate type, and re-run nitrogen!`);
+                }
+                const typename = symbol.getEscapedName();
+                return new EnumType(typename, type);
+            }
+            else {
+                // It consists of different types - that means it's a variant!
+                let variants = type
+                    .getUnionTypes()
+                    // Filter out any undefineds/voids, as those are already treated as `isOptional`.
+                    .filter((t) => !t.isUndefined() && !t.isVoid())
+                    .map((t) => createType(language, t, false))
+                    .toSorted(compareLooselyness);
+                variants = removeDuplicates(variants);
+                if (variants.length === 1) {
+                    // It's just one type with undefined/null variant(s) - so we treat it like a simple optional.
+                    return variants[0];
+                }
+                const name = type.getAliasSymbol()?.getName();
+                return new VariantType(variants, name);
+            }
+        }
+        else if (isDirectlyAnyHybridObject(type)) {
+            // It is a HybridObject directly/literally. Base type
+            return new AnyHybridObjectType();
+        }
+        else if (isAnyHybridSubclass(type)) {
+            // It is another HybridObject being referenced!
+            const typename = getHybridObjectName(type);
+            const baseTypes = getBaseTypes(type)
+                .filter((t) => isAnyHybridSubclass(t))
+                .map((b) => createType(language, b, false));
+            const baseHybrids = baseTypes.filter((b) => b instanceof HybridObjectType);
+            const sourceConfig = getHybridObjectNitroModuleConfig(type) ?? NitroConfig.current;
+            return new HybridObjectType(typename, language, baseHybrids, sourceConfig);
+        }
+        else if (type.isInterface()) {
+            // It is an `interface T { ... }`, which is a `struct`
+            const symbol = type.getAliasSymbol() ?? type.getSymbol();
+            if (symbol == null)
+                throw new Error(`Interface "${type.getText()}" does not have a Symbol!`);
+            const typename = symbol.getName();
+            return createStructWithCycleDetection(language, key, typename, type);
+        }
+        else if (type.isObject()) {
+            // It is an object. If it has a symbol/name, it is a `type T = ...` declaration, so a `struct`.
+            // Otherwise, it is an anonymous/inline object, which cannot be represented in native.
+            const symbol = type.getAliasSymbol();
+            if (symbol != null) {
+                // it has a `type T = ...` declaration
+                const typename = symbol.getName();
+                return createStructWithCycleDetection(language, key, typename, type);
+            }
+            else {
+                // It's an anonymous object (`{ ... }`)
+                throw new Error(`Anonymous objects cannot be represented in C++! Extract "${type.getText()}" to a separate interface/type declaration.`);
+            }
+        }
+        else if (type.isStringLiteral()) {
+            throw new Error(`String literal ${type.getText()} cannot be represented in C++ because it is ambiguous between a string and a discriminating union enum.`);
+        }
+        else if (type.isUndefined()) {
+            throw new Error(`The TypeScript type "undefined" cannot be represented in Nitro.\n` +
+                `- If you want to make a type optional, add \`?\` to it's name, or make it an union with \`undefined\`.\n` +
+                `- If you want a method that returns nothing, use \`void\` instead.\n` +
+                `- If you want to represent an explicit absence of a value, use \`null\` instead.`);
+        }
+        else if (type.isAny()) {
+            throw new Error(`The TypeScript type "${type.getText()}" resolved to any - any is not supported in Nitro.`);
+        }
+        else {
+            if (type.getSymbol() == null) {
+                // There is no declaration for it!
+                // Could be an invalid import, e.g. an alias
+                throw new Error(`The TypeScript type "${type.getText()}" cannot be resolved - is it imported properly? ` +
+                    `Make sure to import it properly using fully specified relative or absolute imports, no aliases.`);
+            }
+            else {
+                // A different error
+                throw new Error(`The TypeScript type "${type.getText()}" cannot be represented in C++!`);
+            }
+        }
+    };
+    const result = get();
+    if (key != null && !knownTypes[language].has(key)) {
+        knownTypes[language].set(key, result);
+    }
+    return result;
+}

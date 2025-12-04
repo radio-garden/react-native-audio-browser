@@ -15,7 +15,7 @@
     "android:test": "bun run --filter example-native android:test",
     "build": "bun run prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "nitrogen --logLevel=\"debug\" && node post-script.cjs && bun run build",
+    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && bun run build",
     "prepare": "bob build",
     "example": "bun run --filter example-native",
     "ci:format": "prettier --check src",
