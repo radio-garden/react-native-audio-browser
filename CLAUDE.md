@@ -2,6 +2,14 @@
 
 ## Building
 
+### Codegen (Nitrogen)
+
+Run the forked Nitrogen codegen (located in `/codegen`):
+
+```bash
+node codegen/index.js --logLevel="debug" && bun post-script.cjs && bun run build
+```
+
 ### Android
 
 Compile Kotlin code from the example app directory:
