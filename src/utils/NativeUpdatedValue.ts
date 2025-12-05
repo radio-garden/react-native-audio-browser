@@ -15,7 +15,7 @@ type Callback<T> = (arg: T) => void
  * @example
  * ```typescript
  * export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
- *   (cb) => (nativePlayer.onPlaybackChanged = cb)
+ *   (cb) => (nativeBrowser.onPlaybackChanged = cb)
  * )
  *
  * export function usePlayback(): Playback {

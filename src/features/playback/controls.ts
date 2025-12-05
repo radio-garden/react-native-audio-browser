@@ -1,40 +1,41 @@
-import { nativePlayer } from '../../native'
 
 // MARK: - Playback Controls
+
+import { nativeBrowser } from "../../native"
 
 /**
  * Resets the player stopping the current track and clearing the queue.
  */
 export function reset(): void {
-  nativePlayer.reset()
+  nativeBrowser.reset()
 }
 
 /**
  * Plays or resumes the current track.
  */
 export function play(): void {
-  nativePlayer.play()
+  nativeBrowser.play()
 }
 
 /**
  * Pauses the current track.
  */
 export function pause(): void {
-  nativePlayer.pause()
+  nativeBrowser.pause()
 }
 
 /**
  * Toggles playback between play and pause.
  */
 export function togglePlayback(): void {
-  nativePlayer.togglePlayback()
+  nativeBrowser.togglePlayback()
 }
 
 /**
  * Stops the current track.
  */
 export function stop(): void {
-  nativePlayer.stop()
+  nativeBrowser.stop()
 }
 
 /**
@@ -44,7 +45,7 @@ export function stop(): void {
  * @see {@link usePlayback}
  */
 export function retry(): void {
-  nativePlayer.retry()
+  nativeBrowser.retry()
 }
 
 /**
@@ -52,7 +53,7 @@ export function retry(): void {
  * @param position - The position to seek to in seconds.
  */
 export function seekTo(position: number): void {
-  nativePlayer.seekTo(position)
+  nativeBrowser.seekTo(position)
 }
 
 /**
@@ -60,5 +61,5 @@ export function seekTo(position: number): void {
  * @param offset - The time offset to seek by in seconds.
  */
 export function seekBy(offset: number): void {
-  nativePlayer.seekBy(offset)
+  nativeBrowser.seekBy(offset)
 }

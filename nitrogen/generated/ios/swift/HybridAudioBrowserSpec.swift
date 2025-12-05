@@ -18,6 +18,56 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onTabsChanged: (_ tabs: [Track]) -> Void { get set }
   var onNavigationError: (_ data: NavigationErrorEvent) -> Void { get set }
   var configuration: NativeBrowserConfiguration { get set }
+  var onMetadataChapterReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
+  var onMetadataCommonReceived: (_ event: AudioCommonMetadataReceivedEvent) -> Void { get set }
+  var onMetadataTimedReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
+  var onPlaybackMetadata: (_ data: PlaybackMetadata) -> Void { get set }
+  var onPlaybackActiveTrackChanged: (_ data: PlaybackActiveTrackChangedEvent) -> Void { get set }
+  var onPlaybackError: (_ data: PlaybackErrorEvent) -> Void { get set }
+  var onPlaybackPlayWhenReadyChanged: (_ data: PlaybackPlayWhenReadyChangedEvent) -> Void { get set }
+  var onPlaybackPlayingState: (_ data: PlayingState) -> Void { get set }
+  var onPlaybackProgressUpdated: (_ data: PlaybackProgressUpdatedEvent) -> Void { get set }
+  var onPlaybackQueueEnded: (_ data: PlaybackQueueEndedEvent) -> Void { get set }
+  var onPlaybackQueueChanged: (_ queue: [Track]) -> Void { get set }
+  var onPlaybackRepeatModeChanged: (_ data: RepeatModeChangedEvent) -> Void { get set }
+  var onSleepTimerChanged: (_ data: SleepTimer?) -> Void { get set }
+  var onPlaybackChanged: (_ data: Playback) -> Void { get set }
+  var onRemoteBookmark: () -> Void { get set }
+  var onRemoteDislike: () -> Void { get set }
+  var onRemoteJumpBackward: (_ event: RemoteJumpBackwardEvent) -> Void { get set }
+  var onRemoteJumpForward: (_ event: RemoteJumpForwardEvent) -> Void { get set }
+  var onRemoteLike: () -> Void { get set }
+  var onRemoteNext: () -> Void { get set }
+  var onRemotePause: () -> Void { get set }
+  var onRemotePlay: () -> Void { get set }
+  var onRemotePlayId: (_ event: RemotePlayIdEvent) -> Void { get set }
+  var onRemotePlaySearch: (_ event: RemotePlaySearchEvent) -> Void { get set }
+  var onRemotePrevious: () -> Void { get set }
+  var onRemoteSeek: (_ event: RemoteSeekEvent) -> Void { get set }
+  var onRemoteSetRating: (_ event: RemoteSetRatingEvent) -> Void { get set }
+  var onRemoteSkip: (_ event: RemoteSkipEvent) -> Void { get set }
+  var onRemoteStop: () -> Void { get set }
+  var onOptionsChanged: (_ event: Options) -> Void { get set }
+  var onFavoriteChanged: (_ event: FavoriteChangedEvent) -> Void { get set }
+  var onNowPlayingChanged: (_ metadata: NowPlayingMetadata) -> Void { get set }
+  var handleRemoteBookmark: (() -> Void)? { get set }
+  var handleRemoteDislike: (() -> Void)? { get set }
+  var handleRemoteJumpBackward: ((_ event: RemoteJumpBackwardEvent) -> Void)? { get set }
+  var handleRemoteJumpForward: ((_ event: RemoteJumpForwardEvent) -> Void)? { get set }
+  var handleRemoteLike: (() -> Void)? { get set }
+  var handleRemoteNext: (() -> Void)? { get set }
+  var handleRemotePause: (() -> Void)? { get set }
+  var handleRemotePlay: (() -> Void)? { get set }
+  var handleRemotePlayId: ((_ event: RemotePlayIdEvent) -> Void)? { get set }
+  var handleRemotePlaySearch: ((_ event: RemotePlaySearchEvent) -> Void)? { get set }
+  var handleRemotePrevious: (() -> Void)? { get set }
+  var handleRemoteSeek: ((_ event: RemoteSeekEvent) -> Void)? { get set }
+  var handleRemoteSkip: (() -> Void)? { get set }
+  var handleRemoteStop: (() -> Void)? { get set }
+  var onOnlineChanged: (_ online: Bool) -> Void { get set }
+  var onEqualizerChanged: (_ settings: EqualizerSettings) -> Void { get set }
+  var onBatteryWarningPendingChanged: (_ event: BatteryWarningPendingChangedEvent) -> Void { get set }
+  var onBatteryOptimizationStatusChanged: (_ event: BatteryOptimizationStatusChangedEvent) -> Void { get set }
 
   // Methods
   func navigatePath(path: String) throws -> Void
@@ -27,6 +77,59 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getNavigationError() throws -> NavigationError?
   func notifyContentChanged(path: String) throws -> Void
   func setFavorites(favorites: [String]) throws -> Void
+  func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
+  func updateOptions(options: NativeUpdateOptions) throws -> Void
+  func getOptions() throws -> UpdateOptions
+  func load(track: Track) throws -> Void
+  func reset() throws -> Void
+  func play() throws -> Void
+  func pause() throws -> Void
+  func togglePlayback() throws -> Void
+  func stop() throws -> Void
+  func setPlayWhenReady(playWhenReady: Bool) throws -> Void
+  func getPlayWhenReady() throws -> Bool
+  func seekTo(position: Double) throws -> Void
+  func seekBy(offset: Double) throws -> Void
+  func setVolume(level: Double) throws -> Void
+  func getVolume() throws -> Double
+  func setRate(rate: Double) throws -> Void
+  func getRate() throws -> Double
+  func getProgress() throws -> Progress
+  func getPlayback() throws -> Playback
+  func getPlayingState() throws -> PlayingState
+  func getRepeatMode() throws -> RepeatMode
+  func setRepeatMode(mode: RepeatMode) throws -> Void
+  func getPlaybackError() throws -> PlaybackError?
+  func retry() throws -> Void
+  func getSleepTimer() throws -> SleepTimer
+  func setSleepTimer(seconds: Double) throws -> Void
+  func setSleepTimerToEndOfTrack() throws -> Void
+  func clearSleepTimer() throws -> Bool
+  func add(tracks: [Track], insertBeforeIndex: Double?) throws -> Void
+  func move(fromIndex: Double, toIndex: Double) throws -> Void
+  func remove(indexes: [Double]) throws -> Void
+  func removeUpcomingTracks() throws -> Void
+  func skip(index: Double, initialPosition: Double?) throws -> Void
+  func skipToNext(initialPosition: Double?) throws -> Void
+  func skipToPrevious(initialPosition: Double?) throws -> Void
+  func setActiveTrackFavorited(favorited: Bool) throws -> Void
+  func toggleActiveTrackFavorited() throws -> Void
+  func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws -> Void
+  func getQueue() throws -> [Track]
+  func getTrack(index: Double) throws -> Track?
+  func getActiveTrackIndex() throws -> Double?
+  func getActiveTrack() throws -> Track?
+  func updateNowPlaying(update: NowPlayingUpdate?) throws -> Void
+  func getNowPlaying() throws -> NowPlayingMetadata?
+  func getOnline() throws -> Bool
+  func getEqualizerSettings() throws -> EqualizerSettings?
+  func setEqualizerEnabled(enabled: Bool) throws -> Void
+  func setEqualizerPreset(preset: String) throws -> Void
+  func setEqualizerLevels(levels: [Double]) throws -> Void
+  func getBatteryWarningPending() throws -> Bool
+  func getBatteryOptimizationStatus() throws -> BatteryOptimizationStatus
+  func dismissBatteryWarning() throws -> Void
+  func openBatterySettings() throws -> Void
 }
 
 public extension HybridAudioBrowserSpec_protocol {

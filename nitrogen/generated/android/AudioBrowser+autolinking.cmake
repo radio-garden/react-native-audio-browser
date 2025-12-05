@@ -34,10 +34,8 @@ target_sources(
   ../nitrogen/generated/android/AudioBrowserOnLoad.cpp
   # Shared Nitrogen C++ sources
   ../nitrogen/generated/shared/c++/HybridAudioBrowserSpec.cpp
-  ../nitrogen/generated/shared/c++/HybridAudioPlayerSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
-  ../nitrogen/generated/android/c++/JHybridAudioPlayerSpec.cpp
   ../nitrogen/generated/android/c++/JSleepTimer.cpp
   ../nitrogen/generated/android/c++/JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.cpp
   ../nitrogen/generated/android/c++/JVariant_NullType_NotificationButtonLayout.cpp

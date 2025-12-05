@@ -1,4 +1,4 @@
-import { nativeBrowser, nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import type { Track } from '../types'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
@@ -20,7 +20,7 @@ import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
  * ```
  */
 export function setActiveTrackFavorited(favorited: boolean): void {
-  nativePlayer.setActiveTrackFavorited(favorited)
+  nativeBrowser.setActiveTrackFavorited(favorited)
 }
 
 /**
@@ -33,7 +33,7 @@ export function setActiveTrackFavorited(favorited: boolean): void {
  * ```
  */
 export function toggleActiveTrackFavorited(): void {
-  nativePlayer.toggleActiveTrackFavorited()
+  nativeBrowser.toggleActiveTrackFavorited()
 }
 
 /**
@@ -98,5 +98,5 @@ export interface FavoriteChangedEvent {
  */
 export const onFavoriteChanged =
   NativeUpdatedValue.emitterize<FavoriteChangedEvent>(
-    (cb) => (nativePlayer.onFavoriteChanged = cb)
+    (cb) => (nativeBrowser.onFavoriteChanged = cb)
   )

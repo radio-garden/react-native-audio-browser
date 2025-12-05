@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 import type { NowPlayingMetadata, NowPlayingUpdate } from './metadata'
@@ -22,14 +22,14 @@ import type { NowPlayingMetadata, NowPlayingUpdate } from './metadata'
  * ```
  */
 export function updateNowPlaying(update: NowPlayingUpdate | null): void {
-  nativePlayer.updateNowPlaying(update ?? undefined)
+  nativeBrowser.updateNowPlaying(update ?? undefined)
 }
 
 /**
  * Gets the current now playing metadata (override if set, else track metadata).
  */
 export function getNowPlaying(): NowPlayingMetadata | undefined {
-  return nativePlayer.getNowPlaying() ?? undefined
+  return nativeBrowser.getNowPlaying() ?? undefined
 }
 
 // MARK: - Event Callbacks
@@ -42,7 +42,7 @@ export function getNowPlaying(): NowPlayingMetadata | undefined {
  */
 export const onNowPlayingChanged =
   NativeUpdatedValue.emitterize<NowPlayingMetadata>(
-    (cb) => (nativePlayer.onNowPlayingChanged = cb)
+    (cb) => (nativeBrowser.onNowPlayingChanged = cb)
   )
 
 // MARK: - Hooks

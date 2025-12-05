@@ -16,10 +16,6 @@
     "AudioBrowser": {
       "swift": "AudioBrowser",
       "kotlin": "AudioBrowser"
-    },
-    "AudioPlayer": {
-      "swift": "AudioPlayer",
-      "kotlin": "AudioPlayer"
     }
   },
   "ignorePaths": [

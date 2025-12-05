@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
@@ -15,7 +15,7 @@ export type PlayingState = {
  * Gets the playing state (playing and buffering flags).
  */
 export function getPlayingState(): PlayingState {
-  return nativePlayer.getPlayingState()
+  return nativeBrowser.getPlayingState()
 }
 
 // MARK: - Event Callbacks
@@ -26,7 +26,7 @@ export function getPlayingState(): PlayingState {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlayingState = NativeUpdatedValue.emitterize<PlayingState>(
-  (cb) => (nativePlayer.onPlaybackPlayingState = cb)
+  (cb) => (nativeBrowser.onPlaybackPlayingState = cb)
 )
 
 // MARK: - Hooks

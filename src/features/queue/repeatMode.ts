@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
@@ -19,7 +19,7 @@ export type RepeatMode = 'off' | 'track' | 'queue'
  * Gets the current repeat mode.
  */
 export function getRepeatMode(): RepeatMode {
-  return nativePlayer.getRepeatMode()
+  return nativeBrowser.getRepeatMode()
 }
 
 /**
@@ -27,7 +27,7 @@ export function getRepeatMode(): RepeatMode {
  * @param repeatMode - The repeat mode to set
  */
 export function setRepeatMode(repeatMode: RepeatMode) {
-  nativePlayer.setRepeatMode(repeatMode)
+  nativeBrowser.setRepeatMode(repeatMode)
 }
 
 // MARK: - Event Callbacks
@@ -44,7 +44,7 @@ export interface RepeatModeChangedEvent {
  */
 export const onRepeatModeChanged =
   NativeUpdatedValue.emitterize<RepeatModeChangedEvent>(
-    (cb) => (nativePlayer.onPlaybackRepeatModeChanged = cb)
+    (cb) => (nativeBrowser.onPlaybackRepeatModeChanged = cb)
   )
 
 // MARK: - Hooks

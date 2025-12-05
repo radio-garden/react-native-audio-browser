@@ -6,7 +6,7 @@
  * This module exposes APIs to detect this condition and guide users to fix their settings.
  */
 
-import { nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
@@ -48,7 +48,7 @@ export type BatteryOptimizationStatusChangedEvent = {
  * @returns true if warning is pending, always false on iOS
  */
 export function getBatteryWarningPending(): boolean {
-  return nativePlayer.getBatteryWarningPending()
+  return nativeBrowser.getBatteryWarningPending()
 }
 
 /**
@@ -57,7 +57,7 @@ export function getBatteryWarningPending(): boolean {
  * @returns Current status, always 'unrestricted' on iOS
  */
 export function getBatteryOptimizationStatus(): BatteryOptimizationStatus {
-  return nativePlayer.getBatteryOptimizationStatus()
+  return nativeBrowser.getBatteryOptimizationStatus()
 }
 
 // MARK: - Actions
@@ -68,7 +68,7 @@ export function getBatteryOptimizationStatus(): BatteryOptimizationStatus {
  * No-op on iOS.
  */
 export function dismissBatteryWarning(): void {
-  nativePlayer.dismissBatteryWarning()
+  nativeBrowser.dismissBatteryWarning()
 }
 
 /**
@@ -76,7 +76,7 @@ export function dismissBatteryWarning(): void {
  * No-op on iOS.
  */
 export function openBatterySettings(): void {
-  nativePlayer.openBatterySettings()
+  nativeBrowser.openBatterySettings()
 }
 
 // MARK: - Event Callbacks
@@ -89,7 +89,7 @@ export function openBatterySettings(): void {
  */
 export const onBatteryWarningPendingChanged =
   NativeUpdatedValue.emitterize<BatteryWarningPendingChangedEvent>(
-    (cb) => (nativePlayer.onBatteryWarningPendingChanged = cb)
+    (cb) => (nativeBrowser.onBatteryWarningPendingChanged = cb)
   )
 
 /**
@@ -99,7 +99,7 @@ export const onBatteryWarningPendingChanged =
  */
 export const onBatteryOptimizationStatusChanged =
   NativeUpdatedValue.emitterize<BatteryOptimizationStatusChangedEvent>(
-    (cb) => (nativePlayer.onBatteryOptimizationStatusChanged = cb)
+    (cb) => (nativeBrowser.onBatteryOptimizationStatusChanged = cb)
   )
 
 // MARK: - Hooks

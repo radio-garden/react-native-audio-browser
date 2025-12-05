@@ -1,12 +1,13 @@
-import { nativePlayer } from '../../native'
 // MARK: - Getters
+
+import { nativeBrowser } from "../../native"
 
 /**
  * Gets the playback rate where 0.5 would be half speed, 1 would be
  * regular speed and 2 would be double speed etc.
  */
 export function getRate(): number {
-  return nativePlayer.getRate()
+  return nativeBrowser.getRate()
 }
 
 // MARK: - Setters
@@ -17,5 +18,5 @@ export function getRate(): number {
  * 1 would be regular speed, 2 would be double speed etc.
  */
 export function setRate(rate: number): void {
-  nativePlayer.setRate(rate)
+  nativeBrowser.setRate(rate)
 }

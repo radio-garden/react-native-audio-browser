@@ -1,4 +1,4 @@
-import { nativeBrowser, nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
@@ -39,7 +39,7 @@ export interface NavigationErrorEvent {
  * @returns The current error or undefined if there is no error
  */
 export function getPlaybackError(): PlaybackError | undefined {
-  return nativePlayer.getPlaybackError()
+  return nativeBrowser.getPlaybackError()
 }
 
 // MARK: - Event Callbacks
@@ -50,7 +50,7 @@ export function getPlaybackError(): PlaybackError | undefined {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlaybackError = NativeUpdatedValue.emitterize<PlaybackErrorEvent>(
-  (cb) => (nativePlayer.onPlaybackError = cb)
+  (cb) => (nativeBrowser.onPlaybackError = cb)
 )
 
 // MARK: - Hooks

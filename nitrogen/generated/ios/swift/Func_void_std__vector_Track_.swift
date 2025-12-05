@@ -9,21 +9,21 @@ import Foundation
 import NitroModules
 
 /**
- * Wraps a Swift `(_ queue: [Track]) -> Void` as a class.
+ * Wraps a Swift `(_ tabs: [Track]) -> Void` as a class.
  * This class can be used from C++, e.g. to wrap the Swift closure as a `std::function`.
  */
 public final class Func_void_std__vector_Track_ {
   public typealias bridge = margelo.nitro.audiobrowser.bridge.swift
 
-  private let closure: (_ queue: [Track]) -> Void
+  private let closure: (_ tabs: [Track]) -> Void
 
-  public init(_ closure: @escaping (_ queue: [Track]) -> Void) {
+  public init(_ closure: @escaping (_ tabs: [Track]) -> Void) {
     self.closure = closure
   }
 
   @inline(__always)
-  public func call(queue: bridge.std__vector_Track_) -> Void {
-    self.closure(queue.map({ __item in __item }))
+  public func call(tabs: bridge.std__vector_Track_) -> Void {
+    self.closure(tabs.map({ __item in __item }))
   }
 
   /**

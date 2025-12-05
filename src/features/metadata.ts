@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import type { Rating } from './rating'
 
@@ -111,7 +111,7 @@ export interface AudioMetadataReceivedEvent {
  */
 export const onMetadataChapterReceived =
   NativeUpdatedValue.emitterize<AudioMetadataReceivedEvent>(
-    (cb) => (nativePlayer.onMetadataChapterReceived = cb)
+    (cb) => (nativeBrowser.onMetadataChapterReceived = cb)
   )
 
 /**
@@ -121,7 +121,7 @@ export const onMetadataChapterReceived =
  */
 export const onMetadataCommonReceived =
   NativeUpdatedValue.emitterize<AudioCommonMetadataReceivedEvent>(
-    (cb) => (nativePlayer.onMetadataCommonReceived = cb)
+    (cb) => (nativeBrowser.onMetadataCommonReceived = cb)
   )
 
 /**
@@ -131,7 +131,7 @@ export const onMetadataCommonReceived =
  */
 export const onPlaybackMetadata =
   NativeUpdatedValue.emitterize<PlaybackMetadata>(
-    (cb) => (nativePlayer.onPlaybackMetadata = cb)
+    (cb) => (nativeBrowser.onPlaybackMetadata = cb)
   )
 
 /**
@@ -141,5 +141,5 @@ export const onPlaybackMetadata =
  */
 export const onMetadataTimedReceived =
   NativeUpdatedValue.emitterize<AudioMetadataReceivedEvent>(
-    (cb) => (nativePlayer.onMetadataTimedReceived = cb)
+    (cb) => (nativeBrowser.onMetadataTimedReceived = cb)
   )

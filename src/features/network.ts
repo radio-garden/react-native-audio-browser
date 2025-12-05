@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
@@ -9,7 +9,7 @@ import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
  * @returns true if the device is online, false otherwise
  */
 export function getOnline(): boolean {
-  return nativePlayer.getOnline()
+  return nativeBrowser.getOnline()
 }
 
 // MARK: - Event Callbacks
@@ -20,7 +20,7 @@ export function getOnline(): boolean {
  * @returns Cleanup function to unsubscribe
  */
 export const onOnlineChanged = NativeUpdatedValue.emitterize<boolean>(
-  (cb) => (nativePlayer.onOnlineChanged = cb)
+  (cb) => (nativeBrowser.onOnlineChanged = cb)
 )
 
 // MARK: - Hooks

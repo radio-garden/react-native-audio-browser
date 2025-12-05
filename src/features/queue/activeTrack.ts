@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import type { Track } from '../../types'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -25,7 +25,7 @@ export interface PlaybackActiveTrackChangedEvent {
  * Gets the active track or undefined if there is no current track.
  */
 export function getActiveTrack(): Track | undefined {
-  return nativePlayer.getActiveTrack() ?? undefined
+  return nativeBrowser.getActiveTrack() ?? undefined
 }
 
 /**
@@ -33,7 +33,7 @@ export function getActiveTrack(): Track | undefined {
  * current track.
  */
 export function getActiveTrackIndex(): number | undefined {
-  return nativePlayer.getActiveTrackIndex() ?? undefined
+  return nativeBrowser.getActiveTrackIndex() ?? undefined
 }
 
 // MARK: - Event Callbacks
@@ -45,7 +45,7 @@ export function getActiveTrackIndex(): number | undefined {
  */
 export const onActiveTrackChanged =
   NativeUpdatedValue.emitterize<PlaybackActiveTrackChangedEvent>(
-    (cb) => (nativePlayer.onPlaybackActiveTrackChanged = cb)
+    (cb) => (nativeBrowser.onPlaybackActiveTrackChanged = cb)
   )
 
 // MARK: - Hooks

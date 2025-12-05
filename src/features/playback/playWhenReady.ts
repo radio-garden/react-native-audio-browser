@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
@@ -16,7 +16,7 @@ export interface PlaybackPlayWhenReadyChangedEvent {
  * Gets whether the player will play automatically when it is ready to do so.
  */
 export function getPlayWhenReady(): boolean {
-  return nativePlayer.getPlayWhenReady()
+  return nativeBrowser.getPlayWhenReady()
 }
 
 // MARK: - Setters
@@ -27,7 +27,7 @@ export function getPlayWhenReady(): boolean {
  * or `pause()` when `playWhenReady = false`.
  */
 export function setPlayWhenReady(playWhenReady: boolean): void {
-  nativePlayer.setPlayWhenReady(playWhenReady)
+  nativeBrowser.setPlayWhenReady(playWhenReady)
 }
 
 // MARK: - Event Callbacks
@@ -39,7 +39,7 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
  */
 export const onPlayWhenReadyChanged =
   NativeUpdatedValue.emitterize<PlaybackPlayWhenReadyChangedEvent>(
-    (cb) => (nativePlayer.onPlaybackPlayWhenReadyChanged = cb)
+    (cb) => (nativeBrowser.onPlaybackPlayWhenReadyChanged = cb)
   )
 
 // MARK: - Hooks

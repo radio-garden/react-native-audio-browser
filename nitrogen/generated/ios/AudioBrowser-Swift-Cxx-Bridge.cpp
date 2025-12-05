@@ -10,7 +10,6 @@
 // Include C++ implementation defined types
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 #include "HybridAudioBrowserSpecSwift.hpp"
-#include "HybridAudioPlayerSpecSwift.hpp"
 #include <NitroModules/NitroDefines.hpp>
 
 namespace margelo::nitro::audiobrowser::bridge::swift {
@@ -129,22 +128,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<Promise<std::vector<Track>>>& result) mutable -> void {
       swiftClosure.call(result);
     };
-  }
-  
-  // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
-  std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
-    AudioBrowser::HybridAudioBrowserSpec_cxx swiftPart = AudioBrowser::HybridAudioBrowserSpec_cxx::fromUnsafe(swiftUnsafePointer);
-    return std::make_shared<margelo::nitro::audiobrowser::HybridAudioBrowserSpecSwift>(swiftPart);
-  }
-  void* NON_NULL get_std__shared_ptr_HybridAudioBrowserSpec_(std__shared_ptr_HybridAudioBrowserSpec_ cppType) {
-    std::shared_ptr<margelo::nitro::audiobrowser::HybridAudioBrowserSpecSwift> swiftWrapper = std::dynamic_pointer_cast<margelo::nitro::audiobrowser::HybridAudioBrowserSpecSwift>(cppType);
-    #ifdef NITRO_DEBUG
-    if (swiftWrapper == nullptr) [[unlikely]] {
-      throw std::runtime_error("Class \"HybridAudioBrowserSpec\" is not implemented in Swift!");
-    }
-    #endif
-    AudioBrowser::HybridAudioBrowserSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
-    return swiftPart.toUnsafe();
   }
   
   // pragma MARK: std::function<void()>
@@ -363,19 +346,19 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::shared_ptr<HybridAudioPlayerSpec>
-  std::shared_ptr<HybridAudioPlayerSpec> create_std__shared_ptr_HybridAudioPlayerSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
-    AudioBrowser::HybridAudioPlayerSpec_cxx swiftPart = AudioBrowser::HybridAudioPlayerSpec_cxx::fromUnsafe(swiftUnsafePointer);
-    return std::make_shared<margelo::nitro::audiobrowser::HybridAudioPlayerSpecSwift>(swiftPart);
+  // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
+  std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
+    AudioBrowser::HybridAudioBrowserSpec_cxx swiftPart = AudioBrowser::HybridAudioBrowserSpec_cxx::fromUnsafe(swiftUnsafePointer);
+    return std::make_shared<margelo::nitro::audiobrowser::HybridAudioBrowserSpecSwift>(swiftPart);
   }
-  void* NON_NULL get_std__shared_ptr_HybridAudioPlayerSpec_(std__shared_ptr_HybridAudioPlayerSpec_ cppType) {
-    std::shared_ptr<margelo::nitro::audiobrowser::HybridAudioPlayerSpecSwift> swiftWrapper = std::dynamic_pointer_cast<margelo::nitro::audiobrowser::HybridAudioPlayerSpecSwift>(cppType);
+  void* NON_NULL get_std__shared_ptr_HybridAudioBrowserSpec_(std__shared_ptr_HybridAudioBrowserSpec_ cppType) {
+    std::shared_ptr<margelo::nitro::audiobrowser::HybridAudioBrowserSpecSwift> swiftWrapper = std::dynamic_pointer_cast<margelo::nitro::audiobrowser::HybridAudioBrowserSpecSwift>(cppType);
     #ifdef NITRO_DEBUG
     if (swiftWrapper == nullptr) [[unlikely]] {
-      throw std::runtime_error("Class \"HybridAudioPlayerSpec\" is not implemented in Swift!");
+      throw std::runtime_error("Class \"HybridAudioBrowserSpec\" is not implemented in Swift!");
     }
     #endif
-    AudioBrowser::HybridAudioPlayerSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
+    AudioBrowser::HybridAudioBrowserSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
     return swiftPart.toUnsafe();
   }
 

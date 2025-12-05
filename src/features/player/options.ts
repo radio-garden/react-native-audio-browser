@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 import type { RatingType } from '../metadata'
@@ -394,7 +394,7 @@ export interface NativeUpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
-  nativePlayer.updateOptions(options)
+  nativeBrowser.updateOptions(options)
 }
 
 // MARK: - Getters
@@ -413,7 +413,7 @@ export function updateOptions(options: UpdateOptions): void {
  * ```
  */
 export function getOptions(): Options {
-  return nativePlayer.getOptions() as Options
+  return nativeBrowser.getOptions() as Options
 }
 
 // MARK: - Event Callbacks
@@ -424,7 +424,7 @@ export function getOptions(): Options {
  * @returns Cleanup function to unsubscribe
  */
 export const onOptionsChanged = NativeUpdatedValue.emitterize<Options>(
-  (cb) => (nativePlayer.onOptionsChanged = cb)
+  (cb) => (nativeBrowser.onOptionsChanged = cb)
 )
 
 // MARK: - Hooks

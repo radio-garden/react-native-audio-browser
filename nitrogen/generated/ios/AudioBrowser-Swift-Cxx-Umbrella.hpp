@@ -50,8 +50,6 @@ namespace margelo::nitro::audiobrowser { struct HeartRating; }
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
-// Forward declaration of `HybridAudioPlayerSpec` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { class HybridAudioPlayerSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 // Forward declaration of `IOSCategoryOptions` to properly resolve imports.
@@ -189,7 +187,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
-#include "HybridAudioPlayerSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
@@ -271,8 +268,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
-// Forward declaration of `HybridAudioPlayerSpec_cxx` to properly resolve imports.
-namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 
 // Include Swift defined types
 #if __has_include("AudioBrowser-Swift.h")

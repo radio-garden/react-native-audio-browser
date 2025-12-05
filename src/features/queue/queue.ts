@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import type { Track } from '../../types'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -34,7 +34,7 @@ export function add(track: Track, insertBeforeIndex?: number): void
 export function add(tracks: Track | Track[], insertBeforeIndex = -1): void {
   const addTracks = Array.isArray(tracks) ? tracks : [tracks]
   if (addTracks.length > 0) {
-    nativePlayer.add(addTracks, insertBeforeIndex)
+    nativeBrowser.add(addTracks, insertBeforeIndex)
   }
 }
 
@@ -43,7 +43,7 @@ export function add(tracks: Track | Track[], insertBeforeIndex = -1): void {
  * @param track - The track to load.
  */
 export function load(track: Track): void {
-  nativePlayer.load(track)
+  nativeBrowser.load(track)
 }
 
 /**
@@ -53,7 +53,7 @@ export function load(track: Track): void {
  * the size of the queue, then the track is moved to the end of the queue.
  */
 export function move(fromIndex: number, toIndex: number): void {
-  nativePlayer.move(fromIndex, toIndex)
+  nativeBrowser.move(fromIndex, toIndex)
 }
 
 /**
@@ -77,7 +77,7 @@ export function remove(indexes: number[]): void
  */
 export function remove(index: number): void
 export function remove(indexOrIndexes: number | number[]): void {
-  nativePlayer.remove(
+  nativeBrowser.remove(
     Array.isArray(indexOrIndexes) ? indexOrIndexes : [indexOrIndexes]
   )
 }
@@ -86,7 +86,7 @@ export function remove(indexOrIndexes: number | number[]): void {
  * Clears any upcoming tracks from the queue.
  */
 export function removeUpcomingTracks(): void {
-  nativePlayer.removeUpcomingTracks()
+  nativeBrowser.removeUpcomingTracks()
 }
 
 /**
@@ -95,7 +95,7 @@ export function removeUpcomingTracks(): void {
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  */
 export function skip(index: number, initialPosition?: number): void {
-  nativePlayer.skip(index, initialPosition)
+  nativeBrowser.skip(index, initialPosition)
 }
 
 /**
@@ -103,7 +103,7 @@ export function skip(index: number, initialPosition?: number): void {
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  */
 export function skipToNext(initialPosition?: number): void {
-  nativePlayer.skipToNext(initialPosition)
+  nativeBrowser.skipToNext(initialPosition)
 }
 
 /**
@@ -111,7 +111,7 @@ export function skipToNext(initialPosition?: number): void {
  * @param initialPosition - (Optional) The initial position to seek to in seconds.
  */
 export function skipToPrevious(initialPosition?: number): void {
-  nativePlayer.skipToPrevious(initialPosition)
+  nativeBrowser.skipToPrevious(initialPosition)
 }
 
 /**
@@ -119,7 +119,7 @@ export function skipToPrevious(initialPosition?: number): void {
  * @param tracks - The tracks to set as the queue.
  */
 export function setQueue(tracks: Track[]): void {
-  nativePlayer.setQueue(tracks)
+  nativeBrowser.setQueue(tracks)
 }
 
 // MARK: - Getters
@@ -130,14 +130,14 @@ export function setQueue(tracks: Track[]): void {
  * @returns The track object or undefined if there isn't a track object at that index.
  */
 export function getTrack(index: number): Track | undefined {
-  return nativePlayer.getTrack(index) as unknown as Track
+  return nativeBrowser.getTrack(index) as unknown as Track
 }
 
 /**
  * Gets the whole queue.
  */
 export function getQueue(): Track[] {
-  return nativePlayer.getQueue() as unknown as Track[]
+  return nativeBrowser.getQueue() as unknown as Track[]
 }
 
 // MARK: - Event Callbacks
@@ -148,7 +148,7 @@ export function getQueue(): Track[] {
  * @returns Cleanup function to unsubscribe
  */
 export const onQueueEnded = NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
-  (cb) => (nativePlayer.onPlaybackQueueEnded = cb)
+  (cb) => (nativeBrowser.onPlaybackQueueEnded = cb)
 )
 
 /**
@@ -158,7 +158,7 @@ export const onQueueEnded = NativeUpdatedValue.emitterize<PlaybackQueueEndedEven
  * @returns Cleanup function to unsubscribe
  */
 export const onQueueChanged = NativeUpdatedValue.emitterize<Track[]>(
-  (cb) => (nativePlayer.onPlaybackQueueChanged = cb)
+  (cb) => (nativeBrowser.onPlaybackQueueChanged = cb)
 )
 
 // MARK: - Hooks

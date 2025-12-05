@@ -1,8 +1,4 @@
-import { nativeBrowser, nativePlayer } from '../native'
-import type {
-  NativeBrowserConfiguration,
-  NativeRouteEntry,
-} from '../types/browser-native'
+import { nativeBrowser } from '../native'
 import type {
   BrowserConfiguration,
   BrowserSource,
@@ -12,10 +8,13 @@ import type {
   SearchSource,
   SearchSourceCallback,
   TabsSource,
-  TabsSourceCallback,
   Track,
-  TransformableRequestConfig,
+  TransformableRequestConfig
 } from '../types'
+import type {
+  NativeBrowserConfiguration,
+  NativeRouteEntry,
+} from '../types/browser-native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
@@ -106,7 +105,7 @@ function tabsSourceToRouteEntry(source: TabsSource): NativeRouteEntry {
   if (isCallback(source)) {
     // Callback returning Track[] - wrap to return ResolvedTrack
     const wrappedCallback: BrowserSourceCallback = async () => {
-      const tracks = await (source as TabsSourceCallback)()
+      const tracks = await (source)()
       return wrapTracksAsResolvedTrack(tracks)
     }
     return {
@@ -118,7 +117,7 @@ function tabsSourceToRouteEntry(source: TabsSource): NativeRouteEntry {
   // TransformableRequestConfig - native will handle wrapping the response
   return {
     path: TABS_ROUTE_PATH,
-    browseConfig: source as TransformableRequestConfig,
+    browseConfig: source,
   }
 }
 
@@ -215,7 +214,6 @@ function toNativeConfig(config: BrowserConfiguration): NativeBrowserConfiguratio
  */
 export function configureBrowser(configuration: BrowserConfiguration): void {
   nativeBrowser.configuration = toNativeConfig(configuration)
-  nativePlayer.registerBrowser(nativeBrowser)
 }
 
 export function navigate(pathOrTrack: string | Track) {

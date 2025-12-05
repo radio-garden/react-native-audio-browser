@@ -1,5 +1,5 @@
-import { nativePlayer } from '../native'
-import type { EqualizerSettings } from '../specs/audio-player.nitro'
+import { nativeBrowser } from '../native'
+import type { EqualizerSettings } from '../specs/audio-browser.nitro'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
@@ -12,7 +12,7 @@ export type { EqualizerSettings }
  * @returns Equalizer settings, or undefined if not available
  */
 export function getEqualizerSettings(): EqualizerSettings | undefined {
-  return nativePlayer.getEqualizerSettings()
+  return nativeBrowser.getEqualizerSettings()
 }
 
 // MARK: - Setters
@@ -22,7 +22,7 @@ export function getEqualizerSettings(): EqualizerSettings | undefined {
  * @param enabled - Whether to enable the equalizer
  */
 export function setEqualizerEnabled(enabled: boolean): void {
-  nativePlayer.setEqualizerEnabled(enabled)
+  nativeBrowser.setEqualizerEnabled(enabled)
 }
 
 /**
@@ -30,7 +30,7 @@ export function setEqualizerEnabled(enabled: boolean): void {
  * @param preset - The name of the preset to apply
  */
 export function setEqualizerPreset(preset: string): void {
-  nativePlayer.setEqualizerPreset(preset)
+  nativeBrowser.setEqualizerPreset(preset)
 }
 
 /**
@@ -38,7 +38,7 @@ export function setEqualizerPreset(preset: string): void {
  * @param levels - Array of level values for each band (in millibels)
  */
 export function setEqualizerLevels(levels: number[]): void {
-  nativePlayer.setEqualizerLevels(levels)
+  nativeBrowser.setEqualizerLevels(levels)
 }
 
 // MARK: - Event Callbacks
@@ -49,7 +49,7 @@ export function setEqualizerLevels(levels: number[]): void {
  * @returns Cleanup function to unsubscribe
  */
 export const onEqualizerChanged = NativeUpdatedValue.emitterize<EqualizerSettings>(
-  (cb) => (nativePlayer.onEqualizerChanged = cb)
+  (cb) => (nativeBrowser.onEqualizerChanged = cb)
 )
 
 // MARK: - Hooks

@@ -1,4 +1,4 @@
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 import type { PlaybackError } from '../errors'
@@ -47,7 +47,7 @@ export type Playback = {
  * @see {@link PlaybackState} for possible state values
  */
 export function getPlayback(): Playback {
-  return nativePlayer.getPlayback()
+  return nativeBrowser.getPlayback()
 }
 
 // MARK: - Event Callbacks
@@ -58,7 +58,7 @@ export function getPlayback(): Playback {
  * @returns Cleanup function to unsubscribe
  */
 export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
-  (cb) => (nativePlayer.onPlaybackChanged = cb)
+  (cb) => (nativeBrowser.onPlaybackChanged = cb)
 )
 
 // MARK: - Hooks

@@ -1,4 +1,4 @@
-import { nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 import type {
   HeartRating,
@@ -156,7 +156,7 @@ export interface RemoteSkipEvent {
  * @param callback - Called when the user presses the play button. Pass undefined to disable.
  */
 export function handleRemotePlay(callback: (() => void) | undefined) {
-  nativePlayer.handleRemotePlay = callback
+  nativeBrowser.handleRemotePlay = callback
 }
 
 /**
@@ -164,7 +164,7 @@ export function handleRemotePlay(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the pause button. Pass undefined to disable.
  */
 export function handleRemotePause(callback: (() => void) | undefined) {
-  nativePlayer.handleRemotePause = callback
+  nativeBrowser.handleRemotePause = callback
 }
 
 /**
@@ -172,7 +172,7 @@ export function handleRemotePause(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the next track button. Pass undefined to disable.
  */
 export function handleRemoteNext(callback: (() => void) | undefined) {
-  nativePlayer.handleRemoteNext = callback
+  nativeBrowser.handleRemoteNext = callback
 }
 
 /**
@@ -180,7 +180,7 @@ export function handleRemoteNext(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the previous track button. Pass undefined to disable.
  */
 export function handleRemotePrevious(callback: (() => void) | undefined) {
-  nativePlayer.handleRemotePrevious = callback
+  nativeBrowser.handleRemotePrevious = callback
 }
 
 /**
@@ -188,7 +188,7 @@ export function handleRemotePrevious(callback: (() => void) | undefined) {
  * @param callback - Called when the user presses the stop button. Pass undefined to disable.
  */
 export function handleRemoteStop(callback: (() => void) | undefined) {
-  nativePlayer.handleRemoteStop = callback
+  nativeBrowser.handleRemoteStop = callback
 }
 
 /**
@@ -198,7 +198,7 @@ export function handleRemoteStop(callback: (() => void) | undefined) {
 export function handleRemoteSeek(
   callback: ((event: RemoteSeekEvent) => void) | undefined
 ) {
-  nativePlayer.handleRemoteSeek = callback
+  nativeBrowser.handleRemoteSeek = callback
 }
 
 /**
@@ -208,7 +208,7 @@ export function handleRemoteSeek(
 export function handleRemoteJumpForward(
   callback: ((event: RemoteJumpForwardEvent) => void) | undefined
 ) {
-  nativePlayer.handleRemoteJumpForward = callback
+  nativeBrowser.handleRemoteJumpForward = callback
 }
 
 /**
@@ -218,7 +218,7 @@ export function handleRemoteJumpForward(
 export function handleRemoteJumpBackward(
   callback: ((event: RemoteJumpBackwardEvent) => void) | undefined
 ) {
-  nativePlayer.handleRemoteJumpBackward = callback
+  nativeBrowser.handleRemoteJumpBackward = callback
 }
 
 // MARK: - Event Callbacks (for listening/debugging only)
@@ -234,7 +234,7 @@ export function handleRemoteJumpBackward(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteBookmark = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemoteBookmark = cb)
+  (cb) => (nativeBrowser.onRemoteBookmark = cb)
 )
 
 /**
@@ -243,7 +243,7 @@ export const onRemoteBookmark = LazyNativeEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteDislike = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemoteDislike = cb)
+  (cb) => (nativeBrowser.onRemoteDislike = cb)
 )
 
 /**
@@ -253,7 +253,7 @@ export const onRemoteDislike = LazyNativeEmitter.emitterize<void>(
  */
 export const onRemoteJumpBackward =
   LazyNativeEmitter.emitterize<RemoteJumpBackwardEvent>(
-    (cb) => (nativePlayer.onRemoteJumpBackward = cb)
+    (cb) => (nativeBrowser.onRemoteJumpBackward = cb)
   )
 
 /**
@@ -263,7 +263,7 @@ export const onRemoteJumpBackward =
  */
 export const onRemoteJumpForward =
   LazyNativeEmitter.emitterize<RemoteJumpForwardEvent>(
-    (cb) => (nativePlayer.onRemoteJumpForward = cb)
+    (cb) => (nativeBrowser.onRemoteJumpForward = cb)
   )
 
 /**
@@ -272,7 +272,7 @@ export const onRemoteJumpForward =
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteLike = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemoteLike = cb)
+  (cb) => (nativeBrowser.onRemoteLike = cb)
 )
 
 /**
@@ -281,7 +281,7 @@ export const onRemoteLike = LazyNativeEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteNext = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemoteNext = cb)
+  (cb) => (nativeBrowser.onRemoteNext = cb)
 )
 
 /**
@@ -290,7 +290,7 @@ export const onRemoteNext = LazyNativeEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePause = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemotePause = cb)
+  (cb) => (nativeBrowser.onRemotePause = cb)
 )
 
 /**
@@ -299,7 +299,7 @@ export const onRemotePause = LazyNativeEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemotePlay = cb)
+  (cb) => (nativeBrowser.onRemotePlay = cb)
 )
 
 /**
@@ -308,7 +308,7 @@ export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePlayId = LazyNativeEmitter.emitterize<RemotePlayIdEvent>(
-  (cb) => (nativePlayer.onRemotePlayId = cb)
+  (cb) => (nativeBrowser.onRemotePlayId = cb)
 )
 
 /**
@@ -317,7 +317,7 @@ export const onRemotePlayId = LazyNativeEmitter.emitterize<RemotePlayIdEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePlaySearch = LazyNativeEmitter.emitterize<RemotePlaySearchEvent>(
-  (cb) => (nativePlayer.onRemotePlaySearch = cb)
+  (cb) => (nativeBrowser.onRemotePlaySearch = cb)
 )
 
 /**
@@ -326,7 +326,7 @@ export const onRemotePlaySearch = LazyNativeEmitter.emitterize<RemotePlaySearchE
  * @returns Cleanup function to unsubscribe
  */
 export const onRemotePrevious = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemotePrevious = cb)
+  (cb) => (nativeBrowser.onRemotePrevious = cb)
 )
 
 /**
@@ -335,7 +335,7 @@ export const onRemotePrevious = LazyNativeEmitter.emitterize<void>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteSeek = LazyNativeEmitter.emitterize<RemoteSeekEvent>(
-  (cb) => (nativePlayer.onRemoteSeek = cb)
+  (cb) => (nativeBrowser.onRemoteSeek = cb)
 )
 
 /**
@@ -344,7 +344,7 @@ export const onRemoteSeek = LazyNativeEmitter.emitterize<RemoteSeekEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteSetRating = LazyNativeEmitter.emitterize<RemoteSetRatingEvent>(
-  (cb) => (nativePlayer.onRemoteSetRating = cb)
+  (cb) => (nativeBrowser.onRemoteSetRating = cb)
 )
 
 /**
@@ -353,7 +353,7 @@ export const onRemoteSetRating = LazyNativeEmitter.emitterize<RemoteSetRatingEve
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteSkip = LazyNativeEmitter.emitterize<RemoteSkipEvent>(
-  (cb) => (nativePlayer.onRemoteSkip = cb)
+  (cb) => (nativeBrowser.onRemoteSkip = cb)
 )
 
 /**
@@ -362,5 +362,5 @@ export const onRemoteSkip = LazyNativeEmitter.emitterize<RemoteSkipEvent>(
  * @returns Cleanup function to unsubscribe
  */
 export const onRemoteStop = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativePlayer.onRemoteStop = cb)
+  (cb) => (nativeBrowser.onRemoteStop = cb)
 )

@@ -11,7 +11,6 @@
 #import <type_traits>
 
 #include "HybridAudioBrowserSpecSwift.hpp"
-#include "HybridAudioPlayerSpecSwift.hpp"
 
 @interface AudioBrowserAutolinking : NSObject
 @end
@@ -26,13 +25,6 @@
     "AudioBrowser",
     []() -> std::shared_ptr<HybridObject> {
       std::shared_ptr<HybridAudioBrowserSpec> hybridObject = AudioBrowser::AudioBrowserAutolinking::createAudioBrowser();
-      return hybridObject;
-    }
-  );
-  HybridObjectRegistry::registerHybridObjectConstructor(
-    "AudioPlayer",
-    []() -> std::shared_ptr<HybridObject> {
-      std::shared_ptr<HybridAudioPlayerSpec> hybridObject = AudioBrowser::AudioBrowserAutolinking::createAudioPlayer();
       return hybridObject;
     }
   );

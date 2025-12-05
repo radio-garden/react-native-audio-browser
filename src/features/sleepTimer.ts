@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { nativePlayer } from '../native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Types
@@ -36,7 +36,7 @@ export type SleepTimerChangedEvent = SleepTimer
  * Gets the current sleep timer state.
  */
 export function getSleepTimer(): SleepTimer {
-  return nativePlayer.getSleepTimer()
+  return nativeBrowser.getSleepTimer()
 }
 
 /**
@@ -44,14 +44,14 @@ export function getSleepTimer(): SleepTimer {
  * @param seconds - Number of seconds until playback stops
  */
 export function setSleepTimer(seconds: number): void {
-  nativePlayer.setSleepTimer(seconds)
+  nativeBrowser.setSleepTimer(seconds)
 }
 
 /**
  * Sets a sleep timer to stop playback when the current track finishes playing.
  */
 export function setSleepTimerToEndOfTrack(): void {
-  nativePlayer.setSleepTimerToEndOfTrack()
+  nativeBrowser.setSleepTimerToEndOfTrack()
 }
 
 /**
@@ -59,7 +59,7 @@ export function setSleepTimerToEndOfTrack(): void {
  * @returns true if a timer was cleared, false if no timer was active
  */
 export function clearSleepTimer(): boolean {
-  return nativePlayer.clearSleepTimer()
+  return nativeBrowser.clearSleepTimer()
 }
 
 // MARK: - Event Callbacks
@@ -70,7 +70,7 @@ export function clearSleepTimer(): boolean {
  * @returns Cleanup function to unsubscribe
  */
 export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
-  (cb) => (nativePlayer.onSleepTimerChanged = cb)
+  (cb) => (nativeBrowser.onSleepTimerChanged = cb)
 )
 
 // MARK: - Hooks

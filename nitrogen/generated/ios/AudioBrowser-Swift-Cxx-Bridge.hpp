@@ -48,8 +48,6 @@ namespace margelo::nitro::audiobrowser { struct HeartRating; }
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { class HybridAudioBrowserSpec; }
-// Forward declaration of `HybridAudioPlayerSpec` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { class HybridAudioPlayerSpec; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 // Forward declaration of `IOSCategoryOptions` to properly resolve imports.
@@ -152,8 +150,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridAudioBrowserSpec_cxx` to properly resolve imports.
 namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
-// Forward declaration of `HybridAudioPlayerSpec_cxx` to properly resolve imports.
-namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 
 // Include C++ defined types
 #include "AndroidAudioContentType.hpp"
@@ -176,7 +172,6 @@ namespace AudioBrowser { class HybridAudioPlayerSpec_cxx; }
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
-#include "HybridAudioPlayerSpec.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
@@ -955,54 +950,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline SearchMode get_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
     return *optional;
-  }
-  
-  // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
-  /**
-   * Specialized version of `std::shared_ptr<HybridAudioBrowserSpec>`.
-   */
-  using std__shared_ptr_HybridAudioBrowserSpec_ = std::shared_ptr<HybridAudioBrowserSpec>;
-  std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept;
-  void* NON_NULL get_std__shared_ptr_HybridAudioBrowserSpec_(std__shared_ptr_HybridAudioBrowserSpec_ cppType);
-  
-  // pragma MARK: std::weak_ptr<HybridAudioBrowserSpec>
-  using std__weak_ptr_HybridAudioBrowserSpec_ = std::weak_ptr<HybridAudioBrowserSpec>;
-  inline std__weak_ptr_HybridAudioBrowserSpec_ weakify_std__shared_ptr_HybridAudioBrowserSpec_(const std::shared_ptr<HybridAudioBrowserSpec>& strong) noexcept { return strong; }
-  
-  // pragma MARK: Result<void>
-  using Result_void_ = Result<void>;
-  inline Result_void_ create_Result_void_() noexcept {
-    return Result<void>::withValue();
-  }
-  inline Result_void_ create_Result_void_(const std::exception_ptr& error) noexcept {
-    return Result<void>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<Track>>>>
-  using Result_std__shared_ptr_Promise_std__vector_Track____ = Result<std::shared_ptr<Promise<std::vector<Track>>>>;
-  inline Result_std__shared_ptr_Promise_std__vector_Track____ create_Result_std__shared_ptr_Promise_std__vector_Track____(const std::shared_ptr<Promise<std::vector<Track>>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<std::vector<Track>>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_std__vector_Track____ create_Result_std__shared_ptr_Promise_std__vector_Track____(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<std::vector<Track>>>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::optional<ResolvedTrack>>
-  using Result_std__optional_ResolvedTrack__ = Result<std::optional<ResolvedTrack>>;
-  inline Result_std__optional_ResolvedTrack__ create_Result_std__optional_ResolvedTrack__(const std::optional<ResolvedTrack>& value) noexcept {
-    return Result<std::optional<ResolvedTrack>>::withValue(value);
-  }
-  inline Result_std__optional_ResolvedTrack__ create_Result_std__optional_ResolvedTrack__(const std::exception_ptr& error) noexcept {
-    return Result<std::optional<ResolvedTrack>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::optional<NavigationError>>
-  using Result_std__optional_NavigationError__ = Result<std::optional<NavigationError>>;
-  inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::optional<NavigationError>& value) noexcept {
-    return Result<std::optional<NavigationError>>::withValue(value);
-  }
-  inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::exception_ptr& error) noexcept {
-    return Result<std::optional<NavigationError>>::withError(error);
   }
   
   // pragma MARK: std::shared_ptr<Promise<void>>
@@ -2398,17 +2345,53 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_BatteryOptimizationStatusChangedEvent_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<HybridAudioPlayerSpec>
+  // pragma MARK: std::shared_ptr<HybridAudioBrowserSpec>
   /**
-   * Specialized version of `std::shared_ptr<HybridAudioPlayerSpec>`.
+   * Specialized version of `std::shared_ptr<HybridAudioBrowserSpec>`.
    */
-  using std__shared_ptr_HybridAudioPlayerSpec_ = std::shared_ptr<HybridAudioPlayerSpec>;
-  std::shared_ptr<HybridAudioPlayerSpec> create_std__shared_ptr_HybridAudioPlayerSpec_(void* NON_NULL swiftUnsafePointer) noexcept;
-  void* NON_NULL get_std__shared_ptr_HybridAudioPlayerSpec_(std__shared_ptr_HybridAudioPlayerSpec_ cppType);
+  using std__shared_ptr_HybridAudioBrowserSpec_ = std::shared_ptr<HybridAudioBrowserSpec>;
+  std::shared_ptr<HybridAudioBrowserSpec> create_std__shared_ptr_HybridAudioBrowserSpec_(void* NON_NULL swiftUnsafePointer) noexcept;
+  void* NON_NULL get_std__shared_ptr_HybridAudioBrowserSpec_(std__shared_ptr_HybridAudioBrowserSpec_ cppType);
   
-  // pragma MARK: std::weak_ptr<HybridAudioPlayerSpec>
-  using std__weak_ptr_HybridAudioPlayerSpec_ = std::weak_ptr<HybridAudioPlayerSpec>;
-  inline std__weak_ptr_HybridAudioPlayerSpec_ weakify_std__shared_ptr_HybridAudioPlayerSpec_(const std::shared_ptr<HybridAudioPlayerSpec>& strong) noexcept { return strong; }
+  // pragma MARK: std::weak_ptr<HybridAudioBrowserSpec>
+  using std__weak_ptr_HybridAudioBrowserSpec_ = std::weak_ptr<HybridAudioBrowserSpec>;
+  inline std__weak_ptr_HybridAudioBrowserSpec_ weakify_std__shared_ptr_HybridAudioBrowserSpec_(const std::shared_ptr<HybridAudioBrowserSpec>& strong) noexcept { return strong; }
+  
+  // pragma MARK: Result<void>
+  using Result_void_ = Result<void>;
+  inline Result_void_ create_Result_void_() noexcept {
+    return Result<void>::withValue();
+  }
+  inline Result_void_ create_Result_void_(const std::exception_ptr& error) noexcept {
+    return Result<void>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<Track>>>>
+  using Result_std__shared_ptr_Promise_std__vector_Track____ = Result<std::shared_ptr<Promise<std::vector<Track>>>>;
+  inline Result_std__shared_ptr_Promise_std__vector_Track____ create_Result_std__shared_ptr_Promise_std__vector_Track____(const std::shared_ptr<Promise<std::vector<Track>>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<Track>>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_std__vector_Track____ create_Result_std__shared_ptr_Promise_std__vector_Track____(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<Track>>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<ResolvedTrack>>
+  using Result_std__optional_ResolvedTrack__ = Result<std::optional<ResolvedTrack>>;
+  inline Result_std__optional_ResolvedTrack__ create_Result_std__optional_ResolvedTrack__(const std::optional<ResolvedTrack>& value) noexcept {
+    return Result<std::optional<ResolvedTrack>>::withValue(value);
+  }
+  inline Result_std__optional_ResolvedTrack__ create_Result_std__optional_ResolvedTrack__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<ResolvedTrack>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<NavigationError>>
+  using Result_std__optional_NavigationError__ = Result<std::optional<NavigationError>>;
+  inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::optional<NavigationError>& value) noexcept {
+    return Result<std::optional<NavigationError>>::withValue(value);
+  }
+  inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<NavigationError>>::withError(error);
+  }
   
   // pragma MARK: Result<std::shared_ptr<Promise<void>>>
   using Result_std__shared_ptr_Promise_void___ = Result<std::shared_ptr<Promise<void>>>;

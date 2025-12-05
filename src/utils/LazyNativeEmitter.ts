@@ -15,7 +15,7 @@ type Callback<T> = (arg: T) => void
  * @example
  * ```typescript
  * export const onRemotePlay = LazyEmitter.emitterize<void>(
- *   (cb) => (nativePlayer.onRemotePlay = cb)
+ *   (cb) => (nativeBrowser.onRemotePlay = cb)
  * )
  * ```
  */

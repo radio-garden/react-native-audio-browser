@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { nativePlayer } from '../../native'
+import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 import { onPlaybackChanged } from './state'
@@ -37,7 +37,7 @@ export interface PlaybackProgressUpdatedEvent extends Progress {
  * duration in seconds.
  */
 export function getProgress(): Progress {
-  return nativePlayer.getProgress()
+  return nativeBrowser.getProgress()
 }
 
 // MARK: - Event Callbacks
@@ -49,7 +49,7 @@ export function getProgress(): Progress {
  */
 export const onProgressUpdated =
   NativeUpdatedValue.emitterize<PlaybackProgressUpdatedEvent>(
-    (cb) => (nativePlayer.onPlaybackProgressUpdated = cb)
+    (cb) => (nativeBrowser.onPlaybackProgressUpdated = cb)
   )
 
 // MARK: - Hooks

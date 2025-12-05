@@ -1,6 +1,7 @@
-import { nativePlayer } from '../../native'
 
 // MARK: - Types
+
+import { nativeBrowser } from "../../native"
 
 /**
  * AndroidAudioContentType options:
@@ -517,7 +518,5 @@ export interface PlayerOptions {
 export async function setupPlayer(
   options: PartialSetupPlayerOptions = {}
 ): Promise<void> {
-  return nativePlayer.setupPlayer(options)
+  return nativeBrowser.setupPlayer(options)
 }
-
-// MARK: - Android-specific
