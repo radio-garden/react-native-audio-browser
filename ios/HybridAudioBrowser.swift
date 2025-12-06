@@ -400,23 +400,23 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     return networkMonitor.getOnline()
   }
 
-  // MARK: - Equalizer
+  // MARK: - Equalizer (unsupported on iOS)
 
   public func getEqualizerSettings() throws -> EqualizerSettings? {
-    // iOS has limited equalizer support
+    // No-op: equalizer unsupported on iOS
     return nil
   }
 
   public func setEqualizerEnabled(enabled: Bool) throws {
-    // iOS has limited equalizer support
+    // No-op: equalizer unsupported on iOS
   }
 
   public func setEqualizerPreset(preset: String) throws {
-    // iOS has limited equalizer support
+    // No-op: equalizer unsupported on iOS
   }
 
   public func setEqualizerLevels(levels: [Double]) throws {
-    // iOS has limited equalizer support
+    // No-op: equalizer unsupported on iOS
   }
 
   // MARK: - Battery (Android-only, stub implementations)
