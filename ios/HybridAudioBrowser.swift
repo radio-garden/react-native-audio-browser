@@ -147,6 +147,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
       // Create player with self as callbacks delegate
       self.player = TrackPlayer(callbacks: self)
 
+      // Configure sleep timer callback
+      self.player?.sleepTimerManager.onChanged = { [weak self] state in
+        self?.onSleepTimerChanged(state)
+      }
+
       // TODO: Apply options
     }
   }
@@ -263,21 +268,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Sleep Timer
 
   public func getSleepTimer() throws -> SleepTimer {
-    // TODO: Implement sleep timer - returns null (first case) when no timer set
+    if let state = player?.sleepTimerManager.get() {
+      return state
+    }
     return .first(NullType.null)
   }
 
   public func setSleepTimer(seconds: Double) throws {
-    // TODO: Implement sleep timer
+    player?.sleepTimerManager.set(seconds: seconds)
   }
 
   public func setSleepTimerToEndOfTrack() throws {
-    // TODO: Implement sleep timer
+    player?.sleepTimerManager.setToEndOfTrack()
   }
 
   public func clearSleepTimer() throws -> Bool {
-    // TODO: Implement sleep timer
-    return false
+    return player?.sleepTimerManager.clear() ?? false
   }
 
   // MARK: - Queue Management

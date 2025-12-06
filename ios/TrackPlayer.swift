@@ -5,6 +5,7 @@ import NitroModules
 class TrackPlayer {
   public let nowPlayingInfoController: NowPlayingInfoController
   public let remoteCommandController: RemoteCommandController
+  public let sleepTimerManager = SleepTimerManager()
   private weak var callbacks: TrackPlayerCallbacks?
   private var lastIndex: Int = -1
   private var lastTrack: Track?
@@ -406,6 +407,11 @@ class TrackPlayer {
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
     self.callbacks = callbacks
 
+    // Configure sleep timer
+    sleepTimerManager.onComplete = { [weak self] in
+      self?.pause()
+    }
+
     setupAVPlayer()
   }
 
@@ -797,6 +803,10 @@ class TrackPlayer {
   func handleTrackDidPlayToEndTime() {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
+
+      // Check if sleep timer should trigger on track end
+      sleepTimerManager.onTrackPlayedToEnd()
+
       if repeatMode == .track {
         replay()
       } else if repeatMode == .queue || !isLastTrack {
@@ -1099,6 +1109,9 @@ class TrackPlayer {
   }
 
   func handleCurrentTrackChanged() {
+    // Reset end-of-track sleep timer when track changes
+    sleepTimerManager.onTrackChanged()
+
     let lastPosition = currentTime
     let shouldContinuePlayback = playWhenReady
     if let currentTrack {
