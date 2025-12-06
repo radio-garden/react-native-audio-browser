@@ -23,12 +23,12 @@ public extension RatingType {
         self = .heart
       case "thumbs-up-down":
         self = .thumbsUpDown
-      case "3-stars":
-        self = .3Stars
-      case "4-stars":
-        self = .4Stars
-      case "5-stars":
-        self = .5Stars
+      case "three-stars":
+        self = .threeStars
+      case "four-stars":
+        self = .fourStars
+      case "five-stars":
+        self = .fiveStars
       case "percentage":
         self = .percentage
       default:
@@ -47,12 +47,12 @@ public extension RatingType {
         return "heart"
       case .thumbsUpDown:
         return "thumbs-up-down"
-      case .3Stars:
-        return "3-stars"
-      case .4Stars:
-        return "4-stars"
-      case .5Stars:
-        return "5-stars"
+      case .threeStars:
+        return "three-stars"
+      case .fourStars:
+        return "four-stars"
+      case .fiveStars:
+        return "five-stars"
       case .percentage:
         return "percentage"
     }

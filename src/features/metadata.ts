@@ -7,9 +7,9 @@ import type { Rating } from './rating'
 export type RatingType =
   | 'heart'
   | 'thumbs-up-down'
-  | '3-stars'
-  | '4-stars'
-  | '5-stars'
+  | 'three-stars'
+  | 'four-stars'
+  | 'five-stars'
   | 'percentage'
   | 'none'
 

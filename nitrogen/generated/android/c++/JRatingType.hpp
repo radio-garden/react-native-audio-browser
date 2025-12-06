@@ -44,9 +44,9 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldNONE = clazz->getStaticField<JRatingType>("NONE");
       static const auto fieldHEART = clazz->getStaticField<JRatingType>("HEART");
       static const auto fieldTHUMBS_UP_DOWN = clazz->getStaticField<JRatingType>("THUMBS_UP_DOWN");
-      static const auto field_3_STARS = clazz->getStaticField<JRatingType>("_3_STARS");
-      static const auto field_4_STARS = clazz->getStaticField<JRatingType>("_4_STARS");
-      static const auto field_5_STARS = clazz->getStaticField<JRatingType>("_5_STARS");
+      static const auto fieldTHREE_STARS = clazz->getStaticField<JRatingType>("THREE_STARS");
+      static const auto fieldFOUR_STARS = clazz->getStaticField<JRatingType>("FOUR_STARS");
+      static const auto fieldFIVE_STARS = clazz->getStaticField<JRatingType>("FIVE_STARS");
       static const auto fieldPERCENTAGE = clazz->getStaticField<JRatingType>("PERCENTAGE");
       
       switch (value) {
@@ -56,12 +56,12 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(fieldHEART);
         case RatingType::THUMBS_UP_DOWN:
           return clazz->getStaticFieldValue(fieldTHUMBS_UP_DOWN);
-        case RatingType::_3_STARS:
-          return clazz->getStaticFieldValue(field_3_STARS);
-        case RatingType::_4_STARS:
-          return clazz->getStaticFieldValue(field_4_STARS);
-        case RatingType::_5_STARS:
-          return clazz->getStaticFieldValue(field_5_STARS);
+        case RatingType::THREE_STARS:
+          return clazz->getStaticFieldValue(fieldTHREE_STARS);
+        case RatingType::FOUR_STARS:
+          return clazz->getStaticFieldValue(fieldFOUR_STARS);
+        case RatingType::FIVE_STARS:
+          return clazz->getStaticFieldValue(fieldFIVE_STARS);
         case RatingType::PERCENTAGE:
           return clazz->getStaticFieldValue(fieldPERCENTAGE);
         default:
