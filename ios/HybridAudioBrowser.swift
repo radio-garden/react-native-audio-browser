@@ -7,6 +7,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Private Properties
 
   private var player: TrackPlayer?
+  private let networkMonitor = NetworkMonitor()
 
   // MARK: - Browser Properties
 
@@ -93,7 +94,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   public var onOptionsChanged: (Options) -> Void = { _ in }
   public var onFavoriteChanged: (FavoriteChangedEvent) -> Void = { _ in }
   public var onNowPlayingChanged: (NowPlayingMetadata) -> Void = { _ in }
-  public var onOnlineChanged: (Bool) -> Void = { _ in }
+  public var onOnlineChanged: (Bool) -> Void = { _ in } {
+    didSet {
+      networkMonitor.onChanged = { [weak self] isOnline in
+        self?.onOnlineChanged(isOnline)
+      }
+      // Immediately notify current state
+      onOnlineChanged(networkMonitor.isOnline)
+    }
+  }
   public var onEqualizerChanged: (EqualizerSettings) -> Void = { _ in }
   public var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Void = { _ in }
   public var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Void = { _ in }
@@ -388,8 +397,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Network
 
   public func getOnline() throws -> Bool {
-    // TODO: Implement network monitoring
-    return true
+    return networkMonitor.getOnline()
   }
 
   // MARK: - Equalizer
