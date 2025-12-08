@@ -112,16 +112,21 @@ export function MiniPlayer({
             iconStyle="solid"
           />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.controlButton} onPress={onEqualizerPress}>
-          <View style={{ transform: [{ rotate: '90deg' }] }}>
-            <Icon
-              name="sliders"
-              size={20}
-              color={equalizerSettings?.enabled ? '#007AFF' : 'white'}
-              iconStyle="solid"
-            />
-          </View>
-        </TouchableOpacity>
+        {equalizerSettings != null && (
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={onEqualizerPress}
+          >
+            <View style={{ transform: [{ rotate: '90deg' }] }}>
+              <Icon
+                name="sliders"
+                size={20}
+                color={equalizerSettings.enabled ? '#007AFF' : 'white'}
+                iconStyle="solid"
+              />
+            </View>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.controlButton}
           onPress={onSleepTimerPress}
