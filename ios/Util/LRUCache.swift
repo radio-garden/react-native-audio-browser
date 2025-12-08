@@ -1,13 +1,29 @@
 import Foundation
 
-/// A thread-safe Least Recently Used (LRU) cache.
+/// A thread-safe Least Recently Used (LRU) cache with O(1) operations.
 ///
 /// When the cache exceeds its maximum size, the least recently accessed
 /// items are evicted to make room for new entries.
+///
+/// Uses a doubly-linked list + dictionary for O(1) get/set/remove operations.
 final class LRUCache<Key: Hashable, Value> {
+  /// Doubly-linked list node for O(1) removal and reordering.
+  private final class Node {
+    let key: Key
+    var value: Value
+    var prev: Node?
+    var next: Node?
+
+    init(key: Key, value: Value) {
+      self.key = key
+      self.value = value
+    }
+  }
+
   private let maxSize: Int
-  private var cache: [Key: Value] = [:]
-  private var accessOrder: [Key] = []
+  private var cache: [Key: Node] = [:]
+  private var head: Node?  // Most recently used
+  private var tail: Node?  // Least recently used
   private let lock = NSLock()
 
   /// Creates a new LRU cache with the specified maximum size.
@@ -15,6 +31,64 @@ final class LRUCache<Key: Hashable, Value> {
   /// - Parameter maxSize: The maximum number of items the cache can hold
   init(maxSize: Int) {
     self.maxSize = maxSize
+  }
+
+  /// Moves a node to the head (most recently used position).
+  private func moveToHead(_ node: Node) {
+    guard node !== head else { return }
+
+    // Remove from current position
+    node.prev?.next = node.next
+    node.next?.prev = node.prev
+
+    if node === tail {
+      tail = node.prev
+    }
+
+    // Insert at head
+    node.prev = nil
+    node.next = head
+    head?.prev = node
+    head = node
+
+    if tail == nil {
+      tail = node
+    }
+  }
+
+  /// Removes a node from the list.
+  private func removeNode(_ node: Node) {
+    node.prev?.next = node.next
+    node.next?.prev = node.prev
+
+    if node === head {
+      head = node.next
+    }
+    if node === tail {
+      tail = node.prev
+    }
+
+    node.prev = nil
+    node.next = nil
+  }
+
+  /// Adds a node at the head (most recently used position).
+  private func addToHead(_ node: Node) {
+    node.prev = nil
+    node.next = head
+    head?.prev = node
+    head = node
+
+    if tail == nil {
+      tail = node
+    }
+  }
+
+  /// Removes and returns the tail node (least recently used).
+  private func removeTail() -> Node? {
+    guard let tailNode = tail else { return nil }
+    removeNode(tailNode)
+    return tailNode
   }
 
   /// Gets a value from the cache, updating its access order.
@@ -25,17 +99,13 @@ final class LRUCache<Key: Hashable, Value> {
     lock.lock()
     defer { lock.unlock() }
 
-    guard let value = cache[key] else {
+    guard let node = cache[key] else {
       return nil
     }
 
-    // Move key to end of access order (most recently used)
-    if let index = accessOrder.firstIndex(of: key) {
-      accessOrder.remove(at: index)
-      accessOrder.append(key)
-    }
-
-    return value
+    // Move to head (most recently used)
+    moveToHead(node)
+    return node.value
   }
 
   /// Sets a value in the cache.
@@ -49,25 +119,22 @@ final class LRUCache<Key: Hashable, Value> {
     lock.lock()
     defer { lock.unlock() }
 
-    // If key already exists, update and move to end
-    if cache[key] != nil {
-      cache[key] = value
-      if let index = accessOrder.firstIndex(of: key) {
-        accessOrder.remove(at: index)
-        accessOrder.append(key)
-      }
+    // If key exists, update value and move to head
+    if let existingNode = cache[key] {
+      existingNode.value = value
+      moveToHead(existingNode)
       return
     }
 
     // Evict oldest if at capacity
-    while accessOrder.count >= maxSize {
-      let oldest = accessOrder.removeFirst()
-      cache.removeValue(forKey: oldest)
+    if cache.count >= maxSize, let evicted = removeTail() {
+      cache.removeValue(forKey: evicted.key)
     }
 
-    // Add new entry
-    cache[key] = value
-    accessOrder.append(key)
+    // Add new entry at head
+    let newNode = Node(key: key, value: value)
+    cache[key] = newNode
+    addToHead(newNode)
   }
 
   /// Removes a value from the cache.
@@ -77,10 +144,9 @@ final class LRUCache<Key: Hashable, Value> {
     lock.lock()
     defer { lock.unlock() }
 
+    guard let node = cache[key] else { return }
+    removeNode(node)
     cache.removeValue(forKey: key)
-    if let index = accessOrder.firstIndex(of: key) {
-      accessOrder.remove(at: index)
-    }
   }
 
   /// Clears all entries from the cache.
@@ -89,7 +155,8 @@ final class LRUCache<Key: Hashable, Value> {
     defer { lock.unlock() }
 
     cache.removeAll()
-    accessOrder.removeAll()
+    head = nil
+    tail = nil
   }
 
   /// The current number of items in the cache.
@@ -103,7 +170,7 @@ final class LRUCache<Key: Hashable, Value> {
   var values: [Value] {
     lock.lock()
     defer { lock.unlock() }
-    return Array(cache.values)
+    return cache.values.map { $0.value }
   }
 
   /// Returns all keys in the cache (no particular order guaranteed).
