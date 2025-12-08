@@ -9,7 +9,6 @@ struct JsonResolvedTrack: Codable {
   let url: String
   let title: String
   let subtitle: String?
-  let icon: String?
   let artwork: String?
   let artist: String?
   let album: String?
@@ -26,7 +25,6 @@ struct JsonResolvedTrack: Codable {
     url: String,
     title: String,
     subtitle: String? = nil,
-    icon: String? = nil,
     artwork: String? = nil,
     artist: String? = nil,
     album: String? = nil,
@@ -42,7 +40,6 @@ struct JsonResolvedTrack: Codable {
     self.url = url
     self.title = title
     self.subtitle = subtitle
-    self.icon = icon
     self.artwork = artwork
     self.artist = artist
     self.album = album
@@ -62,7 +59,6 @@ struct JsonTrack: Codable {
   let url: String?
   let title: String
   let subtitle: String?
-  let icon: String?
   let artwork: String?
   let artist: String?
   let album: String?
@@ -78,7 +74,6 @@ struct JsonTrack: Codable {
     url: String? = nil,
     title: String,
     subtitle: String? = nil,
-    icon: String? = nil,
     artwork: String? = nil,
     artist: String? = nil,
     album: String? = nil,
@@ -93,7 +88,6 @@ struct JsonTrack: Codable {
     self.url = url
     self.title = title
     self.subtitle = subtitle
-    self.icon = icon
     self.artwork = artwork
     self.artist = artist
     self.album = album
