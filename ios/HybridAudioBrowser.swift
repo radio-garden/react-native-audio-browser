@@ -536,6 +536,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   public func setActiveTrackFavorited(favorited: Bool) throws {
     onMainThread {
       guard let track = player?.currentTrack, let src = track.src else { return }
+      guard let index = player?.currentIndex, index >= 0 else { return }
       browserManager.updateFavorite(id: src, favorited: favorited)
       // Create updated track with new favorited state
       let updatedTrack = Track(
@@ -556,6 +557,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         groupTitle: track.groupTitle
       )
       onFavoriteChanged(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
+      // Fire active track changed so useActiveTrack() hook updates UI
+      let position = player?.currentTime ?? 0
+      onPlaybackActiveTrackChanged(PlaybackActiveTrackChangedEvent(
+        lastIndex: Double(index),
+        lastTrack: track,
+        lastPosition: position,
+        index: Double(index),
+        track: updatedTrack
+      ))
     }
   }
 
