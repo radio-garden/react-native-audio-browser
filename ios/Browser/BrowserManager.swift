@@ -699,7 +699,7 @@ final class BrowserManager {
         let transformedConfig = try await innerPromise.await()
 
         // Build final URL from transformed config
-        let finalUrl = buildMediaUrl(from: transformedConfig)
+        let finalUrl = buildUrl(from: transformedConfig)
         logger.debug("Media URL transformed: \(originalUrl) -> \(finalUrl)")
 
         return MediaResolvedUrl(
@@ -728,7 +728,7 @@ final class BrowserManager {
     return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
   }
 
-  private func buildMediaUrl(from config: RequestConfig) -> String {
+  private func buildUrl(from config: RequestConfig) -> String {
     let path = config.path ?? ""
     let baseUrl = config.baseUrl
 
@@ -748,6 +748,111 @@ final class BrowserManager {
     }
 
     return url
+  }
+
+  // MARK: - Artwork URL Resolution
+
+  /// Resolves an artwork URL for a track using the configured artwork transform.
+  /// Returns an ImageSource with transformed URL and headers for image loading.
+  ///
+  /// - Parameters:
+  ///   - track: The track whose artwork URL should be transformed
+  ///   - perRouteConfig: Optional per-route artwork config that overrides global config
+  /// - Returns: ImageSource ready for image loading, or nil if no artwork
+  func resolveArtworkUrl(track: Track, perRouteConfig: MediaRequestConfig?) async -> ImageSource? {
+    // Determine effective artwork config: per-route overrides global
+    let effectiveArtworkConfig = perRouteConfig ?? config.artwork
+
+    // If no artwork config and no track.artwork, nothing to transform
+    if effectiveArtworkConfig == nil && track.artwork == nil {
+      return nil
+    }
+
+    // If no artwork config, return original artwork URL as simple ImageSource
+    guard let artworkConfig = effectiveArtworkConfig else {
+      guard let artwork = track.artwork else { return nil }
+      return ImageSource(uri: artwork, method: nil, headers: nil, body: nil)
+    }
+
+    do {
+      // Create base config from global request config
+      var mergedConfig = RequestConfig(
+        method: config.request?.method,
+        path: track.artwork,  // Use track.artwork as default path
+        baseUrl: config.request?.baseUrl,
+        headers: config.request?.headers,
+        query: config.request?.query,
+        body: config.request?.body,
+        contentType: config.request?.contentType,
+        userAgent: config.request?.userAgent
+      )
+
+      // If there's a resolve callback, call it for per-track config
+      if let resolve = artworkConfig.resolve {
+        let outerPromise = resolve(track)
+        let innerPromise = try await outerPromise.await()
+        let resolvedConfig = try await innerPromise.await()
+
+        // Merge resolved config
+        mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolvedConfig)
+      } else {
+        // No resolve callback - apply artwork static config
+        let artworkStaticConfig = RequestConfig(
+          method: artworkConfig.method,
+          path: artworkConfig.path,
+          baseUrl: artworkConfig.baseUrl,
+          headers: artworkConfig.headers,
+          query: artworkConfig.query,
+          body: artworkConfig.body,
+          contentType: artworkConfig.contentType,
+          userAgent: artworkConfig.userAgent
+        )
+        mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
+      }
+
+      // Apply transform callback if present
+      if let transform = artworkConfig.transform {
+        let outerPromise = transform(mergedConfig, nil)
+        let innerPromise = try await outerPromise.await()
+        mergedConfig = try await innerPromise.await()
+      }
+
+      // Build final URL
+      let uri = buildUrl(from: mergedConfig)
+
+      // Build headers map, merging explicit headers with userAgent
+      var headers = mergedConfig.headers ?? [:]
+      if let userAgent = mergedConfig.userAgent, headers["User-Agent"] == nil {
+        headers["User-Agent"] = userAgent
+      }
+
+      logger.debug("Artwork URL transformed: \(track.artwork ?? "nil") -> \(uri)")
+
+      return ImageSource(
+        uri: uri,
+        method: mergedConfig.method,
+        headers: headers.isEmpty ? nil : headers,
+        body: mergedConfig.body
+      )
+    } catch {
+      logger.error("Failed to transform artwork URL for track: \(track.title), error: \(error.localizedDescription)")
+      // On error, return nil to avoid broken images
+      return nil
+    }
+  }
+
+  /// Merges two RequestConfig objects, with override values taking precedence.
+  private func mergeRequestConfig(base: RequestConfig, override: RequestConfig) -> RequestConfig {
+    return RequestConfig(
+      method: override.method ?? base.method,
+      path: override.path ?? base.path,
+      baseUrl: override.baseUrl ?? base.baseUrl,
+      headers: mergeHeaders(base.headers, override.headers),
+      query: mergeQuery(base.query, override.query),
+      body: override.body ?? base.body,
+      contentType: override.contentType ?? base.contentType,
+      userAgent: override.userAgent ?? base.userAgent
+    )
   }
 
   // MARK: - Accessors

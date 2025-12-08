@@ -21,21 +21,18 @@ extension Track {
     return isLocalFile ? .file : .stream
   }
 
-  /// Asset options for AVURLAsset (headers from artworkSource if available)
-  var assetOptions: [String: Any]? {
-    // TODO: If we need custom headers for media playback, extract from artworkSource
-    // or add a dedicated field for media headers
-    return nil
-  }
-
   /// Loads artwork from the artwork URL (local file or remote URL)
   func loadArtwork(_ handler: @escaping (UIImage?) -> Void) {
     // Try artworkSource first (has more detailed config), then fall back to artwork string
     let artworkUrlString: String?
+    let artworkHeaders: [String: String]?
+
     if let source = artworkSource {
       artworkUrlString = source.uri
+      artworkHeaders = source.headers
     } else {
       artworkUrlString = artwork
+      artworkHeaders = nil
     }
 
     guard let urlString = artworkUrlString, let url = URL(string: urlString) else {
@@ -48,9 +45,15 @@ extension Track {
       let image = UIImage(contentsOfFile: url.path)
       handler(image)
     } else {
-      // Load from remote URL
-      // TODO: Support custom headers from artworkSource if needed
-      URLSession.shared.dataTask(with: url) { data, _, error in
+      // Load from remote URL with optional headers
+      var request = URLRequest(url: url)
+      if let headers = artworkHeaders {
+        for (key, value) in headers {
+          request.setValue(value, forHTTPHeaderField: key)
+        }
+      }
+
+      URLSession.shared.dataTask(with: request) { data, _, error in
         if let data = data, let image = UIImage(data: data), error == nil {
           DispatchQueue.main.async {
             handler(image)

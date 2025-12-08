@@ -188,6 +188,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     browserManager.onTabsChanged = { [weak self] tabs in
       self?.onTabsChanged(tabs)
     }
+
+    // Configure artwork URL resolver for transforming artwork URLs during browsing
+    browserManager.artworkUrlResolver = { [weak browserManager] track, artworkConfig in
+      guard let browserManager = browserManager else { return nil }
+      return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig)
+    }
   }
 
   private func handleNavigationError(_ error: Error, path: String) {
