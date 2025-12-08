@@ -19,6 +19,7 @@ import {
   useTabs
 } from 'react-native-audio-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { DebugPanel } from '../components/DebugPanel'
 import { EqualizerModal } from '../components/EqualizerModal'
 import { MiniPlayer } from '../components/MiniPlayer'
 import { NavigationErrorView } from '../components/NavigationErrorView'
@@ -203,6 +204,8 @@ export function BrowserScreen() {
         visible={showSleepTimer}
         onClose={() => setShowSleepTimer(false)}
       />
+
+      {__DEV__ && <DebugPanel />}
     </View>
   )
 }
