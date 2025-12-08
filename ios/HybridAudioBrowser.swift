@@ -4,21 +4,66 @@ import MediaPlayer
 import NitroModules
 
 public class HybridAudioBrowser: HybridAudioBrowserSpec {
+  // MARK: - Shared Instance for CarPlay
+
+  /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
+  private(set) static weak var shared: HybridAudioBrowser?
+
   // MARK: - Private Properties
 
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
+  let browserManager = BrowserManager()
+  private var lastNavigationError: NavigationError? {
+    didSet {
+      // Skip if both nil (no real change)
+      guard oldValue != nil || lastNavigationError != nil else { return }
+      print("[NAV_ERROR] didSet fired, error=\(String(describing: lastNavigationError?.code)), thread=\(Thread.isMainThread ? "main" : "background")")
+      onNavigationError(NavigationErrorEvent(error: lastNavigationError))
+      print("[NAV_ERROR] callback invoked")
+    }
+  }
+
+  // MARK: - Thread Safety
+
+  /// Executes a closure on the main thread synchronously, returning its result.
+  /// If already on main thread, executes directly.
+  private func onMainThread<T>(_ work: () -> T) -> T {
+    if Thread.isMainThread {
+      return work()
+    } else {
+      return DispatchQueue.main.sync { work() }
+    }
+  }
+
+  /// Executes a throwing closure on the main thread synchronously.
+  private func onMainThread<T>(_ work: () throws -> T) throws -> T {
+    if Thread.isMainThread {
+      return try work()
+    } else {
+      return try DispatchQueue.main.sync { try work() }
+    }
+  }
 
   // MARK: - Browser Properties
 
   public var path: String? {
-    get { nil } // TODO: Implement browser
-    set { } // TODO: Implement browser
+    get { browserManager.getPath() }
+    set {
+      guard let newPath = newValue else { return }
+      Task {
+        do {
+          try await browserManager.navigate(newPath)
+        } catch {
+          handleNavigationError(error, path: newPath)
+        }
+      }
+    }
   }
 
   public var tabs: [Track]? {
-    get { nil } // TODO: Implement browser
-    set { } // TODO: Implement browser
+    get { browserManager.getTabs() }
+    set { /* tabs are managed internally by browserManager */ }
   }
 
   public var configuration: NativeBrowserConfiguration = NativeBrowserConfiguration(
@@ -26,7 +71,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     singleTrack: nil, androidControllerOfflineError: nil
   ) {
     didSet {
-      // TODO: Update browser config
+      browserManager.config = BrowserConfig(from: configuration)
+      // Query tabs and navigate to initial path after config is set (matches Kotlin behavior)
+      Task {
+        let tabs = try? await browserManager.queryTabs()
+        // Navigate to configured path, first tab, or "/"
+        let initialPath = configuration.path ?? tabs?.first?.url ?? "/"
+        print("[NAV_ERROR] Initial navigation to: \(initialPath)")
+        // Clear error before navigation (matches Kotlin clearNavigationError())
+        await MainActor.run { lastNavigationError = nil }
+        do {
+          try await browserManager.navigate(initialPath)
+        } catch {
+          print("[NAV_ERROR] Initial navigation failed: \(error)")
+          handleNavigationError(error, path: initialPath)
+        }
+      }
     }
   }
 
@@ -107,41 +167,149 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   public var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Void = { _ in }
   public var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Void = { _ in }
 
+  // MARK: - Initialization
+
+  public override init() {
+    super.init()
+    HybridAudioBrowser.shared = self
+    setupBrowserCallbacks()
+  }
+
+  /// Returns the TrackPlayer instance, if setup has been called.
+  func getPlayer() -> TrackPlayer? {
+    return player
+  }
+
+  private func setupBrowserCallbacks() {
+    browserManager.onPathChanged = { [weak self] path in
+      self?.onPathChanged(path)
+    }
+    browserManager.onContentChanged = { [weak self] content in
+      self?.onContentChanged(content)
+    }
+    browserManager.onTabsChanged = { [weak self] tabs in
+      self?.onTabsChanged(tabs)
+    }
+  }
+
+  private func handleNavigationError(_ error: Error, path: String) {
+    let navError: NavigationError
+    if let browserError = error as? BrowserError {
+      switch browserError {
+      case .contentNotFound:
+        navError = NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil)
+      case .httpError(let code, _):
+        navError = NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code))
+      case .networkError:
+        navError = NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil)
+      case .invalidConfiguration:
+        navError = NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil)
+      }
+    } else {
+      navError = NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil)
+    }
+
+    lastNavigationError = navError
+  }
+
   // MARK: - Browser Methods
 
   public func navigatePath(path: String) throws {
-    // TODO: Implement browser navigation
+    // Clear error synchronously before starting navigation (didSet notifies JS)
+    lastNavigationError = nil
+    Task {
+      do {
+        try await browserManager.navigate(path)
+      } catch {
+        handleNavigationError(error, path: path)
+      }
+    }
   }
 
   public func navigateTrack(track: Track) throws {
-    // If track has src, load it
-    if track.src != nil {
-      try load(track: track)
+    let url = track.url
+
+    // Check if this is a contextual URL (playable-only track with queue context)
+    if let url = url, BrowserPathHelper.isContextual(url) {
+      Task {
+        do {
+          // Expand the queue from the contextual URL
+          if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
+            let (tracks, startIndex) = expanded
+            print("[PLAYER] Loading expanded queue: \(tracks.count) tracks, starting at index \(startIndex)")
+
+            // Replace queue and seek to selected track
+            await MainActor.run {
+              player?.clear()
+              player?.add(tracks)
+              try? player?.skipTo(startIndex)
+              player?.play()
+            }
+          } else {
+            // Fallback: just load the single track
+            print("[PLAYER] Queue expansion failed, loading single track")
+            try load(track: track)
+            try play()
+          }
+        } catch {
+          print("[PLAYER] Error expanding queue: \(error)")
+          // Fallback to single track
+          try? load(track: track)
+          try? play()
+        }
+      }
     }
-    // TODO: Handle browsable tracks (navigate to url)
+    // If track has src, it's playable - load it
+    else if track.src != nil {
+      try load(track: track)
+      try play()
+    }
+    // If track has url, it's browsable - navigate to it
+    else if let url = url {
+      // Clear error synchronously before starting navigation (didSet notifies JS)
+      lastNavigationError = nil
+      Task {
+        do {
+          try await browserManager.navigate(url)
+        } catch {
+          handleNavigationError(error, path: url)
+        }
+      }
+    }
   }
 
   public func onSearch(query: String) throws -> Promise<[Track]> {
-    // TODO: Implement search
-    return Promise.resolved(withResult: [])
+    return Promise.async { [weak self] in
+      guard let self = self else { return [] }
+      let resolved = try await self.browserManager.search(query)
+      return resolved.children ?? []
+    }
   }
 
   public func getContent() throws -> ResolvedTrack? {
-    // TODO: Implement browser
-    return nil
+    return browserManager.getContent()
   }
 
   public func getNavigationError() throws -> NavigationError? {
-    // TODO: Implement browser
-    return nil
+    return lastNavigationError
   }
 
   public func notifyContentChanged(path: String) throws {
-    // TODO: Implement browser
+    browserManager.invalidateContentCache(path)
+    // Re-resolve the path if it's the current path
+    if browserManager.getPath() == path {
+      Task {
+        do {
+          try await browserManager.navigate(path)
+        } catch {
+          handleNavigationError(error, path: path)
+        }
+      }
+    }
   }
 
   public func setFavorites(favorites: [String]) throws {
-    // TODO: Implement favorites
+    browserManager.setFavorites(favorites)
   }
 
   // MARK: - Player Setup
@@ -184,203 +352,266 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Playback Control
 
   public func load(track: Track) throws {
-    guard let player = player else {
-      throw NSError(domain: "AudioBrowser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Player not initialized"])
+    print("[PLAYER] load() called with track: \(track.title)")
+    try onMainThread {
+      guard let player = player else {
+        print("[PLAYER] ERROR: Player not initialized!")
+        throw NSError(domain: "AudioBrowser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Player not initialized"])
+      }
+      print("[PLAYER] Calling player.load()")
+      player.load(track)
     }
-    player.load(track)
   }
 
   public func reset() throws {
-    player?.clear()
+    onMainThread { player?.clear() }
   }
 
   public func play() throws {
-    player?.play()
+    onMainThread { player?.play() }
   }
 
   public func pause() throws {
-    player?.pause()
+    onMainThread { player?.pause() }
   }
 
   public func togglePlayback() throws {
-    player?.togglePlayback()
+    onMainThread { player?.togglePlayback() }
   }
 
   public func stop() throws {
-    player?.stop()
+    onMainThread { player?.stop() }
   }
 
   public func setPlayWhenReady(playWhenReady: Bool) throws {
-    player?.playWhenReady = playWhenReady
+    onMainThread { player?.playWhenReady = playWhenReady }
   }
 
   public func getPlayWhenReady() throws -> Bool {
-    return player?.playWhenReady ?? false
+    return onMainThread { player?.playWhenReady ?? false }
   }
 
   public func seekTo(position: Double) throws {
-    player?.seekTo(position)
+    onMainThread { player?.seekTo(position) }
   }
 
   public func seekBy(offset: Double) throws {
-    player?.seekBy(offset)
+    onMainThread { player?.seekBy(offset) }
   }
 
   public func setVolume(level: Double) throws {
-    player?.volume = Float(level)
+    onMainThread { player?.volume = Float(level) }
   }
 
   public func getVolume() throws -> Double {
-    return Double(player?.volume ?? 1.0)
+    return onMainThread { Double(player?.volume ?? 1.0) }
   }
 
   public func setRate(rate: Double) throws {
-    player?.rate = Float(rate)
+    onMainThread { player?.rate = Float(rate) }
   }
 
   public func getRate() throws -> Double {
-    return Double(player?.rate ?? 1.0)
+    return onMainThread { Double(player?.rate ?? 1.0) }
   }
 
   public func getProgress() throws -> Progress {
-    return Progress(
-      position: player?.currentTime ?? 0,
-      duration: player?.duration ?? 0,
-      buffered: player?.bufferedPosition ?? 0
-    )
+    return onMainThread {
+      Progress(
+        position: player?.currentTime ?? 0,
+        duration: player?.duration ?? 0,
+        buffered: player?.bufferedPosition ?? 0
+      )
+    }
   }
 
   public func getPlayback() throws -> Playback {
-    return player?.getPlayback() ?? Playback(state: .none, error: nil)
+    return onMainThread { player?.getPlayback() ?? Playback(state: .none, error: nil) }
   }
 
   public func getPlayingState() throws -> PlayingState {
-    return player?.playingStateManager.toPlayingState() ?? PlayingState(playing: false, buffering: false)
+    return onMainThread {
+      player?.playingStateManager.toPlayingState() ?? PlayingState(playing: false, buffering: false)
+    }
   }
 
   public func getRepeatMode() throws -> RepeatMode {
-    return player?.repeatMode ?? .off
+    return onMainThread { player?.repeatMode ?? .off }
   }
 
   public func setRepeatMode(mode: RepeatMode) throws {
-    player?.repeatMode = mode
+    onMainThread { player?.repeatMode = mode }
   }
 
   public func getPlaybackError() throws -> PlaybackError? {
-    return player?.playbackError?.toNitroError()
+    return onMainThread { player?.playbackError?.toNitroError() }
   }
 
   public func retry() throws {
-    player?.reload(startFromCurrentTime: true)
+    onMainThread { player?.reload(startFromCurrentTime: true) }
   }
 
   // MARK: - Sleep Timer
 
   public func getSleepTimer() throws -> SleepTimer {
-    if let state = player?.sleepTimerManager.get() {
-      return state
+    return onMainThread {
+      if let state = player?.sleepTimerManager.get() {
+        return state
+      }
+      return .first(NullType.null)
     }
-    return .first(NullType.null)
   }
 
   public func setSleepTimer(seconds: Double) throws {
-    player?.sleepTimerManager.set(seconds: seconds)
+    onMainThread {
+      player?.sleepTimerManager.set(seconds: seconds)
+    }
   }
 
   public func setSleepTimerToEndOfTrack() throws {
-    player?.sleepTimerManager.setToEndOfTrack()
+    onMainThread {
+      player?.sleepTimerManager.setToEndOfTrack()
+    }
   }
 
   public func clearSleepTimer() throws -> Bool {
-    return player?.sleepTimerManager.clear() ?? false
+    return onMainThread {
+      player?.sleepTimerManager.clear() ?? false
+    }
   }
 
   // MARK: - Queue Management
 
   public func add(tracks: [Track], insertBeforeIndex: Double?) throws {
-    guard let player = player else { return }
-    if let index = insertBeforeIndex {
-      try player.add(tracks, at: Int(index))
-    } else {
-      player.add(tracks)
+    try onMainThread {
+      guard let player = player else { return }
+      if let index = insertBeforeIndex {
+        try player.add(tracks, at: Int(index))
+      } else {
+        player.add(tracks)
+      }
     }
   }
 
   public func move(fromIndex: Double, toIndex: Double) throws {
-    try player?.move(fromIndex: Int(fromIndex), toIndex: Int(toIndex))
+    try onMainThread {
+      try player?.move(fromIndex: Int(fromIndex), toIndex: Int(toIndex))
+    }
   }
 
   public func remove(indexes: [Double]) throws {
-    guard let player = player else { return }
-    // Remove in reverse order to maintain index validity
-    for index in indexes.sorted().reversed() {
-      try player.remove(Int(index))
+    try onMainThread {
+      guard let player = player else { return }
+      // Remove in reverse order to maintain index validity
+      for index in indexes.sorted().reversed() {
+        try player.remove(Int(index))
+      }
     }
   }
 
   public func removeUpcomingTracks() throws {
-    player?.removeUpcomingTracks()
+    onMainThread { player?.removeUpcomingTracks() }
   }
 
   public func skip(index: Double, initialPosition: Double?) throws {
-    try player?.skipTo(Int(index))
-    if let position = initialPosition {
-      player?.seekTo(position)
+    try onMainThread {
+      try player?.skipTo(Int(index))
+      if let position = initialPosition {
+        player?.seekTo(position)
+      }
     }
   }
 
   public func skipToNext(initialPosition: Double?) throws {
-    player?.next()
-    if let position = initialPosition {
-      player?.seekTo(position)
+    onMainThread {
+      player?.next()
+      if let position = initialPosition {
+        player?.seekTo(position)
+      }
     }
   }
 
   public func skipToPrevious(initialPosition: Double?) throws {
-    player?.previous()
-    if let position = initialPosition {
-      player?.seekTo(position)
+    onMainThread {
+      player?.previous()
+      if let position = initialPosition {
+        player?.seekTo(position)
+      }
     }
   }
 
   public func setActiveTrackFavorited(favorited: Bool) throws {
-    // TODO: Implement favorites
+    onMainThread {
+      guard let track = player?.currentTrack, let src = track.src else { return }
+      browserManager.updateFavorite(id: src, favorited: favorited)
+      // Create updated track with new favorited state
+      let updatedTrack = Track(
+        url: track.url,
+        src: track.src,
+        artwork: track.artwork,
+        artworkSource: track.artworkSource,
+        title: track.title,
+        subtitle: track.subtitle,
+        artist: track.artist,
+        album: track.album,
+        description: track.description,
+        genre: track.genre,
+        duration: track.duration,
+        style: track.style,
+        childrenStyle: track.childrenStyle,
+        favorited: favorited,
+        groupTitle: track.groupTitle
+      )
+      onFavoriteChanged(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
+    }
   }
 
   public func toggleActiveTrackFavorited() throws {
-    // TODO: Implement favorites
+    onMainThread {
+      guard let track = player?.currentTrack, let src = track.src else { return }
+      // Check current favorited state from cache
+      let currentTrack = browserManager.getCachedTrack(src)
+      let isFavorited = currentTrack?.favorited ?? track.favorited ?? false
+      try? setActiveTrackFavorited(favorited: !isFavorited)
+    }
   }
 
   public func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws {
-    guard let player = player else { return }
-    player.clear()
-    player.add(tracks)
-    if let index = startIndex, index >= 0 {
-      try player.skipTo(Int(index))
-    }
-    if let position = startPositionMs {
-      player.seekTo(position / 1000.0)
+    try onMainThread {
+      guard let player = player else { return }
+      player.clear()
+      player.add(tracks)
+      if let index = startIndex, index >= 0 {
+        try player.skipTo(Int(index))
+      }
+      if let position = startPositionMs {
+        player.seekTo(position / 1000.0)
+      }
     }
   }
 
   public func getQueue() throws -> [Track] {
-    return player?.tracks ?? []
+    return onMainThread { player?.tracks ?? [] }
   }
 
   public func getTrack(index: Double) throws -> Track? {
-    guard let tracks = player?.tracks else { return nil }
-    let i = Int(index)
-    guard i >= 0, i < tracks.count else { return nil }
-    return tracks[i]
+    return onMainThread {
+      guard let tracks = player?.tracks else { return nil }
+      let i = Int(index)
+      guard i >= 0, i < tracks.count else { return nil }
+      return tracks[i]
+    }
   }
 
   public func getActiveTrackIndex() throws -> Double? {
-    guard let index = player?.currentIndex, index >= 0 else { return nil }
-    return Double(index)
+    return onMainThread {
+      guard let index = player?.currentIndex, index >= 0 else { return nil }
+      return Double(index)
+    }
   }
 
   public func getActiveTrack() throws -> Track? {
-    return player?.currentTrack
+    return onMainThread { player?.currentTrack }
   }
 
   // MARK: - Now Playing
@@ -390,8 +621,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getNowPlaying() throws -> NowPlayingMetadata? {
-    // TODO: Implement
-    return nil
+    return onMainThread {
+      guard let track = player?.currentTrack else { return nil }
+      return NowPlayingMetadata(
+        elapsedTime: player?.currentTime,
+        title: track.title,
+        album: track.album,
+        artist: track.artist,
+        duration: track.duration,
+        artwork: track.artwork,
+        description: track.description,
+        mediaId: track.src ?? track.url,
+        genre: track.genre,
+        rating: nil
+      )
+    }
   }
 
   // MARK: - Network
@@ -447,7 +691,25 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
+    print("[PLAYER] playerDidChangeActiveTrack called, track: \(event.track?.title ?? "nil")")
     onPlaybackActiveTrackChanged(event)
+    // Also notify now playing changed when track changes
+    if let track = event.track {
+      let nowPlaying = NowPlayingMetadata(
+        elapsedTime: nil,
+        title: track.title,
+        album: track.album,
+        artist: track.artist,
+        duration: track.duration,
+        artwork: track.artwork,
+        description: track.description,
+        mediaId: track.src ?? track.url,
+        genre: track.genre,
+        rating: nil
+      )
+      print("[PLAYER] Calling onNowPlayingChanged with: \(nowPlaying.title ?? "nil")")
+      onNowPlayingChanged(nowPlaying)
+    }
   }
 
   public func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
@@ -520,7 +782,8 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func remotePlayPause() {
     // Toggle based on current state
-    if player?.playWhenReady == true {
+    let isPlaying = onMainThread { player?.playWhenReady == true }
+    if isPlaying {
       remotePause()
     } else {
       remotePlay()
