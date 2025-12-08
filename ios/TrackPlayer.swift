@@ -627,10 +627,44 @@ class TrackPlayer {
   }
 
   private func clearCurrentAVItem() {
-    guard let asset else { return }
+    guard let currentAsset = asset else {
+      avPlayer.replaceCurrentItem(with: nil)
+      return
+    }
+
     stopObservingAVPlayerItem()
 
-    asset.cancelLoading()
+    // Don't call currentAsset.cancelLoading() - it blocks the main thread for 500ms+
+    // Instead, cancel on a background queue
+    DispatchQueue.global(qos: .utility).async {
+      currentAsset.cancelLoading()
+    }
+
+    self.asset = nil
+    pendingSeek?.cancel()
+    pendingSeek = nil
+
+    avPlayer.replaceCurrentItem(with: nil)
+  }
+
+  /// Prepares for loading a new item by stopping playback and clearing state,
+  /// but WITHOUT calling the slow cancelLoading() or replaceCurrentItem(nil).
+  /// The old asset's async callbacks are safely ignored because loadAVPlayer()
+  /// checks `if pendingAsset != self.asset { return }` before using results.
+  private func prepareForNewItem() {
+    guard let asset else { return }
+
+    // Stop playback immediately so old track doesn't keep playing while new one loads
+    avPlayer.rate = 0
+
+    stopObservingAVPlayerItem()
+
+    // Cancel loading on background queue to avoid blocking main thread (500ms+).
+    // The old asset's callbacks are ignored anyway via the pendingAsset check.
+    let oldAsset = asset
+    DispatchQueue.global(qos: .utility).async {
+      oldAsset.cancelLoading()
+    }
     self.asset = nil
 
     // Clear any pending seek to prevent it from being applied to the next track that loads.
@@ -638,8 +672,6 @@ class TrackPlayer {
     // an unrelated track that loads later.
     pendingSeek?.cancel()
     pendingSeek = nil
-
-    avPlayer.replaceCurrentItem(with: nil)
   }
 
   private func startObservingAVPlayerItem(_ avItem: AVPlayerItem) {
@@ -683,7 +715,11 @@ class TrackPlayer {
     if state == .error {
       recreateAVPlayer()
     } else {
-      clearCurrentAVItem()
+      // Use prepareForNewItem() instead of clearCurrentAVItem() - it skips the slow
+      // cancelLoading() call and unnecessary replaceCurrentItem(with: nil).
+      // The old item remains until replaceCurrentItem(with: avItem) below, and
+      // stale async callbacks are ignored via `if pendingAsset != self.asset { return }`.
+      prepareForNewItem()
     }
     if let url {
       let pendingAsset = AVURLAsset(url: url, options: urlOptions)
