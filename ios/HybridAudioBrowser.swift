@@ -16,6 +16,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
+  private var nowPlayingOverride: NowPlayingUpdate?
   private var lastNavigationError: NavigationError? {
     didSet {
       // Skip if both nil (no real change)
@@ -634,17 +635,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Now Playing
 
   public func updateNowPlaying(update: NowPlayingUpdate?) throws {
-    // TODO: Implement now playing override
+    onMainThread {
+      nowPlayingOverride = update
+      applyNowPlayingMetadata()
+    }
   }
 
   public func getNowPlaying() throws -> NowPlayingMetadata? {
     return onMainThread {
       guard let track = player?.currentTrack else { return nil }
+      let override = nowPlayingOverride
       return NowPlayingMetadata(
         elapsedTime: player?.currentTime,
-        title: track.title,
+        title: override?.title ?? track.title,
         album: track.album,
-        artist: track.artist,
+        artist: override?.artist ?? track.artist,
         duration: track.duration,
         artwork: track.artwork,
         description: track.description,
@@ -653,6 +658,33 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         rating: nil
       )
     }
+  }
+
+  /// Applies the current now playing metadata (with override if set) to NowPlayingInfoCenter and notifies JS.
+  private func applyNowPlayingMetadata() {
+    guard let track = player?.currentTrack else { return }
+    let override = nowPlayingOverride
+
+    let nowPlaying = NowPlayingMetadata(
+      elapsedTime: player?.currentTime,
+      title: override?.title ?? track.title,
+      album: track.album,
+      artist: override?.artist ?? track.artist,
+      duration: track.duration,
+      artwork: track.artwork,
+      description: track.description,
+      mediaId: track.src ?? track.url,
+      genre: track.genre,
+      rating: nil
+    )
+
+    // Update NowPlayingInfoCenter with override values
+    if let override = override {
+      player?.nowPlayingInfoController.set(keyValue: MediaItemProperty.title(override.title ?? track.title))
+      player?.nowPlayingInfoController.set(keyValue: MediaItemProperty.artist(override.artist ?? track.artist))
+    }
+
+    onNowPlayingChanged(nowPlaying)
   }
 
   // MARK: - Network
@@ -708,23 +740,11 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
+    // Clear now playing override when track changes (matches Kotlin behavior)
+    nowPlayingOverride = nil
     onPlaybackActiveTrackChanged(event)
     // Also notify now playing changed when track changes
-    if let track = event.track {
-      let nowPlaying = NowPlayingMetadata(
-        elapsedTime: nil,
-        title: track.title,
-        album: track.album,
-        artist: track.artist,
-        duration: track.duration,
-        artwork: track.artwork,
-        description: track.description,
-        mediaId: track.src ?? track.url,
-        genre: track.genre,
-        rating: nil
-      )
-      onNowPlayingChanged(nowPlaying)
-    }
+    applyNowPlayingMetadata()
   }
 
   public func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
