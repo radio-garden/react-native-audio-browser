@@ -2,8 +2,10 @@ import AVFoundation
 import Foundation
 import MediaPlayer
 import NitroModules
+import os.log
 
 public class HybridAudioBrowser: HybridAudioBrowserSpec {
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
   // MARK: - Shared Instance for CarPlay
 
   /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
@@ -18,9 +20,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     didSet {
       // Skip if both nil (no real change)
       guard oldValue != nil || lastNavigationError != nil else { return }
-      print("[NAV_ERROR] didSet fired, error=\(String(describing: lastNavigationError?.code)), thread=\(Thread.isMainThread ? "main" : "background")")
       onNavigationError(NavigationErrorEvent(error: lastNavigationError))
-      print("[NAV_ERROR] callback invoked")
     }
   }
 
@@ -77,13 +77,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         let tabs = try? await browserManager.queryTabs()
         // Navigate to configured path, first tab, or "/"
         let initialPath = configuration.path ?? tabs?.first?.url ?? "/"
-        print("[NAV_ERROR] Initial navigation to: \(initialPath)")
         // Clear error before navigation (matches Kotlin clearNavigationError())
         await MainActor.run { lastNavigationError = nil }
         do {
           try await browserManager.navigate(initialPath)
         } catch {
-          print("[NAV_ERROR] Initial navigation failed: \(error)")
           handleNavigationError(error, path: initialPath)
         }
       }
@@ -236,7 +234,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
           // Expand the queue from the contextual URL
           if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
             let (tracks, startIndex) = expanded
-            print("[PLAYER] Loading expanded queue: \(tracks.count) tracks, starting at index \(startIndex)")
 
             // Replace queue and seek to selected track
             await MainActor.run {
@@ -247,13 +244,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
             }
           } else {
             // Fallback: just load the single track
-            print("[PLAYER] Queue expansion failed, loading single track")
             try load(track: track)
             try play()
           }
         } catch {
-          print("[PLAYER] Error expanding queue: \(error)")
-          // Fallback to single track
+          logger.error("Error expanding queue: \(error.localizedDescription)")
+          // Fallback to single track - playback errors reported via TrackPlayer callbacks
           try? load(track: track)
           try? play()
         }
@@ -352,13 +348,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Playback Control
 
   public func load(track: Track) throws {
-    print("[PLAYER] load() called with track: \(track.title)")
     try onMainThread {
       guard let player = player else {
-        print("[PLAYER] ERROR: Player not initialized!")
         throw NSError(domain: "AudioBrowser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Player not initialized"])
       }
-      print("[PLAYER] Calling player.load()")
       player.load(track)
     }
   }
@@ -691,7 +684,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
-    print("[PLAYER] playerDidChangeActiveTrack called, track: \(event.track?.title ?? "nil")")
     onPlaybackActiveTrackChanged(event)
     // Also notify now playing changed when track changes
     if let track = event.track {
@@ -707,7 +699,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         genre: track.genre,
         rating: nil
       )
-      print("[PLAYER] Calling onNowPlayingChanged with: \(nowPlaying.title ?? "nil")")
       onNowPlayingChanged(nowPlaying)
     }
   }
