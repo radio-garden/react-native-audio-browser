@@ -1,3 +1,0 @@
-[install]
-# Use hoisted linker for React Native compatibility
-linker = "hoisted"

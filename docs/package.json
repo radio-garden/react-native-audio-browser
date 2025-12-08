@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run typedoc && vitepress dev",
-    "build": "bun run typedoc && vitepress build",
+    "dev": "yarn typedoc && vitepress dev",
+    "build": "yarn typedoc && vitepress build",
     "preview": "vitepress preview",
-    "typedoc": "typedoc && bun scripts/transform-sidebar.ts && bun scripts/clean-markdown.ts"
+    "typedoc": "typedoc && node scripts/transform-sidebar.ts && node scripts/clean-markdown.ts"
   },
   "devDependencies": {
     "mermaid": "^11.4.1",

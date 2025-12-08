@@ -7,7 +7,7 @@
 Run the forked Nitrogen codegen (located in `/codegen`):
 
 ```bash
-node codegen/index.js --logLevel="debug" && bun post-script.cjs && bun run build
+yarn codegen
 ```
 
 ### Android

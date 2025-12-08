@@ -3,7 +3,7 @@
 ## Building
 
 ```bash
-bun run build
+yarn build
 ```
 
 Runs TypeDoc → transforms sidebar → cleans markdown → builds VitePress.

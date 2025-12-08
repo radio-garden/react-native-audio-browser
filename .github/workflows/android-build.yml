@@ -9,23 +9,23 @@ on:
       - main
     paths:
       - '.github/workflows/android-build.yml'
-      - 'example/android/**'
+      - 'apps/example-native/android/**'
       - 'nitrogen/generated/shared/**'
       - 'nitrogen/generated/android/**'
       - 'cpp/**'
       - 'android/**'
-      - '**/bun.lock'
+      - '**/yarn.lock'
       - '**/react-native.config.js'
       - '**/nitro.json'
   pull_request:
     paths:
       - '.github/workflows/android-build.yml'
-      - 'example/android/**'
+      - 'apps/example-native/android/**'
       - '**/nitrogen/generated/shared/**'
       - '**/nitrogen/generated/android/**'
       - 'cpp/**'
       - 'android/**'
-      - '**/bun.lock'
+      - '**/yarn.lock'
       - '**/react-native.config.js'
       - '**/nitro.json'
   workflow_dispatch:
@@ -44,14 +44,20 @@ jobs:
         arch: [new, old]
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Install dependencies (bun)
-        run: bun install
+      - name: Install dependencies
+        run: yarn install
 
       - name: Disable new architecture in gradle.properties
         if: matrix.arch == 'old'
-        run: sed -i "s/newArchEnabled=true/newArchEnabled=false/g" example/android/gradle.properties
+        run: sed -i "s/newArchEnabled=true/newArchEnabled=false/g" apps/example-native/android/gradle.properties
 
       - name: Setup JDK 17
         uses: actions/setup-java@v5
@@ -66,14 +72,14 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('example/android/**/*.gradle*') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/example-native/android/**/*.gradle*') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
       - name: Run Gradle build
-        working-directory: example/android
+        working-directory: apps/example-native/android
         run: ./gradlew assembleDebug --no-daemon --build-cache
 
       - name: Stop Gradle daemon
-        working-directory: example/android
+        working-directory: apps/example-native/android
         run: ./gradlew --stop
