@@ -9,68 +9,86 @@
 
 ```mermaid
 graph TB
-JS[React Native Layer<br/>JavaScript]
+JS["React Native Layer<br/>JavaScript"]
 
-subgraph Nitro[Nitro Hybrid Object]
-  HAB[HybridAudioBrowser<br/>Implements HybridAudioBrowserSpec<br/>~35 callback properties]
+subgraph Nitro["Nitro Hybrid Object"]
+  HAB["HybridAudioBrowser<br/>Implements HybridAudioBrowserSpec<br/>~50 callback properties"]
 end
 
-TP[TrackPlayer<br/>Core AVPlayer Logic<br/>Queue Management]
+TP["TrackPlayer<br/>Core AVPlayer Logic<br/>Queue Management<br/>~1280 lines"]
 
-subgraph Browser[Browser System]
-  BM[BrowserManager<br/>Navigation & Caching]
-  SR[SimpleRouter<br/>Route Pattern Matching]
-  HC[HttpClient<br/>URLSession Wrapper]
-  LRU[LRUCache<br/>Track & Content Cache]
+subgraph Browser["Browser System"]
+  BM["BrowserManager<br/>Navigation, Routing, Caching<br/>URL Resolution ~870 lines"]
+  SR["SimpleRouter<br/>Route Pattern Matching<br/>Parameter Extraction"]
+  BPH["BrowserPathHelper<br/>Contextual URLs<br/>Path Utilities"]
+  BC["BrowserConfig<br/>Configuration Wrapper"]
+  HC["HttpClient<br/>URLSession Wrapper"]
+  LRU["LRUCache<br/>Track and Content Cache<br/>Thread-safe"]
 end
 
-subgraph Platform[Apple Platform APIs]
-  AVP[AVPlayer<br/>Apple AVFoundation]
-  MPRC[MPRemoteCommandCenter<br/>Lock Screen / CarPlay]
-  AS[AVAudioSession<br/>Audio Session]
-  MPNP[MPNowPlayingInfoCenter<br/>Now Playing Info]
+subgraph Platform["Apple Platform APIs"]
+  AVP["AVPlayer<br/>Apple AVFoundation"]
+  MPRC["MPRemoteCommandCenter<br/>Lock Screen, CarPlay"]
+  AS["AVAudioSession<br/>Audio Session"]
+  MPNP["MPNowPlayingInfoCenter<br/>Now Playing Info"]
 end
 
-subgraph Observers[Observer Layer]
-  PSO[PlayerStateObserver<br/>status, timeControlStatus]
-  PTO[PlayerTimeObserver<br/>Periodic & Boundary]
-  PINO[PlayerItemNotificationObserver<br/>End & Fail Events]
-  PIPO[PlayerItemPropertyObserver<br/>Duration, Metadata]
+subgraph Observers["Observer Layer"]
+  PSO["PlayerStateObserver<br/>KVO status, timeControlStatus"]
+  PTO["PlayerTimeObserver<br/>Periodic and Boundary Time"]
+  PINO["PlayerItemNotificationObserver<br/>End and Fail Events"]
+  PIPO["PlayerItemPropertyObserver<br/>Duration, Metadata, Buffering"]
 end
 
-subgraph StateManagers[State Managers]
-  PSM[PlayingStateManager<br/>playing/buffering flags]
-  PPUM[PlaybackProgressUpdateManager<br/>Periodic Progress]
-  STM[SleepTimerManager<br/>Time & End-of-Track]
+subgraph StateManagers["State Managers"]
+  PSM["PlayingStateManager<br/>playing, buffering flags"]
+  PPUM["PlaybackProgressUpdateManager<br/>Timer-based Progress"]
+  STM["SleepTimerManager<br/>Time and End-of-Track"]
 end
 
-subgraph Controllers[Controllers]
-  RCC[RemoteCommandController<br/>Remote Command Handlers]
-  NPIC[NowPlayingInfoController<br/>Thread-safe Updates]
+subgraph Controllers["Controllers"]
+  RCC["RemoteCommandController<br/>MPRemoteCommand Handlers<br/>Lazy Handler Overrides"]
+  NPIC["NowPlayingInfoController<br/>Thread-safe Queue<br/>Batched Updates"]
 end
 
-NM[NetworkMonitor<br/>Online/Offline]
+NM["NetworkMonitor<br/>NWPathMonitor<br/>Online, Offline"]
 
-JS -->|Direct method calls| HAB
+TPC["TrackPlayerCallbacks<br/>Protocol ~30 methods"]
+
+JS -->|"Direct sync/async calls"| HAB
 HAB -->|Owns| TP
 HAB -->|Owns| BM
 HAB -->|Uses| NM
+HAB -.->|Implements| TPC
 
 BM --> SR
+BM --> BPH
+BM --> BC
 BM --> HC
-BM --> LRU
+BM -->|"trackCache 3000, contentCache 20"| LRU
 
 TP -->|Controls| AVP
-TP -->|Creates| Observers
-TP -->|Owns| StateManagers
-TP -->|Owns| Controllers
-TP -->|Configures| AS
+TP -->|Owns| PSO
+TP -->|Owns| PTO
+TP -->|Owns| PINO
+TP -->|Owns| PIPO
+TP -->|Owns| PSM
+TP -->|Owns| PPUM
+TP -->|Owns| STM
+TP -->|Owns| RCC
+TP -->|Owns| NPIC
 
-Observers -->|KVO & Notifications| AVP
-RCC -->|Registers handlers| MPRC
-NPIC -->|Updates| MPNP
+PSO -->|KVO| AVP
+PTO -->|addPeriodicTimeObserver| AVP
+PINO -->|NotificationCenter| AVP
+PIPO -->|KVO| AVP
 
-HAB -.->|~35 callbacks to JS| JS
+RCC -->|addTarget| MPRC
+NPIC -->|nowPlayingInfo| MPNP
+TP -->|setCategory| AS
+
+TPC -.->|Events| HAB
+HAB -.->|"~50 callbacks to JS"| JS
 
 classDef nitro fill:#e1f5ff,stroke:#333,stroke-width:2px
 classDef core fill:#ffe1e1,stroke:#333,stroke-width:2px
@@ -80,15 +98,17 @@ classDef controller fill:#fff3e1,stroke:#333,stroke-width:2px
 classDef platform fill:#f0f0f0,stroke:#333,stroke-width:2px
 classDef state fill:#e8f5e9,stroke:#333,stroke-width:2px
 classDef util fill:#fafafa,stroke:#333,stroke-width:2px
+classDef protocol fill:#fff8e1,stroke:#333,stroke-width:1px,stroke-dasharray:5 5
 
 class HAB nitro
 class TP core
-class BM,SR,HC,LRU browser
+class BM,SR,BPH,BC,HC,LRU browser
 class PSO,PTO,PINO,PIPO observer
 class RCC,NPIC controller
 class AVP,MPRC,AS,MPNP,JS platform
 class PSM,PPUM,STM state
 class NM util
+class TPC protocol
 ```
 
 ## Key Architecture Points
@@ -97,8 +117,26 @@ class NM util
 - `HybridAudioBrowser` is the single entry point, implementing `HybridAudioBrowserSpec`
 - Unified interface for both browsing and playback functionality
 - Direct JS-native method calls (no event emitters)
-- ~35 callbacks as closure properties (e.g., `onPlaybackProgressUpdated`, `onPathChanged`)
+- ~50 callbacks as closure properties organized into categories:
+  - **Browser** (4): `onPathChanged`, `onContentChanged`, `onTabsChanged`, `onNavigationError`
+  - **Player** (14): `onPlaybackProgressUpdated`, `onPlaybackActiveTrackChanged`, `onPlaybackPlayingState`, etc.
+  - **Remote** (16): `onRemotePlay`, `onRemotePause`, `onRemoteNext`, etc.
+  - **Remote Handlers** (14): `handleRemotePlay`, `handleRemotePause`, etc. (optional JS overrides)
+  - **Other** (8): `onOptionsChanged`, `onFavoriteChanged`, `onNowPlayingChanged`, `onOnlineChanged`, etc.
 - Types generated by Nitrogen in `nitrogen/generated/ios/swift/`
+
+### Data Flow
+1. **JS → Native**: Direct sync/async method calls via Nitro
+2. **Native → JS**: Callback properties invoked from native code
+3. **Browser → Player**: `navigateTrack()` can expand contextual URLs and load queue
+4. **Player → Controllers**: TrackPlayer owns RemoteCommandController and NowPlayingInfoController
+5. **Platform → Observers**: KVO and NotificationCenter feed back to TrackPlayer
+
+### Thread Safety
+- `HybridAudioBrowser.onMainThread()` ensures player operations run on main thread
+- `NowPlayingInfoController` uses concurrent queue with barriers
+- `LRUCache` uses NSLock for thread-safe access
+- `BrowserManager` asserts main thread for state modifications
 
 ### Relationship to RNTP
 This codebase is adapted from react-native-track-player. Key differences:
@@ -106,54 +144,72 @@ This codebase is adapted from react-native-track-player. Key differences:
 - **Nitro types used** - `Track`, `PlayingState`, events from nitrogen/generated
 - **Browser added** - Navigation, routing, HTTP client (not in RNTP)
 - **Unified API** - Browser and player merged into single HybridAudioBrowser
+- **URL Resolution** - Media and artwork URL transforms via configuration
 
 ## Project Structure
 
 ```
 ios/
-├── HybridAudioBrowser.swift          # Main Nitro entry point (~900 lines)
-├── TrackPlayer.swift                 # Core AVPlayer logic (~1200 lines)
-├── TrackPlayerCallbacks.swift        # Internal callback protocol
+├── HybridAudioBrowser.swift          # Main Nitro entry point (~910 lines)
+│                                     # Implements HybridAudioBrowserSpec & TrackPlayerCallbacks
+│                                     # ~50 callback properties (browser, player, remote)
+├── TrackPlayer.swift                 # Core AVPlayer logic (~1280 lines)
+│                                     # Queue management, media URL resolution
+│                                     # Owns all observers, state managers, controllers
+├── TrackPlayerCallbacks.swift        # Internal callback protocol (~30 methods)
+│                                     # Bridge between TrackPlayer events and HybridAudioBrowser
 ├── Browser/
-│   ├── BrowserManager.swift          # Navigation, routing, caching (~640 lines)
-│   ├── SimpleRouter.swift            # Route pattern matching (~190 lines)
+│   ├── BrowserManager.swift          # Navigation, routing, caching (~870 lines)
+│   │                                 # URL resolution (media, artwork)
+│   │                                 # Favorites hydration, queue expansion
+│   ├── SimpleRouter.swift            # Route pattern matching (~185 lines)
+│   │                                 # Supports {param}, *, ** wildcards
+│   │                                 # Specificity-based best match
 │   ├── BrowserConfig.swift           # Configuration wrapper
 │   ├── BrowserPathHelper.swift       # Path utilities & contextual URLs
-│   └── JsonModels.swift              # JSON codable models
+│   │                                 # __trackId encoding for playable-only tracks
+│   └── JsonModels.swift              # JSON Codable models for API responses
 ├── Observer/
-│   ├── PlayerStateObserver.swift     # KVO for AVPlayer status
+│   ├── PlayerStateObserver.swift     # KVO: AVPlayer.status, timeControlStatus
 │   ├── PlayerTimeObserver.swift      # Periodic & boundary time events
 │   ├── PlayerItemNotificationObserver.swift  # Track end/fail notifications
-│   └── PlayerItemPropertyObserver.swift      # Duration, metadata output
+│   └── PlayerItemPropertyObserver.swift      # Duration, metadata, buffering
 ├── Player/
 │   ├── PlayingStateManager.swift     # Computes playing/buffering state
 │   ├── SleepTimerManager.swift       # Sleep timer (time & end-of-track)
-│   └── PlaybackProgressUpdateManager.swift   # Periodic progress events
+│   │                                 # Supports both countdown and track-end modes
+│   └── PlaybackProgressUpdateManager.swift   # Timer-based periodic progress
 ├── NowPlayingInfo/
 │   ├── NowPlayingInfoController.swift # Thread-safe MPNowPlayingInfoCenter
+│   │                                 # Concurrent queue with barriers
 │   ├── NowPlayingInfoCenter.swift    # Protocol for testability
+│   ├── NowPlayingInfoKeyValue.swift  # Key-value protocol
 │   ├── MediaItemProperty.swift       # Track metadata properties
 │   └── NowPlayingInfoProperty.swift  # Playback state properties
 ├── RemoteCommand/
-│   └── RemoteCommandController.swift # MPRemoteCommandCenter handlers
+│   └── RemoteCommandController.swift # MPRemoteCommandCenter handlers (~285 lines)
+│                                     # Lazy handler properties for customization
 ├── Http/
-│   └── HttpClient.swift              # URLSession wrapper (~210 lines)
+│   └── HttpClient.swift              # URLSession wrapper (~230 lines)
+│                                     # JSON decoding with detailed errors
 ├── Model/
 │   ├── TrackPlayerError.swift        # PlaybackError, QueueError
-│   ├── MediaURL.swift                # URL parsing
-│   ├── SourceType.swift              # file vs stream
-│   └── PlayerUpdateOptions.swift     # Update options
+│   ├── MediaURL.swift                # URL parsing utilities
+│   ├── RemoteCommand.swift           # Remote command enum with config
+│   ├── SourceType.swift              # file vs stream detection
+│   └── PlayerUpdateOptions.swift     # Update options struct
 ├── Extension/
-│   ├── Track+AVPlayer.swift          # Track playback utilities
-│   └── Capability+RemoteCommand.swift
+│   ├── Track+AVPlayer.swift          # Track artwork loading
+│   └── Capability+RemoteCommand.swift # Capability to RemoteCommand conversion
 ├── Option/
-│   ├── PitchAlgorithms.swift         # Pitch algorithm enum
+│   ├── PitchAlgorithms.swift         # AVAudioTimePitchAlgorithm mapping
 │   ├── TimeEventFrequency.swift      # Event frequency enum
 │   └── SessionCategories.swift       # Audio session categories
 ├── Util/
-│   ├── LRUCache.swift                # Thread-safe LRU cache (~185 lines)
-│   ├── MetadataAdapter.swift         # Metadata parsing
-│   └── NetworkMonitor.swift          # Online/offline detection
+│   ├── LRUCache.swift                # Thread-safe LRU cache (~183 lines)
+│   │                                 # O(1) get/set with doubly-linked list
+│   ├── MetadataAdapter.swift         # AVMetadataItem parsing
+│   └── NetworkMonitor.swift          # NWPathMonitor wrapper
 └── Support/
     └── Bridge.h                       # Objective-C bridge header
 ```
@@ -182,27 +238,40 @@ The Nitro `Track` has:
 Use `track.src ?? track.url` for AVPlayer URL.
 
 ### Callbacks
-HybridAudioBrowserSpec defines ~35 callbacks as properties:
+HybridAudioBrowserSpec defines ~50 callbacks as properties:
 ```swift
-// Browser callbacks
-var onPathChanged: ((PathChangedEvent) -> Void)?
-var onContentChanged: ((ContentChangedEvent) -> Void)?
-var onTabsChanged: (([Track]) -> Void)?
-var onNavigationError: ((NavigationError) -> Void)?
+// Browser callbacks (4)
+var onPathChanged: (String) -> Void = { _ in }
+var onContentChanged: (ResolvedTrack?) -> Void = { _ in }
+var onTabsChanged: ([Track]) -> Void = { _ in }
+var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
 
-// Playback callbacks
-var onPlaybackProgressUpdated: ((PlaybackProgressUpdatedEvent) -> Void)?
-var onPlaybackActiveTrackChanged: ((PlaybackActiveTrackChangedEvent) -> Void)?
-var onPlaybackPlayingState: ((PlayingState) -> Void)?
-var onPlaybackError: ((PlaybackError) -> Void)?
+// Playback callbacks (14)
+var onPlaybackProgressUpdated: (PlaybackProgressUpdatedEvent) -> Void = { _ in }
+var onPlaybackActiveTrackChanged: (PlaybackActiveTrackChangedEvent) -> Void = { _ in }
+var onPlaybackPlayingState: (PlayingState) -> Void = { _ in }
+var onPlaybackError: (PlaybackErrorEvent) -> Void = { _ in }
+var onPlaybackChanged: (Playback) -> Void = { _ in }
+// ...etc
 
-// Remote callbacks (with optional handler overrides)
-var onRemotePlay: (() -> Void)?
-var handleRemotePlay: (() -> Void)?  // Override default behavior
-// etc.
+// Remote callbacks (16) - fire events to JS
+var onRemotePlay: () -> Void = {}
+var onRemotePause: () -> Void = {}
+var onRemoteNext: () -> Void = {}
+// ...etc
+
+// Remote handlers (14) - optional JS overrides for default behavior
+var handleRemotePlay: (() -> Void)?     // If set, overrides default
+var handleRemotePause: (() -> Void)?
+var handleRemoteNext: (() -> Void)?
+// ...etc
 ```
 
-Set these from TrackPlayer events, BrowserManager, or observer closures.
+Callbacks are set from:
+- `TrackPlayerCallbacks` protocol methods (player events)
+- `BrowserManager` callbacks (navigation events)
+- `NetworkMonitor.onChanged` (connectivity)
+- `SleepTimerManager.onChanged` (sleep timer)
 
 ### Promises
 Async methods return `Promise<T>`:
