@@ -69,7 +69,7 @@ export interface Track {
    *
    * @example
    * ```tsx
-   * <Image source={audioBrowser.currentTrack?.artworkSource} />
+   * <Image source={audioBrowser.activeTrack?.artworkSource} />
    * ```
    */
   readonly artworkSource?: ImageSource
