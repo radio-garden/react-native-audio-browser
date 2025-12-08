@@ -59,6 +59,9 @@ final class BrowserManager {
   // Set of favorited track identifiers (src)
   private var favoriteIds: Set<String> = []
 
+  // Navigation tracking to prevent race conditions
+  private var currentNavigationId: Int = 0
+
   // MARK: - Public State
 
   /// Current navigation path. Must be modified on main thread.
@@ -213,12 +216,23 @@ final class BrowserManager {
   // MARK: - Navigation
 
   /// Main navigation method - updates path and resolves content.
+  ///
+  /// Uses a navigation ID to prevent race conditions when multiple navigations
+  /// overlap. Only the most recent navigation's result is applied.
   @MainActor
   func navigate(_ path: String) async throws {
+    // Increment navigation ID and capture for this navigation
+    currentNavigationId += 1
+    let navigationId = currentNavigationId
+
     self.path = path
     self.content = nil  // Clear for loading state
 
     let resolved = try await resolve(path, useCache: false)
+
+    // Only apply result if this is still the current navigation
+    guard navigationId == currentNavigationId else { return }
+
     self.content = resolved
   }
 
@@ -249,11 +263,21 @@ final class BrowserManager {
   }
 
   /// Refreshes the current path by invalidating cache and re-resolving.
+  ///
+  /// Uses navigation ID tracking to prevent race conditions.
   @MainActor
   func refresh() async throws {
+    // Increment navigation ID and capture for this refresh
+    currentNavigationId += 1
+    let navigationId = currentNavigationId
+
     let currentPath = path
     contentCache.remove(currentPath)
     let resolved = try await resolve(currentPath, useCache: false)
+
+    // Only apply result if this is still the current navigation
+    guard navigationId == currentNavigationId else { return }
+
     self.content = resolved
   }
 
@@ -461,11 +485,12 @@ final class BrowserManager {
 
   /// Execute a search query.
   func search(_ query: String) async throws -> ResolvedTrack {
-    // Check cache
+    // Check cache - re-hydrate favorites since they may have changed
     if query == lastSearchQuery, let results = lastSearchResults {
+      let hydratedResults = results.map { hydrateFavorite($0) }
       return ResolvedTrack(
         url: BrowserPathHelper.createSearchPath(query),
-        children: results,
+        children: hydratedResults,
         src: nil,
         artwork: nil,
         artworkSource: nil,
@@ -515,16 +540,19 @@ final class BrowserManager {
       throw BrowserError.contentNotFound(path: Self.searchRoutePath)
     }
 
+    // Hydrate favorites in results
+    let hydratedResults = results.map { hydrateFavorite($0) }
+
     // Cache results
     lastSearchQuery = query
-    lastSearchResults = results
+    lastSearchResults = hydratedResults
 
     // Cache individual tracks
-    results.forEach { cacheTrack($0) }
+    hydratedResults.forEach { cacheTrack($0) }
 
     return ResolvedTrack(
       url: BrowserPathHelper.createSearchPath(query),
-      children: results,
+      children: hydratedResults,
       src: nil,
       artwork: nil,
       artworkSource: nil,
