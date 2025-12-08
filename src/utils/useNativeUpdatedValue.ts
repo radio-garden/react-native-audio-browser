@@ -19,16 +19,17 @@ export function useNativeUpdatedValue<T, E = T>(
 ): T {
   const [value, setValue] = useState(() => {
     const { lastValue } = emitter
-    return (lastValue !== undefined
-      ? eventKey !== undefined
-        ? lastValue?.[eventKey]
-        : lastValue
-      : getter()) as T
+    if (lastValue != null) {
+      return (eventKey !== undefined ? lastValue[eventKey] : lastValue) as T
+    }
+    return getter()
   })
 
   useEffect(() => {
-    if (emitter.lastValue !== undefined) {
-      setValue(emitter.lastValue as T)
+    const { lastValue } = emitter
+    if (lastValue != null) {
+      const newValue = eventKey !== undefined ? lastValue[eventKey] : lastValue
+      setValue(newValue as T)
     }
     return emitter.addListener((event) => {
       const newValue = eventKey !== undefined ? event[eventKey] : event
