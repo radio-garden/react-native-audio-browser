@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useContent, usePath } from '../features/browser'
 import { useNavigationError, usePlaybackError } from '../features/errors'
 import {
@@ -9,30 +9,83 @@ import {
 } from '../features/metadata'
 import { useOnline } from '../features/network'
 import { useNowPlaying } from '../features/nowPlaying'
+import type { PlayingState } from '../features/playback/playing'
 import { usePlayingState } from '../features/playback/playing'
 import { usePlayWhenReady } from '../features/playback/playWhenReady'
 import { useProgress } from '../features/playback/progress'
+import type { PlaybackState } from '../features/playback/state'
 import { usePlayback } from '../features/playback/state'
+import type { Options } from '../features/player/options'
 import { useOptions } from '../features/player/options'
 import { useActiveTrack } from '../features/queue/activeTrack'
 import { useQueue } from '../features/queue/queue'
+import type { RepeatMode } from '../features/queue/repeatMode'
 import { useRepeatMode } from '../features/queue/repeatMode'
+import type { NowPlayingMetadata } from '../features/metadata'
+import type { Track } from '../types'
 
-/**
- * Debug hook that logs all audio browser state changes.
- * Drop this into any component to see what's happening.
- *
- * @param enabled - Whether logging is enabled (default: __DEV__)
- *
- * @example
- * ```tsx
- * function MyScreen() {
- *   useDebug()
- *   // ... rest of component
- * }
- * ```
- */
-export function useDebug(enabled: boolean = __DEV__): void {
+// MARK: - Types
+
+interface DebugLogEntry {
+  timestamp: number
+  elapsed: number | null
+  type: 'initial' | 'change' | 'metadata'
+  message: string
+}
+
+interface DebugState {
+  activeTrack: Track | undefined
+  state: PlaybackState
+  playingState: PlayingState
+  playWhenReady: boolean
+  position: number
+  duration: number
+  queue: string
+  repeatMode: RepeatMode
+  options: Options
+  online: boolean
+  nowPlaying: NowPlayingMetadata | undefined
+  playbackError: string | null
+  navigationError: string | null
+  path: string | null
+  content: string | null
+}
+
+interface DebugOptions {
+  /** Whether logging is enabled (default: __DEV__) */
+  enabled?: boolean
+  /** Whether to log stream metadata events (default: false) */
+  metadata?: boolean
+}
+
+// MARK: - Log Store
+
+const MAX_LOG_ENTRIES = 100
+let debugLogs: DebugLogEntry[] = []
+const debugLogListeners = new Set<() => void>()
+
+function addDebugLog(entry: DebugLogEntry) {
+  debugLogs = [...debugLogs.slice(-(MAX_LOG_ENTRIES - 1)), entry]
+  debugLogListeners.forEach((listener) => listener())
+}
+
+function clearDebugLogs() {
+  debugLogs = []
+  debugLogListeners.forEach((listener) => listener())
+}
+
+function subscribeToDebugLogs(listener: () => void) {
+  debugLogListeners.add(listener)
+  return () => debugLogListeners.delete(listener)
+}
+
+function getDebugLogs() {
+  return debugLogs
+}
+
+// MARK: - State Hook
+
+function useDebugState(): DebugState {
   const activeTrack = useActiveTrack()
   const playback = usePlayback()
   const playingState = usePlayingState()
@@ -48,65 +101,152 @@ export function useDebug(enabled: boolean = __DEV__): void {
   const path = usePath()
   const content = useContent()
 
-  const prevRef = useRef<Record<string, unknown>>({})
+  return {
+    activeTrack,
+    state: playback.state,
+    playingState,
+    playWhenReady,
+    position: Math.round(progress.position),
+    duration: Math.round(progress.duration),
+    queue: queue.map((t) => t.src).join(', '),
+    repeatMode,
+    options,
+    online,
+    nowPlaying,
+    playbackError: playbackError?.message ?? null,
+    navigationError: navigationError?.message ?? null,
+    path: path ?? null,
+    content: content?.title ?? null,
+  }
+}
+
+// MARK: - Main Hook
+
+/**
+ * Debug hook that provides state inspection and change logging.
+ *
+ * @param options - Configuration options
+ * @returns Debug object with state, logs, and clear function
+ *
+ * @example
+ * ```tsx
+ * function MyScreen() {
+ *   const debug = useDebug()
+ *   // debug.state - current state
+ *   // debug.logs - log history
+ *   // debug.clear() - clear logs
+ * }
+ *
+ * // With metadata logging for live streams
+ * function RadioScreen() {
+ *   const debug = useDebug({ metadata: true })
+ * }
+ * ```
+ */
+export function useDebug(options: DebugOptions = {}) {
+  const { enabled = __DEV__, metadata = false } = options
+
+  const state = useDebugState()
+  const logs = useSyncExternalStore(subscribeToDebugLogs, getDebugLogs, getDebugLogs)
+
+  const prevRef = useRef<DebugState | null>(null)
   const lastChangeRef = useRef(Date.now())
   const isFirstRender = useRef(true)
 
-  const values: Record<string, unknown> = {
-    'activeTrack': activeTrack,
-    'state': playback.state,
-    'playingState': playingState,
-    'playWhenReady': playWhenReady,
-    'position': Math.round(progress.position),
-    'duration': Math.round(progress.duration),
-    'queue': queue.map((t) => t.src).join(', '),
-    'repeatMode': repeatMode,
-    'options': options,
-    'online': online,
-    'nowPlaying': nowPlaying,
-    'playbackError': playbackError?.message ?? null,
-    'navigationError': navigationError?.message ?? null,
-    'path': path ?? null,
-    'content': content?.title ?? null,
-  }
+  // State change logging
+  useEffect(() => {
+    if (!enabled) return
 
-  if (!enabled) return
+    const now = Date.now()
+    const elapsed = now - lastChangeRef.current
+    const prev = prevRef.current
+    const changes: string[] = []
 
-  const now = Date.now()
-  const elapsed = now - lastChangeRef.current
-  const prev = prevRef.current
-  const changes: string[] = []
-
-  for (const key of Object.keys(values)) {
-    // Skip small position changes to reduce noise
-    if (key === 'position') {
-      const prevPos = prev[key] as number | undefined
-      const currPos = values[key] as number
-      if (prevPos !== undefined && Math.abs(prevPos - currPos) < 2) {
-        continue
+    for (const key of Object.keys(state) as (keyof DebugState)[]) {
+      // Skip small position changes to reduce noise
+      if (key === 'position') {
+        const prevPos = prev?.[key]
+        const currPos = state[key]
+        if (prevPos !== undefined && Math.abs(prevPos - currPos) < 2) {
+          continue
+        }
+      }
+      if (!Object.is(prev?.[key], state[key])) {
+        changes.push(`${key}:
+    old → ${formatIndented(prev?.[key])}
+    new → ${formatIndented(state[key])}\n`)
       }
     }
-    if (!Object.is(prev[key], values[key])) {
-      changes.push(`${key}:
-    old → ${formatIndented(prev[key])}
-    new → ${formatIndented(values[key])}\n`)
-    }
-  }
 
-  if (isFirstRender.current) {
-    console.log(`[useDebug] initial state:`)
-    for (const [k, v] of Object.entries(values)) {
-      console.log(`  ${k}: ${format(v)}`)
+    if (isFirstRender.current) {
+      const message = Object.entries(state)
+        .map(([k, v]) => `${k}: ${format(v)}`)
+        .join('\n')
+      console.log(`[useDebug] initial state:\n  ${message.split('\n').join('\n  ')}`)
+      addDebugLog({ timestamp: now, elapsed: null, type: 'initial', message })
+      isFirstRender.current = false
+      lastChangeRef.current = now
+    } else if (changes.length > 0) {
+      const message = changes.join('\n')
+      console.log(`[useDebug] (+${elapsed}ms)\n  ${message.split('\n').join('\n  ')}`)
+      addDebugLog({ timestamp: now, elapsed, type: 'change', message })
+      lastChangeRef.current = now
     }
-    isFirstRender.current = false
-    lastChangeRef.current = now
-  } else if (changes.length > 0) {
-    console.log(`[useDebug] (+${elapsed}ms)\n  ${changes.join('\n  ')}`)
-    lastChangeRef.current = now
-  }
 
-  prevRef.current = { ...values }
+    prevRef.current = state
+  })
+
+  // Metadata logging
+  useEffect(() => {
+    if (!enabled || !metadata) return
+
+    const logMetadata = (type: string, message: string) => {
+      const now = Date.now()
+      const elapsed = now - lastChangeRef.current
+      console.log(`[useDebug:metadata] ${type} (+${elapsed}ms)\n  ${message.split('\n').join('\n  ')}`)
+      addDebugLog({ timestamp: now, elapsed, type: 'metadata', message: `[${type}] ${message}` })
+      lastChangeRef.current = now
+    }
+
+    const unsubscribeCommon = onMetadataCommonReceived.addListener((event) => {
+      const { metadata } = event
+      const fields = Object.entries(metadata)
+        .filter(([, v]) => v != null)
+        .map(([k, v]) => `${k}: "${v}"`)
+      logMetadata('common', fields.join('\n'))
+    })
+
+    const unsubscribePlayback = onPlaybackMetadata.addListener((metadata) => {
+      const fields = Object.entries(metadata)
+        .filter(([, v]) => v != null)
+        .map(([k, v]) => `${k}: "${v}"`)
+      logMetadata('playback', fields.join('\n'))
+    })
+
+    const unsubscribeTimed = onMetadataTimedReceived.addListener((event) => {
+      logMetadata('timed', `${event.metadata.length} entries`)
+    })
+
+    const unsubscribeChapter = onMetadataChapterReceived.addListener((event) => {
+      logMetadata('chapter', `${event.metadata.length} entries`)
+    })
+
+    return () => {
+      unsubscribeCommon()
+      unsubscribePlayback()
+      unsubscribeTimed()
+      unsubscribeChapter()
+    }
+  }, [enabled, metadata])
+
+  return {
+    state,
+    logs,
+    clear: clearDebugLogs,
+  }
 }
+
+// MARK: - Formatters
 
 function format(value: unknown): string {
   if (value === undefined) return 'undefined'
@@ -122,64 +262,10 @@ function indent(str: string, spaces: number): string {
   const pad = ' '.repeat(spaces)
   return str
     .split('\n')
-    .map((line, index) => index === 0 ? line : pad + line)
+    .map((line, index) => (index === 0 ? line : pad + line))
     .join('\n')
 }
 
 function formatIndented(value: unknown): string {
   return indent(format(value), 4)
-}
-
-/**
- * Debug hook that logs stream metadata events.
- * Use this when debugging live streams with ICY/ID3 metadata.
- *
- * @param enabled - Whether logging is enabled (default: __DEV__)
- *
- * @example
- * ```tsx
- * function MyScreen() {
- *   useDebugMetadata()
- *   // ... rest of component
- * }
- * ```
- */
-export function useDebugMetadata(enabled: boolean = __DEV__): void {
-  const mountTimeRef = useRef(Date.now())
-
-  useEffect(() => {
-    if (!enabled) return
-
-    const elapsed = () => Date.now() - mountTimeRef.current
-
-    const unsubscribeCommon = onMetadataCommonReceived.addListener((event) => {
-      const { metadata } = event
-      const fields = Object.entries(metadata)
-        .filter(([, v]) => v != null)
-        .map(([k, v]) => `${k}: "${v}"`)
-      console.log(`[useDebugMetadata] common (+${elapsed()}ms)\n  ${fields.join('\n  ')}`)
-    })
-
-    const unsubscribePlayback = onPlaybackMetadata.addListener((metadata) => {
-      const fields = Object.entries(metadata)
-        .filter(([, v]) => v != null)
-        .map(([k, v]) => `${k}: "${v}"`)
-      console.log(`[useDebugMetadata] playback (+${elapsed()}ms)\n  ${fields.join('\n  ')}`)
-    })
-
-    const unsubscribeTimed = onMetadataTimedReceived.addListener((event) => {
-      console.log(`[useDebugMetadata] timed (+${elapsed()}ms): ${event.metadata.length} entries`)
-    })
-
-    const unsubscribeChapter = onMetadataChapterReceived.addListener((event) => {
-      console.log(`[useDebugMetadata] chapter (+${elapsed()}ms): ${event.metadata.length} entries`)
-    })
-
-    return () => {
-      unsubscribeCommon()
-      unsubscribePlayback()
-      unsubscribeTimed()
-      unsubscribeChapter()
-    }
-  }, [enabled])
 }
