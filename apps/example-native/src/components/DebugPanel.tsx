@@ -59,11 +59,18 @@ export function DebugPanel() {
             </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={tab === 'logs' ? debug.clear : handleCopy}>
-          <Text style={styles.headerButton}>
-            {tab === 'logs' ? 'Clear' : copied ? 'Copied!' : 'Copy'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {tab === 'logs' && (
+            <TouchableOpacity onPress={debug.clear}>
+              <Text style={styles.headerButton}>Clear</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleCopy}>
+            <Text style={styles.headerButton}>
+              {copied ? 'Copied!' : 'Copy'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <ScrollView
         ref={scrollViewRef}
@@ -137,10 +144,13 @@ const styles = StyleSheet.create({
   activeTab: {
     color: '#fff'
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 16
+  },
   headerButton: {
     color: '#007AFF',
-    fontSize: 14,
-    minWidth: 50
+    fontSize: 14
   },
   scrollView: {
     flex: 1,
