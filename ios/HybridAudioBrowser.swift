@@ -320,6 +320,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
       // Create player with self as callbacks delegate
       self.player = TrackPlayer(callbacks: self)
 
+      // Configure media URL resolver
+      self.player?.mediaUrlResolver = { [weak self] src in
+        guard let self = self else {
+          return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+        }
+        return await self.browserManager.resolveMediaUrl(src)
+      }
+
       // Configure sleep timer callback
       self.player?.sleepTimerManager.onChanged = { [weak self] state in
         self?.onSleepTimerChanged(state)

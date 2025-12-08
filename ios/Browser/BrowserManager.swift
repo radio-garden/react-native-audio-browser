@@ -1,5 +1,6 @@
 import Foundation
 import NitroModules
+import os.log
 
 /// Custom browser errors.
 enum BrowserError: Error {
@@ -30,6 +31,8 @@ enum BrowserError: Error {
 /// - JavaScript callback invocation
 /// - Fallback handling and error management
 final class BrowserManager {
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "BrowserManager")
+
   // MARK: - Constants (match Kotlin companion object)
 
   /// Internal path used for the default/root browse source
@@ -410,9 +413,20 @@ final class BrowserManager {
       headers: mergeHeaders(config.request?.headers, routeConfig.headers)
     )
 
+    logger.debug("Resolving content from API")
+    logger.debug("  path: \(path)")
+    logger.debug("  url: \(url)")
+
     // Execute request
     let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
-    return result.toNitro()
+    let nitroResult = result.toNitro()
+
+    logger.debug("Resolved: \(nitroResult.title)")
+    if let children = nitroResult.children {
+      logger.debug("  children: \(children.count) tracks")
+    }
+
+    return nitroResult
   }
 
   private func mergeQuery(
@@ -622,6 +636,11 @@ final class BrowserManager {
     let parentPath = BrowserPathHelper.stripTrackId(url)
     guard let trackId = BrowserPathHelper.extractTrackId(url) else { return nil }
 
+    logger.debug("Expanding queue from contextual URL")
+    logger.debug("  url: \(url)")
+    logger.debug("  parentPath: \(parentPath)")
+    logger.debug("  trackId: \(trackId)")
+
     // Resolve the parent container
     let resolved = try await resolve(parentPath, useCache: true)
     guard let children = resolved.children else { return nil }
@@ -630,8 +649,14 @@ final class BrowserManager {
     let playableTracks = children.filter { $0.src != nil }
     guard !playableTracks.isEmpty else { return nil }
 
+    logger.debug("Found \(playableTracks.count) playable tracks")
+    for (index, track) in playableTracks.enumerated() {
+      logger.debug("  [\(index)] \(track.title) - src: \(track.src ?? "nil")")
+    }
+
     // Find selected track index
     let selectedIndex = playableTracks.firstIndex { $0.src == trackId } ?? 0
+    logger.debug("Selected track index: \(selectedIndex)")
 
     // If singleTrack mode, return just the selected track
     if config.singleTrack {
@@ -639,6 +664,90 @@ final class BrowserManager {
     }
 
     return (tracks: playableTracks, selectedIndex: selectedIndex)
+  }
+
+  // MARK: - Media URL Resolution
+
+  /// Resolves a media URL using the configured media transform.
+  /// Returns the transformed URL, headers, and user-agent for playback.
+  func resolveMediaUrl(_ originalUrl: String) async -> MediaResolvedUrl {
+    guard let mediaConfig = config.media else {
+      logger.debug("No media config, using original URL: \(originalUrl)")
+      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+    }
+
+    logger.debug("Resolving media URL: \(originalUrl)")
+
+    // If there's a transform function, call it
+    if let transform = mediaConfig.transform {
+      do {
+        // Create base request config with original URL as path
+        let baseRequest = RequestConfig(
+          method: config.request?.method,
+          path: originalUrl,
+          baseUrl: config.request?.baseUrl,
+          headers: config.request?.headers,
+          query: config.request?.query,
+          body: config.request?.body,
+          contentType: config.request?.contentType,
+          userAgent: config.request?.userAgent
+        )
+
+        // Call the JS transform function
+        let outerPromise = transform(baseRequest, nil)
+        let innerPromise = try await outerPromise.await()
+        let transformedConfig = try await innerPromise.await()
+
+        // Build final URL from transformed config
+        let finalUrl = buildMediaUrl(from: transformedConfig)
+        logger.debug("Media URL transformed: \(originalUrl) -> \(finalUrl)")
+
+        return MediaResolvedUrl(
+          url: finalUrl,
+          headers: transformedConfig.headers,
+          userAgent: transformedConfig.userAgent
+        )
+      } catch {
+        logger.error("Media transform failed: \(error.localizedDescription)")
+        return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+      }
+    }
+
+    // No transform, just apply baseUrl if configured
+    let baseUrl = mediaConfig.baseUrl ?? config.request?.baseUrl
+    if let baseUrl = baseUrl {
+      let finalUrl = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: originalUrl)
+      logger.debug("Media URL with baseUrl: \(originalUrl) -> \(finalUrl)")
+      return MediaResolvedUrl(
+        url: finalUrl,
+        headers: mediaConfig.headers ?? config.request?.headers,
+        userAgent: mediaConfig.userAgent ?? config.request?.userAgent
+      )
+    }
+
+    return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+  }
+
+  private func buildMediaUrl(from config: RequestConfig) -> String {
+    let path = config.path ?? ""
+    let baseUrl = config.baseUrl
+
+    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: path)
+
+    // Add query parameters if any
+    if let query = config.query, !query.isEmpty {
+      let queryString = query
+        .map { key, value in
+          let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
+          let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+          return "\(encodedKey)=\(encodedValue)"
+        }
+        .joined(separator: "&")
+      let separator = url.contains("?") ? "&" : "?"
+      url = "\(url)\(separator)\(queryString)"
+    }
+
+    return url
   }
 
   // MARK: - Accessors

@@ -1,14 +1,27 @@
 import Foundation
 import MediaPlayer
 import NitroModules
+import os.log
+
+/// Result of media URL resolution
+struct MediaResolvedUrl {
+  let url: String
+  let headers: [String: String]?
+  let userAgent: String?
+}
 
 class TrackPlayer {
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackPlayer")
+
   public let nowPlayingInfoController: NowPlayingInfoController
   public let remoteCommandController: RemoteCommandController
   public let sleepTimerManager = SleepTimerManager()
   private weak var callbacks: TrackPlayerCallbacks?
   private var lastIndex: Int = -1
   private var lastTrack: Track?
+
+  /// Callback to resolve media URLs with optional transform
+  var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
 
   /// The repeat mode for the queue player.
   public var repeatMode: RepeatMode = .off {
@@ -1169,14 +1182,27 @@ class TrackPlayer {
       // Enable remote commands
       enableRemoteCommands(remoteCommands)
 
-      // Load the track using playbackUrl from Track extension
-      if let trackUrl = currentTrack.playbackUrl {
-        url = currentTrack.isLocalFile ? URL(fileURLWithPath: trackUrl.path) : trackUrl
-        urlOptions = currentTrack.assetOptions
-        loadAVPlayer()
-      } else {
+      // Load the track - resolve media URL first if resolver is configured
+      guard let src = currentTrack.src else {
+        logger.error("Failed to load track - no src")
+        logger.error("  track.title: \(currentTrack.title)")
+        logger.error("  track.url: \(currentTrack.url ?? "nil")")
         clearCurrentAVItem()
-        playbackError = TrackPlayerError.PlaybackError.invalidSourceUrl(currentTrack.src ?? "nil")
+        playbackError = TrackPlayerError.PlaybackError.invalidSourceUrl("nil")
+        return
+      }
+
+      logger.debug("Loading track: \(currentTrack.title)")
+      logger.debug("  track.url: \(currentTrack.url ?? "nil")")
+      logger.debug("  track.src: \(src)")
+
+      // Check if it's already a full URL (http/https) or local file
+      if src.hasPrefix("http://") || src.hasPrefix("https://") || src.hasPrefix("file://") {
+        // Already a full URL, use directly (may still need transform for headers)
+        resolveAndLoadMedia(src: src, track: currentTrack)
+      } else {
+        // Relative path - needs media URL resolution
+        resolveAndLoadMedia(src: src, track: currentTrack)
       }
     } else {
       let playbackWasActive = playbackActive
@@ -1194,5 +1220,60 @@ class TrackPlayer {
     callbacks?.playerDidChangeActiveTrack(eventData)
     lastTrack = currentTrack
     lastIndex = currentIndex
+  }
+
+  /// Resolves the media URL (applying transform if configured) and loads the player
+  private func resolveAndLoadMedia(src: String, track: Track) {
+    // If we have a resolver, use it asynchronously
+    if let resolver = mediaUrlResolver {
+      Task { @MainActor in
+        // Check that this track is still the current one
+        guard self.currentTrack?.src == track.src else {
+          self.logger.debug("Track changed during media resolution, skipping load")
+          return
+        }
+
+        let resolved = await resolver(src)
+        self.logger.debug("  resolved URL: \(resolved.url)")
+        if let headers = resolved.headers {
+          self.logger.debug("  headers: \(headers)")
+        }
+        if let userAgent = resolved.userAgent {
+          self.logger.debug("  userAgent: \(userAgent)")
+        }
+
+        self.loadMediaWithResolvedUrl(resolved, track: track)
+      }
+    } else {
+      // No resolver, use src directly
+      let resolved = MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+      loadMediaWithResolvedUrl(resolved, track: track)
+    }
+  }
+
+  /// Loads the AVPlayer with a resolved media URL
+  private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track: Track) {
+    assertMainThread()
+
+    guard let mediaUrl = URL(string: resolved.url) else {
+      logger.error("Invalid media URL: \(resolved.url)")
+      playbackError = TrackPlayerError.PlaybackError.invalidSourceUrl(resolved.url)
+      return
+    }
+
+    // Build URL options with headers if provided
+    var options: [String: Any] = [:]
+    if let headers = resolved.headers, !headers.isEmpty {
+      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
+    }
+
+    let isLocalFile = mediaUrl.isFileURL
+    url = isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl
+    urlOptions = options.isEmpty ? nil : options
+
+    logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
+    logger.debug("  isLocalFile: \(isLocalFile)")
+
+    loadAVPlayer()
   }
 }
