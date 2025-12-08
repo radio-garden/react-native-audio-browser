@@ -91,6 +91,10 @@ class BrowserManager {
   // Set of favorited track identifiers (src)
   private var favoriteIds = setOf<String>()
 
+  // Navigation tracking to prevent race conditions
+  @Volatile
+  private var currentNavigationId = 0
+
   /**
    * Browser configuration containing routes, search, tabs, and request settings. This can be
    * updated dynamically when the configuration changes.
@@ -561,16 +565,26 @@ class BrowserManager {
   /**
    * Navigate to a path and return browser content.
    *
+   * Uses a navigation ID to prevent race conditions when multiple navigations
+   * overlap. Only the most recent navigation's result is applied.
+   *
    * @param path The path to navigate to (e.g., "/artists/123")
    * @return ResolvedTrack containing the navigation result
    */
   suspend fun navigate(path: String): ResolvedTrack {
     Timber.d("Navigating to path: $path")
 
+    // Increment navigation ID and capture for this navigation
+    val navigationId = ++currentNavigationId
+
     this.path = path
     this.content = null // Clear content immediately to show loading state
     val content = resolve(path)
-    this.content = content
+
+    // Only apply result if this is still the current navigation
+    if (navigationId == currentNavigationId) {
+      this.content = content
+    }
     return content
   }
 
@@ -578,15 +592,22 @@ class BrowserManager {
    * Refresh the current path's content without changing navigation state.
    * Used for background refreshes (e.g., when content changes via notifyContentChanged).
    * Bypasses content cache to fetch fresh data. Errors are silently ignored.
+   *
+   * Uses navigation ID tracking to prevent race conditions.
    */
   suspend fun refresh() {
+    // Increment navigation ID and capture for this refresh
+    val navigationId = ++currentNavigationId
+
     val currentPath = path
     Timber.d("Refreshing content for path: $currentPath")
 
     try {
+      contentCache.remove(currentPath)
       val content = resolve(currentPath, useCache = false)
-      // Only update if still on the same path (user didn't navigate away)
-      if (path == currentPath) {
+
+      // Only apply result if this is still the current navigation
+      if (navigationId == currentNavigationId) {
         this.content = content
       }
     } catch (e: Exception) {
