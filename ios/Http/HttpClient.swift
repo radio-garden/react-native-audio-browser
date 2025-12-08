@@ -171,7 +171,27 @@ final class HttpClient {
         )
       }
       let decoder = JSONDecoder()
-      return try decoder.decode(type, from: data)
+      do {
+        return try decoder.decode(type, from: data)
+      } catch let DecodingError.keyNotFound(key, context) {
+        throw NSError(
+          domain: "HttpClient",
+          code: -1,
+          userInfo: [NSLocalizedDescriptionKey: "Missing required key '\(key.stringValue)' at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"]
+        )
+      } catch let DecodingError.typeMismatch(type, context) {
+        throw NSError(
+          domain: "HttpClient",
+          code: -1,
+          userInfo: [NSLocalizedDescriptionKey: "Type mismatch for \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"]
+        )
+      } catch let DecodingError.valueNotFound(type, context) {
+        throw NSError(
+          domain: "HttpClient",
+          code: -1,
+          userInfo: [NSLocalizedDescriptionKey: "Value not found for \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"]
+        )
+      }
     case .failure(let error):
       throw error
     }

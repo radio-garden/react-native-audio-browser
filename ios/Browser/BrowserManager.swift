@@ -380,15 +380,29 @@ final class BrowserManager {
     path: String,
     params: [String: String]
   ) async throws -> ResolvedTrack {
-    // Build the request URL
-    let baseUrl = config.request?.baseUrl ?? routeConfig.baseUrl
+    // Build the request URL - route config takes precedence over global config
+    let baseUrl = routeConfig.baseUrl ?? config.request?.baseUrl
     guard let baseUrl = baseUrl else {
       throw BrowserError.invalidConfiguration("No URL configured for route")
     }
 
-    let url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: path)
+    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: path)
 
-    // Build HTTP request - convert HttpMethod enum to string
+    // Add query parameters from config - route config values override global config
+    let queryParams = mergeQuery(config.request?.query, routeConfig.query)
+    if let queryParams = queryParams, !queryParams.isEmpty {
+      let queryString = queryParams
+        .map { key, value in
+          let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
+          let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+          return "\(encodedKey)=\(encodedValue)"
+        }
+        .joined(separator: "&")
+      let separator = url.contains("?") ? "&" : "?"
+      url = "\(url)\(separator)\(queryString)"
+    }
+
+    // Build HTTP request - route config takes precedence
     let method = (routeConfig.method ?? config.request?.method)?.stringValue ?? "GET"
     let request = HttpClient.HttpRequest(
       url: url,
@@ -399,6 +413,15 @@ final class BrowserManager {
     // Execute request
     let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
     return result.toNitro()
+  }
+
+  private func mergeQuery(
+    _ base: [String: String]?,
+    _ override: [String: String]?
+  ) -> [String: String]? {
+    guard let base = base else { return override }
+    guard let override = override else { return base }
+    return base.merging(override) { _, new in new }
   }
 
   private func mergeHeaders(
