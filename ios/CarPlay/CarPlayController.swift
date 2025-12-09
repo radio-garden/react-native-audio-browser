@@ -128,15 +128,14 @@ public final class RNABCarPlayController: NSObject {
     logger.info("Building tab bar with \(tabs.count) tabs")
 
     var tabTemplates: [CPTemplate] = []
+    let maxTabs = CPTabBarTemplate.maximumTabCount
 
-    for tab in tabs.prefix(4) {  // CarPlay supports max 4 tabs
+    for tab in tabs.prefix(maxTabs) {
       let listTemplate = await createListTemplate(for: tab)
       tabTemplates.append(listTemplate)
     }
 
     let tabBar = CPTabBarTemplate(templates: tabTemplates)
-    // Note: Not setting delegate - tab selection is handled automatically by CarPlay
-
     interfaceController.setRootTemplate(tabBar, animated: true, completion: nil)
   }
 
@@ -149,11 +148,19 @@ public final class RNABCarPlayController: NSObject {
       sections: []
     )
 
-    // Set tab system item or image
+    // Set tab title explicitly (required for tab bar display)
+    template.tabTitle = track.title
+
+    // Set tab image - CarPlay requires an image for proper tab display
     if let artwork = track.artwork, let url = URL(string: artwork) {
-      template.tabImage = await loadImage(from: url)
+      if let image = await loadImage(from: url) {
+        template.tabImage = image
+      } else {
+        template.tabImage = defaultTabImage()
+      }
     } else {
-      template.tabSystemItem = .featured
+      // Default icon when no artwork available
+      template.tabImage = defaultTabImage()
     }
 
     // If track has a URL, resolve its content
@@ -384,6 +391,11 @@ public final class RNABCarPlayController: NSObject {
   }
 
   // MARK: - Image Loading
+
+  private func defaultTabImage() -> UIImage? {
+    let config = UIImage.SymbolConfiguration(scale: .large)
+    return UIImage(systemName: "music.note.list", withConfiguration: config)
+  }
 
   private func loadImage(from url: URL) async -> UIImage? {
     do {
