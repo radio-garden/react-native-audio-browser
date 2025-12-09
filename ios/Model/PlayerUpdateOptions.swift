@@ -75,7 +75,7 @@ class PlayerUpdateOptions {
     }
   }
 
-  /// Convert to Nitro Options struct
+  /// Convert to Nitro Options struct (full options with all required fields)
   public func toOptions() -> Options {
     // Convert Double? to Variant_NullType_Double?
     let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
@@ -92,6 +92,25 @@ class PlayerUpdateOptions {
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
       repeatMode: repeatMode
+    )
+  }
+
+  /// Convert to Nitro UpdateOptions struct (partial options for getOptions())
+  public func toUpdateOptions() -> UpdateOptions {
+    // Convert Double? to Variant_NullType_Double?
+    let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
+
+    return UpdateOptions(
+      android: nil,
+      ios: IOSUpdateOptions(
+        likeOptions: likeOptions,
+        dislikeOptions: dislikeOptions,
+        bookmarkOptions: bookmarkOptions
+      ),
+      forwardJumpInterval: forwardJumpInterval,
+      backwardJumpInterval: backwardJumpInterval,
+      progressUpdateEventInterval: progressInterval,
+      capabilities: capabilities
     )
   }
 }

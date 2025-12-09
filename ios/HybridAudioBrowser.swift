@@ -17,6 +17,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   private let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
   private var nowPlayingOverride: NowPlayingUpdate?
+  private let playerOptions = PlayerUpdateOptions()
   private var lastNavigationError: NavigationError? {
     didSet {
       // Skip if both nil (no real change)
@@ -69,7 +70,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   public var configuration: NativeBrowserConfiguration = NativeBrowserConfiguration(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
-    singleTrack: nil, androidControllerOfflineError: nil
+    singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil
   ) {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)
@@ -242,30 +243,31 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
           if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
             let (tracks, startIndex) = expanded
 
-            // Replace queue and seek to selected track
+            // Replace queue and start at the selected track (auto-play)
             await MainActor.run {
               player?.clear()
-              player?.add(tracks)
-              try? player?.skipTo(startIndex)
-              player?.play()
+              player?.add(tracks, initialIndex: startIndex, playWhenReady: true)
             }
           } else {
-            // Fallback: just load the single track
-            try load(track: track)
-            try play()
+            // Fallback: just load the single track (auto-play)
+            await MainActor.run {
+              player?.load(track, playWhenReady: true)
+            }
           }
         } catch {
           logger.error("Error expanding queue: \(error.localizedDescription)")
-          // Fallback to single track - playback errors reported via TrackPlayer callbacks
-          try? load(track: track)
-          try? play()
+          // Fallback to single track (auto-play) - playback errors reported via TrackPlayer callbacks
+          await MainActor.run {
+            player?.load(track, playWhenReady: true)
+          }
         }
       }
     }
-    // If track has src, it's playable - load it
+    // If track has src, it's playable - load and auto-play
     else if track.src != nil {
-      try load(track: track)
-      try play()
+      onMainThread {
+        player?.load(track, playWhenReady: true)
+      }
     }
     // If track has url, it's browsable - navigate to it
     else if let url = url {
@@ -340,24 +342,42 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         self?.onSleepTimerChanged(state)
       }
 
-      // TODO: Apply options
+      // Apply default remote commands (play, pause, next, previous, seekTo)
+      await MainActor.run {
+        self.applyRemoteCommands()
+      }
     }
   }
 
   public func updateOptions(options: NativeUpdateOptions) throws {
-    // TODO: Implement
+    try onMainThread {
+      // Update stored options
+      playerOptions.update(from: options)
+
+      // Apply remote commands to player
+      applyRemoteCommands()
+    }
+  }
+
+  /// Converts capabilities to remote commands and applies them to the player
+  private func applyRemoteCommands() {
+    guard let player = player else { return }
+
+    let remoteCommands = playerOptions.capabilities.map { capability in
+      capability.mapToPlayerCommand(
+        forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
+        backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
+        likeOptions: playerOptions.likeOptions,
+        dislikeOptions: playerOptions.dislikeOptions,
+        bookmarkOptions: playerOptions.bookmarkOptions
+      )
+    }
+
+    player.remoteCommands = remoteCommands
   }
 
   public func getOptions() throws -> UpdateOptions {
-    // TODO: Return actual options
-    return UpdateOptions(
-      android: nil,
-      ios: nil,
-      forwardJumpInterval: nil,
-      backwardJumpInterval: nil,
-      progressUpdateEventInterval: nil,
-      capabilities: nil
-    )
+    return playerOptions.toUpdateOptions()
   }
 
   // MARK: - Playback Control
@@ -795,24 +815,30 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     if let handler = handleRemotePlay {
       handler()
     } else {
-      onRemotePlay()
+      // Default behavior: play the player
+      onMainThread { player?.play() }
     }
+    onRemotePlay()
   }
 
   public func remotePause() {
     if let handler = handleRemotePause {
       handler()
     } else {
-      onRemotePause()
+      // Default behavior: pause the player
+      onMainThread { player?.pause() }
     }
+    onRemotePause()
   }
 
   public func remoteStop() {
     if let handler = handleRemoteStop {
       handler()
     } else {
-      onRemoteStop()
+      // Default behavior: stop the player
+      onMainThread { player?.stop() }
     }
+    onRemoteStop()
   }
 
   public func remotePlayPause() {
@@ -829,16 +855,20 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     if let handler = handleRemoteNext {
       handler()
     } else {
-      onRemoteNext()
+      // Default behavior: skip to next track
+      onMainThread { player?.next() }
     }
+    onRemoteNext()
   }
 
   public func remotePrevious() {
     if let handler = handleRemotePrevious {
       handler()
     } else {
-      onRemotePrevious()
+      // Default behavior: skip to previous track
+      onMainThread { player?.previous() }
     }
+    onRemotePrevious()
   }
 
   public func remoteJumpForward(interval: Double) {
@@ -846,8 +876,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     if let handler = handleRemoteJumpForward {
       handler(event)
     } else {
-      onRemoteJumpForward(event)
+      // Default behavior: seek forward by interval
+      onMainThread { player?.seekBy(interval) }
     }
+    onRemoteJumpForward(event)
   }
 
   public func remoteJumpBackward(interval: Double) {
@@ -855,17 +887,23 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     if let handler = handleRemoteJumpBackward {
       handler(event)
     } else {
-      onRemoteJumpBackward(event)
+      // Default behavior: seek backward by interval
+      onMainThread { player?.seekBy(-interval) }
     }
+    onRemoteJumpBackward(event)
   }
 
   public func remoteSeek(position: Double) {
+    logger.info("remoteSeek called with position: \(position)")
     let event = RemoteSeekEvent(position: position)
     if let handler = handleRemoteSeek {
       handler(event)
     } else {
-      onRemoteSeek(event)
+      // Default behavior: seek to position
+      logger.info("remoteSeek: calling player.seekTo(\(position))")
+      onMainThread { player?.seekTo(position) }
     }
+    onRemoteSeek(event)
   }
 
   public func remoteChangePlaybackPosition(position: Double) {
