@@ -984,21 +984,23 @@ class TrackPlayer {
    Add tracks to the queue.
 
    - parameter tracks: The tracks to add to the queue.
+   - parameter initialIndex: Optional, the index to start at when queue was empty. Defaults to 0.
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
-  public func add(_ tracks: [Track], playWhenReady: Bool? = nil) {
+  public func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
     handlePlayWhenReady(playWhenReady) {
-      add(tracks)
+      add(tracks, initialIndex: initialIndex ?? 0)
     }
   }
 
-  private func add(_ newTracks: [Track]) {
+  private func add(_ newTracks: [Track], initialIndex: Int) {
     assertMainThread()
     guard !newTracks.isEmpty else { return }
     let wasEmpty = tracks.isEmpty
     tracks.append(contentsOf: newTracks)
     if wasEmpty {
-      currentIndex = 0
+      // Use initialIndex, clamped to valid range
+      currentIndex = max(0, min(initialIndex, tracks.count - 1))
       handleCurrentTrackChanged()
     }
   }
