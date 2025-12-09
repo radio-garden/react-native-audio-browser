@@ -28,4 +28,7 @@ Pod::Spec.new do |s|
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
   install_modules_dependencies(s)
+
+  # CarPlay framework for CarPlay support
+  s.frameworks = 'CarPlay'
 end
