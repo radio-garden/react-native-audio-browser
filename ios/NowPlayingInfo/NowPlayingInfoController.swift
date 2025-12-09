@@ -1,9 +1,11 @@
 import Foundation
 import MediaPlayer
+import os.log
 
 /// Thread-safe controller for managing MPNowPlayingInfoCenter.
 /// Uses a concurrent queue with barriers to synchronize access to the info dictionary.
 class NowPlayingInfoController {
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingInfoController")
   private var infoQueue = DispatchQueue(
     label: "NowPlayingInfoController.infoQueue",
     attributes: .concurrent
@@ -69,6 +71,7 @@ class NowPlayingInfoController {
   /// Internal update method - assumes already inside barrier block.
   /// Use this from internal methods that are already synchronized to avoid nested dispatch.
   private func performUpdate() {
+    logger.debug("performUpdate: setting nowPlayingInfo with \(self._info.count) keys")
     infoCenter.nowPlayingInfo = _info
   }
 

@@ -1,5 +1,6 @@
 import Foundation
 import MediaPlayer
+import os.log
 
 typealias RemoteCommandHandler = (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus
 
@@ -10,6 +11,7 @@ typealias RemoteCommandHandler = (MPRemoteCommandEvent) -> MPRemoteCommandHandle
  that invoke TrackPlayerCallbacks, but allows customization by setting the lazy handler properties.
  */
 class RemoteCommandController {
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "RemoteCommandController")
   private let center: MPRemoteCommandCenter
 
   weak var callbacks: TrackPlayerCallbacks?
@@ -235,9 +237,11 @@ class RemoteCommandController {
     -> MPRemoteCommandHandlerStatus
   {
     if let event = event as? MPChangePlaybackPositionCommandEvent {
+      logger.debug("changePlaybackPosition: \(event.positionTime)")
       callbacks?.remoteSeek(position: event.positionTime)
       return MPRemoteCommandHandlerStatus.success
     }
+    logger.debug("changePlaybackPosition: failed to cast event")
     return MPRemoteCommandHandlerStatus.commandFailed
   }
 
