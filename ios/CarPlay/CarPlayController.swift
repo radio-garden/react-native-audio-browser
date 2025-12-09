@@ -329,11 +329,9 @@ public final class RNABCarPlayController: NSObject {
             let (tracks, startIndex) = expanded
 
             await MainActor.run {
-              // Replace queue and seek to selected track
+              // Replace queue and start at the selected track
               audioBrowser.getPlayer()?.clear()
-              audioBrowser.getPlayer()?.add(tracks)
-              try? audioBrowser.getPlayer()?.skipTo(startIndex)
-              audioBrowser.getPlayer()?.play()
+              audioBrowser.getPlayer()?.add(tracks, initialIndex: startIndex, playWhenReady: true)
 
               // Show now playing template
               self.showNowPlaying()
