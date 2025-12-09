@@ -18,9 +18,14 @@ Pod::Spec.new do |s|
     "ios/**/*.{swift}",
     # Autolinking/Registration (Objective-C++)
     "ios/**/*.{m,mm}",
+    # Headers (Objective-C)
+    "ios/**/*.{h}",
     # Implementation (C++ objects)
     "cpp/**/*.{hpp,cpp}",
   ]
+
+  # Public headers for CarPlay scene delegate
+  s.public_header_files = ["ios/CarPlay/*.h"]
 
   load 'nitrogen/generated/ios/AudioBrowser+autolinking.rb'
   add_nitrogen_files(s)
