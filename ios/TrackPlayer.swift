@@ -259,7 +259,13 @@ class TrackPlayer {
       }
 
       switch state {
-      case .ready, .loading:
+      case .ready:
+        setTimePitchingAlgorithmForCurrentItem()
+        // When item becomes ready and playWhenReady is true, start playback
+        if playWhenReady {
+          applyAVPlayerRate()
+        }
+      case .loading:
         setTimePitchingAlgorithmForCurrentItem()
       default: break
       }
