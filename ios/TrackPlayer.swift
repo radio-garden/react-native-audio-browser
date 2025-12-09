@@ -981,6 +981,31 @@ class TrackPlayer {
   }
 
   /**
+   Replace the entire queue with new tracks.
+
+   - parameter tracks: The tracks to set as the new queue.
+   - parameter initialIndex: The index to start at. Defaults to 0.
+   - parameter playWhenReady: Optional, whether to start playback when the track is ready.
+   */
+  public func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil) {
+    assertMainThread()
+    guard !newTracks.isEmpty else {
+      clear()
+      return
+    }
+
+    // Replace tracks and index atomically to avoid intermediate nil state
+    let clampedIndex = max(0, min(initialIndex, newTracks.count - 1))
+    tracks = newTracks
+    currentIndex = clampedIndex
+
+    // Handle playWhenReady and load the new track
+    handlePlayWhenReady(playWhenReady) {
+      handleCurrentTrackChanged()
+    }
+  }
+
+  /**
    Add tracks to the queue.
 
    - parameter tracks: The tracks to add to the queue.

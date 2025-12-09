@@ -245,8 +245,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
             // Replace queue and start at the selected track (auto-play)
             await MainActor.run {
-              player?.clear()
-              player?.add(tracks, initialIndex: startIndex, playWhenReady: true)
+              player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true)
             }
           } else {
             // Fallback: just load the single track (auto-play)
