@@ -19,7 +19,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?) {
+  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -64,6 +64,12 @@ public extension NativeBrowserConfiguration {
       }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = androidControllerOfflineError {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = carPlayUpNextButton {
         return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
@@ -215,6 +221,30 @@ public extension NativeBrowserConfiguration {
     @inline(__always)
     set {
       self.__androidControllerOfflineError = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var carPlayUpNextButton: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__carPlayUpNextButton) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__carPlayUpNextButton)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__carPlayUpNextButton = { () -> bridge.std__optional_bool_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {

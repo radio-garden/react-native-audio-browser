@@ -26,6 +26,15 @@ public final class RNABCarPlayController: NSObject {
   /// Current navigation stack paths (for back navigation context)
   private var navigationStack: [String] = []
 
+  /// Helper object for CPNowPlayingTemplateObserver conformance
+  /// (kept separate to avoid exposing CarPlay protocols to Obj-C header)
+  private var nowPlayingObserver: NowPlayingObserver?
+
+  /// Convenience accessor for browser config
+  private var config: BrowserConfig {
+    audioBrowser?.browserManager.config ?? BrowserConfig()
+  }
+
   // MARK: - Initialization
 
   @objc
@@ -47,6 +56,9 @@ public final class RNABCarPlayController: NSObject {
     // Subscribe to browser content changes
     setupContentSubscriptions()
 
+    // Register as Now Playing observer for Up Next button
+    setupNowPlayingTemplate()
+
     // Build initial interface
     Task { @MainActor in
       await buildInitialInterface()
@@ -59,6 +71,13 @@ public final class RNABCarPlayController: NSObject {
     isStarted = false
 
     logger.info("Stopping CarPlay controller")
+
+    // Remove Now Playing observer
+    if let observer = nowPlayingObserver {
+      CPNowPlayingTemplate.shared.remove(observer)
+      nowPlayingObserver = nil
+    }
+
     navigationStack.removeAll()
   }
 
@@ -191,6 +210,9 @@ public final class RNABCarPlayController: NSObject {
       return []
     }
 
+    let maxSections = CPListTemplate.maximumSectionCount
+    let maxTotalItems = CPListTemplate.maximumItemCount
+
     // Group by groupTitle if present
     var groups: [String?: [Track]] = [:]
     for track in children {
@@ -198,20 +220,32 @@ public final class RNABCarPlayController: NSObject {
       groups[groupKey, default: []].append(track)
     }
 
-    // Create sections
+    // Create sections (respecting both section and total item limits)
     var sections: [CPListSection] = []
+    var totalItemCount = 0
 
     // Ungrouped items first
     if let ungrouped = groups[nil], !ungrouped.isEmpty {
-      let items = ungrouped.map { createListItem(for: $0) }
-      sections.append(CPListSection(items: items))
+      let availableSlots = maxTotalItems - totalItemCount
+      let items = ungrouped.prefix(availableSlots).map { createListItem(for: $0) }
+      if !items.isEmpty {
+        sections.append(CPListSection(items: items))
+        totalItemCount += items.count
+      }
     }
 
-    // Then grouped items
+    // Then grouped items (respecting section and item limits)
     for (groupTitle, tracks) in groups.sorted(by: { ($0.key ?? "") < ($1.key ?? "") }) {
+      guard sections.count < maxSections else { break }
+      guard totalItemCount < maxTotalItems else { break }
       guard groupTitle != nil else { continue }
-      let items = tracks.map { createListItem(for: $0) }
-      sections.append(CPListSection(items: items, header: groupTitle, sectionIndexTitle: nil))
+
+      let availableSlots = maxTotalItems - totalItemCount
+      let items = tracks.prefix(availableSlots).map { createListItem(for: $0) }
+      if !items.isEmpty {
+        sections.append(CPListSection(items: items, header: groupTitle, sectionIndexTitle: nil))
+        totalItemCount += items.count
+      }
     }
 
     return sections
@@ -360,7 +394,35 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Now Playing
 
+  private func setupNowPlayingTemplate() {
+    let template = CPNowPlayingTemplate.shared
+
+    // Create and register observer for Up Next button
+    let observer = NowPlayingObserver(controller: self)
+    nowPlayingObserver = observer
+    template.add(observer)
+
+    // Update button states based on config
+    updateNowPlayingButtonStates()
+  }
+
+  /// Updates Now Playing button states based on config and current queue
+  private func updateNowPlayingButtonStates() {
+    let template = CPNowPlayingTemplate.shared
+
+    // Up Next button: enabled if config allows and queue has more than 1 track
+    if config.carPlayUpNextButton {
+      let queueCount = audioBrowser?.getPlayer()?.tracks.count ?? 0
+      template.isUpNextButtonEnabled = queueCount > 1
+    } else {
+      template.isUpNextButtonEnabled = false
+    }
+  }
+
   private func showNowPlaying() {
+    // Update button states before showing
+    updateNowPlayingButtonStates()
+
     let nowPlayingTemplate = CPNowPlayingTemplate.shared
     interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
   }
@@ -405,6 +467,94 @@ public final class RNABCarPlayController: NSObject {
       logger.debug("Failed to load image from \(url): \(error.localizedDescription)")
       return nil
     }
+  }
+}
+
+// MARK: - Now Playing Observer
+
+/// Private helper class for CPNowPlayingTemplateObserver conformance.
+/// Kept separate from RNABCarPlayController to avoid exposing CarPlay protocols to Obj-C header.
+private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver {
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingObserver")
+  private weak var controller: RNABCarPlayController?
+
+  init(controller: RNABCarPlayController) {
+    self.controller = controller
+    super.init()
+  }
+
+  func nowPlayingTemplateUpNextButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
+    controller?.handleUpNextButtonTapped()
+  }
+
+  func nowPlayingTemplateAlbumArtistButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
+    // Album/Artist button functionality - can be implemented later
+    logger.debug("Album/Artist button tapped (not implemented)")
+  }
+}
+
+// MARK: - Up Next Handler
+
+extension RNABCarPlayController {
+  /// Handles the Up Next button tap from Now Playing screen
+  fileprivate func handleUpNextButtonTapped() {
+    guard let player = audioBrowser?.getPlayer() else {
+      logger.warning("Player not available for Up Next")
+      return
+    }
+
+    let tracks = player.tracks
+    let currentIndex = player.currentIndex
+
+    guard !tracks.isEmpty else {
+      logger.debug("No tracks in queue for Up Next")
+      return
+    }
+
+    logger.info("Showing Up Next queue with \(tracks.count) tracks")
+
+    // Create list items for each track in the queue
+    let items = tracks.enumerated().map { index, track -> CPListItem in
+      let item = CPListItem(
+        text: track.title,
+        detailText: track.subtitle ?? track.artist
+      )
+
+      // Mark currently playing track
+      item.isPlaying = index == currentIndex
+
+      // Load artwork asynchronously
+      if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
+         let url = URL(string: artworkUrl) {
+        Task { [weak self] in
+          if let image = await self?.loadImage(from: url) {
+            await MainActor.run {
+              item.setImage(image)
+            }
+          }
+        }
+      }
+
+      // Handler to skip to this track
+      item.handler = { [weak self] _, completion in
+        self?.logger.info("Skipping to track at index \(index): \(track.title)")
+        do {
+          try player.skipTo(index)
+        } catch {
+          self?.logger.error("Failed to skip to track: \(error.localizedDescription)")
+        }
+        completion()
+      }
+
+      return item
+    }
+
+    let template = CPListTemplate(
+      title: "Up Next",
+      sections: [CPListSection(items: items)]
+    )
+
+    interfaceController.pushTemplate(template, animated: true, completion: nil)
   }
 }
 

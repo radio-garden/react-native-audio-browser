@@ -25,13 +25,19 @@ struct BrowserConfig {
   /// Behavior: show offline error in Android Auto controller
   let androidControllerOfflineError: Bool
 
+  // MARK: - CarPlay Options
+
+  /// Enable the "Up Next" button on CarPlay Now Playing screen
+  let carPlayUpNextButton: Bool
+
   init(
     request: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
     artwork: MediaRequestConfig? = nil,
     routes: [NativeRouteEntry]? = nil,
     singleTrack: Bool = false,
-    androidControllerOfflineError: Bool = true
+    androidControllerOfflineError: Bool = true,
+    carPlayUpNextButton: Bool = true
   ) {
     self.request = request
     self.media = media
@@ -39,6 +45,7 @@ struct BrowserConfig {
     self.routes = routes
     self.singleTrack = singleTrack
     self.androidControllerOfflineError = androidControllerOfflineError
+    self.carPlayUpNextButton = carPlayUpNextButton
   }
 
   /// Create from NativeBrowserConfiguration
@@ -49,6 +56,7 @@ struct BrowserConfig {
     self.routes = config.routes
     self.singleTrack = config.singleTrack ?? false
     self.androidControllerOfflineError = config.androidControllerOfflineError ?? true
+    self.carPlayUpNextButton = config.carPlayUpNextButton ?? true
   }
 
   /// Returns true if search functionality is configured (either callback or config).

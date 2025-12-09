@@ -37,7 +37,10 @@ data class NativeBrowserConfiguration(
   val singleTrack: Boolean?,
   @DoNotStrip
   @Keep
-  val androidControllerOfflineError: Boolean?
+  val androidControllerOfflineError: Boolean?,
+  @DoNotStrip
+  @Keep
+  val carPlayUpNextButton: Boolean?
 ) {
   /* primary constructor */
 
@@ -49,8 +52,8 @@ data class NativeBrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?): NativeBrowserConfiguration {
-      return NativeBrowserConfiguration(path, request, media, artwork, routes, singleTrack, androidControllerOfflineError)
+    private fun fromCpp(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?): NativeBrowserConfiguration {
+      return NativeBrowserConfiguration(path, request, media, artwork, routes, singleTrack, androidControllerOfflineError, carPlayUpNextButton)
     }
   }
 }
