@@ -693,19 +693,24 @@ final class BrowserManager {
           userAgent: config.request?.userAgent
         )
 
-        // Call the JS transform function
-        let outerPromise = transform(baseRequest, nil)
+        // Call the JS transform function on main thread (required for Nitro JS callbacks)
+        let outerPromise = await MainActor.run { transform(baseRequest, nil) }
         let innerPromise = try await outerPromise.await()
         let transformedConfig = try await innerPromise.await()
 
-        // Build final URL from transformed config
+        // Extract values immediately to Swift native types to avoid
+        // memory corruption in Nitro's Swift-C++ bridge when the
+        // Promise<RequestConfig> is deallocated
         let finalUrl = buildUrl(from: transformedConfig)
+        let headers = transformedConfig.headers
+        let userAgent = transformedConfig.userAgent
+
         logger.debug("Media URL transformed: \(originalUrl) -> \(finalUrl)")
 
         return MediaResolvedUrl(
           url: finalUrl,
-          headers: transformedConfig.headers,
-          userAgent: transformedConfig.userAgent
+          headers: headers,
+          userAgent: userAgent
         )
       } catch {
         logger.error("Media transform failed: \(error.localizedDescription)")
@@ -793,8 +798,8 @@ final class BrowserManager {
         let innerPromise = try await outerPromise.await()
         let resolvedConfig = try await innerPromise.await()
 
-        // Merge resolved config
-        mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolvedConfig)
+        // Merge resolved config (extractConfig avoids Nitro bridge memory issues)
+        mergedConfig = mergeRequestConfig(base: mergedConfig, override: extractConfig(resolvedConfig))
       } else {
         // No resolve callback - apply artwork static config
         let artworkStaticConfig = RequestConfig(
@@ -814,7 +819,10 @@ final class BrowserManager {
       if let transform = artworkConfig.transform {
         let outerPromise = transform(mergedConfig, nil)
         let innerPromise = try await outerPromise.await()
-        mergedConfig = try await innerPromise.await()
+        let transformedConfig = try await innerPromise.await()
+
+        // Extract values immediately to avoid Nitro bridge memory issues
+        mergedConfig = extractConfig(transformedConfig)
       }
 
       // Build final URL
@@ -839,6 +847,21 @@ final class BrowserManager {
       // On error, return nil to avoid broken images
       return nil
     }
+  }
+
+  /// Extracts all values from a RequestConfig into a new instance to avoid
+  /// memory corruption in Nitro's Swift-C++ bridge when the Promise is deallocated.
+  private func extractConfig(_ config: RequestConfig) -> RequestConfig {
+    return RequestConfig(
+      method: config.method,
+      path: config.path,
+      baseUrl: config.baseUrl,
+      headers: config.headers,
+      query: config.query,
+      body: config.body,
+      contentType: config.contentType,
+      userAgent: config.userAgent
+    )
   }
 
   /// Merges two RequestConfig objects, with override values taking precedence.
