@@ -24,7 +24,6 @@ API_AVAILABLE(ios(14.0))
     // The app delegate should implement startReactNativeHeadless
     id appDelegate = [UIApplication sharedApplication].delegate;
     if ([appDelegate respondsToSelector:@selector(startReactNativeHeadless)]) {
-        os_log_info(OS_LOG_DEFAULT, "[CarPlay] Starting React Native in headless mode");
         [appDelegate performSelector:@selector(startReactNativeHeadless)];
     }
 
