@@ -15,7 +15,7 @@ class PlayerItemNotificationObserver {
 
   init(
     onDidPlayToEndTime: @escaping () -> Void,
-    onFailedToPlayToEndTime: @escaping () -> Void
+    onFailedToPlayToEndTime: @escaping () -> Void,
   ) {
     self.onDidPlayToEndTime = onDidPlayToEndTime
     self.onFailedToPlayToEndTime = onFailedToPlayToEndTime
@@ -39,13 +39,13 @@ class PlayerItemNotificationObserver {
       self,
       selector: #selector(avItemDidPlayToEndTime),
       name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
-      object: avItem
+      object: avItem,
     )
     notificationCenter.addObserver(
       self,
       selector: #selector(avItemFailedToPlayToEndTime),
       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
-      object: avItem
+      object: avItem,
     )
   }
 
@@ -59,12 +59,12 @@ class PlayerItemNotificationObserver {
     notificationCenter.removeObserver(
       self,
       name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
-      object: observingAVItem
+      object: observingAVItem,
     )
     notificationCenter.removeObserver(
       self,
       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
-      object: observingAVItem
+      object: observingAVItem,
     )
     self.observingAVItem = nil
     isObserving = false

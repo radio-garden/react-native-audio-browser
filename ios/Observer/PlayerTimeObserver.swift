@@ -35,7 +35,7 @@ class PlayerTimeObserver {
   init(
     periodicObserverTimeInterval: CMTime,
     onAudioDidStart: @escaping () -> Void,
-    onSecondElapsed: @escaping (Double) -> Void
+    onSecondElapsed: @escaping (Double) -> Void,
   ) {
     self.periodicObserverTimeInterval = periodicObserverTimeInterval
     self.onAudioDidStart = onAudioDidStart
@@ -62,7 +62,7 @@ class PlayerTimeObserver {
       queue: nil,
       using: { [weak self] in
         self?.onAudioDidStart()
-      }
+      },
     )
   }
 
@@ -92,7 +92,7 @@ class PlayerTimeObserver {
       queue: nil,
       using: { [weak self] time in
         self?.onSecondElapsed(time.seconds)
-      }
+      },
     )
   }
 

@@ -6,7 +6,7 @@ typealias RawMetadataGroup = [[String: Any]]
 class MetadataAdapter {
   private static func getMetadataItem(
     metadata: [AVMetadataItem],
-    forIdentifier: AVMetadataIdentifier
+    forIdentifier: AVMetadataIdentifier,
   ) -> String? {
     AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: forIdentifier).first?
       .stringValue
@@ -52,73 +52,73 @@ class MetadataAdapter {
 
   static func convertToCommonMetadata(
     metadata: [AVMetadataItem],
-    skipRaw: Bool = false
+    skipRaw: Bool = false,
   ) -> [String: Any] {
     var rawMetadataItem: [String: Any] = [:]
     rawMetadataItem["title"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .commonIdentifierTitle
+      forIdentifier: .commonIdentifierTitle,
     )
     rawMetadataItem["artist"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .commonIdentifierArtist
+      forIdentifier: .commonIdentifierArtist,
     )
     rawMetadataItem["albumName"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .commonIdentifierAlbumName
+      forIdentifier: .commonIdentifierAlbumName,
     )
     rawMetadataItem["subtitle"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataSetSubtitle
+      forIdentifier: .id3MetadataSetSubtitle,
     )
       ?? getMetadataItem(metadata: metadata, forIdentifier: .iTunesMetadataTrackSubTitle)
     rawMetadataItem["description"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .commonIdentifierDescription
+      forIdentifier: .commonIdentifierDescription,
     )
     rawMetadataItem["artworkUri"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .commonIdentifierArtwork
+      forIdentifier: .commonIdentifierArtwork,
     )
     rawMetadataItem["trackNumber"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataTrackNumber
+      forIdentifier: .id3MetadataTrackNumber,
     )
       ?? getMetadataItem(metadata: metadata, forIdentifier: .iTunesMetadataTrackNumber)
     rawMetadataItem["composer"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataComposer
+      forIdentifier: .id3MetadataComposer,
     )
       ?? getMetadataItem(metadata: metadata, forIdentifier: .iTunesMetadataComposer)
       ?? getMetadataItem(metadata: metadata, forIdentifier: .quickTimeMetadataComposer)
     rawMetadataItem["conductor"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataConductor
+      forIdentifier: .id3MetadataConductor,
     )
       ?? getMetadataItem(metadata: metadata, forIdentifier: .iTunesMetadataConductor)
     rawMetadataItem["genre"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .quickTimeMetadataGenre
+      forIdentifier: .quickTimeMetadataGenre,
     )
     rawMetadataItem["compilation"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .iTunesMetadataDiscCompilation
+      forIdentifier: .iTunesMetadataDiscCompilation,
     )
     rawMetadataItem["station"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataInternetRadioStationName
+      forIdentifier: .id3MetadataInternetRadioStationName,
     )
     rawMetadataItem["mediaType"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataMediaType
+      forIdentifier: .id3MetadataMediaType,
     )
     rawMetadataItem["creationDate"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .commonIdentifierCreationDate
+      forIdentifier: .commonIdentifierCreationDate,
     )
     rawMetadataItem["creationYear"] = getMetadataItem(
       metadata: metadata,
-      forIdentifier: .id3MetadataYear
+      forIdentifier: .id3MetadataYear,
     )
       ?? getMetadataItem(metadata: metadata, forIdentifier: .quickTimeMetadataYear)
 

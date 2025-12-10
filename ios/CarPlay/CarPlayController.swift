@@ -178,7 +178,7 @@ public final class RNABCarPlayController: NSObject {
     // See TODO.md for voice search implementation requirements.
     let template = CPListTemplate(
       title: track.title,
-      sections: []
+      sections: [],
     )
 
     // Set tab title explicitly (required for tab bar display)
@@ -207,11 +207,11 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func createListTemplate(
     for resolvedTrack: ResolvedTrack,
-    path: String
+    path: String,
   ) -> CPListTemplate {
     let template = CPListTemplate(
       title: resolvedTrack.title,
-      sections: createSections(from: resolvedTrack)
+      sections: createSections(from: resolvedTrack),
     )
 
     template.userInfo = ["path": path] as [String: Any]
@@ -268,7 +268,7 @@ public final class RNABCarPlayController: NSObject {
   private func createListItem(for track: Track) -> CPListItem {
     let item = CPListItem(
       text: track.title,
-      detailText: track.subtitle ?? track.artist
+      detailText: track.subtitle ?? track.artist,
     )
 
     // Store track info for selection handling
@@ -449,7 +449,7 @@ public final class RNABCarPlayController: NSObject {
 
       case .favorite:
         let favoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: false)
+          image: favoriteButtonImage(isFavorited: false),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -538,7 +538,7 @@ public final class RNABCarPlayController: NSObject {
       if button is CPNowPlayingImageButton {
         // Recreate the button with updated image
         let newFavoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: isFavorited)
+          image: favoriteButtonImage(isFavorited: isFavorited),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -597,7 +597,7 @@ public final class RNABCarPlayController: NSObject {
     errorItem.isEnabled = false
     let template = CPListTemplate(
       title: "Error",
-      sections: [CPListSection(items: [errorItem])]
+      sections: [CPListSection(items: [errorItem])],
     )
     interfaceController.setRootTemplate(template, animated: true, completion: nil)
   }
@@ -667,7 +667,7 @@ private extension RNABCarPlayController {
     let items = tracks.enumerated().map { index, track -> CPListItem in
       let item = CPListItem(
         text: track.title,
-        detailText: track.subtitle ?? track.artist
+        detailText: track.subtitle ?? track.artist,
       )
 
       // Mark currently playing track
@@ -702,7 +702,7 @@ private extension RNABCarPlayController {
 
     let template = CPListTemplate(
       title: "Up Next",
-      sections: [CPListSection(items: items)]
+      sections: [CPListSection(items: items)],
     )
 
     interfaceController.pushTemplate(template, animated: true, completion: nil)

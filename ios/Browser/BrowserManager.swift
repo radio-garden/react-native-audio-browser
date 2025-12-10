@@ -161,7 +161,7 @@ final class BrowserManager {
       style: track.style,
       childrenStyle: track.childrenStyle,
       favorited: isFavorited,
-      groupTitle: track.groupTitle
+      groupTitle: track.groupTitle,
     )
   }
 
@@ -185,7 +185,7 @@ final class BrowserManager {
       style: resolvedTrack.style,
       childrenStyle: resolvedTrack.childrenStyle,
       favorited: resolvedTrack.favorited,
-      groupTitle: resolvedTrack.groupTitle
+      groupTitle: resolvedTrack.groupTitle,
     )
   }
 
@@ -326,7 +326,7 @@ final class BrowserManager {
         style: resolvedTrack.style,
         childrenStyle: resolvedTrack.childrenStyle,
         favorited: resolvedTrack.favorited,
-        groupTitle: resolvedTrack.groupTitle
+        groupTitle: resolvedTrack.groupTitle,
       )
     }
 
@@ -337,7 +337,7 @@ final class BrowserManager {
 
   private func findBestRouteMatch(
     path: String,
-    routes: [NativeRouteEntry]
+    routes: [NativeRouteEntry],
   ) -> (NativeRouteEntry, RouteMatch)? {
     // Filter out special routes
     let browseRoutes = routes.filter {
@@ -362,7 +362,7 @@ final class BrowserManager {
   private func resolveRouteEntry(
     _ entry: NativeRouteEntry,
     path: String,
-    params: [String: String]
+    params: [String: String],
   ) async throws -> ResolvedTrack {
     // Priority: callback > config > static
     if let callback = entry.browseCallback {
@@ -387,7 +387,7 @@ final class BrowserManager {
   private func resolveFromConfig(
     _ routeConfig: TransformableRequestConfig,
     path: String,
-    params _: [String: String]
+    params _: [String: String],
   ) async throws -> ResolvedTrack {
     // Build the request URL - route config takes precedence over global config
     let baseUrl = routeConfig.baseUrl ?? config.request?.baseUrl
@@ -416,7 +416,7 @@ final class BrowserManager {
     let request = HttpClient.HttpRequest(
       url: url,
       method: method,
-      headers: mergeHeaders(config.request?.headers, routeConfig.headers)
+      headers: mergeHeaders(config.request?.headers, routeConfig.headers),
     )
 
     logger.debug("Resolving content from API")
@@ -437,7 +437,7 @@ final class BrowserManager {
 
   private func mergeQuery(
     _ base: [String: String]?,
-    _ override: [String: String]?
+    _ override: [String: String]?,
   ) -> [String: String]? {
     guard let base else { return override }
     guard let override else { return base }
@@ -446,7 +446,7 @@ final class BrowserManager {
 
   private func mergeHeaders(
     _ base: [String: String]?,
-    _ override: [String: String]?
+    _ override: [String: String]?,
   ) -> [String: String]? {
     guard let base else { return override }
     guard let override else { return base }
@@ -458,7 +458,7 @@ final class BrowserManager {
   private func transformChildren(
     _ children: [Track],
     parentPath: String,
-    routeEntry: NativeRouteEntry
+    routeEntry: NativeRouteEntry,
   ) async throws -> [Track] {
     var transformed: [Track] = []
 
@@ -466,7 +466,7 @@ final class BrowserManager {
       // Validate track has stable identifier
       if track.url == nil, track.src == nil {
         throw BrowserError.invalidConfiguration(
-          "Track must have either 'url' or 'src' for stable identification: \(track.title)"
+          "Track must have either 'url' or 'src' for stable identification: \(track.title)",
         )
       }
 
@@ -490,7 +490,7 @@ final class BrowserManager {
           style: track.style,
           childrenStyle: track.childrenStyle,
           favorited: track.favorited,
-          groupTitle: track.groupTitle
+          groupTitle: track.groupTitle,
         )
       }
 
@@ -513,7 +513,7 @@ final class BrowserManager {
             style: transformedTrack.style,
             childrenStyle: transformedTrack.childrenStyle,
             favorited: transformedTrack.favorited,
-            groupTitle: transformedTrack.groupTitle
+            groupTitle: transformedTrack.groupTitle,
           )
         }
       }
@@ -547,7 +547,7 @@ final class BrowserManager {
         style: nil,
         childrenStyle: nil,
         favorited: nil,
-        groupTitle: nil
+        groupTitle: nil,
       )
     }
 
@@ -566,7 +566,7 @@ final class BrowserManager {
       artist: nil,
       album: nil,
       title: nil,
-      playlist: nil
+      playlist: nil,
     )
 
     var results: [Track]
@@ -609,7 +609,7 @@ final class BrowserManager {
       style: nil,
       childrenStyle: nil,
       favorited: nil,
-      groupTitle: nil
+      groupTitle: nil,
     )
   }
 
@@ -696,7 +696,7 @@ final class BrowserManager {
           query: config.request?.query,
           body: config.request?.body,
           contentType: config.request?.contentType,
-          userAgent: config.request?.userAgent
+          userAgent: config.request?.userAgent,
         )
 
         // Call the JS transform function on main thread (required for Nitro JS callbacks)
@@ -716,7 +716,7 @@ final class BrowserManager {
         return MediaResolvedUrl(
           url: finalUrl,
           headers: headers,
-          userAgent: userAgent
+          userAgent: userAgent,
         )
       } catch {
         logger.error("Media transform failed: \(error.localizedDescription)")
@@ -732,7 +732,7 @@ final class BrowserManager {
       return MediaResolvedUrl(
         url: finalUrl,
         headers: mediaConfig.headers ?? config.request?.headers,
-        userAgent: mediaConfig.userAgent ?? config.request?.userAgent
+        userAgent: mediaConfig.userAgent ?? config.request?.userAgent,
       )
     }
 
@@ -795,7 +795,7 @@ final class BrowserManager {
         query: config.request?.query,
         body: config.request?.body,
         contentType: config.request?.contentType,
-        userAgent: config.request?.userAgent
+        userAgent: config.request?.userAgent,
       )
 
       // If there's a resolve callback, call it for per-track config
@@ -816,7 +816,7 @@ final class BrowserManager {
           query: artworkConfig.query,
           body: artworkConfig.body,
           contentType: artworkConfig.contentType,
-          userAgent: artworkConfig.userAgent
+          userAgent: artworkConfig.userAgent,
         )
         mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
       }
@@ -846,7 +846,7 @@ final class BrowserManager {
         uri: uri,
         method: mergedConfig.method,
         headers: headers.isEmpty ? nil : headers,
-        body: mergedConfig.body
+        body: mergedConfig.body,
       )
     } catch {
       logger.error("Failed to transform artwork URL for track: \(track.title), error: \(error.localizedDescription)")
@@ -866,7 +866,7 @@ final class BrowserManager {
       query: config.query,
       body: config.body,
       contentType: config.contentType,
-      userAgent: config.userAgent
+      userAgent: config.userAgent,
     )
   }
 
@@ -880,7 +880,7 @@ final class BrowserManager {
       query: mergeQuery(base.query, override.query),
       body: override.body ?? base.body,
       contentType: override.contentType ?? base.contentType,
-      userAgent: override.userAgent ?? base.userAgent
+      userAgent: override.userAgent ?? base.userAgent,
     )
   }
 

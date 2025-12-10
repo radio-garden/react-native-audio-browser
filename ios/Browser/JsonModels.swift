@@ -35,7 +35,7 @@ struct JsonResolvedTrack: Codable {
     src: String? = nil,
     style: String? = nil,
     childrenStyle: String? = nil,
-    groupTitle: String? = nil
+    groupTitle: String? = nil,
   ) {
     self.url = url
     self.title = title
@@ -83,7 +83,7 @@ struct JsonTrack: Codable {
     src: String? = nil,
     style: String? = nil,
     childrenStyle: String? = nil,
-    groupTitle: String? = nil
+    groupTitle: String? = nil,
   ) {
     self.url = url
     self.title = title
@@ -127,7 +127,7 @@ extension JsonResolvedTrack {
       style: style?.toTrackStyle(),
       childrenStyle: childrenStyle?.toTrackStyle(),
       favorited: nil,
-      groupTitle: groupTitle
+      groupTitle: groupTitle,
     )
   }
 }
@@ -149,7 +149,7 @@ extension JsonTrack {
       style: style?.toTrackStyle(),
       childrenStyle: childrenStyle?.toTrackStyle(),
       favorited: nil,
-      groupTitle: groupTitle
+      groupTitle: groupTitle,
     )
   }
 }

@@ -31,7 +31,7 @@ class PlaybackProgressUpdateManager {
     guard timer == nil, let interval = updateInterval else { return }
     timer = Timer.scheduledTimer(
       withTimeInterval: interval,
-      repeats: true
+      repeats: true,
     ) { [weak self] _ in
       self?.onProgressUpdate()
     }

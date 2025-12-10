@@ -27,7 +27,7 @@ class RemoteCommandController {
    */
   init(
     remoteCommandCenter: MPRemoteCommandCenter = MPRemoteCommandCenter.shared(),
-    callbacks: TrackPlayerCallbacks? = nil
+    callbacks: TrackPlayerCallbacks? = nil,
   ) {
     center = remoteCommandCenter
     self.callbacks = callbacks
@@ -54,7 +54,7 @@ class RemoteCommandController {
   private func enableRemoteCommand(
     _ command: MPRemoteCommand,
     key: String,
-    handler: @escaping RemoteCommandHandler
+    handler: @escaping RemoteCommandHandler,
   ) {
     command.isEnabled = true
     command.removeTarget(commandTargetPointers[key])
@@ -82,39 +82,39 @@ class RemoteCommandController {
       enableRemoteCommand(
         center.togglePlayPauseCommand,
         key: command.key,
-        handler: handleTogglePlayPauseCommand
+        handler: handleTogglePlayPauseCommand,
       )
     case .next:
       enableRemoteCommand(
         center.nextTrackCommand,
         key: command.key,
-        handler: handleNextTrackCommand
+        handler: handleNextTrackCommand,
       )
     case .previous:
       enableRemoteCommand(
         center.previousTrackCommand,
         key: command.key,
-        handler: handlePreviousTrackCommand
+        handler: handlePreviousTrackCommand,
       )
     case .changePlaybackPosition:
       enableRemoteCommand(
         center.changePlaybackPositionCommand,
         key: command.key,
-        handler: handleChangePlaybackPositionCommand
+        handler: handleChangePlaybackPositionCommand,
       )
     case let .skipForward(preferredIntervals):
       center.skipForwardCommand.preferredIntervals = preferredIntervals
       enableRemoteCommand(
         center.skipForwardCommand,
         key: command.key,
-        handler: handleSkipForwardCommand
+        handler: handleSkipForwardCommand,
       )
     case let .skipBackward(preferredIntervals):
       center.skipBackwardCommand.preferredIntervals = preferredIntervals
       enableRemoteCommand(
         center.skipBackwardCommand,
         key: command.key,
-        handler: handleSkipBackwardCommand
+        handler: handleSkipBackwardCommand,
       )
     case let .like(isActive, localizedTitle, localizedShortTitle):
       center.likeCommand.isActive = isActive

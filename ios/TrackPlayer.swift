@@ -30,7 +30,7 @@ class TrackPlayer {
       assertMainThread()
 
       callbacks?.playerDidChangeRepeatMode(
-        RepeatModeChangedEvent(repeatMode: repeatMode)
+        RepeatModeChangedEvent(repeatMode: repeatMode),
       )
     }
   }
@@ -160,7 +160,7 @@ class TrackPlayer {
     },
     onTimeControlStatusChange: { [weak self] status in
       self?.avPlayerDidChangeTimeControlStatus(status)
-    }
+    },
   )
 
   private lazy var playerTimeObserver: PlayerTimeObserver = .init(
@@ -173,7 +173,7 @@ class TrackPlayer {
       if automaticallyUpdateNowPlayingInfo {
         setNowPlayingCurrentTime(seconds: seconds)
       }
-    }
+    },
   )
 
   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
@@ -182,7 +182,7 @@ class TrackPlayer {
     },
     onFailedToPlayToEndTime: { [weak self] in
       self?.playbackError = TrackPlayerError.PlaybackError.playbackFailed
-    }
+    },
   )
 
   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
@@ -194,7 +194,7 @@ class TrackPlayer {
     },
     onTimedMetadataReceived: { [weak self] groups in
       self?.callbacks?.playerDidReceiveTimedMetadata(groups)
-    }
+    },
   )
 
   private lazy var progressUpdateManager: PlaybackProgressUpdateManager =
@@ -204,7 +204,7 @@ class TrackPlayer {
         track: Double(currentIndex),
         position: currentTime,
         duration: duration,
-        buffered: bufferedPosition
+        buffered: bufferedPosition,
       )
       callbacks?.playerDidUpdateProgress(progressEvent)
     }
@@ -335,7 +335,7 @@ class TrackPlayer {
       if state == .ended, isLastInPlaybackOrder {
         let event = PlaybackQueueEndedEvent(
           track: Double(currentIndex),
-          position: currentTime
+          position: currentTime,
         )
         callbacks?.playerDidEndQueue(event)
       }
@@ -469,7 +469,7 @@ class TrackPlayer {
 
   init(
     nowPlayingInfoController: NowPlayingInfoController = NowPlayingInfoController(),
-    callbacks: TrackPlayerCallbacks? = nil
+    callbacks: TrackPlayerCallbacks? = nil,
   ) {
     self.nowPlayingInfoController = nowPlayingInfoController
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
@@ -670,7 +670,7 @@ class TrackPlayer {
 
   private func setNowPlayingCurrentTime(seconds: Double) {
     nowPlayingInfoController.set(
-      keyValue: NowPlayingInfoProperty.elapsedPlaybackTime(seconds)
+      keyValue: NowPlayingInfoProperty.elapsedPlaybackTime(seconds),
     )
   }
 
@@ -822,7 +822,7 @@ class TrackPlayer {
             for locale in pendingAsset.availableChapterLocales {
               let chapters = pendingAsset.chapterMetadataGroups(
                 withTitleLocale: locale,
-                containingItemsWithCommonKeys: nil
+                containingItemsWithCommonKeys: nil,
               )
               callbacks?.playerDidReceiveChapterMetadata(chapters)
             }
@@ -830,16 +830,16 @@ class TrackPlayer {
             for format in pendingAsset.availableMetadataFormats {
               let timeRange = CMTimeRange(
                 start: CMTime(seconds: 0, preferredTimescale: 1000),
-                end: pendingAsset.duration
+                end: pendingAsset.duration,
               )
               let group = AVTimedMetadataGroup(
                 items: pendingAsset.metadata(forFormat: format),
-                timeRange: timeRange
+                timeRange: timeRange,
               )
               callbacks?.playerDidReceiveTimedMetadata([group])
             }
           }
-        }
+        },
       )
 
       // Load playable portion of the track and commence when ready
@@ -874,7 +874,7 @@ class TrackPlayer {
 
             let avItem = AVPlayerItem(
               asset: pendingAsset,
-              automaticallyLoadedAssetKeys: playableKeys
+              automaticallyLoadedAssetKeys: playableKeys,
             )
             avItem.preferredForwardBufferDuration = self.bufferDuration
             self.logger.debug("AVPlayerItem created, calling replaceCurrentItem")
@@ -889,7 +889,7 @@ class TrackPlayer {
               pending.execute(on: self.avPlayer, delegate: self)
             }
           }
-        }
+        },
       )
     }
   }
@@ -1015,12 +1015,12 @@ class TrackPlayer {
     index: Int,
     name: String = "index",
     min: Int? = nil,
-    max: Int? = nil
+    max: Int? = nil,
   ) throws {
     guard index >= (min ?? 0), (max ?? tracks.count) > index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
-        message: "\(name) must be non-negative and less than \(tracks.count)"
+        message: "\(name) must be non-negative and less than \(tracks.count)",
       )
     }
   }
@@ -1108,7 +1108,7 @@ class TrackPlayer {
     guard index >= 0, self.tracks.count >= index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
-        message: "Index to insert at has to be non-negative and equal to or smaller than the number of tracks: (\(self.tracks.count))"
+        message: "Index to insert at has to be non-negative and equal to or smaller than the number of tracks: (\(self.tracks.count))",
       )
     }
     let wasEmpty = self.tracks.isEmpty
@@ -1371,7 +1371,7 @@ class TrackPlayer {
       lastTrack: lastTrack,
       lastPosition: lastPosition,
       index: currentIndex == -1 ? nil : Double(currentIndex),
-      track: currentTrack
+      track: currentTrack,
     )
     callbacks?.playerDidChangeActiveTrack(eventData)
     lastTrack = currentTrack

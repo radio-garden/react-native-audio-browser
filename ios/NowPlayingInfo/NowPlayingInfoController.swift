@@ -8,7 +8,7 @@ class NowPlayingInfoController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingInfoController")
   private var infoQueue = DispatchQueue(
     label: "NowPlayingInfoController.infoQueue",
-    attributes: .concurrent
+    attributes: .concurrent,
   )
 
   private(set) var infoCenter: NowPlayingInfoCenter
@@ -73,7 +73,7 @@ class NowPlayingInfoController {
   private func performUpdate() {
     let keys = _info.keys.sorted().joined(separator: ", ")
     let hasArtwork = _info[MPMediaItemPropertyArtwork] != nil
-    logger.debug("performUpdate: setting nowPlayingInfo with \(self._info.count) keys (hasArtwork=\(hasArtwork)): \(keys)")
+    logger.debug("performUpdate: setting nowPlayingInfo with \(_info.count) keys (hasArtwork=\(hasArtwork)): \(keys)")
     infoCenter.nowPlayingInfo = _info
   }
 

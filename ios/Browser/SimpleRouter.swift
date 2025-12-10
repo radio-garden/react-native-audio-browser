@@ -85,7 +85,7 @@ final class SimpleRouter {
           matchSingleSegment(
             patternSegment: patternSegments[i],
             pathSegment: pathSegments[i],
-            params: &params
+            params: &params,
           )
         else {
           return nil
@@ -95,7 +95,7 @@ final class SimpleRouter {
           patternSegment: patternSegments[i],
           constantSegments: &constantSegments,
           parameterSegments: &parameterSegments,
-          wildcardSegments: &wildcardSegments
+          wildcardSegments: &wildcardSegments,
         )
       }
 
@@ -115,7 +115,7 @@ final class SimpleRouter {
           matchSingleSegment(
             patternSegment: patternSegments[i],
             pathSegment: pathSegments[i],
-            params: &params
+            params: &params,
           )
         else {
           return nil
@@ -125,7 +125,7 @@ final class SimpleRouter {
           patternSegment: patternSegments[i],
           constantSegments: &constantSegments,
           parameterSegments: &parameterSegments,
-          wildcardSegments: &wildcardSegments
+          wildcardSegments: &wildcardSegments,
         )
       }
     }
@@ -149,7 +149,7 @@ final class SimpleRouter {
   private func matchSingleSegment(
     patternSegment: String,
     pathSegment: String,
-    params: inout [String: String]
+    params: inout [String: String],
   ) -> Bool {
     // Parameter segment: {paramName}
     if patternSegment.hasPrefix("{"), patternSegment.hasSuffix("}") {
@@ -171,7 +171,7 @@ final class SimpleRouter {
     patternSegment: String,
     constantSegments: inout Int,
     parameterSegments: inout Int,
-    wildcardSegments: inout Int
+    wildcardSegments: inout Int,
   ) {
     if patternSegment.hasPrefix("{"), patternSegment.hasSuffix("}") {
       parameterSegments += 1

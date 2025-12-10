@@ -28,7 +28,7 @@ class PlayerStateObserver: NSObject {
 
   init(
     onStatusChange: @escaping (AVPlayer.Status) -> Void,
-    onTimeControlStatusChange: @escaping (AVPlayer.TimeControlStatus) -> Void
+    onTimeControlStatusChange: @escaping (AVPlayer.TimeControlStatus) -> Void,
   ) {
     self.onStatusChange = onStatusChange
     self.onTimeControlStatusChange = onTimeControlStatusChange
@@ -51,13 +51,13 @@ class PlayerStateObserver: NSObject {
       self,
       forKeyPath: AVPlayerKeyPath.status,
       options: statusChangeOptions,
-      context: &PlayerStateObserver.context
+      context: &PlayerStateObserver.context,
     )
     avPlayer.addObserver(
       self,
       forKeyPath: AVPlayerKeyPath.timeControlStatus,
       options: timeControlStatusChangeOptions,
-      context: &PlayerStateObserver.context
+      context: &PlayerStateObserver.context,
     )
   }
 
@@ -68,12 +68,12 @@ class PlayerStateObserver: NSObject {
     avPlayer.removeObserver(
       self,
       forKeyPath: AVPlayerKeyPath.status,
-      context: &PlayerStateObserver.context
+      context: &PlayerStateObserver.context,
     )
     avPlayer.removeObserver(
       self,
       forKeyPath: AVPlayerKeyPath.timeControlStatus,
-      context: &PlayerStateObserver.context
+      context: &PlayerStateObserver.context,
     )
     isObserving = false
   }
@@ -82,7 +82,7 @@ class PlayerStateObserver: NSObject {
     forKeyPath keyPath: String?,
     of object: Any?,
     change: [NSKeyValueChangeKey: Any]?,
-    context: UnsafeMutableRawPointer?
+    context: UnsafeMutableRawPointer?,
   ) {
     guard context == &PlayerStateObserver.context, let observedKeyPath = keyPath else {
       super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)

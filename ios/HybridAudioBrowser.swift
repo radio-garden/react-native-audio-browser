@@ -72,7 +72,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
     singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, carPlayNowPlayingRates: nil
+    carPlayNowPlayingButtons: nil, carPlayNowPlayingRates: nil,
   ) {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)
@@ -371,7 +371,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
         likeOptions: playerOptions.likeOptions,
         dislikeOptions: playerOptions.dislikeOptions,
-        bookmarkOptions: playerOptions.bookmarkOptions
+        bookmarkOptions: playerOptions.bookmarkOptions,
       )
     }
 
@@ -450,7 +450,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
       Progress(
         position: player?.currentTime ?? 0,
         duration: player?.duration ?? 0,
-        buffered: player?.bufferedPosition ?? 0
+        buffered: player?.bufferedPosition ?? 0,
       )
     }
   }
@@ -599,7 +599,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         style: track.style,
         childrenStyle: track.childrenStyle,
         favorited: favorited,
-        groupTitle: track.groupTitle
+        groupTitle: track.groupTitle,
       )
       onFavoriteChanged(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
       // Fire active track changed so useActiveTrack() hook updates UI
@@ -609,7 +609,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         lastTrack: track,
         lastPosition: position,
         index: Double(index),
-        track: updatedTrack
+        track: updatedTrack,
       ))
     }
   }
@@ -685,7 +685,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         description: track.description,
         mediaId: track.src ?? track.url,
         genre: track.genre,
-        rating: nil
+        rating: nil,
       )
     }
   }
@@ -705,7 +705,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
       description: track.description,
       mediaId: track.src ?? track.url,
       genre: track.genre,
-      rating: nil
+      rating: nil,
     )
 
     // Update NowPlayingInfoCenter with override values

@@ -24,7 +24,7 @@ class PlayerItemPropertyObserver: NSObject {
   init(
     onDurationUpdate: @escaping (Double) -> Void,
     onPlaybackLikelyToKeepUpUpdate: @escaping (Bool) -> Void,
-    onTimedMetadataReceived: @escaping ([AVTimedMetadataGroup]) -> Void
+    onTimedMetadataReceived: @escaping ([AVTimedMetadataGroup]) -> Void,
   ) {
     self.onDurationUpdate = onDurationUpdate
     self.onPlaybackLikelyToKeepUpUpdate = onPlaybackLikelyToKeepUpUpdate
@@ -49,19 +49,19 @@ class PlayerItemPropertyObserver: NSObject {
       self,
       forKeyPath: AVPlayerItemKeyPath.duration,
       options: [.new],
-      context: &PlayerItemPropertyObserver.context
+      context: &PlayerItemPropertyObserver.context,
     )
     avItem.addObserver(
       self,
       forKeyPath: AVPlayerItemKeyPath.loadedTimeRanges,
       options: [.new],
-      context: &PlayerItemPropertyObserver.context
+      context: &PlayerItemPropertyObserver.context,
     )
     avItem.addObserver(
       self,
       forKeyPath: AVPlayerItemKeyPath.playbackLikelyToKeepUp,
       options: [.new],
-      context: &PlayerItemPropertyObserver.context
+      context: &PlayerItemPropertyObserver.context,
     )
 
     // Create and add a new metadata output to the AVPlayerItem.
@@ -79,17 +79,17 @@ class PlayerItemPropertyObserver: NSObject {
     observingAVItem.removeObserver(
       self,
       forKeyPath: AVPlayerItemKeyPath.duration,
-      context: &PlayerItemPropertyObserver.context
+      context: &PlayerItemPropertyObserver.context,
     )
     observingAVItem.removeObserver(
       self,
       forKeyPath: AVPlayerItemKeyPath.loadedTimeRanges,
-      context: &PlayerItemPropertyObserver.context
+      context: &PlayerItemPropertyObserver.context,
     )
     observingAVItem.removeObserver(
       self,
       forKeyPath: AVPlayerItemKeyPath.playbackLikelyToKeepUp,
-      context: &PlayerItemPropertyObserver.context
+      context: &PlayerItemPropertyObserver.context,
     )
 
     // Remove all metadata outputs from the AVPlayerItem.
@@ -104,7 +104,7 @@ class PlayerItemPropertyObserver: NSObject {
     forKeyPath keyPath: String?,
     of object: Any?,
     change: [NSKeyValueChangeKey: Any]?,
-    context: UnsafeMutableRawPointer?
+    context: UnsafeMutableRawPointer?,
   ) {
     guard context == &PlayerItemPropertyObserver.context, let observedKeyPath = keyPath else {
       super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
@@ -138,7 +138,7 @@ extension PlayerItemPropertyObserver: AVPlayerItemMetadataOutputPushDelegate {
   func metadataOutput(
     _ output: AVPlayerItemMetadataOutput,
     didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
-    from _: AVPlayerItemTrack?
+    from _: AVPlayerItemTrack?,
   ) {
     if output == currentMetadataOutput {
       onTimedMetadataReceived(groups)

@@ -25,7 +25,7 @@ final class HttpClient {
       headers: [String: String]? = nil,
       body: String? = nil,
       contentType: String = HttpClient.defaultContentType,
-      userAgent: String = HttpClient.defaultUserAgent
+      userAgent: String = HttpClient.defaultUserAgent,
     ) {
       self.url = url
       self.method = method
@@ -73,7 +73,7 @@ final class HttpClient {
       return .failure(NSError(
         domain: "HttpClient",
         code: -1,
-        userInfo: [NSLocalizedDescriptionKey: "Invalid URL: \(httpRequest.url)"]
+        userInfo: [NSLocalizedDescriptionKey: "Invalid URL: \(httpRequest.url)"],
       ))
     }
 
@@ -107,7 +107,7 @@ final class HttpClient {
       return .failure(NSError(
         domain: "HttpClient",
         code: -1,
-        userInfo: [NSLocalizedDescriptionKey: "Unsupported HTTP method: \(httpRequest.method)"]
+        userInfo: [NSLocalizedDescriptionKey: "Unsupported HTTP method: \(httpRequest.method)"],
       ))
     }
 
@@ -121,7 +121,7 @@ final class HttpClient {
         return .failure(NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Invalid response type"]
+          userInfo: [NSLocalizedDescriptionKey: "Invalid response type"],
         ))
       }
 
@@ -138,7 +138,7 @@ final class HttpClient {
       let httpResp = HttpResponse(
         code: httpResponse.statusCode,
         body: responseBody,
-        headers: headers
+        headers: headers,
       )
 
       // Log response
@@ -154,7 +154,7 @@ final class HttpClient {
   /// Executes an HTTP request and decodes the JSON response (matches Kotlin requestJson()).
   func requestJson<T: Decodable>(
     _ httpRequest: HttpRequest,
-    as type: T.Type
+    as type: T.Type,
   ) async throws -> T {
     let result = await request(httpRequest)
 
@@ -167,7 +167,7 @@ final class HttpClient {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Failed to convert response body to data"]
+          userInfo: [NSLocalizedDescriptionKey: "Failed to convert response body to data"],
         )
       }
       let decoder = JSONDecoder()
@@ -177,19 +177,19 @@ final class HttpClient {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Missing required key '\(key.stringValue)' at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"]
+          userInfo: [NSLocalizedDescriptionKey: "Missing required key '\(key.stringValue)' at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"],
         )
       } catch let DecodingError.typeMismatch(type, context) {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Type mismatch for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"]
+          userInfo: [NSLocalizedDescriptionKey: "Type mismatch for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"],
         )
       } catch let DecodingError.valueNotFound(type, context) {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Value not found for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"]
+          userInfo: [NSLocalizedDescriptionKey: "Value not found for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"],
         )
       }
     case let .failure(error):

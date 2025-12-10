@@ -85,13 +85,13 @@ class PlayerUpdateOptions {
       ios: IOSOptions(
         likeOptions: likeOptions,
         dislikeOptions: dislikeOptions,
-        bookmarkOptions: bookmarkOptions
+        bookmarkOptions: bookmarkOptions,
       ),
       forwardJumpInterval: forwardJumpInterval,
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      repeatMode: repeatMode
+      repeatMode: repeatMode,
     )
   }
 
@@ -105,12 +105,12 @@ class PlayerUpdateOptions {
       ios: IOSUpdateOptions(
         likeOptions: likeOptions,
         dislikeOptions: dislikeOptions,
-        bookmarkOptions: bookmarkOptions
+        bookmarkOptions: bookmarkOptions,
       ),
       forwardJumpInterval: forwardJumpInterval,
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
-      capabilities: capabilities
+      capabilities: capabilities,
     )
   }
 }

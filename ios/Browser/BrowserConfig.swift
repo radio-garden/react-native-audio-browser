@@ -47,7 +47,7 @@ struct BrowserConfig {
     androidControllerOfflineError: Bool = true,
     carPlayUpNextButton: Bool = true,
     carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
-    carPlayNowPlayingRates: [Double] = defaultCarPlayNowPlayingRates
+    carPlayNowPlayingRates: [Double] = defaultCarPlayNowPlayingRates,
   ) {
     self.request = request
     self.media = media

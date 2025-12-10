@@ -8,7 +8,7 @@ extension Capability {
     backwardJumpInterval: NSNumber?,
     likeOptions: FeedbackOptions,
     dislikeOptions _: FeedbackOptions,
-    bookmarkOptions: FeedbackOptions
+    bookmarkOptions: FeedbackOptions,
   ) -> RemoteCommand {
     switch self {
     case .stop:
@@ -34,13 +34,13 @@ extension Capability {
       .like(
         isActive: likeOptions.isActive,
         localizedTitle: likeOptions.title,
-        localizedShortTitle: likeOptions.title
+        localizedShortTitle: likeOptions.title,
       )
     case .bookmark:
       .bookmark(
         isActive: bookmarkOptions.isActive,
         localizedTitle: bookmarkOptions.title,
-        localizedShortTitle: bookmarkOptions.title
+        localizedShortTitle: bookmarkOptions.title,
       )
     case .playFromId, .playFromSearch, .skip:
       // These don't have direct RemoteCommand mappings
