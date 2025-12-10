@@ -6,6 +6,8 @@ import NitroModules
 /// This is a convenience wrapper around NativeBrowserConfiguration that
 /// provides easier access to configuration properties.
 struct BrowserConfig {
+  static let defaultCarPlayNowPlayingRates: [Double] = [1.0, 1.5, 2.0]
+
   /// Base HTTP request configuration
   let request: TransformableRequestConfig?
 
@@ -33,6 +35,9 @@ struct BrowserConfig {
   /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
   let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
 
+  /// Playback rates for CarPlay Now Playing rate button
+  let carPlayNowPlayingRates: [Double]
+
   init(
     request: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
@@ -41,7 +46,8 @@ struct BrowserConfig {
     singleTrack: Bool = false,
     androidControllerOfflineError: Bool = true,
     carPlayUpNextButton: Bool = true,
-    carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = []
+    carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
+    carPlayNowPlayingRates: [Double] = defaultCarPlayNowPlayingRates
   ) {
     self.request = request
     self.media = media
@@ -51,6 +57,7 @@ struct BrowserConfig {
     self.androidControllerOfflineError = androidControllerOfflineError
     self.carPlayUpNextButton = carPlayUpNextButton
     self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
+    self.carPlayNowPlayingRates = carPlayNowPlayingRates
   }
 
   /// Create from NativeBrowserConfiguration
@@ -63,6 +70,7 @@ struct BrowserConfig {
     androidControllerOfflineError = config.androidControllerOfflineError ?? true
     carPlayUpNextButton = config.carPlayUpNextButton ?? true
     carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
+    carPlayNowPlayingRates = config.carPlayNowPlayingRates ?? Self.defaultCarPlayNowPlayingRates
   }
 
   /// Returns true if search functionality is configured (either callback or config).

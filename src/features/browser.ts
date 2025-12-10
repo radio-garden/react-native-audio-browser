@@ -189,6 +189,7 @@ function toNativeConfig(config: BrowserConfiguration): NativeBrowserConfiguratio
     androidControllerOfflineError: config.androidControllerOfflineError,
     carPlayUpNextButton: config.carPlayUpNextButton,
     carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
+    carPlayNowPlayingRates: config.carPlayNowPlayingRates,
   }
 }
 

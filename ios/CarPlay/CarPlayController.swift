@@ -494,18 +494,18 @@ public final class RNABCarPlayController: NSObject {
     updateFavoriteButtonState()
   }
 
-  /// Available playback rates to cycle through
-  private static let playbackRates: [Float] = [0.5, 1.0, 1.5, 2.0]
-
   /// Handles playback rate button tap - cycles through rate options
   private func handlePlaybackRateButtonTapped() {
     guard let player = audioBrowser?.getPlayer() else { return }
 
-    let currentRate = player.rate
+    let rates = config.carPlayNowPlayingRates
+    guard !rates.isEmpty else { return }
+
+    let currentRate = Double(player.rate)
     // Find next rate in the cycle
-    let currentIndex = Self.playbackRates.firstIndex { abs($0 - currentRate) < 0.01 } ?? 1 // default to 1.0
-    let nextIndex = (currentIndex + 1) % Self.playbackRates.count
-    let newRate = Self.playbackRates[nextIndex]
+    let currentIndex = rates.firstIndex { abs($0 - currentRate) < 0.01 } ?? 0
+    let nextIndex = (currentIndex + 1) % rates.count
+    let newRate = Float(rates[nextIndex])
 
     player.rate = newRate
     logger.info("CarPlay playback rate changed: \(currentRate) → \(newRate)")
