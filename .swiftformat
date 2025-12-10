@@ -1,0 +1,3 @@
+--disable redundantSelf
+--swiftversion 6.2
+--indent 2

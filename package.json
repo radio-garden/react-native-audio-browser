@@ -21,7 +21,7 @@
     "ci:format": "prettier --check src",
     "ci:lint": "eslint src --max-warnings=0",
     "format": "prettier --write src",
-    "ios:format": "swiftformat ios --swiftversion 5.9 --indent 2",
+    "ios:format": "swiftformat ios",
     "ios:ide": "yarn workspace example-native ios:ide",
     "ios:rebuild": "yarn workspace example-native ios:rebuild",
     "lint": "eslint . --fix",
