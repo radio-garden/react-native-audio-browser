@@ -73,7 +73,9 @@ class NowPlayingInfoController {
   private func performUpdate() {
     let keys = _info.keys.sorted().joined(separator: ", ")
     let hasArtwork = _info[MPMediaItemPropertyArtwork] != nil
-    logger.debug("performUpdate: setting nowPlayingInfo with \(_info.count) keys (hasArtwork=\(hasArtwork)): \(keys)")
+    let playbackRate = _info[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber
+    let defaultPlaybackRate = _info[MPNowPlayingInfoPropertyDefaultPlaybackRate] as? NSNumber
+    logger.debug("performUpdate: setting nowPlayingInfo with \(self._info.count) keys (hasArtwork=\(hasArtwork), playbackRate=\(playbackRate?.doubleValue ?? -1), defaultPlaybackRate=\(defaultPlaybackRate?.doubleValue ?? -1)): \(keys)")
     infoCenter.nowPlayingInfo = _info
   }
 

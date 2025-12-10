@@ -4,6 +4,34 @@ import os.log
 
 typealias RemoteCommandHandler = (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus
 
+extension RepeatMode {
+  /// Convert to MPRepeatType for MPRemoteCommandCenter sync
+  var mpRepeatType: MPRepeatType {
+    switch self {
+    case .off: .off
+    case .track: .one
+    case .queue: .all
+    }
+  }
+
+  /// Create from MPRepeatType
+  init(from mpRepeatType: MPRepeatType) {
+    switch mpRepeatType {
+    case .off: self = .off
+    case .one: self = .track
+    case .all: self = .queue
+    @unknown default: self = .off
+    }
+  }
+}
+
+extension Bool {
+  /// Convert to MPShuffleType for MPRemoteCommandCenter sync
+  var mpShuffleType: MPShuffleType {
+    self ? .items : .off
+  }
+}
+
 /**
  Manages MPRemoteCommandCenter integration for media control (lock screen, control center, CarPlay, etc.).
 
@@ -131,6 +159,25 @@ class RemoteCommandController {
       center.bookmarkCommand.localizedTitle = localizedTitle
       center.bookmarkCommand.localizedShortTitle = localizedShortTitle
       enableRemoteCommand(center.bookmarkCommand, key: command.key, handler: handleBookmarkCommand)
+    case .changeRepeatMode:
+      enableRemoteCommand(
+        center.changeRepeatModeCommand,
+        key: command.key,
+        handler: handleChangeRepeatModeCommand,
+      )
+    case .changeShuffleMode:
+      enableRemoteCommand(
+        center.changeShuffleModeCommand,
+        key: command.key,
+        handler: handleChangeShuffleModeCommand,
+      )
+    case let .changePlaybackRate(supportedPlaybackRates):
+      center.changePlaybackRateCommand.supportedPlaybackRates = supportedPlaybackRates
+      enableRemoteCommand(
+        center.changePlaybackRateCommand,
+        key: command.key,
+        handler: handleChangePlaybackRateCommand,
+      )
     }
   }
 
@@ -160,7 +207,25 @@ class RemoteCommandController {
       disableRemoteCommand(center.dislikeCommand, key: command.key)
     case .bookmark:
       disableRemoteCommand(center.bookmarkCommand, key: command.key)
+    case .changeRepeatMode:
+      disableRemoteCommand(center.changeRepeatModeCommand, key: command.key)
+    case .changeShuffleMode:
+      disableRemoteCommand(center.changeShuffleModeCommand, key: command.key)
+    case .changePlaybackRate:
+      disableRemoteCommand(center.changePlaybackRateCommand, key: command.key)
     }
+  }
+
+  // MARK: - Repeat/Shuffle State Sync
+
+  /// Updates the repeat mode state shown on CarPlay and lock screen
+  func updateRepeatMode(_ mode: RepeatMode) {
+    center.changeRepeatModeCommand.currentRepeatType = mode.mpRepeatType
+  }
+
+  /// Updates the shuffle mode state shown on CarPlay and lock screen
+  func updateShuffleMode(_ enabled: Bool) {
+    center.changeShuffleModeCommand.currentShuffleType = enabled.mpShuffleType
   }
 
   // MARK: - Handlers
@@ -180,6 +245,12 @@ class RemoteCommandController {
   lazy var handleLikeCommand: RemoteCommandHandler = handleLikeCommandDefault
   lazy var handleDislikeCommand: RemoteCommandHandler = handleDislikeCommandDefault
   lazy var handleBookmarkCommand: RemoteCommandHandler = handleBookmarkCommandDefault
+  lazy var handleChangeRepeatModeCommand: RemoteCommandHandler =
+    handleChangeRepeatModeCommandDefault
+  lazy var handleChangeShuffleModeCommand: RemoteCommandHandler =
+    handleChangeShuffleModeCommandDefault
+  lazy var handleChangePlaybackRateCommand: RemoteCommandHandler =
+    handleChangePlaybackRateCommandDefault
 
   private func handlePlayCommandDefault(event _: MPRemoteCommandEvent)
     -> MPRemoteCommandHandlerStatus
@@ -278,6 +349,43 @@ class RemoteCommandController {
   {
     callbacks?.remoteBookmark()
     return MPRemoteCommandHandlerStatus.success
+  }
+
+  private func handleChangeRepeatModeCommandDefault(event: MPRemoteCommandEvent)
+    -> MPRemoteCommandHandlerStatus
+  {
+    if let event = event as? MPChangeRepeatModeCommandEvent {
+      let mode = RepeatMode(from: event.repeatType)
+      callbacks?.remoteChangeRepeatMode(mode: mode)
+      // Update the command center state to reflect the new mode
+      center.changeRepeatModeCommand.currentRepeatType = event.repeatType
+      return MPRemoteCommandHandlerStatus.success
+    }
+    return MPRemoteCommandHandlerStatus.commandFailed
+  }
+
+  private func handleChangeShuffleModeCommandDefault(event: MPRemoteCommandEvent)
+    -> MPRemoteCommandHandlerStatus
+  {
+    if let event = event as? MPChangeShuffleModeCommandEvent {
+      let enabled = event.shuffleType != .off
+      callbacks?.remoteChangeShuffleMode(enabled: enabled)
+      // Update the command center state to reflect the new mode
+      center.changeShuffleModeCommand.currentShuffleType = event.shuffleType
+      return MPRemoteCommandHandlerStatus.success
+    }
+    return MPRemoteCommandHandlerStatus.commandFailed
+  }
+
+  private func handleChangePlaybackRateCommandDefault(event: MPRemoteCommandEvent)
+    -> MPRemoteCommandHandlerStatus
+  {
+    if let event = event as? MPChangePlaybackRateCommandEvent {
+      let rate = Float(event.playbackRate)
+      callbacks?.remoteChangePlaybackRate(rate: rate)
+      return MPRemoteCommandHandlerStatus.success
+    }
+    return MPRemoteCommandHandlerStatus.commandFailed
   }
 
   private func getRemoteCommandHandlerStatus(forError error: Error)

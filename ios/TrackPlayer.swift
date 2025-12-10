@@ -29,6 +29,9 @@ class TrackPlayer {
       guard oldValue != repeatMode else { return }
       assertMainThread()
 
+      // Sync state with MPRemoteCommandCenter for CarPlay/lock screen button display
+      remoteCommandController.updateRepeatMode(repeatMode)
+
       callbacks?.playerDidChangeRepeatMode(
         RepeatModeChangedEvent(repeatMode: repeatMode),
       )
@@ -43,6 +46,9 @@ class TrackPlayer {
     didSet {
       guard oldValue != shuffleEnabled else { return }
       assertMainThread()
+
+      // Sync state with MPRemoteCommandCenter for CarPlay/lock screen button display
+      remoteCommandController.updateShuffleMode(shuffleEnabled)
 
       logger.debug("Shuffle \(self.shuffleEnabled ? "enabled" : "disabled"), order: \(self.shuffleOrder.shuffled)")
       callbacks?.playerDidChangeShuffleEnabled(shuffleEnabled)
@@ -633,11 +639,16 @@ class TrackPlayer {
   func loadNowPlayingMetaValues() {
     guard let track = currentTrack else { return }
 
+    // Calculate actual playback rate: 0 when paused, configured rate when playing
+    let actualRate = playWhenReady ? Double(rate) : 0.0
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.artist(track.artist),
       MediaItemProperty.title(track.title),
       MediaItemProperty.albumTitle(track.album),
-      NowPlayingInfoProperty.playbackRate(Double(rate)),
+      // playbackRate is the actual current rate (0 when paused)
+      NowPlayingInfoProperty.playbackRate(actualRate),
+      // defaultPlaybackRate is the configured rate - this is what CarPlay shows on the rate button
+      NowPlayingInfoProperty.defaultPlaybackRate(Double(rate)),
     ])
     loadArtworkForTrack(track)
   }
@@ -651,10 +662,15 @@ class TrackPlayer {
    - Playback rate
    */
   func updateNowPlayingPlaybackValues() {
-    logger.debug("updateNowPlayingPlaybackValues: duration=\(self.duration), rate=\(self.rate), currentTime=\(self.currentTime), playWhenReady=\(self.playWhenReady)")
+    // Calculate actual playback rate: 0 when paused, configured rate when playing
+    let actualRate = playWhenReady ? Double(rate) : 0.0
+    logger.debug("updateNowPlayingPlaybackValues: duration=\(self.duration), rate=\(self.rate), actualRate=\(actualRate), currentTime=\(self.currentTime), playWhenReady=\(self.playWhenReady)")
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.duration(duration),
-      NowPlayingInfoProperty.playbackRate(Double(rate)),
+      // playbackRate is the actual current rate (0 when paused)
+      NowPlayingInfoProperty.playbackRate(actualRate),
+      // defaultPlaybackRate is the configured rate - this is what CarPlay shows on the rate button
+      NowPlayingInfoProperty.defaultPlaybackRate(Double(rate)),
       NowPlayingInfoProperty.elapsedPlaybackTime(currentTime),
     ])
   }

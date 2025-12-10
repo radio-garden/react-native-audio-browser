@@ -970,6 +970,21 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     }
   }
 
+  public func remoteChangeRepeatMode(mode: RepeatMode) {
+    // Apply the repeat mode change from CarPlay/lock screen
+    try? setRepeatMode(mode: mode)
+  }
+
+  public func remoteChangeShuffleMode(enabled: Bool) {
+    // Apply the shuffle mode change from CarPlay/lock screen
+    try? setShuffleEnabled(enabled: enabled)
+  }
+
+  public func remoteChangePlaybackRate(rate: Float) {
+    // Apply the playback rate change from CarPlay/lock screen
+    player?.rate = rate
+  }
+
   func playerDidChangeOptions(_: PlayerUpdateOptions) {
     // TODO: Convert to Options type
   }

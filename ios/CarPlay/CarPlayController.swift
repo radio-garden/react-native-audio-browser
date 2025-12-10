@@ -113,6 +113,15 @@ public final class RNABCarPlayController: NSObject {
         self?.setupNowPlayingButtons()
       }
     }
+
+    // Subscribe to favorite changes (for Now Playing button)
+    let originalOnFavoriteChanged = audioBrowser.onFavoriteChanged
+    audioBrowser.onFavoriteChanged = { [weak self, originalOnFavoriteChanged] event in
+      originalOnFavoriteChanged(event)
+      Task { @MainActor in
+        self?.updateFavoriteButtonState(isFavorited: event.favorited)
+      }
+    }
   }
 
   // MARK: - Initial Interface
@@ -432,16 +441,21 @@ public final class RNABCarPlayController: NSObject {
     }
 
     var nowPlayingButtons: [CPNowPlayingButton] = []
+    var commandsToEnable: [RemoteCommand] = []
 
     for buttonType in buttons {
       switch buttonType {
       case .shuffle:
+        // Queue command to be enabled so button state syncs properly
+        commandsToEnable.append(.changeShuffleMode)
         let shuffleButton = CPNowPlayingShuffleButton { [weak self] _ in
           self?.handleShuffleButtonTapped()
         }
         nowPlayingButtons.append(shuffleButton)
 
       case .repeat:
+        // Queue command to be enabled so button state syncs properly
+        commandsToEnable.append(.changeRepeatMode)
         let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
           self?.handleRepeatButtonTapped()
         }
@@ -456,6 +470,9 @@ public final class RNABCarPlayController: NSObject {
         nowPlayingButtons.append(favoriteButton)
 
       case .playbackRate:
+        // Queue command to be enabled with supported rates
+        let rates = config.carPlayNowPlayingRates.map { NSNumber(value: $0) }
+        commandsToEnable.append(.changePlaybackRate(supportedPlaybackRates: rates))
         let rateButton = CPNowPlayingPlaybackRateButton { [weak self] _ in
           self?.handlePlaybackRateButtonTapped()
         }
@@ -465,6 +482,21 @@ public final class RNABCarPlayController: NSObject {
 
     CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
     logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
+
+    // Enable the remote commands needed for CarPlay buttons to display state properly
+    if !commandsToEnable.isEmpty, let player = audioBrowser?.getPlayer() {
+      // Merge with existing commands to avoid disabling them
+      var allCommands = player.remoteCommands
+      for command in commandsToEnable {
+        if !allCommands.contains(command) {
+          allCommands.append(command)
+        }
+      }
+      player.enableRemoteCommands(allCommands)
+
+      // Sync current playback state so buttons display correctly
+      player.updateNowPlayingPlaybackValues()
+    }
   }
 
   /// Returns the appropriate image for the favorite button based on state
@@ -504,12 +536,10 @@ public final class RNABCarPlayController: NSObject {
   private func handleFavoriteButtonTapped() {
     try? audioBrowser?.toggleActiveTrackFavorited()
     logger.info("CarPlay favorite toggled")
-
-    // Update button appearance
-    updateFavoriteButtonState()
+    // Button appearance is updated via onFavoriteChanged subscription
   }
 
-  /// Handles playback rate button tap - cycles through rate options
+  /// Handles playback rate button tap - shows a list of available rates
   private func handlePlaybackRateButtonTapped() {
     guard let player = audioBrowser?.getPlayer() else { return }
 
@@ -517,20 +547,46 @@ public final class RNABCarPlayController: NSObject {
     guard !rates.isEmpty else { return }
 
     let currentRate = Double(player.rate)
-    // Find next rate in the cycle
-    let currentIndex: Int = rates.firstIndex(where: { (rate: Double) in (rate - currentRate).magnitude < 0.01 }) ?? 0
-    let nextIndex = (currentIndex + 1) % rates.count
-    let newRate = Float(rates[nextIndex])
 
-    player.rate = newRate
-    logger.info("CarPlay playback rate changed: \(currentRate) → \(newRate)")
+    // Create list items for each rate option
+    let rateItems: [CPListItem] = rates.map { rate in
+      let isSelected = (rate - currentRate).magnitude < 0.01
+      let title = formatPlaybackRate(rate)
+      let listItem = CPListItem(text: title, detailText: isSelected ? "Current" : nil)
+      listItem.handler = { [weak self] _, completion in
+        guard let self else {
+          completion()
+          return
+        }
+        player.rate = Float(rate)
+        logger.info("CarPlay playback rate changed: \(currentRate) → \(rate)")
+        interfaceController.popTemplate(animated: true) { _, _ in }
+        completion()
+      }
+      return listItem
+    }
+
+    let rateTemplate = CPListTemplate(
+      title: "Playback Speed",
+      sections: [CPListSection(items: rateItems)]
+    )
+    interfaceController.pushTemplate(rateTemplate, animated: true, completion: nil)
+  }
+
+  /// Formats a playback rate for display (e.g., 1.0 -> "1x", 1.5 -> "1.5x")
+  private func formatPlaybackRate(_ rate: Double) -> String {
+    if rate == rate.rounded() {
+      return "\(Int(rate))x"
+    } else {
+      return "\(rate)x"
+    }
   }
 
   /// Updates the favorite button appearance based on current track's favorite state
-  private func updateFavoriteButtonState() {
+  /// - Parameter isFavorited: If provided, uses this value; otherwise queries the active track
+  private func updateFavoriteButtonState(isFavorited: Bool? = nil) {
     guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
-
-    let isFavorited = (try? audioBrowser?.getActiveTrack())?.favorited ?? false
+    let favorited = isFavorited ?? (try? audioBrowser?.getActiveTrack())?.favorited ?? false
     let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
 
     // Find and update the favorite button (it's a CPNowPlayingImageButton)
@@ -538,7 +594,7 @@ public final class RNABCarPlayController: NSObject {
       if button is CPNowPlayingImageButton {
         // Recreate the button with updated image
         let newFavoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: isFavorited),
+          image: favoriteButtonImage(isFavorited: favorited),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }

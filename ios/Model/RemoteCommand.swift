@@ -25,6 +25,12 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   case bookmark(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
 
+  case changeRepeatMode
+
+  case changeShuffleMode
+
+  case changePlaybackRate(supportedPlaybackRates: [NSNumber])
+
   public var description: String {
     switch self {
     case .play: "play"
@@ -39,6 +45,9 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
     case .like: "like"
     case .dislike: "dislike"
     case .bookmark: "bookmark"
+    case .changeRepeatMode: "changeRepeatMode"
+    case .changeShuffleMode: "changeShuffleMode"
+    case .changePlaybackRate: "changePlaybackRate"
     }
   }
 
@@ -62,6 +71,9 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
       .like(isActive: false, localizedTitle: "", localizedShortTitle: ""),
       .dislike(isActive: false, localizedTitle: "", localizedShortTitle: ""),
       .bookmark(isActive: false, localizedTitle: "", localizedShortTitle: ""),
+      .changeRepeatMode,
+      .changeShuffleMode,
+      .changePlaybackRate(supportedPlaybackRates: []),
     ]
   }
 }

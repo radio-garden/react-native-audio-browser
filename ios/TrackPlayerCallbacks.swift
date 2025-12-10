@@ -106,6 +106,15 @@ protocol TrackPlayerCallbacks: AnyObject {
   /// Called when bookmark is triggered remotely.
   func remoteBookmark()
 
+  /// Called when repeat mode change is triggered remotely (CarPlay/lock screen).
+  func remoteChangeRepeatMode(mode: RepeatMode)
+
+  /// Called when shuffle mode change is triggered remotely (CarPlay/lock screen).
+  func remoteChangeShuffleMode(enabled: Bool)
+
+  /// Called when playback rate change is triggered remotely (CarPlay/lock screen).
+  func remoteChangePlaybackRate(rate: Float)
+
   // MARK: - Configuration Events
 
   /// Called when options are changed.
