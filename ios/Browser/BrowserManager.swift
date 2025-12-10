@@ -11,14 +11,14 @@ enum BrowserError: Error {
 
   var localizedDescription: String {
     switch self {
-    case .contentNotFound(let path):
-      return "No content found for path: \(path)"
-    case .httpError(let code, let body):
-      return "HTTP error \(code): \(body)"
-    case .networkError(let error):
-      return "Network error: \(error.localizedDescription)"
-    case .invalidConfiguration(let message):
-      return "Invalid configuration: \(message)"
+    case let .contentNotFound(path):
+      "No content found for path: \(path)"
+    case let .httpError(code, body):
+      "HTTP error \(code): \(body)"
+    case let .networkError(error):
+      "Network error: \(error.localizedDescription)"
+    case let .invalidConfiguration(message):
+      "Invalid configuration: \(message)"
     }
   }
 }
@@ -90,7 +90,7 @@ final class BrowserManager {
   private(set) var tabs: [Track]? {
     didSet {
       assertMainThread()
-      if let tabs = tabs {
+      if let tabs {
         onTabsChanged?(tabs)
       }
     }
@@ -229,14 +229,14 @@ final class BrowserManager {
     let navigationId = currentNavigationId
 
     self.path = path
-    self.content = nil  // Clear for loading state
+    content = nil // Clear for loading state
 
     let resolved = try await resolve(path, useCache: false)
 
     // Only apply result if this is still the current navigation
     guard navigationId == currentNavigationId else { return }
 
-    self.content = resolved
+    content = resolved
   }
 
   /// Resolves content for a path with optional caching.
@@ -281,7 +281,7 @@ final class BrowserManager {
     // Only apply result if this is still the current navigation
     guard navigationId == currentNavigationId else { return }
 
-    self.content = resolved
+    content = resolved
   }
 
   private func resolveUncached(_ path: String) async throws -> ResolvedTrack {
@@ -336,8 +336,8 @@ final class BrowserManager {
     // Filter out special routes
     let browseRoutes = routes.filter {
       $0.path != Self.tabsRoutePath &&
-      $0.path != Self.searchRoutePath &&
-      $0.path != Self.defaultRoutePath
+        $0.path != Self.searchRoutePath &&
+        $0.path != Self.defaultRoutePath
     }
 
     // Try to find a matching route
@@ -381,11 +381,11 @@ final class BrowserManager {
   private func resolveFromConfig(
     _ routeConfig: TransformableRequestConfig,
     path: String,
-    params: [String: String]
+    params _: [String: String]
   ) async throws -> ResolvedTrack {
     // Build the request URL - route config takes precedence over global config
     let baseUrl = routeConfig.baseUrl ?? config.request?.baseUrl
-    guard let baseUrl = baseUrl else {
+    guard let baseUrl else {
       throw BrowserError.invalidConfiguration("No URL configured for route")
     }
 
@@ -393,7 +393,7 @@ final class BrowserManager {
 
     // Add query parameters from config - route config values override global config
     let queryParams = mergeQuery(config.request?.query, routeConfig.query)
-    if let queryParams = queryParams, !queryParams.isEmpty {
+    if let queryParams, !queryParams.isEmpty {
       let queryString = queryParams
         .map { key, value in
           let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
@@ -433,8 +433,8 @@ final class BrowserManager {
     _ base: [String: String]?,
     _ override: [String: String]?
   ) -> [String: String]? {
-    guard let base = base else { return override }
-    guard let override = override else { return base }
+    guard let base else { return override }
+    guard let override else { return base }
     return base.merging(override) { _, new in new }
   }
 
@@ -442,8 +442,8 @@ final class BrowserManager {
     _ base: [String: String]?,
     _ override: [String: String]?
   ) -> [String: String]? {
-    guard let base = base else { return override }
-    guard let override = override else { return base }
+    guard let base else { return override }
+    guard let override else { return base }
     return base.merging(override) { _, new in new }
   }
 
@@ -458,7 +458,7 @@ final class BrowserManager {
 
     for track in children {
       // Validate track has stable identifier
-      if track.url == nil && track.src == nil {
+      if track.url == nil, track.src == nil {
         throw BrowserError.invalidConfiguration(
           "Track must have either 'url' or 'src' for stable identification: \(track.title)"
         )
@@ -467,7 +467,7 @@ final class BrowserManager {
       var transformedTrack = track
 
       // Generate contextual URL for playable-only tracks (has src but no url)
-      if track.src != nil && track.url == nil {
+      if track.src != nil, track.url == nil {
         let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: track.src!)
         transformedTrack = Track(
           url: contextualUrl,
@@ -623,7 +623,7 @@ final class BrowserManager {
     let resolved = try await resolveRouteEntry(tabsEntry, path: Self.tabsRoutePath, params: [:])
     let tabTracks = resolved.children ?? []
 
-    self.tabs = tabTracks
+    tabs = tabTracks
     return tabTracks
   }
 
@@ -720,7 +720,7 @@ final class BrowserManager {
 
     // No transform, just apply baseUrl if configured
     let baseUrl = mediaConfig.baseUrl ?? config.request?.baseUrl
-    if let baseUrl = baseUrl {
+    if let baseUrl {
       let finalUrl = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: originalUrl)
       logger.debug("Media URL with baseUrl: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
@@ -769,7 +769,7 @@ final class BrowserManager {
     let effectiveArtworkConfig = perRouteConfig ?? config.artwork
 
     // If no artwork config and no track.artwork, nothing to transform
-    if effectiveArtworkConfig == nil && track.artwork == nil {
+    if effectiveArtworkConfig == nil, track.artwork == nil {
       return nil
     }
 
@@ -783,7 +783,7 @@ final class BrowserManager {
       // Create base config from global request config
       var mergedConfig = RequestConfig(
         method: config.request?.method,
-        path: track.artwork,  // Use track.artwork as default path
+        path: track.artwork, // Use track.artwork as default path
         baseUrl: config.request?.baseUrl,
         headers: config.request?.headers,
         query: config.request?.query,
@@ -852,7 +852,7 @@ final class BrowserManager {
   /// Extracts all values from a RequestConfig into a new instance to avoid
   /// memory corruption in Nitro's Swift-C++ bridge when the Promise is deallocated.
   private func extractConfig(_ config: RequestConfig) -> RequestConfig {
-    return RequestConfig(
+    RequestConfig(
       method: config.method,
       path: config.path,
       baseUrl: config.baseUrl,
@@ -866,7 +866,7 @@ final class BrowserManager {
 
   /// Merges two RequestConfig objects, with override values taking precedence.
   private func mergeRequestConfig(base: RequestConfig, override: RequestConfig) -> RequestConfig {
-    return RequestConfig(
+    RequestConfig(
       method: override.method ?? base.method,
       path: override.path ?? base.path,
       baseUrl: override.baseUrl ?? base.baseUrl,
@@ -881,14 +881,14 @@ final class BrowserManager {
   // MARK: - Accessors
 
   func getPath() -> String {
-    return path
+    path
   }
 
   func getContent() -> ResolvedTrack? {
-    return content
+    content
   }
 
   func getTabs() -> [Track]? {
-    return tabs
+    tabs
   }
 }

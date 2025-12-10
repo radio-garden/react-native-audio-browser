@@ -6,10 +6,11 @@ import os.log
 
 public class HybridAudioBrowser: HybridAudioBrowserSpec {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
+
   // MARK: - Shared Instance for CarPlay
 
   /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
-  private(set) static weak var shared: HybridAudioBrowser?
+  private(set) weak static var shared: HybridAudioBrowser?
 
   // MARK: - Private Properties
 
@@ -32,18 +33,18 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   /// If already on main thread, executes directly.
   private func onMainThread<T>(_ work: () -> T) -> T {
     if Thread.isMainThread {
-      return work()
+      work()
     } else {
-      return DispatchQueue.main.sync { work() }
+      DispatchQueue.main.sync { work() }
     }
   }
 
   /// Executes a throwing closure on the main thread synchronously.
   private func onMainThread<T>(_ work: () throws -> T) throws -> T {
     if Thread.isMainThread {
-      return try work()
+      try work()
     } else {
-      return try DispatchQueue.main.sync { try work() }
+      try DispatchQueue.main.sync { try work() }
     }
   }
 
@@ -68,7 +69,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     set { /* tabs are managed internally by browserManager */ }
   }
 
-  public var configuration: NativeBrowserConfiguration = NativeBrowserConfiguration(
+  public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
     singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil
   ) {
@@ -163,13 +164,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
       onOnlineChanged(networkMonitor.isOnline)
     }
   }
+
   public var onEqualizerChanged: (EqualizerSettings) -> Void = { _ in }
   public var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Void = { _ in }
   public var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Void = { _ in }
 
   // MARK: - Initialization
 
-  public override init() {
+  override public init() {
     super.init()
     HybridAudioBrowser.shared = self
     setupBrowserCallbacks()
@@ -177,7 +179,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   /// Returns the TrackPlayer instance, if setup has been called.
   func getPlayer() -> TrackPlayer? {
-    return player
+    player
   }
 
   private func setupBrowserCallbacks() {
@@ -193,26 +195,25 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
     // Configure artwork URL resolver for transforming artwork URLs during browsing
     browserManager.artworkUrlResolver = { [weak browserManager] track, artworkConfig in
-      guard let browserManager = browserManager else { return nil }
+      guard let browserManager else { return nil }
       return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig)
     }
   }
 
-  private func handleNavigationError(_ error: Error, path: String) {
-    let navError: NavigationError
-    if let browserError = error as? BrowserError {
+  private func handleNavigationError(_ error: Error, path _: String) {
+    let navError = if let browserError = error as? BrowserError {
       switch browserError {
       case .contentNotFound:
-        navError = NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil)
-      case .httpError(let code, _):
-        navError = NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code))
+        NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil)
+      case let .httpError(code, _):
+        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code))
       case .networkError:
-        navError = NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil)
+        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil)
       case .invalidConfiguration:
-        navError = NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil)
+        NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil)
       }
     } else {
-      navError = NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil)
+      NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil)
     }
 
     lastNavigationError = navError
@@ -236,7 +237,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     let url = track.url
 
     // Check if this is a contextual URL (playable-only track with queue context)
-    if let url = url, BrowserPathHelper.isContextual(url) {
+    if let url, BrowserPathHelper.isContextual(url) {
       Task {
         do {
           // Expand the queue from the contextual URL
@@ -269,7 +270,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
       }
     }
     // If track has url, it's browsable - navigate to it
-    else if let url = url {
+    else if let url {
       // Clear error synchronously before starting navigation (didSet notifies JS)
       lastNavigationError = nil
       Task {
@@ -283,19 +284,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func onSearch(query: String) throws -> Promise<[Track]> {
-    return Promise.async { [weak self] in
-      guard let self = self else { return [] }
-      let resolved = try await self.browserManager.search(query)
+    Promise.async { [weak self] in
+      guard let self else { return [] }
+      let resolved = try await browserManager.search(query)
       return resolved.children ?? []
     }
   }
 
   public func getContent() throws -> ResolvedTrack? {
-    return browserManager.getContent()
+    browserManager.getContent()
   }
 
   public func getNavigationError() throws -> NavigationError? {
-    return lastNavigationError
+    lastNavigationError
   }
 
   public func notifyContentChanged(path: String) throws {
@@ -318,8 +319,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   // MARK: - Player Setup
 
-  public func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void> {
-    return Promise.async {
+  public func setupPlayer(options _: PartialSetupPlayerOptions) throws -> Promise<Void> {
+    Promise.async {
       // Configure audio session
       let session = AVAudioSession.sharedInstance()
       try session.setCategory(.playback, mode: .default)
@@ -330,10 +331,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
       // Configure media URL resolver
       self.player?.mediaUrlResolver = { [weak self] src in
-        guard let self = self else {
+        guard let self else {
           return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
         }
-        return await self.browserManager.resolveMediaUrl(src)
+        return await browserManager.resolveMediaUrl(src)
       }
 
       // Configure sleep timer callback
@@ -360,7 +361,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   /// Converts capabilities to remote commands and applies them to the player
   private func applyRemoteCommands() {
-    guard let player = player else { return }
+    guard let player else { return }
 
     let remoteCommands = playerOptions.capabilities.map { capability in
       capability.mapToPlayerCommand(
@@ -376,14 +377,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getOptions() throws -> UpdateOptions {
-    return playerOptions.toUpdateOptions()
+    playerOptions.toUpdateOptions()
   }
 
   // MARK: - Playback Control
 
   public func load(track: Track) throws {
     try onMainThread {
-      guard let player = player else {
+      guard let player else {
         throw NSError(domain: "AudioBrowser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Player not initialized"])
       }
       player.load(track)
@@ -415,7 +416,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getPlayWhenReady() throws -> Bool {
-    return onMainThread { player?.playWhenReady ?? false }
+    onMainThread { player?.playWhenReady ?? false }
   }
 
   public func seekTo(position: Double) throws {
@@ -431,7 +432,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getVolume() throws -> Double {
-    return onMainThread { Double(player?.volume ?? 1.0) }
+    onMainThread { Double(player?.volume ?? 1.0) }
   }
 
   public func setRate(rate: Double) throws {
@@ -439,11 +440,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getRate() throws -> Double {
-    return onMainThread { Double(player?.rate ?? 1.0) }
+    onMainThread { Double(player?.rate ?? 1.0) }
   }
 
   public func getProgress() throws -> Progress {
-    return onMainThread {
+    onMainThread {
       Progress(
         position: player?.currentTime ?? 0,
         duration: player?.duration ?? 0,
@@ -453,17 +454,17 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getPlayback() throws -> Playback {
-    return onMainThread { player?.getPlayback() ?? Playback(state: .none, error: nil) }
+    onMainThread { player?.getPlayback() ?? Playback(state: .none, error: nil) }
   }
 
   public func getPlayingState() throws -> PlayingState {
-    return onMainThread {
+    onMainThread {
       player?.playingStateManager.toPlayingState() ?? PlayingState(playing: false, buffering: false)
     }
   }
 
   public func getRepeatMode() throws -> RepeatMode {
-    return onMainThread { player?.repeatMode ?? .off }
+    onMainThread { player?.repeatMode ?? .off }
   }
 
   public func setRepeatMode(mode: RepeatMode) throws {
@@ -471,7 +472,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getPlaybackError() throws -> PlaybackError? {
-    return onMainThread { player?.playbackError?.toNitroError() }
+    onMainThread { player?.playbackError?.toNitroError() }
   }
 
   public func retry() throws {
@@ -481,7 +482,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Sleep Timer
 
   public func getSleepTimer() throws -> SleepTimer {
-    return onMainThread {
+    onMainThread {
       if let state = player?.sleepTimerManager.get() {
         return state
       }
@@ -502,7 +503,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func clearSleepTimer() throws -> Bool {
-    return onMainThread {
+    onMainThread {
       player?.sleepTimerManager.clear() ?? false
     }
   }
@@ -511,7 +512,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   public func add(tracks: [Track], insertBeforeIndex: Double?) throws {
     try onMainThread {
-      guard let player = player else { return }
+      guard let player else { return }
       if let index = insertBeforeIndex {
         try player.add(tracks, at: Int(index))
       } else {
@@ -528,7 +529,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   public func remove(indexes: [Double]) throws {
     try onMainThread {
-      guard let player = player else { return }
+      guard let player else { return }
       // Remove in reverse order to maintain index validity
       for index in indexes.sorted().reversed() {
         try player.remove(Int(index))
@@ -615,7 +616,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   public func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws {
     try onMainThread {
-      guard let player = player else { return }
+      guard let player else { return }
       player.clear()
       player.add(tracks)
       if let index = startIndex, index >= 0 {
@@ -628,11 +629,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getQueue() throws -> [Track] {
-    return onMainThread { player?.tracks ?? [] }
+    onMainThread { player?.tracks ?? [] }
   }
 
   public func getTrack(index: Double) throws -> Track? {
-    return onMainThread {
+    onMainThread {
       guard let tracks = player?.tracks else { return nil }
       let i = Int(index)
       guard i >= 0, i < tracks.count else { return nil }
@@ -641,14 +642,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getActiveTrackIndex() throws -> Double? {
-    return onMainThread {
+    onMainThread {
       guard let index = player?.currentIndex, index >= 0 else { return nil }
       return Double(index)
     }
   }
 
   public func getActiveTrack() throws -> Track? {
-    return onMainThread { player?.currentTrack }
+    onMainThread { player?.currentTrack }
   }
 
   // MARK: - Now Playing
@@ -661,7 +662,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   public func getNowPlaying() throws -> NowPlayingMetadata? {
-    return onMainThread {
+    onMainThread {
       guard let track = player?.currentTrack else { return nil }
       let override = nowPlayingOverride
       return NowPlayingMetadata(
@@ -698,7 +699,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     )
 
     // Update NowPlayingInfoCenter with override values
-    if let override = override {
+    if let override {
       player?.nowPlayingInfoController.set(keyValue: MediaItemProperty.title(override.title ?? track.title))
       player?.nowPlayingInfoController.set(keyValue: MediaItemProperty.artist(override.artist ?? track.artist))
     }
@@ -709,37 +710,37 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   // MARK: - Network
 
   public func getOnline() throws -> Bool {
-    return networkMonitor.getOnline()
+    networkMonitor.getOnline()
   }
 
   // MARK: - Equalizer (unsupported on iOS)
 
   public func getEqualizerSettings() throws -> EqualizerSettings? {
     // No-op: equalizer unsupported on iOS
-    return nil
+    nil
   }
 
-  public func setEqualizerEnabled(enabled: Bool) throws {
+  public func setEqualizerEnabled(enabled _: Bool) throws {
     // No-op: equalizer unsupported on iOS
   }
 
-  public func setEqualizerPreset(preset: String) throws {
+  public func setEqualizerPreset(preset _: String) throws {
     // No-op: equalizer unsupported on iOS
   }
 
-  public func setEqualizerLevels(levels: [Double]) throws {
+  public func setEqualizerLevels(levels _: [Double]) throws {
     // No-op: equalizer unsupported on iOS
   }
 
   // MARK: - Battery (Android-only, stub implementations)
 
   public func getBatteryWarningPending() throws -> Bool {
-    return false
+    false
   }
 
   public func getBatteryOptimizationStatus() throws -> BatteryOptimizationStatus {
     // iOS doesn't have battery optimization restrictions like Android
-    return .unrestricted
+    .unrestricted
   }
 
   public func dismissBatteryWarning() throws {
@@ -790,23 +791,23 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     onPlaybackError(event)
   }
 
-  public func playerDidReceiveCommonMetadata(_ metadata: [AVMetadataItem]) {
+  public func playerDidReceiveCommonMetadata(_: [AVMetadataItem]) {
     // TODO: Convert to AudioCommonMetadataReceivedEvent
   }
 
-  public func playerDidReceiveTimedMetadata(_ metadata: [AVTimedMetadataGroup]) {
+  public func playerDidReceiveTimedMetadata(_: [AVTimedMetadataGroup]) {
     // TODO: Convert to AudioMetadataReceivedEvent
   }
 
-  public func playerDidReceiveChapterMetadata(_ metadata: [AVTimedMetadataGroup]) {
+  public func playerDidReceiveChapterMetadata(_: [AVTimedMetadataGroup]) {
     // TODO: Convert to AudioMetadataReceivedEvent
   }
 
-  public func playerDidCompleteSeek(position: Double, didFinish: Bool) {
+  public func playerDidCompleteSeek(position _: Double, didFinish _: Bool) {
     // Not exposed to JS currently
   }
 
-  public func playerDidUpdateDuration(_ duration: Double) {
+  public func playerDidUpdateDuration(_: Double) {
     // Not exposed to JS currently
   }
 
@@ -909,7 +910,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     remoteSeek(position: position)
   }
 
-  public func remoteSetRating(rating: Any) {
+  public func remoteSetRating(rating _: Any) {
     // TODO: Convert rating to RemoteSetRatingEvent
   }
 
@@ -955,7 +956,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     }
   }
 
-  func playerDidChangeOptions(_ options: PlayerUpdateOptions) {
+  func playerDidChangeOptions(_: PlayerUpdateOptions) {
     // TODO: Convert to Options type
   }
 }

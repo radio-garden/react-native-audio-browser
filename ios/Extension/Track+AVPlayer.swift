@@ -7,7 +7,7 @@ import UIKit
 extension Track {
   /// The URL for AVPlayer playback (uses src for playback URL)
   var playbackUrl: URL? {
-    guard let src = src else { return nil }
+    guard let src else { return nil }
     return URL(string: src)
   }
 
@@ -18,7 +18,7 @@ extension Track {
 
   /// The source type (file or stream) based on the URL scheme
   var sourceType: SourceType {
-    return isLocalFile ? .file : .stream
+    isLocalFile ? .file : .stream
   }
 
   /// Loads artwork from the artwork URL (local file or remote URL)
@@ -54,7 +54,7 @@ extension Track {
       }
 
       URLSession.shared.dataTask(with: request) { data, _, error in
-        if let data = data, let image = UIImage(data: data), error == nil {
+        if let data, let image = UIImage(data: data), error == nil {
           DispatchQueue.main.async {
             handler(image)
           }

@@ -40,7 +40,7 @@ public final class RNABCarPlayController: NSObject {
   @objc
   public init(interfaceController: CPInterfaceController) {
     self.interfaceController = interfaceController
-    self.audioBrowser = HybridAudioBrowser.shared
+    audioBrowser = HybridAudioBrowser.shared
     super.init()
   }
 
@@ -84,7 +84,7 @@ public final class RNABCarPlayController: NSObject {
   // MARK: - Content Subscriptions
 
   private func setupContentSubscriptions() {
-    guard let audioBrowser = audioBrowser else {
+    guard let audioBrowser else {
       logger.warning("AudioBrowser not available for CarPlay")
       return
     }
@@ -112,7 +112,7 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func buildInitialInterface() async {
-    guard let audioBrowser = audioBrowser else {
+    guard let audioBrowser else {
       logger.error("AudioBrowser not available")
       showErrorTemplate(message: "Audio browser not initialized")
       return
@@ -121,7 +121,7 @@ public final class RNABCarPlayController: NSObject {
     // Get tabs from browser manager
     let tabs = audioBrowser.browserManager.getTabs()
 
-    if let tabs = tabs, !tabs.isEmpty {
+    if let tabs, !tabs.isEmpty {
       await showTabBar(tabs: tabs)
     } else {
       // No tabs yet - show loading or query tabs
@@ -262,14 +262,14 @@ public final class RNABCarPlayController: NSObject {
       "url": track.url as Any,
       "src": track.src as Any,
       "hasSrc": track.src != nil,
-      "hasUrl": track.url != nil
+      "hasUrl": track.url != nil,
     ]
 
     // Set accessory type based on whether track is browsable or playable
     if track.src != nil {
       // Playable track
       item.accessoryType = .none
-      item.isPlaying = false  // Will be updated based on current playback
+      item.isPlaying = false // Will be updated based on current playback
     } else if track.url != nil {
       // Browsable only - show disclosure indicator
       item.accessoryType = .disclosureIndicator
@@ -277,7 +277,8 @@ public final class RNABCarPlayController: NSObject {
 
     // Load artwork asynchronously
     if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
-       let url = URL(string: artworkUrl) {
+       let url = URL(string: artworkUrl)
+    {
       Task {
         if let image = await loadImage(from: url) {
           await MainActor.run {
@@ -299,7 +300,7 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func loadContent(for path: String, into template: CPListTemplate) async {
-    guard let audioBrowser = audioBrowser else { return }
+    guard let audioBrowser else { return }
 
     do {
       let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
@@ -315,7 +316,7 @@ public final class RNABCarPlayController: NSObject {
   private func handleItemSelection(track: Track, completion: @escaping () -> Void) {
     logger.info("Selected track: \(track.title)")
 
-    guard let audioBrowser = audioBrowser else {
+    guard let audioBrowser else {
       completion()
       return
     }
@@ -436,7 +437,7 @@ public final class RNABCarPlayController: NSObject {
   }
 
   @MainActor
-  private func handleContentChanged(_ content: ResolvedTrack?) {
+  private func handleContentChanged(_: ResolvedTrack?) {
     // Update the current template if it matches the content path
     // This is useful for refreshing content after favorites change, etc.
   }
@@ -480,11 +481,11 @@ private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver {
     super.init()
   }
 
-  func nowPlayingTemplateUpNextButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
+  func nowPlayingTemplateUpNextButtonTapped(_: CPNowPlayingTemplate) {
     controller?.handleUpNextButtonTapped()
   }
 
-  func nowPlayingTemplateAlbumArtistButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
+  func nowPlayingTemplateAlbumArtistButtonTapped(_: CPNowPlayingTemplate) {
     // Album/Artist button functionality - can be implemented later
     logger.debug("Album/Artist button tapped (not implemented)")
   }
@@ -492,9 +493,9 @@ private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver {
 
 // MARK: - Up Next Handler
 
-extension RNABCarPlayController {
+private extension RNABCarPlayController {
   /// Handles the Up Next button tap from Now Playing screen
-  fileprivate func handleUpNextButtonTapped() {
+  func handleUpNextButtonTapped() {
     guard let player = audioBrowser?.getPlayer() else {
       logger.warning("Player not available for Up Next")
       return
@@ -522,7 +523,8 @@ extension RNABCarPlayController {
 
       // Load artwork asynchronously
       if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
-         let url = URL(string: artworkUrl) {
+         let url = URL(string: artworkUrl)
+      {
         Task { [weak self] in
           if let image = await self?.loadImage(from: url) {
             await MainActor.run {
@@ -554,4 +556,3 @@ extension RNABCarPlayController {
     interfaceController.pushTemplate(template, animated: true, completion: nil)
   }
 }
-

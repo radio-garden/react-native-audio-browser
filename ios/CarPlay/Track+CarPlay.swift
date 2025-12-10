@@ -7,11 +7,11 @@ import NitroModules
 extension Track {
   /// Returns the best artwork URL for CarPlay display.
   var carPlayArtworkUrl: URL? {
-    if let artworkSource = artworkSource {
+    if let artworkSource {
       let uri = artworkSource.uri
       return URL(string: uri)
     }
-    if let artwork = artwork {
+    if let artwork {
       return URL(string: artwork)
     }
     return nil
@@ -19,18 +19,18 @@ extension Track {
 
   /// Returns whether this track is playable (has a media source).
   var isPlayable: Bool {
-    return src != nil
+    src != nil
   }
 
   /// Returns whether this track is browsable (has a navigation URL).
   var isBrowsable: Bool {
-    return url != nil && src == nil
+    url != nil && src == nil
   }
 
   /// Returns the display subtitle for CarPlay.
   /// Uses subtitle if available, falls back to artist.
   var carPlaySubtitle: String? {
-    return subtitle ?? artist
+    subtitle ?? artist
   }
 }
 
@@ -39,11 +39,11 @@ extension Track {
 extension ResolvedTrack {
   /// Returns playable children only (tracks with src).
   var playableChildren: [Track] {
-    return children?.filter { $0.src != nil } ?? []
+    children?.filter { $0.src != nil } ?? []
   }
 
   /// Returns browsable children only (tracks with url but no src).
   var browsableChildren: [Track] {
-    return children?.filter { $0.url != nil && $0.src == nil } ?? []
+    children?.filter { $0.url != nil && $0.src == nil } ?? []
   }
 }

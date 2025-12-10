@@ -13,9 +13,9 @@ struct MediaResolvedUrl {
 class TrackPlayer {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackPlayer")
 
-  public let nowPlayingInfoController: NowPlayingInfoController
-  public let remoteCommandController: RemoteCommandController
-  public let sleepTimerManager = SleepTimerManager()
+  let nowPlayingInfoController: NowPlayingInfoController
+  let remoteCommandController: RemoteCommandController
+  let sleepTimerManager = SleepTimerManager()
   private weak var callbacks: TrackPlayerCallbacks?
   private var lastIndex: Int = -1
   private var lastTrack: Track?
@@ -24,7 +24,7 @@ class TrackPlayer {
   var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
 
   /// The repeat mode for the queue player.
-  public var repeatMode: RepeatMode = .off {
+  var repeatMode: RepeatMode = .off {
     didSet {
       guard oldValue != repeatMode else { return }
       assertMainThread()
@@ -44,14 +44,14 @@ class TrackPlayer {
   /**
    The index of the current track. `-1` when there is no current track
    */
-  public private(set) var currentIndex: Int = -1
+  private(set) var currentIndex: Int = -1
 
   /**
    All tracks held by the queue.
    */
-  public private(set) var tracks: [Track] = []
+  private(set) var tracks: [Track] = []
 
-  public var currentTrack: Track? {
+  var currentTrack: Track? {
     assertMainThread()
     guard currentIndex >= 0, currentIndex < tracks.count else { return nil }
     return tracks[currentIndex]
@@ -60,7 +60,7 @@ class TrackPlayer {
   /**
    The upcoming tracks in the queue.
    */
-  public var nextTracks: [Track] {
+  var nextTracks: [Track] {
     assertMainThread()
     guard currentIndex >= 0, currentIndex < tracks.count - 1 else { return [] }
     return Array(tracks[currentIndex + 1 ..< tracks.count])
@@ -69,7 +69,7 @@ class TrackPlayer {
   /**
    The previous tracks held by the queue.
    */
-  public var previousTracks: [Track] {
+  var previousTracks: [Track] {
     assertMainThread()
     guard currentIndex > 0 else { return [] }
     return Array(tracks[0 ..< currentIndex])
@@ -184,33 +184,33 @@ class TrackPlayer {
 
   private(set) var lastPlayerTimeControlStatus: AVPlayer.TimeControlStatus = .paused
 
-  public func getPlayback() -> Playback {
-    return Playback(state: state, error: playbackError?.toNitroError())
+  func getPlayback() -> Playback {
+    Playback(state: state, error: playbackError?.toNitroError())
   }
 
-  public func getRepeatMode() -> RepeatMode {
-    return repeatMode
+  func getRepeatMode() -> RepeatMode {
+    repeatMode
   }
 
-  public func setRepeatMode(_ mode: RepeatMode) {
+  func setRepeatMode(_ mode: RepeatMode) {
     repeatMode = mode
   }
 
   /**
    Set this to false to disable automatic updating of now playing info for control center and lock screen.
    */
-  public var automaticallyUpdateNowPlayingInfo: Bool = true
+  var automaticallyUpdateNowPlayingInfo: Bool = true
 
   /**
    Controls the time pitch algorithm applied to each track loaded into the player.
    If the loaded `AudioItem` conforms to `TimePitcher`-protocol this will be overriden.
    */
-  public var audioTimePitchAlgorithm: AVAudioTimePitchAlgorithm = .timeDomain
+  var audioTimePitchAlgorithm: AVAudioTimePitchAlgorithm = .timeDomain
 
   /**
    Default remote commands to use for each playing track
    */
-  public var remoteCommands: [RemoteCommand] = [] {
+  var remoteCommands: [RemoteCommand] = [] {
     didSet {
       if let track = currentTrack {
         enableRemoteCommands(remoteCommands)
@@ -299,8 +299,8 @@ class TrackPlayer {
   var playbackActive: Bool {
     switch state {
     case .none, .stopped, .ended, .error:
-      return false
-    default: return true
+      false
+    default: true
     }
   }
 
@@ -313,7 +313,7 @@ class TrackPlayer {
   /**
    The elapsed playback time of the current track.
    */
-  public var currentTime: Double {
+  var currentTime: Double {
     let seconds = avPlayer.currentTime().seconds
     return seconds.isNaN ? 0 : seconds
   }
@@ -321,7 +321,7 @@ class TrackPlayer {
   /**
    The duration of the current track.
    */
-  public var duration: Double {
+  var duration: Double {
     guard let item = avPlayer.currentItem else { return 0.0 }
 
     if !item.asset.duration.seconds.isNaN {
@@ -341,14 +341,14 @@ class TrackPlayer {
   /**
    The bufferedPosition of the active track
    */
-  public var bufferedPosition: Double {
+  var bufferedPosition: Double {
     avPlayer.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.seconds ?? 0
   }
 
   /**
    The current state of the underlying `TrackPlayer`.
    */
-  public var playerState: PlaybackState {
+  var playerState: PlaybackState {
     state
   }
 
@@ -357,7 +357,7 @@ class TrackPlayer {
   /**
    Whether the player should start playing automatically when the track is ready.
    */
-  public var playWhenReady: Bool = false {
+  var playWhenReady: Bool = false {
     didSet {
       if playWhenReady == true, state == .error || state == .stopped {
         reload(startFromCurrentTime: state == .error)
@@ -376,7 +376,7 @@ class TrackPlayer {
 
    [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
    */
-  public var bufferDuration: TimeInterval = 0 {
+  var bufferDuration: TimeInterval = 0 {
     didSet {
       avPlayer.automaticallyWaitsToMinimizeStalling = bufferDuration == 0
     }
@@ -387,7 +387,7 @@ class TrackPlayer {
 
    [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayer/1643482-automaticallywaitstominimizestal)
    */
-  public var automaticallyWaitsToMinimizeStalling: Bool {
+  var automaticallyWaitsToMinimizeStalling: Bool {
     get { avPlayer.automaticallyWaitsToMinimizeStalling }
     set {
       if newValue {
@@ -397,17 +397,17 @@ class TrackPlayer {
     }
   }
 
-  public var volume: Float {
+  var volume: Float {
     get { avPlayer.volume }
     set { avPlayer.volume = newValue }
   }
 
-  public var isMuted: Bool {
+  var isMuted: Bool {
     get { avPlayer.isMuted }
     set { avPlayer.isMuted = newValue }
   }
 
-  public var rate: Float = 1.0 {
+  var rate: Float = 1.0 {
     didSet {
       applyAVPlayerRate()
       if automaticallyUpdateNowPlayingInfo {
@@ -418,7 +418,7 @@ class TrackPlayer {
 
   // MARK: - Init
 
-  public init(
+  init(
     nowPlayingInfoController: NowPlayingInfoController = NowPlayingInfoController(),
     callbacks: TrackPlayerCallbacks? = nil
   ) {
@@ -442,7 +442,7 @@ class TrackPlayer {
    - parameter track: The Track to replace the current track.
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
-  public func load(_ track: Track, playWhenReady: Bool? = nil) {
+  func load(_ track: Track, playWhenReady: Bool? = nil) {
     handlePlayWhenReady(playWhenReady) {
       replaceCurrentTrackWith(track)
     }
@@ -451,7 +451,7 @@ class TrackPlayer {
   /**
    Toggle playback status.
    */
-  public func togglePlaying() {
+  func togglePlaying() {
     switch avPlayer.timeControlStatus {
     case .playing, .waitingToPlayAtSpecifiedRate:
       pause()
@@ -465,28 +465,28 @@ class TrackPlayer {
   /**
    Start playback
    */
-  public func play() {
+  func play() {
     playWhenReady = true
   }
 
   /**
    Pause playback
    */
-  public func pause() {
+  func pause() {
     playWhenReady = false
   }
 
   /**
    Toggle playback between play and pause
    */
-  public func togglePlayback() {
+  func togglePlayback() {
     playWhenReady = !playWhenReady
   }
 
   /**
    Stop playback
    */
-  public func stop() {
+  func stop() {
     let wasActive = playbackActive
     state = .stopped
     clearCurrentAVItem()
@@ -496,7 +496,7 @@ class TrackPlayer {
   /**
    Reload the current track.
    */
-  public func reload(startFromCurrentTime: Bool) {
+  func reload(startFromCurrentTime: Bool) {
     var time: Double? = nil
     if startFromCurrentTime {
       if let currentItem = avPlayer.currentItem {
@@ -514,7 +514,7 @@ class TrackPlayer {
   /**
    Seek to a specific time in the track.
    */
-  public func seekTo(_ seconds: TimeInterval) {
+  func seekTo(_ seconds: TimeInterval) {
     seekTo(seconds, completion: { _ in })
   }
 
@@ -524,7 +524,7 @@ class TrackPlayer {
    - parameter seconds: The time to seek to.
    - parameter completion: Called when the seek operation completes. The Bool parameter indicates whether the seek finished successfully (true) or was interrupted/deferred (false).
    */
-  public func seekTo(_ seconds: TimeInterval, completion: @escaping (Bool) -> Void) {
+  func seekTo(_ seconds: TimeInterval, completion: @escaping (Bool) -> Void) {
     // If an track is currently being loaded asynchronously, defer the seek until it's ready.
     if state == .loading {
       // Cancel any previous pending seek before creating a new one
@@ -546,7 +546,7 @@ class TrackPlayer {
   /**
    Seek by relative a time offset in the track.
    */
-  public func seekBy(_ offset: TimeInterval) {
+  func seekBy(_ offset: TimeInterval) {
     // Calculate the target time based on current state
     let targetTime: TimeInterval
     if state == .loading {
@@ -581,7 +581,7 @@ class TrackPlayer {
    - Album title
    - Album artwork
    */
-  public func loadNowPlayingMetaValues() {
+  func loadNowPlayingMetaValues() {
     guard let track = currentTrack else { return }
 
     nowPlayingInfoController.set(keyValues: [
@@ -608,7 +608,7 @@ class TrackPlayer {
     ])
   }
 
-  public func clear() {
+  func clear() {
     clearTracks()
     let playbackWasActive = playbackActive
     unloadAVPlayer()
@@ -659,7 +659,7 @@ class TrackPlayer {
       currentAsset.cancelLoading()
     }
 
-    self.asset = nil
+    asset = nil
     pendingSeek?.cancel()
     pendingSeek = nil
 
@@ -844,7 +844,7 @@ class TrackPlayer {
    Sets the progress update interval.
    - Parameter interval: The interval in seconds, or nil to disable progress updates
    */
-  public func setProgressUpdateInterval(_ interval: TimeInterval?) {
+  func setProgressUpdateInterval(_ interval: TimeInterval?) {
     progressUpdateManager.setUpdateInterval(interval)
   }
 
@@ -987,7 +987,7 @@ class TrackPlayer {
    - parameter initialIndex: The index to start at. Defaults to 0.
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
-  public func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil) {
+  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil) {
     assertMainThread()
     guard !newTracks.isEmpty else {
       clear()
@@ -1012,7 +1012,7 @@ class TrackPlayer {
    - parameter initialIndex: Optional, the index to start at when queue was empty. Defaults to 0.
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
-  public func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
+  func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
     handlePlayWhenReady(playWhenReady) {
       add(tracks, initialIndex: initialIndex ?? 0)
     }
@@ -1030,7 +1030,7 @@ class TrackPlayer {
     }
   }
 
-  public func add(_ tracks: [Track], at index: Int) throws {
+  func add(_ tracks: [Track], at index: Int) throws {
     assertMainThread()
     guard !tracks.isEmpty else { return }
     guard index >= 0, self.tracks.count >= index else {
@@ -1054,14 +1054,14 @@ class TrackPlayer {
   /**
    Step to the next track in the queue.
    */
-  public func next() {
+  func next() {
     skipBy(1, wrap: repeatMode == .queue)
   }
 
   /**
    Step to the previous track in the queue.
    */
-  public func previous() {
+  func previous() {
     skipBy(-1, wrap: repeatMode == .queue)
   }
 
@@ -1094,7 +1094,7 @@ class TrackPlayer {
    - parameter index: The index of the track to remove.
    - throws: `TrackPlayerError.QueueError`
    */
-  public func remove(_ index: Int) throws {
+  func remove(_ index: Int) throws {
     assertMainThread()
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: index)
@@ -1114,7 +1114,7 @@ class TrackPlayer {
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    - throws: `TrackPlayerError`
    */
-  public func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
+  func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
     try handlePlayWhenReady(playWhenReady) {
       if index == currentIndex {
         seekTo(0)
@@ -1146,7 +1146,7 @@ class TrackPlayer {
    - parameter toIndex: The index to move the track to.
    - throws: `TrackPlayerError.QueueError`
    */
-  public func move(fromIndex: Int, toIndex: Int) throws {
+  func move(fromIndex: Int, toIndex: Int) throws {
     assertMainThread()
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: fromIndex, name: "fromIndex")
@@ -1163,7 +1163,7 @@ class TrackPlayer {
   /**
    Remove all upcoming tracks, those returned by `next()`
    */
-  public func removeUpcomingTracks() {
+  func removeUpcomingTracks() {
     assertMainThread()
     guard !tracks.isEmpty else { return }
     let nextIndex = currentIndex + 1
@@ -1285,7 +1285,7 @@ class TrackPlayer {
   }
 
   /// Loads the AVPlayer with a resolved media URL
-  private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track: Track) {
+  private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track _: Track) {
     assertMainThread()
 
     guard let mediaUrl = URL(string: resolved.url) else {
