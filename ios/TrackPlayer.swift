@@ -588,6 +588,7 @@ class TrackPlayer {
       MediaItemProperty.artist(track.artist),
       MediaItemProperty.title(track.title),
       MediaItemProperty.albumTitle(track.album),
+      NowPlayingInfoProperty.playbackRate(Double(rate)),
     ])
     loadArtworkForTrack(track)
   }
@@ -601,9 +602,10 @@ class TrackPlayer {
    - Playback rate
    */
   func updateNowPlayingPlaybackValues() {
+    logger.debug("updateNowPlayingPlaybackValues: duration=\(duration), rate=\(rate), currentTime=\(currentTime), playWhenReady=\(playWhenReady)")
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.duration(duration),
-      NowPlayingInfoProperty.playbackRate(playWhenReady ? Double(rate) : 0),
+      NowPlayingInfoProperty.playbackRate(Double(rate)),
       NowPlayingInfoProperty.elapsedPlaybackTime(currentTime),
     ])
   }
@@ -624,12 +626,20 @@ class TrackPlayer {
   }
 
   private func loadArtworkForTrack(_ track: Track) {
-    track.loadArtwork { image in
+    let artworkUrl = track.artworkSource?.uri ?? track.artwork
+    logger.debug("loadArtworkForTrack: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
+    track.loadArtwork { [weak self] image in
+      guard let self else { return }
       if let image {
-        let artwork = MPMediaItemArtwork(boundsSize: image.size, requestHandler: { _ in image })
-        self.nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
+        logger.debug("loadArtworkForTrack: loaded image \(image.size.width)x\(image.size.height)")
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { requestedSize in
+          self.logger.debug("MPMediaItemArtwork requestHandler called with size: \(requestedSize.width)x\(requestedSize.height)")
+          return image
+        }
+        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
       } else {
-        self.nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
+        logger.debug("loadArtworkForTrack: no image loaded")
+        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
       }
     }
   }
@@ -818,8 +828,10 @@ class TrackPlayer {
               automaticallyLoadedAssetKeys: playableKeys
             )
             avItem.preferredForwardBufferDuration = self.bufferDuration
+            self.logger.debug("AVPlayerItem created, calling replaceCurrentItem")
             self.avPlayer.replaceCurrentItem(with: avItem)
             self.startObservingAVPlayerItem(avItem)
+            self.logger.debug("AVPlayerItem loaded, currentItem: \(String(describing: self.avPlayer.currentItem)), playWhenReady: \(self.playWhenReady), avPlayer.status=\(self.avPlayer.status.rawValue)")
             self.applyAVPlayerRate()
 
             // Execute any pending seek operation
@@ -932,9 +944,11 @@ class TrackPlayer {
   }
 
   func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
+    logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp: \(playbackLikelyToKeepUp), state=\(state.rawValue)")
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       if playbackLikelyToKeepUp, state != .playing {
+        logger.debug("setting state = .ready")
         state = .ready
       }
     }
@@ -1260,14 +1274,16 @@ class TrackPlayer {
     // If we have a resolver, use it asynchronously
     if let resolver = mediaUrlResolver {
       Task { @MainActor in
+        self.logger.debug("resolveAndLoadMedia: starting resolution for \(src)")
         // Check that this track is still the current one
         guard self.currentTrack?.src == track.src else {
           self.logger.debug("Track changed during media resolution, skipping load")
           return
         }
 
+        self.logger.debug("resolveAndLoadMedia: calling resolver...")
         let resolved = await resolver(src)
-        self.logger.debug("  resolved URL: \(resolved.url)")
+        self.logger.debug("resolveAndLoadMedia: resolver returned, resolved URL: \(resolved.url)")
         if let headers = resolved.headers {
           self.logger.debug("  headers: \(headers)")
         }

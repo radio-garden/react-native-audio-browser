@@ -399,5 +399,54 @@ export type BrowserConfiguration = {
    * @platform android
    */
   androidControllerOfflineError?: boolean
+
+  // ─── CarPlay Options ──────────────────────────────────────────────────────────
+
+  /**
+   * Enable the "Up Next" button on the CarPlay Now Playing screen.
+   *
+   * When enabled, tapping "Up Next" shows the current playback queue,
+   * allowing users to see upcoming tracks and jump to a specific position.
+   *
+   * The button is automatically hidden when the queue has only one track.
+   *
+   * @default true
+   * @platform ios
+   */
+  carPlayUpNextButton?: boolean
+
+  /**
+   * Configure custom buttons on the CarPlay Now Playing screen.
+   *
+   * CarPlay allows up to 2 custom buttons to be displayed alongside the standard
+   * playback controls (play/pause, previous, next). These buttons appear in the
+   * Now Playing template.
+   *
+   * Available button types:
+   * - `'repeat'`: Cycles through repeat modes (off → track → queue → off)
+   *
+   * Note: Shuffle is not currently supported as it would require shuffling the queue
+   * which affects the underlying data structure. Consider implementing shuffle at
+   * the app level if needed.
+   *
+   * @example
+   * ```typescript
+   * carPlayNowPlayingButtons: ['repeat']
+   * ```
+   *
+   * @default []
+   * @platform ios
+   */
+  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 }
 
+/**
+ * Custom button types for CarPlay Now Playing screen.
+ *
+ * - `'repeat'`: Repeat button that cycles through off → track → queue → off
+ * - `'favorite'`: Heart button to toggle favorite state of current track
+ * - `'playback-rate'`: Playback speed button that cycles through rate options
+ *
+ * @platform ios
+ */
+export type CarPlayNowPlayingButton = 'repeat' | 'favorite' | 'playback-rate'

@@ -6,13 +6,14 @@
  * Users should use BrowserConfiguration, not these types directly.
  */
 
-import type { ResolvedTrack } from './browser-nodes'
 import type {
   BrowserSourceCallback,
+  CarPlayNowPlayingButton,
   MediaRequestConfig,
   SearchSourceCallback,
   TransformableRequestConfig,
 } from './browser'
+import type { ResolvedTrack } from './browser-nodes'
 
 /**
  * Flattened route entry for native bridge.
@@ -55,4 +56,8 @@ export interface NativeBrowserConfiguration {
   // Behavior
   singleTrack?: boolean
   androidControllerOfflineError?: boolean
+
+  // CarPlay options
+  carPlayUpNextButton?: boolean
+  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 }

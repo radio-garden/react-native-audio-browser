@@ -103,7 +103,11 @@ final class BrowserManager {
   // MARK: - Configuration
 
   /// Browser configuration containing routes, search, tabs, and request settings.
-  var config: BrowserConfig = BrowserConfig()
+  var config: BrowserConfig = .init() {
+    didSet {
+      onConfigChanged?(config)
+    }
+  }
 
   /// Callback to transform artwork URLs for tracks.
   var artworkUrlResolver: ((Track, MediaRequestConfig?) async -> ImageSource?)?
@@ -113,6 +117,7 @@ final class BrowserManager {
   var onPathChanged: ((String) -> Void)?
   var onContentChanged: ((ResolvedTrack?) -> Void)?
   var onTabsChanged: (([Track]) -> Void)?
+  var onConfigChanged: ((BrowserConfig) -> Void)?
 
   // MARK: - Favorites
 
@@ -131,14 +136,15 @@ final class BrowserManager {
   }
 
   /// Hydrates the favorited field on a track based on the favoriteIds set.
+  /// Local favoriteIds always take precedence over API-provided values.
   private func hydrateFavorite(_ track: Track) -> Track {
-    // Don't overwrite API-provided favorites
-    if track.favorited != nil { return track }
-    if favoriteIds.isEmpty { return track }
+    guard let src = track.src else { return track }
 
-    guard let src = track.src, favoriteIds.contains(src) else {
-      return track
-    }
+    // Check if this track is in our local favorites set
+    let isFavorited = favoriteIds.contains(src)
+
+    // Only create a new track if the favorited state differs
+    if track.favorited == isFavorited { return track }
 
     return Track(
       url: track.url,
@@ -154,7 +160,7 @@ final class BrowserManager {
       duration: track.duration,
       style: track.style,
       childrenStyle: track.childrenStyle,
-      favorited: true,
+      favorited: isFavorited,
       groupTitle: track.groupTitle
     )
   }

@@ -29,11 +29,11 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (ButtonCapability).
    */
   enum class ButtonCapability {
-    SKIP_TO_PREVIOUS      SWIFT_NAME(skipToPrevious) = 0,
-    SKIP_TO_NEXT      SWIFT_NAME(skipToNext) = 1,
-    JUMP_BACKWARD      SWIFT_NAME(jumpBackward) = 2,
-    JUMP_FORWARD      SWIFT_NAME(jumpForward) = 3,
-    FAVORITE      SWIFT_NAME(favorite) = 4,
+    FAVORITE      SWIFT_NAME(favorite) = 0,
+    SKIP_TO_PREVIOUS      SWIFT_NAME(skipToPrevious) = 1,
+    SKIP_TO_NEXT      SWIFT_NAME(skipToNext) = 2,
+    JUMP_BACKWARD      SWIFT_NAME(jumpBackward) = 3,
+    JUMP_FORWARD      SWIFT_NAME(jumpForward) = 4,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -46,22 +46,22 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::ButtonCapability fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("favorite"): return margelo::nitro::audiobrowser::ButtonCapability::FAVORITE;
         case hashString("skip-to-previous"): return margelo::nitro::audiobrowser::ButtonCapability::SKIP_TO_PREVIOUS;
         case hashString("skip-to-next"): return margelo::nitro::audiobrowser::ButtonCapability::SKIP_TO_NEXT;
         case hashString("jump-backward"): return margelo::nitro::audiobrowser::ButtonCapability::JUMP_BACKWARD;
         case hashString("jump-forward"): return margelo::nitro::audiobrowser::ButtonCapability::JUMP_FORWARD;
-        case hashString("favorite"): return margelo::nitro::audiobrowser::ButtonCapability::FAVORITE;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum ButtonCapability - invalid value!");
       }
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::ButtonCapability arg) {
       switch (arg) {
+        case margelo::nitro::audiobrowser::ButtonCapability::FAVORITE: return JSIConverter<std::string>::toJSI(runtime, "favorite");
         case margelo::nitro::audiobrowser::ButtonCapability::SKIP_TO_PREVIOUS: return JSIConverter<std::string>::toJSI(runtime, "skip-to-previous");
         case margelo::nitro::audiobrowser::ButtonCapability::SKIP_TO_NEXT: return JSIConverter<std::string>::toJSI(runtime, "skip-to-next");
         case margelo::nitro::audiobrowser::ButtonCapability::JUMP_BACKWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-backward");
         case margelo::nitro::audiobrowser::ButtonCapability::JUMP_FORWARD: return JSIConverter<std::string>::toJSI(runtime, "jump-forward");
-        case margelo::nitro::audiobrowser::ButtonCapability::FAVORITE: return JSIConverter<std::string>::toJSI(runtime, "favorite");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert ButtonCapability to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -73,11 +73,11 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("favorite"):
         case hashString("skip-to-previous"):
         case hashString("skip-to-next"):
         case hashString("jump-backward"):
         case hashString("jump-forward"):
-        case hashString("favorite"):
           return true;
         default:
           return false;

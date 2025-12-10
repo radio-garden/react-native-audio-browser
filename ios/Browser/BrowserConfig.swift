@@ -30,6 +30,9 @@ struct BrowserConfig {
   /// Enable the "Up Next" button on CarPlay Now Playing screen
   let carPlayUpNextButton: Bool
 
+  /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
+  let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
+
   init(
     request: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
@@ -37,7 +40,8 @@ struct BrowserConfig {
     routes: [NativeRouteEntry]? = nil,
     singleTrack: Bool = false,
     androidControllerOfflineError: Bool = true,
-    carPlayUpNextButton: Bool = true
+    carPlayUpNextButton: Bool = true,
+    carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = []
   ) {
     self.request = request
     self.media = media
@@ -46,22 +50,24 @@ struct BrowserConfig {
     self.singleTrack = singleTrack
     self.androidControllerOfflineError = androidControllerOfflineError
     self.carPlayUpNextButton = carPlayUpNextButton
+    self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
   }
 
   /// Create from NativeBrowserConfiguration
   init(from config: NativeBrowserConfiguration) {
-    self.request = config.request
-    self.media = config.media
-    self.artwork = config.artwork
-    self.routes = config.routes
-    self.singleTrack = config.singleTrack ?? false
-    self.androidControllerOfflineError = config.androidControllerOfflineError ?? true
-    self.carPlayUpNextButton = config.carPlayUpNextButton ?? true
+    request = config.request
+    media = config.media
+    artwork = config.artwork
+    routes = config.routes
+    singleTrack = config.singleTrack ?? false
+    androidControllerOfflineError = config.androidControllerOfflineError ?? true
+    carPlayUpNextButton = config.carPlayUpNextButton ?? true
+    carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
   }
 
   /// Returns true if search functionality is configured (either callback or config).
   var hasSearch: Bool {
-    guard let routes = routes else { return false }
+    guard let routes else { return false }
     let searchEntry = routes.first { $0.path == BrowserManager.searchRoutePath }
     return searchEntry?.searchCallback != nil || searchEntry?.searchConfig != nil
   }

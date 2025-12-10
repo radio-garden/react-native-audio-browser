@@ -29,6 +29,8 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
+// Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 
 #include <string>
 #include <optional>
@@ -36,6 +38,7 @@ namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 #include "MediaRequestConfig.hpp"
 #include "NativeRouteEntry.hpp"
 #include <vector>
+#include "CarPlayNowPlayingButton.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -52,10 +55,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<bool> singleTrack     SWIFT_PRIVATE;
     std::optional<bool> androidControllerOfflineError     SWIFT_PRIVATE;
     std::optional<bool> carPlayUpNextButton     SWIFT_PRIVATE;
+    std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons     SWIFT_PRIVATE;
 
   public:
     NativeBrowserConfiguration() = default;
-    explicit NativeBrowserConfiguration(std::optional<std::string> path, std::optional<TransformableRequestConfig> request, std::optional<MediaRequestConfig> media, std::optional<MediaRequestConfig> artwork, std::optional<std::vector<NativeRouteEntry>> routes, std::optional<bool> singleTrack, std::optional<bool> androidControllerOfflineError, std::optional<bool> carPlayUpNextButton): path(path), request(request), media(media), artwork(artwork), routes(routes), singleTrack(singleTrack), androidControllerOfflineError(androidControllerOfflineError), carPlayUpNextButton(carPlayUpNextButton) {}
+    explicit NativeBrowserConfiguration(std::optional<std::string> path, std::optional<TransformableRequestConfig> request, std::optional<MediaRequestConfig> media, std::optional<MediaRequestConfig> artwork, std::optional<std::vector<NativeRouteEntry>> routes, std::optional<bool> singleTrack, std::optional<bool> androidControllerOfflineError, std::optional<bool> carPlayUpNextButton, std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons): path(path), request(request), media(media), artwork(artwork), routes(routes), singleTrack(singleTrack), androidControllerOfflineError(androidControllerOfflineError), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -75,7 +79,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::NativeRouteEntry>>>::fromJSI(runtime, obj.getProperty(runtime, "routes")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "singleTrack")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "androidControllerOfflineError")),
-        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "carPlayUpNextButton"))
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "carPlayUpNextButton")),
+        JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::fromJSI(runtime, obj.getProperty(runtime, "carPlayNowPlayingButtons"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NativeBrowserConfiguration& arg) {
@@ -88,6 +93,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "singleTrack", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.singleTrack));
       obj.setProperty(runtime, "androidControllerOfflineError", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.androidControllerOfflineError));
       obj.setProperty(runtime, "carPlayUpNextButton", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.carPlayUpNextButton));
+      obj.setProperty(runtime, "carPlayNowPlayingButtons", JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::toJSI(runtime, arg.carPlayNowPlayingButtons));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -106,6 +112,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "singleTrack"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "androidControllerOfflineError"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "carPlayUpNextButton"))) return false;
+      if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::canConvert(runtime, obj.getProperty(runtime, "carPlayNowPlayingButtons"))) return false;
       return true;
     }
   };

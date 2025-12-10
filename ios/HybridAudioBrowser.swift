@@ -71,7 +71,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
-    singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil
+    singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil,
+    carPlayNowPlayingButtons: nil
   ) {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)

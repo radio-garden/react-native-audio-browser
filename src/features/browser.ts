@@ -187,6 +187,8 @@ function toNativeConfig(config: BrowserConfiguration): NativeBrowserConfiguratio
     routes: flattenRoutes(config.routes, config.browse, config.tabs, config.search),
     singleTrack: config.singleTrack,
     androidControllerOfflineError: config.androidControllerOfflineError,
+    carPlayUpNextButton: config.carPlayUpNextButton,
+    carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
   }
 }
 

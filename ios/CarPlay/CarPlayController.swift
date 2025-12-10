@@ -106,6 +106,13 @@ public final class RNABCarPlayController: NSObject {
         self?.handleContentChanged(content)
       }
     }
+
+    // Subscribe to config changes (for Now Playing buttons)
+    audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
+      Task { @MainActor in
+        self?.setupNowPlayingButtons()
+      }
+    }
   }
 
   // MARK: - Initial Interface
@@ -149,7 +156,11 @@ public final class RNABCarPlayController: NSObject {
     var tabTemplates: [CPTemplate] = []
     let maxTabs = CPTabBarTemplate.maximumTabCount
 
-    for tab in tabs.prefix(maxTabs) {
+    // Reserve one slot for search if configured
+    let hasSearch = config.hasSearch
+    let maxContentTabs = hasSearch ? maxTabs - 1 : maxTabs
+
+    for tab in tabs.prefix(maxContentTabs) {
       let listTemplate = await createListTemplate(for: tab)
       tabTemplates.append(listTemplate)
     }
@@ -162,6 +173,9 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func createListTemplate(for track: Track) async -> CPListTemplate {
+    // Note: CPAssistantCellConfiguration requires INPlayMediaIntent handlers to be implemented.
+    // Without SiriKit integration, it crashes with "clientAssistantCellUnavailableWithError".
+    // See TODO.md for voice search implementation requirements.
     let template = CPListTemplate(
       title: track.title,
       sections: []
@@ -400,8 +414,126 @@ public final class RNABCarPlayController: NSObject {
     nowPlayingObserver = observer
     template.add(observer)
 
+    // Setup custom Now Playing buttons from config
+    setupNowPlayingButtons()
+
     // Update button states based on config
     updateNowPlayingButtonStates()
+  }
+
+  /// Sets up custom Now Playing buttons based on configuration
+  private func setupNowPlayingButtons() {
+    let buttons = config.carPlayNowPlayingButtons
+    logger.info("Setting up Now Playing buttons: \(buttons.map(\.stringValue))")
+
+    guard !buttons.isEmpty else {
+      CPNowPlayingTemplate.shared.updateNowPlayingButtons([])
+      return
+    }
+
+    var nowPlayingButtons: [CPNowPlayingButton] = []
+
+    for buttonType in buttons {
+      switch buttonType {
+      case .repeat:
+        let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
+          self?.handleRepeatButtonTapped()
+        }
+        nowPlayingButtons.append(repeatButton)
+
+      case .favorite:
+        let favoriteButton = CPNowPlayingImageButton(
+          image: favoriteButtonImage(isFavorited: false)
+        ) { [weak self] _ in
+          self?.handleFavoriteButtonTapped()
+        }
+        nowPlayingButtons.append(favoriteButton)
+
+      case .playbackRate:
+        let rateButton = CPNowPlayingPlaybackRateButton { [weak self] _ in
+          self?.handlePlaybackRateButtonTapped()
+        }
+        nowPlayingButtons.append(rateButton)
+      }
+    }
+
+    CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
+    logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
+  }
+
+  /// Returns the appropriate image for the favorite button based on state
+  private func favoriteButtonImage(isFavorited: Bool) -> UIImage {
+    let symbolName = isFavorited ? "heart.fill" : "heart"
+    return UIImage(systemName: symbolName) ?? UIImage()
+  }
+
+  /// Handles repeat button tap - cycles through repeat modes
+  private func handleRepeatButtonTapped() {
+    guard let player = audioBrowser?.getPlayer() else { return }
+
+    let currentMode = player.getRepeatMode()
+    let newMode: RepeatMode = switch currentMode {
+    case .off:
+      .track
+    case .track:
+      .queue
+    case .queue:
+      .off
+    }
+
+    player.setRepeatMode(newMode)
+    logger.info("CarPlay repeat mode changed: \(currentMode.stringValue) → \(newMode.stringValue)")
+  }
+
+  /// Handles favorite button tap - toggles favorite state of current track
+  private func handleFavoriteButtonTapped() {
+    try? audioBrowser?.toggleActiveTrackFavorited()
+    logger.info("CarPlay favorite toggled")
+
+    // Update button appearance
+    updateFavoriteButtonState()
+  }
+
+  /// Available playback rates to cycle through
+  private static let playbackRates: [Float] = [0.5, 1.0, 1.5, 2.0]
+
+  /// Handles playback rate button tap - cycles through rate options
+  private func handlePlaybackRateButtonTapped() {
+    guard let player = audioBrowser?.getPlayer() else { return }
+
+    let currentRate = player.rate
+    // Find next rate in the cycle
+    let currentIndex = Self.playbackRates.firstIndex { abs($0 - currentRate) < 0.01 } ?? 1 // default to 1.0
+    let nextIndex = (currentIndex + 1) % Self.playbackRates.count
+    let newRate = Self.playbackRates[nextIndex]
+
+    player.rate = newRate
+    logger.info("CarPlay playback rate changed: \(currentRate) → \(newRate)")
+  }
+
+  /// Updates the favorite button appearance based on current track's favorite state
+  private func updateFavoriteButtonState() {
+    guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
+
+    let isFavorited = (try? audioBrowser?.getActiveTrack())?.favorited ?? false
+    let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
+
+    // Find and update the favorite button (it's a CPNowPlayingImageButton)
+    for (index, button) in buttons.enumerated() {
+      if button is CPNowPlayingImageButton {
+        // Recreate the button with updated image
+        let newFavoriteButton = CPNowPlayingImageButton(
+          image: favoriteButtonImage(isFavorited: isFavorited)
+        ) { [weak self] _ in
+          self?.handleFavoriteButtonTapped()
+        }
+
+        var updatedButtons = buttons
+        updatedButtons[index] = newFavoriteButton
+        CPNowPlayingTemplate.shared.updateNowPlayingButtons(updatedButtons)
+        break
+      }
+    }
   }
 
   /// Updates Now Playing button states based on config and current queue
@@ -445,9 +577,14 @@ public final class RNABCarPlayController: NSObject {
   // MARK: - Error Handling
 
   private func showErrorTemplate(message: String) {
-    let alertAction = CPAlertAction(title: "OK", style: .default) { _ in }
-    let alertTemplate = CPAlertTemplate(titleVariants: [message], actions: [alertAction])
-    interfaceController.setRootTemplate(alertTemplate, animated: true, completion: nil)
+    // CPAlertTemplate cannot be set as root - use a list template instead
+    let errorItem = CPListItem(text: message, detailText: nil)
+    errorItem.isEnabled = false
+    let template = CPListTemplate(
+      title: "Error",
+      sections: [CPListSection(items: [errorItem])]
+    )
+    interfaceController.setRootTemplate(template, animated: true, completion: nil)
   }
 
   // MARK: - Image Loading

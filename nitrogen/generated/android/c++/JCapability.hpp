@@ -41,11 +41,11 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::alias_ref<JCapability> fromCpp(Capability value) {
       static const auto clazz = javaClassStatic();
+      static const auto fieldFAVORITE = clazz->getStaticField<JCapability>("FAVORITE");
       static const auto fieldSKIP_TO_PREVIOUS = clazz->getStaticField<JCapability>("SKIP_TO_PREVIOUS");
       static const auto fieldSKIP_TO_NEXT = clazz->getStaticField<JCapability>("SKIP_TO_NEXT");
       static const auto fieldJUMP_BACKWARD = clazz->getStaticField<JCapability>("JUMP_BACKWARD");
       static const auto fieldJUMP_FORWARD = clazz->getStaticField<JCapability>("JUMP_FORWARD");
-      static const auto fieldFAVORITE = clazz->getStaticField<JCapability>("FAVORITE");
       static const auto fieldPLAY = clazz->getStaticField<JCapability>("PLAY");
       static const auto fieldPLAY_FROM_ID = clazz->getStaticField<JCapability>("PLAY_FROM_ID");
       static const auto fieldPLAY_FROM_SEARCH = clazz->getStaticField<JCapability>("PLAY_FROM_SEARCH");
@@ -56,6 +56,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldBOOKMARK = clazz->getStaticField<JCapability>("BOOKMARK");
       
       switch (value) {
+        case Capability::FAVORITE:
+          return clazz->getStaticFieldValue(fieldFAVORITE);
         case Capability::SKIP_TO_PREVIOUS:
           return clazz->getStaticFieldValue(fieldSKIP_TO_PREVIOUS);
         case Capability::SKIP_TO_NEXT:
@@ -64,8 +66,6 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(fieldJUMP_BACKWARD);
         case Capability::JUMP_FORWARD:
           return clazz->getStaticFieldValue(fieldJUMP_FORWARD);
-        case Capability::FAVORITE:
-          return clazz->getStaticFieldValue(fieldFAVORITE);
         case Capability::PLAY:
           return clazz->getStaticFieldValue(fieldPLAY);
         case Capability::PLAY_FROM_ID:

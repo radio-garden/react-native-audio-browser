@@ -41,13 +41,15 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::alias_ref<JButtonCapability> fromCpp(ButtonCapability value) {
       static const auto clazz = javaClassStatic();
+      static const auto fieldFAVORITE = clazz->getStaticField<JButtonCapability>("FAVORITE");
       static const auto fieldSKIP_TO_PREVIOUS = clazz->getStaticField<JButtonCapability>("SKIP_TO_PREVIOUS");
       static const auto fieldSKIP_TO_NEXT = clazz->getStaticField<JButtonCapability>("SKIP_TO_NEXT");
       static const auto fieldJUMP_BACKWARD = clazz->getStaticField<JButtonCapability>("JUMP_BACKWARD");
       static const auto fieldJUMP_FORWARD = clazz->getStaticField<JButtonCapability>("JUMP_FORWARD");
-      static const auto fieldFAVORITE = clazz->getStaticField<JButtonCapability>("FAVORITE");
       
       switch (value) {
+        case ButtonCapability::FAVORITE:
+          return clazz->getStaticFieldValue(fieldFAVORITE);
         case ButtonCapability::SKIP_TO_PREVIOUS:
           return clazz->getStaticFieldValue(fieldSKIP_TO_PREVIOUS);
         case ButtonCapability::SKIP_TO_NEXT:
@@ -56,8 +58,6 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(fieldJUMP_BACKWARD);
         case ButtonCapability::JUMP_FORWARD:
           return clazz->getStaticFieldValue(fieldJUMP_FORWARD);
-        case ButtonCapability::FAVORITE:
-          return clazz->getStaticFieldValue(fieldFAVORITE);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

@@ -19,7 +19,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?) {
+  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -71,6 +71,18 @@ public extension NativeBrowserConfiguration {
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = carPlayUpNextButton {
         return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__vector_CarPlayNowPlayingButton__ in
+      if let __unwrappedValue = carPlayNowPlayingButtons {
+        return bridge.create_std__optional_std__vector_CarPlayNowPlayingButton__({ () -> bridge.std__vector_CarPlayNowPlayingButton_ in
+          var __vector = bridge.create_std__vector_CarPlayNowPlayingButton_(__unwrappedValue.count)
+          for __item in __unwrappedValue {
+            __vector.push_back(__item)
+          }
+          return __vector
+        }())
       } else {
         return .init()
       }
@@ -247,6 +259,36 @@ public extension NativeBrowserConfiguration {
       self.__carPlayUpNextButton = { () -> bridge.std__optional_bool_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_bool_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var carPlayNowPlayingButtons: [CarPlayNowPlayingButton]? {
+    @inline(__always)
+    get {
+      return { () -> [CarPlayNowPlayingButton]? in
+        if bridge.has_value_std__optional_std__vector_CarPlayNowPlayingButton__(self.__carPlayNowPlayingButtons) {
+          let __unwrapped = bridge.get_std__optional_std__vector_CarPlayNowPlayingButton__(self.__carPlayNowPlayingButtons)
+          return __unwrapped.map({ __item in __item })
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__carPlayNowPlayingButtons = { () -> bridge.std__optional_std__vector_CarPlayNowPlayingButton__ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__vector_CarPlayNowPlayingButton__({ () -> bridge.std__vector_CarPlayNowPlayingButton_ in
+            var __vector = bridge.create_std__vector_CarPlayNowPlayingButton_(__unwrappedValue.count)
+            for __item in __unwrappedValue {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
         } else {
           return .init()
         }

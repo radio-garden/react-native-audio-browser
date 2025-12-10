@@ -17,6 +17,8 @@ public extension ButtonCapability {
    */
   init?(fromString string: String) {
     switch string {
+      case "favorite":
+        self = .favorite
       case "skip-to-previous":
         self = .skipToPrevious
       case "skip-to-next":
@@ -25,8 +27,6 @@ public extension ButtonCapability {
         self = .jumpBackward
       case "jump-forward":
         self = .jumpForward
-      case "favorite":
-        self = .favorite
       default:
         return nil
     }
@@ -37,6 +37,8 @@ public extension ButtonCapability {
    */
   var stringValue: String {
     switch self {
+      case .favorite:
+        return "favorite"
       case .skipToPrevious:
         return "skip-to-previous"
       case .skipToNext:
@@ -45,8 +47,6 @@ public extension ButtonCapability {
         return "jump-backward"
       case .jumpForward:
         return "jump-forward"
-      case .favorite:
-        return "favorite"
     }
   }
 }

@@ -36,6 +36,8 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
 // Forward declaration of `Capability` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
@@ -166,6 +168,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "BrowserSourceCallbackParam.hpp"
 #include "ButtonCapability.hpp"
 #include "Capability.hpp"
+#include "CarPlayNowPlayingButton.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
@@ -950,6 +953,32 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline SearchMode get_std__optional_SearchMode_(const std::optional<SearchMode>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::vector<CarPlayNowPlayingButton>>
+  /**
+   * Specialized version of `std::optional<std::vector<CarPlayNowPlayingButton>>`.
+   */
+  using std__optional_std__vector_CarPlayNowPlayingButton__ = std::optional<std::vector<CarPlayNowPlayingButton>>;
+  inline std::optional<std::vector<CarPlayNowPlayingButton>> create_std__optional_std__vector_CarPlayNowPlayingButton__(const std::vector<CarPlayNowPlayingButton>& value) noexcept {
+    return std::optional<std::vector<CarPlayNowPlayingButton>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_CarPlayNowPlayingButton__(const std::optional<std::vector<CarPlayNowPlayingButton>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<CarPlayNowPlayingButton> get_std__optional_std__vector_CarPlayNowPlayingButton__(const std::optional<std::vector<CarPlayNowPlayingButton>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<CarPlayNowPlayingButton>
+  /**
+   * Specialized version of `std::vector<CarPlayNowPlayingButton>`.
+   */
+  using std__vector_CarPlayNowPlayingButton_ = std::vector<CarPlayNowPlayingButton>;
+  inline std::vector<CarPlayNowPlayingButton> create_std__vector_CarPlayNowPlayingButton_(size_t size) noexcept {
+    std::vector<CarPlayNowPlayingButton> vector;
+    vector.reserve(size);
+    return vector;
   }
   
   // pragma MARK: std::shared_ptr<Promise<void>>
