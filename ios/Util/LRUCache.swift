@@ -22,8 +22,8 @@ final class LRUCache<Key: Hashable, Value> {
 
   private let maxSize: Int
   private var cache: [Key: Node] = [:]
-  private var head: Node?  // Most recently used
-  private var tail: Node?  // Least recently used
+  private var head: Node? // Most recently used
+  private var tail: Node? // Least recently used
   private let lock = NSLock()
 
   /// Creates a new LRU cache with the specified maximum size.
@@ -170,7 +170,7 @@ final class LRUCache<Key: Hashable, Value> {
   var values: [Value] {
     lock.lock()
     defer { lock.unlock() }
-    return cache.values.map { $0.value }
+    return cache.values.map(\.value)
   }
 
   /// Returns all keys in the cache (no particular order guaranteed).

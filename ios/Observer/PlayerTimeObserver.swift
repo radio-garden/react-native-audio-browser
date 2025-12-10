@@ -56,9 +56,9 @@ class PlayerTimeObserver {
     }
     unregisterForBoundaryTimeEvents()
     boundaryTimeStartObserverToken = avPlayer.addBoundaryTimeObserver(
-      forTimes: [PlayerTimeObserver.startBoundaryTime].map({
+      forTimes: [PlayerTimeObserver.startBoundaryTime].map {
         NSValue(time: $0)
-      }),
+      },
       queue: nil,
       using: { [weak self] in
         self?.onAudioDidStart()

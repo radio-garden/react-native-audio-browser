@@ -41,38 +41,38 @@ enum MediaItemProperty: NowPlayingInfoKeyValue {
   var key: String {
     switch self {
     case .artist:
-      return MPMediaItemPropertyArtist
+      MPMediaItemPropertyArtist
 
     case .title:
-      return MPMediaItemPropertyTitle
+      MPMediaItemPropertyTitle
 
     case .albumTitle:
-      return MPMediaItemPropertyAlbumTitle
+      MPMediaItemPropertyAlbumTitle
 
     case .duration:
-      return MPMediaItemPropertyPlaybackDuration
+      MPMediaItemPropertyPlaybackDuration
 
     case .artwork:
-      return MPMediaItemPropertyArtwork
+      MPMediaItemPropertyArtwork
     }
   }
 
   var value: Any? {
     switch self {
     case let .artist(artist):
-      return artist
+      artist
 
     case let .title(title):
-      return title
+      title
 
     case let .albumTitle(title):
-      return title
+      title
 
     case let .duration(duration):
-      return duration != nil ? NSNumber(floatLiteral: duration!) : nil
+      duration != nil ? NSNumber(floatLiteral: duration!) : nil
 
     case let .artwork(artwork):
-      return artwork
+      artwork
     }
   }
 }

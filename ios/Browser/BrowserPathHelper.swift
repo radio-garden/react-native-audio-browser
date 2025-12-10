@@ -31,7 +31,7 @@ enum BrowserPathHelper {
 
   /// Check if a path is a special system path (not a regular navigation path)
   static func isSpecialPath(_ path: String) -> Bool {
-    return path == rootPath ||
+    path == rootPath ||
       path == recentPath ||
       path.hasPrefix("\(searchPathPrefix)?")
   }
@@ -48,7 +48,7 @@ enum BrowserPathHelper {
   /// - Parameter path: The URL path to check
   /// - Returns: true if the path contains the contextual track parameter
   static func isContextual(_ path: String) -> Bool {
-    return path.contains("?\(contextualTrackParam)=")
+    path.contains("?\(contextualTrackParam)=")
       || path.contains("&\(contextualTrackParam)=")
   }
 
@@ -135,7 +135,7 @@ enum BrowserPathHelper {
     }
 
     // If no baseUrl, return path as-is
-    guard let baseUrl = baseUrl else {
+    guard let baseUrl else {
       return path
     }
 

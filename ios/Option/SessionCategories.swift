@@ -8,15 +8,15 @@ enum SessionCategory: String {
   func mapConfigToAVAudioSessionCategory() -> AVAudioSession.Category {
     switch self {
     case .playAndRecord:
-      return .playAndRecord
+      .playAndRecord
     case .multiRoute:
-      return .multiRoute
+      .multiRoute
     case .playback:
-      return .playback
+      .playback
     case .ambient:
-      return .ambient
+      .ambient
     case .soloAmbient:
-      return .soloAmbient
+      .soloAmbient
     }
   }
 }
@@ -27,14 +27,14 @@ enum SessionCategoryPolicy: String {
   func toRouteSharingPolicy() -> AVAudioSession.RouteSharingPolicy {
     switch self {
     case .default:
-      return .default
+      .default
     case .longFormAudio:
-      return .longFormAudio
+      .longFormAudio
     case .longFormVideo:
       if #available(iOS 13.0, *) {
-        return .longFormVideo
+        .longFormVideo
       } else {
-        return .longFormAudio
+        .longFormAudio
       }
     }
   }
@@ -47,27 +47,27 @@ enum SessionCategoryMode: String {
   func mapConfigToAVAudioSessionCategoryMode() -> AVAudioSession.Mode {
     switch self {
     case .default:
-      return .default
+      .default
     case .gameChat:
-      return .gameChat
+      .gameChat
     case .measurement:
-      return .measurement
+      .measurement
     case .moviePlayback:
-      return .moviePlayback
+      .moviePlayback
     case .spokenAudio:
-      return .spokenAudio
+      .spokenAudio
     case .videoChat:
-      return .videoChat
+      .videoChat
     case .videoRecording:
-      return .videoRecording
+      .videoRecording
     case .voiceChat:
-      return .voiceChat
+      .voiceChat
     case .voicePrompt:
       if #available(iOS 12.0, *) {
-        return .voicePrompt
+        .voicePrompt
       } else {
         // Do Nothing
-        return .default
+        .default
       }
     }
   }
@@ -82,19 +82,19 @@ enum SessionCategoryOptions: String {
   func mapConfigToAVAudioSessionCategoryOptions() -> AVAudioSession.CategoryOptions? {
     switch self {
     case .mixWithOthers:
-      return .mixWithOthers
+      .mixWithOthers
     case .duckOthers:
-      return .duckOthers
+      .duckOthers
     case .interruptSpokenAudioAndMixWithOthers:
-      return .interruptSpokenAudioAndMixWithOthers
+      .interruptSpokenAudioAndMixWithOthers
     case .allowBluetooth:
-      return .allowBluetooth
+      .allowBluetooth
     case .allowBluetoothA2DP:
-      return .allowBluetoothA2DP
+      .allowBluetoothA2DP
     case .allowAirPlay:
-      return .allowAirPlay
+      .allowAirPlay
     case .defaultToSpeaker:
-      return .defaultToSpeaker
+      .defaultToSpeaker
     }
   }
 }

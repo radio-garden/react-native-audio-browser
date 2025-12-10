@@ -43,7 +43,7 @@ final class HttpClient {
     let headers: [String: String]
 
     var isSuccessful: Bool {
-      return (200..<300).contains(code)
+      (200 ..< 300).contains(code)
     }
   }
 
@@ -58,7 +58,7 @@ final class HttpClient {
     }
 
     var localizedDescription: String {
-      return "HTTP \(code): \(responseBody)"
+      "HTTP \(code): \(responseBody)"
     }
   }
 
@@ -159,7 +159,7 @@ final class HttpClient {
     let result = await request(httpRequest)
 
     switch result {
-    case .success(let response):
+    case let .success(response):
       if !response.isSuccessful {
         throw HttpException(code: response.code, responseBody: response.body)
       }
@@ -177,22 +177,22 @@ final class HttpClient {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Missing required key '\(key.stringValue)' at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"]
+          userInfo: [NSLocalizedDescriptionKey: "Missing required key '\(key.stringValue)' at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"]
         )
       } catch let DecodingError.typeMismatch(type, context) {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Type mismatch for \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"]
+          userInfo: [NSLocalizedDescriptionKey: "Type mismatch for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"]
         )
       } catch let DecodingError.valueNotFound(type, context) {
         throw NSError(
           domain: "HttpClient",
           code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Value not found for \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"]
+          userInfo: [NSLocalizedDescriptionKey: "Value not found for \(type) at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"]
         )
       }
-    case .failure(let error):
+    case let .failure(error):
       throw error
     }
   }

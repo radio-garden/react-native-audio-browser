@@ -105,13 +105,13 @@ struct JsonTrack: Codable {
 
 private extension String {
   func toTrackStyle() -> TrackStyle? {
-    return TrackStyle(fromString: self.lowercased())
+    TrackStyle(fromString: lowercased())
   }
 }
 
 extension JsonResolvedTrack {
   func toNitro() -> ResolvedTrack {
-    return ResolvedTrack(
+    ResolvedTrack(
       url: url,
       children: children?.map { $0.toNitro() },
       src: src,
@@ -134,7 +134,7 @@ extension JsonResolvedTrack {
 
 extension JsonTrack {
   func toNitro() -> Track {
-    return Track(
+    Track(
       url: url,
       src: src,
       artwork: artwork,

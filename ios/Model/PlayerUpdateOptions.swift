@@ -9,12 +9,12 @@ class PlayerUpdateOptions {
   // MARK: - Core Properties
 
   /// Jump intervals
-  public var forwardJumpInterval: Double = 15.0
-  public var backwardJumpInterval: Double = 15.0
-  public var progressUpdateEventInterval: Double?
+  var forwardJumpInterval: Double = 15.0
+  var backwardJumpInterval: Double = 15.0
+  var progressUpdateEventInterval: Double?
 
   /// Rating and capabilities
-  public var capabilities: [Capability] = [
+  var capabilities: [Capability] = [
     .play,
     .pause,
     .skipToNext,
@@ -23,21 +23,21 @@ class PlayerUpdateOptions {
   ]
 
   /// Repeat mode
-  public var repeatMode: RepeatMode = .off
+  var repeatMode: RepeatMode = .off
 
   /// iOS-specific options
-  public var likeOptions: FeedbackOptions = .init(isActive: false, title: "Like")
-  public var dislikeOptions: FeedbackOptions = .init(isActive: false, title: "Dislike")
-  public var bookmarkOptions: FeedbackOptions = .init(isActive: false, title: "Bookmark")
+  var likeOptions: FeedbackOptions = .init(isActive: false, title: "Like")
+  var dislikeOptions: FeedbackOptions = .init(isActive: false, title: "Dislike")
+  var bookmarkOptions: FeedbackOptions = .init(isActive: false, title: "Bookmark")
 
   // MARK: - Initialization
 
-  public init() {}
+  init() {}
 
   // MARK: - Update from Nitro Options
 
   /// Update options from NativeUpdateOptions
-  public func update(from options: NativeUpdateOptions) {
+  func update(from options: NativeUpdateOptions) {
     // Update jump intervals
     if let interval = options.forwardJumpInterval {
       forwardJumpInterval = interval
@@ -51,7 +51,7 @@ class PlayerUpdateOptions {
       case .first:
         // null - disable progress updates
         progressUpdateEventInterval = nil
-      case .second(let value):
+      case let .second(value):
         progressUpdateEventInterval = value
       }
     }
@@ -76,7 +76,7 @@ class PlayerUpdateOptions {
   }
 
   /// Convert to Nitro Options struct (full options with all required fields)
-  public func toOptions() -> Options {
+  func toOptions() -> Options {
     // Convert Double? to Variant_NullType_Double?
     let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
 
@@ -96,7 +96,7 @@ class PlayerUpdateOptions {
   }
 
   /// Convert to Nitro UpdateOptions struct (partial options for getOptions())
-  public func toUpdateOptions() -> UpdateOptions {
+  func toUpdateOptions() -> UpdateOptions {
     // Convert Double? to Variant_NullType_Double?
     let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
 

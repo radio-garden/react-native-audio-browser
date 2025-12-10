@@ -63,7 +63,7 @@ class SleepTimerManager {
     let sleepOnEnd = willSleepWhenCurrentItemReachesEnd
     let hasSleepTimerTime = sleepTimerTime > -1
 
-    if !hasSleepTimerTime && !sleepOnEnd { return nil }
+    if !hasSleepTimerTime, !sleepOnEnd { return nil }
 
     if hasSleepTimerTime {
       // Return time in milliseconds since epoch

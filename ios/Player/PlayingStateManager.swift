@@ -24,6 +24,6 @@ class PlayingStateManager {
   }
 
   func toPlayingState() -> PlayingState {
-    return PlayingState(playing: playing, buffering: buffering)
+    PlayingState(playing: playing, buffering: buffering)
   }
 }

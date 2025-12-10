@@ -25,7 +25,7 @@ class RemoteCommandController {
    - parameter remoteCommandCenter: The MPRemoteCommandCenter used. Default is `MPRemoteCommandCenter.shared()`
    - parameter callbacks: The callbacks to invoke for remote command events
    */
-  public init(
+  init(
     remoteCommandCenter: MPRemoteCommandCenter = MPRemoteCommandCenter.shared(),
     callbacks: TrackPlayerCallbacks? = nil
   ) {
@@ -165,21 +165,21 @@ class RemoteCommandController {
 
   // MARK: - Handlers
 
-  public lazy var handlePlayCommand: RemoteCommandHandler = handlePlayCommandDefault
-  public lazy var handlePauseCommand: RemoteCommandHandler = handlePauseCommandDefault
-  public lazy var handleStopCommand: RemoteCommandHandler = handleStopCommandDefault
-  public lazy var handleTogglePlayPauseCommand: RemoteCommandHandler =
+  lazy var handlePlayCommand: RemoteCommandHandler = handlePlayCommandDefault
+  lazy var handlePauseCommand: RemoteCommandHandler = handlePauseCommandDefault
+  lazy var handleStopCommand: RemoteCommandHandler = handleStopCommandDefault
+  lazy var handleTogglePlayPauseCommand: RemoteCommandHandler =
     handleTogglePlayPauseCommandDefault
-  public lazy var handleSkipForwardCommand: RemoteCommandHandler = handleSkipForwardCommandDefault
-  public lazy var handleSkipBackwardCommand: RemoteCommandHandler = handleSkipBackwardDefault
-  public lazy var handleChangePlaybackPositionCommand: RemoteCommandHandler =
+  lazy var handleSkipForwardCommand: RemoteCommandHandler = handleSkipForwardCommandDefault
+  lazy var handleSkipBackwardCommand: RemoteCommandHandler = handleSkipBackwardDefault
+  lazy var handleChangePlaybackPositionCommand: RemoteCommandHandler =
     handleChangePlaybackPositionCommandDefault
-  public lazy var handleNextTrackCommand: RemoteCommandHandler = handleNextTrackCommandDefault
-  public lazy var handlePreviousTrackCommand: RemoteCommandHandler =
+  lazy var handleNextTrackCommand: RemoteCommandHandler = handleNextTrackCommandDefault
+  lazy var handlePreviousTrackCommand: RemoteCommandHandler =
     handlePreviousTrackCommandDefault
-  public lazy var handleLikeCommand: RemoteCommandHandler = handleLikeCommandDefault
-  public lazy var handleDislikeCommand: RemoteCommandHandler = handleDislikeCommandDefault
-  public lazy var handleBookmarkCommand: RemoteCommandHandler = handleBookmarkCommandDefault
+  lazy var handleLikeCommand: RemoteCommandHandler = handleLikeCommandDefault
+  lazy var handleDislikeCommand: RemoteCommandHandler = handleDislikeCommandDefault
+  lazy var handleBookmarkCommand: RemoteCommandHandler = handleBookmarkCommandDefault
 
   private func handlePlayCommandDefault(event _: MPRemoteCommandEvent)
     -> MPRemoteCommandHandlerStatus
@@ -283,7 +283,7 @@ class RemoteCommandController {
   private func getRemoteCommandHandlerStatus(forError error: Error)
     -> MPRemoteCommandHandlerStatus
   {
-    return error is TrackPlayerError.QueueError
+    error is TrackPlayerError.QueueError
       ? MPRemoteCommandHandlerStatus.noSuchContent
       : MPRemoteCommandHandlerStatus.commandFailed
   }

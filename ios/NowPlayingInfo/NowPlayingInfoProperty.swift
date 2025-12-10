@@ -111,110 +111,110 @@ enum NowPlayingInfoProperty: NowPlayingInfoKeyValue {
   var key: String {
     switch self {
     case .collectionIdentifier:
-      return MPNowPlayingInfoCollectionIdentifier
+      MPNowPlayingInfoCollectionIdentifier
 
     case .availableLanguageOptions:
-      return MPNowPlayingInfoPropertyAvailableLanguageOptions
+      MPNowPlayingInfoPropertyAvailableLanguageOptions
 
     case .assetUrl:
-      return MPNowPlayingInfoPropertyAssetURL
+      MPNowPlayingInfoPropertyAssetURL
 
     case .chapterCount:
-      return MPNowPlayingInfoPropertyChapterCount
+      MPNowPlayingInfoPropertyChapterCount
 
     case .chapterNumber:
-      return MPNowPlayingInfoPropertyChapterNumber
+      MPNowPlayingInfoPropertyChapterNumber
 
     case .currentLanguageOptions:
-      return MPNowPlayingInfoPropertyCurrentLanguageOptions
+      MPNowPlayingInfoPropertyCurrentLanguageOptions
 
     case .defaultPlaybackRate:
-      return MPNowPlayingInfoPropertyDefaultPlaybackRate
+      MPNowPlayingInfoPropertyDefaultPlaybackRate
 
     case .elapsedPlaybackTime:
-      return MPNowPlayingInfoPropertyElapsedPlaybackTime
+      MPNowPlayingInfoPropertyElapsedPlaybackTime
 
     case .externalContentIdentifier:
-      return MPNowPlayingInfoPropertyExternalContentIdentifier
+      MPNowPlayingInfoPropertyExternalContentIdentifier
 
     case .externalUserProfileIdentifier:
-      return MPNowPlayingInfoPropertyExternalUserProfileIdentifier
+      MPNowPlayingInfoPropertyExternalUserProfileIdentifier
 
     case .isLiveStream:
-      return MPNowPlayingInfoPropertyIsLiveStream
+      MPNowPlayingInfoPropertyIsLiveStream
 
     case .mediaType:
-      return MPNowPlayingInfoPropertyMediaType
+      MPNowPlayingInfoPropertyMediaType
 
     case .playbackProgress:
-      return MPNowPlayingInfoPropertyPlaybackProgress
+      MPNowPlayingInfoPropertyPlaybackProgress
 
     case .playbackQueueCount:
-      return MPNowPlayingInfoPropertyPlaybackQueueCount
+      MPNowPlayingInfoPropertyPlaybackQueueCount
 
     case .playbackQueueIndex:
-      return MPNowPlayingInfoPropertyPlaybackQueueIndex
+      MPNowPlayingInfoPropertyPlaybackQueueIndex
 
     case .playbackRate:
-      return MPNowPlayingInfoPropertyPlaybackRate
+      MPNowPlayingInfoPropertyPlaybackRate
 
     case .serviceIdentifier:
-      return MPNowPlayingInfoPropertyServiceIdentifier
+      MPNowPlayingInfoPropertyServiceIdentifier
     }
   }
 
   var value: Any? {
     switch self {
     case let .collectionIdentifier(identifier):
-      return identifier
+      identifier
 
     case let .availableLanguageOptions(options):
-      return options
+      options
 
     case let .assetUrl(url):
-      return url
+      url
 
     case let .chapterCount(count):
-      return count != nil ? NSNumber(value: count!) : nil
+      count != nil ? NSNumber(value: count!) : nil
 
     case let .chapterNumber(number):
-      return number != nil ? NSNumber(value: number!) : nil
+      number != nil ? NSNumber(value: number!) : nil
 
     case let .currentLanguageOptions(options):
-      return options
+      options
 
     case let .defaultPlaybackRate(rate):
-      return rate != nil ? NSNumber(floatLiteral: rate!) : nil
+      rate != nil ? NSNumber(floatLiteral: rate!) : nil
 
     case let .elapsedPlaybackTime(time):
-      return time != nil ? NSNumber(floatLiteral: time!) : nil
+      time != nil ? NSNumber(floatLiteral: time!) : nil
 
     case let .externalContentIdentifier(id):
-      return id
+      id
 
     case let .externalUserProfileIdentifier(id):
-      return id
+      id
 
     case let .isLiveStream(status):
-      return status
+      status
 
     case let .mediaType(type):
-      return type != nil ? NSNumber(value: type!.rawValue) : nil
+      type != nil ? NSNumber(value: type!.rawValue) : nil
 
     case let .playbackProgress(progress):
-      return progress != nil ? NSNumber(value: progress!) : nil
+      progress != nil ? NSNumber(value: progress!) : nil
 
     case let .playbackQueueCount(count):
-      return count != nil ? NSNumber(value: count!) : nil
+      count != nil ? NSNumber(value: count!) : nil
 
     case let .playbackQueueIndex(index):
-      return index != nil ? NSNumber(value: index!) : nil
+      index != nil ? NSNumber(value: index!) : nil
 
     case let .playbackRate(rate):
-      return rate != nil ? NSNumber(floatLiteral: rate!) : nil
+      rate != nil ? NSNumber(floatLiteral: rate!) : nil
 
     case let .serviceIdentifier(id):
-      return id != nil ? NSString(string: id!) : nil
+      id != nil ? NSString(string: id!) : nil
     }
   }
 }

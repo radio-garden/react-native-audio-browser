@@ -34,7 +34,6 @@ protocol RouteEntry {
 /// - Constant segments > parameter segments > wildcards > tail wildcards
 /// - Most specific route wins
 final class SimpleRouter {
-
   /// Finds the best matching route for the given path.
   ///
   /// - Parameters:
@@ -81,7 +80,7 @@ final class SimpleRouter {
       }
 
       // Match all segments except the tail wildcard
-      for i in 0..<(patternSegments.count - 1) {
+      for i in 0 ..< (patternSegments.count - 1) {
         guard
           matchSingleSegment(
             patternSegment: patternSegments[i],
@@ -139,10 +138,10 @@ final class SimpleRouter {
     // - Base path length: segments count
     let specificity =
       (constantSegments * 1000)
-      + (parameterSegments * 100)
-      + (wildcardSegments * 10)
-      + (hasTailWildcard ? 1 : 0)
-      + patternSegments.count
+        + (parameterSegments * 100)
+        + (wildcardSegments * 10)
+        + (hasTailWildcard ? 1 : 0)
+        + patternSegments.count
 
     return RouteMatch(params: params, specificity: specificity)
   }
@@ -153,7 +152,7 @@ final class SimpleRouter {
     params: inout [String: String]
   ) -> Bool {
     // Parameter segment: {paramName}
-    if patternSegment.hasPrefix("{") && patternSegment.hasSuffix("}") {
+    if patternSegment.hasPrefix("{"), patternSegment.hasSuffix("}") {
       let paramName = String(patternSegment.dropFirst().dropLast())
       params[paramName] = pathSegment
       return true
@@ -174,7 +173,7 @@ final class SimpleRouter {
     parameterSegments: inout Int,
     wildcardSegments: inout Int
   ) {
-    if patternSegment.hasPrefix("{") && patternSegment.hasSuffix("}") {
+    if patternSegment.hasPrefix("{"), patternSegment.hasSuffix("}") {
       parameterSegments += 1
     } else if patternSegment == "*" {
       wildcardSegments += 1

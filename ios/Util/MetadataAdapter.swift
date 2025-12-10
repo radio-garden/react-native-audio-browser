@@ -8,7 +8,7 @@ class MetadataAdapter {
     metadata: [AVMetadataItem],
     forIdentifier: AVMetadataIdentifier
   ) -> String? {
-    return AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: forIdentifier).first?
+    AVMetadataItem.metadataItems(from: metadata, filteredByIdentifier: forIdentifier).first?
       .stringValue
   }
 

@@ -27,18 +27,18 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   public var description: String {
     switch self {
-    case .play: return "play"
-    case .pause: return "pause"
-    case .stop: return "stop"
-    case .togglePlayPause: return "togglePlayPause"
-    case .next: return "nextTrack"
-    case .previous: return "previousTrack"
-    case .changePlaybackPosition: return "changePlaybackPosition"
-    case .skipForward: return "skipForward"
-    case .skipBackward: return "skipBackward"
-    case .like: return "like"
-    case .dislike: return "dislike"
-    case .bookmark: return "bookmark"
+    case .play: "play"
+    case .pause: "pause"
+    case .stop: "stop"
+    case .togglePlayPause: "togglePlayPause"
+    case .next: "nextTrack"
+    case .previous: "previousTrack"
+    case .changePlaybackPosition: "changePlaybackPosition"
+    case .skipForward: "skipForward"
+    case .skipBackward: "skipBackward"
+    case .like: "like"
+    case .dislike: "dislike"
+    case .bookmark: "bookmark"
     }
   }
 
@@ -49,7 +49,7 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
    Don't use for associated values.
    */
   static func all() -> [RemoteCommand] {
-    return [
+    [
       .play,
       .pause,
       .stop,

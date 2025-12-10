@@ -21,15 +21,15 @@ extension TrackPlayerError.PlaybackError: LocalizedError {
   public var errorDescription: String? {
     switch self {
     case .failedToLoadKeyValue:
-      return "Failed to load audio track"
+      "Failed to load audio track"
     case let .invalidSourceUrl(url):
-      return "Invalid audio source URL: \(url)"
+      "Invalid audio source URL: \(url)"
     case .notConnectedToInternet:
-      return "No internet connection"
+      "No internet connection"
     case .playbackFailed:
-      return "Playback failed"
+      "Playback failed"
     case .trackWasUnplayable:
-      return "Track is not playable"
+      "Track is not playable"
     }
   }
 }
@@ -38,32 +38,31 @@ extension TrackPlayerError.QueueError: LocalizedError {
   public var errorDescription: String? {
     switch self {
     case .noCurrentItem:
-      return "No current track"
+      "No current track"
     case let .invalidIndex(index, message):
-      return "Invalid track index \(index): \(message)"
+      "Invalid track index \(index): \(message)"
     case .empty:
-      return "Queue is empty"
+      "Queue is empty"
     }
   }
 }
 
 // MARK: - Nitro PlaybackError Conversion
 
-extension TrackPlayerError.PlaybackError {
+public extension TrackPlayerError.PlaybackError {
   /// Converts to Nitro PlaybackError for JS callbacks
-  public func toNitroError() -> PlaybackError {
-    let code: String
-    switch self {
+  func toNitroError() -> PlaybackError {
+    let code = switch self {
     case .failedToLoadKeyValue:
-      code = "failed_to_load"
+      "failed_to_load"
     case .invalidSourceUrl:
-      code = "invalid_source_url"
+      "invalid_source_url"
     case .notConnectedToInternet:
-      code = "not_connected_to_internet"
+      "not_connected_to_internet"
     case .playbackFailed:
-      code = "playback_failed"
+      "playback_failed"
     case .trackWasUnplayable:
-      code = "track_unplayable"
+      "track_unplayable"
     }
     return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
   }

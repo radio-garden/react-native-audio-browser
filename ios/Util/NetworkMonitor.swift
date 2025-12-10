@@ -15,7 +15,7 @@ class NetworkMonitor {
       if oldValue != isOnline {
         DispatchQueue.main.async { [weak self] in
           guard let self else { return }
-          self.onChanged?(self.isOnline)
+          onChanged?(isOnline)
         }
       }
     }
@@ -49,7 +49,7 @@ class NetworkMonitor {
   /// Gets the current network connectivity state.
   /// - Returns: true if device is online, false otherwise
   func getOnline() -> Bool {
-    return isOnline
+    isOnline
   }
 
   /// Stops monitoring and cleans up resources.
