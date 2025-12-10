@@ -286,6 +286,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPlaybackRepeatModeChanged = value
     }
   
+  abstract var onPlaybackShuffleModeChanged: (enabled: Boolean) -> Unit
+  
+  private var onPlaybackShuffleModeChanged_cxx: Func_void_bool
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_bool_java(onPlaybackShuffleModeChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onPlaybackShuffleModeChanged = value
+    }
+  
   abstract var onSleepTimerChanged: (data: SleepTimer?) -> Unit
   
   private var onSleepTimerChanged_cxx: Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__
@@ -934,6 +948,14 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun setRepeatMode(mode: RepeatMode): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getShuffleEnabled(): Boolean
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setShuffleEnabled(enabled: Boolean): Unit
   
   @DoNotStrip
   @Keep

@@ -218,6 +218,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(bool /* enabled */)>
+  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_bool::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](bool enabled) mutable -> void {
+      swiftClosure.call(enabled);
+    };
+  }
+  
   // pragma MARK: std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>
   Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ create_Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__::fromUnsafe(swiftClosureWrapper);
@@ -311,14 +319,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     auto swiftClosure = AudioBrowser::Func_void_NowPlayingMetadata::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const NowPlayingMetadata& metadata) mutable -> void {
       swiftClosure.call(metadata);
-    };
-  }
-  
-  // pragma MARK: std::function<void(bool /* online */)>
-  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_bool::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](bool online) mutable -> void {
-      swiftClosure.call(online);
     };
   }
   

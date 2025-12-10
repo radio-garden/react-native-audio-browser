@@ -95,6 +95,7 @@ export interface AudioBrowser
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
   onPlaybackQueueChanged: (queue: Track[]) => void
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
+  onPlaybackShuffleModeChanged: (enabled: boolean) => void
   onSleepTimerChanged: (data: SleepTimerChangedEvent) => void
   onPlaybackChanged: (data: Playback) => void
   onRemoteBookmark: () => void
@@ -154,6 +155,8 @@ export interface AudioBrowser
   getPlayingState(): PlayingState
   getRepeatMode(): RepeatMode
   setRepeatMode(mode: RepeatMode): void
+  getShuffleEnabled(): boolean
+  setShuffleEnabled(enabled: boolean): void
   getPlaybackError(): PlaybackError | undefined
   retry(): void
   getSleepTimer(): SleepTimer

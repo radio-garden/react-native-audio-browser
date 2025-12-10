@@ -1766,6 +1766,28 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RepeatModeChangedEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::function<void(bool /* enabled */)>
+  /**
+   * Specialized version of `std::function<void(bool)>`.
+   */
+  using Func_void_bool = std::function<void(bool /* enabled */)>;
+  /**
+   * Wrapper class for a `std::function<void(bool / * enabled * /)>`, this can be used from Swift.
+   */
+  class Func_void_bool_Wrapper final {
+  public:
+    explicit Func_void_bool_Wrapper(std::function<void(bool /* enabled */)>&& func): _function(std::make_unique<std::function<void(bool /* enabled */)>>(std::move(func))) {}
+    inline void call(bool enabled) const noexcept {
+      _function->operator()(enabled);
+    }
+  private:
+    std::unique_ptr<std::function<void(bool /* enabled */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_bool_Wrapper wrap_Func_void_bool(Func_void_bool value) noexcept {
+    return Func_void_bool_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>
   /**
    * Wrapper struct for `std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>`.
@@ -2284,28 +2306,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline NowPlayingMetadata get_std__optional_NowPlayingMetadata_(const std::optional<NowPlayingMetadata>& optional) noexcept {
     return *optional;
-  }
-  
-  // pragma MARK: std::function<void(bool /* online */)>
-  /**
-   * Specialized version of `std::function<void(bool)>`.
-   */
-  using Func_void_bool = std::function<void(bool /* online */)>;
-  /**
-   * Wrapper class for a `std::function<void(bool / * online * /)>`, this can be used from Swift.
-   */
-  class Func_void_bool_Wrapper final {
-  public:
-    explicit Func_void_bool_Wrapper(std::function<void(bool /* online */)>&& func): _function(std::make_unique<std::function<void(bool /* online */)>>(std::move(func))) {}
-    inline void call(bool online) const noexcept {
-      _function->operator()(online);
-    }
-  private:
-    std::unique_ptr<std::function<void(bool /* online */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_bool_Wrapper wrap_Func_void_bool(Func_void_bool value) noexcept {
-    return Func_void_bool_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<EqualizerSettings>

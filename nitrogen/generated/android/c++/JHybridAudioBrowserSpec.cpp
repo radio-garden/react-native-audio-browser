@@ -243,6 +243,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JRepeatModeChangedEvent.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
+#include "JFunc_void_bool.hpp"
 #include <NitroModules/Null.hpp>
 #include "SleepTimerTime.hpp"
 #include "SleepTimerEndOfTrack.hpp"
@@ -315,7 +316,6 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "NowPlayingMetadata.hpp"
 #include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JNowPlayingMetadata.hpp"
-#include "JFunc_void_bool.hpp"
 #include "EqualizerSettings.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JEqualizerSettings.hpp"
@@ -709,6 +709,23 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RepeatModeChangedEvent::javaobject> /* onPlaybackRepeatModeChanged */)>("setOnPlaybackRepeatModeChanged_cxx");
     method(_javaPart, JFunc_void_RepeatModeChangedEvent_cxx::fromCpp(onPlaybackRepeatModeChanged));
+  }
+  std::function<void(bool /* enabled */)> JHybridAudioBrowserSpec::getOnPlaybackShuffleModeChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnPlaybackShuffleModeChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(bool /* enabled */)> {
+      if (__result->isInstanceOf(JFunc_void_bool_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_bool_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_bool, void(bool)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnPlaybackShuffleModeChanged(const std::function<void(bool /* enabled */)>& onPlaybackShuffleModeChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onPlaybackShuffleModeChanged */)>("setOnPlaybackShuffleModeChanged_cxx");
+    method(_javaPart, JFunc_void_bool_cxx::fromCpp(onPlaybackShuffleModeChanged));
   }
   std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> JHybridAudioBrowserSpec::getOnSleepTimerChanged() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__::javaobject>()>("getOnSleepTimerChanged_cxx");
@@ -1524,6 +1541,15 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setRepeatMode(RepeatMode mode) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JRepeatMode> /* mode */)>("setRepeatMode");
     method(_javaPart, JRepeatMode::fromCpp(mode));
+  }
+  bool JHybridAudioBrowserSpec::getShuffleEnabled() {
+    static const auto method = javaClassStatic()->getMethod<jboolean()>("getShuffleEnabled");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
+  void JHybridAudioBrowserSpec::setShuffleEnabled(bool enabled) {
+    static const auto method = javaClassStatic()->getMethod<void(jboolean /* enabled */)>("setShuffleEnabled");
+    method(_javaPart, enabled);
   }
   std::optional<PlaybackError> JHybridAudioBrowserSpec::getPlaybackError() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPlaybackError>()>("getPlaybackError");

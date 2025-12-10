@@ -21,6 +21,7 @@ import { useActiveTrack } from '../features/queue/activeTrack'
 import { useQueue } from '../features/queue/queue'
 import type { RepeatMode } from '../features/queue/repeatMode'
 import { useRepeatMode } from '../features/queue/repeatMode'
+import { useShuffle } from '../features/queue/shuffle'
 import type { NowPlayingMetadata } from '../features/metadata'
 import type { Track } from '../types'
 
@@ -42,6 +43,7 @@ interface DebugState {
   duration: number
   queue: string
   repeatMode: RepeatMode
+  shuffle: boolean
   options: Options
   online: boolean
   nowPlaying: NowPlayingMetadata | undefined
@@ -93,6 +95,7 @@ function useDebugState(): DebugState {
   const progress = useProgress()
   const queue = useQueue()
   const repeatMode = useRepeatMode()
+  const shuffle = useShuffle()
   const options = useOptions()
   const playbackError = usePlaybackError()
   const navigationError = useNavigationError()
@@ -110,6 +113,7 @@ function useDebugState(): DebugState {
     duration: Math.round(progress.duration),
     queue: queue.map((t) => t.src).join(', '),
     repeatMode,
+    shuffle,
     options,
     online,
     nowPlaying,

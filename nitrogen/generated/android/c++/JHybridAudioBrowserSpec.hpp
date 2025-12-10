@@ -88,6 +88,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnPlaybackQueueChanged(const std::function<void(const std::vector<Track>& /* queue */)>& onPlaybackQueueChanged) override;
     std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() override;
     void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) override;
+    std::function<void(bool /* enabled */)> getOnPlaybackShuffleModeChanged() override;
+    void setOnPlaybackShuffleModeChanged(const std::function<void(bool /* enabled */)>& onPlaybackShuffleModeChanged) override;
     std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() override;
     void setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) override;
     std::function<void(const Playback& /* data */)> getOnPlaybackChanged() override;
@@ -196,6 +198,8 @@ namespace margelo::nitro::audiobrowser {
     PlayingState getPlayingState() override;
     RepeatMode getRepeatMode() override;
     void setRepeatMode(RepeatMode mode) override;
+    bool getShuffleEnabled() override;
+    void setShuffleEnabled(bool enabled) override;
     std::optional<PlaybackError> getPlaybackError() override;
     void retry() override;
     std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() override;

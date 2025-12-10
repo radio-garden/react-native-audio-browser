@@ -17,6 +17,8 @@ public extension CarPlayNowPlayingButton {
    */
   init?(fromString string: String) {
     switch string {
+      case "shuffle":
+        self = .shuffle
       case "repeat":
         self = .repeat
       case "favorite":
@@ -33,6 +35,8 @@ public extension CarPlayNowPlayingButton {
    */
   var stringValue: String {
     switch self {
+      case .shuffle:
+        return "shuffle"
       case .repeat:
         return "repeat"
       case .favorite:

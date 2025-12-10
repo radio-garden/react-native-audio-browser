@@ -501,6 +501,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onPlaybackShuffleModeChanged: bridge.Func_void_bool {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_bool in
+        let __closureWrapper = Func_void_bool(self.__implementation.onPlaybackShuffleModeChanged)
+        return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onPlaybackShuffleModeChanged = { () -> (Bool) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
+        return { (__enabled: Bool) -> Void in
+          __wrappedFunction.call(__enabled)
+        }
+      }()
+    }
+  }
+  
   public final var onSleepTimerChanged: bridge.Func_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__ {
     @inline(__always)
     get {
@@ -1777,6 +1796,29 @@ open class HybridAudioBrowserSpec_cxx {
   public final func setRepeatMode(mode: Int32) -> bridge.Result_void_ {
     do {
       try self.__implementation.setRepeatMode(mode: margelo.nitro.audiobrowser.RepeatMode(rawValue: mode)!)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getShuffleEnabled() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.getShuffleEnabled()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setShuffleEnabled(enabled: Bool) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setShuffleEnabled(enabled: enabled)
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

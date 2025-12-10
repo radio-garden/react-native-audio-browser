@@ -416,18 +416,7 @@ export type BrowserConfiguration = {
   carPlayUpNextButton?: boolean
 
   /**
-   * Configure custom buttons on the CarPlay Now Playing screen.
-   *
-   * CarPlay allows up to 2 custom buttons to be displayed alongside the standard
-   * playback controls (play/pause, previous, next). These buttons appear in the
-   * Now Playing template.
-   *
-   * Available button types:
-   * - `'repeat'`: Cycles through repeat modes (off → track → queue → off)
-   *
-   * Note: Shuffle is not currently supported as it would require shuffling the queue
-   * which affects the underlying data structure. Consider implementing shuffle at
-   * the app level if needed.
+   * Configure buttons on the CarPlay Now Playing screen.
    *
    * @example
    * ```typescript
@@ -449,10 +438,10 @@ export type BrowserConfiguration = {
    * @example
    * ```typescript
    * // For audiobooks/podcasts
-   * carPlayNowPlayingRates: [0.75, 1.0, 1.25, 1.5, 2.0]
+   * carPlayNowPlayingRates: [0.75, 1, 1.25, 1.5, 2.0]
    *
    * // For music (no slow speeds)
-   * carPlayNowPlayingRates: [1.0, 1.25, 1.5, 2.0]
+   * carPlayNowPlayingRates: [1, 1.25, 1.5, 2.0]
    * ```
    *
    * @default [1.0, 1.5, 2.0]
@@ -464,10 +453,15 @@ export type BrowserConfiguration = {
 /**
  * Custom button types for CarPlay Now Playing screen.
  *
+ * - `'shuffle'`: Shuffle button that toggles shuffle mode on/off
  * - `'repeat'`: Repeat button that cycles through off → track → queue → off
  * - `'favorite'`: Heart button to toggle favorite state of current track
  * - `'playback-rate'`: Playback speed button that cycles through rate options
  *
  * @platform ios
  */
-export type CarPlayNowPlayingButton = 'repeat' | 'favorite' | 'playback-rate'
+export type CarPlayNowPlayingButton =
+  | 'shuffle'
+  | 'repeat'
+  | 'favorite'
+  | 'playback-rate'

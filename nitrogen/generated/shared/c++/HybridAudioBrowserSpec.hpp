@@ -204,6 +204,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnPlaybackQueueChanged(const std::function<void(const std::vector<Track>& /* queue */)>& onPlaybackQueueChanged) = 0;
       virtual std::function<void(const RepeatModeChangedEvent& /* data */)> getOnPlaybackRepeatModeChanged() = 0;
       virtual void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) = 0;
+      virtual std::function<void(bool /* enabled */)> getOnPlaybackShuffleModeChanged() = 0;
+      virtual void setOnPlaybackShuffleModeChanged(const std::function<void(bool /* enabled */)>& onPlaybackShuffleModeChanged) = 0;
       virtual std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() = 0;
       virtual void setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) = 0;
       virtual std::function<void(const Playback& /* data */)> getOnPlaybackChanged() = 0;
@@ -312,6 +314,8 @@ namespace margelo::nitro::audiobrowser {
       virtual PlayingState getPlayingState() = 0;
       virtual RepeatMode getRepeatMode() = 0;
       virtual void setRepeatMode(RepeatMode mode) = 0;
+      virtual bool getShuffleEnabled() = 0;
+      virtual void setShuffleEnabled(bool enabled) = 0;
       virtual std::optional<PlaybackError> getPlaybackError() = 0;
       virtual void retry() = 0;
       virtual std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() = 0;

@@ -41,6 +41,8 @@ interface Callbacks {
 
   fun onPlaybackRepeatModeChanged(event: RepeatMode)
 
+  fun onPlaybackShuffleModeChanged(enabled: Boolean)
+
   fun onPlaybackError(error: PlaybackError?)
 
   // Metadata events

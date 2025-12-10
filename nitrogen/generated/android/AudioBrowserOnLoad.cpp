@@ -34,6 +34,7 @@
 #include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_RepeatModeChangedEvent.hpp"
+#include "JFunc_void_bool.hpp"
 #include "JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__.hpp"
 #include "JFunc_void_Playback.hpp"
 #include "JFunc_void.hpp"
@@ -47,7 +48,6 @@
 #include "JFunc_void_Options.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFunc_void_NowPlayingMetadata.hpp"
-#include "JFunc_void_bool.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
 #include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
@@ -81,6 +81,7 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_PlaybackProgressUpdatedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_PlaybackQueueEndedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RepeatModeChangedEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_Playback_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
@@ -94,7 +95,6 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_Options_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_FavoriteChangedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_NowPlayingMetadata_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_BatteryWarningPendingChangedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::registerNatives();

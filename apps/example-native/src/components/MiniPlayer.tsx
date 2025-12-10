@@ -13,11 +13,13 @@ import {
   skipToPrevious,
   toggleActiveTrackFavorited,
   togglePlayback,
+  toggleShuffle,
   useActiveTrack,
   useEqualizerSettings,
   useNowPlaying,
   usePlaybackError,
   usePlayingState,
+  useShuffle,
   useSleepTimerActive
 } from 'react-native-audio-browser'
 
@@ -34,6 +36,7 @@ export function MiniPlayer({
   const nowPlaying = useNowPlaying()
   const playingState = usePlayingState()
   const playbackError = usePlaybackError()
+  const shuffleEnabled = useShuffle()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
 
@@ -64,17 +67,6 @@ export function MiniPlayer({
         </View>
       </View>
       <View style={styles.controls}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={toggleActiveTrackFavorited}
-        >
-          <Icon
-            name="heart"
-            size={20}
-            color="white"
-            iconStyle={track.favorited ? 'solid' : 'regular'}
-          />
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.controlButton}
           onPress={() => skipToPrevious()}
@@ -109,6 +101,25 @@ export function MiniPlayer({
             name="forward-step"
             size={20}
             color="white"
+            iconStyle="solid"
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={toggleActiveTrackFavorited}
+        >
+          <Icon
+            name="heart"
+            size={20}
+            color="white"
+            iconStyle={track.favorited ? 'solid' : 'regular'}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.controlButton} onPress={toggleShuffle}>
+          <Icon
+            name="shuffle"
+            size={20}
+            color={shuffleEnabled ? '#007AFF' : 'white'}
             iconStyle="solid"
           />
         </TouchableOpacity>

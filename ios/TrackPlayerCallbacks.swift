@@ -31,6 +31,9 @@ protocol TrackPlayerCallbacks: AnyObject {
   /// Called when the repeat mode changes.
   func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent)
 
+  /// Called when shuffle mode changes.
+  func playerDidChangeShuffleEnabled(_ enabled: Bool)
+
   /// Called when the player encounters an error.
   func playerDidError(_ event: PlaybackErrorEvent)
 

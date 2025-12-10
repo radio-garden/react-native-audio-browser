@@ -199,6 +199,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   }
 
   override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+    player.callbacks?.onPlaybackShuffleModeChanged(shuffleModeEnabled)
     player.playbackStateStore.shuffleEnabled = shuffleModeEnabled
   }
 

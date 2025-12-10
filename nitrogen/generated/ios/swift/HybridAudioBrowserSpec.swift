@@ -30,6 +30,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onPlaybackQueueEnded: (_ data: PlaybackQueueEndedEvent) -> Void { get set }
   var onPlaybackQueueChanged: (_ queue: [Track]) -> Void { get set }
   var onPlaybackRepeatModeChanged: (_ data: RepeatModeChangedEvent) -> Void { get set }
+  var onPlaybackShuffleModeChanged: (_ enabled: Bool) -> Void { get set }
   var onSleepTimerChanged: (_ data: SleepTimer?) -> Void { get set }
   var onPlaybackChanged: (_ data: Playback) -> Void { get set }
   var onRemoteBookmark: () -> Void { get set }
@@ -99,6 +100,8 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getPlayingState() throws -> PlayingState
   func getRepeatMode() throws -> RepeatMode
   func setRepeatMode(mode: RepeatMode) throws -> Void
+  func getShuffleEnabled() throws -> Bool
+  func setShuffleEnabled(enabled: Bool) throws -> Void
   func getPlaybackError() throws -> PlaybackError?
   func retry() throws -> Void
   func getSleepTimer() throws -> SleepTimer

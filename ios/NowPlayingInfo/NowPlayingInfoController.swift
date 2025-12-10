@@ -73,7 +73,7 @@ class NowPlayingInfoController {
   private func performUpdate() {
     let keys = _info.keys.sorted().joined(separator: ", ")
     let hasArtwork = _info[MPMediaItemPropertyArtwork] != nil
-    logger.debug("performUpdate: setting nowPlayingInfo with \(_info.count) keys (hasArtwork=\(hasArtwork)): \(keys)")
+    logger.debug("performUpdate: setting nowPlayingInfo with \(self._info.count) keys (hasArtwork=\(hasArtwork)): \(keys)")
     infoCenter.nowPlayingInfo = _info
   }
 

@@ -419,6 +419,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackRepeatModeChanged(const std::function<void(const RepeatModeChangedEvent& /* data */)>& onPlaybackRepeatModeChanged) noexcept override {
       _swiftPart.setOnPlaybackRepeatModeChanged(onPlaybackRepeatModeChanged);
     }
+    inline std::function<void(bool /* enabled */)> getOnPlaybackShuffleModeChanged() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackShuffleModeChanged();
+      return __result;
+    }
+    inline void setOnPlaybackShuffleModeChanged(const std::function<void(bool /* enabled */)>& onPlaybackShuffleModeChanged) noexcept override {
+      _swiftPart.setOnPlaybackShuffleModeChanged(onPlaybackShuffleModeChanged);
+    }
     inline std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)> getOnSleepTimerChanged() noexcept override {
       auto __result = _swiftPart.getOnSleepTimerChanged();
       return __result;
@@ -882,6 +889,20 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setRepeatMode(RepeatMode mode) override {
       auto __result = _swiftPart.setRepeatMode(static_cast<int>(mode));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline bool getShuffleEnabled() override {
+      auto __result = _swiftPart.getShuffleEnabled();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setShuffleEnabled(bool enabled) override {
+      auto __result = _swiftPart.setShuffleEnabled(std::forward<decltype(enabled)>(enabled));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

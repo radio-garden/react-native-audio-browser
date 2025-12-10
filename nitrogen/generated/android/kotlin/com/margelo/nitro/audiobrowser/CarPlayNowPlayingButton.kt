@@ -16,7 +16,8 @@ import com.facebook.proguard.annotations.DoNotStrip
 @DoNotStrip
 @Keep
 enum class CarPlayNowPlayingButton(@DoNotStrip @Keep val value: Int) {
-  REPEAT(0),
-  FAVORITE(1),
-  PLAYBACK_RATE(2);
+  SHUFFLE(0),
+  REPEAT(1),
+  FAVORITE(2),
+  PLAYBACK_RATE(3);
 }

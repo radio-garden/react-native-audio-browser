@@ -35,6 +35,23 @@ class TrackPlayer {
     }
   }
 
+  /// Whether shuffle mode is enabled.
+  /// When enabled, next/previous traverse the shuffle order instead of sequential order.
+  /// Like Media3, the shuffle order is pre-generated when tracks are added to the queue,
+  /// so toggling shuffle just changes how navigation works without reshuffling.
+  var shuffleEnabled: Bool = false {
+    didSet {
+      guard oldValue != shuffleEnabled else { return }
+      assertMainThread()
+
+      logger.debug("Shuffle \(self.shuffleEnabled ? "enabled" : "disabled"), order: \(self.shuffleOrder.shuffled)")
+      callbacks?.playerDidChangeShuffleEnabled(shuffleEnabled)
+    }
+  }
+
+  /// The shuffle order for randomized playback
+  private var shuffleOrder = ShuffleOrder()
+
   // MARK: - Queue Properties
 
   private func assertMainThread() {
@@ -58,28 +75,60 @@ class TrackPlayer {
   }
 
   /**
-   The upcoming tracks in the queue.
+   The upcoming tracks in playback order.
+   When shuffle is enabled, returns tracks in shuffled order.
    */
   var nextTracks: [Track] {
     assertMainThread()
-    guard currentIndex >= 0, currentIndex < tracks.count - 1 else { return [] }
+    guard currentIndex >= 0, currentIndex < tracks.count else { return [] }
+
+    if shuffleEnabled {
+      // Return tracks in shuffled order after current position
+      var result: [Track] = []
+      var index = currentIndex
+      while let nextIndex = shuffleOrder.getNextIndex(after: index) {
+        result.append(tracks[nextIndex])
+        index = nextIndex
+      }
+      return result
+    }
+
+    guard currentIndex < tracks.count - 1 else { return [] }
     return Array(tracks[currentIndex + 1 ..< tracks.count])
   }
 
   /**
-   The previous tracks held by the queue.
+   The previous tracks in playback order.
+   When shuffle is enabled, returns tracks in shuffled order.
    */
   var previousTracks: [Track] {
     assertMainThread()
+    guard currentIndex >= 0, currentIndex < tracks.count else { return [] }
+
+    if shuffleEnabled {
+      // Return tracks in shuffled order before current position
+      var result: [Track] = []
+      var index = currentIndex
+      while let prevIndex = shuffleOrder.getPreviousIndex(before: index) {
+        result.insert(tracks[prevIndex], at: 0)
+        index = prevIndex
+      }
+      return result
+    }
+
     guard currentIndex > 0 else { return [] }
     return Array(tracks[0 ..< currentIndex])
   }
 
   /**
-   Whether the current track is the last track in the queue.
+   Whether the current track is the last track in playback order.
+   When shuffle is enabled, this checks the shuffle order; otherwise, queue order.
    */
-  private var isLastTrack: Bool {
-    currentIndex == tracks.count - 1
+  private var isLastInPlaybackOrder: Bool {
+    if shuffleEnabled {
+      return shuffleOrder.isLast(currentIndex)
+    }
+    return currentIndex == tracks.count - 1
   }
 
   // MARK: - AVPlayer Properties (from AVPlayerWrapper)
@@ -283,7 +332,7 @@ class TrackPlayer {
 
       // Emit queue ended event when playback ends on the last track
       // This matches Android's behavior (TrackPlayer.kt:642-646)
-      if state == .ended, isLastTrack {
+      if state == .ended, isLastInPlaybackOrder {
         let event = PlaybackQueueEndedEvent(
           track: Double(currentIndex),
           position: currentTime
@@ -602,7 +651,7 @@ class TrackPlayer {
    - Playback rate
    */
   func updateNowPlayingPlaybackValues() {
-    logger.debug("updateNowPlayingPlaybackValues: duration=\(duration), rate=\(rate), currentTime=\(currentTime), playWhenReady=\(playWhenReady)")
+    logger.debug("updateNowPlayingPlaybackValues: duration=\(self.duration), rate=\(self.rate), currentTime=\(self.currentTime), playWhenReady=\(self.playWhenReady)")
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.duration(duration),
       NowPlayingInfoProperty.playbackRate(Double(rate)),
@@ -876,7 +925,7 @@ class TrackPlayer {
 
       if repeatMode == .track {
         replay()
-      } else if repeatMode == .queue || !isLastTrack {
+      } else if repeatMode == .queue || !isLastInPlaybackOrder {
         next()
       } else {
         state = .ended
@@ -944,7 +993,7 @@ class TrackPlayer {
   }
 
   func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
-    logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp: \(playbackLikelyToKeepUp), state=\(state.rawValue)")
+    logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp: \(playbackLikelyToKeepUp), state=\(self.state.rawValue)")
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       if playbackLikelyToKeepUp, state != .playing {
@@ -1013,6 +1062,10 @@ class TrackPlayer {
     tracks = newTracks
     currentIndex = clampedIndex
 
+    // Generate new shuffle order for the new queue
+    // Like Media3, this is a fresh randomized order - not reshuffled based on current track
+    shuffleOrder = ShuffleOrder(length: newTracks.count)
+
     // Handle playWhenReady and load the new track
     handlePlayWhenReady(playWhenReady) {
       handleCurrentTrackChanged()
@@ -1036,7 +1089,12 @@ class TrackPlayer {
     assertMainThread()
     guard !newTracks.isEmpty else { return }
     let wasEmpty = tracks.isEmpty
+    let insertIndex = tracks.count
     tracks.append(contentsOf: newTracks)
+
+    // Update shuffle order - inserts new items at random positions (like Media3)
+    shuffleOrder.insert(at: insertIndex, count: newTracks.count)
+
     if wasEmpty {
       // Use initialIndex, clamped to valid range
       currentIndex = max(0, min(initialIndex, tracks.count - 1))
@@ -1059,6 +1117,10 @@ class TrackPlayer {
       currentIndex += tracks.count
     }
     self.tracks.insert(contentsOf: tracks, at: index)
+
+    // Update shuffle order - inserts new items at random positions (like Media3)
+    shuffleOrder.insert(at: index, count: tracks.count)
+
     if wasEmpty {
       currentIndex = 0
       handleCurrentTrackChanged()
@@ -1069,19 +1131,10 @@ class TrackPlayer {
    Step to the next track in the queue.
    */
   func next() {
-    skipBy(1, wrap: repeatMode == .queue)
-  }
-
-  /**
-   Step to the previous track in the queue.
-   */
-  func previous() {
-    skipBy(-1, wrap: repeatMode == .queue)
-  }
-
-  private func skipBy(_ delta: Int, wrap: Bool) {
     assertMainThread()
     guard currentTrack != nil, !tracks.isEmpty else { return }
+
+    let wrap = repeatMode == .queue
 
     if tracks.count == 1 {
       if wrap, playWhenReady {
@@ -1090,13 +1143,65 @@ class TrackPlayer {
       return
     }
 
-    var index = currentIndex + delta
-    if wrap {
-      index = (index + tracks.count) % tracks.count
+    var newIndex: Int?
+    if shuffleEnabled {
+      // Use shuffle order for navigation
+      newIndex = shuffleOrder.getNextIndex(after: currentIndex)
+      if newIndex == nil {
+        // Wrap to start of shuffle order (same order, like Media3)
+        newIndex = shuffleOrder.firstIndex
+      }
+    } else {
+      // Sequential navigation
+      let nextIndex = currentIndex + 1
+      if nextIndex < tracks.count {
+        newIndex = nextIndex
+      } else if wrap {
+        newIndex = 0
+      }
     }
-    let newIndex = max(0, min(tracks.count - 1, index))
 
-    if newIndex != currentIndex {
+    if let newIndex, newIndex != currentIndex {
+      currentIndex = newIndex
+      handleCurrentTrackChanged()
+    }
+  }
+
+  /**
+   Step to the previous track in the queue.
+   */
+  func previous() {
+    assertMainThread()
+    guard currentTrack != nil, !tracks.isEmpty else { return }
+
+    let wrap = repeatMode == .queue
+
+    if tracks.count == 1 {
+      if wrap, playWhenReady {
+        replay()
+      }
+      return
+    }
+
+    var newIndex: Int?
+    if shuffleEnabled {
+      // Use shuffle order for navigation
+      newIndex = shuffleOrder.getPreviousIndex(before: currentIndex)
+      if newIndex == nil {
+        // Wrap to end of shuffle order (same order, like Media3)
+        newIndex = shuffleOrder.lastIndex
+      }
+    } else {
+      // Sequential navigation
+      let prevIndex = currentIndex - 1
+      if prevIndex >= 0 {
+        newIndex = prevIndex
+      } else if wrap {
+        newIndex = tracks.count - 1
+      }
+    }
+
+    if let newIndex, newIndex != currentIndex {
       currentIndex = newIndex
       handleCurrentTrackChanged()
     }
@@ -1112,7 +1217,11 @@ class TrackPlayer {
     assertMainThread()
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: index)
-    let result = tracks.remove(at: index)
+    tracks.remove(at: index)
+
+    // Update shuffle order
+    shuffleOrder.remove(from: index, to: index + 1)
+
     if index == currentIndex {
       currentIndex = tracks.count > 0 ? currentIndex % tracks.count : -1
       handleCurrentTrackChanged()

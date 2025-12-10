@@ -107,6 +107,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       routes = null,
       singleTrack = null,
       androidControllerOfflineError = null,
+      carPlayUpNextButton = null,
+      carPlayNowPlayingButtons = null,
+      carPlayNowPlayingRates = null,
     )
 
   internal val browserManager =
@@ -154,6 +157,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) -> Unit = {}
   override var onPlaybackQueueChanged: (queue: Array<Track>) -> Unit = {}
   override var onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) -> Unit = {}
+  override var onPlaybackShuffleModeChanged: (enabled: Boolean) -> Unit = {}
   override var onRemotePlay: (() -> Unit) = {}
   override var onRemotePlayId: (RemotePlayIdEvent) -> Unit = {}
   override var onRemotePlaySearch: (RemotePlaySearchEvent) -> Unit = {}
@@ -683,6 +687,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun setRepeatMode(mode: RepeatMode) = runBlockingOnMain { player.repeatMode = mode }
 
+  override fun getShuffleEnabled(): Boolean = runBlockingOnMain { player.shuffleMode }
+
+  override fun setShuffleEnabled(enabled: Boolean) = runBlockingOnMain { player.shuffleMode = enabled }
+
   override fun getPlaybackError(): PlaybackError? = runBlockingOnMain { player.playbackError }
 
   override fun retry() = runBlockingOnMain { player.prepare() }
@@ -977,6 +985,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       override fun onPlaybackRepeatModeChanged(event: RepeatMode) {
         post { this@AudioBrowser.onPlaybackRepeatModeChanged(RepeatModeChangedEvent(event)) }
+      }
+
+      override fun onPlaybackShuffleModeChanged(enabled: Boolean) {
+        post { this@AudioBrowser.onPlaybackShuffleModeChanged(enabled) }
       }
 
       override fun onPlaybackError(error: PlaybackError?) {

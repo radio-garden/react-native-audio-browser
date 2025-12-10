@@ -52,6 +52,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onPlaybackQueueChanged", &HybridAudioBrowserSpec::setOnPlaybackQueueChanged);
       prototype.registerHybridGetter("onPlaybackRepeatModeChanged", &HybridAudioBrowserSpec::getOnPlaybackRepeatModeChanged);
       prototype.registerHybridSetter("onPlaybackRepeatModeChanged", &HybridAudioBrowserSpec::setOnPlaybackRepeatModeChanged);
+      prototype.registerHybridGetter("onPlaybackShuffleModeChanged", &HybridAudioBrowserSpec::getOnPlaybackShuffleModeChanged);
+      prototype.registerHybridSetter("onPlaybackShuffleModeChanged", &HybridAudioBrowserSpec::setOnPlaybackShuffleModeChanged);
       prototype.registerHybridGetter("onSleepTimerChanged", &HybridAudioBrowserSpec::getOnSleepTimerChanged);
       prototype.registerHybridSetter("onSleepTimerChanged", &HybridAudioBrowserSpec::setOnSleepTimerChanged);
       prototype.registerHybridGetter("onPlaybackChanged", &HybridAudioBrowserSpec::getOnPlaybackChanged);
@@ -157,6 +159,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getPlayingState", &HybridAudioBrowserSpec::getPlayingState);
       prototype.registerHybridMethod("getRepeatMode", &HybridAudioBrowserSpec::getRepeatMode);
       prototype.registerHybridMethod("setRepeatMode", &HybridAudioBrowserSpec::setRepeatMode);
+      prototype.registerHybridMethod("getShuffleEnabled", &HybridAudioBrowserSpec::getShuffleEnabled);
+      prototype.registerHybridMethod("setShuffleEnabled", &HybridAudioBrowserSpec::setShuffleEnabled);
       prototype.registerHybridMethod("getPlaybackError", &HybridAudioBrowserSpec::getPlaybackError);
       prototype.registerHybridMethod("retry", &HybridAudioBrowserSpec::retry);
       prototype.registerHybridMethod("getSleepTimer", &HybridAudioBrowserSpec::getSleepTimer);

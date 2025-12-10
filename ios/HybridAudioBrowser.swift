@@ -113,6 +113,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   public var onPlaybackQueueEnded: (PlaybackQueueEndedEvent) -> Void = { _ in }
   public var onPlaybackQueueChanged: ([Track]) -> Void = { _ in }
   public var onPlaybackRepeatModeChanged: (RepeatModeChangedEvent) -> Void = { _ in }
+  public var onPlaybackShuffleModeChanged: (Bool) -> Void = { _ in }
   public var onSleepTimerChanged: (SleepTimer?) -> Void = { _ in }
   public var onPlaybackChanged: (Playback) -> Void = { _ in }
 
@@ -472,6 +473,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     onMainThread { player?.repeatMode = mode }
   }
 
+  public func getShuffleEnabled() throws -> Bool {
+    onMainThread { player?.shuffleEnabled ?? false }
+  }
+
+  public func setShuffleEnabled(enabled: Bool) throws {
+    onMainThread { player?.shuffleEnabled = enabled }
+  }
+
   public func getPlaybackError() throws -> PlaybackError? {
     onMainThread { player?.playbackError?.toNitroError() }
   }
@@ -786,6 +795,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
     onPlaybackRepeatModeChanged(event)
+  }
+
+  public func playerDidChangeShuffleEnabled(_ enabled: Bool) {
+    onPlaybackShuffleModeChanged(enabled)
   }
 
   public func playerDidError(_ event: PlaybackErrorEvent) {
