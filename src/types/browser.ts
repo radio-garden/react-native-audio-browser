@@ -416,7 +416,8 @@ export type BrowserConfiguration = {
   carPlayUpNextButton?: boolean
 
   /**
-   * Configure buttons on the CarPlay Now Playing screen.
+   * Configure up to 5 buttons on the CarPlay Now Playing screen. These buttons
+   * are arranged using the array order from left to right.
    *
    * @example
    * ```typescript
