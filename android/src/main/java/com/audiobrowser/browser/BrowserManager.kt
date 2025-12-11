@@ -92,8 +92,7 @@ class BrowserManager {
   private var favoriteIds = setOf<String>()
 
   // Navigation tracking to prevent race conditions
-  @Volatile
-  private var currentNavigationId = 0
+  @Volatile private var currentNavigationId = 0
 
   /**
    * Browser configuration containing routes, search, tabs, and request settings. This can be
@@ -369,8 +368,8 @@ class BrowserManager {
   }
 
   /**
-   * Invalidates the content cache for a specific path.
-   * Called when content at that path has changed (e.g., via notifyContentChanged).
+   * Invalidates the content cache for a specific path. Called when content at that path has changed
+   * (e.g., via notifyContentChanged).
    *
    * @param path The container path to invalidate (e.g., "/library/radio")
    * @throws IllegalArgumentException if passed a contextual URL (contains __trackId)
@@ -419,8 +418,10 @@ class BrowserManager {
                 var transformedTrack = track
 
                 // Generate contextual URLs for playable tracks
-                // Always regenerate to reflect the current browsing context, not the original context
-                // (e.g., a track favorited from an album should use /favorites context when browsed there)
+                // Always regenerate to reflect the current browsing context, not the original
+                // context
+                // (e.g., a track favorited from an album should use /favorites context when browsed
+                // there)
                 if (track.src != null) {
                   val contextualUrl = BrowserPathHelper.build(path, track.src)
                   transformedTrack = transformedTrack.copy(url = contextualUrl)
@@ -566,8 +567,8 @@ class BrowserManager {
   /**
    * Navigate to a path and return browser content.
    *
-   * Uses a navigation ID to prevent race conditions when multiple navigations
-   * overlap. Only the most recent navigation's result is applied.
+   * Uses a navigation ID to prevent race conditions when multiple navigations overlap. Only the
+   * most recent navigation's result is applied.
    *
    * @param path The path to navigate to (e.g., "/artists/123")
    * @return ResolvedTrack containing the navigation result
@@ -590,9 +591,9 @@ class BrowserManager {
   }
 
   /**
-   * Refresh the current path's content without changing navigation state.
-   * Used for background refreshes (e.g., when content changes via notifyContentChanged).
-   * Bypasses content cache to fetch fresh data. Errors are silently ignored.
+   * Refresh the current path's content without changing navigation state. Used for background
+   * refreshes (e.g., when content changes via notifyContentChanged). Bypasses content cache to
+   * fetch fresh data. Errors are silently ignored.
    *
    * Uses navigation ID tracking to prevent race conditions.
    */

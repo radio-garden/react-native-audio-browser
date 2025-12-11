@@ -703,7 +703,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getShuffleEnabled(): Boolean = runBlockingOnMain { player.shuffleMode }
 
-  override fun setShuffleEnabled(enabled: Boolean) = runBlockingOnMain { player.shuffleMode = enabled }
+  override fun setShuffleEnabled(enabled: Boolean) = runBlockingOnMain {
+    player.shuffleMode = enabled
+  }
 
   override fun getPlaybackError(): PlaybackError? = runBlockingOnMain { player.playbackError }
 

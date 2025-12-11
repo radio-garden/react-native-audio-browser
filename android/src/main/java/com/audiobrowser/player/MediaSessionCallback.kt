@@ -461,16 +461,15 @@ class MediaSessionCallback(private val player: Player) :
 
       // Wait for browser to be registered if it's not available yet
       val browserManager = player.awaitBrowser().browserManager
-      val result = browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+      val result =
+        browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
 
       // If this was a contextual URL expansion, track the source path
       if (mediaItems.size == 1) {
         val mediaId = mediaItems[0].mediaId
         if (BrowserPathHelper.isContextual(mediaId)) {
           val parentPath = BrowserPathHelper.stripTrackId(mediaId)
-          withContext(Dispatchers.Main) {
-            player.queueSourcePath = parentPath
-          }
+          withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
         }
       }
 
@@ -531,9 +530,7 @@ class MediaSessionCallback(private val player: Player) :
         // Track the source path if this was a contextual URL expansion
         if (BrowserPathHelper.isContextual(url)) {
           val parentPath = BrowserPathHelper.stripTrackId(url)
-          withContext(Dispatchers.Main) {
-            player.queueSourcePath = parentPath
-          }
+          withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
         }
 
         MediaSession.MediaItemsWithStartPosition(
