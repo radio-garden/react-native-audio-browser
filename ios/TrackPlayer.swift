@@ -651,6 +651,7 @@ class TrackPlayer {
       NowPlayingInfoProperty.playbackRate(actualRate),
       // defaultPlaybackRate is the configured rate - this is what CarPlay shows on the rate button
       NowPlayingInfoProperty.defaultPlaybackRate(Double(rate)),
+      NowPlayingInfoProperty.isLiveStream(track.live),
     ])
     loadArtworkForTrack(track)
   }

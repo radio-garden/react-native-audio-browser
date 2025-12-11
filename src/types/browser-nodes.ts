@@ -121,6 +121,12 @@ export interface Track {
    * Items must be contiguous to form a single group.
    */
   groupTitle?: string
+
+  /**
+   * Whether this track is a live stream. When true, displays a "live" indicator
+   * in iOS now playing interfaces.
+   */
+  live?: boolean
 }
 
 /**

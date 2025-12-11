@@ -610,6 +610,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
         childrenStyle: track.childrenStyle,
         favorited: favorited,
         groupTitle: track.groupTitle,
+        live: track.live,
       )
       onFavoriteChanged(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
       // Fire active track changed so useActiveTrack() hook updates UI

@@ -55,10 +55,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<TrackStyle> childrenStyle     SWIFT_PRIVATE;
     std::optional<bool> favorited     SWIFT_PRIVATE;
     std::optional<std::string> groupTitle     SWIFT_PRIVATE;
+    std::optional<bool> live     SWIFT_PRIVATE;
 
   public:
     Track() = default;
-    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style, std::optional<TrackStyle> childrenStyle, std::optional<bool> favorited, std::optional<std::string> groupTitle): url(url), src(src), artwork(artwork), artworkSource(artworkSource), title(title), subtitle(subtitle), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style), childrenStyle(childrenStyle), favorited(favorited), groupTitle(groupTitle) {}
+    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style, std::optional<TrackStyle> childrenStyle, std::optional<bool> favorited, std::optional<std::string> groupTitle, std::optional<bool> live): url(url), src(src), artwork(artwork), artworkSource(artworkSource), title(title), subtitle(subtitle), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style), childrenStyle(childrenStyle), favorited(favorited), groupTitle(groupTitle), live(live) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -85,7 +86,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::fromJSI(runtime, obj.getProperty(runtime, "style")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::fromJSI(runtime, obj.getProperty(runtime, "childrenStyle")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "favorited")),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "groupTitle"))
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "groupTitle")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "live"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::Track& arg) {
@@ -105,6 +107,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "childrenStyle", JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::toJSI(runtime, arg.childrenStyle));
       obj.setProperty(runtime, "favorited", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.favorited));
       obj.setProperty(runtime, "groupTitle", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.groupTitle));
+      obj.setProperty(runtime, "live", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.live));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -130,6 +133,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackStyle>>::canConvert(runtime, obj.getProperty(runtime, "childrenStyle"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "favorited"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "groupTitle"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "live"))) return false;
       return true;
     }
   };

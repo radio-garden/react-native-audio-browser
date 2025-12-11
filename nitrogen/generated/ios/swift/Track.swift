@@ -19,7 +19,7 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?) {
+  init(url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -101,6 +101,12 @@ public extension Track {
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = groupTitle {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = live {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -419,6 +425,30 @@ public extension Track {
       self.__groupTitle = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var live: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__live) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__live)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__live = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }

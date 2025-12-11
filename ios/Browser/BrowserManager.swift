@@ -162,6 +162,7 @@ final class BrowserManager {
       childrenStyle: track.childrenStyle,
       favorited: isFavorited,
       groupTitle: track.groupTitle,
+      live: track.live,
     )
   }
 
@@ -186,6 +187,7 @@ final class BrowserManager {
       childrenStyle: resolvedTrack.childrenStyle,
       favorited: resolvedTrack.favorited,
       groupTitle: resolvedTrack.groupTitle,
+      live: resolvedTrack.live,
     )
   }
 
@@ -327,6 +329,7 @@ final class BrowserManager {
         childrenStyle: resolvedTrack.childrenStyle,
         favorited: resolvedTrack.favorited,
         groupTitle: resolvedTrack.groupTitle,
+        live: resolvedTrack.live,
       )
     }
 
@@ -491,6 +494,7 @@ final class BrowserManager {
           childrenStyle: track.childrenStyle,
           favorited: track.favorited,
           groupTitle: track.groupTitle,
+          live: track.live,
         )
       }
 
@@ -514,6 +518,7 @@ final class BrowserManager {
             childrenStyle: transformedTrack.childrenStyle,
             favorited: transformedTrack.favorited,
             groupTitle: transformedTrack.groupTitle,
+            live: transformedTrack.live,
           )
         }
       }
@@ -548,6 +553,7 @@ final class BrowserManager {
         childrenStyle: nil,
         favorited: nil,
         groupTitle: nil,
+        live: nil,
       )
     }
 
@@ -610,6 +616,7 @@ final class BrowserManager {
       childrenStyle: nil,
       favorited: nil,
       groupTitle: nil,
+      live: nil,
     )
   }
 

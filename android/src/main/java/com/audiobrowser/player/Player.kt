@@ -758,6 +758,7 @@ class Player(internal val context: Context) {
         childrenStyle = currentTrack.childrenStyle,
         favorited = favorited,
         groupTitle = currentTrack.groupTitle,
+        live = currentTrack.live,
       )
 
     // Use buildUpon() on the existing MediaItem to update only the metadata

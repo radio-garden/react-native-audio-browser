@@ -159,6 +159,7 @@ class BrowserManager {
       childrenStyle = track.childrenStyle,
       favorited = true,
       groupTitle = track.groupTitle,
+      live = track.live,
     )
   }
 
@@ -738,6 +739,7 @@ class BrowserManager {
           childrenStyle = null,
           favorited = null,
           groupTitle = null,
+          live = null,
         )
 
       // Cache search results for getCachedSearchResults()
@@ -773,6 +775,7 @@ class BrowserManager {
           childrenStyle = null,
           favorited = null,
           groupTitle = null,
+          live = null,
         )
 
       return emptySearchResult

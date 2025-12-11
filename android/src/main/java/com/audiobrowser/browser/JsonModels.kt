@@ -26,6 +26,7 @@ data class JsonResolvedTrack(
   val style: String? = null,
   val childrenStyle: String? = null,
   val groupTitle: String? = null,
+  val live: Boolean? = null,
 )
 
 @Serializable
@@ -44,6 +45,7 @@ data class JsonTrack(
   val style: String? = null,
   val childrenStyle: String? = null,
   val groupTitle: String? = null,
+  val live: Boolean? = null,
 )
 
 /** Convert JSON models to Nitro types */
@@ -73,6 +75,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     childrenStyle = childrenStyle.toTrackStyle(),
     favorited = null,
     groupTitle = groupTitle,
+    live = live,
   )
 }
 
@@ -93,5 +96,6 @@ fun JsonTrack.toNitro(): Track {
     childrenStyle = childrenStyle.toTrackStyle(),
     favorited = null,
     groupTitle = groupTitle,
+    live = live,
   )
 }
