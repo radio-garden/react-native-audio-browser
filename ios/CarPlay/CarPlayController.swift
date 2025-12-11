@@ -30,9 +30,17 @@ public final class RNABCarPlayController: NSObject {
   /// (kept separate to avoid exposing CarPlay protocols to Obj-C header)
   private var nowPlayingObserver: NowPlayingObserver?
 
+  /// Helper object for CPInterfaceControllerDelegate conformance
+  private var interfaceDelegate: InterfaceControllerDelegate?
+
   /// Convenience accessor for browser config
   private var config: BrowserConfig {
     audioBrowser?.browserManager.config ?? BrowserConfig()
+  }
+
+  /// Checks if the given src matches the currently active (loaded) track
+  private func isActiveTrack(src: String) -> Bool {
+    audioBrowser?.getPlayer()?.currentTrack?.src == src
   }
 
   // MARK: - Initialization
@@ -52,6 +60,11 @@ public final class RNABCarPlayController: NSObject {
     isStarted = true
 
     logger.info("Starting CarPlay controller")
+
+    // Set up interface controller delegate for template lifecycle events
+    let delegate = InterfaceControllerDelegate(controller: self)
+    interfaceDelegate = delegate
+    interfaceController.delegate = delegate
 
     // Subscribe to browser content changes
     setupContentSubscriptions()
@@ -126,6 +139,15 @@ public final class RNABCarPlayController: NSObject {
     // Subscribe to external content changes (from notifyContentChanged)
     audioBrowser.onExternalContentChanged = { [weak self] path in
       self?.notifyContentChanged(path: path)
+    }
+
+    // Subscribe to active track changes (for playing indicator in lists)
+    let originalOnActiveTrackChanged = audioBrowser.onPlaybackActiveTrackChanged
+    audioBrowser.onPlaybackActiveTrackChanged = { [weak self, originalOnActiveTrackChanged] event in
+      originalOnActiveTrackChanged(event)
+      Task { @MainActor in
+        self?.handleActiveTrackChanged(event)
+      }
     }
   }
 
@@ -300,10 +322,13 @@ public final class RNABCarPlayController: NSObject {
     ]
 
     // Set accessory type based on whether track is browsable or playable
-    if track.src != nil {
-      // Playable track
+    if let src = track.src {
+      // Playable track - check if it's currently playing
       item.accessoryType = .none
-      item.isPlaying = false // Will be updated based on current playback
+      item.isPlaying = isActiveTrack(src: src)
+      if item.isPlaying {
+        logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
+      }
     } else if track.url != nil {
       // Browsable only - show disclosure indicator
       item.accessoryType = .disclosureIndicator
@@ -351,6 +376,14 @@ public final class RNABCarPlayController: NSObject {
     logger.info("Selected track: \(track.title)")
 
     guard let audioBrowser else {
+      completion()
+      return
+    }
+
+    // If this track is already loaded, resume playback and show Now Playing
+    if let src = track.src, isActiveTrack(src: src) {
+      try? audioBrowser.play()
+      showNowPlaying()
       completion()
       return
     }
@@ -658,6 +691,49 @@ public final class RNABCarPlayController: NSObject {
     refreshTemplatesForPath(content.url, with: content)
   }
 
+  @MainActor
+  private func handleActiveTrackChanged(_ event: PlaybackActiveTrackChangedEvent) {
+    logger.debug("handleActiveTrackChanged: \(event.lastTrack?.src ?? "nil") → \(event.track?.src ?? "nil")")
+    updatePlayingIndicators()
+  }
+
+  /// Updates the isPlaying state on all list items based on the current active track.
+  @MainActor
+  fileprivate func updatePlayingIndicators() {
+    var templates: [CPListTemplate] = []
+
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
+      for template in tabBar.templates {
+        if let listTemplate = template as? CPListTemplate {
+          templates.append(listTemplate)
+        }
+      }
+    }
+
+    if let topTemplate = interfaceController.topTemplate as? CPListTemplate,
+       !templates.contains(where: { $0 === topTemplate })
+    {
+      templates.append(topTemplate)
+    }
+
+    for template in templates {
+      for section in template.sections {
+        for item in section.items {
+          guard let listItem = item as? CPListItem,
+                let userInfo = listItem.userInfo as? [String: Any],
+                let itemSrc = userInfo["src"] as? String
+          else { continue }
+
+          let isPlaying = isActiveTrack(src: itemSrc)
+          if listItem.isPlaying != isPlaying {
+            logger.debug("Updating isPlaying for \(itemSrc): \(listItem.isPlaying) → \(isPlaying)")
+            listItem.isPlaying = isPlaying
+          }
+        }
+      }
+    }
+  }
+
   // MARK: - Public Content Notification
 
   /// Notifies CarPlay that content at the given path has changed and should be refreshed.
@@ -837,5 +913,24 @@ private extension RNABCarPlayController {
     )
 
     interfaceController.pushTemplate(template, animated: true, completion: nil)
+  }
+}
+
+// MARK: - CPInterfaceControllerDelegate
+
+/// Separate delegate class to avoid exposing CPInterfaceControllerDelegate to Obj-C header
+private final class InterfaceControllerDelegate: NSObject, CPInterfaceControllerDelegate {
+  private weak var controller: RNABCarPlayController?
+
+  init(controller: RNABCarPlayController) {
+    self.controller = controller
+    super.init()
+  }
+
+  func templateDidAppear(_ aTemplate: CPTemplate, animated _: Bool) {
+    // Update playing indicators when navigating back to a list template
+    if aTemplate is CPListTemplate {
+      controller?.updatePlayingIndicators()
+    }
   }
 }

@@ -87,4 +87,13 @@ class NowPlayingInfoController {
       infoCenter.nowPlayingInfo = nil
     }
   }
+
+  /// Sets the playback state (required for CarPlay Now Playing to show correct play/pause state)
+  func setPlaybackState(_ state: MPNowPlayingPlaybackState) {
+    infoQueue.async(flags: .barrier) { [weak self] in
+      guard let self else { return }
+      logger.debug("setPlaybackState: \(state.rawValue)")
+      infoCenter.playbackState = state
+    }
+  }
 }

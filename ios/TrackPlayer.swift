@@ -330,6 +330,8 @@ class TrackPlayer {
         if automaticallyUpdateNowPlayingInfo {
           updateNowPlayingPlaybackValues()
         }
+        // Update playback state for CarPlay Now Playing
+        updateNowPlayingPlaybackState()
       default: break
       }
 
@@ -673,6 +675,14 @@ class TrackPlayer {
       NowPlayingInfoProperty.defaultPlaybackRate(Double(rate)),
       NowPlayingInfoProperty.elapsedPlaybackTime(currentTime),
     ])
+  }
+
+  /// Updates the Now Playing playback state for CarPlay.
+  /// This is separate from playbackRate and required for CarPlay to show correct play/pause button.
+  private func updateNowPlayingPlaybackState() {
+    let state: MPNowPlayingPlaybackState = playWhenReady ? .playing : .paused
+    logger.debug("updateNowPlayingPlaybackState: \(state.rawValue) (playWhenReady=\(self.playWhenReady))")
+    nowPlayingInfoController.setPlaybackState(state)
   }
 
   func clear() {
