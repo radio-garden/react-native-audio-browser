@@ -325,7 +325,7 @@ public final class RNABCarPlayController: NSObject {
   ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
   private func createListItem(
     for track: Track,
-    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil
+    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil,
   ) -> CPListItem {
     let item = CPListItem(
       text: track.title,
@@ -651,7 +651,7 @@ public final class RNABCarPlayController: NSObject {
 
     let rateTemplate = CPListTemplate(
       title: "Playback Speed",
-      sections: [CPListSection(items: rateItems)]
+      sections: [CPListSection(items: rateItems)],
     )
     interfaceController.pushTemplate(rateTemplate, animated: true, completion: nil)
   }
@@ -659,9 +659,9 @@ public final class RNABCarPlayController: NSObject {
   /// Formats a playback rate for display (e.g., 1.0 -> "1x", 1.5 -> "1.5x")
   private func formatPlaybackRate(_ rate: Double) -> String {
     if rate == rate.rounded() {
-      return "\(Int(rate))x"
+      "\(Int(rate))x"
     } else {
-      return "\(rate)x"
+      "\(rate)x"
     }
   }
 
@@ -943,7 +943,8 @@ private extension RNABCarPlayController {
 
     // Update the Up Next template if it's currently visible
     guard let template = upNextTemplate,
-          let player = audioBrowser?.getPlayer() else {
+          let player = audioBrowser?.getPlayer()
+    else {
       return
     }
 
