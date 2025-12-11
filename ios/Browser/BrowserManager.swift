@@ -706,9 +706,13 @@ final class BrowserManager {
           userAgent: config.request?.userAgent,
         )
 
+        logger.debug("resolveMediaUrl: calling transform callback...")
         let outerPromise = transform(baseRequest, nil)
+        logger.debug("resolveMediaUrl: awaiting outer promise...")
         let innerPromise = try await outerPromise.await()
+        logger.debug("resolveMediaUrl: awaiting inner promise...")
         let transformedConfig = try await innerPromise.await()
+        logger.debug("resolveMediaUrl: transform complete")
 
         // Extract values immediately to Swift native types to avoid
         // memory corruption in Nitro's Swift-C++ bridge when the

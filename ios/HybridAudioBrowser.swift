@@ -804,6 +804,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     onPlaybackQueueEnded(event)
   }
 
+  public func playerDidChangeQueue(_ tracks: [Track]) {
+    onPlaybackQueueChanged(tracks)
+  }
+
   public func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
     onPlaybackRepeatModeChanged(event)
   }

@@ -72,7 +72,11 @@ class TrackPlayer {
   /**
    All tracks held by the queue.
    */
-  private(set) var tracks: [Track] = []
+  private(set) var tracks: [Track] = [] {
+    didSet {
+      callbacks?.playerDidChangeQueue(tracks)
+    }
+  }
 
   var currentTrack: Track? {
     assertMainThread()
@@ -1302,8 +1306,12 @@ class TrackPlayer {
     try throwIfIndexInvalid(index: fromIndex, name: "fromIndex")
     try throwIfIndexInvalid(index: toIndex, name: "toIndex", max: Int.max)
 
-    let track = tracks.remove(at: fromIndex)
-    tracks.insert(track, at: min(tracks.count, toIndex))
+    // Mutate a copy and assign once to trigger didSet only once
+    var newTracks = tracks
+    let track = newTracks.remove(at: fromIndex)
+    newTracks.insert(track, at: min(newTracks.count, toIndex))
+    tracks = newTracks
+
     if fromIndex == currentIndex {
       currentIndex = toIndex
       handleCurrentTrackChanged()

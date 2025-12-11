@@ -33,6 +33,9 @@ public final class RNABCarPlayController: NSObject {
   /// Helper object for CPInterfaceControllerDelegate conformance
   private var interfaceDelegate: InterfaceControllerDelegate?
 
+  /// Reference to the Up Next template for updating when queue changes
+  private weak var upNextTemplate: CPListTemplate?
+
   /// Convenience accessor for browser config
   private var config: BrowserConfig {
     audioBrowser?.browserManager.config ?? BrowserConfig()
@@ -147,6 +150,15 @@ public final class RNABCarPlayController: NSObject {
       originalOnActiveTrackChanged(event)
       Task { @MainActor in
         self?.handleActiveTrackChanged(event)
+      }
+    }
+
+    // Subscribe to queue changes (for Up Next list updates)
+    let originalOnQueueChanged = audioBrowser.onPlaybackQueueChanged
+    audioBrowser.onPlaybackQueueChanged = { [weak self, originalOnQueueChanged] tracks in
+      originalOnQueueChanged(tracks)
+      Task { @MainActor in
+        self?.handleQueueChanged(tracks)
       }
     }
   }
@@ -872,7 +884,6 @@ private extension RNABCarPlayController {
     }
 
     let tracks = player.tracks
-    let currentIndex = player.currentIndex
 
     guard !tracks.isEmpty else {
       logger.debug("No tracks in queue for Up Next")
@@ -881,7 +892,19 @@ private extension RNABCarPlayController {
 
     logger.info("Showing Up Next queue with \(tracks.count) tracks")
 
-    // Create list items for each track in the queue
+    let template = CPListTemplate(
+      title: "Up Next",
+      sections: [createUpNextSections(tracks: tracks, player: player)],
+    )
+
+    // Store reference for queue change updates
+    upNextTemplate = template
+
+    interfaceController.pushTemplate(template, animated: true, completion: nil)
+  }
+
+  /// Creates list items for the Up Next queue
+  func createUpNextSections(tracks: [Track], player: TrackPlayer) -> CPListSection {
     let items = tracks.enumerated().map { index, track -> CPListItem in
       createListItem(for: track) { [weak self] _, completion in
         self?.logger.info("Skipping to track at index \(index): \(track.title)")
@@ -893,13 +916,23 @@ private extension RNABCarPlayController {
         completion()
       }
     }
+    return CPListSection(items: items)
+  }
 
-    let template = CPListTemplate(
-      title: "Up Next",
-      sections: [CPListSection(items: items)],
-    )
+  /// Handles queue changes - updates Up Next list if visible
+  @MainActor
+  func handleQueueChanged(_ tracks: [Track]) {
+    // Update the Up Next button enabled state
+    updateNowPlayingButtonStates()
 
-    interfaceController.pushTemplate(template, animated: true, completion: nil)
+    // Update the Up Next template if it's currently visible
+    guard let template = upNextTemplate,
+          let player = audioBrowser?.getPlayer() else {
+      return
+    }
+
+    logger.debug("Queue changed, updating Up Next list with \(tracks.count) tracks")
+    template.updateSections([createUpNextSections(tracks: tracks, player: player)])
   }
 }
 
