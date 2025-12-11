@@ -122,6 +122,11 @@ public final class RNABCarPlayController: NSObject {
         self?.updateFavoriteButtonState(isFavorited: event.favorited)
       }
     }
+
+    // Subscribe to external content changes (from notifyContentChanged)
+    audioBrowser.onExternalContentChanged = { [weak self] path in
+      self?.notifyContentChanged(path: path)
+    }
   }
 
   // MARK: - Initial Interface
@@ -205,8 +210,9 @@ public final class RNABCarPlayController: NSObject {
       template.tabImage = defaultTabImage()
     }
 
-    // If track has a URL, resolve its content
+    // If track has a URL, resolve its content and store path for refresh
     if let url = track.url {
+      template.userInfo = ["path": url] as [String: Any]
       await loadContent(for: url, into: template)
     }
 
@@ -226,6 +232,11 @@ public final class RNABCarPlayController: NSObject {
     template.userInfo = ["path": path] as [String: Any]
 
     return template
+  }
+
+  /// Finds the path associated with a template, if any
+  private func getPath(from template: CPTemplate) -> String? {
+    (template.userInfo as? [String: Any])?["path"] as? String
   }
 
   private func createSections(from resolvedTrack: ResolvedTrack) -> [CPListSection] {
@@ -640,9 +651,73 @@ public final class RNABCarPlayController: NSObject {
   }
 
   @MainActor
-  private func handleContentChanged(_: ResolvedTrack?) {
-    // Update the current template if it matches the content path
-    // This is useful for refreshing content after favorites change, etc.
+  private func handleContentChanged(_ content: ResolvedTrack?) {
+    // This callback fires when the main browser's content changes.
+    // For CarPlay-specific refreshes (e.g., favorites), use notifyContentChanged instead.
+    guard let content else { return }
+    refreshTemplatesForPath(content.url, with: content)
+  }
+
+  // MARK: - Public Content Notification
+
+  /// Notifies CarPlay that content at the given path has changed and should be refreshed.
+  /// Called from HybridAudioBrowser.notifyContentChanged() to update CarPlay lists.
+  ///
+  /// - Parameter path: The path where content has changed (e.g., "/favorites")
+  @objc
+  public func notifyContentChanged(path: String) {
+    guard isStarted else { return }
+
+    Task { @MainActor in
+      await refreshContentForPath(path)
+    }
+  }
+
+  /// Fetches fresh content for a path and updates any matching CarPlay templates.
+  @MainActor
+  private func refreshContentForPath(_ path: String) async {
+    guard let audioBrowser else { return }
+
+    logger.debug("Refreshing CarPlay content for path: \(path)")
+
+    // Fetch fresh content (bypassing cache since content changed)
+    do {
+      let resolved = try await audioBrowser.browserManager.resolve(path, useCache: false)
+      refreshTemplatesForPath(path, with: resolved)
+    } catch {
+      logger.error("Failed to refresh content for \(path): \(error.localizedDescription)")
+    }
+  }
+
+  /// Updates all CarPlay templates that are displaying the given path.
+  @MainActor
+  private func refreshTemplatesForPath(_ path: String, with content: ResolvedTrack) {
+    logger.debug("Content changed for path: \(path)")
+
+    // Check if the root template is a tab bar and refresh matching tabs
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
+      for template in tabBar.templates {
+        guard let listTemplate = template as? CPListTemplate,
+              let templatePath = getPath(from: listTemplate),
+              templatePath == path
+        else { continue }
+
+        logger.info("Refreshing tab template for path: \(path)")
+        let sections = createSections(from: content)
+        listTemplate.updateSections(sections)
+      }
+    }
+
+    // Check if any template in the navigation stack matches the changed path
+    // The top template is the currently visible one
+    if let topTemplate = interfaceController.topTemplate as? CPListTemplate,
+       let templatePath = getPath(from: topTemplate),
+       templatePath == path
+    {
+      logger.info("Refreshing top template for path: \(path)")
+      let sections = createSections(from: content)
+      topTemplate.updateSections(sections)
+    }
   }
 
   // MARK: - Error Handling

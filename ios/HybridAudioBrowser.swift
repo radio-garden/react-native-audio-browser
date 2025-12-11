@@ -27,6 +27,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
     }
   }
 
+  // MARK: - Internal Callbacks (for CarPlay/external controllers)
+
+  /// Called when notifyContentChanged is invoked, allowing CarPlay to refresh its templates.
+  /// Set by CarPlayController during setup.
+  var onExternalContentChanged: ((String) -> Void)?
+
   // MARK: - Thread Safety
 
   /// Executes a closure on the main thread synchronously, returning its result.
@@ -303,7 +309,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   public func notifyContentChanged(path: String) throws {
     browserManager.invalidateContentCache(path)
-    // Re-resolve the path if it's the current path
+
+    // Notify external controllers (CarPlay) that content changed
+    onExternalContentChanged?(path)
+
+    // Re-resolve the path if it's the current browser path
     if browserManager.getPath() == path {
       Task {
         do {
