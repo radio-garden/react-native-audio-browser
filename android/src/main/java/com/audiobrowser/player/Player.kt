@@ -398,6 +398,13 @@ class Player(internal val context: Context) {
     get() = exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1
 
   /**
+   * The source path from which the current queue was expanded (e.g., from a contextual URL).
+   * Used to avoid re-expanding the queue when selecting tracks from the same source.
+   */
+  var queueSourcePath: String? = null
+    internal set
+
+  /**
    * Get track at index with bounds checking.
    *
    * @param index The index of the track to retrieve.
@@ -710,10 +717,12 @@ class Player(internal val context: Context) {
    * @param tracks The tracks to set as the new queue.
    * @param startIndex The index to start playback from (default: 0).
    * @param startPositionMs The position in milliseconds to start from (default: 0).
+   * @param sourcePath Optional path from which this queue was expanded (for contextual URL optimization).
    */
-  fun setQueue(tracks: Array<Track>, startIndex: Int = 0, startPositionMs: Long = 0) {
+  fun setQueue(tracks: Array<Track>, startIndex: Int = 0, startPositionMs: Long = 0, sourcePath: String? = null) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
     exoPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
+    queueSourcePath = sourcePath
     exoPlayer.prepare()
   }
 
@@ -962,6 +971,7 @@ class Player(internal val context: Context) {
 
   fun clear() {
     exoPlayer.clearMediaItems()
+    queueSourcePath = null
   }
 
   /**

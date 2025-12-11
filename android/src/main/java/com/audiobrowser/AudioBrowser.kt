@@ -483,6 +483,20 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             url != null && BrowserPathHelper.isContextual(url) -> {
               Timber.d("Navigating to contextual track URL: $url")
 
+              val parentPath = BrowserPathHelper.stripTrackId(url)
+              val trackId = BrowserPathHelper.extractTrackId(url)
+
+              // Check if queue already came from this parent path - just skip to the track
+              if (trackId != null && parentPath == player.queueSourcePath) {
+                val index = player.tracks.indexOfFirst { it.src == trackId }
+                if (index >= 0) {
+                  Timber.d("Queue already from $parentPath, skipping to index $index")
+                  player.skipTo(index)
+                  player.play()
+                  return@launch
+                }
+              }
+
               // Expand the queue from the contextual URL
               val expanded = browserManager.expandQueueFromContextualUrl(url)
 
@@ -494,7 +508,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
                 // Replace queue and seek to selected track
                 // Use internal player methods directly to avoid blocking on main thread
-                player.setQueue(tracks, startIndex)
+                player.setQueue(tracks, startIndex, sourcePath = parentPath)
                 player.play()
               } else {
                 // Fallback: just load the single track

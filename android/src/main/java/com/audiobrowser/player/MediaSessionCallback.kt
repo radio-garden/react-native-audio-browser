@@ -435,11 +435,46 @@ class MediaSessionCallback(private val player: Player) :
     )
 
     return scope.future {
+      // Check if this is a single contextual URL that matches the current queue source
+      if (mediaItems.size == 1) {
+        val mediaId = mediaItems[0].mediaId
+        if (BrowserPathHelper.isContextual(mediaId)) {
+          val parentPath = BrowserPathHelper.stripTrackId(mediaId)
+          val trackId = BrowserPathHelper.extractTrackId(mediaId)
+
+          // Check if queue already came from this parent path - just skip to the track
+          if (trackId != null && parentPath == player.queueSourcePath) {
+            val index = player.tracks.indexOfFirst { it.src == trackId }
+            if (index >= 0) {
+              Timber.d("Queue already from $parentPath, skipping to index $index")
+              // Return the existing queue items with the new start index
+              val existingItems = player.tracks.map { TrackFactory.toMedia3(it) }
+              return@future MediaSession.MediaItemsWithStartPosition(
+                existingItems,
+                index,
+                startPositionMs,
+              )
+            }
+          }
+        }
+      }
+
       // Wait for browser to be registered if it's not available yet
-      player
-        .awaitBrowser()
-        .browserManager
-        .resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+      val browserManager = player.awaitBrowser().browserManager
+      val result = browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
+
+      // If this was a contextual URL expansion, track the source path
+      if (mediaItems.size == 1) {
+        val mediaId = mediaItems[0].mediaId
+        if (BrowserPathHelper.isContextual(mediaId)) {
+          val parentPath = BrowserPathHelper.stripTrackId(mediaId)
+          withContext(Dispatchers.Main) {
+            player.queueSourcePath = parentPath
+          }
+        }
+      }
+
+      result
     }
   }
 
@@ -492,6 +527,15 @@ class MediaSessionCallback(private val player: Player) :
         Timber.d(
           "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
         )
+
+        // Track the source path if this was a contextual URL expansion
+        if (BrowserPathHelper.isContextual(url)) {
+          val parentPath = BrowserPathHelper.stripTrackId(url)
+          withContext(Dispatchers.Main) {
+            player.queueSourcePath = parentPath
+          }
+        }
+
         MediaSession.MediaItemsWithStartPosition(
           ImmutableList.copyOf(TrackFactory.toMedia3(tracks)),
           selectedIndex,
