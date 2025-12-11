@@ -699,8 +699,7 @@ final class BrowserManager {
           userAgent: config.request?.userAgent,
         )
 
-        // Call the JS transform function on main thread (required for Nitro JS callbacks)
-        let outerPromise = await MainActor.run { transform(baseRequest, nil) }
+        let outerPromise = transform(baseRequest, nil)
         let innerPromise = try await outerPromise.await()
         let transformedConfig = try await innerPromise.await()
 
