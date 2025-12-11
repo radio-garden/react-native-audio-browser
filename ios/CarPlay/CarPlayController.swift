@@ -886,7 +886,7 @@ private extension RNABCarPlayController {
       createListItem(for: track) { [weak self] _, completion in
         self?.logger.info("Skipping to track at index \(index): \(track.title)")
         do {
-          try player.skipTo(index)
+          try player.skipTo(index, playWhenReady: true)
         } catch {
           self?.logger.error("Failed to skip to track: \(error.localizedDescription)")
         }
