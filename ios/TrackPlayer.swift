@@ -70,6 +70,12 @@ class TrackPlayer {
   private(set) var currentIndex: Int = -1
 
   /**
+   The source path from which the current queue was expanded (e.g., from a contextual URL).
+   Used to avoid re-expanding the queue when selecting tracks from the same source.
+   */
+  private(set) var queueSourcePath: String?
+
+  /**
    All tracks held by the queue.
    */
   private(set) var tracks: [Track] = [] {
@@ -1080,8 +1086,9 @@ class TrackPlayer {
    - parameter tracks: The tracks to set as the new queue.
    - parameter initialIndex: The index to start at. Defaults to 0.
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
+   - parameter sourcePath: Optional path from which this queue was expanded (for contextual URL optimization).
    */
-  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil) {
+  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil, sourcePath: String? = nil) {
     assertMainThread()
     guard !newTracks.isEmpty else {
       clear()
@@ -1092,6 +1099,7 @@ class TrackPlayer {
     let clampedIndex = max(0, min(initialIndex, newTracks.count - 1))
     tracks = newTracks
     currentIndex = clampedIndex
+    queueSourcePath = sourcePath
 
     // Generate new shuffle order for the new queue
     // Like Media3, this is a fresh randomized order - not reshuffled based on current track
@@ -1337,6 +1345,7 @@ class TrackPlayer {
     guard currentIndex != -1 else { return }
     currentIndex = -1
     tracks.removeAll()
+    queueSourcePath = nil
     handleCurrentTrackChanged()
   }
 

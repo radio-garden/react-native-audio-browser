@@ -413,6 +413,22 @@ public final class RNABCarPlayController: NSObject {
 
     // Check if this is a contextual URL (playable-only track with queue context)
     if let url = track.url, BrowserPathHelper.isContextual(url) {
+      let parentPath = BrowserPathHelper.stripTrackId(url)
+      let trackId = BrowserPathHelper.extractTrackId(url)
+      let player = audioBrowser.getPlayer()
+
+      // Check if queue already came from this parent path - just skip to the track
+      if let trackId,
+         parentPath == player?.queueSourcePath,
+         let index = player?.tracks.firstIndex(where: { $0.src == trackId })
+      {
+        logger.debug("Queue already from \(parentPath), skipping to index \(index)")
+        try? player?.skipTo(index, playWhenReady: true)
+        showNowPlaying()
+        completion()
+        return
+      }
+
       Task {
         do {
           // Expand the queue from the contextual URL
@@ -421,7 +437,7 @@ public final class RNABCarPlayController: NSObject {
 
             await MainActor.run {
               // Replace queue and start at the selected track
-              audioBrowser.getPlayer()?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true)
+              audioBrowser.getPlayer()?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: parentPath)
 
               // Show now playing template
               self.showNowPlaying()

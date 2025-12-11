@@ -246,6 +246,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
     // Check if this is a contextual URL (playable-only track with queue context)
     if let url, BrowserPathHelper.isContextual(url) {
+      let parentPath = BrowserPathHelper.stripTrackId(url)
+      let trackId = BrowserPathHelper.extractTrackId(url)
+
+      // Check if queue already came from this parent path - just skip to the track
+      if let trackId,
+         parentPath == player?.queueSourcePath,
+         let index = player?.tracks.firstIndex(where: { $0.src == trackId })
+      {
+        logger.debug("Queue already from \(parentPath), skipping to index \(index)")
+        onMainThread {
+          try? player?.skipTo(index, playWhenReady: true)
+        }
+        return
+      }
+
       Task {
         do {
           // Expand the queue from the contextual URL
@@ -254,7 +269,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
             // Replace queue and start at the selected track (auto-play)
             await MainActor.run {
-              player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true)
+              player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: parentPath)
             }
           } else {
             // Fallback: just load the single track (auto-play)
