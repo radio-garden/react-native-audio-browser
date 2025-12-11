@@ -1344,6 +1344,11 @@ class TrackPlayer {
     // Reset end-of-track sleep timer when track changes
     sleepTimerManager.onTrackChanged()
 
+    // Clear any previous playback error when switching tracks
+    if playbackError != nil {
+      playbackError = nil
+    }
+
     let lastPosition = currentTime
     let shouldContinuePlayback = playWhenReady
     if let currentTrack {
@@ -1409,10 +1414,15 @@ class TrackPlayer {
   private func resolveAndLoadMedia(src: String, track: Track) {
     // If we have a resolver, use it asynchronously
     if let resolver = mediaUrlResolver {
-      Task { @MainActor in
+      // Don't use @MainActor for the entire Task - this can cause deadlocks
+      // when the JS callback needs to schedule work back on the main thread.
+      // Instead, only hop to main thread when we need to access/modify state.
+      Task {
         self.logger.debug("resolveAndLoadMedia: starting resolution for \(src)")
-        // Check that this track is still the current one
-        guard self.currentTrack?.src == track.src else {
+
+        // Check on main thread that this track is still the current one
+        let isCurrentTrack = await MainActor.run { self.currentTrack?.src == track.src }
+        guard isCurrentTrack else {
           self.logger.debug("Track changed during media resolution, skipping load")
           return
         }
@@ -1427,7 +1437,10 @@ class TrackPlayer {
           self.logger.debug("  userAgent: \(userAgent)")
         }
 
-        self.loadMediaWithResolvedUrl(resolved, track: track)
+        // Load on main thread
+        await MainActor.run {
+          self.loadMediaWithResolvedUrl(resolved, track: track)
+        }
       }
     } else {
       // No resolver, use src directly
