@@ -307,13 +307,20 @@ public final class RNABCarPlayController: NSObject {
     return sections
   }
 
-  private func createListItem(for track: Track) -> CPListItem {
+  /// Creates a CPListItem for a track with common setup (userInfo, artwork, isPlaying).
+  /// - Parameters:
+  ///   - track: The track to create the item for
+  ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
+  private func createListItem(
+    for track: Track,
+    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil
+  ) -> CPListItem {
     let item = CPListItem(
       text: track.title,
       detailText: track.subtitle ?? track.artist,
     )
 
-    // Store track info for selection handling
+    // Store track info for selection handling and updatePlayingIndicators()
     item.userInfo = [
       "url": track.url as Any,
       "src": track.src as Any,
@@ -348,8 +355,12 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Set selection handler
-    item.handler = { [weak self] _, completion in
-      self?.handleItemSelection(track: track, completion: completion)
+    if let handler {
+      item.handler = handler
+    } else {
+      item.handler = { [weak self] _, completion in
+        self?.handleItemSelection(track: track, completion: completion)
+      }
     }
 
     return item
@@ -872,29 +883,7 @@ private extension RNABCarPlayController {
 
     // Create list items for each track in the queue
     let items = tracks.enumerated().map { index, track -> CPListItem in
-      let item = CPListItem(
-        text: track.title,
-        detailText: track.subtitle ?? track.artist,
-      )
-
-      // Mark currently playing track
-      item.isPlaying = index == currentIndex
-
-      // Load artwork asynchronously
-      if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
-         let url = URL(string: artworkUrl)
-      {
-        Task { [weak self] in
-          if let image = await self?.loadImage(from: url) {
-            await MainActor.run {
-              item.setImage(image)
-            }
-          }
-        }
-      }
-
-      // Handler to skip to this track
-      item.handler = { [weak self] _, completion in
+      createListItem(for: track) { [weak self] _, completion in
         self?.logger.info("Skipping to track at index \(index): \(track.title)")
         do {
           try player.skipTo(index)
@@ -903,8 +892,6 @@ private extension RNABCarPlayController {
         }
         completion()
       }
-
-      return item
     }
 
     let template = CPListTemplate(
