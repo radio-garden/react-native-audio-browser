@@ -25,6 +25,9 @@ public final class RNABCarPlayController: NSObject {
   /// Track content subscriptions
   private var isStarted = false
 
+  /// Task for waiting on AudioBrowser initialization
+  private var initializationTask: Task<Void, Never>?
+
   /// Current navigation stack paths (for back navigation context)
   private var navigationStack: [String] = []
 
@@ -71,14 +74,15 @@ public final class RNABCarPlayController: NSObject {
     interfaceDelegate = delegate
     interfaceController.delegate = delegate
 
-    // Subscribe to browser content changes
-    setupContentSubscriptions()
+    // If AudioBrowser is already configured (warm start), set up subscriptions now
+    // Otherwise, they'll be set up after waiting in buildInitialInterface()
+    if audioBrowser?.isBrowserConfigured == true {
+      setupContentSubscriptions()
+      setupNowPlayingTemplate()
+    }
 
-    // Register as Now Playing observer for Up Next button
-    setupNowPlayingTemplate()
-
-    // Build initial interface
-    Task { @MainActor in
+    // Build initial interface (will wait for AudioBrowser if needed)
+    initializationTask = Task { @MainActor in
       await buildInitialInterface()
     }
   }
@@ -89,6 +93,10 @@ public final class RNABCarPlayController: NSObject {
     isStarted = false
 
     logger.info("Stopping CarPlay controller")
+
+    // Cancel any pending initialization
+    initializationTask?.cancel()
+    initializationTask = nil
 
     // Remove Now Playing observer
     if let observer = nowPlayingObserver {
@@ -188,8 +196,15 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func buildInitialInterface() async {
+    // If AudioBrowser isn't configured yet (cold start from CarPlay), wait for it
+    if audioBrowser == nil || audioBrowser?.isBrowserConfigured != true {
+      logger.debug("AudioBrowser not configured yet, waiting...")
+      showLoadingTemplate()
+      await waitForAudioBrowser()
+    }
+
     guard let audioBrowser else {
-      logger.error("AudioBrowser not available")
+      logger.error("AudioBrowser not available after waiting")
       showErrorTemplate(message: "Audio browser not initialized")
       return
     }
@@ -214,6 +229,34 @@ public final class RNABCarPlayController: NSObject {
         showErrorTemplate(message: "Failed to load content")
       }
     }
+  }
+
+  /// Waits for HybridAudioBrowser to be configured (cold start scenario)
+  @MainActor
+  private func waitForAudioBrowser() async {
+    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+      HybridAudioBrowser.onBrowserConfigured { [weak self] browser in
+        guard let self else {
+          continuation.resume()
+          return
+        }
+        logger.debug("AudioBrowser configured")
+        audioBrowser = browser
+        // Set up content subscriptions now that we have the browser
+        setupContentSubscriptions()
+        setupNowPlayingTemplate()
+        continuation.resume()
+      }
+    }
+  }
+
+  /// Shows a loading template while waiting for initialization
+  private func showLoadingTemplate() {
+    let template = CPListTemplate(
+      title: nil,
+      sections: [],
+    )
+    interfaceController.setRootTemplate(template, animated: false, completion: nil)
   }
 
   // MARK: - Tab Bar
