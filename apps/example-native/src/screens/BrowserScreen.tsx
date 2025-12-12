@@ -14,7 +14,7 @@ import {
   Track,
   useActiveTrack,
   useContent,
-  useNavigationError,
+  useFormattedNavigationError,
   usePath,
   useTabs
 } from 'react-native-audio-browser'
@@ -37,7 +37,7 @@ export function BrowserScreen() {
   const content = useContent()
   const activeTrack = useActiveTrack()
   const tabs = useTabs()
-  const navigationError = useNavigationError()
+  const navigationError = useFormattedNavigationError()
   const handleBrowserBack = useBrowserHistory()
   const [showEqualizer, setShowEqualizer] = useState(false)
   const [showSleepTimer, setShowSleepTimer] = useState(false)
