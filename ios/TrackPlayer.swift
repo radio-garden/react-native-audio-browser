@@ -510,6 +510,7 @@ class TrackPlayer: @unchecked Sendable {
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
   func load(_ track: Track, playWhenReady: Bool? = nil) {
+    assertMainThread()
     handlePlayWhenReady(playWhenReady) {
       replaceCurrentTrackWith(track)
     }
@@ -697,6 +698,7 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   func clear() {
+    assertMainThread()
     clearTracks()
     let playbackWasActive = playbackActive
     unloadAVPlayer()
@@ -1119,6 +1121,7 @@ class TrackPlayer: @unchecked Sendable {
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
   func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
+    assertMainThread()
     handlePlayWhenReady(playWhenReady) {
       add(tracks, initialIndex: initialIndex ?? 0)
     }
@@ -1277,6 +1280,7 @@ class TrackPlayer: @unchecked Sendable {
    - throws: `TrackPlayerError`
    */
   func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
+    assertMainThread()
     try handlePlayWhenReady(playWhenReady) {
       if index == currentIndex {
         seekTo(0)
