@@ -4,8 +4,8 @@ import Foundation
 /**
  Observes player item property changes and invokes callbacks passed at initialization.
  */
-class PlayerItemPropertyObserver: NSObject {
-  private static var context = 0
+final class PlayerItemPropertyObserver: NSObject, @unchecked Sendable {
+  nonisolated(unsafe) private static var context = 0
   private var currentMetadataOutput: AVPlayerItemMetadataOutput?
 
   private enum AVPlayerItemKeyPath {

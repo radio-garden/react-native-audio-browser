@@ -13,6 +13,7 @@ import os.log
 /// - Integrates with CPNowPlayingTemplate
 ///
 /// This class is exposed to Objective-C for use by RNABCarPlaySceneDelegate.
+@MainActor
 @objc(RNABCarPlayController)
 public final class RNABCarPlayController: NSObject {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayController")
@@ -109,8 +110,8 @@ public final class RNABCarPlayController: NSObject {
     let originalOnTabsChanged = audioBrowser.onTabsChanged
     audioBrowser.onTabsChanged = { [weak self, originalOnTabsChanged] tabs in
       originalOnTabsChanged(tabs)
-      Task { @MainActor in
-        self?.handleTabsChanged(tabs)
+      Task {
+        await self?.handleTabsChanged(tabs)
       }
     }
 
@@ -118,15 +119,15 @@ public final class RNABCarPlayController: NSObject {
     let originalOnContentChanged = audioBrowser.onContentChanged
     audioBrowser.onContentChanged = { [weak self, originalOnContentChanged] content in
       originalOnContentChanged(content)
-      Task { @MainActor in
-        self?.handleContentChanged(content)
+      Task {
+        await self?.handleContentChanged(content)
       }
     }
 
     // Subscribe to config changes (for Now Playing buttons)
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
-      Task { @MainActor in
-        self?.setupNowPlayingButtons()
+      Task {
+        await self?.setupNowPlayingButtons()
       }
     }
 
@@ -134,8 +135,8 @@ public final class RNABCarPlayController: NSObject {
     let originalOnFavoriteChanged = audioBrowser.onFavoriteChanged
     audioBrowser.onFavoriteChanged = { [weak self, originalOnFavoriteChanged] event in
       originalOnFavoriteChanged(event)
-      Task { @MainActor in
-        self?.updateFavoriteButtonState(isFavorited: event.favorited)
+      Task {
+        await self?.updateFavoriteButtonState(isFavorited: event.favorited)
       }
     }
 
@@ -148,8 +149,8 @@ public final class RNABCarPlayController: NSObject {
     let originalOnActiveTrackChanged = audioBrowser.onPlaybackActiveTrackChanged
     audioBrowser.onPlaybackActiveTrackChanged = { [weak self, originalOnActiveTrackChanged] event in
       originalOnActiveTrackChanged(event)
-      Task { @MainActor in
-        self?.handleActiveTrackChanged(event)
+      Task {
+        await self?.handleActiveTrackChanged(event)
       }
     }
 
@@ -157,8 +158,8 @@ public final class RNABCarPlayController: NSObject {
     let originalOnQueueChanged = audioBrowser.onPlaybackQueueChanged
     audioBrowser.onPlaybackQueueChanged = { [weak self, originalOnQueueChanged] tracks in
       originalOnQueueChanged(tracks)
-      Task { @MainActor in
-        self?.handleQueueChanged(tracks)
+      Task {
+        await self?.handleQueueChanged(tracks)
       }
     }
   }
@@ -870,17 +871,20 @@ public final class RNABCarPlayController: NSObject {
 
 /// Private helper class for CPNowPlayingTemplateObserver conformance.
 /// Kept separate from RNABCarPlayController to avoid exposing CarPlay protocols to Obj-C header.
-private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver {
+private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver, @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingObserver")
   private weak var controller: RNABCarPlayController?
 
+  @MainActor
   init(controller: RNABCarPlayController) {
     self.controller = controller
     super.init()
   }
 
   func nowPlayingTemplateUpNextButtonTapped(_: CPNowPlayingTemplate) {
-    controller?.handleUpNextButtonTapped()
+    Task { @MainActor in
+      controller?.handleUpNextButtonTapped()
+    }
   }
 
   func nowPlayingTemplateAlbumArtistButtonTapped(_: CPNowPlayingTemplate) {

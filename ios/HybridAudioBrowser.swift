@@ -4,13 +4,13 @@ import MediaPlayer
 import NitroModules
 import os.log
 
-public class HybridAudioBrowser: HybridAudioBrowserSpec {
+public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
 
   // MARK: - Shared Instance for CarPlay
 
   /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
-  private(set) weak static var shared: HybridAudioBrowser?
+  nonisolated(unsafe) private(set) weak static var shared: HybridAudioBrowser?
 
   // MARK: - Private Properties
 
@@ -37,7 +37,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
 
   /// Executes a closure on the main thread synchronously, returning its result.
   /// If already on main thread, executes directly.
-  private func onMainThread<T>(_ work: () -> T) -> T {
+  private func onMainThread<T>(_ work: @Sendable () -> T) -> T {
     if Thread.isMainThread {
       work()
     } else {
@@ -46,7 +46,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec {
   }
 
   /// Executes a throwing closure on the main thread synchronously.
-  private func onMainThread<T>(_ work: () throws -> T) throws -> T {
+  private func onMainThread<T>(_ work: @Sendable () throws -> T) throws -> T {
     if Thread.isMainThread {
       try work()
     } else {

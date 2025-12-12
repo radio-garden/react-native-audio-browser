@@ -3,7 +3,7 @@ import Network
 
 /// Monitors network connectivity state using NWPathMonitor.
 /// Notifies listeners when the connection state changes.
-class NetworkMonitor {
+final class NetworkMonitor: @unchecked Sendable {
   // MARK: - Properties
 
   private let monitor: NWPathMonitor

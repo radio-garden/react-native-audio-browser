@@ -30,7 +30,7 @@ enum BrowserError: Error {
 /// - HTTP API requests and response processing
 /// - JavaScript callback invocation
 /// - Fallback handling and error management
-final class BrowserManager {
+final class BrowserManager: @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "BrowserManager")
 
   // MARK: - Constants (match Kotlin companion object)

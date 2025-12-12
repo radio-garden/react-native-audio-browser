@@ -48,7 +48,7 @@ final class HttpClient {
   }
 
   /// HTTP exception (matches Kotlin HttpClient.HttpException).
-  class HttpException: Error {
+  final class HttpException: Error, Sendable {
     let code: Int
     let responseBody: String
 

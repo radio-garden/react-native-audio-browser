@@ -10,7 +10,7 @@ struct MediaResolvedUrl {
   let userAgent: String?
 }
 
-class TrackPlayer {
+class TrackPlayer: @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackPlayer")
 
   let nowPlayingInfoController: NowPlayingInfoController

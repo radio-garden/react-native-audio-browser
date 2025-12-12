@@ -4,8 +4,8 @@ import Foundation
 /**
  Observes player state changes and invokes callbacks passed at initialization.
  */
-class PlayerStateObserver: NSObject {
-  private static var context = 0
+final class PlayerStateObserver: NSObject {
+  nonisolated(unsafe) private static var context = 0
   private let main: DispatchQueue = .main
 
   private enum AVPlayerKeyPath {
