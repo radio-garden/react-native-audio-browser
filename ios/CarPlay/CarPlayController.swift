@@ -163,6 +163,23 @@ public final class RNABCarPlayController: NSObject {
         await self?.handleQueueChanged(tracks)
       }
     }
+
+    // Subscribe to navigation errors (from browser layer)
+    let originalOnNavigationError = audioBrowser.onNavigationError
+    audioBrowser.onNavigationError = { [weak self, originalOnNavigationError] event in
+      originalOnNavigationError(event)
+      Task {
+        await self?.handleNavigationError(event)
+      }
+    }
+  }
+
+  /// Handles navigation errors from the browser layer, displaying them in CarPlay
+  @MainActor
+  private func handleNavigationError(_ event: NavigationErrorEvent) {
+    guard let error = event.error else { return }
+    logger.warning("Navigation error: \(error.code.stringValue) - \(error.message)")
+    showNavigationError(error)
   }
 
   // MARK: - Initial Interface
@@ -472,25 +489,40 @@ public final class RNABCarPlayController: NSObject {
     }
     // If track has url, it's browsable - navigate to it
     else if let url = track.url {
-      Task {
-        do {
-          let resolved = try await audioBrowser.browserManager.resolve(url, useCache: true)
-
-          await MainActor.run {
-            let listTemplate = self.createListTemplate(for: resolved, path: url)
-            self.navigationStack.append(url)
-            self.interfaceController.pushTemplate(listTemplate, animated: true, completion: nil)
-            completion()
-          }
-        } catch {
-          logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
-          await MainActor.run {
-            completion()
-          }
-        }
-      }
+      navigateToUrl(url, completion: completion)
     } else {
       completion()
+    }
+  }
+
+  /// Navigates to a browsable URL path, showing error action sheet on failure with retry option.
+  private func navigateToUrl(_ url: String, completion: @escaping () -> Void) {
+    guard let audioBrowser else {
+      completion()
+      return
+    }
+
+    Task {
+      do {
+        let resolved = try await audioBrowser.browserManager.resolve(url, useCache: true)
+
+        await MainActor.run {
+          let listTemplate = self.createListTemplate(for: resolved, path: url)
+          self.navigationStack.append(url)
+          self.interfaceController.pushTemplate(listTemplate, animated: true, completion: nil)
+          completion()
+        }
+      } catch {
+        logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
+        await MainActor.run {
+          let navError = self.toNavigationError(error)
+          self.showNavigationError(navError) { [weak self] in
+            // Retry: attempt navigation again
+            self?.navigateToUrl(url, completion: {})
+          }
+          completion()
+        }
+      }
     }
   }
 
@@ -816,6 +848,55 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Error Handling
 
+  /// Shows a navigation error using CPActionSheetTemplate with Retry and OK actions.
+  /// - Parameters:
+  ///   - error: The NavigationError to display
+  ///   - retryAction: Optional closure to execute when user taps Retry
+  private func showNavigationError(_ error: NavigationError, retryAction: (() -> Void)? = nil) {
+    // Build error title based on error type
+    let title: String = switch error.code {
+    case .contentNotFound:
+      "Content Not Found"
+    case .networkError:
+      "Network Error"
+    case .httpError:
+      if let statusCode = error.statusCode {
+        "HTTP Error (\(Int(statusCode)))"
+      } else {
+        "HTTP Error"
+      }
+    case .unknownError:
+      "Error"
+    }
+
+    var actions: [CPAlertAction] = []
+
+    // Add Retry action if a retry handler is provided
+    if let retryAction {
+      let retry = CPAlertAction(title: "Retry", style: .default) { [weak self] _ in
+        self?.interfaceController.dismissTemplate(animated: true) { _, _ in
+          retryAction()
+        }
+      }
+      actions.append(retry)
+    }
+
+    // OK action - dismiss the action sheet
+    let ok = CPAlertAction(title: "OK", style: .cancel) { [weak self] _ in
+      self?.interfaceController.dismissTemplate(animated: true, completion: nil)
+    }
+    actions.append(ok)
+
+    let actionSheet = CPActionSheetTemplate(
+      title: title,
+      message: error.message,
+      actions: actions
+    )
+
+    interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
+  }
+
+  /// Shows a simple error template as root (for initialization errors when no other template exists)
   private func showErrorTemplate(message: String) {
     // CPAlertTemplate cannot be set as root - use a list template instead
     let errorItem = CPListItem(text: message, detailText: nil)
@@ -825,6 +906,24 @@ public final class RNABCarPlayController: NSObject {
       sections: [CPListSection(items: [errorItem])],
     )
     interfaceController.setRootTemplate(template, animated: true, completion: nil)
+  }
+
+  /// Converts a generic Error (typically BrowserError) to a NavigationError
+  private func toNavigationError(_ error: Error) -> NavigationError {
+    if let browserError = error as? BrowserError {
+      switch browserError {
+      case .contentNotFound:
+        return NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil)
+      case let .httpError(code, _):
+        return NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code))
+      case .networkError:
+        return NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil)
+      case .invalidConfiguration:
+        return NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil)
+      }
+    } else {
+      return NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil)
+    }
   }
 
   // MARK: - Image Loading
