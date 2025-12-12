@@ -2,6 +2,8 @@
 
 Ideas for future improvements that aren't urgent but worth considering.
 
+Note: FUTURE items are AI coauthored and can include incorrect or incomplete details
+
 ## Playback Resumption Cache
 
 Currently, playback resumption always resolves via the `browse` callback, which requires JS to be ready and potentially a network request.
@@ -505,6 +507,78 @@ notificationButtons: {
 - Icon resource registration
 - Custom session command handling
 - JS callback for button tap
+
+## Localized HTTP Status Code Strings (Android)
+
+iOS uses system-localized text via `HTTPURLResponse.localizedString(forStatusCode:)`, but Android has no equivalent. Currently uses English strings like "Not Found", "Service Unavailable".
+
+**Workaround:** Users can provide their own translations via `formatNavigationError` callback.
+
+**Potential solution:** Bundle localized strings for common HTTP status codes (401, 403, 404, 500, 502, 503, etc.) using Android's resources system.
+
+## Custom CarPlay Now Playing Buttons
+
+Allow users to create custom buttons beyond the predefined set (shuffle, repeat, favorite, playbackRate).
+
+**Potential API:**
+```typescript
+carPlayNowPlayingButtons: [
+  'shuffle',
+  'repeat',
+  { id: 'sleep-timer', icon: 'moon.zzz', handler: () => toggleSleepTimer() }
+]
+```
+
+**Implementation needs:**
+- SF Symbol name for icon
+- Handler callback to JS
+- Button state management (selected/unselected)
+
+## CarPlay Album/Artist Button
+
+Tap artist on Now Playing screen to search/browse related content.
+
+- Enable `CPNowPlayingTemplate.shared.isAlbumArtistButtonEnabled`
+- Implement `nowPlayingTemplateAlbumArtistButtonTapped` (stub exists in `NowPlayingObserver`)
+- Apple's sample: searches for artist name and auto-plays results
+- Our approach: search for artist and show results list (more user control)
+- Requires search to be configured in browser config
+
+## CarPlay Image Row Items
+
+Support `CPListImageRowItem` / `CPListImageRowItemCardElement` for list items with multiple images.
+
+**Use cases:**
+- Album row showing multiple cover arts
+- Playlist preview with track thumbnails
+- "Recently played" with visual history
+
+## CarPlay Grid Template
+
+Support `CPGridButton` / `CPGridTemplate` for grid-based navigation with image buttons.
+
+**Use cases:**
+- Genre/mood selection screens
+- Quick access shortcuts
+- Visual category browsing
+
+## notifyContentChanged Wildcard Support
+
+Allow patterns to invalidate multiple paths at once.
+
+**Potential API:**
+```typescript
+// Invalidate all favorites sub-paths
+notifyContentChanged('/favorites/*')
+
+// Invalidate everything
+notifyContentChanged('*')
+
+// Current behavior (single path)
+notifyContentChanged('/favorites')
+```
+
+**Implementation:** Pattern matching in native code before refreshing templates.
 
 ## Keyboard Controls Documentation
 
