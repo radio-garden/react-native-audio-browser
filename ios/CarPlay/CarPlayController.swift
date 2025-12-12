@@ -1,8 +1,8 @@
 import CarPlay
 import Foundation
-import Kingfisher
 import NitroModules
 import os.log
+import SDWebImage
 
 /// Controller managing CarPlay templates and navigation.
 ///
@@ -237,10 +237,14 @@ public final class RNABCarPlayController: NSObject {
     // Set tab image - CarPlay requires an image for proper tab display
     if let artwork = track.artwork, let url = URL(string: artwork) {
       template.tabImage = defaultTabImage()
-      // Load and cache image asynchronously via Kingfisher, then update tab
-      KingfisherManager.shared.retrieveImage(with: url) { [weak template] result in
-        if case let .success(imageResult) = result {
-          template?.tabImage = imageResult.image
+      // Load and cache image asynchronously via SDWebImage, then update tab
+      SDWebImageManager.shared.loadImage(
+        with: url,
+        options: [.retryFailed],
+        progress: nil
+      ) { [weak template] image, _, _, _, _, _ in
+        if let image {
+          template?.tabImage = image
         }
       }
     } else {
@@ -357,11 +361,11 @@ public final class RNABCarPlayController: NSObject {
       item.accessoryType = .disclosureIndicator
     }
 
-    // Load artwork asynchronously with caching via Kingfisher
+    // Load artwork asynchronously with caching via SDWebImage
     if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
        let url = URL(string: artworkUrl)
     {
-      item.kf.setImage(with: url)
+      item.sd_setImage(with: url)
     }
 
     // Set selection handler
