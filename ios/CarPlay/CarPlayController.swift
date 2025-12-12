@@ -620,7 +620,7 @@ public final class RNABCarPlayController: NSObject {
     // Button appearance is updated via onFavoriteChanged subscription
   }
 
-  /// Handles playback rate button tap - shows a list of available rates
+  /// Handles playback rate button tap - cycles through available rates
   private func handlePlaybackRateButtonTapped() {
     guard let player = audioBrowser?.getPlayer() else { return }
 
@@ -628,39 +628,20 @@ public final class RNABCarPlayController: NSObject {
     guard !rates.isEmpty else { return }
 
     let currentRate = Double(player.rate)
+    let nextRate: Double
 
-    // Create list items for each rate option
-    let rateItems: [CPListItem] = rates.map { rate in
-      let isSelected = (rate - currentRate).magnitude < 0.01
-      let title = formatPlaybackRate(rate)
-      let listItem = CPListItem(text: title, detailText: isSelected ? "Current" : nil)
-      listItem.handler = { [weak self] _, completion in
-        guard let self else {
-          completion()
-          return
-        }
-        player.rate = Float(rate)
-        logger.info("CarPlay playback rate changed: \(currentRate) → \(rate)")
-        interfaceController.popTemplate(animated: true) { _, _ in }
-        completion()
-      }
-      return listItem
-    }
-
-    let rateTemplate = CPListTemplate(
-      title: "Playback Speed",
-      sections: [CPListSection(items: rateItems)],
-    )
-    interfaceController.pushTemplate(rateTemplate, animated: true, completion: nil)
-  }
-
-  /// Formats a playback rate for display (e.g., 1.0 -> "1x", 1.5 -> "1.5x")
-  private func formatPlaybackRate(_ rate: Double) -> String {
-    if rate == rate.rounded() {
-      "\(Int(rate))x"
+    // Find current rate index and cycle to next
+    if let currentIndex = rates.firstIndex(where: { (currentRate - $0).magnitude < 0.01 }) {
+      // Current rate is in the list - cycle to next
+      let nextIndex = (currentIndex + 1) % rates.count
+      nextRate = rates[nextIndex]
     } else {
-      "\(rate)x"
+      // Current rate not in list - find first rate greater than current, or wrap to first
+      nextRate = rates.first { $0 > currentRate } ?? rates[0]
     }
+
+    player.rate = Float(nextRate)
+    logger.info("CarPlay playback rate changed: \(currentRate) → \(nextRate)")
   }
 
   /// Updates the favorite button appearance based on current track's favorite state
