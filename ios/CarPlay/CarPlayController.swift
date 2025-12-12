@@ -516,10 +516,7 @@ public final class RNABCarPlayController: NSObject {
         logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
         await MainActor.run {
           let navError = self.toNavigationError(error)
-          self.showNavigationError(navError) { [weak self] in
-            // Retry: attempt navigation again
-            self?.navigateToUrl(url, completion: {})
-          }
+          self.showNavigationError(navError)
           completion()
         }
       }
@@ -848,52 +845,101 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Error Handling
 
-  /// Shows a navigation error using CPActionSheetTemplate with Retry and OK actions.
-  /// - Parameters:
-  ///   - error: The NavigationError to display
-  ///   - retryAction: Optional closure to execute when user taps Retry
-  private func showNavigationError(_ error: NavigationError, retryAction: (() -> Void)? = nil) {
-    // Build error title based on error type
-    let title: String = switch error.code {
-    case .contentNotFound:
-      "Content Not Found"
-    case .networkError:
-      "Network Error"
-    case .httpError:
-      if let statusCode = error.statusCode {
-        "HTTP Error (\(Int(statusCode)))"
-      } else {
-        "HTTP Error"
-      }
-    case .unknownError:
-      "Error"
-    }
-
-    var actions: [CPAlertAction] = []
-
-    // Add Retry action if a retry handler is provided
-    if let retryAction {
-      let retry = CPAlertAction(title: "Retry", style: .default) { [weak self] _ in
-        self?.interfaceController.dismissTemplate(animated: true) { _, _ in
-          retryAction()
+  /// Shows a navigation error using CPActionSheetTemplate.
+  /// - Parameter error: The NavigationError to display
+  private func showNavigationError(_ error: NavigationError) {
+    // Check if custom formatter is configured
+    logger.debug("showNavigationError: formatNavigationError is \(self.config.formatNavigationError != nil ? "set" : "nil")")
+    if let formatter = config.formatNavigationError {
+      logger.debug("Calling formatNavigationError callback...")
+      // Call the JS callback and handle result
+      formatter(error)
+        .then { [weak self] customDisplay in
+          self?.logger.debug("formatNavigationError returned: \(String(describing: customDisplay))")
+          self?.presentErrorActionSheet(error: error, customDisplay: customDisplay)
         }
-      }
-      actions.append(retry)
+        .catch { [weak self] callbackError in
+          self?.logger.error("formatNavigationError failed: \(callbackError)")
+          // On error, fall back to defaults
+          self?.presentErrorActionSheet(error: error, customDisplay: nil)
+        }
+    } else {
+      presentErrorActionSheet(error: error, customDisplay: nil)
+    }
+  }
+
+  /// Presents the error action sheet with the given display info.
+  /// - Parameters:
+  ///   - error: The NavigationError (used for default title/message if customDisplay is nil)
+  ///   - customDisplay: Optional custom display from formatNavigationError callback
+  private func presentErrorActionSheet(
+    error: NavigationError,
+    customDisplay: FormattedNavigationError?
+  ) {
+    // Can only present action sheet if a root template exists
+    guard interfaceController.rootTemplate != nil else {
+      logger.warning("Cannot present error action sheet - no root template set")
+      return
     }
 
-    // OK action - dismiss the action sheet
-    let ok = CPAlertAction(title: "OK", style: .cancel) { [weak self] _ in
+    // If another template is already presented, dismiss it first
+    if interfaceController.presentedTemplate != nil {
+      interfaceController.dismissTemplate(animated: false) { [weak self] _, _ in
+        self?.showErrorActionSheet(error: error, customDisplay: customDisplay)
+      }
+    } else {
+      showErrorActionSheet(error: error, customDisplay: customDisplay)
+    }
+  }
+
+  /// Actually shows the error action sheet (called after safety checks)
+  private func showErrorActionSheet(
+    error: NavigationError,
+    customDisplay: FormattedNavigationError?
+  ) {
+    // Use custom display if provided, otherwise fall back to defaults
+    let title: String
+    let message: String
+
+    if let customDisplay {
+      title = customDisplay.title
+      message = customDisplay.message
+    } else {
+      // Default English titles based on error type
+      title = switch error.code {
+      case .contentNotFound:
+        "Content Not Found"
+      case .networkError:
+        "Network Error"
+      case .httpError:
+        httpErrorTitle(statusCode: error.statusCode.map { Int($0) })
+      case .callbackError:
+        "Error"
+      case .unknownError:
+        "Error"
+      }
+      message = error.message
+    }
+
+    // OK action - dismiss the action sheet (use system-localized "OK")
+    let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
+    let ok = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
       self?.interfaceController.dismissTemplate(animated: true, completion: nil)
     }
-    actions.append(ok)
 
     let actionSheet = CPActionSheetTemplate(
       title: title,
-      message: error.message,
-      actions: actions
+      message: message,
+      actions: [ok]
     )
 
     interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
+  }
+
+  /// Returns a localized title for HTTP errors based on status code
+  private func httpErrorTitle(statusCode: Int?) -> String {
+    guard let code = statusCode else { return "Server Error" }
+    return HTTPURLResponse.localizedString(forStatusCode: code).capitalized
   }
 
   /// Shows a simple error template as root (for initialization errors when no other template exists)
@@ -913,16 +959,24 @@ public final class RNABCarPlayController: NSObject {
     if let browserError = error as? BrowserError {
       switch browserError {
       case .contentNotFound:
-        return NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil)
+        return NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case let .httpError(code, _):
-        return NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code))
+        return NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
       case .networkError:
-        return NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil)
+        return NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
-        return NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil)
+        return NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+      case .callbackError:
+        return NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       }
+    } else if let httpError = error as? HttpClient.HttpException {
+      // HTTP error from HttpClient (non-2xx response)
+      return NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
+    } else if error is URLError {
+      // Network error (connection failed, timeout, no internet, etc.)
+      return NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     } else {
-      return NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil)
+      return NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     }
   }
 

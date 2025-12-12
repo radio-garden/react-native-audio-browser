@@ -6,7 +6,7 @@ import type {
   BatteryWarningPendingChangedEvent,
   FavoriteChangedEvent
 } from '../features'
-import type { NavigationError, NavigationErrorEvent, PlaybackError, PlaybackErrorEvent } from '../features/errors'
+import type { NavigationError, NavigationErrorEvent, FormattedNavigationError, PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
   AudioCommonMetadataReceivedEvent,
   AudioMetadataReceivedEvent,
@@ -71,6 +71,8 @@ export interface AudioBrowser
   onTabsChanged: (tabs: Track[]) => void
   onNavigationError: (data: NavigationErrorEvent) => void
   getNavigationError(): NavigationError | undefined
+  onFormattedNavigationError: (formattedError: FormattedNavigationError | undefined) => void
+  getFormattedNavigationError(): FormattedNavigationError | undefined
   notifyContentChanged(path: string): void
   setFavorites(favorites: string[]): void
   configuration: NativeBrowserConfiguration

@@ -23,6 +23,8 @@ public extension NavigationErrorType {
         self = .networkError
       case "http-error":
         self = .httpError
+      case "callback-error":
+        self = .callbackError
       case "unknown-error":
         self = .unknownError
       default:
@@ -41,6 +43,8 @@ public extension NavigationErrorType {
         return "network-error"
       case .httpError:
         return "http-error"
+      case .callbackError:
+        return "callback-error"
       case .unknownError:
         return "unknown-error"
     }

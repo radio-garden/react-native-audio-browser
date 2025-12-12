@@ -17,6 +17,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onContentChanged: (_ content: ResolvedTrack?) -> Void { get set }
   var onTabsChanged: (_ tabs: [Track]) -> Void { get set }
   var onNavigationError: (_ data: NavigationErrorEvent) -> Void { get set }
+  var onFormattedNavigationError: (_ formattedError: FormattedNavigationError?) -> Void { get set }
   var configuration: NativeBrowserConfiguration { get set }
   var onMetadataChapterReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
   var onMetadataCommonReceived: (_ event: AudioCommonMetadataReceivedEvent) -> Void { get set }
@@ -76,6 +77,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func onSearch(query: String) throws -> Promise<[Track]>
   func getContent() throws -> ResolvedTrack?
   func getNavigationError() throws -> NavigationError?
+  func getFormattedNavigationError() throws -> FormattedNavigationError?
   func notifyContentChanged(path: String) throws -> Void
   func setFavorites(favorites: [String]) throws -> Void
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>

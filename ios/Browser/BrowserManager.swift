@@ -8,17 +8,28 @@ enum BrowserError: Error {
   case httpError(code: Int, body: String)
   case networkError(Error)
   case invalidConfiguration(String)
+  case callbackError(String)
 
   var localizedDescription: String {
     switch self {
-    case let .contentNotFound(path):
-      "No content found for path: \(path)"
+    case .contentNotFound:
+      return "Content not found"
     case let .httpError(code, body):
-      "HTTP error \(code): \(body)"
+      // Try to extract error message from JSON response: { "error": "message" }
+      if let data = body.data(using: .utf8),
+         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+         let errorMessage = json["error"] as? String
+      {
+        return errorMessage
+      }
+      // Fall back to localized HTTP status description
+      return HTTPURLResponse.localizedString(forStatusCode: code)
     case let .networkError(error):
-      "Network error: \(error.localizedDescription)"
+      return "Network error: \(error.localizedDescription)"
     case let .invalidConfiguration(message):
-      "Invalid configuration: \(message)"
+      return "Invalid configuration: \(message)"
+    case let .callbackError(message):
+      return message
     }
   }
 }
@@ -329,7 +340,7 @@ final class BrowserManager: @unchecked Sendable {
         childrenStyle: resolvedTrack.childrenStyle,
         favorited: resolvedTrack.favorited,
         groupTitle: resolvedTrack.groupTitle,
-        live: resolvedTrack.live,
+        live: resolvedTrack.live
       )
     }
 
@@ -370,10 +381,18 @@ final class BrowserManager: @unchecked Sendable {
     // Priority: callback > config > static
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      // Callback returns Promise<Promise<ResolvedTrack>> - await both layers
+      // Callback returns Promise<Promise<BrowseResult>> - await both layers
       let outerPromise = callback(callbackParam)
       let innerPromise = try await outerPromise.await()
-      return try await innerPromise.await()
+      let result = try await innerPromise.await()
+
+      // Handle the BrowseResult union type
+      switch result {
+      case let .first(resolvedTrack):
+        return resolvedTrack
+      case let .second(browseError):
+        throw BrowserError.callbackError(browseError.error)
+      }
     }
 
     if let browseConfig = entry.browseConfig {
@@ -553,7 +572,7 @@ final class BrowserManager: @unchecked Sendable {
         childrenStyle: nil,
         favorited: nil,
         groupTitle: nil,
-        live: nil,
+        live: nil
       )
     }
 
@@ -616,7 +635,7 @@ final class BrowserManager: @unchecked Sendable {
       childrenStyle: nil,
       favorited: nil,
       groupTitle: nil,
-      live: nil,
+      live: nil
     )
   }
 

@@ -44,6 +44,7 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldCONTENT_NOT_FOUND = clazz->getStaticField<JNavigationErrorType>("CONTENT_NOT_FOUND");
       static const auto fieldNETWORK_ERROR = clazz->getStaticField<JNavigationErrorType>("NETWORK_ERROR");
       static const auto fieldHTTP_ERROR = clazz->getStaticField<JNavigationErrorType>("HTTP_ERROR");
+      static const auto fieldCALLBACK_ERROR = clazz->getStaticField<JNavigationErrorType>("CALLBACK_ERROR");
       static const auto fieldUNKNOWN_ERROR = clazz->getStaticField<JNavigationErrorType>("UNKNOWN_ERROR");
       
       switch (value) {
@@ -53,6 +54,8 @@ namespace margelo::nitro::audiobrowser {
           return clazz->getStaticFieldValue(fieldNETWORK_ERROR);
         case NavigationErrorType::HTTP_ERROR:
           return clazz->getStaticFieldValue(fieldHTTP_ERROR);
+        case NavigationErrorType::CALLBACK_ERROR:
+          return clazz->getStaticFieldValue(fieldCALLBACK_ERROR);
         case NavigationErrorType::UNKNOWN_ERROR:
           return clazz->getStaticFieldValue(fieldUNKNOWN_ERROR);
         default:

@@ -19,5 +19,6 @@ enum class NavigationErrorType(@DoNotStrip @Keep val value: Int) {
   CONTENT_NOT_FOUND(0),
   NETWORK_ERROR(1),
   HTTP_ERROR(2),
-  UNKNOWN_ERROR(3);
+  CALLBACK_ERROR(3),
+  UNKNOWN_ERROR(4);
 }

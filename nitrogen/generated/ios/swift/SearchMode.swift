@@ -17,14 +17,14 @@ public extension SearchMode {
    */
   init?(fromString string: String) {
     switch string {
-      case "any":
-        self = .any
-      case "genre":
-        self = .genre
       case "artist":
         self = .artist
       case "album":
         self = .album
+      case "genre":
+        self = .genre
+      case "any":
+        self = .any
       case "song":
         self = .song
       case "playlist":
@@ -39,14 +39,14 @@ public extension SearchMode {
    */
   var stringValue: String {
     switch self {
-      case .any:
-        return "any"
-      case .genre:
-        return "genre"
       case .artist:
         return "artist"
       case .album:
         return "album"
+      case .genre:
+        return "genre"
+      case .any:
+        return "any"
       case .song:
         return "song"
       case .playlist:

@@ -32,6 +32,8 @@ namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChanged
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
+// Forward declaration of `BrowseError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowseError; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `ButtonCapability` to properly resolve imports.
@@ -46,6 +48,8 @@ namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `FormattedNavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
@@ -180,6 +184,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "BatteryOptimizationStatus.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
+#include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "ButtonCapability.hpp"
 #include "Capability.hpp"
@@ -187,6 +192,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
+#include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"

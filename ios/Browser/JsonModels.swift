@@ -37,7 +37,7 @@ struct JsonResolvedTrack: Codable {
     style: String? = nil,
     childrenStyle: String? = nil,
     groupTitle: String? = nil,
-    live: Bool? = nil,
+    live: Bool? = nil
   ) {
     self.url = url
     self.title = title
@@ -134,7 +134,7 @@ extension JsonResolvedTrack {
       childrenStyle: childrenStyle?.toTrackStyle(),
       favorited: nil,
       groupTitle: groupTitle,
-      live: live,
+      live: live
     )
   }
 }

@@ -27,6 +27,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
+  private var lastFormattedNavigationError: FormattedNavigationError? {
+    didSet {
+      // Skip if both nil (no real change)
+      guard oldValue != nil || lastFormattedNavigationError != nil else { return }
+      onFormattedNavigationError(lastFormattedNavigationError)
+    }
+  }
+
   // MARK: - Internal Callbacks (for CarPlay/external controllers)
 
   /// Called when notifyContentChanged is invoked, allowing CarPlay to refresh its templates.
@@ -78,7 +86,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
     singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, carPlayNowPlayingRates: nil,
+    carPlayNowPlayingButtons: nil, carPlayNowPlayingRates: nil, formatNavigationError: nil
   ) {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)
@@ -88,7 +96,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Navigate to configured path, first tab, or "/"
         let initialPath = configuration.path ?? tabs?.first?.url ?? "/"
         // Clear error before navigation (matches Kotlin clearNavigationError())
-        await MainActor.run { lastNavigationError = nil }
+        await MainActor.run {
+          lastNavigationError = nil
+          lastFormattedNavigationError = nil
+        }
         do {
           try await browserManager.navigate(initialPath)
         } catch {
@@ -104,6 +115,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onContentChanged: (ResolvedTrack?) -> Void = { _ in }
   public var onTabsChanged: ([Track]) -> Void = { _ in }
   public var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
+  public var onFormattedNavigationError: (FormattedNavigationError?) -> Void = { _ in }
 
   // MARK: - Player Callbacks
 
@@ -209,22 +221,66 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   private func handleNavigationError(_ error: Error, path _: String) {
-    let navError = if let browserError = error as? BrowserError {
+    let navError: NavigationError
+    if let browserError = error as? BrowserError {
       switch browserError {
       case .contentNotFound:
-        NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil)
+        navError = NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case let .httpError(code, _):
-        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code))
+        navError = NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
       case .networkError:
-        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil)
+        navError = NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
-        NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil)
+        navError = NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+      case .callbackError:
+        navError = NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       }
+    } else if let httpError = error as? HttpClient.HttpException {
+      // HTTP error from HttpClient (non-2xx response)
+      navError = NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
+    } else if error is URLError {
+      // Network error (connection failed, timeout, no internet, etc.)
+      navError = NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     } else {
-      NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil)
+      navError = NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     }
 
     lastNavigationError = navError
+
+    // Format the error (async if using JS callback, sync for defaults)
+    if let formatter = browserManager.config.formatNavigationError {
+      formatter(navError)
+        .then { [weak self] customDisplay in
+          self?.lastFormattedNavigationError = customDisplay ?? self?.defaultFormattedError(navError)
+        }
+        .catch { [weak self] _ in
+          self?.lastFormattedNavigationError = self?.defaultFormattedError(navError)
+        }
+    } else {
+      lastFormattedNavigationError = defaultFormattedError(navError)
+    }
+  }
+
+  private func defaultFormattedError(_ error: NavigationError) -> FormattedNavigationError {
+    let title: String
+    switch error.code {
+    case .contentNotFound:
+      title = "Content Not Found"
+    case .networkError:
+      title = "Network Error"
+    case .httpError:
+      if let statusCode = error.statusCode {
+        // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
+        title = HTTPURLResponse.localizedString(forStatusCode: Int(statusCode)).capitalized
+      } else {
+        title = "Server Error"
+      }
+    case .callbackError:
+      title = "Error"
+    case .unknownError:
+      title = "Error"
+    }
+    return FormattedNavigationError(title: title, message: error.message)
   }
 
   // MARK: - Browser Methods
@@ -232,6 +288,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public func navigatePath(path: String) throws {
     // Clear error synchronously before starting navigation (didSet notifies JS)
     lastNavigationError = nil
+    lastFormattedNavigationError = nil
     Task {
       do {
         try await browserManager.navigate(path)
@@ -296,6 +353,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     else if let url {
       // Clear error synchronously before starting navigation (didSet notifies JS)
       lastNavigationError = nil
+      lastFormattedNavigationError = nil
       Task {
         do {
           try await browserManager.navigate(url)
@@ -320,6 +378,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func getNavigationError() throws -> NavigationError? {
     lastNavigationError
+  }
+
+  public func getFormattedNavigationError() throws -> FormattedNavigationError? {
+    lastFormattedNavigationError
   }
 
   public func notifyContentChanged(path: String) throws {

@@ -9,6 +9,7 @@
 import type {
   BrowserSourceCallback,
   CarPlayNowPlayingButton,
+  FormatNavigationErrorCallback,
   MediaRequestConfig,
   SearchSourceCallback,
   TransformableRequestConfig,
@@ -61,4 +62,5 @@ export interface NativeBrowserConfiguration {
   carPlayUpNextButton?: boolean
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
   carPlayNowPlayingRates?: number[]
+  formatNavigationError?: FormatNavigationErrorCallback
 }

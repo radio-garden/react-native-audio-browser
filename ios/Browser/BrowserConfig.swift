@@ -38,6 +38,10 @@ struct BrowserConfig {
   /// Playback rates for CarPlay Now Playing rate button
   let carPlayNowPlayingRates: [Double]
 
+  /// Callback to customize navigation error display (for i18n)
+  /// Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
+  let formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)?
+
   init(
     request: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
@@ -48,6 +52,7 @@ struct BrowserConfig {
     carPlayUpNextButton: Bool = true,
     carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
     carPlayNowPlayingRates: [Double] = defaultCarPlayNowPlayingRates,
+    formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
     self.media = media
@@ -58,6 +63,7 @@ struct BrowserConfig {
     self.carPlayUpNextButton = carPlayUpNextButton
     self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
     self.carPlayNowPlayingRates = carPlayNowPlayingRates
+    self.formatNavigationError = formatNavigationError
   }
 
   /// Create from NativeBrowserConfiguration
@@ -71,6 +77,7 @@ struct BrowserConfig {
     carPlayUpNextButton = config.carPlayUpNextButton ?? true
     carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
     carPlayNowPlayingRates = config.carPlayNowPlayingRates ?? Self.defaultCarPlayNowPlayingRates
+    formatNavigationError = config.formatNavigationError
   }
 
   /// Returns true if search functionality is configured (either callback or config).

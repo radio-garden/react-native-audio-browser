@@ -22,7 +22,7 @@ data class NativeRouteEntry(
   val path: String,
   @DoNotStrip
   @Keep
-  val browseCallback: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam?,
+  val browseCallback: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam?,
   @DoNotStrip
   @Keep
   val browseConfig: TransformableRequestConfig?,
@@ -45,8 +45,8 @@ data class NativeRouteEntry(
   /**
    * Create a new instance of NativeRouteEntry from Kotlin
    */
-  constructor(path: String, browseCallback: ((param: BrowserSourceCallbackParam) -> Promise<Promise<ResolvedTrack>>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((params: SearchParams) -> Promise<Promise<Array<Track>>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?):
-         this(path, browseCallback?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_java(it) }, browseConfig, browseStatic, searchCallback?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_java(it) }, searchConfig, media, artwork)
+  constructor(path: String, browseCallback: ((param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((params: SearchParams) -> Promise<Promise<Array<Track>>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?):
+         this(path, browseCallback?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_java(it) }, browseConfig, browseStatic, searchCallback?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_java(it) }, searchConfig, media, artwork)
 
   private companion object {
     /**
@@ -56,7 +56,7 @@ data class NativeRouteEntry(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String, browseCallback: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?): NativeRouteEntry {
+    private fun fromCpp(path: String, browseCallback: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?): NativeRouteEntry {
       return NativeRouteEntry(path, browseCallback, browseConfig, browseStatic, searchCallback, searchConfig, media, artwork)
     }
   }

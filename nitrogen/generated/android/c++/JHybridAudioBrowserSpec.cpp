@@ -23,6 +23,8 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NavigationErrorType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
+// Forward declaration of `FormattedNavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
@@ -31,6 +33,8 @@ namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
+// Forward declaration of `BrowseError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowseError; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `SearchParams` to properly resolve imports.
@@ -184,6 +188,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JNavigationError.hpp"
 #include "NavigationErrorType.hpp"
 #include "JNavigationErrorType.hpp"
+#include "FormattedNavigationError.hpp"
+#include "JFunc_void_std__optional_FormattedNavigationError_.hpp"
+#include "JFormattedNavigationError.hpp"
 #include "JNativeBrowserConfiguration.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "JTransformableRequestConfig.hpp"
@@ -197,8 +204,12 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
 #include "NativeRouteEntry.hpp"
 #include "JNativeRouteEntry.hpp"
+#include "BrowseError.hpp"
+#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
+#include "JBrowseResult.hpp"
+#include "JBrowseError.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
@@ -207,6 +218,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JSearchMode.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
 #include "JFunc_void_AudioMetadataReceivedEvent.hpp"
 #include "JAudioMetadataReceivedEvent.hpp"
@@ -247,7 +259,6 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include <NitroModules/Null.hpp>
 #include "SleepTimerTime.hpp"
 #include "SleepTimerEndOfTrack.hpp"
-#include <variant>
 #include "JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__.hpp"
 #include "JSleepTimer.hpp"
 #include <NitroModules/JNull.hpp>
@@ -496,6 +507,23 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_NavigationErrorEvent::javaobject> /* onNavigationError */)>("setOnNavigationError_cxx");
     method(_javaPart, JFunc_void_NavigationErrorEvent_cxx::fromCpp(onNavigationError));
+  }
+  std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)> JHybridAudioBrowserSpec::getOnFormattedNavigationError() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__optional_FormattedNavigationError_::javaobject>()>("getOnFormattedNavigationError_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)> {
+      if (__result->isInstanceOf(JFunc_void_std__optional_FormattedNavigationError__cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_std__optional_FormattedNavigationError__cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_std__optional_FormattedNavigationError_, void(std::optional<FormattedNavigationError>)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_std__optional_FormattedNavigationError_::javaobject> /* onFormattedNavigationError */)>("setOnFormattedNavigationError_cxx");
+    method(_javaPart, JFunc_void_std__optional_FormattedNavigationError__cxx::fromCpp(onFormattedNavigationError));
   }
   NativeBrowserConfiguration JHybridAudioBrowserSpec::getConfiguration() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JNativeBrowserConfiguration>()>("getConfiguration");
@@ -1415,6 +1443,11 @@ namespace margelo::nitro::audiobrowser {
   }
   std::optional<NavigationError> JHybridAudioBrowserSpec::getNavigationError() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JNavigationError>()>("getNavigationError");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  std::optional<FormattedNavigationError> JHybridAudioBrowserSpec::getFormattedNavigationError() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFormattedNavigationError>()>("getFormattedNavigationError");
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }

@@ -256,6 +256,31 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onFormattedNavigationError: bridge.Func_void_std__optional_FormattedNavigationError_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_std__optional_FormattedNavigationError_ in
+        let __closureWrapper = Func_void_std__optional_FormattedNavigationError_(self.__implementation.onFormattedNavigationError)
+        return bridge.create_Func_void_std__optional_FormattedNavigationError_(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onFormattedNavigationError = { () -> (FormattedNavigationError?) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__optional_FormattedNavigationError_(newValue)
+        return { (__formattedError: FormattedNavigationError?) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__optional_FormattedNavigationError_ in
+            if let __unwrappedValue = __formattedError {
+              return bridge.create_std__optional_FormattedNavigationError_(__unwrappedValue)
+            } else {
+              return .init()
+            }
+          }())
+        }
+      }()
+    }
+  }
+  
   public final var configuration: NativeBrowserConfiguration {
     @inline(__always)
     get {
@@ -1520,6 +1545,24 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__optional_NavigationError__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getFormattedNavigationError() -> bridge.Result_std__optional_FormattedNavigationError__ {
+    do {
+      let __result = try self.__implementation.getFormattedNavigationError()
+      let __resultCpp = { () -> bridge.std__optional_FormattedNavigationError_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_FormattedNavigationError_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_FormattedNavigationError__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_FormattedNavigationError__(__exceptionPtr)
     }
   }
   

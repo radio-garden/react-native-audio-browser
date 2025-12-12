@@ -904,7 +904,13 @@ class BrowserManager {
       val param = BrowserSourceCallbackParam(path, routeParams)
       val promise = callback.invoke(param)
       val innerPromise = promise.await()
-      return innerPromise.await()
+      val result = innerPromise.await()
+
+      // Handle BrowseResult variant: either ResolvedTrack or BrowseError
+      return result.match(
+        first = { resolvedTrack -> resolvedTrack },
+        second = { browseError -> throw CallbackException(browseError.error) }
+      )
     }
 
     entry.browseConfig?.let { apiConfig ->
@@ -1110,14 +1116,16 @@ class BrowserManager {
 }
 
 /** Exception thrown when no content is configured for a requested path. */
-class ContentNotFoundException(val path: String) :
-  Exception("No content configured for path: $path")
+class ContentNotFoundException(val path: String) : Exception("Content not found")
 
 /** Exception thrown when an HTTP request fails with a non-2xx status code. */
 class HttpStatusException(val statusCode: Int, message: String) : Exception(message)
 
 /** Exception thrown when a network request fails (connection error, timeout, etc). */
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/** Exception thrown when a browse callback returns an error message. */
+class CallbackException(message: String) : Exception(message)
 
 /**
  * Configuration object that holds all browser settings. Uses flattened structure matching

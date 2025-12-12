@@ -41,22 +41,22 @@ namespace margelo::nitro::audiobrowser {
     [[maybe_unused]]
     static jni::alias_ref<JSearchMode> fromCpp(SearchMode value) {
       static const auto clazz = javaClassStatic();
-      static const auto fieldANY = clazz->getStaticField<JSearchMode>("ANY");
-      static const auto fieldGENRE = clazz->getStaticField<JSearchMode>("GENRE");
       static const auto fieldARTIST = clazz->getStaticField<JSearchMode>("ARTIST");
       static const auto fieldALBUM = clazz->getStaticField<JSearchMode>("ALBUM");
+      static const auto fieldGENRE = clazz->getStaticField<JSearchMode>("GENRE");
+      static const auto fieldANY = clazz->getStaticField<JSearchMode>("ANY");
       static const auto fieldSONG = clazz->getStaticField<JSearchMode>("SONG");
       static const auto fieldPLAYLIST = clazz->getStaticField<JSearchMode>("PLAYLIST");
       
       switch (value) {
-        case SearchMode::ANY:
-          return clazz->getStaticFieldValue(fieldANY);
-        case SearchMode::GENRE:
-          return clazz->getStaticFieldValue(fieldGENRE);
         case SearchMode::ARTIST:
           return clazz->getStaticFieldValue(fieldARTIST);
         case SearchMode::ALBUM:
           return clazz->getStaticFieldValue(fieldALBUM);
+        case SearchMode::GENRE:
+          return clazz->getStaticFieldValue(fieldGENRE);
+        case SearchMode::ANY:
+          return clazz->getStaticFieldValue(fieldANY);
         case SearchMode::SONG:
           return clazz->getStaticFieldValue(fieldSONG);
         case SearchMode::PLAYLIST:

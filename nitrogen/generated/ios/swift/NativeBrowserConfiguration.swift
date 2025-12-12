@@ -19,7 +19,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayNowPlayingRates: [Double]?) {
+  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayNowPlayingRates: [Double]?, formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -94,6 +94,15 @@ public extension NativeBrowserConfiguration {
             __vector.push_back(__item)
           }
           return __vector
+        }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______ in
+      if let __unwrappedValue = formatNavigationError {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
@@ -330,6 +339,59 @@ public extension NativeBrowserConfiguration {
               __vector.push_back(__item)
             }
             return __vector
+          }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)? {
+    @inline(__always)
+    get {
+      return { () -> ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)? in
+        if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(self.__formatNavigationError) {
+          let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(self.__formatNavigationError)
+          return { () -> (NavigationError) -> Promise<FormattedNavigationError?> in
+            let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__unwrapped)
+            return { (__error: NavigationError) -> Promise<FormattedNavigationError?> in
+              let __result = __wrappedFunction.call(__error)
+              return { () -> Promise<FormattedNavigationError?> in
+                let __promise = Promise<FormattedNavigationError?>()
+                let __resolver = { (__result: FormattedNavigationError?) in
+                  __promise.resolve(withResult: __result)
+                }
+                let __rejecter = { (__error: Error) in
+                  __promise.reject(withError: __error)
+                }
+                let __resolverCpp = { () -> bridge.Func_void_std__optional_FormattedNavigationError_ in
+                  let __closureWrapper = Func_void_std__optional_FormattedNavigationError_(__resolver)
+                  return bridge.create_Func_void_std__optional_FormattedNavigationError_(__closureWrapper.toUnsafe())
+                }()
+                let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                  let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                  return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+                }()
+                let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__optional_FormattedNavigationError___(__result)
+                __promiseHolder.addOnResolvedListener(__resolverCpp)
+                __promiseHolder.addOnRejectedListener(__rejecterCpp)
+                return __promise
+              }()
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__formatNavigationError = { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError in
+            let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__unwrappedValue)
+            return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__closureWrapper.toUnsafe())
           }())
         } else {
           return .init()

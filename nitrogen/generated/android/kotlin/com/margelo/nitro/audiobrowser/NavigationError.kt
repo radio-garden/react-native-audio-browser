@@ -25,7 +25,10 @@ data class NavigationError(
   val message: String,
   @DoNotStrip
   @Keep
-  val statusCode: Double?
+  val statusCode: Double?,
+  @DoNotStrip
+  @Keep
+  val statusCodeSuccess: Boolean?
 ) {
   /* primary constructor */
 
@@ -37,8 +40,8 @@ data class NavigationError(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(code: NavigationErrorType, message: String, statusCode: Double?): NavigationError {
-      return NavigationError(code, message, statusCode)
+    private fun fromCpp(code: NavigationErrorType, message: String, statusCode: Double?, statusCodeSuccess: Boolean?): NavigationError {
+      return NavigationError(code, message, statusCode, statusCodeSuccess)
     }
   }
 }

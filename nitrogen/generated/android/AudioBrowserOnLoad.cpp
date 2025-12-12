@@ -20,10 +20,12 @@
 #include "JFunc_void_std__optional_ResolvedTrack_.hpp"
 #include "JFunc_void_std__vector_Track_.hpp"
 #include "JFunc_void_NavigationErrorEvent.hpp"
+#include "JFunc_void_std__optional_FormattedNavigationError_.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError.hpp"
 #include "JFunc_void_AudioMetadataReceivedEvent.hpp"
 #include "JFunc_void_AudioCommonMetadataReceivedEvent.hpp"
 #include "JFunc_void_PlaybackMetadata.hpp"
@@ -67,10 +69,12 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_std__optional_ResolvedTrack__cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_std__vector_Track__cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_NavigationErrorEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_std__optional_FormattedNavigationError__cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_AudioMetadataReceivedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_AudioCommonMetadataReceivedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_PlaybackMetadata_cxx::registerNatives();

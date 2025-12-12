@@ -58,7 +58,15 @@ final class HttpClient {
     }
 
     var localizedDescription: String {
-      "HTTP \(code): \(responseBody)"
+      // Try to extract error message from JSON response: { "error": "message" }
+      if let data = responseBody.data(using: .utf8),
+         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+         let errorMessage = json["error"] as? String
+      {
+        return errorMessage
+      }
+      // Fall back to localized HTTP status description
+      return HTTPURLResponse.localizedString(forStatusCode: code)
     }
   }
 

@@ -190,6 +190,7 @@ function toNativeConfig(config: BrowserConfiguration): NativeBrowserConfiguratio
     carPlayUpNextButton: config.carPlayUpNextButton,
     carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
     carPlayNowPlayingRates: config.carPlayNowPlayingRates,
+    formatNavigationError: config.formatNavigationError,
   }
 }
 

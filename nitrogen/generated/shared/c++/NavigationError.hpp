@@ -40,10 +40,11 @@ namespace margelo::nitro::audiobrowser {
     NavigationErrorType code     SWIFT_PRIVATE;
     std::string message     SWIFT_PRIVATE;
     std::optional<double> statusCode     SWIFT_PRIVATE;
+    std::optional<bool> statusCodeSuccess     SWIFT_PRIVATE;
 
   public:
     NavigationError() = default;
-    explicit NavigationError(NavigationErrorType code, std::string message, std::optional<double> statusCode): code(code), message(message), statusCode(statusCode) {}
+    explicit NavigationError(NavigationErrorType code, std::string message, std::optional<double> statusCode, std::optional<bool> statusCodeSuccess): code(code), message(message), statusCode(statusCode), statusCodeSuccess(statusCodeSuccess) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -58,7 +59,8 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::NavigationError(
         JSIConverter<margelo::nitro::audiobrowser::NavigationErrorType>::fromJSI(runtime, obj.getProperty(runtime, "code")),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "message")),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "statusCode"))
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "statusCode")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "statusCodeSuccess"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NavigationError& arg) {
@@ -66,6 +68,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "code", JSIConverter<margelo::nitro::audiobrowser::NavigationErrorType>::toJSI(runtime, arg.code));
       obj.setProperty(runtime, "message", JSIConverter<std::string>::toJSI(runtime, arg.message));
       obj.setProperty(runtime, "statusCode", JSIConverter<std::optional<double>>::toJSI(runtime, arg.statusCode));
+      obj.setProperty(runtime, "statusCodeSuccess", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.statusCodeSuccess));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -79,6 +82,7 @@ namespace margelo::nitro {
       if (!JSIConverter<margelo::nitro::audiobrowser::NavigationErrorType>::canConvert(runtime, obj.getProperty(runtime, "code"))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "message"))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "statusCode"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "statusCodeSuccess"))) return false;
       return true;
     }
   };

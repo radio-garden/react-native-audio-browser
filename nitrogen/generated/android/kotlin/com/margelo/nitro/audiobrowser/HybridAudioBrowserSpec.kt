@@ -112,6 +112,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onNavigationError = value
     }
   
+  abstract var onFormattedNavigationError: (formattedError: FormattedNavigationError?) -> Unit
+  
+  private var onFormattedNavigationError_cxx: Func_void_std__optional_FormattedNavigationError_
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_std__optional_FormattedNavigationError__java(onFormattedNavigationError)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onFormattedNavigationError = value
+    }
+  
   @get:DoNotStrip
   @get:Keep
   @set:DoNotStrip
@@ -852,6 +866,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getNavigationError(): NavigationError?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getFormattedNavigationError(): FormattedNavigationError?
   
   @DoNotStrip
   @Keep

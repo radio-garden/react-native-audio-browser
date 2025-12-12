@@ -1,6 +1,10 @@
 import { nativeBrowser } from '../native'
+import type { FormattedNavigationError } from '../types/browser'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
+
+// Re-export for Nitro spec
+export type { FormattedNavigationError } from '../types/browser'
 
 export type PlaybackError = {
   code: string
@@ -16,13 +20,25 @@ export interface PlaybackErrorEvent {
 
 /**
  * Type of navigation error that occurred.
+ *
+ * - `'content-not-found'` - No route configured for the requested path, or route resolution
+ *   returned no content. This is a configuration issue, not an HTTP 404 from the server.
+ * - `'network-error'` - Network request failed (connection error, timeout, no internet).
+ * - `'http-error'` - Server returned a non-2xx HTTP status code, or returned 2xx but response
+ *   parsing failed. Check `statusCode` and `statusCodeSuccess` for details.
+ * - `'callback-error'` - The browse callback returned an error (e.g., `{ error: 'message' }`).
+ *   Use this for business logic errors like authentication failures or subscription requirements.
+ * - `'unknown-error'` - An unexpected error occurred (e.g., invalid configuration).
  */
-export type NavigationErrorType = 'content-not-found' | 'network-error' | 'http-error' | 'unknown-error'
+export type NavigationErrorType = 'content-not-found' | 'network-error' | 'http-error' | 'callback-error' | 'unknown-error'
 
 export type NavigationError = {
   code: NavigationErrorType
   message: string
+  /** HTTP status code when code is 'http-error' */
   statusCode?: number
+  /** True if HTTP status code was 2xx (success), useful when error is due to response parsing */
+  statusCodeSuccess?: boolean
 }
 
 /**
@@ -89,4 +105,70 @@ export const onNavigationError = NativeUpdatedValue.emitterize<NavigationErrorEv
  */
 export function useNavigationError(): NavigationError | undefined {
   return useNativeUpdatedValue(getNavigationError, onNavigationError, 'error')
+}
+
+// MARK: - Formatted Navigation Error
+
+/**
+ * Gets the current navigation error formatted for display.
+ * Native formats the error using the configured `formatNavigationError` callback,
+ * or falls back to default formatting.
+ *
+ * @returns Formatted error with title and message, or undefined if no error
+ */
+export function getFormattedNavigationError(): FormattedNavigationError | undefined {
+  return nativeBrowser.getFormattedNavigationError() ?? undefined
+}
+
+/**
+ * Subscribes to formatted navigation error changes.
+ * @param callback - Called when the formatted navigation error changes
+ * @returns Cleanup function to unsubscribe
+ */
+export const onFormattedNavigationError = NativeUpdatedValue.emitterize<FormattedNavigationError | undefined>(
+  (cb) => (nativeBrowser.onFormattedNavigationError = cb)
+)
+
+/**
+ * Hook that returns the current navigation error formatted for display.
+ *
+ * Native formats the error using the `formatNavigationError` callback configured
+ * in {@link BrowserConfiguration}, or falls back to default English messages.
+ *
+ * The same formatted error is used by CarPlay and Android Auto error dialogs,
+ * ensuring consistent error presentation across your app and external controllers.
+ *
+ * @returns Formatted error with title and message, or undefined if no error
+ *
+ * @example
+ * ```tsx
+ * // Basic usage
+ * const error = useFormattedNavigationError()
+ *
+ * if (error) {
+ *   return <ErrorView title={error.title} message={error.message} />
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // Configure custom formatting for i18n
+ * configureBrowser({
+ *   formatNavigationError: (error) => ({
+ *     title: t(`error.${error.code}`),
+ *     message: error.code === 'http-error'
+ *       ? t('error.httpMessage', { status: error.statusCode })
+ *       : error.message
+ *   })
+ * })
+ * ```
+ *
+ * @see {@link BrowserConfiguration.formatNavigationError} - Configure custom error formatting
+ * @see {@link useNavigationError} - Access the raw error with code and status details
+ */
+export function useFormattedNavigationError(): FormattedNavigationError | undefined {
+  return useNativeUpdatedValue(
+    getFormattedNavigationError,
+    onFormattedNavigationError
+  )
 }

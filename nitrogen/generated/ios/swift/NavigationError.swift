@@ -19,10 +19,16 @@ public extension NavigationError {
   /**
    * Create a new instance of `NavigationError`.
    */
-  init(code: NavigationErrorType, message: String, statusCode: Double?) {
+  init(code: NavigationErrorType, message: String, statusCode: Double?, statusCodeSuccess: Bool?) {
     self.init(code, std.string(message), { () -> bridge.std__optional_double_ in
       if let __unwrappedValue = statusCode {
         return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = statusCodeSuccess {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -61,6 +67,30 @@ public extension NavigationError {
       self.__statusCode = { () -> bridge.std__optional_double_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_double_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var statusCodeSuccess: Bool? {
+    @inline(__always)
+    get {
+      return { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(self.__statusCodeSuccess) {
+          let __unwrapped = bridge.get_std__optional_bool_(self.__statusCodeSuccess)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__statusCodeSuccess = { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
         } else {
           return .init()
         }

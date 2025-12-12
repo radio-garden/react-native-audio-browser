@@ -19,6 +19,8 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
+// Forward declaration of `FormattedNavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
 // Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
@@ -99,6 +101,7 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include <functional>
 #include "ResolvedTrack.hpp"
 #include "NavigationErrorEvent.hpp"
+#include "FormattedNavigationError.hpp"
 #include "NativeBrowserConfiguration.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
 #include "AudioCommonMetadataReceivedEvent.hpp"
@@ -178,6 +181,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) = 0;
       virtual std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() = 0;
       virtual void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) = 0;
+      virtual std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)> getOnFormattedNavigationError() = 0;
+      virtual void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) = 0;
       virtual NativeBrowserConfiguration getConfiguration() = 0;
       virtual void setConfiguration(const NativeBrowserConfiguration& configuration) = 0;
       virtual std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataChapterReceived() = 0;
@@ -290,6 +295,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
       virtual std::optional<ResolvedTrack> getContent() = 0;
       virtual std::optional<NavigationError> getNavigationError() = 0;
+      virtual std::optional<FormattedNavigationError> getFormattedNavigationError() = 0;
       virtual void notifyContentChanged(const std::string& path) = 0;
       virtual void setFavorites(const std::vector<std::string>& favorites) = 0;
       virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;

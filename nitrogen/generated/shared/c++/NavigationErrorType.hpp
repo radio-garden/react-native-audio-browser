@@ -32,7 +32,8 @@ namespace margelo::nitro::audiobrowser {
     CONTENT_NOT_FOUND      SWIFT_NAME(contentNotFound) = 0,
     NETWORK_ERROR      SWIFT_NAME(networkError) = 1,
     HTTP_ERROR      SWIFT_NAME(httpError) = 2,
-    UNKNOWN_ERROR      SWIFT_NAME(unknownError) = 3,
+    CALLBACK_ERROR      SWIFT_NAME(callbackError) = 3,
+    UNKNOWN_ERROR      SWIFT_NAME(unknownError) = 4,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -48,6 +49,7 @@ namespace margelo::nitro {
         case hashString("content-not-found"): return margelo::nitro::audiobrowser::NavigationErrorType::CONTENT_NOT_FOUND;
         case hashString("network-error"): return margelo::nitro::audiobrowser::NavigationErrorType::NETWORK_ERROR;
         case hashString("http-error"): return margelo::nitro::audiobrowser::NavigationErrorType::HTTP_ERROR;
+        case hashString("callback-error"): return margelo::nitro::audiobrowser::NavigationErrorType::CALLBACK_ERROR;
         case hashString("unknown-error"): return margelo::nitro::audiobrowser::NavigationErrorType::UNKNOWN_ERROR;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum NavigationErrorType - invalid value!");
@@ -58,6 +60,7 @@ namespace margelo::nitro {
         case margelo::nitro::audiobrowser::NavigationErrorType::CONTENT_NOT_FOUND: return JSIConverter<std::string>::toJSI(runtime, "content-not-found");
         case margelo::nitro::audiobrowser::NavigationErrorType::NETWORK_ERROR: return JSIConverter<std::string>::toJSI(runtime, "network-error");
         case margelo::nitro::audiobrowser::NavigationErrorType::HTTP_ERROR: return JSIConverter<std::string>::toJSI(runtime, "http-error");
+        case margelo::nitro::audiobrowser::NavigationErrorType::CALLBACK_ERROR: return JSIConverter<std::string>::toJSI(runtime, "callback-error");
         case margelo::nitro::audiobrowser::NavigationErrorType::UNKNOWN_ERROR: return JSIConverter<std::string>::toJSI(runtime, "unknown-error");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert NavigationErrorType to JS - invalid value: "
@@ -73,6 +76,7 @@ namespace margelo::nitro {
         case hashString("content-not-found"):
         case hashString("network-error"):
         case hashString("http-error"):
+        case hashString("callback-error"):
         case hashString("unknown-error"):
           return true;
         default:

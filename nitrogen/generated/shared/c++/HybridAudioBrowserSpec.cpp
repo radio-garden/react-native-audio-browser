@@ -26,6 +26,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onTabsChanged", &HybridAudioBrowserSpec::setOnTabsChanged);
       prototype.registerHybridGetter("onNavigationError", &HybridAudioBrowserSpec::getOnNavigationError);
       prototype.registerHybridSetter("onNavigationError", &HybridAudioBrowserSpec::setOnNavigationError);
+      prototype.registerHybridGetter("onFormattedNavigationError", &HybridAudioBrowserSpec::getOnFormattedNavigationError);
+      prototype.registerHybridSetter("onFormattedNavigationError", &HybridAudioBrowserSpec::setOnFormattedNavigationError);
       prototype.registerHybridGetter("configuration", &HybridAudioBrowserSpec::getConfiguration);
       prototype.registerHybridSetter("configuration", &HybridAudioBrowserSpec::setConfiguration);
       prototype.registerHybridGetter("onMetadataChapterReceived", &HybridAudioBrowserSpec::getOnMetadataChapterReceived);
@@ -135,6 +137,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("onSearch", &HybridAudioBrowserSpec::onSearch);
       prototype.registerHybridMethod("getContent", &HybridAudioBrowserSpec::getContent);
       prototype.registerHybridMethod("getNavigationError", &HybridAudioBrowserSpec::getNavigationError);
+      prototype.registerHybridMethod("getFormattedNavigationError", &HybridAudioBrowserSpec::getFormattedNavigationError);
       prototype.registerHybridMethod("notifyContentChanged", &HybridAudioBrowserSpec::notifyContentChanged);
       prototype.registerHybridMethod("setFavorites", &HybridAudioBrowserSpec::setFavorites);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioBrowserSpec::setupPlayer);

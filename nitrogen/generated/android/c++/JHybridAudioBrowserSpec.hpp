@@ -62,6 +62,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnTabsChanged(const std::function<void(const std::vector<Track>& /* tabs */)>& onTabsChanged) override;
     std::function<void(const NavigationErrorEvent& /* data */)> getOnNavigationError() override;
     void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) override;
+    std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)> getOnFormattedNavigationError() override;
+    void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) override;
     NativeBrowserConfiguration getConfiguration() override;
     void setConfiguration(const NativeBrowserConfiguration& configuration) override;
     std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataChapterReceived() override;
@@ -174,6 +176,7 @@ namespace margelo::nitro::audiobrowser {
     std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override;
     std::optional<ResolvedTrack> getContent() override;
     std::optional<NavigationError> getNavigationError() override;
+    std::optional<FormattedNavigationError> getFormattedNavigationError() override;
     void notifyContentChanged(const std::string& path) override;
     void setFavorites(const std::vector<std::string>& favorites) override;
     std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override;

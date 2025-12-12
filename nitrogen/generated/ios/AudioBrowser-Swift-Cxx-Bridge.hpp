@@ -30,6 +30,8 @@ namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChanged
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEvent; }
+// Forward declaration of `BrowseError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowseError; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `ButtonCapability` to properly resolve imports.
@@ -44,6 +46,8 @@ namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `FormattedNavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
@@ -165,6 +169,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "BatteryOptimizationStatus.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
+#include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "ButtonCapability.hpp"
 #include "Capability.hpp"
@@ -172,6 +177,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
+#include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
@@ -551,6 +557,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_NavigationErrorEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<FormattedNavigationError>
+  /**
+   * Specialized version of `std::optional<FormattedNavigationError>`.
+   */
+  using std__optional_FormattedNavigationError_ = std::optional<FormattedNavigationError>;
+  inline std::optional<FormattedNavigationError> create_std__optional_FormattedNavigationError_(const FormattedNavigationError& value) noexcept {
+    return std::optional<FormattedNavigationError>(value);
+  }
+  inline bool has_value_std__optional_FormattedNavigationError_(const std::optional<FormattedNavigationError>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline FormattedNavigationError get_std__optional_FormattedNavigationError_(const std::optional<FormattedNavigationError>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>
+  /**
+   * Specialized version of `std::function<void(const std::optional<FormattedNavigationError>&)>`.
+   */
+  using Func_void_std__optional_FormattedNavigationError_ = std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::optional<FormattedNavigationError>& / * formattedError * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__optional_FormattedNavigationError__Wrapper final {
+  public:
+    explicit Func_void_std__optional_FormattedNavigationError__Wrapper(std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>&& func): _function(std::make_unique<std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>>(std::move(func))) {}
+    inline void call(std::optional<FormattedNavigationError> formattedError) const noexcept {
+      _function->operator()(formattedError);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__optional_FormattedNavigationError_ create_Func_void_std__optional_FormattedNavigationError_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__optional_FormattedNavigationError__Wrapper wrap_Func_void_std__optional_FormattedNavigationError_(Func_void_std__optional_FormattedNavigationError_ value) noexcept {
+    return Func_void_std__optional_FormattedNavigationError__Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::vector<std::string>
   /**
    * Specialized version of `std::vector<std::string>`.
@@ -762,110 +805,139 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& / * param * /)>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>>(value);
+  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam&)>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam&)>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>;
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& / * param * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& / * param * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_Wrapper final {
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>> call(BrowserSourceCallbackParam param) const noexcept {
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> call(BrowserSourceCallbackParam param) const noexcept {
       auto __result = _function->operator()(param);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>(const BrowserSourceCallbackParam& /* param */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack_____BrowserSourceCallbackParam_Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>
+  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>
   /**
-   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>`.
+   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>`.
    */
-  using std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack____ = std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>>;
-  inline std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack____() noexcept {
-    return Promise<std::shared_ptr<Promise<ResolvedTrack>>>::create();
+  using std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____ = std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>;
+  inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____() noexcept {
+    return Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>::create();
   }
-  inline PromiseHolder<std::shared_ptr<Promise<ResolvedTrack>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_ResolvedTrack____(std::shared_ptr<Promise<std::shared_ptr<Promise<ResolvedTrack>>>> promise) noexcept {
-    return PromiseHolder<std::shared_ptr<Promise<ResolvedTrack>>>(std::move(promise));
+  inline PromiseHolder<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____(std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> promise) noexcept {
+    return PromiseHolder<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>(std::move(promise));
   }
   
-  // pragma MARK: std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>& /* result */)>
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>
   /**
-   * Specialized version of `std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>&)>`.
+   * Specialized version of `std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>&)>`.
    */
-  using Func_void_std__shared_ptr_Promise_ResolvedTrack__ = std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>& /* result */)>;
+  using Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ = std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>;
   /**
-   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>& / * result * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& / * result * /)>`, this can be used from Swift.
    */
-  class Func_void_std__shared_ptr_Promise_ResolvedTrack___Wrapper final {
+  class Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper final {
   public:
-    explicit Func_void_std__shared_ptr_Promise_ResolvedTrack___Wrapper(std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>& /* result */)>>(std::move(func))) {}
-    inline void call(std::shared_ptr<Promise<ResolvedTrack>> result) const noexcept {
+    explicit Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper(std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>> result) const noexcept {
       _function->operator()(result);
     }
   private:
-    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<ResolvedTrack>>& /* result */)>> _function;
+    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_std__shared_ptr_Promise_ResolvedTrack__ create_Func_void_std__shared_ptr_Promise_ResolvedTrack__(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__shared_ptr_Promise_ResolvedTrack___Wrapper wrap_Func_void_std__shared_ptr_Promise_ResolvedTrack__(Func_void_std__shared_ptr_Promise_ResolvedTrack__ value) noexcept {
-    return Func_void_std__shared_ptr_Promise_ResolvedTrack___Wrapper(std::move(value));
+  Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ create_Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper wrap_Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ value) noexcept {
+    return Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<Promise<ResolvedTrack>>
+  // pragma MARK: std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>
   /**
-   * Specialized version of `std::shared_ptr<Promise<ResolvedTrack>>`.
+   * Specialized version of `std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>`.
    */
-  using std__shared_ptr_Promise_ResolvedTrack__ = std::shared_ptr<Promise<ResolvedTrack>>;
-  inline std::shared_ptr<Promise<ResolvedTrack>> create_std__shared_ptr_Promise_ResolvedTrack__() noexcept {
-    return Promise<ResolvedTrack>::create();
+  using std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ = std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>;
+  inline std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>> create_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___() noexcept {
+    return Promise<std::variant<ResolvedTrack, BrowseError>>::create();
   }
-  inline PromiseHolder<ResolvedTrack> wrap_std__shared_ptr_Promise_ResolvedTrack__(std::shared_ptr<Promise<ResolvedTrack>> promise) noexcept {
-    return PromiseHolder<ResolvedTrack>(std::move(promise));
+  inline PromiseHolder<std::variant<ResolvedTrack, BrowseError>> wrap_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>> promise) noexcept {
+    return PromiseHolder<std::variant<ResolvedTrack, BrowseError>>(std::move(promise));
   }
   
-  // pragma MARK: std::function<void(const ResolvedTrack& /* result */)>
+  // pragma MARK: std::function<void(const std::variant<ResolvedTrack, BrowseError>& /* result */)>
   /**
-   * Specialized version of `std::function<void(const ResolvedTrack&)>`.
+   * Specialized version of `std::function<void(const std::variant<ResolvedTrack, BrowseError>&)>`.
    */
-  using Func_void_ResolvedTrack = std::function<void(const ResolvedTrack& /* result */)>;
+  using Func_void_std__variant_ResolvedTrack__BrowseError_ = std::function<void(const std::variant<ResolvedTrack, BrowseError>& /* result */)>;
   /**
-   * Wrapper class for a `std::function<void(const ResolvedTrack& / * result * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const std::variant<ResolvedTrack, BrowseError>& / * result * /)>`, this can be used from Swift.
    */
-  class Func_void_ResolvedTrack_Wrapper final {
+  class Func_void_std__variant_ResolvedTrack__BrowseError__Wrapper final {
   public:
-    explicit Func_void_ResolvedTrack_Wrapper(std::function<void(const ResolvedTrack& /* result */)>&& func): _function(std::make_unique<std::function<void(const ResolvedTrack& /* result */)>>(std::move(func))) {}
-    inline void call(ResolvedTrack result) const noexcept {
+    explicit Func_void_std__variant_ResolvedTrack__BrowseError__Wrapper(std::function<void(const std::variant<ResolvedTrack, BrowseError>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::variant<ResolvedTrack, BrowseError>& /* result */)>>(std::move(func))) {}
+    inline void call(std::variant<ResolvedTrack, BrowseError> result) const noexcept {
       _function->operator()(result);
     }
   private:
-    std::unique_ptr<std::function<void(const ResolvedTrack& /* result */)>> _function;
+    std::unique_ptr<std::function<void(const std::variant<ResolvedTrack, BrowseError>& /* result */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_ResolvedTrack create_Func_void_ResolvedTrack(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_ResolvedTrack_Wrapper wrap_Func_void_ResolvedTrack(Func_void_ResolvedTrack value) noexcept {
-    return Func_void_ResolvedTrack_Wrapper(std::move(value));
+  Func_void_std__variant_ResolvedTrack__BrowseError_ create_Func_void_std__variant_ResolvedTrack__BrowseError_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__variant_ResolvedTrack__BrowseError__Wrapper wrap_Func_void_std__variant_ResolvedTrack__BrowseError_(Func_void_std__variant_ResolvedTrack__BrowseError_ value) noexcept {
+    return Func_void_std__variant_ResolvedTrack__BrowseError__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::variant<ResolvedTrack, BrowseError>
+  /**
+   * Wrapper struct for `std::variant<ResolvedTrack, BrowseError>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_ResolvedTrack__BrowseError_ {
+    std::variant<ResolvedTrack, BrowseError> variant;
+    std__variant_ResolvedTrack__BrowseError_(std::variant<ResolvedTrack, BrowseError> variant): variant(variant) { }
+    operator std::variant<ResolvedTrack, BrowseError>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline ResolvedTrack get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline BrowseError get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_ResolvedTrack__BrowseError_ create_std__variant_ResolvedTrack__BrowseError_(const ResolvedTrack& value) noexcept {
+    return std__variant_ResolvedTrack__BrowseError_(value);
+  }
+  inline std__variant_ResolvedTrack__BrowseError_ create_std__variant_ResolvedTrack__BrowseError_(const BrowseError& value) noexcept {
+    return std__variant_ResolvedTrack__BrowseError_(value);
   }
   
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>>
@@ -1005,6 +1077,56 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     std::vector<double> vector;
     vector.reserve(size);
     return vector;
+  }
+  
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& / * error * /)>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______ = std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(const std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)> get_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError = std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& / * error * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper(std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> call(NavigationError error) const noexcept {
+      auto __result = _function->operator()(error);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper wrap_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError value) noexcept {
+    return Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>`.
+   */
+  using std__shared_ptr_Promise_std__optional_FormattedNavigationError___ = std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>;
+  inline std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> create_std__shared_ptr_Promise_std__optional_FormattedNavigationError___() noexcept {
+    return Promise<std::optional<FormattedNavigationError>>::create();
+  }
+  inline PromiseHolder<std::optional<FormattedNavigationError>> wrap_std__shared_ptr_Promise_std__optional_FormattedNavigationError___(std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> promise) noexcept {
+    return PromiseHolder<std::optional<FormattedNavigationError>>(std::move(promise));
   }
   
   // pragma MARK: std::shared_ptr<Promise<void>>
@@ -2435,6 +2557,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_NavigationError__ create_Result_std__optional_NavigationError__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<NavigationError>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<FormattedNavigationError>>
+  using Result_std__optional_FormattedNavigationError__ = Result<std::optional<FormattedNavigationError>>;
+  inline Result_std__optional_FormattedNavigationError__ create_Result_std__optional_FormattedNavigationError__(const std::optional<FormattedNavigationError>& value) noexcept {
+    return Result<std::optional<FormattedNavigationError>>::withValue(value);
+  }
+  inline Result_std__optional_FormattedNavigationError__ create_Result_std__optional_FormattedNavigationError__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<FormattedNavigationError>>::withError(error);
   }
   
   // pragma MARK: Result<std::shared_ptr<Promise<void>>>

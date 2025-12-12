@@ -29,10 +29,10 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (SearchMode).
    */
   enum class SearchMode {
-    ANY      SWIFT_NAME(any) = 0,
-    GENRE      SWIFT_NAME(genre) = 1,
-    ARTIST      SWIFT_NAME(artist) = 2,
-    ALBUM      SWIFT_NAME(album) = 3,
+    ARTIST      SWIFT_NAME(artist) = 0,
+    ALBUM      SWIFT_NAME(album) = 1,
+    GENRE      SWIFT_NAME(genre) = 2,
+    ANY      SWIFT_NAME(any) = 3,
     SONG      SWIFT_NAME(song) = 4,
     PLAYLIST      SWIFT_NAME(playlist) = 5,
   } CLOSED_ENUM;
@@ -47,10 +47,10 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::SearchMode fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("any"): return margelo::nitro::audiobrowser::SearchMode::ANY;
-        case hashString("genre"): return margelo::nitro::audiobrowser::SearchMode::GENRE;
         case hashString("artist"): return margelo::nitro::audiobrowser::SearchMode::ARTIST;
         case hashString("album"): return margelo::nitro::audiobrowser::SearchMode::ALBUM;
+        case hashString("genre"): return margelo::nitro::audiobrowser::SearchMode::GENRE;
+        case hashString("any"): return margelo::nitro::audiobrowser::SearchMode::ANY;
         case hashString("song"): return margelo::nitro::audiobrowser::SearchMode::SONG;
         case hashString("playlist"): return margelo::nitro::audiobrowser::SearchMode::PLAYLIST;
         default: [[unlikely]]
@@ -59,10 +59,10 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::SearchMode arg) {
       switch (arg) {
-        case margelo::nitro::audiobrowser::SearchMode::ANY: return JSIConverter<std::string>::toJSI(runtime, "any");
-        case margelo::nitro::audiobrowser::SearchMode::GENRE: return JSIConverter<std::string>::toJSI(runtime, "genre");
         case margelo::nitro::audiobrowser::SearchMode::ARTIST: return JSIConverter<std::string>::toJSI(runtime, "artist");
         case margelo::nitro::audiobrowser::SearchMode::ALBUM: return JSIConverter<std::string>::toJSI(runtime, "album");
+        case margelo::nitro::audiobrowser::SearchMode::GENRE: return JSIConverter<std::string>::toJSI(runtime, "genre");
+        case margelo::nitro::audiobrowser::SearchMode::ANY: return JSIConverter<std::string>::toJSI(runtime, "any");
         case margelo::nitro::audiobrowser::SearchMode::SONG: return JSIConverter<std::string>::toJSI(runtime, "song");
         case margelo::nitro::audiobrowser::SearchMode::PLAYLIST: return JSIConverter<std::string>::toJSI(runtime, "playlist");
         default: [[unlikely]]
@@ -76,10 +76,10 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("any"):
-        case hashString("genre"):
         case hashString("artist"):
         case hashString("album"):
+        case hashString("genre"):
+        case hashString("any"):
         case hashString("song"):
         case hashString("playlist"):
           return true;

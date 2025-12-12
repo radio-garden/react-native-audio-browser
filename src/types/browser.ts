@@ -1,3 +1,4 @@
+import type { NavigationError } from '../features/errors'
 import type { ResolvedTrack, Track } from './browser-nodes.ts'
 
 export type BrowserSourceCallbackParam = {
@@ -5,9 +6,37 @@ export type BrowserSourceCallbackParam = {
   routeParams?: Record<string, string>
 }
 
+/**
+ * Return BrowseError from a browse callback to display an error to the user.
+ * The error message will be shown in an error dialog in CarPlay and Android Auto.
+ *
+ * On the app side, the error is surfaced as a `NavigationError` with
+ * `code: 'callback-error'`. Use `useNavigationError()` to get the error details,
+ * or `useFormattedNavigationError()` for a display-friendly version.
+ *
+ * @example
+ * ```ts
+ * browse: async ({ path }) => {
+ *   if (!user.subscribed) {
+ *     return { error: 'Please subscribe to access this content' }
+ *   }
+ *   return fetchContent(path)
+ * }
+ * ```
+ */
+export type BrowseError = {
+  error: string
+}
+
+/**
+ * Result type for browse callbacks.
+ * Can be either a ResolvedTrack (success) or BrowseError (failure).
+ */
+export type BrowseResult = ResolvedTrack | BrowseError
+
 export type BrowserSourceCallback = (
   param: BrowserSourceCallbackParam
-) => Promise<ResolvedTrack>
+) => Promise<BrowseResult>
 
 /**
  * Search mode types for structured voice search.
@@ -449,6 +478,24 @@ export type BrowserConfiguration = {
    * @platform ios
    */
   carPlayNowPlayingRates?: number[]
+
+  /**
+   * Callback to customize error messages for navigation errors.
+   * Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
+   *
+   * If not provided or returns undefined, default English messages are used.
+   *
+   * @example
+   * ```typescript
+   * formatNavigationError: (error) => ({
+   *   title: t(`error.${error.code}`),
+   *   message: error.code === 'http-error'
+   *     ? t('error.httpMessage', { status: error.statusCode })
+   *     : error.message
+   * })
+   * ```
+   */
+  formatNavigationError?: FormatNavigationErrorCallback
 }
 
 /**
@@ -466,3 +513,48 @@ export type CarPlayNowPlayingButton =
   | 'repeat'
   | 'favorite'
   | 'playback-rate'
+
+/**
+ * Formatted navigation error for display in UI.
+ * Used by CarPlay/Android Auto and available via `useFormattedNavigationError()` for app UI.
+ */
+export type FormattedNavigationError = {
+  /**
+   * Title shown in the error action sheet header.
+   *
+   * Default values:
+   * - `'content-not-found'`: "Content Not Found" (English)
+   * - `'network-error'`: "Network Error" (English)
+   * - `'http-error'`: System-localized status text (e.g., "Not Found", "Service Unavailable")
+   * - `'callback-error'`: "Error" (English)
+   * - `'unknown-error'`: "Error" (English)
+   */
+  title: string
+  /**
+   * Message body shown below the title in the error action sheet.
+   *
+   * Default value: `error.message`
+   */
+  message: string
+}
+
+/**
+ * Callback to customize navigation error display.
+ * Return localized title and message for error presentation.
+ *
+ * @param error - The navigation error that occurred
+ * @returns Display information for the error, or undefined to use defaults
+ *
+ * @example
+ * ```typescript
+ * formatNavigationError: (error) => ({
+ *   title: t(`error.${error.code}`),
+ *   message: error.code === 'http-error'
+ *     ? t('error.httpMessage', { status: error.statusCode })
+ *     : error.message
+ * })
+ * ```
+ */
+export type FormatNavigationErrorCallback = (
+  error: NavigationError
+) => FormattedNavigationError | undefined

@@ -48,7 +48,13 @@ class HttpClient {
     val userAgent: String = DEFAULT_USER_AGENT,
   )
 
-  data class HttpResponse(val code: Int, val body: String, val headers: Map<String, String>) {
+  data class HttpResponse(
+    val code: Int,
+    val body: String,
+    val headers: Map<String, String>,
+    /** HTTP reason phrase (e.g., "Not Found", "Service Unavailable") */
+    val message: String,
+  ) {
     val isSuccessful: Boolean
       get() = code in 200..299
   }
@@ -105,7 +111,12 @@ class HttpClient {
         val responseHeaders = response.headers.toMap()
 
         Result.success(
-          HttpResponse(code = response.code, body = responseBody, headers = responseHeaders)
+          HttpResponse(
+            code = response.code,
+            body = responseBody,
+            headers = responseHeaders,
+            message = response.message,
+          )
         )
       } catch (e: IOException) {
         Timber.e(e, "HTTP request failed")
@@ -119,7 +130,7 @@ class HttpClient {
   suspend inline fun <reified T> requestJson(httpRequest: HttpRequest): Result<T> {
     return request(httpRequest).mapCatching { response ->
       if (!response.isSuccessful) {
-        throw HttpException(response.code, response.body)
+        throw HttpException(response.code, response.body, response.message)
       }
       json.decodeFromString<T>(response.body)
     }
@@ -128,12 +139,33 @@ class HttpClient {
   suspend fun requestJsonElement(httpRequest: HttpRequest): Result<JsonElement> {
     return request(httpRequest).mapCatching { response ->
       if (!response.isSuccessful) {
-        throw HttpException(response.code, response.body)
+        throw HttpException(response.code, response.body, response.message)
       }
       json.parseToJsonElement(response.body)
     }
   }
 
-  class HttpException(val code: Int, val responseBody: String) :
-    Exception("HTTP $code: $responseBody")
+  class HttpException(
+    val code: Int,
+    val responseBody: String,
+    /** HTTP reason phrase (e.g., "Not Found", "Service Unavailable") */
+    val reasonPhrase: String,
+  ) : Exception(formatMessage(code, responseBody, reasonPhrase)) {
+    companion object {
+      private fun formatMessage(code: Int, responseBody: String, reasonPhrase: String): String {
+        // Try to extract error message from JSON response: { "error": "message" }
+        try {
+          val json = org.json.JSONObject(responseBody)
+          val errorMessage = json.optString("error", null)
+          if (!errorMessage.isNullOrBlank()) {
+            return errorMessage
+          }
+        } catch (_: Exception) {
+          // Not valid JSON, fall through
+        }
+        // Fall back to HTTP reason phrase
+        return reasonPhrase
+      }
+    }
+  }
 }

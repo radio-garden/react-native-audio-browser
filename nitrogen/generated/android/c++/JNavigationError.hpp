@@ -40,10 +40,13 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> message = this->getFieldValue(fieldMessage);
       static const auto fieldStatusCode = clazz->getField<jni::JDouble>("statusCode");
       jni::local_ref<jni::JDouble> statusCode = this->getFieldValue(fieldStatusCode);
+      static const auto fieldStatusCodeSuccess = clazz->getField<jni::JBoolean>("statusCodeSuccess");
+      jni::local_ref<jni::JBoolean> statusCodeSuccess = this->getFieldValue(fieldStatusCodeSuccess);
       return NavigationError(
         code->toCpp(),
         message->toStdString(),
-        statusCode != nullptr ? std::make_optional(statusCode->value()) : std::nullopt
+        statusCode != nullptr ? std::make_optional(statusCode->value()) : std::nullopt,
+        statusCodeSuccess != nullptr ? std::make_optional(static_cast<bool>(statusCodeSuccess->value())) : std::nullopt
       );
     }
 
@@ -53,14 +56,15 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNavigationError::javaobject> fromCpp(const NavigationError& value) {
-      using JSignature = JNavigationError(jni::alias_ref<JNavigationErrorType>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
+      using JSignature = JNavigationError(jni::alias_ref<JNavigationErrorType>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         JNavigationErrorType::fromCpp(value.code),
         jni::make_jstring(value.message),
-        value.statusCode.has_value() ? jni::JDouble::valueOf(value.statusCode.value()) : nullptr
+        value.statusCode.has_value() ? jni::JDouble::valueOf(value.statusCode.value()) : nullptr,
+        value.statusCodeSuccess.has_value() ? jni::JBoolean::valueOf(value.statusCodeSuccess.value()) : nullptr
       );
     }
   };

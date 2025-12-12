@@ -28,6 +28,8 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NavigationErrorType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
+// Forward declaration of `FormattedNavigationError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `TransformableRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
@@ -36,6 +38,8 @@ namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
+// Forward declaration of `BrowseError` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct BrowseError; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `SearchParams` to properly resolve imports.
@@ -176,11 +180,14 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorType.hpp"
+#include "FormattedNavigationError.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
 #include "MediaRequestConfig.hpp"
 #include "NativeRouteEntry.hpp"
+#include "BrowseError.hpp"
+#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
 #include "SearchMode.hpp"
@@ -201,7 +208,6 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include <NitroModules/Null.hpp>
 #include "SleepTimerTime.hpp"
 #include "SleepTimerEndOfTrack.hpp"
-#include <variant>
 #include "Playback.hpp"
 #include "PlaybackState.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
@@ -328,6 +334,13 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnNavigationError(const std::function<void(const NavigationErrorEvent& /* data */)>& onNavigationError) noexcept override {
       _swiftPart.setOnNavigationError(onNavigationError);
+    }
+    inline std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)> getOnFormattedNavigationError() noexcept override {
+      auto __result = _swiftPart.getOnFormattedNavigationError();
+      return __result;
+    }
+    inline void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) noexcept override {
+      _swiftPart.setOnFormattedNavigationError(onFormattedNavigationError);
     }
     inline NativeBrowserConfiguration getConfiguration() noexcept override {
       return _swiftPart.getConfiguration();
@@ -725,6 +738,14 @@ namespace margelo::nitro::audiobrowser {
     }
     inline std::optional<NavigationError> getNavigationError() override {
       auto __result = _swiftPart.getNavigationError();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<FormattedNavigationError> getFormattedNavigationError() override {
+      auto __result = _swiftPart.getFormattedNavigationError();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
