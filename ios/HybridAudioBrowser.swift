@@ -220,7 +220,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  private func handleNavigationError(_ error: Error, path _: String) {
+  private func handleNavigationError(_ error: Error, path: String) {
     let navError: NavigationError
     if let browserError = error as? BrowserError {
       switch browserError {
@@ -248,16 +248,18 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     lastNavigationError = navError
 
     // Format the error (async if using JS callback, sync for defaults)
+    let defaultFormatted = defaultFormattedError(navError)
     if let formatter = browserManager.config.formatNavigationError {
-      formatter(navError)
+      let params = FormatNavigationErrorParams(error: navError, defaultFormatted: defaultFormatted, path: path)
+      formatter(params)
         .then { [weak self] customDisplay in
-          self?.lastFormattedNavigationError = customDisplay ?? self?.defaultFormattedError(navError)
+          self?.lastFormattedNavigationError = customDisplay ?? defaultFormatted
         }
         .catch { [weak self] _ in
-          self?.lastFormattedNavigationError = self?.defaultFormattedError(navError)
+          self?.lastFormattedNavigationError = defaultFormatted
         }
     } else {
-      lastFormattedNavigationError = defaultFormattedError(navError)
+      lastFormattedNavigationError = defaultFormatted
     }
   }
 

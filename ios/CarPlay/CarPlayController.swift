@@ -179,7 +179,9 @@ public final class RNABCarPlayController: NSObject {
   private func handleNavigationError(_ event: NavigationErrorEvent) {
     guard let error = event.error else { return }
     logger.warning("Navigation error: \(error.code.stringValue) - \(error.message)")
-    showNavigationError(error)
+    // Use current path from navigation stack, or "/" as fallback
+    let path = navigationStack.last ?? "/"
+    showNavigationError(error, path: path)
   }
 
   // MARK: - Initial Interface
@@ -516,7 +518,7 @@ public final class RNABCarPlayController: NSObject {
         logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
         await MainActor.run {
           let navError = self.toNavigationError(error)
-          self.showNavigationError(navError)
+          self.showNavigationError(navError, path: url)
           completion()
         }
       }
@@ -846,36 +848,53 @@ public final class RNABCarPlayController: NSObject {
   // MARK: - Error Handling
 
   /// Shows a navigation error using CPActionSheetTemplate.
-  /// - Parameter error: The NavigationError to display
-  private func showNavigationError(_ error: NavigationError) {
+  /// - Parameters:
+  ///   - error: The NavigationError to display
+  ///   - path: The path that was being navigated to when the error occurred
+  private func showNavigationError(_ error: NavigationError, path: String) {
+    let defaultFormatted = defaultFormattedError(error)
+
     // Check if custom formatter is configured
     logger.debug("showNavigationError: formatNavigationError is \(self.config.formatNavigationError != nil ? "set" : "nil")")
     if let formatter = config.formatNavigationError {
       logger.debug("Calling formatNavigationError callback...")
       // Call the JS callback and handle result
-      formatter(error)
+      let params = FormatNavigationErrorParams(error: error, defaultFormatted: defaultFormatted, path: path)
+      formatter(params)
         .then { [weak self] customDisplay in
           self?.logger.debug("formatNavigationError returned: \(String(describing: customDisplay))")
-          self?.presentErrorActionSheet(error: error, customDisplay: customDisplay)
+          self?.presentErrorActionSheet(customDisplay: customDisplay ?? defaultFormatted)
         }
         .catch { [weak self] callbackError in
           self?.logger.error("formatNavigationError failed: \(callbackError)")
           // On error, fall back to defaults
-          self?.presentErrorActionSheet(error: error, customDisplay: nil)
+          self?.presentErrorActionSheet(customDisplay: defaultFormatted)
         }
     } else {
-      presentErrorActionSheet(error: error, customDisplay: nil)
+      presentErrorActionSheet(customDisplay: defaultFormatted)
     }
   }
 
+  /// Returns the default formatted error for the given navigation error
+  private func defaultFormattedError(_ error: NavigationError) -> FormattedNavigationError {
+    let title = switch error.code {
+    case .contentNotFound:
+      "Content Not Found"
+    case .networkError:
+      "Network Error"
+    case .httpError:
+      httpErrorTitle(statusCode: error.statusCode.map { Int($0) })
+    case .callbackError:
+      "Error"
+    case .unknownError:
+      "Error"
+    }
+    return FormattedNavigationError(title: title, message: error.message)
+  }
+
   /// Presents the error action sheet with the given display info.
-  /// - Parameters:
-  ///   - error: The NavigationError (used for default title/message if customDisplay is nil)
-  ///   - customDisplay: Optional custom display from formatNavigationError callback
-  private func presentErrorActionSheet(
-    error: NavigationError,
-    customDisplay: FormattedNavigationError?
-  ) {
+  /// - Parameter customDisplay: The formatted error to display
+  private func presentErrorActionSheet(customDisplay: FormattedNavigationError) {
     // Can only present action sheet if a root template exists
     guard interfaceController.rootTemplate != nil else {
       logger.warning("Cannot present error action sheet - no root template set")
@@ -885,42 +904,15 @@ public final class RNABCarPlayController: NSObject {
     // If another template is already presented, dismiss it first
     if interfaceController.presentedTemplate != nil {
       interfaceController.dismissTemplate(animated: false) { [weak self] _, _ in
-        self?.showErrorActionSheet(error: error, customDisplay: customDisplay)
+        self?.showErrorActionSheet(customDisplay: customDisplay)
       }
     } else {
-      showErrorActionSheet(error: error, customDisplay: customDisplay)
+      showErrorActionSheet(customDisplay: customDisplay)
     }
   }
 
   /// Actually shows the error action sheet (called after safety checks)
-  private func showErrorActionSheet(
-    error: NavigationError,
-    customDisplay: FormattedNavigationError?
-  ) {
-    // Use custom display if provided, otherwise fall back to defaults
-    let title: String
-    let message: String
-
-    if let customDisplay {
-      title = customDisplay.title
-      message = customDisplay.message
-    } else {
-      // Default English titles based on error type
-      title = switch error.code {
-      case .contentNotFound:
-        "Content Not Found"
-      case .networkError:
-        "Network Error"
-      case .httpError:
-        httpErrorTitle(statusCode: error.statusCode.map { Int($0) })
-      case .callbackError:
-        "Error"
-      case .unknownError:
-        "Error"
-      }
-      message = error.message
-    }
-
+  private func showErrorActionSheet(customDisplay: FormattedNavigationError) {
     // OK action - dismiss the action sheet (use system-localized "OK")
     let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
     let ok = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
@@ -928,8 +920,8 @@ public final class RNABCarPlayController: NSObject {
     }
 
     let actionSheet = CPActionSheetTemplate(
-      title: title,
-      message: message,
+      title: customDisplay.title,
+      message: customDisplay.message,
       actions: [ok]
     )
 

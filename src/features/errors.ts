@@ -152,14 +152,25 @@ export const onFormattedNavigationError = NativeUpdatedValue.emitterize<Formatte
  *
  * @example
  * ```tsx
- * // Configure custom formatting for i18n
+ * // Configure custom formatting - override only specific errors or routes
  * configureBrowser({
- *   formatNavigationError: (error) => ({
- *     title: t(`error.${error.code}`),
- *     message: error.code === 'http-error'
- *       ? t('error.httpMessage', { status: error.statusCode })
- *       : error.message
- *   })
+ *   formatNavigationError: ({ error, defaultFormatted, path }) => {
+ *     // Custom message for specific routes
+ *     if (error.code === 'network-error' && path.startsWith('/json-api')) {
+ *       return {
+ *         title: 'API Server Not Running',
+ *         message: 'Start the API server first'
+ *       }
+ *     }
+ *     if (error.code === 'http-error') {
+ *       return {
+ *         title: t('error.serverError'),
+ *         message: t('error.httpMessage', { status: error.statusCode })
+ *       }
+ *     }
+ *     // Use default for other error types
+ *     return defaultFormatted
+ *   }
  * })
  * ```
  *

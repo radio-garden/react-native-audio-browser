@@ -40,7 +40,7 @@ struct BrowserConfig {
 
   /// Callback to customize navigation error display (for i18n)
   /// Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
-  let formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)?
+  let formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?
 
   init(
     request: TransformableRequestConfig? = nil,
@@ -52,7 +52,7 @@ struct BrowserConfig {
     carPlayUpNextButton: Bool = true,
     carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
     carPlayNowPlayingRates: [Double] = defaultCarPlayNowPlayingRates,
-    formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)? = nil,
+    formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
     self.media = media

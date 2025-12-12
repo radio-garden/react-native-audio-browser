@@ -46,6 +46,8 @@ namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `HeartRating` to properly resolve imports.
@@ -177,6 +179,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
+#include "FormatNavigationErrorParams.hpp"
 #include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
@@ -1079,42 +1082,42 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& / * error * /)>>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& / * params * /)>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______ = std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(const std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>(value);
+  using std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______ = std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______(const std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)> get_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)> get_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError&)>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams&)>`.
    */
-  using Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError = std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>;
+  using Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams = std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& / * error * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& / * params * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper final {
+  class Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper(std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> call(NavigationError error) const noexcept {
-      auto __result = _function->operator()(error);
+    explicit Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_Wrapper(std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::optional<FormattedNavigationError>>> call(FormatNavigationErrorParams params) const noexcept {
+      auto __result = _function->operator()(params);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const NavigationError& /* error */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper wrap_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError value) noexcept {
-    return Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError_Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>

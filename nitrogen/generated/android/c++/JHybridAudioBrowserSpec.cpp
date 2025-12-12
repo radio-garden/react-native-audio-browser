@@ -43,6 +43,8 @@ namespace margelo::nitro::audiobrowser { struct SearchParams; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadata` to properly resolve imports.
@@ -218,7 +220,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JSearchMode.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError.hpp"
+#include "FormatNavigationErrorParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
+#include "JFormatNavigationErrorParams.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
 #include "JFunc_void_AudioMetadataReceivedEvent.hpp"
 #include "JAudioMetadataReceivedEvent.hpp"

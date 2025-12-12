@@ -40,6 +40,7 @@ import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
 import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -320,7 +321,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
               } catch (e: CancellationException) {
                 throw e // Rethrow to properly cancel
               } catch (e: Exception) {
-                handleBrowserException(e, "setting path: $path")
+                handleBrowserException(e, path, "setting path: $path")
               }
             }
         }
@@ -351,7 +352,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             } catch (e: CancellationException) {
               throw e // Rethrow to properly cancel
             } catch (e: Exception) {
-              handleBrowserException(e, "setting configuration path: $path")
+              handleBrowserException(e, path, "setting configuration path: $path")
             }
           }
       }
@@ -399,6 +400,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private fun setNavigationError(
     code: NavigationErrorType,
     message: String,
+    path: String,
     statusCode: Double? = null,
     statusCodeSuccess: Boolean? = null,
   ) {
@@ -407,50 +409,53 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     onNavigationError(NavigationErrorEvent(navigationError))
 
     // Format the error (async if using JS callback, sync for defaults)
+    val defaultFormatted = defaultFormattedError(navError)
     val formatter = _configuration.formatNavigationError
     if (formatter != null) {
       mainScope.launch {
         try {
-          val customFormatted = formatter(navError).await()
-          formattedNavigationError = customFormatted ?: defaultFormattedError(navError)
+          val params = FormatNavigationErrorParams(navError, defaultFormatted, path)
+          val customFormatted = formatter(params).await()
+          formattedNavigationError = customFormatted ?: defaultFormatted
         } catch (e: Exception) {
-          formattedNavigationError = defaultFormattedError(navError)
+          formattedNavigationError = defaultFormatted
         }
         onFormattedNavigationError(formattedNavigationError)
       }
     } else {
-      formattedNavigationError = defaultFormattedError(navError)
+      formattedNavigationError = defaultFormatted
       onFormattedNavigationError(formattedNavigationError)
     }
   }
 
   /** Maps common browser exceptions to navigation errors */
-  private fun handleBrowserException(e: Exception, logContext: String) {
+  private fun handleBrowserException(e: Exception, path: String, logContext: String) {
     when (e) {
       is HttpStatusException -> {
         Timber.e(e, "HTTP error $logContext")
         setNavigationError(
           NavigationErrorType.HTTP_ERROR,
           e.message ?: "Server error",
+          path,
           e.statusCode.toDouble(),
           e.statusCode in 200..299,
         )
       }
       is NetworkException -> {
         Timber.e(e, "Network error $logContext")
-        setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed")
+        setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed", path)
       }
       is ContentNotFoundException -> {
         Timber.e(e, "Content not found $logContext")
-        setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "Content not found")
+        setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "Content not found", path)
       }
       is CallbackException -> {
         Timber.e(e, "Callback error $logContext")
-        setNavigationError(NavigationErrorType.CALLBACK_ERROR, e.message ?: "An error occurred")
+        setNavigationError(NavigationErrorType.CALLBACK_ERROR, e.message ?: "An error occurred", path)
       }
       else -> {
         Timber.e(e, "Unexpected error $logContext")
-        setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred")
+        setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred", path)
       }
     }
   }
@@ -482,7 +487,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         } catch (e: CancellationException) {
           throw e // Rethrow to properly cancel
         } catch (e: Exception) {
-          handleBrowserException(e, "navigating to path: $path")
+          handleBrowserException(e, path, "navigating to path: $path")
         }
       }
   }
@@ -493,10 +498,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Cancel previous navigation to avoid race conditions
     navigationJob?.cancel()
 
+    val url = track.url
     navigationJob =
       mainScope.launch {
         try {
-          val url = track.url
           when {
             // Check if this is a contextual URL (playable-only track with queue context)
             url != null && BrowserPathHelper.isContextual(url) -> {
@@ -552,7 +557,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         } catch (e: CancellationException) {
           throw e // Rethrow to properly cancel
         } catch (e: Exception) {
-          handleBrowserException(e, "navigating to track: ${track.title}")
+          handleBrowserException(e, url ?: track.src ?: "", "navigating to track: ${track.title}")
         }
       }
   }

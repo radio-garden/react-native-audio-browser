@@ -539,22 +539,40 @@ export type FormattedNavigationError = {
 }
 
 /**
+ * Parameters passed to the formatNavigationError callback.
+ */
+export type FormatNavigationErrorParams = {
+  /** The navigation error that occurred */
+  error: NavigationError
+  /** The default formatted error (useful for selective overrides) */
+  defaultFormatted: FormattedNavigationError
+  /** The path that was being navigated to when the error occurred */
+  path: string
+}
+
+/**
  * Callback to customize navigation error display.
  * Return localized title and message for error presentation.
  *
- * @param error - The navigation error that occurred
+ * @param params - Object containing error details and context
  * @returns Display information for the error, or undefined to use defaults
  *
  * @example
  * ```typescript
- * formatNavigationError: (error) => ({
- *   title: t(`error.${error.code}`),
- *   message: error.code === 'http-error'
- *     ? t('error.httpMessage', { status: error.statusCode })
- *     : error.message
- * })
+ * // Override only specific error types or routes
+ * formatNavigationError: ({ error, defaultFormatted, path }) => {
+ *   // Custom message for local server routes
+ *   if (error.code === 'network-error' && path.startsWith('/errors')) {
+ *     return {
+ *       title: 'Server Not Running',
+ *       message: 'Start the local server with: yarn server'
+ *     }
+ *   }
+ *   // Use default for other errors
+ *   return defaultFormatted
+ * }
  * ```
  */
 export type FormatNavigationErrorCallback = (
-  error: NavigationError
+  params: FormatNavigationErrorParams
 ) => FormattedNavigationError | undefined

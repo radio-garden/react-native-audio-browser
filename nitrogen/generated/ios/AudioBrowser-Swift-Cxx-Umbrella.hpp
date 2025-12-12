@@ -48,6 +48,8 @@ namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
+// Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `HeartRating` to properly resolve imports.
@@ -192,6 +194,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FeedbackOptions.hpp"
+#include "FormatNavigationErrorParams.hpp"
 #include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"

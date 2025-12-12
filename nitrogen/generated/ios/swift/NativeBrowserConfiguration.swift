@@ -19,7 +19,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayNowPlayingRates: [Double]?, formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayNowPlayingRates: [Double]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -98,11 +98,11 @@ public extension NativeBrowserConfiguration {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______ in
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______ in
       if let __unwrappedValue = formatNavigationError {
-        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError in
-          let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__unwrappedValue)
-          return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__closureWrapper.toUnsafe())
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
@@ -347,16 +347,16 @@ public extension NativeBrowserConfiguration {
     }
   }
   
-  var formatNavigationError: ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)? {
+  var formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? {
     @inline(__always)
     get {
-      return { () -> ((_ error: NavigationError) -> Promise<FormattedNavigationError?>)? in
-        if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(self.__formatNavigationError) {
-          let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______(self.__formatNavigationError)
-          return { () -> (NavigationError) -> Promise<FormattedNavigationError?> in
-            let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__unwrapped)
-            return { (__error: NavigationError) -> Promise<FormattedNavigationError?> in
-              let __result = __wrappedFunction.call(__error)
+      return { () -> ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? in
+        if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______(self.__formatNavigationError) {
+          let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______(self.__formatNavigationError)
+          return { () -> (FormatNavigationErrorParams) -> Promise<FormattedNavigationError?> in
+            let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__unwrapped)
+            return { (__params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?> in
+              let __result = __wrappedFunction.call(__params)
               return { () -> Promise<FormattedNavigationError?> in
                 let __promise = Promise<FormattedNavigationError?>()
                 let __resolver = { (__result: FormattedNavigationError?) in
@@ -387,11 +387,11 @@ public extension NativeBrowserConfiguration {
     }
     @inline(__always)
     set {
-      self.__formatNavigationError = { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______ in
+      self.__formatNavigationError = { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_NavigationError_____error______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError in
-            let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__unwrappedValue)
-            return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____NavigationError(__closureWrapper.toUnsafe())
+          return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_FormattedNavigationError____const_FormatNavigationErrorParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams in
+            let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__unwrappedValue)
+            return bridge.create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(__closureWrapper.toUnsafe())
           }())
         } else {
           return .init()
