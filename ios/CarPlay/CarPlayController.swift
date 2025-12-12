@@ -1,5 +1,6 @@
 import CarPlay
 import Foundation
+import Kingfisher
 import NitroModules
 import os.log
 
@@ -235,10 +236,12 @@ public final class RNABCarPlayController: NSObject {
 
     // Set tab image - CarPlay requires an image for proper tab display
     if let artwork = track.artwork, let url = URL(string: artwork) {
-      if let image = await loadImage(from: url) {
-        template.tabImage = image
-      } else {
-        template.tabImage = defaultTabImage()
+      template.tabImage = defaultTabImage()
+      // Load and cache image asynchronously via Kingfisher, then update tab
+      KingfisherManager.shared.retrieveImage(with: url) { [weak template] result in
+        if case let .success(imageResult) = result {
+          template?.tabImage = imageResult.image
+        }
       }
     } else {
       // Default icon when no artwork available
@@ -354,17 +357,11 @@ public final class RNABCarPlayController: NSObject {
       item.accessoryType = .disclosureIndicator
     }
 
-    // Load artwork asynchronously
+    // Load artwork asynchronously with caching via Kingfisher
     if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
        let url = URL(string: artworkUrl)
     {
-      Task {
-        if let image = await loadImage(from: url) {
-          await MainActor.run {
-            item.setImage(image)
-          }
-        }
-      }
+      item.kf.setImage(with: url)
     }
 
     // Set selection handler
@@ -854,16 +851,6 @@ public final class RNABCarPlayController: NSObject {
   private func defaultTabImage() -> UIImage? {
     let config = UIImage.SymbolConfiguration(scale: .large)
     return UIImage(systemName: "music.note.list", withConfiguration: config)
-  }
-
-  private func loadImage(from url: URL) async -> UIImage? {
-    do {
-      let (data, _) = try await URLSession.shared.data(from: url)
-      return UIImage(data: data)
-    } catch {
-      logger.debug("Failed to load image from \(url): \(error.localizedDescription)")
-      return nil
-    }
   }
 }
 
