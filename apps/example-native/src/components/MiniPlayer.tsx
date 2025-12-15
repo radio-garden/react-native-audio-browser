@@ -33,7 +33,7 @@ type MiniPlayerProps = {
 }
 
 function cycleRepeatMode() {
-    const modes: RepeatMode[] = ['off', 'queue', 'track']
+    const modes: RepeatMode[] = ['off', 'track', 'queue']
     const currentIndex = modes.indexOf(getRepeatMode())
     const nextIndex = (currentIndex + 1) % modes.length
     setRepeatMode(modes[nextIndex])
