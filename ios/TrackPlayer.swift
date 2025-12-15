@@ -512,7 +512,13 @@ class TrackPlayer: @unchecked Sendable {
   func load(_ track: Track, playWhenReady: Bool? = nil) {
     assertMainThread()
     handlePlayWhenReady(playWhenReady) {
-      replaceCurrentTrackWith(track)
+      if currentIndex == -1 {
+        tracks.append(track)
+        currentIndex = 0
+      } else {
+        setTrack(at: currentIndex, track)
+      }
+      handleCurrentTrackChanged()
     }
   }
 
@@ -1067,19 +1073,15 @@ class TrackPlayer: @unchecked Sendable {
   // MARK: - Queue Methods
 
   /**
-   Replace the current track with a new one. If there is no current track, it is equivalent to calling `add(track:)`, `skipTo(trackIndex)`.
+   Set the track at a specific index.
 
-   - parameter track: The track to set as the new current track.
+   - parameter index: The index of the track to set.
+   - parameter track: The track to set.
    */
-  private func replaceCurrentTrackWith(_ track: Track) {
+  func setTrack(at index: Int, _ track: Track) {
     assertMainThread()
-    if currentIndex == -1 {
-      tracks.append(track)
-      currentIndex = 0
-    } else {
-      tracks[currentIndex] = track
-    }
-    handleCurrentTrackChanged()
+    guard index >= 0, index < tracks.count else { return }
+    tracks[index] = track
   }
 
   /**
