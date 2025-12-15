@@ -4,6 +4,13 @@ import MediaPlayer
 import NitroModules
 import os.log
 
+@MainActor let playerAndConfiguredBrowser = OnceValue<(HybridAudioBrowser, TrackPlayer)> {
+  guard let browser = HybridAudioBrowser.shared,
+        browser.browserManager.isConfigured,
+        let player = browser.getPlayer() else { return nil }
+  return (browser, player)
+}
+
 public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
 
@@ -11,24 +18,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
   nonisolated(unsafe) private(set) weak static var shared: HybridAudioBrowser?
-
-  /// Callbacks waiting for HybridAudioBrowser to be configured (for CarPlay cold start)
-  @MainActor
-  private static var onBrowserConfiguredCallbacks: [@MainActor (HybridAudioBrowser) -> Void] = []
-
-  /// Whether configureBrowser() has been called
-  private(set) var isBrowserConfigured = false
-
-  /// Register a callback to be called when HybridAudioBrowser is configured.
-  /// If already configured, the callback is called immediately on main thread.
-  @MainActor
-  static func onBrowserConfigured(_ callback: @escaping @MainActor (HybridAudioBrowser) -> Void) {
-    if let shared, shared.isBrowserConfigured {
-      callback(shared)
-    } else {
-      onBrowserConfiguredCallbacks.append(callback)
-    }
-  }
 
   // MARK: - Private Properties
 
@@ -121,20 +110,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)
 
-      // Mark as configured and notify waiting listeners (e.g., CarPlay cold start)
-      if !isBrowserConfigured {
-        isBrowserConfigured = true
-        // Dispatch to main actor since callbacks and CarPlay require main thread
-        Task { @MainActor [self] in
-          let callbacks = HybridAudioBrowser.onBrowserConfiguredCallbacks
-          HybridAudioBrowser.onBrowserConfiguredCallbacks = []
-          for callback in callbacks {
-            callback(self)
-          }
-        }
-      }
-
       // Query tabs and navigate to initial path after config is set (matches Kotlin behavior)
+      Task { @MainActor in
+        // Notify waiting listeners (e.g., CarPlay cold start)
+        playerAndConfiguredBrowser.check()
+      }
       Task {
         let tabs = try? await browserManager.queryTabs()
         // Navigate to configured path, first tab, or "/"
@@ -252,27 +232,27 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     tabsChangedEmitter.addListener { [weak self] tabs in
       self?.onTabsChanged(tabs)
     }
-    
+
     contentChangedEmitter.addListener { [weak self] content in
       self?.onContentChanged(content)
     }
-    
+
     favoriteChangedEmitter.addListener { [weak self] event in
       self?.onFavoriteChanged(event)
     }
-    
+
     activeTrackChangedEmitter.addListener { [weak self] event in
       self?.onPlaybackActiveTrackChanged(event)
     }
-    
+
     queueChangedEmitter.addListener { [weak self] tracks in
       self?.onPlaybackQueueChanged(tracks)
     }
-    
+
     navigationErrorEmitter.addListener { [weak self] event in
       self?.onNavigationError(event)
     }
-    
+
     repeatModeChangedEmitter.addListener { [weak self] event in
       self?.onPlaybackRepeatModeChanged(event)
     }
@@ -511,8 +491,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       }
 
       // Apply default remote commands (play, pause, next, previous, seekTo)
+      // Notify listeners that player is ready (e.g., CarPlay)
       await MainActor.run {
         self.applyRemoteCommands()
+        playerAndConfiguredBrowser.check()
       }
     }
   }

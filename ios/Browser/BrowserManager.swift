@@ -113,9 +113,13 @@ final class BrowserManager: @unchecked Sendable {
 
   // MARK: - Configuration
 
+  /// Whether configureBrowser() has been called
+  private(set) var isConfigured = false
+
   /// Browser configuration containing routes, search, tabs, and request settings.
   var config: BrowserConfig = .init() {
     didSet {
+      isConfigured = true
       onConfigChanged?(config)
     }
   }

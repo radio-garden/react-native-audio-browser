@@ -25,9 +25,6 @@ public final class RNABCarPlayController: NSObject {
   /// Track content subscriptions
   private var isStarted = false
 
-  /// Task for waiting on AudioBrowser initialization
-  private var initializationTask: Task<Void, Never>?
-
   /// Current navigation stack paths (for back navigation context)
   private var navigationStack: [String] = []
 
@@ -79,16 +76,18 @@ public final class RNABCarPlayController: NSObject {
     interfaceDelegate = delegate
     interfaceController.delegate = delegate
 
-    // If AudioBrowser is already configured (warm start), set up subscriptions now
-    // Otherwise, they'll be set up after waiting in buildInitialInterface()
-    if audioBrowser?.isBrowserConfigured == true {
-      setupContentSubscriptions()
-      setupNowPlayingTemplate()
-    }
+    // Show loading template while waiting
+    showLoadingTemplate()
 
-    // Build initial interface (will wait for AudioBrowser if needed)
-    initializationTask = Task { @MainActor in
-      await buildInitialInterface()
+    // Wait for both browser and player to be ready
+    Task { @MainActor in
+      let (browser, _) = await playerAndConfiguredBrowser.wait()
+      guard self.isStarted else { return }
+      self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
+      self.audioBrowser = browser
+      self.setupContentSubscriptions()
+      self.setupNowPlayingTemplate()
+      await self.buildInitialInterface()
     }
   }
 
@@ -98,10 +97,6 @@ public final class RNABCarPlayController: NSObject {
     isStarted = false
 
     logger.info("Stopping CarPlay controller")
-
-    // Cancel any pending initialization
-    initializationTask?.cancel()
-    initializationTask = nil
 
     // Remove Now Playing observer
     if let observer = nowPlayingObserver {
@@ -189,15 +184,8 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func buildInitialInterface() async {
-    // If AudioBrowser isn't configured yet (cold start from CarPlay), wait for it
-    if audioBrowser == nil || audioBrowser?.isBrowserConfigured != true {
-      logger.debug("AudioBrowser not configured yet, waiting...")
-      showLoadingTemplate()
-      await waitForAudioBrowser()
-    }
-
     guard let audioBrowser else {
-      logger.error("AudioBrowser not available after waiting")
+      logger.error("AudioBrowser not available")
       showErrorTemplate(message: "Audio browser not initialized")
       return
     }
@@ -208,7 +196,7 @@ public final class RNABCarPlayController: NSObject {
     if let tabs, !tabs.isEmpty {
       await showTabBar(tabs: tabs)
     } else {
-      // No tabs yet - show loading or query tabs
+      // No tabs yet - query them
       logger.info("No tabs available, querying...")
       do {
         let queriedTabs = try await audioBrowser.browserManager.queryTabs()
@@ -220,25 +208,6 @@ public final class RNABCarPlayController: NSObject {
       } catch {
         logger.error("Failed to query tabs: \(error.localizedDescription)")
         showErrorTemplate(message: "Failed to load content")
-      }
-    }
-  }
-
-  /// Waits for HybridAudioBrowser to be configured (cold start scenario)
-  @MainActor
-  private func waitForAudioBrowser() async {
-    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-      HybridAudioBrowser.onBrowserConfigured { [weak self] browser in
-        guard let self else {
-          continuation.resume()
-          return
-        }
-        logger.debug("AudioBrowser configured")
-        audioBrowser = browser
-        // Set up content subscriptions now that we have the browser
-        setupContentSubscriptions()
-        setupNowPlayingTemplate()
-        continuation.resume()
       }
     }
   }
@@ -589,21 +558,16 @@ public final class RNABCarPlayController: NSObject {
     }
 
     var nowPlayingButtons: [CPNowPlayingButton] = []
-    var commandsToEnable: [RemoteCommand] = []
 
     for buttonType in buttons {
       switch buttonType {
       case .shuffle:
-        // Queue command to be enabled so button state syncs properly
-        commandsToEnable.append(.changeShuffleMode)
         let shuffleButton = CPNowPlayingShuffleButton { [weak self] _ in
           self?.handleShuffleButtonTapped()
         }
         nowPlayingButtons.append(shuffleButton)
 
       case .repeat:
-        // Queue command to be enabled so button state syncs properly
-        commandsToEnable.append(.changeRepeatMode)
         let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
           self?.handleRepeatButtonTapped()
         }
@@ -618,9 +582,6 @@ public final class RNABCarPlayController: NSObject {
         nowPlayingButtons.append(favoriteButton)
 
       case .playbackRate:
-        // Queue command to be enabled with supported rates
-        let rates = config.carPlayNowPlayingRates.map { NSNumber(value: $0) }
-        commandsToEnable.append(.changePlaybackRate(supportedPlaybackRates: rates))
         let rateButton = CPNowPlayingPlaybackRateButton { [weak self] _ in
           self?.handlePlaybackRateButtonTapped()
         }
@@ -631,20 +592,43 @@ public final class RNABCarPlayController: NSObject {
     CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
     logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
 
-    // Enable the remote commands needed for CarPlay buttons to display state properly
-    if !commandsToEnable.isEmpty, let player = audioBrowser?.getPlayer() {
-      // Merge with existing commands to avoid disabling them
-      var allCommands = player.remoteCommands
-      for command in commandsToEnable {
-        if !allCommands.contains(command) {
-          allCommands.append(command)
-        }
-      }
-      player.enableRemoteCommands(allCommands)
+    // Try to enable commands now (will be retried in handleActiveTrackChanged if player doesn't exist)
+    enableNowPlayingRemoteCommands()
+  }
 
-      // Sync current playback state so buttons display correctly
-      player.updateNowPlayingPlaybackValues()
+  /// Enables remote commands needed for CarPlay Now Playing buttons to display state properly.
+  /// Called from setupNowPlayingButtons and again from handleActiveTrackChanged when first track loads.
+  private func enableNowPlayingRemoteCommands() {
+    guard let player = audioBrowser?.getPlayer() else { return }
+
+    var commandsToEnable: [RemoteCommand] = []
+    for buttonType in config.carPlayNowPlayingButtons {
+      switch buttonType {
+      case .shuffle:
+        commandsToEnable.append(.changeShuffleMode)
+      case .repeat:
+        commandsToEnable.append(.changeRepeatMode)
+      case .playbackRate:
+        let rates = config.carPlayNowPlayingRates.map { NSNumber(value: $0) }
+        commandsToEnable.append(.changePlaybackRate(supportedPlaybackRates: rates))
+      case .favorite:
+        break // No remote command needed for favorite
+      }
     }
+
+    guard !commandsToEnable.isEmpty else { return }
+
+    // Merge with existing commands to avoid disabling them
+    var allCommands = player.remoteCommands
+    for command in commandsToEnable {
+      if !allCommands.contains(command) {
+        allCommands.append(command)
+      }
+    }
+    player.enableRemoteCommands(allCommands)
+
+    // Sync current playback state so buttons display correctly
+    player.updateNowPlayingPlaybackValues()
   }
 
   /// Returns the appropriate image for the favorite button based on state
