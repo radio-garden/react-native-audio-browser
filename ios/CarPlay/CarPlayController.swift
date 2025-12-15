@@ -121,18 +121,14 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to tab changes
-    let originalOnTabsChanged = audioBrowser.onTabsChanged
-    audioBrowser.onTabsChanged = { [weak self, originalOnTabsChanged] tabs in
-      originalOnTabsChanged(tabs)
+    audioBrowser.tabsChangedEmitter.addListener { [weak self] tabs in
       Task {
         await self?.handleTabsChanged(tabs)
       }
     }
 
     // Subscribe to content changes
-    let originalOnContentChanged = audioBrowser.onContentChanged
-    audioBrowser.onContentChanged = { [weak self, originalOnContentChanged] content in
-      originalOnContentChanged(content)
+    audioBrowser.contentChangedEmitter.addListener { [weak self] content in
       Task {
         await self?.handleContentChanged(content)
       }
@@ -146,41 +142,33 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to favorite changes (for Now Playing button)
-    let originalOnFavoriteChanged = audioBrowser.onFavoriteChanged
-    audioBrowser.onFavoriteChanged = { [weak self, originalOnFavoriteChanged] event in
-      originalOnFavoriteChanged(event)
+    audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in
       Task {
         await self?.updateFavoriteButtonState()
       }
     }
 
     // Subscribe to external content changes (from notifyContentChanged)
-    audioBrowser.onExternalContentChanged = { [weak self] path in
+    audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
       self?.notifyContentChanged(path: path)
     }
 
     // Subscribe to active track changes (for playing indicator in lists)
-    let originalOnActiveTrackChanged = audioBrowser.onPlaybackActiveTrackChanged
-    audioBrowser.onPlaybackActiveTrackChanged = { [weak self, originalOnActiveTrackChanged] event in
-      originalOnActiveTrackChanged(event)
+    audioBrowser.activeTrackChangedEmitter.addListener { [weak self] event in
       Task {
         await self?.handleActiveTrackChanged(event)
       }
     }
 
     // Subscribe to queue changes (for Up Next list updates)
-    let originalOnQueueChanged = audioBrowser.onPlaybackQueueChanged
-    audioBrowser.onPlaybackQueueChanged = { [weak self, originalOnQueueChanged] tracks in
-      originalOnQueueChanged(tracks)
+    audioBrowser.queueChangedEmitter.addListener { [weak self] tracks in
       Task {
         await self?.handleQueueChanged(tracks)
       }
     }
 
     // Subscribe to navigation errors (from browser layer)
-    let originalOnNavigationError = audioBrowser.onNavigationError
-    audioBrowser.onNavigationError = { [weak self, originalOnNavigationError] event in
-      originalOnNavigationError(event)
+    audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
       Task {
         await self?.handleNavigationError(event)
       }

@@ -41,7 +41,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     didSet {
       // Skip if both nil (no real change)
       guard oldValue != nil || lastNavigationError != nil else { return }
-      onNavigationError(NavigationErrorEvent(error: lastNavigationError))
+      navigationErrorEmitter.emit(NavigationErrorEvent(error: lastNavigationError))
     }
   }
 
@@ -58,6 +58,18 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Called when notifyContentChanged is invoked, allowing CarPlay to refresh its templates.
   /// Set by CarPlayController during setup.
   var onExternalContentChanged: ((String) -> Void)?
+
+  // MARK: - Multi-Listener Emitters
+
+  /// Emitters allow multiple listeners for each event type, avoiding callback hijacking
+  public let tabsChangedEmitter = Emitter<[Track]>()
+  public let contentChangedEmitter = Emitter<ResolvedTrack?>()
+  public let favoriteChangedEmitter = Emitter<FavoriteChangedEvent>()
+  public let activeTrackChangedEmitter = Emitter<PlaybackActiveTrackChangedEvent>()
+  public let queueChangedEmitter = Emitter<[Track]>()
+  public let navigationErrorEmitter = Emitter<NavigationErrorEvent>()
+  public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
+  public let externalContentChangedEmitter = Emitter<String>()
 
   // MARK: - Thread Safety
 
@@ -226,6 +238,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   override public init() {
     super.init()
     HybridAudioBrowser.shared = self
+    setupEmitterToNitroForwarding()
     setupBrowserCallbacks()
   }
 
@@ -234,15 +247,46 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     player
   }
 
+  /// Sets up automatic forwarding from emitters to Nitro callbacks
+  private func setupEmitterToNitroForwarding() {
+    tabsChangedEmitter.addListener { [weak self] tabs in
+      self?.onTabsChanged(tabs)
+    }
+    
+    contentChangedEmitter.addListener { [weak self] content in
+      self?.onContentChanged(content)
+    }
+    
+    favoriteChangedEmitter.addListener { [weak self] event in
+      self?.onFavoriteChanged(event)
+    }
+    
+    activeTrackChangedEmitter.addListener { [weak self] event in
+      self?.onPlaybackActiveTrackChanged(event)
+    }
+    
+    queueChangedEmitter.addListener { [weak self] tracks in
+      self?.onPlaybackQueueChanged(tracks)
+    }
+    
+    navigationErrorEmitter.addListener { [weak self] event in
+      self?.onNavigationError(event)
+    }
+    
+    repeatModeChangedEmitter.addListener { [weak self] event in
+      self?.onPlaybackRepeatModeChanged(event)
+    }
+  }
+
   private func setupBrowserCallbacks() {
     browserManager.onPathChanged = { [weak self] path in
       self?.onPathChanged(path)
     }
     browserManager.onContentChanged = { [weak self] content in
-      self?.onContentChanged(content)
+      self?.contentChangedEmitter.emit(content)
     }
     browserManager.onTabsChanged = { [weak self] tabs in
-      self?.onTabsChanged(tabs)
+      self?.tabsChangedEmitter.emit(tabs)
     }
 
     // Configure artwork URL resolver for transforming artwork URLs during browsing
@@ -423,6 +467,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     // Notify external controllers (CarPlay) that content changed
     onExternalContentChanged?(path)
+    externalContentChangedEmitter.emit(path)
 
     // Re-resolve the path if it's the current browser path
     if browserManager.getPath() == path {
@@ -725,10 +770,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       )
       // Update the track in the player's queue so getActiveTrack() returns correct state
       player?.setTrack(at: index, updatedTrack)
-      onFavoriteChanged(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
+      favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
       // Fire active track changed so useActiveTrack() hook updates UI
       let position = player?.currentTime ?? 0
-      onPlaybackActiveTrackChanged(PlaybackActiveTrackChangedEvent(
+      activeTrackChangedEmitter.emit(PlaybackActiveTrackChangedEvent(
         lastIndex: Double(index),
         lastTrack: track,
         lastPosition: position,
@@ -896,7 +941,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
     // Clear now playing override when track changes (matches Kotlin behavior)
     nowPlayingOverride = nil
-    onPlaybackActiveTrackChanged(event)
+    activeTrackChangedEmitter.emit(event)
     // Also notify now playing changed when track changes
     applyNowPlayingMetadata()
   }
@@ -918,11 +963,11 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangeQueue(_ tracks: [Track]) {
-    onPlaybackQueueChanged(tracks)
+    queueChangedEmitter.emit(tracks)
   }
 
   public func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
-    onPlaybackRepeatModeChanged(event)
+    repeatModeChangedEmitter.emit(event)
   }
 
   public func playerDidChangeShuffleEnabled(_ enabled: Bool) {
