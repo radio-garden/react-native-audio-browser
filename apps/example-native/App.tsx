@@ -36,8 +36,8 @@ void AudioBrowser.setupPlayer().then(() => {
     capabilities: [
       'play',
       'pause',
-      // 'skip-to-next',
-      // 'skip-to-previous',
+      'skip-to-next',
+      'skip-to-previous',
       'seek-to',
       'favorite'
     ],
