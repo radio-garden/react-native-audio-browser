@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
+import type { RepeatMode } from 'react-native-audio-browser'
 import {
+  getRepeatMode,
+  setRepeatMode,
   skipToNext,
   skipToPrevious,
   toggleActiveTrackFavorited,
@@ -19,6 +22,7 @@ import {
   useNowPlaying,
   usePlaybackError,
   usePlayingState,
+  useRepeatMode,
   useShuffle,
   useSleepTimerActive
 } from 'react-native-audio-browser'
@@ -27,6 +31,13 @@ type MiniPlayerProps = {
   onEqualizerPress: () => void
   onSleepTimerPress: () => void
 }
+
+function cycleRepeatMode() {
+    const modes: RepeatMode[] = ['off', 'queue', 'track']
+    const currentIndex = modes.indexOf(getRepeatMode())
+    const nextIndex = (currentIndex + 1) % modes.length
+    setRepeatMode(modes[nextIndex])
+  }
 
 export function MiniPlayer({
   onEqualizerPress,
@@ -37,6 +48,7 @@ export function MiniPlayer({
   const playingState = usePlayingState()
   const playbackError = usePlaybackError()
   const shuffleEnabled = useShuffle()
+  const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
 
@@ -67,88 +79,103 @@ export function MiniPlayer({
         </View>
       </View>
       <View style={styles.controls}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={() => skipToPrevious()}
-        >
-          <Icon
-            name="backward-step"
-            size={20}
-            color="white"
-            iconStyle="solid"
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.controlButton, styles.playPauseButton]}
-          onPress={togglePlayback}
-        >
-          {playingState.buffering ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
+        <View style={styles.controlRow}>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={() => skipToPrevious()}
+          >
             <Icon
-              name={playingState.playing ? 'pause' : 'play'}
+              name="backward-step"
               size={20}
               color="white"
               iconStyle="solid"
             />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={() => skipToNext()}
-        >
-          <Icon
-            name="forward-step"
-            size={20}
-            color="white"
-            iconStyle="solid"
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={toggleActiveTrackFavorited}
-        >
-          <Icon
-            name="heart"
-            size={20}
-            color="white"
-            iconStyle={track.favorited ? 'solid' : 'regular'}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.controlButton} onPress={toggleShuffle}>
-          <Icon
-            name="shuffle"
-            size={20}
-            color={shuffleEnabled ? '#007AFF' : 'white'}
-            iconStyle="solid"
-          />
-        </TouchableOpacity>
-        {equalizerSettings != null && (
+          </TouchableOpacity>
           <TouchableOpacity
-            style={styles.controlButton}
-            onPress={onEqualizerPress}
+            style={[styles.controlButton, styles.playPauseButton]}
+            onPress={togglePlayback}
           >
-            <View style={{ transform: [{ rotate: '90deg' }] }}>
+            {playingState.buffering ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
               <Icon
-                name="sliders"
+                name={playingState.playing ? 'pause' : 'play'}
                 size={20}
-                color={equalizerSettings.enabled ? '#007AFF' : 'white'}
+                color="white"
                 iconStyle="solid"
               />
-            </View>
+            )}
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={onSleepTimerPress}
-        >
-          <Icon
-            name="moon"
-            size={20}
-            color={sleepTimerActive ? '#007AFF' : 'white'}
-            iconStyle="solid"
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={() => skipToNext()}
+          >
+            <Icon
+              name="forward-step"
+              size={20}
+              color="white"
+              iconStyle="solid"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={toggleActiveTrackFavorited}
+          >
+            <Icon
+              name="heart"
+              size={20}
+              color="white"
+              iconStyle={track.favorited ? 'solid' : 'regular'}
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.controlRow}>
+          <TouchableOpacity style={styles.controlButton} onPress={toggleShuffle}>
+            <Icon
+              name="shuffle"
+              size={20}
+              color={shuffleEnabled ? '#007AFF' : 'white'}
+              iconStyle="solid"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={cycleRepeatMode}
+          >
+            <Icon
+              name={repeatMode === 'track' ? '1' : 'repeat'}
+              size={20}
+              color={repeatMode === 'off' ? 'white' : '#007AFF'}
+              iconStyle="solid"
+            />
+          </TouchableOpacity>
+          {equalizerSettings != null && (
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={onEqualizerPress}
+            >
+              <View style={{ transform: [{ rotate: '90deg' }] }}>
+                <Icon
+                  name="sliders"
+                  size={20}
+                  color={equalizerSettings.enabled ? '#007AFF' : 'white'}
+                  iconStyle="solid"
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={onSleepTimerPress}
+          >
+            <Icon
+              name="moon"
+              size={20}
+              color={sleepTimerActive ? '#007AFF' : 'white'}
+              iconStyle="solid"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   )
@@ -203,6 +230,9 @@ const styles = StyleSheet.create({
     color: '#ff6b6b'
   },
   controls: {
+    alignItems: 'flex-end'
+  },
+  controlRow: {
     flexDirection: 'row',
     alignItems: 'center'
   },
