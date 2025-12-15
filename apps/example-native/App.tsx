@@ -161,27 +161,27 @@ const configuration: BrowserConfiguration = {
           title: 'Independent Sounds',
           url: '/api/playlist/independent-sounds',
           children: [
-            { title: 'Radio is a Foreign Country', src: 'b35yEqjv' },
-            { title: 'NTS 1', src: 'wT9JJD4j' },
-            { title: 'Worldwide FM', src: '/rg/vfm-z7pR' },
-            { title: 'Kiosk Radio', src: '/rg/rTzlLOJp' },
-            { title: 'Rinse France', src: '/rg/39GkuKiS' },
-            { title: 'Radio 80000', src: '/rg/MBWk5Fmi' },
-            { title: 'Foundation FM', src: '/rg/QgsEUvYo' },
-            { title: 'Dublin Digital Radio', src: '/rg/Bv4OzWTA' },
-            { title: 'LYL Radio', src: '/rg/LINZ0-LZ' }
+            { title: 'Radio is a Foreign Country', src: 'b35yEqjv', live: true },
+            { title: 'NTS 1', src: 'wT9JJD4j', live: true },
+            { title: 'Worldwide FM', src: '/rg/vfm-z7pR', live: true },
+            { title: 'Kiosk Radio', src: '/rg/rTzlLOJp', live: true },
+            { title: 'Rinse France', src: '/rg/39GkuKiS', live: true },
+            { title: 'Radio 80000', src: '/rg/MBWk5Fmi', live: true },
+            { title: 'Foundation FM', src: '/rg/QgsEUvYo', live: true },
+            { title: 'Dublin Digital Radio', src: '/rg/Bv4OzWTA', live: true },
+            { title: 'LYL Radio', src: '/rg/LINZ0-LZ', live: true }
           ]
         },
         'energetic-rhythms': {
           title: 'Energetic Rhythms',
           url: '/playlist/energetic-rhythms',
           children: [
-            { title: 'Noods Radio', src: '/rg/TdAjNy_3' },
-            { title: 'Systrum Sistum - SSR2', src: '/rg/ftR_mtxU' },
-            { title: 'Radio.D59B', src: '/rg/GSLfbwH8' },
-            { title: 'Dublab DE', src: '/rg/IbYQwskl' },
-            { title: 'Operator Radio', src: '/rg/8Ls6E7wH' },
-            { title: 'datafruits', src: '/rg/nED7EFV4' }
+            { title: 'Noods Radio', src: '/rg/TdAjNy_3', live: true },
+            { title: 'Systrum Sistum - SSR2', src: '/rg/ftR_mtxU', live: true },
+            { title: 'Radio.D59B', src: '/rg/GSLfbwH8', live: true },
+            { title: 'Dublab DE', src: '/rg/IbYQwskl', live: true },
+            { title: 'Operator Radio', src: '/rg/8Ls6E7wH', live: true },
+            { title: 'datafruits', src: '/rg/nED7EFV4', live: true }
           ]
         }
       }[routeParams!.id]!
