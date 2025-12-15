@@ -46,6 +46,11 @@ public final class RNABCarPlayController: NSObject {
     audioBrowser?.browserManager.config ?? BrowserConfig()
   }
 
+  /// Gets the current active track's favorited state
+  private var isActiveTrackFavorited: Bool {
+    (try? audioBrowser?.getActiveTrack())?.favorited ?? false
+  }
+
   /// Checks if the given src matches the currently active (loaded) track
   private func isActiveTrack(src: String) -> Bool {
     audioBrowser?.getPlayer()?.currentTrack?.src == src
@@ -145,7 +150,7 @@ public final class RNABCarPlayController: NSObject {
     audioBrowser.onFavoriteChanged = { [weak self, originalOnFavoriteChanged] event in
       originalOnFavoriteChanged(event)
       Task {
-        await self?.updateFavoriteButtonState(isFavorited: event.favorited)
+        await self?.updateFavoriteButtonState()
       }
     }
 
@@ -618,7 +623,7 @@ public final class RNABCarPlayController: NSObject {
 
       case .favorite:
         let favoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: false),
+          image: favoriteButtonImage(isFavorited: isActiveTrackFavorited),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -719,10 +724,9 @@ public final class RNABCarPlayController: NSObject {
   }
 
   /// Updates the favorite button appearance based on current track's favorite state
-  /// - Parameter isFavorited: If provided, uses this value; otherwise queries the active track
-  private func updateFavoriteButtonState(isFavorited: Bool? = nil) {
+  private func updateFavoriteButtonState() {
     guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
-    let favorited = isFavorited ?? (try? audioBrowser?.getActiveTrack())?.favorited ?? false
+    let favorited = isActiveTrackFavorited
     let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
 
     // Find and update the favorite button (it's a CPNowPlayingImageButton)
@@ -745,19 +749,17 @@ public final class RNABCarPlayController: NSObject {
 
   /// Updates Now Playing button states based on config and current queue
   private func updateNowPlayingButtonStates() {
-    let template = CPNowPlayingTemplate.shared
+    updateNowPlayingUpNextButton()
+    updateFavoriteButtonState()
+  }
 
-    // Up Next button: enabled if config allows and queue has more than 1 track
-    if config.carPlayUpNextButton {
-      let queueCount = audioBrowser?.getPlayer()?.tracks.count ?? 0
-      template.isUpNextButtonEnabled = queueCount > 1
-    } else {
-      template.isUpNextButtonEnabled = false
-    }
+  /// Updates the Up Next button enabled state based on config and queue size
+  private func updateNowPlayingUpNextButton() {
+    let template = CPNowPlayingTemplate.shared
+    template.isUpNextButtonEnabled = config.carPlayUpNextButton && (audioBrowser?.getPlayer()?.tracks.count ?? 0) > 1
   }
 
   private func showNowPlaying() {
-    // Update button states before showing
     updateNowPlayingButtonStates()
 
     let nowPlayingTemplate = CPNowPlayingTemplate.shared
@@ -787,6 +789,8 @@ public final class RNABCarPlayController: NSObject {
   private func handleActiveTrackChanged(_ event: PlaybackActiveTrackChangedEvent) {
     logger.debug("handleActiveTrackChanged: \(event.lastTrack?.src ?? "nil") → \(event.track?.src ?? "nil")")
     updatePlayingIndicators()
+    // Update favorite button to reflect the new track's favorite state
+    updateFavoriteButtonState()
   }
 
   /// Updates the isPlaying state on all list items based on the current active track.
@@ -1099,7 +1103,7 @@ private extension RNABCarPlayController {
   @MainActor
   func handleQueueChanged(_ tracks: [Track]) {
     // Update the Up Next button enabled state
-    updateNowPlayingButtonStates()
+    updateNowPlayingUpNextButton()
 
     // Update the Up Next template if it's currently visible
     guard let template = upNextTemplate,
