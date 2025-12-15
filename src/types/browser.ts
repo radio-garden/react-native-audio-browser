@@ -108,6 +108,12 @@ export type HttpMethod =
 
 export interface RequestConfig {
   method?: HttpMethod
+  /**
+   * The request path.
+   * - For browser requests, this is the track's `url`
+   * - For media requests, this is the track's `src` value
+   * - For artwork requests, this is the track's `artwork` URL
+   */
   path?: string
   baseUrl?: string
   headers?: Record<string, string>
