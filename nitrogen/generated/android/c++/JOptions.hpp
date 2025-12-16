@@ -12,22 +12,22 @@
 
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
-#include "ButtonCapability.hpp"
-#include "Capability.hpp"
 #include "FeedbackOptions.hpp"
 #include "IOSOptions.hpp"
 #include "JAndroidOptions.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "JButtonCapability.hpp"
-#include "JCapability.hpp"
 #include "JFeedbackOptions.hpp"
 #include "JIOSOptions.hpp"
+#include "JNotificationButton.hpp"
 #include "JNotificationButtonLayout.hpp"
+#include "JPlayerCapabilities.hpp"
 #include "JRatingType.hpp"
 #include "JRepeatMode.hpp"
 #include "JVariant_NullType_Double.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
+#include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
+#include "PlayerCapabilities.hpp"
 #include "RatingType.hpp"
 #include "RepeatMode.hpp"
 #include <NitroModules/JNull.hpp>
@@ -66,8 +66,8 @@ namespace margelo::nitro::audiobrowser {
       double backwardJumpInterval = this->getFieldValue(fieldBackwardJumpInterval);
       static const auto fieldProgressUpdateEventInterval = clazz->getField<JVariant_NullType_Double>("progressUpdateEventInterval");
       jni::local_ref<JVariant_NullType_Double> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
-      static const auto fieldCapabilities = clazz->getField<jni::JArrayClass<JCapability>>("capabilities");
-      jni::local_ref<jni::JArrayClass<JCapability>> capabilities = this->getFieldValue(fieldCapabilities);
+      static const auto fieldCapabilities = clazz->getField<JPlayerCapabilities>("capabilities");
+      jni::local_ref<JPlayerCapabilities> capabilities = this->getFieldValue(fieldCapabilities);
       static const auto fieldRepeatMode = clazz->getField<JRepeatMode>("repeatMode");
       jni::local_ref<JRepeatMode> repeatMode = this->getFieldValue(fieldRepeatMode);
       return Options(
@@ -76,16 +76,7 @@ namespace margelo::nitro::audiobrowser {
         forwardJumpInterval,
         backwardJumpInterval,
         progressUpdateEventInterval != nullptr ? std::make_optional(progressUpdateEventInterval->toCpp()) : std::nullopt,
-        [&]() {
-          size_t __size = capabilities->size();
-          std::vector<Capability> __vector;
-          __vector.reserve(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = capabilities->getElement(__i);
-            __vector.push_back(__element->toCpp());
-          }
-          return __vector;
-        }(),
+        capabilities->toCpp(),
         repeatMode->toCpp()
       );
     }
@@ -96,7 +87,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JOptions::javaobject> fromCpp(const Options& value) {
-      using JSignature = JOptions(jni::alias_ref<JAndroidOptions>, jni::alias_ref<JIOSOptions>, double, double, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JArrayClass<JCapability>>, jni::alias_ref<JRepeatMode>);
+      using JSignature = JOptions(jni::alias_ref<JAndroidOptions>, jni::alias_ref<JIOSOptions>, double, double, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<JPlayerCapabilities>, jni::alias_ref<JRepeatMode>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -106,16 +97,7 @@ namespace margelo::nitro::audiobrowser {
         value.forwardJumpInterval,
         value.backwardJumpInterval,
         value.progressUpdateEventInterval.has_value() ? JVariant_NullType_Double::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
-        [&]() {
-          size_t __size = value.capabilities.size();
-          jni::local_ref<jni::JArrayClass<JCapability>> __array = jni::JArrayClass<JCapability>::newArray(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.capabilities[__i];
-            auto __elementJni = JCapability::fromCpp(__element);
-            __array->setElement(__i, *__elementJni);
-          }
-          return __array;
-        }(),
+        JPlayerCapabilities::fromCpp(value.capabilities),
         JRepeatMode::fromCpp(value.repeatMode)
       );
     }

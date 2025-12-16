@@ -34,7 +34,7 @@ data class Options(
   val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
-  val capabilities: Array<Capability>,
+  val capabilities: PlayerCapabilities,
   @DoNotStrip
   @Keep
   val repeatMode: RepeatMode
@@ -49,7 +49,7 @@ data class Options(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: Array<Capability>, repeatMode: RepeatMode): Options {
+    private fun fromCpp(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, repeatMode: RepeatMode): Options {
       return Options(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, repeatMode)
     }
   }

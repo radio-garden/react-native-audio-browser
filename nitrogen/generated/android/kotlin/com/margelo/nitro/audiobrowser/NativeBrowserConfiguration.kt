@@ -46,16 +46,13 @@ data class NativeBrowserConfiguration(
   val carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?,
   @DoNotStrip
   @Keep
-  val carPlayNowPlayingRates: DoubleArray?,
-  @DoNotStrip
-  @Keep
   val formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?
 ) {
   /**
    * Create a new instance of NativeBrowserConfiguration from Kotlin
    */
-  constructor(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, carPlayNowPlayingRates: DoubleArray?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?):
-         this(path, request, media, artwork, routes, singleTrack, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, carPlayNowPlayingRates, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) })
+  constructor(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?):
+         this(path, request, media, artwork, routes, singleTrack, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) })
 
   private companion object {
     /**
@@ -65,8 +62,8 @@ data class NativeBrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, carPlayNowPlayingRates: DoubleArray?, formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?): NativeBrowserConfiguration {
-      return NativeBrowserConfiguration(path, request, media, artwork, routes, singleTrack, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, carPlayNowPlayingRates, formatNavigationError)
+    private fun fromCpp(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?): NativeBrowserConfiguration {
+      return NativeBrowserConfiguration(path, request, media, artwork, routes, singleTrack, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, formatNavigationError)
     }
   }
 }

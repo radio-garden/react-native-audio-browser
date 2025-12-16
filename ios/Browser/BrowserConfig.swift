@@ -6,8 +6,6 @@ import NitroModules
 /// This is a convenience wrapper around NativeBrowserConfiguration that
 /// provides easier access to configuration properties.
 struct BrowserConfig {
-  static let defaultCarPlayNowPlayingRates: [Double] = [1.0, 1.5, 2.0]
-
   /// Base HTTP request configuration
   let request: TransformableRequestConfig?
 
@@ -35,9 +33,6 @@ struct BrowserConfig {
   /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
   let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
 
-  /// Playback rates for CarPlay Now Playing rate button
-  let carPlayNowPlayingRates: [Double]
-
   /// Callback to customize navigation error display (for i18n)
   /// Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
   let formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?
@@ -51,7 +46,6 @@ struct BrowserConfig {
     androidControllerOfflineError: Bool = true,
     carPlayUpNextButton: Bool = true,
     carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
-    carPlayNowPlayingRates: [Double] = defaultCarPlayNowPlayingRates,
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
@@ -62,7 +56,6 @@ struct BrowserConfig {
     self.androidControllerOfflineError = androidControllerOfflineError
     self.carPlayUpNextButton = carPlayUpNextButton
     self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
-    self.carPlayNowPlayingRates = carPlayNowPlayingRates
     self.formatNavigationError = formatNavigationError
   }
 
@@ -76,7 +69,6 @@ struct BrowserConfig {
     androidControllerOfflineError = config.androidControllerOfflineError ?? true
     carPlayUpNextButton = config.carPlayUpNextButton ?? true
     carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
-    carPlayNowPlayingRates = config.carPlayNowPlayingRates ?? Self.defaultCarPlayNowPlayingRates
     formatNavigationError = config.formatNavigationError
   }
 

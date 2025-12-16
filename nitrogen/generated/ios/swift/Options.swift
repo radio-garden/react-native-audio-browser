@@ -19,7 +19,7 @@ public extension Options {
   /**
    * Create a new instance of `Options`.
    */
-  init(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: [Capability], repeatMode: RepeatMode) {
+  init(android: AndroidOptions?, ios: IOSOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, repeatMode: RepeatMode) {
     self.init({ () -> bridge.std__optional_AndroidOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_AndroidOptions_(__unwrappedValue)
@@ -45,13 +45,7 @@ public extension Options {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__vector_Capability_ in
-      var __vector = bridge.create_std__vector_Capability_(capabilities.count)
-      for __item in capabilities {
-        __vector.push_back(__item)
-      }
-      return __vector
-    }(), repeatMode)
+    }(), capabilities, repeatMode)
   }
 
   var android: AndroidOptions? {
@@ -153,20 +147,14 @@ public extension Options {
     }
   }
   
-  var capabilities: [Capability] {
+  var capabilities: PlayerCapabilities {
     @inline(__always)
     get {
-      return self.__capabilities.map({ __item in __item })
+      return self.__capabilities
     }
     @inline(__always)
     set {
-      self.__capabilities = { () -> bridge.std__vector_Capability_ in
-        var __vector = bridge.create_std__vector_Capability_(newValue.count)
-        for __item in newValue {
-          __vector.push_back(__item)
-        }
-        return __vector
-      }()
+      self.__capabilities = newValue
     }
   }
   

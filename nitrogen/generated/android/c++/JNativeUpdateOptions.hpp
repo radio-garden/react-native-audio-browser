@@ -11,22 +11,22 @@
 #include "NativeUpdateOptions.hpp"
 
 #include "AppKilledPlaybackBehavior.hpp"
-#include "ButtonCapability.hpp"
-#include "Capability.hpp"
 #include "FeedbackOptions.hpp"
 #include "IOSUpdateOptions.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "JButtonCapability.hpp"
-#include "JCapability.hpp"
 #include "JFeedbackOptions.hpp"
 #include "JIOSUpdateOptions.hpp"
 #include "JNitroAndroidUpdateOptions.hpp"
+#include "JNotificationButton.hpp"
 #include "JNotificationButtonLayout.hpp"
+#include "JPlayerCapabilities.hpp"
 #include "JRatingType.hpp"
 #include "JVariant_NullType_Double.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
+#include "PlayerCapabilities.hpp"
 #include "RatingType.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
@@ -64,22 +64,21 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JDouble> backwardJumpInterval = this->getFieldValue(fieldBackwardJumpInterval);
       static const auto fieldProgressUpdateEventInterval = clazz->getField<JVariant_NullType_Double>("progressUpdateEventInterval");
       jni::local_ref<JVariant_NullType_Double> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
-      static const auto fieldCapabilities = clazz->getField<jni::JArrayClass<JCapability>>("capabilities");
-      jni::local_ref<jni::JArrayClass<JCapability>> capabilities = this->getFieldValue(fieldCapabilities);
+      static const auto fieldCapabilities = clazz->getField<JPlayerCapabilities>("capabilities");
+      jni::local_ref<JPlayerCapabilities> capabilities = this->getFieldValue(fieldCapabilities);
+      static const auto fieldIosPlaybackRates = clazz->getField<jni::JArrayDouble>("iosPlaybackRates");
+      jni::local_ref<jni::JArrayDouble> iosPlaybackRates = this->getFieldValue(fieldIosPlaybackRates);
       return NativeUpdateOptions(
         android != nullptr ? std::make_optional(android->toCpp()) : std::nullopt,
         ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt,
         forwardJumpInterval != nullptr ? std::make_optional(forwardJumpInterval->value()) : std::nullopt,
         backwardJumpInterval != nullptr ? std::make_optional(backwardJumpInterval->value()) : std::nullopt,
         progressUpdateEventInterval != nullptr ? std::make_optional(progressUpdateEventInterval->toCpp()) : std::nullopt,
-        capabilities != nullptr ? std::make_optional([&]() {
-          size_t __size = capabilities->size();
-          std::vector<Capability> __vector;
-          __vector.reserve(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = capabilities->getElement(__i);
-            __vector.push_back(__element->toCpp());
-          }
+        capabilities != nullptr ? std::make_optional(capabilities->toCpp()) : std::nullopt,
+        iosPlaybackRates != nullptr ? std::make_optional([&]() {
+          size_t __size = iosPlaybackRates->size();
+          std::vector<double> __vector(__size);
+          iosPlaybackRates->getRegion(0, __size, __vector.data());
           return __vector;
         }()) : std::nullopt
       );
@@ -91,7 +90,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeUpdateOptions::javaobject> fromCpp(const NativeUpdateOptions& value) {
-      using JSignature = JNativeUpdateOptions(jni::alias_ref<JNitroAndroidUpdateOptions>, jni::alias_ref<JIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JArrayClass<JCapability>>);
+      using JSignature = JNativeUpdateOptions(jni::alias_ref<JNitroAndroidUpdateOptions>, jni::alias_ref<JIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<JPlayerCapabilities>, jni::alias_ref<jni::JArrayDouble>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -101,14 +100,11 @@ namespace margelo::nitro::audiobrowser {
         value.forwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.forwardJumpInterval.value()) : nullptr,
         value.backwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.backwardJumpInterval.value()) : nullptr,
         value.progressUpdateEventInterval.has_value() ? JVariant_NullType_Double::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
-        value.capabilities.has_value() ? [&]() {
-          size_t __size = value.capabilities.value().size();
-          jni::local_ref<jni::JArrayClass<JCapability>> __array = jni::JArrayClass<JCapability>::newArray(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.capabilities.value()[__i];
-            auto __elementJni = JCapability::fromCpp(__element);
-            __array->setElement(__i, *__elementJni);
-          }
+        value.capabilities.has_value() ? JPlayerCapabilities::fromCpp(value.capabilities.value()) : nullptr,
+        value.iosPlaybackRates.has_value() ? [&]() {
+          size_t __size = value.iosPlaybackRates.value().size();
+          jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
+          __array->setRegion(0, __size, value.iosPlaybackRates.value().data());
           return __array;
         }() : nullptr
       );

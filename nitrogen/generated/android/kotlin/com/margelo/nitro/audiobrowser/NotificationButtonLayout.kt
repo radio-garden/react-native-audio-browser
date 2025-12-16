@@ -19,19 +19,19 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class NotificationButtonLayout(
   @DoNotStrip
   @Keep
-  val back: ButtonCapability?,
+  val back: NotificationButton?,
   @DoNotStrip
   @Keep
-  val forward: ButtonCapability?,
+  val forward: NotificationButton?,
   @DoNotStrip
   @Keep
-  val backSecondary: ButtonCapability?,
+  val backSecondary: NotificationButton?,
   @DoNotStrip
   @Keep
-  val forwardSecondary: ButtonCapability?,
+  val forwardSecondary: NotificationButton?,
   @DoNotStrip
   @Keep
-  val overflow: Array<ButtonCapability>?
+  val overflow: Array<NotificationButton>?
 ) {
   /* primary constructor */
 
@@ -43,7 +43,7 @@ data class NotificationButtonLayout(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(back: ButtonCapability?, forward: ButtonCapability?, backSecondary: ButtonCapability?, forwardSecondary: ButtonCapability?, overflow: Array<ButtonCapability>?): NotificationButtonLayout {
+    private fun fromCpp(back: NotificationButton?, forward: NotificationButton?, backSecondary: NotificationButton?, forwardSecondary: NotificationButton?, overflow: Array<NotificationButton>?): NotificationButtonLayout {
       return NotificationButtonLayout(back, forward, backSecondary, forwardSecondary, overflow)
     }
   }

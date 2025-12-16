@@ -23,10 +23,10 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `ButtonCapability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
+// Forward declaration of `NotificationButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 
-#include "ButtonCapability.hpp"
+#include "NotificationButton.hpp"
 #include <optional>
 #include <vector>
 
@@ -37,15 +37,15 @@ namespace margelo::nitro::audiobrowser {
    */
   struct NotificationButtonLayout {
   public:
-    std::optional<ButtonCapability> back     SWIFT_PRIVATE;
-    std::optional<ButtonCapability> forward     SWIFT_PRIVATE;
-    std::optional<ButtonCapability> backSecondary     SWIFT_PRIVATE;
-    std::optional<ButtonCapability> forwardSecondary     SWIFT_PRIVATE;
-    std::optional<std::vector<ButtonCapability>> overflow     SWIFT_PRIVATE;
+    std::optional<NotificationButton> back     SWIFT_PRIVATE;
+    std::optional<NotificationButton> forward     SWIFT_PRIVATE;
+    std::optional<NotificationButton> backSecondary     SWIFT_PRIVATE;
+    std::optional<NotificationButton> forwardSecondary     SWIFT_PRIVATE;
+    std::optional<std::vector<NotificationButton>> overflow     SWIFT_PRIVATE;
 
   public:
     NotificationButtonLayout() = default;
-    explicit NotificationButtonLayout(std::optional<ButtonCapability> back, std::optional<ButtonCapability> forward, std::optional<ButtonCapability> backSecondary, std::optional<ButtonCapability> forwardSecondary, std::optional<std::vector<ButtonCapability>> overflow): back(back), forward(forward), backSecondary(backSecondary), forwardSecondary(forwardSecondary), overflow(overflow) {}
+    explicit NotificationButtonLayout(std::optional<NotificationButton> back, std::optional<NotificationButton> forward, std::optional<NotificationButton> backSecondary, std::optional<NotificationButton> forwardSecondary, std::optional<std::vector<NotificationButton>> overflow): back(back), forward(forward), backSecondary(backSecondary), forwardSecondary(forwardSecondary), overflow(overflow) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -58,20 +58,20 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::NotificationButtonLayout fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::NotificationButtonLayout(
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::fromJSI(runtime, obj.getProperty(runtime, "back")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::fromJSI(runtime, obj.getProperty(runtime, "forward")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::fromJSI(runtime, obj.getProperty(runtime, "backSecondary")),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::fromJSI(runtime, obj.getProperty(runtime, "forwardSecondary")),
-        JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::ButtonCapability>>>::fromJSI(runtime, obj.getProperty(runtime, "overflow"))
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::fromJSI(runtime, obj.getProperty(runtime, "back")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::fromJSI(runtime, obj.getProperty(runtime, "forward")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::fromJSI(runtime, obj.getProperty(runtime, "backSecondary")),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::fromJSI(runtime, obj.getProperty(runtime, "forwardSecondary")),
+        JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::NotificationButton>>>::fromJSI(runtime, obj.getProperty(runtime, "overflow"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NotificationButtonLayout& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, "back", JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::toJSI(runtime, arg.back));
-      obj.setProperty(runtime, "forward", JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::toJSI(runtime, arg.forward));
-      obj.setProperty(runtime, "backSecondary", JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::toJSI(runtime, arg.backSecondary));
-      obj.setProperty(runtime, "forwardSecondary", JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::toJSI(runtime, arg.forwardSecondary));
-      obj.setProperty(runtime, "overflow", JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::ButtonCapability>>>::toJSI(runtime, arg.overflow));
+      obj.setProperty(runtime, "back", JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::toJSI(runtime, arg.back));
+      obj.setProperty(runtime, "forward", JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::toJSI(runtime, arg.forward));
+      obj.setProperty(runtime, "backSecondary", JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::toJSI(runtime, arg.backSecondary));
+      obj.setProperty(runtime, "forwardSecondary", JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::toJSI(runtime, arg.forwardSecondary));
+      obj.setProperty(runtime, "overflow", JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::NotificationButton>>>::toJSI(runtime, arg.overflow));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -82,11 +82,11 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::canConvert(runtime, obj.getProperty(runtime, "back"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::canConvert(runtime, obj.getProperty(runtime, "forward"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::canConvert(runtime, obj.getProperty(runtime, "backSecondary"))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ButtonCapability>>::canConvert(runtime, obj.getProperty(runtime, "forwardSecondary"))) return false;
-      if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::ButtonCapability>>>::canConvert(runtime, obj.getProperty(runtime, "overflow"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::canConvert(runtime, obj.getProperty(runtime, "back"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::canConvert(runtime, obj.getProperty(runtime, "forward"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::canConvert(runtime, obj.getProperty(runtime, "backSecondary"))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::NotificationButton>>::canConvert(runtime, obj.getProperty(runtime, "forwardSecondary"))) return false;
+      if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::NotificationButton>>>::canConvert(runtime, obj.getProperty(runtime, "overflow"))) return false;
       return true;
     }
   };

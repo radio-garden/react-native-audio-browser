@@ -15,9 +15,9 @@
 #include <variant>
 #include <NitroModules/JNull.hpp>
 #include "JNotificationButtonLayout.hpp"
-#include "ButtonCapability.hpp"
+#include "NotificationButton.hpp"
 #include <optional>
-#include "JButtonCapability.hpp"
+#include "JNotificationButton.hpp"
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {

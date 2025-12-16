@@ -36,10 +36,6 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BrowseError; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
-// Forward declaration of `ButtonCapability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
-// Forward declaration of `Capability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -90,6 +86,8 @@ namespace margelo::nitro::audiobrowser { struct NavigationError; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
+// Forward declaration of `NotificationButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
@@ -122,6 +120,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
 // Forward declaration of `Playback` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Playback; }
+// Forward declaration of `PlayerCapabilities` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 // Forward declaration of `PlayingState` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `Progress` to properly resolve imports.
@@ -188,8 +188,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
-#include "ButtonCapability.hpp"
-#include "Capability.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -214,6 +212,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
@@ -231,6 +230,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
 #include "PlaybackState.hpp"
+#include "PlayerCapabilities.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
 #include "RatingType.hpp"

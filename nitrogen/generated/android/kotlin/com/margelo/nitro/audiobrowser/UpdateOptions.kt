@@ -34,7 +34,10 @@ data class UpdateOptions(
   val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
-  val capabilities: Array<Capability>?
+  val capabilities: PlayerCapabilities?,
+  @DoNotStrip
+  @Keep
+  val iosPlaybackRates: DoubleArray?
 ) {
   /* primary constructor */
 
@@ -46,8 +49,8 @@ data class UpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: Array<Capability>?): UpdateOptions {
-      return UpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities)
+    private fun fromCpp(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities?, iosPlaybackRates: DoubleArray?): UpdateOptions {
+      return UpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, iosPlaybackRates)
     }
   }
 }

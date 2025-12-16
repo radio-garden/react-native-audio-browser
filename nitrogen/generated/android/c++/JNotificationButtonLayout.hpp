@@ -10,8 +10,8 @@
 #include <fbjni/fbjni.h>
 #include "NotificationButtonLayout.hpp"
 
-#include "ButtonCapability.hpp"
-#include "JButtonCapability.hpp"
+#include "JNotificationButton.hpp"
+#include "NotificationButton.hpp"
 #include <optional>
 #include <vector>
 
@@ -34,16 +34,16 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     NotificationButtonLayout toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldBack = clazz->getField<JButtonCapability>("back");
-      jni::local_ref<JButtonCapability> back = this->getFieldValue(fieldBack);
-      static const auto fieldForward = clazz->getField<JButtonCapability>("forward");
-      jni::local_ref<JButtonCapability> forward = this->getFieldValue(fieldForward);
-      static const auto fieldBackSecondary = clazz->getField<JButtonCapability>("backSecondary");
-      jni::local_ref<JButtonCapability> backSecondary = this->getFieldValue(fieldBackSecondary);
-      static const auto fieldForwardSecondary = clazz->getField<JButtonCapability>("forwardSecondary");
-      jni::local_ref<JButtonCapability> forwardSecondary = this->getFieldValue(fieldForwardSecondary);
-      static const auto fieldOverflow = clazz->getField<jni::JArrayClass<JButtonCapability>>("overflow");
-      jni::local_ref<jni::JArrayClass<JButtonCapability>> overflow = this->getFieldValue(fieldOverflow);
+      static const auto fieldBack = clazz->getField<JNotificationButton>("back");
+      jni::local_ref<JNotificationButton> back = this->getFieldValue(fieldBack);
+      static const auto fieldForward = clazz->getField<JNotificationButton>("forward");
+      jni::local_ref<JNotificationButton> forward = this->getFieldValue(fieldForward);
+      static const auto fieldBackSecondary = clazz->getField<JNotificationButton>("backSecondary");
+      jni::local_ref<JNotificationButton> backSecondary = this->getFieldValue(fieldBackSecondary);
+      static const auto fieldForwardSecondary = clazz->getField<JNotificationButton>("forwardSecondary");
+      jni::local_ref<JNotificationButton> forwardSecondary = this->getFieldValue(fieldForwardSecondary);
+      static const auto fieldOverflow = clazz->getField<jni::JArrayClass<JNotificationButton>>("overflow");
+      jni::local_ref<jni::JArrayClass<JNotificationButton>> overflow = this->getFieldValue(fieldOverflow);
       return NotificationButtonLayout(
         back != nullptr ? std::make_optional(back->toCpp()) : std::nullopt,
         forward != nullptr ? std::make_optional(forward->toCpp()) : std::nullopt,
@@ -51,7 +51,7 @@ namespace margelo::nitro::audiobrowser {
         forwardSecondary != nullptr ? std::make_optional(forwardSecondary->toCpp()) : std::nullopt,
         overflow != nullptr ? std::make_optional([&]() {
           size_t __size = overflow->size();
-          std::vector<ButtonCapability> __vector;
+          std::vector<NotificationButton> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             auto __element = overflow->getElement(__i);
@@ -68,21 +68,21 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNotificationButtonLayout::javaobject> fromCpp(const NotificationButtonLayout& value) {
-      using JSignature = JNotificationButtonLayout(jni::alias_ref<JButtonCapability>, jni::alias_ref<JButtonCapability>, jni::alias_ref<JButtonCapability>, jni::alias_ref<JButtonCapability>, jni::alias_ref<jni::JArrayClass<JButtonCapability>>);
+      using JSignature = JNotificationButtonLayout(jni::alias_ref<JNotificationButton>, jni::alias_ref<JNotificationButton>, jni::alias_ref<JNotificationButton>, jni::alias_ref<JNotificationButton>, jni::alias_ref<jni::JArrayClass<JNotificationButton>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        value.back.has_value() ? JButtonCapability::fromCpp(value.back.value()) : nullptr,
-        value.forward.has_value() ? JButtonCapability::fromCpp(value.forward.value()) : nullptr,
-        value.backSecondary.has_value() ? JButtonCapability::fromCpp(value.backSecondary.value()) : nullptr,
-        value.forwardSecondary.has_value() ? JButtonCapability::fromCpp(value.forwardSecondary.value()) : nullptr,
+        value.back.has_value() ? JNotificationButton::fromCpp(value.back.value()) : nullptr,
+        value.forward.has_value() ? JNotificationButton::fromCpp(value.forward.value()) : nullptr,
+        value.backSecondary.has_value() ? JNotificationButton::fromCpp(value.backSecondary.value()) : nullptr,
+        value.forwardSecondary.has_value() ? JNotificationButton::fromCpp(value.forwardSecondary.value()) : nullptr,
         value.overflow.has_value() ? [&]() {
           size_t __size = value.overflow.value().size();
-          jni::local_ref<jni::JArrayClass<JButtonCapability>> __array = jni::JArrayClass<JButtonCapability>::newArray(__size);
+          jni::local_ref<jni::JArrayClass<JNotificationButton>> __array = jni::JArrayClass<JNotificationButton>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             const auto& __element = value.overflow.value()[__i];
-            auto __elementJni = JButtonCapability::fromCpp(__element);
+            auto __elementJni = JNotificationButton::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;

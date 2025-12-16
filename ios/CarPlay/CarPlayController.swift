@@ -591,44 +591,6 @@ public final class RNABCarPlayController: NSObject {
 
     CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
     logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
-
-    // Try to enable commands now (will be retried in handleActiveTrackChanged if player doesn't exist)
-    enableNowPlayingRemoteCommands()
-  }
-
-  /// Enables remote commands needed for CarPlay Now Playing buttons to display state properly.
-  /// Called from setupNowPlayingButtons and again from handleActiveTrackChanged when first track loads.
-  private func enableNowPlayingRemoteCommands() {
-    guard let player = audioBrowser?.getPlayer() else { return }
-
-    var commandsToEnable: [RemoteCommand] = []
-    for buttonType in config.carPlayNowPlayingButtons {
-      switch buttonType {
-      case .shuffle:
-        commandsToEnable.append(.changeShuffleMode)
-      case .repeat:
-        commandsToEnable.append(.changeRepeatMode)
-      case .playbackRate:
-        let rates = config.carPlayNowPlayingRates.map { NSNumber(value: $0) }
-        commandsToEnable.append(.changePlaybackRate(supportedPlaybackRates: rates))
-      case .favorite:
-        break // No remote command needed for favorite
-      }
-    }
-
-    guard !commandsToEnable.isEmpty else { return }
-
-    // Merge with existing commands to avoid disabling them
-    var allCommands = player.remoteCommands
-    for command in commandsToEnable {
-      if !allCommands.contains(command) {
-        allCommands.append(command)
-      }
-    }
-    player.enableRemoteCommands(allCommands)
-
-    // Sync current playback state so buttons display correctly
-    player.updateNowPlayingPlaybackValues()
   }
 
   /// Returns the appropriate image for the favorite button based on state
@@ -673,9 +635,9 @@ public final class RNABCarPlayController: NSObject {
 
   /// Handles playback rate button tap - cycles through available rates
   private func handlePlaybackRateButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else { return }
+    guard let audioBrowser, let player = audioBrowser.getPlayer() else { return }
 
-    let rates: [Double] = config.carPlayNowPlayingRates
+    let rates = audioBrowser.playbackRates
     guard !rates.isEmpty else { return }
 
     let currentRate = Double(player.rate)
@@ -733,7 +695,6 @@ public final class RNABCarPlayController: NSObject {
 
   private func showNowPlaying() {
     updateNowPlayingButtonStates()
-
     let nowPlayingTemplate = CPNowPlayingTemplate.shared
     interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
   }

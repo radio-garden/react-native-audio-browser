@@ -19,35 +19,35 @@ public extension NotificationButtonLayout {
   /**
    * Create a new instance of `NotificationButtonLayout`.
    */
-  init(back: ButtonCapability?, forward: ButtonCapability?, backSecondary: ButtonCapability?, forwardSecondary: ButtonCapability?, overflow: [ButtonCapability]?) {
-    self.init({ () -> bridge.std__optional_ButtonCapability_ in
+  init(back: NotificationButton?, forward: NotificationButton?, backSecondary: NotificationButton?, forwardSecondary: NotificationButton?, overflow: [NotificationButton]?) {
+    self.init({ () -> bridge.std__optional_NotificationButton_ in
       if let __unwrappedValue = back {
-        return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+        return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_ButtonCapability_ in
+    }(), { () -> bridge.std__optional_NotificationButton_ in
       if let __unwrappedValue = forward {
-        return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+        return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_ButtonCapability_ in
+    }(), { () -> bridge.std__optional_NotificationButton_ in
       if let __unwrappedValue = backSecondary {
-        return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+        return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_ButtonCapability_ in
+    }(), { () -> bridge.std__optional_NotificationButton_ in
       if let __unwrappedValue = forwardSecondary {
-        return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+        return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__vector_ButtonCapability__ in
+    }(), { () -> bridge.std__optional_std__vector_NotificationButton__ in
       if let __unwrappedValue = overflow {
-        return bridge.create_std__optional_std__vector_ButtonCapability__({ () -> bridge.std__vector_ButtonCapability_ in
-          var __vector = bridge.create_std__vector_ButtonCapability_(__unwrappedValue.count)
+        return bridge.create_std__optional_std__vector_NotificationButton__({ () -> bridge.std__vector_NotificationButton_ in
+          var __vector = bridge.create_std__vector_NotificationButton_(__unwrappedValue.count)
           for __item in __unwrappedValue {
             __vector.push_back(__item)
           }
@@ -59,16 +59,16 @@ public extension NotificationButtonLayout {
     }())
   }
 
-  var back: ButtonCapability? {
+  var back: NotificationButton? {
     @inline(__always)
     get {
       return self.__back.value
     }
     @inline(__always)
     set {
-      self.__back = { () -> bridge.std__optional_ButtonCapability_ in
+      self.__back = { () -> bridge.std__optional_NotificationButton_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+          return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -76,16 +76,16 @@ public extension NotificationButtonLayout {
     }
   }
   
-  var forward: ButtonCapability? {
+  var forward: NotificationButton? {
     @inline(__always)
     get {
       return self.__forward.value
     }
     @inline(__always)
     set {
-      self.__forward = { () -> bridge.std__optional_ButtonCapability_ in
+      self.__forward = { () -> bridge.std__optional_NotificationButton_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+          return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -93,16 +93,16 @@ public extension NotificationButtonLayout {
     }
   }
   
-  var backSecondary: ButtonCapability? {
+  var backSecondary: NotificationButton? {
     @inline(__always)
     get {
       return self.__backSecondary.value
     }
     @inline(__always)
     set {
-      self.__backSecondary = { () -> bridge.std__optional_ButtonCapability_ in
+      self.__backSecondary = { () -> bridge.std__optional_NotificationButton_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+          return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -110,16 +110,16 @@ public extension NotificationButtonLayout {
     }
   }
   
-  var forwardSecondary: ButtonCapability? {
+  var forwardSecondary: NotificationButton? {
     @inline(__always)
     get {
       return self.__forwardSecondary.value
     }
     @inline(__always)
     set {
-      self.__forwardSecondary = { () -> bridge.std__optional_ButtonCapability_ in
+      self.__forwardSecondary = { () -> bridge.std__optional_NotificationButton_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_ButtonCapability_(__unwrappedValue)
+          return bridge.create_std__optional_NotificationButton_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -127,12 +127,12 @@ public extension NotificationButtonLayout {
     }
   }
   
-  var overflow: [ButtonCapability]? {
+  var overflow: [NotificationButton]? {
     @inline(__always)
     get {
-      return { () -> [ButtonCapability]? in
-        if bridge.has_value_std__optional_std__vector_ButtonCapability__(self.__overflow) {
-          let __unwrapped = bridge.get_std__optional_std__vector_ButtonCapability__(self.__overflow)
+      return { () -> [NotificationButton]? in
+        if bridge.has_value_std__optional_std__vector_NotificationButton__(self.__overflow) {
+          let __unwrapped = bridge.get_std__optional_std__vector_NotificationButton__(self.__overflow)
           return __unwrapped.map({ __item in __item })
         } else {
           return nil
@@ -141,10 +141,10 @@ public extension NotificationButtonLayout {
     }
     @inline(__always)
     set {
-      self.__overflow = { () -> bridge.std__optional_std__vector_ButtonCapability__ in
+      self.__overflow = { () -> bridge.std__optional_std__vector_NotificationButton__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__vector_ButtonCapability__({ () -> bridge.std__vector_ButtonCapability_ in
-            var __vector = bridge.create_std__vector_ButtonCapability_(__unwrappedValue.count)
+          return bridge.create_std__optional_std__vector_NotificationButton__({ () -> bridge.std__vector_NotificationButton_ in
+            var __vector = bridge.create_std__vector_NotificationButton_(__unwrappedValue.count)
             for __item in __unwrappedValue {
               __vector.push_back(__item)
             }

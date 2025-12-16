@@ -6,26 +6,98 @@ import type { RepeatMode } from '../queue/repeatMode'
 
 // MARK: - Types
 
-export type Capability =
-  | 'play'
-  | 'play-from-id'
-  | 'play-from-search'
-  | 'pause'
-  | 'stop'
-  | 'seek-to'
-  | 'skip'
-  | 'skip-to-next'
-  | 'skip-to-previous'
-  | 'jump-forward'
-  | 'jump-backward'
-  | 'favorite'
-  | 'bookmark'
+/**
+ * Player capabilities control which media controls are available to the user.
+ * All capabilities are enabled by default - only specify ones you want to disable.
+ *
+ * @example
+ * ```typescript
+ * // Disable shuffle and repeat for a simple player
+ * updateOptions({
+ *   capabilities: {
+ *     shuffleMode: false,
+ *     repeatMode: false,
+ *   }
+ * })
+ * ```
+ */
+export interface PlayerCapabilities {
+  /**
+   * Enable play control.
+   * @default true
+   */
+  play?: boolean
+  /**
+   * Enable pause control.
+   * @default true
+   */
+  pause?: boolean
+  /**
+   * Enable stop control.
+   * @default true
+   */
+  stop?: boolean
+  /**
+   * Enable seek-to-position control (scrubbing in timeline).
+   * @default true
+   */
+  seekTo?: boolean
+  /**
+   * Enable skip to next track control.
+   * @default true
+   */
+  skipToNext?: boolean
+  /**
+   * Enable skip to previous track control.
+   * @default true
+   */
+  skipToPrevious?: boolean
+  /**
+   * Enable jump forward control (configurable via forwardJumpInterval).
+   * @default true
+   */
+  jumpForward?: boolean
+  /**
+   * Enable jump backward control (configurable via backwardJumpInterval).
+   * @default true
+   */
+  jumpBackward?: boolean
+  /**
+   * Enable favorite/like control.
+   * On iOS: appears in Control Center.
+   * On Android: can be assigned to notification button slots.
+   * @default true
+   */
+  favorite?: boolean
+  /**
+   * Enable bookmark control (iOS only - appears in Control Center).
+   * Note: No default implementation - you must handle `onRemoteBookmark` event.
+   * @default false
+   */
+  bookmark?: boolean
+  /**
+   * Enable shuffle mode toggle.
+   * @default true
+   */
+  shuffleMode?: boolean
+  /**
+   * Enable repeat mode toggle.
+   * @default true
+   */
+  repeatMode?: boolean
+  /**
+   * Enable playback rate control.
+   * On iOS: appears in Control Center and CarPlay.
+   * @default true
+   */
+  playbackRate?: boolean
+}
 
 /**
- * Capabilities that can be assigned to notification button slots.
- * This is a subset of Capability that represents buttons users can interact with.
+ * Buttons that can be assigned to Android notification button slots.
+ * These represent the interactive buttons users can tap in the notification.
  */
-export type ButtonCapability =
+export type NotificationButton =
   | 'skip-to-previous'
   | 'skip-to-next'
   | 'jump-backward'
@@ -39,7 +111,7 @@ export type ButtonCapability =
  * Slot behavior:
  * - **Omit a slot**: Derive from capabilities (smart default)
  * - **Set to null**: Explicitly empty slot
- * - **Set to capability**: Show that button in that slot
+ * - **Set to button**: Show that button in that slot
  *
  * @example
  * ```typescript
@@ -61,15 +133,15 @@ export type ButtonCapability =
  */
 export type NotificationButtonLayout = {
   /** Primary back position (SLOT_BACK) - typically previous track or jump backward */
-  back?: ButtonCapability | null
+  back?: NotificationButton | null
   /** Primary forward position (SLOT_FORWARD) - typically next track or jump forward */
-  forward?: ButtonCapability | null
+  forward?: NotificationButton | null
   /** Secondary back position (SLOT_BACK_SECONDARY) */
-  backSecondary?: ButtonCapability | null
+  backSecondary?: NotificationButton | null
   /** Secondary forward position (SLOT_FORWARD_SECONDARY) */
-  forwardSecondary?: ButtonCapability | null
+  forwardSecondary?: NotificationButton | null
   /** Additional buttons in overflow area (SLOT_OVERFLOW) */
-  overflow?: ButtonCapability[]
+  overflow?: NotificationButton[]
 }
 
 /**
@@ -99,7 +171,7 @@ export type AppKilledPlaybackBehavior =
  * ```typescript
  * const options = getOptions();
  * console.log(options.repeatMode); // 'off'
- * console.log(options.capabilities); // ['play', 'pause', 'skip-to-next', 'skip-to-previous']
+ * console.log(options.capabilities); // { shuffleMode: false } - only disabled caps shown
  * console.log(options.android?.skipSilence); // true (Android only)
  * console.log(options.ios?.likeOptions); // { isActive: false, title: 'Like' } (iOS only)
  * ```
@@ -132,9 +204,9 @@ export interface Options {
 
   /**
    * The capabilities that the player has.
-   * @default [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious, Capability.SeekTo]
+   * All capabilities are enabled by default - this shows which ones are disabled.
    */
-  capabilities: Capability[]
+  capabilities: PlayerCapabilities
 
   /**
    * The current repeat mode of the player.
@@ -297,10 +369,9 @@ export interface IOSOptions {
  * // Update only repeat mode
  * updateOptions({ repeatMode: 'track' });
  *
- * // Update multiple properties
+ * // Disable specific capabilities
  * updateOptions({
- *   repeatMode: 'queue',
- *   capabilities: ['play', 'pause', 'skip-to-next']
+ *   capabilities: { shuffleMode: false, repeatMode: false }
  * });
  *
  * // Disable progress events by setting to null
@@ -341,7 +412,30 @@ export interface UpdateOptions {
    */
   progressUpdateEventInterval?: number | null
 
-  capabilities?: Capability[]
+  /**
+   * Player capabilities to enable or disable.
+   * All capabilities are enabled by default - only specify ones you want to disable.
+   *
+   * @example
+   * ```typescript
+   * // Disable shuffle and repeat
+   * updateOptions({
+   *   capabilities: {
+   *     shuffleMode: false,
+   *     repeatMode: false,
+   *   }
+   * })
+   * ```
+   */
+  capabilities?: PlayerCapabilities
+
+  /**
+   * Supported playback rates for the playback-rate capability.
+   * Used by CarPlay and lock screen rate controls.
+   * @platform ios
+   * @default [0.5, 1.0, 1.5, 2.0]
+   */
+  iosPlaybackRates?: number[]
 }
 
 export interface NativeUpdateOptions {
@@ -370,7 +464,13 @@ export interface NativeUpdateOptions {
    */
   progressUpdateEventInterval?: number | null
 
-  capabilities?: Capability[]
+  capabilities?: PlayerCapabilities
+
+  /**
+   * Supported playback rates for the playback-rate capability.
+   * @platform ios
+   */
+  iosPlaybackRates?: number[]
 }
 
 // MARK: - Functions
@@ -386,9 +486,9 @@ export interface NativeUpdateOptions {
  * // Update single property
  * updateOptions({ repeatMode: 'track' });
  *
- * // Update multiple properties
+ * // Disable specific capabilities
  * updateOptions({
- *   capabilities: ['play', 'pause'],
+ *   capabilities: { shuffleMode: false },
  *   progressUpdateEventInterval: 0.5
  * });
  * ```

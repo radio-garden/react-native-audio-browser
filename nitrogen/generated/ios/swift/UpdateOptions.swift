@@ -19,7 +19,7 @@ public extension UpdateOptions {
   /**
    * Create a new instance of `UpdateOptions`.
    */
-  init(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: [Capability]?) {
+  init(android: AndroidUpdateOptions?, ios: IOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities?, iosPlaybackRates: [Double]?) {
     self.init({ () -> bridge.std__optional_AndroidUpdateOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_AndroidUpdateOptions_(__unwrappedValue)
@@ -57,10 +57,16 @@ public extension UpdateOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__vector_Capability__ in
+    }(), { () -> bridge.std__optional_PlayerCapabilities_ in
       if let __unwrappedValue = capabilities {
-        return bridge.create_std__optional_std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
-          var __vector = bridge.create_std__vector_Capability_(__unwrappedValue.count)
+        return bridge.create_std__optional_PlayerCapabilities_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__vector_double__ in
+      if let __unwrappedValue = iosPlaybackRates {
+        return bridge.create_std__optional_std__vector_double__({ () -> bridge.std__vector_double_ in
+          var __vector = bridge.create_std__vector_double_(__unwrappedValue.count)
           for __item in __unwrappedValue {
             __vector.push_back(__item)
           }
@@ -183,12 +189,29 @@ public extension UpdateOptions {
     }
   }
   
-  var capabilities: [Capability]? {
+  var capabilities: PlayerCapabilities? {
     @inline(__always)
     get {
-      return { () -> [Capability]? in
-        if bridge.has_value_std__optional_std__vector_Capability__(self.__capabilities) {
-          let __unwrapped = bridge.get_std__optional_std__vector_Capability__(self.__capabilities)
+      return self.__capabilities.value
+    }
+    @inline(__always)
+    set {
+      self.__capabilities = { () -> bridge.std__optional_PlayerCapabilities_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_PlayerCapabilities_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var iosPlaybackRates: [Double]? {
+    @inline(__always)
+    get {
+      return { () -> [Double]? in
+        if bridge.has_value_std__optional_std__vector_double__(self.__iosPlaybackRates) {
+          let __unwrapped = bridge.get_std__optional_std__vector_double__(self.__iosPlaybackRates)
           return __unwrapped.map({ __item in __item })
         } else {
           return nil
@@ -197,10 +220,10 @@ public extension UpdateOptions {
     }
     @inline(__always)
     set {
-      self.__capabilities = { () -> bridge.std__optional_std__vector_Capability__ in
+      self.__iosPlaybackRates = { () -> bridge.std__optional_std__vector_double__ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__vector_Capability__({ () -> bridge.std__vector_Capability_ in
-            var __vector = bridge.create_std__vector_Capability_(__unwrappedValue.count)
+          return bridge.create_std__optional_std__vector_double__({ () -> bridge.std__vector_double_ in
+            var __vector = bridge.create_std__vector_double_(__unwrappedValue.count)
             for __item in __unwrappedValue {
               __vector.push_back(__item)
             }

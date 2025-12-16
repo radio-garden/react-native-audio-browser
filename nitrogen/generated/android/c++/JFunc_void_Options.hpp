@@ -27,8 +27,8 @@
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
 #include "JNotificationButtonLayout.hpp"
-#include "ButtonCapability.hpp"
-#include "JButtonCapability.hpp"
+#include "NotificationButton.hpp"
+#include "JNotificationButton.hpp"
 #include <vector>
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
@@ -36,8 +36,8 @@
 #include "JFeedbackOptions.hpp"
 #include <string>
 #include "JVariant_NullType_Double.hpp"
-#include "Capability.hpp"
-#include "JCapability.hpp"
+#include "PlayerCapabilities.hpp"
+#include "JPlayerCapabilities.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
 

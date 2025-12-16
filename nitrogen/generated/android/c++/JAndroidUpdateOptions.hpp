@@ -11,12 +11,12 @@
 #include "AndroidUpdateOptions.hpp"
 
 #include "AppKilledPlaybackBehavior.hpp"
-#include "ButtonCapability.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "JButtonCapability.hpp"
+#include "JNotificationButton.hpp"
 #include "JNotificationButtonLayout.hpp"
 #include "JRatingType.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
+#include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "RatingType.hpp"
 #include <NitroModules/JNull.hpp>

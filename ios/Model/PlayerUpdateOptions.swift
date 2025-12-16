@@ -13,14 +13,15 @@ class PlayerUpdateOptions {
   var backwardJumpInterval: Double = 15.0
   var progressUpdateEventInterval: Double?
 
-  /// Rating and capabilities
-  var capabilities: [Capability] = [
-    .play,
-    .pause,
-    .skipToNext,
-    .skipToPrevious,
-    .seekTo,
-  ]
+  /// Player capabilities - all enabled by default, only false values disable
+  /// Exception: bookmark defaults to false (no default implementation)
+  var capabilities: PlayerCapabilities = .init(
+    play: nil, pause: nil, stop: nil, seekTo: nil,
+    skipToNext: nil, skipToPrevious: nil,
+    jumpForward: nil, jumpBackward: nil,
+    favorite: nil, bookmark: false,
+    shuffleMode: nil, repeatMode: nil, playbackRate: nil
+  )
 
   /// Repeat mode
   var repeatMode: RepeatMode = .off
@@ -29,6 +30,9 @@ class PlayerUpdateOptions {
   var likeOptions: FeedbackOptions = .init(isActive: false, title: "Like")
   var dislikeOptions: FeedbackOptions = .init(isActive: false, title: "Dislike")
   var bookmarkOptions: FeedbackOptions = .init(isActive: false, title: "Bookmark")
+
+  /// Supported playback rates for the playback-rate capability
+  var playbackRates: [Double] = [0.5, 1.0, 1.5, 2.0]
 
   // MARK: - Initialization
 
@@ -56,9 +60,9 @@ class PlayerUpdateOptions {
       }
     }
 
-    // Update capabilities
+    // Update capabilities - merge incoming with existing, only explicitly set values override
     if let caps = options.capabilities {
-      capabilities = caps
+      capabilities = mergeCapabilities(existing: capabilities, incoming: caps)
     }
 
     // Update iOS-specific options
@@ -72,6 +76,11 @@ class PlayerUpdateOptions {
       if let bookmark = iosOptions.bookmarkOptions {
         bookmarkOptions = bookmark
       }
+    }
+
+    // Update playback rates
+    if let rates = options.iosPlaybackRates {
+      playbackRates = rates
     }
   }
 
@@ -111,6 +120,26 @@ class PlayerUpdateOptions {
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
+      iosPlaybackRates: playbackRates,
+    )
+  }
+
+  /// Merge incoming capabilities with existing - only explicitly set values override
+  private func mergeCapabilities(existing: PlayerCapabilities, incoming: PlayerCapabilities) -> PlayerCapabilities {
+    return PlayerCapabilities(
+      play: incoming.play ?? existing.play,
+      pause: incoming.pause ?? existing.pause,
+      stop: incoming.stop ?? existing.stop,
+      seekTo: incoming.seekTo ?? existing.seekTo,
+      skipToNext: incoming.skipToNext ?? existing.skipToNext,
+      skipToPrevious: incoming.skipToPrevious ?? existing.skipToPrevious,
+      jumpForward: incoming.jumpForward ?? existing.jumpForward,
+      jumpBackward: incoming.jumpBackward ?? existing.jumpBackward,
+      favorite: incoming.favorite ?? existing.favorite,
+      bookmark: incoming.bookmark ?? existing.bookmark,
+      shuffleMode: incoming.shuffleMode ?? existing.shuffleMode,
+      repeatMode: incoming.repeatMode ?? existing.repeatMode,
+      playbackRate: incoming.playbackRate ?? existing.playbackRate
     )
   }
 }

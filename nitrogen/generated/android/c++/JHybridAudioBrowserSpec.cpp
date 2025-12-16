@@ -111,14 +111,14 @@ namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 namespace margelo::nitro::audiobrowser { enum class RatingType; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
-// Forward declaration of `ButtonCapability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
+// Forward declaration of `NotificationButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `FeedbackOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FeedbackOptions; }
-// Forward declaration of `Capability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class Capability; }
+// Forward declaration of `PlayerCapabilities` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
@@ -316,15 +316,15 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "NotificationButtonLayout.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include "JNotificationButtonLayout.hpp"
-#include "ButtonCapability.hpp"
-#include "JButtonCapability.hpp"
+#include "NotificationButton.hpp"
+#include "JNotificationButton.hpp"
 #include "IOSOptions.hpp"
 #include "JIOSOptions.hpp"
 #include "FeedbackOptions.hpp"
 #include "JFeedbackOptions.hpp"
 #include "JVariant_NullType_Double.hpp"
-#include "Capability.hpp"
-#include "JCapability.hpp"
+#include "PlayerCapabilities.hpp"
+#include "JPlayerCapabilities.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFavoriteChangedEvent.hpp"

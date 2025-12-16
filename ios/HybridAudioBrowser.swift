@@ -26,6 +26,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   let browserManager = BrowserManager()
   private var nowPlayingOverride: NowPlayingUpdate?
   private let playerOptions = PlayerUpdateOptions()
+
+  /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
+  var playbackRates: [Double] { playerOptions.playbackRates }
   private var lastNavigationError: NavigationError? {
     didSet {
       // Skip if both nil (no real change)
@@ -105,7 +108,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
     singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, carPlayNowPlayingRates: nil, formatNavigationError: nil
+    carPlayNowPlayingButtons: nil, formatNavigationError: nil
   ) {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)
@@ -513,15 +516,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private func applyRemoteCommands() {
     guard let player else { return }
 
-    let remoteCommands = playerOptions.capabilities.map { capability in
-      capability.mapToPlayerCommand(
-        forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
-        backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
-        likeOptions: playerOptions.likeOptions,
-        dislikeOptions: playerOptions.dislikeOptions,
-        bookmarkOptions: playerOptions.bookmarkOptions,
-      )
-    }
+    let remoteCommands = playerOptions.capabilities.buildRemoteCommands(
+      forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
+      backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
+      likeOptions: playerOptions.likeOptions,
+      dislikeOptions: playerOptions.dislikeOptions,
+      bookmarkOptions: playerOptions.bookmarkOptions,
+      playbackRates: playerOptions.playbackRates
+    )
 
     player.remoteCommands = remoteCommands
   }

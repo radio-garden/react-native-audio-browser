@@ -61,6 +61,5 @@ export interface NativeBrowserConfiguration {
   // CarPlay options
   carPlayUpNextButton?: boolean
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
-  carPlayNowPlayingRates?: number[]
   formatNavigationError?: FormatNavigationErrorCallback
 }

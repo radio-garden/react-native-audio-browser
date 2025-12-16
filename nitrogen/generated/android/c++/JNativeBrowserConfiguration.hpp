@@ -99,8 +99,6 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> carPlayUpNextButton = this->getFieldValue(fieldCarPlayUpNextButton);
       static const auto fieldCarPlayNowPlayingButtons = clazz->getField<jni::JArrayClass<JCarPlayNowPlayingButton>>("carPlayNowPlayingButtons");
       jni::local_ref<jni::JArrayClass<JCarPlayNowPlayingButton>> carPlayNowPlayingButtons = this->getFieldValue(fieldCarPlayNowPlayingButtons);
-      static const auto fieldCarPlayNowPlayingRates = clazz->getField<jni::JArrayDouble>("carPlayNowPlayingRates");
-      jni::local_ref<jni::JArrayDouble> carPlayNowPlayingRates = this->getFieldValue(fieldCarPlayNowPlayingRates);
       static const auto fieldFormatNavigationError = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>("formatNavigationError");
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject> formatNavigationError = this->getFieldValue(fieldFormatNavigationError);
       return NativeBrowserConfiguration(
@@ -131,12 +129,6 @@ namespace margelo::nitro::audiobrowser {
           }
           return __vector;
         }()) : std::nullopt,
-        carPlayNowPlayingRates != nullptr ? std::make_optional([&]() {
-          size_t __size = carPlayNowPlayingRates->size();
-          std::vector<double> __vector(__size);
-          carPlayNowPlayingRates->getRegion(0, __size, __vector.data());
-          return __vector;
-        }()) : std::nullopt,
         formatNavigationError != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)> {
           if (formatNavigationError->isInstanceOf(JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::javaClassStatic())) [[likely]] {
             auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::javaobject>(formatNavigationError);
@@ -155,7 +147,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeBrowserConfiguration::javaobject> fromCpp(const NativeBrowserConfiguration& value) {
-      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<jni::JArrayDouble>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
+      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -185,12 +177,6 @@ namespace margelo::nitro::audiobrowser {
             auto __elementJni = JCarPlayNowPlayingButton::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
-          return __array;
-        }() : nullptr,
-        value.carPlayNowPlayingRates.has_value() ? [&]() {
-          size_t __size = value.carPlayNowPlayingRates.value().size();
-          jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
-          __array->setRegion(0, __size, value.carPlayNowPlayingRates.value().data());
           return __array;
         }() : nullptr,
         value.formatNavigationError.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::fromCpp(value.formatNavigationError.value()) : nullptr

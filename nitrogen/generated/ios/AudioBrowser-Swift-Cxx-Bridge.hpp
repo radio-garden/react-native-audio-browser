@@ -34,10 +34,6 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BrowseError; }
 // Forward declaration of `BrowserSourceCallbackParam` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
-// Forward declaration of `ButtonCapability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class ButtonCapability; }
-// Forward declaration of `Capability` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class Capability; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -80,6 +76,8 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
+// Forward declaration of `NotificationButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -104,6 +102,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackQueueEndedEvent; }
 namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
 // Forward declaration of `Playback` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Playback; }
+// Forward declaration of `PlayerCapabilities` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 // Forward declaration of `PlayingState` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `Progress` to properly resolve imports.
@@ -173,8 +173,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
-#include "ButtonCapability.hpp"
-#include "Capability.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -195,6 +193,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "NavigationError.hpp"
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
+#include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "Options.hpp"
@@ -208,6 +207,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
 #include "PlaybackState.hpp"
+#include "PlayerCapabilities.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
 #include "RatingType.hpp"
@@ -1056,32 +1056,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
-  // pragma MARK: std::optional<std::vector<double>>
-  /**
-   * Specialized version of `std::optional<std::vector<double>>`.
-   */
-  using std__optional_std__vector_double__ = std::optional<std::vector<double>>;
-  inline std::optional<std::vector<double>> create_std__optional_std__vector_double__(const std::vector<double>& value) noexcept {
-    return std::optional<std::vector<double>>(value);
-  }
-  inline bool has_value_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::vector<double> get_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::vector<double>
-  /**
-   * Specialized version of `std::vector<double>`.
-   */
-  using std__vector_double_ = std::vector<double>;
-  inline std::vector<double> create_std__vector_double_(size_t size) noexcept {
-    std::vector<double> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>
   /**
    * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& / * params * /)>>`.
@@ -1518,43 +1492,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_nitro__NullType__NotificationButtonLayout_(value);
   }
   
-  // pragma MARK: std::optional<ButtonCapability>
+  // pragma MARK: std::optional<NotificationButton>
   /**
-   * Specialized version of `std::optional<ButtonCapability>`.
+   * Specialized version of `std::optional<NotificationButton>`.
    */
-  using std__optional_ButtonCapability_ = std::optional<ButtonCapability>;
-  inline std::optional<ButtonCapability> create_std__optional_ButtonCapability_(const ButtonCapability& value) noexcept {
-    return std::optional<ButtonCapability>(value);
+  using std__optional_NotificationButton_ = std::optional<NotificationButton>;
+  inline std::optional<NotificationButton> create_std__optional_NotificationButton_(const NotificationButton& value) noexcept {
+    return std::optional<NotificationButton>(value);
   }
-  inline bool has_value_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
+  inline bool has_value_std__optional_NotificationButton_(const std::optional<NotificationButton>& optional) noexcept {
     return optional.has_value();
   }
-  inline ButtonCapability get_std__optional_ButtonCapability_(const std::optional<ButtonCapability>& optional) noexcept {
+  inline NotificationButton get_std__optional_NotificationButton_(const std::optional<NotificationButton>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::optional<std::vector<ButtonCapability>>
+  // pragma MARK: std::optional<std::vector<NotificationButton>>
   /**
-   * Specialized version of `std::optional<std::vector<ButtonCapability>>`.
+   * Specialized version of `std::optional<std::vector<NotificationButton>>`.
    */
-  using std__optional_std__vector_ButtonCapability__ = std::optional<std::vector<ButtonCapability>>;
-  inline std::optional<std::vector<ButtonCapability>> create_std__optional_std__vector_ButtonCapability__(const std::vector<ButtonCapability>& value) noexcept {
-    return std::optional<std::vector<ButtonCapability>>(value);
+  using std__optional_std__vector_NotificationButton__ = std::optional<std::vector<NotificationButton>>;
+  inline std::optional<std::vector<NotificationButton>> create_std__optional_std__vector_NotificationButton__(const std::vector<NotificationButton>& value) noexcept {
+    return std::optional<std::vector<NotificationButton>>(value);
   }
-  inline bool has_value_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
+  inline bool has_value_std__optional_std__vector_NotificationButton__(const std::optional<std::vector<NotificationButton>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::vector<ButtonCapability> get_std__optional_std__vector_ButtonCapability__(const std::optional<std::vector<ButtonCapability>>& optional) noexcept {
+  inline std::vector<NotificationButton> get_std__optional_std__vector_NotificationButton__(const std::optional<std::vector<NotificationButton>>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::vector<ButtonCapability>
+  // pragma MARK: std::vector<NotificationButton>
   /**
-   * Specialized version of `std::vector<ButtonCapability>`.
+   * Specialized version of `std::vector<NotificationButton>`.
    */
-  using std__vector_ButtonCapability_ = std::vector<ButtonCapability>;
-  inline std::vector<ButtonCapability> create_std__vector_ButtonCapability_(size_t size) noexcept {
-    std::vector<ButtonCapability> vector;
+  using std__vector_NotificationButton_ = std::vector<NotificationButton>;
+  inline std::vector<NotificationButton> create_std__vector_NotificationButton_(size_t size) noexcept {
+    std::vector<NotificationButton> vector;
     vector.reserve(size);
     return vector;
   }
@@ -1589,28 +1563,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::optional<std::vector<Capability>>
+  // pragma MARK: std::optional<PlayerCapabilities>
   /**
-   * Specialized version of `std::optional<std::vector<Capability>>`.
+   * Specialized version of `std::optional<PlayerCapabilities>`.
    */
-  using std__optional_std__vector_Capability__ = std::optional<std::vector<Capability>>;
-  inline std::optional<std::vector<Capability>> create_std__optional_std__vector_Capability__(const std::vector<Capability>& value) noexcept {
-    return std::optional<std::vector<Capability>>(value);
+  using std__optional_PlayerCapabilities_ = std::optional<PlayerCapabilities>;
+  inline std::optional<PlayerCapabilities> create_std__optional_PlayerCapabilities_(const PlayerCapabilities& value) noexcept {
+    return std::optional<PlayerCapabilities>(value);
   }
-  inline bool has_value_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+  inline bool has_value_std__optional_PlayerCapabilities_(const std::optional<PlayerCapabilities>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::vector<Capability> get_std__optional_std__vector_Capability__(const std::optional<std::vector<Capability>>& optional) noexcept {
+  inline PlayerCapabilities get_std__optional_PlayerCapabilities_(const std::optional<PlayerCapabilities>& optional) noexcept {
     return *optional;
   }
   
-  // pragma MARK: std::vector<Capability>
+  // pragma MARK: std::optional<std::vector<double>>
   /**
-   * Specialized version of `std::vector<Capability>`.
+   * Specialized version of `std::optional<std::vector<double>>`.
    */
-  using std__vector_Capability_ = std::vector<Capability>;
-  inline std::vector<Capability> create_std__vector_Capability_(size_t size) noexcept {
-    std::vector<Capability> vector;
+  using std__optional_std__vector_double__ = std::optional<std::vector<double>>;
+  inline std::optional<std::vector<double>> create_std__optional_std__vector_double__(const std::vector<double>& value) noexcept {
+    return std::optional<std::vector<double>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<double> get_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<double>
+  /**
+   * Specialized version of `std::vector<double>`.
+   */
+  using std__vector_double_ = std::vector<double>;
+  inline std::vector<double> create_std__vector_double_(size_t size) noexcept {
+    std::vector<double> vector;
     vector.reserve(size);
     return vector;
   }

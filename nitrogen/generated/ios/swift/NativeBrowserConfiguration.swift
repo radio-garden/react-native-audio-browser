@@ -19,7 +19,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayNowPlayingRates: [Double]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -78,18 +78,6 @@ public extension NativeBrowserConfiguration {
       if let __unwrappedValue = carPlayNowPlayingButtons {
         return bridge.create_std__optional_std__vector_CarPlayNowPlayingButton__({ () -> bridge.std__vector_CarPlayNowPlayingButton_ in
           var __vector = bridge.create_std__vector_CarPlayNowPlayingButton_(__unwrappedValue.count)
-          for __item in __unwrappedValue {
-            __vector.push_back(__item)
-          }
-          return __vector
-        }())
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__vector_double__ in
-      if let __unwrappedValue = carPlayNowPlayingRates {
-        return bridge.create_std__optional_std__vector_double__({ () -> bridge.std__vector_double_ in
-          var __vector = bridge.create_std__vector_double_(__unwrappedValue.count)
           for __item in __unwrappedValue {
             __vector.push_back(__item)
           }
@@ -305,36 +293,6 @@ public extension NativeBrowserConfiguration {
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__vector_CarPlayNowPlayingButton__({ () -> bridge.std__vector_CarPlayNowPlayingButton_ in
             var __vector = bridge.create_std__vector_CarPlayNowPlayingButton_(__unwrappedValue.count)
-            for __item in __unwrappedValue {
-              __vector.push_back(__item)
-            }
-            return __vector
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
-  var carPlayNowPlayingRates: [Double]? {
-    @inline(__always)
-    get {
-      return { () -> [Double]? in
-        if bridge.has_value_std__optional_std__vector_double__(self.__carPlayNowPlayingRates) {
-          let __unwrapped = bridge.get_std__optional_std__vector_double__(self.__carPlayNowPlayingRates)
-          return __unwrapped.map({ __item in __item })
-        } else {
-          return nil
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__carPlayNowPlayingRates = { () -> bridge.std__optional_std__vector_double__ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_std__vector_double__({ () -> bridge.std__vector_double_ in
-            var __vector = bridge.create_std__vector_double_(__unwrappedValue.count)
             for __item in __unwrappedValue {
               __vector.push_back(__item)
             }

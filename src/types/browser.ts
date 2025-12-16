@@ -465,27 +465,6 @@ export type BrowserConfiguration = {
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 
   /**
-   * Configure the playback rates available when using the `'playback-rate'` button
-   * on CarPlay Now Playing screen.
-   *
-   * The button cycles through these rates in order. Values should be positive numbers
-   * where 1.0 is normal speed.
-   *
-   * @example
-   * ```typescript
-   * // For audiobooks/podcasts
-   * carPlayNowPlayingRates: [0.75, 1, 1.25, 1.5, 2.0]
-   *
-   * // For music (no slow speeds)
-   * carPlayNowPlayingRates: [1, 1.25, 1.5, 2.0]
-   * ```
-   *
-   * @default [1.0, 1.5, 2.0]
-   * @platform ios
-   */
-  carPlayNowPlayingRates?: number[]
-
-  /**
    * Callback to customize error messages for navigation errors.
    * Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
    *
