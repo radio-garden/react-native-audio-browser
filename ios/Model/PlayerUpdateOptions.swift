@@ -18,7 +18,7 @@ class PlayerUpdateOptions {
   var capabilities: PlayerCapabilities = .init(
     play: nil, pause: nil, stop: nil, seekTo: nil,
     skipToNext: nil, skipToPrevious: nil,
-    jumpForward: nil, jumpBackward: nil,
+    jumpForward: false, jumpBackward: false,
     favorite: nil, bookmark: false,
     shuffleMode: nil, repeatMode: nil, playbackRate: nil
   )

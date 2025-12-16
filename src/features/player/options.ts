@@ -54,12 +54,14 @@ export interface PlayerCapabilities {
   skipToPrevious?: boolean
   /**
    * Enable jump forward control (configurable via forwardJumpInterval).
-   * @default true
+   * Typically used for podcast/audiobook apps.
+   * @default false
    */
   jumpForward?: boolean
   /**
    * Enable jump backward control (configurable via backwardJumpInterval).
-   * @default true
+   * Typically used for podcast/audiobook apps.
+   * @default false
    */
   jumpBackward?: boolean
   /**
