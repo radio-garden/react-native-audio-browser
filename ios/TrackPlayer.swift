@@ -703,8 +703,13 @@ class TrackPlayer {
   private func loadArtworkForTrack(_ track: Track) {
     let artworkUrl = track.artworkSource?.uri ?? track.artwork
     logger.debug("loadArtworkForTrack: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
-    track.loadArtwork { [weak self] image in
-      guard let self else { return }
+
+    Task {
+      let image = await track.loadArtwork()
+
+      // Verify we're still on the same track after async load
+      guard currentTrack?.src == track.src else { return }
+
       if let image {
         logger.debug("loadArtworkForTrack: loaded image \(image.size.width)x\(image.size.height)")
         // Note: The requestHandler closure is called from MediaPlayer's background queue,

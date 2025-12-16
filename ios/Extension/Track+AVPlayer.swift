@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import Kingfisher
 import NitroModules
 import UIKit
 
@@ -22,7 +23,8 @@ extension Track {
   }
 
   /// Loads artwork from the artwork URL (local file or remote URL)
-  func loadArtwork(_ handler: @escaping (UIImage?) -> Void) {
+  /// Uses Kingfisher for caching and efficient image loading
+  func loadArtwork() async -> UIImage? {
     // Try artworkSource first (has more detailed config), then fall back to artwork string
     let artworkUrlString: String?
     let artworkHeaders: [String: String]?
@@ -36,34 +38,31 @@ extension Track {
     }
 
     guard let urlString = artworkUrlString, let url = URL(string: urlString) else {
-      handler(nil)
-      return
+      return nil
     }
 
     if url.isFileURL {
-      // Load from local file
-      let image = UIImage(contentsOfFile: url.path)
-      handler(image)
-    } else {
-      // Load from remote URL with optional headers
-      var request = URLRequest(url: url)
-      if let headers = artworkHeaders {
-        for (key, value) in headers {
-          request.setValue(value, forHTTPHeaderField: key)
-        }
-      }
+      return UIImage(contentsOfFile: url.path)
+    }
 
-      URLSession.shared.dataTask(with: request) { data, _, error in
-        if let data, let image = UIImage(data: data), error == nil {
-          DispatchQueue.main.async {
-            handler(image)
-          }
-        } else {
-          DispatchQueue.main.async {
-            handler(nil)
-          }
+    // Build Kingfisher options with headers if provided
+    var options: KingfisherOptionsInfo = []
+    if let headers = artworkHeaders, !headers.isEmpty {
+      let modifier = AnyModifier { request in
+        var mutableRequest = request
+        for (key, value) in headers {
+          mutableRequest.setValue(value, forHTTPHeaderField: key)
         }
-      }.resume()
+        return mutableRequest
+      }
+      options.append(.requestModifier(modifier))
+    }
+
+    do {
+      let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
+      return result.image
+    } catch {
+      return nil
     }
   }
 }
