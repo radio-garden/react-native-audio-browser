@@ -227,29 +227,30 @@ public final class RNABCarPlayController: NSObject {
   private func showTabBar(tabs: [Track]) async {
     logger.info("Building tab bar with \(tabs.count) tabs")
 
-    var tabTemplates: [CPTemplate] = []
     let maxTabs = CPTabBarTemplate.maximumTabCount
 
     // Reserve one slot for search if configured
     let hasSearch = config.hasSearch
     let maxContentTabs = hasSearch ? maxTabs - 1 : maxTabs
 
-    for tab in tabs.prefix(maxContentTabs) {
-      let listTemplate = await createListTemplate(for: tab)
-      tabTemplates.append(listTemplate)
+    // Create tab templates synchronously (empty shells) - don't block on content loading
+    let tabTemplates: [CPListTemplate] = tabs.prefix(maxContentTabs).map { tab in
+      createTabTemplate(for: tab)
     }
 
+    // Set the tab bar immediately so UI appears fast
+    logger.info("Setting tab bar root template with \(tabTemplates.count) templates")
     let tabBar = CPTabBarTemplate(templates: tabTemplates)
     interfaceController.setRootTemplate(tabBar, animated: true, completion: nil)
+
+    // Load content for the first tab only - others load lazily when selected
+    if let firstTemplate = tabTemplates.first, let firstTab = tabs.first, let url = firstTab.url {
+      await loadContent(for: url, into: firstTemplate)
+    }
   }
 
-  // MARK: - List Templates
-
-  @MainActor
-  private func createListTemplate(for track: Track) async -> CPListTemplate {
-    // Note: CPAssistantCellConfiguration requires INPlayMediaIntent handlers to be implemented.
-    // Without SiriKit integration, it crashes with "clientAssistantCellUnavailableWithError".
-    // See TODO.md for voice search implementation requirements.
+  /// Creates a tab template shell without loading content (synchronous)
+  private func createTabTemplate(for track: Track) -> CPListTemplate {
     let template = CPListTemplate(
       title: track.title,
       sections: [],
@@ -257,6 +258,11 @@ public final class RNABCarPlayController: NSObject {
 
     // Set tab title explicitly (required for tab bar display)
     template.tabTitle = track.title
+
+    // Store path for lazy loading and refresh
+    if let url = track.url {
+      template.userInfo = ["path": url] as [String: Any]
+    }
 
     // Set tab image - CarPlay requires an image for proper tab display
     if let artwork = track.artwork, let url = URL(string: artwork) {
@@ -272,14 +278,10 @@ public final class RNABCarPlayController: NSObject {
       template.tabImage = defaultTabImage()
     }
 
-    // If track has a URL, resolve its content and store path for refresh
-    if let url = track.url {
-      template.userInfo = ["path": url] as [String: Any]
-      await loadContent(for: url, into: template)
-    }
-
     return template
   }
+
+  // MARK: - List Templates
 
   @MainActor
   private func createListTemplate(
@@ -1062,9 +1064,31 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
   }
 
   func templateDidAppear(_ aTemplate: CPTemplate, animated _: Bool) {
+    guard let listTemplate = aTemplate as? CPListTemplate else { return }
+
     // Update playing indicators when navigating back to a list template
-    if aTemplate is CPListTemplate {
-      controller?.updatePlayingIndicators()
+    controller?.updatePlayingIndicators()
+
+    // Lazy load content for tabs that haven't been loaded yet
+    controller?.loadContentIfNeeded(for: listTemplate)
+  }
+}
+
+// MARK: - Lazy Loading
+
+private extension RNABCarPlayController {
+  /// Loads content for a template if it hasn't been loaded yet (lazy loading for tabs)
+  func loadContentIfNeeded(for template: CPListTemplate) {
+    // Skip if already has content
+    guard template.sections.isEmpty else { return }
+
+    // Get path from userInfo
+    guard let path = getPath(from: template) else { return }
+
+    logger.debug("Lazy loading content for tab: \(path)")
+
+    Task {
+      await loadContent(for: path, into: template)
     }
   }
 }
