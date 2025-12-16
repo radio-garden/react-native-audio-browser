@@ -32,7 +32,9 @@ export function togglePlayback(): void {
 }
 
 /**
- * Stops the current track.
+ * Stops playback and resets position to the beginning.
+ * The track remains loaded and can be resumed with play().
+ * For live streams, position is not reset.
  */
 export function stop(): void {
   nativeBrowser.stop()

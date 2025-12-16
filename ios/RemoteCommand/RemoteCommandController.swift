@@ -40,7 +40,7 @@ extension Bool {
  */
 class RemoteCommandController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RemoteCommandController")
-  private let center: MPRemoteCommandCenter
+  private var center: MPRemoteCommandCenter
 
   weak var callbacks: TrackPlayerCallbacks?
 
@@ -59,6 +59,34 @@ class RemoteCommandController {
   ) {
     center = remoteCommandCenter
     self.callbacks = callbacks
+  }
+
+  /**
+   Switches to a new remote command center.
+   This is used when MPNowPlayingSession is created/destroyed on iOS 16+,
+   as the session has its own command center that must be used instead of the shared one.
+
+   - parameter newCenter: The new MPRemoteCommandCenter to use
+   */
+  func switchCommandCenter(_ newCenter: MPRemoteCommandCenter) {
+    guard newCenter !== center else {
+      logger.debug("switchCommandCenter: same command center, skipping")
+      return
+    }
+
+    logger.info("Switching remote command center")
+
+    // Disable all commands on the old center
+    let commandsToReEnable = enabledCommands
+    disable(commands: commandsToReEnable)
+
+    // Switch to new center
+    center = newCenter
+
+    // Re-enable commands on the new center
+    enable(commands: commandsToReEnable)
+
+    logger.info("Switched command center, re-enabled \(commandsToReEnable.count) commands")
   }
 
   func enable(commands: [RemoteCommand]) {

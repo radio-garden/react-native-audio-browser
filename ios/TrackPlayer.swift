@@ -185,10 +185,7 @@ class TrackPlayer: @unchecked Sendable {
       self?.audioDidStart()
     },
     onSecondElapsed: { [weak self] seconds in
-      guard let self else { return }
-      if automaticallyUpdateNowPlayingInfo {
-        setNowPlayingCurrentTime(seconds: seconds)
-      }
+      self?.setNowPlayingCurrentTime(seconds: seconds)
     },
   )
 
@@ -230,6 +227,8 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   private var pendingSeek: PendingSeek?
+  private var metadataLoadTask: Task<Void, Never>?
+  private var playableLoadTask: Task<Void, Never>?
   private var asset: AVAsset?
   private var url: URL?
   private var urlOptions: [String: Any]?
@@ -262,11 +261,6 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   /**
-   Set this to false to disable automatic updating of now playing info for control center and lock screen.
-   */
-  var automaticallyUpdateNowPlayingInfo: Bool = true
-
-  /**
    Controls the time pitch algorithm applied to each track loaded into the player.
    If the loaded `AudioItem` conforms to `TimePitcher`-protocol this will be overriden.
    */
@@ -277,9 +271,7 @@ class TrackPlayer: @unchecked Sendable {
    */
   var remoteCommands: [RemoteCommand] = [] {
     didSet {
-      if let track = currentTrack {
-        enableRemoteCommands(remoteCommands)
-      }
+      enableRemoteCommands(remoteCommands)
     }
   }
 
@@ -328,7 +320,7 @@ class TrackPlayer: @unchecked Sendable {
         setTimePitchingAlgorithmForCurrentItem()
         // When item becomes ready and playWhenReady is true, start playback
         if playWhenReady {
-          applyAVPlayerRate()
+          startPlayback()
         }
       case .loading:
         setTimePitchingAlgorithmForCurrentItem()
@@ -337,9 +329,7 @@ class TrackPlayer: @unchecked Sendable {
 
       switch state {
       case .ready, .loading, .playing, .paused:
-        if automaticallyUpdateNowPlayingInfo {
-          updateNowPlayingPlaybackValues()
-        }
+        updateNowPlayingPlaybackValues()
         // Update playback state for CarPlay Now Playing
         updateNowPlayingPlaybackState()
       default: break
@@ -429,7 +419,11 @@ class TrackPlayer: @unchecked Sendable {
       if playWhenReady == true, state == .error || state == .stopped {
         reload(startFromCurrentTime: state == .error)
       }
-      applyAVPlayerRate()
+      if playWhenReady {
+        startPlayback()
+      } else {
+        pausePlayback()
+      }
 
       if oldValue != playWhenReady {
         callbacks?.playerDidChangePlayWhenReady(playWhenReady)
@@ -476,10 +470,8 @@ class TrackPlayer: @unchecked Sendable {
 
   var rate: Float = 1.0 {
     didSet {
-      applyAVPlayerRate()
-      if automaticallyUpdateNowPlayingInfo {
-        updateNowPlayingPlaybackValues()
-      }
+      avPlayer.rate = rate
+      updateNowPlayingPlaybackValues()
     }
   }
 
@@ -496,6 +488,11 @@ class TrackPlayer: @unchecked Sendable {
     // Configure sleep timer
     sleepTimerManager.onComplete = { [weak self] in
       self?.pause()
+    }
+
+    // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
+    nowPlayingInfoController.onRemoteCommandCenterChanged = { [weak self] newCommandCenter in
+      self?.remoteCommandController.switchCommandCenter(newCommandCenter)
     }
 
     setupAVPlayer()
@@ -561,9 +558,10 @@ class TrackPlayer: @unchecked Sendable {
    Stop playback
    */
   func stop() {
-    let wasActive = playbackActive
     state = .stopped
-    clearCurrentAVItem()
+    if currentTrack?.live != true {
+      seekTo(0)
+    }
     playWhenReady = false
   }
 
@@ -658,16 +656,11 @@ class TrackPlayer: @unchecked Sendable {
   func loadNowPlayingMetaValues() {
     guard let track = currentTrack else { return }
 
-    // Calculate actual playback rate: 0 when paused, configured rate when playing
-    let actualRate = playWhenReady ? Double(rate) : 0.0
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.artist(track.artist),
       MediaItemProperty.title(track.title),
       MediaItemProperty.albumTitle(track.album),
-      // playbackRate is the actual current rate (0 when paused)
-      NowPlayingInfoProperty.playbackRate(actualRate),
-      // defaultPlaybackRate is the configured rate - this is what CarPlay shows on the rate button
-      NowPlayingInfoProperty.defaultPlaybackRate(Double(rate)),
+      NowPlayingInfoProperty.playbackRate(Double(rate)),
       NowPlayingInfoProperty.isLiveStream(track.live),
     ])
     loadArtworkForTrack(track)
@@ -682,15 +675,10 @@ class TrackPlayer: @unchecked Sendable {
    - Playback rate
    */
   func updateNowPlayingPlaybackValues() {
-    // Calculate actual playback rate: 0 when paused, configured rate when playing
-    let actualRate = playWhenReady ? Double(rate) : 0.0
-    logger.debug("updateNowPlayingPlaybackValues: duration=\(self.duration), rate=\(self.rate), actualRate=\(actualRate), currentTime=\(self.currentTime), playWhenReady=\(self.playWhenReady)")
+    logger.debug("updateNowPlayingPlaybackValues: duration=\(self.duration), rate=\(self.rate), currentTime=\(self.currentTime), playWhenReady=\(self.playWhenReady)")
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.duration(duration),
-      // playbackRate is the actual current rate (0 when paused)
-      NowPlayingInfoProperty.playbackRate(actualRate),
-      // defaultPlaybackRate is the configured rate - this is what CarPlay shows on the rate button
-      NowPlayingInfoProperty.defaultPlaybackRate(Double(rate)),
+      NowPlayingInfoProperty.playbackRate(Double(rate)),
       NowPlayingInfoProperty.elapsedPlaybackTime(currentTime),
     ])
   }
@@ -708,6 +696,7 @@ class TrackPlayer: @unchecked Sendable {
     clearTracks()
     let playbackWasActive = playbackActive
     unloadAVPlayer()
+    nowPlayingInfoController.unlinkPlayer()
     nowPlayingInfoController.clear()
   }
 
@@ -745,8 +734,14 @@ class TrackPlayer: @unchecked Sendable {
 
   // MARK: - AVPlayer Management Methods (from AVPlayerWrapper)
 
-  private func applyAVPlayerRate() {
-    avPlayer.rate = playWhenReady ? rate : 0
+  /// Starts playback at the configured rate
+  private func startPlayback() {
+    avPlayer.play()
+  }
+
+  /// Pauses playback
+  private func pausePlayback() {
+    avPlayer.pause()
   }
 
   private func clearCurrentAVItem() {
@@ -770,33 +765,6 @@ class TrackPlayer: @unchecked Sendable {
     avPlayer.replaceCurrentItem(with: nil)
   }
 
-  /// Prepares for loading a new item by stopping playback and clearing state,
-  /// but WITHOUT calling the slow cancelLoading() or replaceCurrentItem(nil).
-  /// The old asset's async callbacks are safely ignored because loadAVPlayer()
-  /// checks `if pendingAsset != self.asset { return }` before using results.
-  private func prepareForNewItem() {
-    guard let asset else { return }
-
-    // Stop playback immediately so old track doesn't keep playing while new one loads
-    avPlayer.rate = 0
-
-    stopObservingAVPlayerItem()
-
-    // Cancel loading on background queue to avoid blocking main thread (500ms+).
-    // The old asset's callbacks are ignored anyway via the pendingAsset check.
-    let oldAsset = asset
-    DispatchQueue.global(qos: .utility).async {
-      oldAsset.cancelLoading()
-    }
-    self.asset = nil
-
-    // Clear any pending seek to prevent it from being applied to the next track that loads.
-    // Without this, a seek called before any track was loaded could incorrectly apply to
-    // an unrelated track that loads later.
-    pendingSeek?.cancel()
-    pendingSeek = nil
-  }
-
   private func startObservingAVPlayerItem(_ avItem: AVPlayerItem) {
     playerItemObserver.startObserving(item: avItem)
     playerItemNotificationObserver.startObserving(item: avItem)
@@ -815,6 +783,9 @@ class TrackPlayer: @unchecked Sendable {
     stopObservingAVPlayerItem()
     clearCurrentAVItem()
 
+    // Unlink old player before creating new one
+    nowPlayingInfoController.unlinkPlayer()
+
     avPlayer = AVPlayer()
     setupAVPlayer()
   }
@@ -830,103 +801,112 @@ class TrackPlayer: @unchecked Sendable {
     playerTimeObserver.registerForBoundaryTimeEvents()
     playerTimeObserver.registerForPeriodicTimeEvents()
 
-    applyAVPlayerRate()
+    // Link AVPlayer to NowPlayingInfoController for automatic publishing on iOS 16+
+    nowPlayingInfoController.linkPlayer(avPlayer)
+
+    // Apply initial playback state
+    if playWhenReady {
+      startPlayback()
+    } else {
+      // Ensure defaultRate is set for when playback starts later
+      if #available(iOS 16.0, *) {
+        avPlayer.defaultRate = rate
+      }
+    }
   }
 
   func loadAVPlayer() {
     assertMainThread()
     if state == .error {
       recreateAVPlayer()
-    } else {
-      // Use prepareForNewItem() instead of clearCurrentAVItem() - it skips the slow
-      // cancelLoading() call and unnecessary replaceCurrentItem(with: nil).
-      // The old item remains until replaceCurrentItem(with: avItem) below, and
-      // stale async callbacks are ignored via `if pendingAsset != self.asset { return }`.
-      prepareForNewItem()
+    } else if let oldAsset = asset {
+      // Prepare for new item: cancel in-flight tasks, stop observing, cancel asset loading
+      metadataLoadTask?.cancel()
+      playableLoadTask?.cancel()
+      stopObservingAVPlayerItem()
+      pausePlayback()
+      DispatchQueue.global(qos: .utility).async {
+        oldAsset.cancelLoading()
+      }
+      asset = nil
+      pendingSeek?.cancel()
+      pendingSeek = nil
     }
     if let url {
       let pendingAsset = AVURLAsset(url: url, options: urlOptions)
       asset = pendingAsset
       state = .loading
 
-      // Load metadata keys asynchronously and separate from playable, to allow that to execute as
-      // quickly as it can
-      let metadataKeys = ["commonMetadata", "availableChapterLocales", "availableMetadataFormats"]
-      pendingAsset.loadValuesAsynchronously(
-        forKeys: metadataKeys,
-        completionHandler: { [weak self] in
-          guard let self else { return }
-          if pendingAsset != asset { return }
+      // Load metadata asynchronously, separate from playable to allow playback to start faster
+      metadataLoadTask = Task { [weak self] in
+        guard let self else { return }
 
-          let commonData = pendingAsset.commonMetadata
-          if !commonData.isEmpty {
-            callbacks?.playerDidReceiveCommonMetadata(commonData)
-          }
+        guard let (commonMetadata, chapterLocales, metadataFormats) = try? await pendingAsset.load(
+          .commonMetadata,
+          .availableChapterLocales,
+          .availableMetadataFormats
+        ) else { return }
 
-          if !pendingAsset.availableChapterLocales.isEmpty {
-            for locale in pendingAsset.availableChapterLocales {
-              let chapters = pendingAsset.chapterMetadataGroups(
-                withTitleLocale: locale,
-                containingItemsWithCommonKeys: nil,
-              )
+        guard !Task.isCancelled, pendingAsset == asset else { return }
+
+        if !commonMetadata.isEmpty {
+          callbacks?.playerDidReceiveCommonMetadata(commonMetadata)
+        }
+
+        if !chapterLocales.isEmpty {
+          for locale in chapterLocales {
+            guard !Task.isCancelled else { return }
+            if let chapters = try? await pendingAsset.loadChapterMetadataGroups(
+              withTitleLocale: locale,
+              containingItemsWithCommonKeys: []
+            ) {
               callbacks?.playerDidReceiveChapterMetadata(chapters)
             }
-          } else {
-            for format in pendingAsset.availableMetadataFormats {
+          }
+        } else {
+          let duration = (try? await pendingAsset.load(.duration)) ?? .zero
+          for format in metadataFormats {
+            guard !Task.isCancelled else { return }
+            if let metadata = try? await pendingAsset.loadMetadata(for: format) {
               let timeRange = CMTimeRange(
                 start: CMTime(seconds: 0, preferredTimescale: 1000),
-                end: pendingAsset.duration,
+                end: duration
               )
-              let group = AVTimedMetadataGroup(
-                items: pendingAsset.metadata(forFormat: format),
-                timeRange: timeRange,
-              )
+              let group = AVTimedMetadataGroup(items: metadata, timeRange: timeRange)
               callbacks?.playerDidReceiveTimedMetadata([group])
             }
           }
-        },
-      )
+        }
+      }
 
-      // Load playable portion of the track and commence when ready
-      let playableKeys = ["playable"]
-      pendingAsset.loadValuesAsynchronously(
-        forKeys: playableKeys,
-        completionHandler: { [weak self] in
-          guard let self else { return }
+      // Load playable and start playback when ready
+      playableLoadTask = Task { [weak self] in
+        guard let self else { return }
 
-          DispatchQueue.main.async {
-            if pendingAsset != self.asset { return }
+        do {
+          let isPlayable = try await pendingAsset.load(.isPlayable)
 
-            for key in playableKeys {
-              var error: NSError?
-              let keyStatus = pendingAsset.statusOfValue(forKey: key, error: &error)
-              switch keyStatus {
-              case .failed:
-                self.playbackError = TrackPlayerError.PlaybackError.failedToLoadKeyValue
-                return
-              case .cancelled, .loading, .unknown:
-                return
-              case .loaded:
-                break
-              default: break
-              }
-            }
+          guard !Task.isCancelled else { return }
 
-            if !pendingAsset.isPlayable {
+          await MainActor.run {
+            guard pendingAsset == self.asset else { return }
+
+            if !isPlayable {
               self.playbackError = TrackPlayerError.PlaybackError.trackWasUnplayable
               return
             }
 
-            let avItem = AVPlayerItem(
-              asset: pendingAsset,
-              automaticallyLoadedAssetKeys: playableKeys,
-            )
+            let avItem = AVPlayerItem(asset: pendingAsset)
             avItem.preferredForwardBufferDuration = self.bufferDuration
+            // Set metadata on item before it becomes current, so there's no gap
+            self.nowPlayingInfoController.prepareItem(avItem)
             self.logger.debug("AVPlayerItem created, calling replaceCurrentItem")
             self.avPlayer.replaceCurrentItem(with: avItem)
             self.startObservingAVPlayerItem(avItem)
             self.logger.debug("AVPlayerItem loaded, currentItem: \(String(describing: self.avPlayer.currentItem)), playWhenReady: \(self.playWhenReady), avPlayer.status=\(self.avPlayer.status.rawValue)")
-            self.applyAVPlayerRate()
+            if self.playWhenReady {
+              self.startPlayback()
+            }
 
             // Execute any pending seek operation
             if let pending = self.pendingSeek {
@@ -934,8 +914,14 @@ class TrackPlayer: @unchecked Sendable {
               pending.execute(on: self.avPlayer, delegate: self)
             }
           }
-        },
-      )
+        } catch {
+          guard !Task.isCancelled else { return }
+          await MainActor.run {
+            guard pendingAsset == self.asset else { return }
+            self.playbackError = TrackPlayerError.PlaybackError.failedToLoadKeyValue
+          }
+        }
+      }
     }
   }
 
@@ -955,9 +941,7 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   private func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
-    if automaticallyUpdateNowPlayingInfo {
-      setNowPlayingCurrentTime(seconds: Double(seconds))
-    }
+    setNowPlayingCurrentTime(seconds: seconds)
     callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
   }
 
@@ -1378,20 +1362,14 @@ class TrackPlayer: @unchecked Sendable {
       // Ensure playWhenReady is set before loading to preserve playback state
       playWhenReady = shouldContinuePlayback
 
-      // Update now playing info
-      if automaticallyUpdateNowPlayingInfo {
-        // Reset playback values without updating, because that will happen in
-        // the loadNowPlayingMetaValues call straight after:
-        nowPlayingInfoController.setWithoutUpdate(keyValues: [
-          MediaItemProperty.duration(nil),
-          NowPlayingInfoProperty.playbackRate(nil),
-          NowPlayingInfoProperty.elapsedPlaybackTime(nil),
-        ])
-        loadNowPlayingMetaValues()
-      }
-
-      // Enable remote commands
-      enableRemoteCommands(remoteCommands)
+      // Reset playback values without updating, because that will happen in
+      // the loadNowPlayingMetaValues call straight after:
+      nowPlayingInfoController.setWithoutUpdate(keyValues: [
+        MediaItemProperty.duration(nil),
+        NowPlayingInfoProperty.playbackRate(nil),
+        NowPlayingInfoProperty.elapsedPlaybackTime(nil),
+      ])
+      loadNowPlayingMetaValues()
 
       // Load the track - resolve media URL first if resolver is configured
       guard let src = currentTrack.src else {

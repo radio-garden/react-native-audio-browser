@@ -13,8 +13,8 @@ class PlayerUpdateOptions {
   var backwardJumpInterval: Double = 15.0
   var progressUpdateEventInterval: Double?
 
-  /// Player capabilities - all enabled by default, only false values disable
-  /// Exception: bookmark defaults to false (no default implementation)
+  /// Player capabilities - most enabled by default, only false values disable
+  /// Exceptions: bookmark, jumpForward, jumpBackward default to false
   var capabilities: PlayerCapabilities = .init(
     play: nil, pause: nil, stop: nil, seekTo: nil,
     skipToNext: nil, skipToPrevious: nil,
