@@ -148,7 +148,7 @@ class TrackPlayer {
     let completion: ((Bool) -> Void)?
 
     func execute(on player: AVPlayer, delegate: TrackPlayer?) {
-      let cmTime = CMTimeMakeWithSeconds(time, preferredTimescale: 1000)
+      let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
       player
         .seek(to: cmTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
           delegate?.handleSeekCompleted(to: Double(time), didFinish: finished)
@@ -596,7 +596,7 @@ class TrackPlayer {
       pendingSeek?.cancel()
       pendingSeek = PendingSeek(time: seconds, completion: completion)
     } else if avPlayer.currentItem != nil {
-      let time = CMTimeMakeWithSeconds(seconds, preferredTimescale: 1000)
+      let time = CMTime(seconds: seconds, preferredTimescale: 1000)
       avPlayer
         .seek(to: time, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
           self.handleSeekCompleted(to: Double(seconds), didFinish: finished)
