@@ -31,16 +31,8 @@ if (persistedFavorites) {
 void AudioBrowser.setupPlayer().then(() => {
   setPlayWhenReady(true)
 
-  // Configure player capabilities and notification button layout
+  // Configure Android notification button layout
   AudioBrowser.updateOptions({
-    capabilities: [
-      'play',
-      'pause',
-      'skip-to-next',
-      'skip-to-previous',
-      'seek-to',
-      'favorite'
-    ],
     android: {
       // Explicit notification button layout:
       // - Back/Forward: skip buttons as primary
