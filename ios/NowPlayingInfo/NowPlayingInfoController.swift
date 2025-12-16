@@ -1,7 +1,10 @@
 import AVFoundation
 import Foundation
-import MediaPlayer
+@preconcurrency import MediaPlayer
 import os.log
+
+// MPRemoteCommandCenter is not Sendable, but we only use it on the main thread
+extension MPRemoteCommandCenter: @retroactive @unchecked Sendable {}
 
 /// Thread-safe controller for managing Now Playing info.
 ///
@@ -54,7 +57,8 @@ class NowPlayingInfoController {
 
   /// Callback invoked when the remote command center changes (iOS 16+ session created/destroyed)
   /// Called on the main thread.
-  var onRemoteCommandCenterChanged: (@Sendable (MPRemoteCommandCenter) -> Void)?
+  /// Note: MPRemoteCommandCenter is not Sendable, but this callback is always invoked on main thread
+  nonisolated(unsafe) var onRemoteCommandCenterChanged: ((MPRemoteCommandCenter) -> Void)?
 
   /// Links an AVPlayer to enable automatic Now Playing publishing on iOS 16+.
   /// On older iOS versions, this is a no-op.

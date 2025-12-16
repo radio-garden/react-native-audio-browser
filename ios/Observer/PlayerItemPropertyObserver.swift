@@ -1,5 +1,9 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import Foundation
+
+// AVTimedMetadataGroup is not Sendable, but we only use it on the main thread
+// via AVPlayerItemMetadataOutputPushDelegate (queue: .main)
+extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 
 /**
  Observes player item property changes and invokes callbacks passed at initialization.
@@ -11,14 +15,16 @@ final class PlayerItemPropertyObserver: NSObject {
 
   private(set) weak var observingAVItem: AVPlayerItem?
 
-  private let onDurationUpdate: (Double) -> Void
-  private let onPlaybackLikelyToKeepUpUpdate: (Bool) -> Void
-  private let onTimedMetadataReceived: ([AVTimedMetadataGroup]) -> Void
+  private let onDurationUpdate: @Sendable (Double) -> Void
+  private let onPlaybackLikelyToKeepUpUpdate: @Sendable (Bool) -> Void
+  // Note: AVTimedMetadataGroup is not Sendable, but this callback is always invoked
+  // on the main thread via AVPlayerItemMetadataOutputPushDelegate (queue: .main)
+  private let onTimedMetadataReceived: @MainActor ([AVTimedMetadataGroup]) -> Void
 
   init(
-    onDurationUpdate: @escaping (Double) -> Void,
-    onPlaybackLikelyToKeepUpUpdate: @escaping (Bool) -> Void,
-    onTimedMetadataReceived: @escaping ([AVTimedMetadataGroup]) -> Void
+    onDurationUpdate: @escaping @Sendable (Double) -> Void,
+    onPlaybackLikelyToKeepUpUpdate: @escaping @Sendable (Bool) -> Void,
+    onTimedMetadataReceived: @escaping @MainActor ([AVTimedMetadataGroup]) -> Void
   ) {
     self.onDurationUpdate = onDurationUpdate
     self.onPlaybackLikelyToKeepUpUpdate = onPlaybackLikelyToKeepUpUpdate
@@ -79,7 +85,8 @@ extension PlayerItemPropertyObserver: AVPlayerItemMetadataOutputPushDelegate {
     from _: AVPlayerItemTrack?
   ) {
     if output == currentMetadataOutput {
-      onTimedMetadataReceived(groups)
+      // Delegate is called on main thread (queue: .main), so we can assume isolation
+      MainActor.assumeIsolated { onTimedMetadataReceived(groups) }
     }
   }
 }

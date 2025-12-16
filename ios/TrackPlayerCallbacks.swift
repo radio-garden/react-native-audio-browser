@@ -7,6 +7,8 @@ import NitroModules
 /// This protocol defines the interface for receiving events from TrackPlayer.
 /// HybridAudioBrowser implements this protocol to bridge events to JavaScript.
 /// Note: Method names are prefixed to avoid conflicts with JS callback property names.
+/// All callbacks are called from the main actor since TrackPlayer is @MainActor.
+@MainActor
 protocol TrackPlayerCallbacks: AnyObject {
   // MARK: - Playback State Events
 

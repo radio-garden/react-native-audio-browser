@@ -1,3 +1,4 @@
+@preconcurrency import AVFoundation
 import Foundation
 import MediaPlayer
 import NitroModules
@@ -10,7 +11,8 @@ struct MediaResolvedUrl {
   let userAgent: String?
 }
 
-class TrackPlayer: @unchecked Sendable {
+@MainActor
+class TrackPlayer {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackPlayer")
 
   let nowPlayingInfoController: NowPlayingInfoController
@@ -27,7 +29,6 @@ class TrackPlayer: @unchecked Sendable {
   var repeatMode: RepeatMode = .off {
     didSet {
       guard oldValue != repeatMode else { return }
-      assertMainThread()
 
       // Sync state with MPRemoteCommandCenter for CarPlay/lock screen button display
       remoteCommandController.updateRepeatMode(repeatMode)
@@ -45,7 +46,6 @@ class TrackPlayer: @unchecked Sendable {
   var shuffleEnabled: Bool = false {
     didSet {
       guard oldValue != shuffleEnabled else { return }
-      assertMainThread()
 
       // Sync state with MPRemoteCommandCenter for CarPlay/lock screen button display
       remoteCommandController.updateShuffleMode(shuffleEnabled)
@@ -59,10 +59,6 @@ class TrackPlayer: @unchecked Sendable {
   private var shuffleOrder = ShuffleOrder()
 
   // MARK: - Queue Properties
-
-  private func assertMainThread() {
-    assert(Thread.isMainThread, "TrackPlayer queue must be accessed from the main thread")
-  }
 
   /**
    The index of the current track. `-1` when there is no current track
@@ -85,7 +81,6 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   var currentTrack: Track? {
-    assertMainThread()
     guard currentIndex >= 0, currentIndex < tracks.count else { return nil }
     return tracks[currentIndex]
   }
@@ -95,7 +90,6 @@ class TrackPlayer: @unchecked Sendable {
    When shuffle is enabled, returns tracks in shuffled order.
    */
   var nextTracks: [Track] {
-    assertMainThread()
     guard currentIndex >= 0, currentIndex < tracks.count else { return [] }
 
     if shuffleEnabled {
@@ -118,7 +112,6 @@ class TrackPlayer: @unchecked Sendable {
    When shuffle is enabled, returns tracks in shuffled order.
    */
   var previousTracks: [Track] {
-    assertMainThread()
     guard currentIndex >= 0, currentIndex < tracks.count else { return [] }
 
     if shuffleEnabled {
@@ -172,42 +165,42 @@ class TrackPlayer: @unchecked Sendable {
 
   private lazy var playerObserver: PlayerStateObserver = .init(
     onStatusChange: { [weak self] status in
-      self?.avPlayerStatusDidChange(status)
+      Task { @MainActor in self?.avPlayerStatusDidChange(status) }
     },
     onTimeControlStatusChange: { [weak self] status in
-      self?.avPlayerDidChangeTimeControlStatus(status)
-    },
+      Task { @MainActor in self?.avPlayerDidChangeTimeControlStatus(status) }
+    }
   )
 
   private lazy var playerTimeObserver: PlayerTimeObserver = .init(
     periodicObserverTimeInterval: CMTime(seconds: 1, preferredTimescale: 1000),
     onAudioDidStart: { [weak self] in
-      self?.audioDidStart()
+      Task { @MainActor in self?.audioDidStart() }
     },
     onSecondElapsed: { [weak self] seconds in
-      self?.setNowPlayingCurrentTime(seconds: seconds)
-    },
+      Task { @MainActor in self?.setNowPlayingCurrentTime(seconds: seconds) }
+    }
   )
 
   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
     onDidPlayToEndTime: { [weak self] in
-      self?.handleTrackDidPlayToEndTime()
+      Task { @MainActor in self?.handleTrackDidPlayToEndTime() }
     },
     onFailedToPlayToEndTime: { [weak self] in
-      self?.playbackError = TrackPlayerError.PlaybackError.playbackFailed
-    },
+      Task { @MainActor in self?.playbackError = TrackPlayerError.PlaybackError.playbackFailed }
+    }
   )
 
   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
     onDurationUpdate: { [weak self] duration in
-      self?.callbacks?.playerDidUpdateDuration(duration)
+      Task { @MainActor in self?.callbacks?.playerDidUpdateDuration(duration) }
     },
     onPlaybackLikelyToKeepUpUpdate: { [weak self] isLikely in
-      self?.avItemDidUpdatePlaybackLikelyToKeepUp(isLikely)
+      Task { @MainActor in self?.avItemDidUpdatePlaybackLikelyToKeepUp(isLikely) }
     },
     onTimedMetadataReceived: { [weak self] groups in
       self?.callbacks?.playerDidReceiveTimedMetadata(groups)
-    },
+    }
   )
 
   private lazy var progressUpdateManager: PlaybackProgressUpdateManager =
@@ -235,7 +228,6 @@ class TrackPlayer: @unchecked Sendable {
   private(set) var playbackError: TrackPlayerError.PlaybackError? {
     didSet {
       guard oldValue != playbackError else { return }
-      assertMainThread()
 
       // Setting an error should set state to .error
       if let _ = playbackError, state != .error {
@@ -308,7 +300,6 @@ class TrackPlayer: @unchecked Sendable {
   private(set) var state: PlaybackState = .none {
     didSet {
       guard oldValue != state else { return }
-      assertMainThread()
 
       // Clear error when transitioning away from error state
       if oldValue == .error, state != .error {
@@ -491,8 +482,11 @@ class TrackPlayer: @unchecked Sendable {
     }
 
     // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
+    // This callback is guaranteed to be called on the main thread by NowPlayingInfoController
     nowPlayingInfoController.onRemoteCommandCenterChanged = { [weak self] newCommandCenter in
-      self?.remoteCommandController.switchCommandCenter(newCommandCenter)
+      MainActor.assumeIsolated {
+        self?.remoteCommandController.switchCommandCenter(newCommandCenter)
+      }
     }
 
     setupAVPlayer()
@@ -507,7 +501,6 @@ class TrackPlayer: @unchecked Sendable {
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
   func load(_ track: Track, playWhenReady: Bool? = nil) {
-    assertMainThread()
     handlePlayWhenReady(playWhenReady) {
       if currentIndex == -1 {
         tracks.append(track)
@@ -692,7 +685,6 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   func clear() {
-    assertMainThread()
     clearTracks()
     let playbackWasActive = playbackActive
     unloadAVPlayer()
@@ -715,10 +707,9 @@ class TrackPlayer: @unchecked Sendable {
       guard let self else { return }
       if let image {
         logger.debug("loadArtworkForTrack: loaded image \(image.size.width)x\(image.size.height)")
-        let artwork = MPMediaItemArtwork(boundsSize: image.size) { requestedSize in
-          self.logger.debug("MPMediaItemArtwork requestHandler called with size: \(requestedSize.width)x\(requestedSize.height)")
-          return image
-        }
+        // Note: The requestHandler closure is called from MediaPlayer's background queue,
+        // so we must mark it @Sendable to break @MainActor isolation inheritance.
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
         nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
       } else {
         logger.debug("loadArtworkForTrack: no image loaded")
@@ -816,7 +807,6 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   func loadAVPlayer() {
-    assertMainThread()
     if state == .error {
       recreateAVPlayer()
     } else if let oldAsset = asset {
@@ -946,89 +936,73 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   func handleTrackDidPlayToEndTime() {
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
+    // Check if sleep timer should trigger on track end
+    sleepTimerManager.onTrackPlayedToEnd()
 
-      // Check if sleep timer should trigger on track end
-      sleepTimerManager.onTrackPlayedToEnd()
-
-      if repeatMode == .track {
-        replay()
-      } else if repeatMode == .queue || !isLastInPlaybackOrder {
-        next()
-      } else {
-        state = .ended
-      }
+    if repeatMode == .track {
+      replay()
+    } else if repeatMode == .queue || !isLastInPlaybackOrder {
+      next()
+    } else {
+      state = .ended
     }
   }
 
   // MARK: - Observer Callbacks
 
   func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      switch status {
-      case .paused:
-        let currentState = state
-        let currentTime = currentTime
-        let duration = duration
-        // Ignore pauses when near track end - let handleTrackDidPlayToEndTime handle track
-        // completion
-        let nearTrackEnd = currentTime >= duration - 0.5 && duration > 0
+    switch status {
+    case .paused:
+      let currentState = state
+      let currentTime = currentTime
+      let duration = duration
+      // Ignore pauses when near track end - let handleTrackDidPlayToEndTime handle track
+      // completion
+      let nearTrackEnd = currentTime >= duration - 0.5 && duration > 0
 
-        // Completely ignore pause events when near track end to avoid race with
-        // handleTrackDidPlayToEndTime
-        if nearTrackEnd {
-          // Ignore - track completion will be handled by handleTrackDidPlayToEndTime
-        } else if asset == nil, currentState != .stopped {
-          state = .none
-        } else if currentState != .error, currentState != .stopped {
-          // Only update state, never modify playWhenReady
-          // playWhenReady represents user intent and should only change via explicit user actions
-          if !playWhenReady {
-            state = .paused
-          }
-          // If playWhenReady is true, this is likely buffering/seeking - don't change state
+      // Completely ignore pause events when near track end to avoid race with
+      // handleTrackDidPlayToEndTime
+      if nearTrackEnd {
+        // Ignore - track completion will be handled by handleTrackDidPlayToEndTime
+      } else if asset == nil, currentState != .stopped {
+        state = .none
+      } else if currentState != .error, currentState != .stopped {
+        // Only update state, never modify playWhenReady
+        // playWhenReady represents user intent and should only change via explicit user actions
+        if !playWhenReady {
+          state = .paused
         }
-      case .waitingToPlayAtSpecifiedRate:
-        if asset != nil {
-          state = .buffering
-        }
-      case .playing:
-        state = .playing
-      @unknown default:
-        break
+        // If playWhenReady is true, this is likely buffering/seeking - don't change state
       }
+    case .waitingToPlayAtSpecifiedRate:
+      if asset != nil {
+        state = .buffering
+      }
+    case .playing:
+      state = .playing
+    @unknown default:
+      break
     }
   }
 
   func avPlayerStatusDidChange(_ status: AVPlayer.Status) {
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      if status == .failed {
-        let error = avPlayer.currentItem?.error as NSError?
-        playbackError = error?.code == URLError.notConnectedToInternet.rawValue
-          ? TrackPlayerError.PlaybackError.notConnectedToInternet
-          : TrackPlayerError.PlaybackError.playbackFailed
-      }
+    if status == .failed {
+      let error = avPlayer.currentItem?.error as NSError?
+      playbackError = error?.code == URLError.notConnectedToInternet.rawValue
+        ? TrackPlayerError.PlaybackError.notConnectedToInternet
+        : TrackPlayerError.PlaybackError.playbackFailed
     }
   }
 
   func audioDidStart() {
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      state = .playing
-    }
+    state = .playing
   }
 
   func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
     logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp: \(playbackLikelyToKeepUp), state=\(self.state.rawValue)")
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      if playbackLikelyToKeepUp, state != .playing {
-        logger.debug("setting state = .ready")
-        state = .ready
-      }
+    if playbackLikelyToKeepUp, state != .playing {
+      logger.debug("setting state = .ready")
+      state = .ready
     }
   }
 
@@ -1063,7 +1037,6 @@ class TrackPlayer: @unchecked Sendable {
    - parameter track: The track to set.
    */
   func setTrack(at index: Int, _ track: Track) {
-    assertMainThread()
     guard index >= 0, index < tracks.count else { return }
     tracks[index] = track
   }
@@ -1077,7 +1050,6 @@ class TrackPlayer: @unchecked Sendable {
    - parameter sourcePath: Optional path from which this queue was expanded (for contextual URL optimization).
    */
   func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil, sourcePath: String? = nil) {
-    assertMainThread()
     guard !newTracks.isEmpty else {
       clear()
       return
@@ -1107,14 +1079,12 @@ class TrackPlayer: @unchecked Sendable {
    - parameter playWhenReady: Optional, whether to start playback when the track is ready.
    */
   func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
-    assertMainThread()
     handlePlayWhenReady(playWhenReady) {
       add(tracks, initialIndex: initialIndex ?? 0)
     }
   }
 
   private func add(_ newTracks: [Track], initialIndex: Int) {
-    assertMainThread()
     guard !newTracks.isEmpty else { return }
     let wasEmpty = tracks.isEmpty
     let insertIndex = tracks.count
@@ -1131,7 +1101,6 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   func add(_ tracks: [Track], at index: Int) throws {
-    assertMainThread()
     guard !tracks.isEmpty else { return }
     guard index >= 0, self.tracks.count >= index else {
       throw TrackPlayerError.QueueError.invalidIndex(
@@ -1159,7 +1128,6 @@ class TrackPlayer: @unchecked Sendable {
    Step to the next track in the queue.
    */
   func next() {
-    assertMainThread()
     guard currentTrack != nil, !tracks.isEmpty else { return }
 
     let wrap = repeatMode == .queue
@@ -1199,7 +1167,6 @@ class TrackPlayer: @unchecked Sendable {
    Step to the previous track in the queue.
    */
   func previous() {
-    assertMainThread()
     guard currentTrack != nil, !tracks.isEmpty else { return }
 
     let wrap = repeatMode == .queue
@@ -1242,7 +1209,6 @@ class TrackPlayer: @unchecked Sendable {
    - throws: `TrackPlayerError.QueueError`
    */
   func remove(_ index: Int) throws {
-    assertMainThread()
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: index)
     tracks.remove(at: index)
@@ -1266,7 +1232,6 @@ class TrackPlayer: @unchecked Sendable {
    - throws: `TrackPlayerError`
    */
   func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
-    assertMainThread()
     try handlePlayWhenReady(playWhenReady) {
       if index == currentIndex {
         seekTo(0)
@@ -1277,7 +1242,6 @@ class TrackPlayer: @unchecked Sendable {
   }
 
   private func skipTo(_ index: Int) throws {
-    assertMainThread()
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: index)
 
@@ -1299,7 +1263,6 @@ class TrackPlayer: @unchecked Sendable {
    - throws: `TrackPlayerError.QueueError`
    */
   func move(fromIndex: Int, toIndex: Int) throws {
-    assertMainThread()
     try throwIfQueueEmpty()
     try throwIfIndexInvalid(index: fromIndex, name: "fromIndex")
     try throwIfIndexInvalid(index: toIndex, name: "toIndex", max: Int.max)
@@ -1320,7 +1283,6 @@ class TrackPlayer: @unchecked Sendable {
    Remove all upcoming tracks, those returned by `next()`
    */
   func removeUpcomingTracks() {
-    assertMainThread()
     guard !tracks.isEmpty else { return }
     let nextIndex = currentIndex + 1
     guard nextIndex < tracks.count else { return }
@@ -1331,7 +1293,6 @@ class TrackPlayer: @unchecked Sendable {
    Removes all tracks from queue
    */
   private func clearTracks() {
-    assertMainThread()
     guard currentIndex != -1 else { return }
     currentIndex = -1
     tracks.removeAll()
@@ -1452,7 +1413,6 @@ class TrackPlayer: @unchecked Sendable {
 
   /// Loads the AVPlayer with a resolved media URL
   private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track _: Track) {
-    assertMainThread()
 
     guard let mediaUrl = URL(string: resolved.url) else {
       logger.error("Invalid media URL: \(resolved.url)")

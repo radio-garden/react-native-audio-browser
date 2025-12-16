@@ -2,7 +2,7 @@ import Foundation
 import MediaPlayer
 import os.log
 
-typealias RemoteCommandHandler = (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus
+typealias RemoteCommandHandler = @MainActor (MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus
 
 extension RepeatMode {
   /// Convert to MPRepeatType for MPRemoteCommandCenter sync
@@ -37,7 +37,11 @@ extension Bool {
 
  This controller enables/disables remote commands and routes them to handlers. It provides default handlers
  that invoke TrackPlayerCallbacks, but allows customization by setting the lazy handler properties.
+
+ Note: This class is @MainActor because it's owned by TrackPlayer (which is @MainActor) and
+ MPRemoteCommandCenter handlers are always called on the main thread.
  */
+@MainActor
 class RemoteCommandController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RemoteCommandController")
   private var center: MPRemoteCommandCenter

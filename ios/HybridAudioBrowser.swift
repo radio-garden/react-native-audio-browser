@@ -65,22 +65,26 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Thread Safety
 
-  /// Executes a closure on the main thread synchronously, returning its result.
-  /// If already on main thread, executes directly.
-  private func onMainThread<T>(_ work: @Sendable () -> T) -> T {
+  /// Executes a closure on the main actor synchronously, returning its result.
+  /// Uses MainActor.assumeIsolated when already on main thread, otherwise dispatches synchronously.
+  private func onMainActor<T: Sendable>(_ work: @MainActor () -> T) -> T {
     if Thread.isMainThread {
-      work()
+      return MainActor.assumeIsolated { work() }
     } else {
-      DispatchQueue.main.sync { work() }
+      return DispatchQueue.main.sync {
+        MainActor.assumeIsolated { work() }
+      }
     }
   }
 
-  /// Executes a throwing closure on the main thread synchronously.
-  private func onMainThread<T>(_ work: @Sendable () throws -> T) throws -> T {
+  /// Executes a throwing closure on the main actor synchronously.
+  private func onMainActor<T: Sendable>(_ work: @MainActor () throws -> T) throws -> T {
     if Thread.isMainThread {
-      try work()
+      return try MainActor.assumeIsolated { try work() }
     } else {
-      try DispatchQueue.main.sync { try work() }
+      return try DispatchQueue.main.sync {
+        try MainActor.assumeIsolated { try work() }
+      }
     }
   }
 
@@ -368,12 +372,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       let trackId = BrowserPathHelper.extractTrackId(url)
 
       // Check if queue already came from this parent path - just skip to the track
-      if let trackId,
-         parentPath == player?.queueSourcePath,
-         let index = player?.tracks.firstIndex(where: { $0.src == trackId })
-      {
+      let existingIndex: Int? = onMainActor {
+        guard let trackId,
+              parentPath == player?.queueSourcePath,
+              let index = player?.tracks.firstIndex(where: { $0.src == trackId })
+        else { return nil }
+        return index
+      }
+      if let index = existingIndex {
         logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-        onMainThread {
+        onMainActor {
           try? player?.skipTo(index, playWhenReady: true)
         }
         return
@@ -406,7 +414,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
     // If track has src, it's playable - load and auto-play
     else if track.src != nil {
-      onMainThread {
+      onMainActor {
         player?.load(track, playWhenReady: true)
       }
     }
@@ -477,33 +485,37 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       try session.setCategory(.playback, mode: .default)
       try session.setActive(true)
 
-      // Create player with self as callbacks delegate
-      self.player = TrackPlayer(callbacks: self)
+      // Create player and configure on main actor
+      await MainActor.run { [weak self] in
+        guard let self else { return }
 
-      // Configure media URL resolver
-      self.player?.mediaUrlResolver = { [weak self] src in
-        guard let self else {
-          return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+        // Create player with self as callbacks delegate
+        player = TrackPlayer(callbacks: self)
+
+        // Configure media URL resolver
+        player?.mediaUrlResolver = { [weak self] src in
+          guard let self else {
+            return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
+          }
+          return await browserManager.resolveMediaUrl(src)
         }
-        return await browserManager.resolveMediaUrl(src)
-      }
 
-      // Configure sleep timer callback
-      self.player?.sleepTimerManager.onChanged = { [weak self] state in
-        self?.onSleepTimerChanged(state)
-      }
+        // Configure sleep timer callback
+        player?.sleepTimerManager.onChanged = { [weak self] state in
+          self?.onSleepTimerChanged(state)
+        }
 
-      // Apply default remote commands (play, pause, next, previous, seekTo)
-      // Notify listeners that player is ready (e.g., CarPlay)
-      await MainActor.run {
-        self.applyRemoteCommands()
+        // Apply default remote commands (play, pause, next, previous, seekTo)
+        applyRemoteCommands()
+
+        // Notify listeners that player is ready (e.g., CarPlay)
         playerAndConfiguredBrowser.check()
       }
     }
   }
 
   public func updateOptions(options: NativeUpdateOptions) throws {
-    try onMainThread {
+    try onMainActor {
       // Update stored options
       playerOptions.update(from: options)
 
@@ -513,6 +525,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   /// Converts capabilities to remote commands and applies them to the player
+  @MainActor
   private func applyRemoteCommands() {
     guard let player else { return }
 
@@ -535,7 +548,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Playback Control
 
   public func load(track: Track) throws {
-    try onMainThread {
+    try onMainActor {
       guard let player else {
         throw NSError(domain: "AudioBrowser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Player not initialized"])
       }
@@ -544,59 +557,59 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func reset() throws {
-    onMainThread { player?.clear() }
+    onMainActor { player?.clear() }
   }
 
   public func play() throws {
-    onMainThread { player?.play() }
+    onMainActor { player?.play() }
   }
 
   public func pause() throws {
-    onMainThread { player?.pause() }
+    onMainActor { player?.pause() }
   }
 
   public func togglePlayback() throws {
-    onMainThread { player?.togglePlayback() }
+    onMainActor { player?.togglePlayback() }
   }
 
   public func stop() throws {
-    onMainThread { player?.stop() }
+    onMainActor { player?.stop() }
   }
 
   public func setPlayWhenReady(playWhenReady: Bool) throws {
-    onMainThread { player?.playWhenReady = playWhenReady }
+    onMainActor { player?.playWhenReady = playWhenReady }
   }
 
   public func getPlayWhenReady() throws -> Bool {
-    onMainThread { player?.playWhenReady ?? false }
+    onMainActor { player?.playWhenReady ?? false }
   }
 
   public func seekTo(position: Double) throws {
-    onMainThread { player?.seekTo(position) }
+    onMainActor { player?.seekTo(position) }
   }
 
   public func seekBy(offset: Double) throws {
-    onMainThread { player?.seekBy(offset) }
+    onMainActor { player?.seekBy(offset) }
   }
 
   public func setVolume(level: Double) throws {
-    onMainThread { player?.volume = Float(level) }
+    onMainActor { player?.volume = Float(level) }
   }
 
   public func getVolume() throws -> Double {
-    onMainThread { Double(player?.volume ?? 1.0) }
+    onMainActor { Double(player?.volume ?? 1.0) }
   }
 
   public func setRate(rate: Double) throws {
-    onMainThread { player?.rate = Float(rate) }
+    onMainActor { player?.rate = Float(rate) }
   }
 
   public func getRate() throws -> Double {
-    onMainThread { Double(player?.rate ?? 1.0) }
+    onMainActor { Double(player?.rate ?? 1.0) }
   }
 
   public func getProgress() throws -> Progress {
-    onMainThread {
+    onMainActor {
       Progress(
         position: player?.currentTime ?? 0,
         duration: player?.duration ?? 0,
@@ -606,43 +619,43 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getPlayback() throws -> Playback {
-    onMainThread { player?.getPlayback() ?? Playback(state: .none, error: nil) }
+    onMainActor { player?.getPlayback() ?? Playback(state: .none, error: nil) }
   }
 
   public func getPlayingState() throws -> PlayingState {
-    onMainThread {
+    onMainActor {
       player?.playingStateManager.toPlayingState() ?? PlayingState(playing: false, buffering: false)
     }
   }
 
   public func getRepeatMode() throws -> RepeatMode {
-    onMainThread { player?.repeatMode ?? .off }
+    onMainActor { player?.repeatMode ?? .off }
   }
 
   public func setRepeatMode(mode: RepeatMode) throws {
-    onMainThread { player?.repeatMode = mode }
+    onMainActor { player?.repeatMode = mode }
   }
 
   public func getShuffleEnabled() throws -> Bool {
-    onMainThread { player?.shuffleEnabled ?? false }
+    onMainActor { player?.shuffleEnabled ?? false }
   }
 
   public func setShuffleEnabled(enabled: Bool) throws {
-    onMainThread { player?.shuffleEnabled = enabled }
+    onMainActor { player?.shuffleEnabled = enabled }
   }
 
   public func getPlaybackError() throws -> PlaybackError? {
-    onMainThread { player?.playbackError?.toNitroError() }
+    onMainActor { player?.playbackError?.toNitroError() }
   }
 
   public func retry() throws {
-    onMainThread { player?.reload(startFromCurrentTime: true) }
+    onMainActor { player?.reload(startFromCurrentTime: true) }
   }
 
   // MARK: - Sleep Timer
 
   public func getSleepTimer() throws -> SleepTimer {
-    onMainThread {
+    onMainActor {
       if let state = player?.sleepTimerManager.get() {
         return state
       }
@@ -651,19 +664,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func setSleepTimer(seconds: Double) throws {
-    onMainThread {
+    onMainActor {
       player?.sleepTimerManager.set(seconds: seconds)
     }
   }
 
   public func setSleepTimerToEndOfTrack() throws {
-    onMainThread {
+    onMainActor {
       player?.sleepTimerManager.setToEndOfTrack()
     }
   }
 
   public func clearSleepTimer() throws -> Bool {
-    onMainThread {
+    onMainActor {
       player?.sleepTimerManager.clear() ?? false
     }
   }
@@ -671,7 +684,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Queue Management
 
   public func add(tracks: [Track], insertBeforeIndex: Double?) throws {
-    try onMainThread {
+    try onMainActor {
       guard let player else { return }
       if let index = insertBeforeIndex {
         try player.add(tracks, at: Int(index))
@@ -682,13 +695,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func move(fromIndex: Double, toIndex: Double) throws {
-    try onMainThread {
+    try onMainActor {
       try player?.move(fromIndex: Int(fromIndex), toIndex: Int(toIndex))
     }
   }
 
   public func remove(indexes: [Double]) throws {
-    try onMainThread {
+    try onMainActor {
       guard let player else { return }
       // Remove in reverse order to maintain index validity
       for index in indexes.sorted().reversed() {
@@ -698,11 +711,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func removeUpcomingTracks() throws {
-    onMainThread { player?.removeUpcomingTracks() }
+    onMainActor { player?.removeUpcomingTracks() }
   }
 
   public func skip(index: Double, initialPosition: Double?) throws {
-    try onMainThread {
+    try onMainActor {
       try player?.skipTo(Int(index))
       if let position = initialPosition {
         player?.seekTo(position)
@@ -711,7 +724,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func skipToNext(initialPosition: Double?) throws {
-    onMainThread {
+    onMainActor {
       player?.next()
       if let position = initialPosition {
         player?.seekTo(position)
@@ -720,7 +733,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func skipToPrevious(initialPosition: Double?) throws {
-    onMainThread {
+    onMainActor {
       player?.previous()
       if let position = initialPosition {
         player?.seekTo(position)
@@ -729,7 +742,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func setActiveTrackFavorited(favorited: Bool) throws {
-    onMainThread {
+    onMainActor {
       guard let track = player?.currentTrack, let src = track.src else { return }
       guard let index = player?.currentIndex, index >= 0 else { return }
       browserManager.updateFavorite(id: src, favorited: favorited)
@@ -768,7 +781,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func toggleActiveTrackFavorited() throws {
-    onMainThread {
+    onMainActor {
       guard let track = player?.currentTrack, let src = track.src else { return }
       // Check current favorited state from cache
       let currentTrack = browserManager.getCachedTrack(src)
@@ -778,7 +791,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws {
-    try onMainThread {
+    try onMainActor {
       guard let player else { return }
       player.clear()
       player.add(tracks)
@@ -792,11 +805,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getQueue() throws -> [Track] {
-    onMainThread { player?.tracks ?? [] }
+    onMainActor { player?.tracks ?? [] }
   }
 
   public func getTrack(index: Double) throws -> Track? {
-    onMainThread {
+    onMainActor {
       guard let tracks = player?.tracks else { return nil }
       let i = Int(index)
       guard i >= 0, i < tracks.count else { return nil }
@@ -805,27 +818,27 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getActiveTrackIndex() throws -> Double? {
-    onMainThread {
+    onMainActor {
       guard let index = player?.currentIndex, index >= 0 else { return nil }
       return Double(index)
     }
   }
 
   public func getActiveTrack() throws -> Track? {
-    onMainThread { player?.currentTrack }
+    onMainActor { player?.currentTrack }
   }
 
   // MARK: - Now Playing
 
   public func updateNowPlaying(update: NowPlayingUpdate?) throws {
-    onMainThread {
+    onMainActor {
       nowPlayingOverride = update
       applyNowPlayingMetadata()
     }
   }
 
   public func getNowPlaying() throws -> NowPlayingMetadata? {
-    onMainThread {
+    onMainActor {
       guard let track = player?.currentTrack else { return nil }
       let override = nowPlayingOverride
       return NowPlayingMetadata(
@@ -844,6 +857,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   /// Applies the current now playing metadata (with override if set) to NowPlayingInfoCenter and notifies JS.
+  @MainActor
   private func applyNowPlayingMetadata() {
     guard let track = player?.currentTrack else { return }
     let override = nowPlayingOverride
@@ -987,7 +1001,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler()
     } else {
       // Default behavior: play the player
-      onMainThread { player?.play() }
+      onMainActor { player?.play() }
     }
     onRemotePlay()
   }
@@ -997,7 +1011,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler()
     } else {
       // Default behavior: pause the player
-      onMainThread { player?.pause() }
+      onMainActor { player?.pause() }
     }
     onRemotePause()
   }
@@ -1007,14 +1021,14 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler()
     } else {
       // Default behavior: stop the player
-      onMainThread { player?.stop() }
+      onMainActor { player?.stop() }
     }
     onRemoteStop()
   }
 
   public func remotePlayPause() {
     // Toggle based on current state
-    let isPlaying = onMainThread { player?.playWhenReady == true }
+    let isPlaying = onMainActor { player?.playWhenReady == true }
     if isPlaying {
       remotePause()
     } else {
@@ -1027,7 +1041,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler()
     } else {
       // Default behavior: skip to next track
-      onMainThread { player?.next() }
+      onMainActor { player?.next() }
     }
     onRemoteNext()
   }
@@ -1037,7 +1051,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler()
     } else {
       // Default behavior: skip to previous track
-      onMainThread { player?.previous() }
+      onMainActor { player?.previous() }
     }
     onRemotePrevious()
   }
@@ -1048,7 +1062,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler(event)
     } else {
       // Default behavior: seek forward by interval
-      onMainThread { player?.seekBy(interval) }
+      onMainActor { player?.seekBy(interval) }
     }
     onRemoteJumpForward(event)
   }
@@ -1059,7 +1073,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       handler(event)
     } else {
       // Default behavior: seek backward by interval
-      onMainThread { player?.seekBy(-interval) }
+      onMainActor { player?.seekBy(-interval) }
     }
     onRemoteJumpBackward(event)
   }
@@ -1072,7 +1086,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     } else {
       // Default behavior: seek to position
       logger.info("remoteSeek: calling player.seekTo(\(position))")
-      onMainThread { player?.seekTo(position) }
+      onMainActor { player?.seekTo(position) }
     }
     onRemoteSeek(event)
   }
@@ -1139,7 +1153,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func remoteChangePlaybackRate(rate: Float) {
     // Apply the playback rate change from CarPlay/lock screen
-    player?.rate = rate
+    onMainActor { player?.rate = rate }
   }
 
   func playerDidChangeOptions(_: PlayerUpdateOptions) {

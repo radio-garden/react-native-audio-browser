@@ -10,12 +10,12 @@ class PlayerItemNotificationObserver {
   private(set) weak var observingAVItem: AVPlayerItem?
   private(set) var isObserving: Bool = false
 
-  private let onDidPlayToEndTime: () -> Void
-  private let onFailedToPlayToEndTime: () -> Void
+  private let onDidPlayToEndTime: @Sendable () -> Void
+  private let onFailedToPlayToEndTime: @Sendable () -> Void
 
   init(
-    onDidPlayToEndTime: @escaping () -> Void,
-    onFailedToPlayToEndTime: @escaping () -> Void,
+    onDidPlayToEndTime: @escaping @Sendable () -> Void,
+    onFailedToPlayToEndTime: @escaping @Sendable () -> Void,
   ) {
     self.onDidPlayToEndTime = onDidPlayToEndTime
     self.onFailedToPlayToEndTime = onFailedToPlayToEndTime

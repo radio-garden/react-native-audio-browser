@@ -29,13 +29,13 @@ class PlayerTimeObserver {
     }
   }
 
-  private let onAudioDidStart: () -> Void
-  private let onSecondElapsed: (Double) -> Void
+  private let onAudioDidStart: @Sendable () -> Void
+  private let onSecondElapsed: @Sendable (Double) -> Void
 
   init(
     periodicObserverTimeInterval: CMTime,
-    onAudioDidStart: @escaping () -> Void,
-    onSecondElapsed: @escaping (Double) -> Void,
+    onAudioDidStart: @escaping @Sendable () -> Void,
+    onSecondElapsed: @escaping @Sendable (Double) -> Void,
   ) {
     self.periodicObserverTimeInterval = periodicObserverTimeInterval
     self.onAudioDidStart = onAudioDidStart

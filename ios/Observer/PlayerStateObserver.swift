@@ -14,12 +14,12 @@ final class PlayerStateObserver {
     }
   }
 
-  private let onStatusChange: (AVPlayer.Status) -> Void
-  private let onTimeControlStatusChange: (AVPlayer.TimeControlStatus) -> Void
+  private let onStatusChange: @Sendable (AVPlayer.Status) -> Void
+  private let onTimeControlStatusChange: @Sendable (AVPlayer.TimeControlStatus) -> Void
 
   init(
-    onStatusChange: @escaping (AVPlayer.Status) -> Void,
-    onTimeControlStatusChange: @escaping (AVPlayer.TimeControlStatus) -> Void
+    onStatusChange: @escaping @Sendable (AVPlayer.Status) -> Void,
+    onTimeControlStatusChange: @escaping @Sendable (AVPlayer.TimeControlStatus) -> Void
   ) {
     self.onStatusChange = onStatusChange
     self.onTimeControlStatusChange = onTimeControlStatusChange
