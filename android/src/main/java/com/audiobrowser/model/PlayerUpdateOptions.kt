@@ -2,9 +2,9 @@ package com.audiobrowser.model
 
 import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
-import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
@@ -20,15 +20,15 @@ data class PlayerUpdateOptions(
   var backwardJumpInterval: Double = 15.0,
   var progressUpdateEventInterval: Double? = null,
 
-  // Rating and capabilities
-  var capabilities: List<Capability> =
-    listOf(
-      Capability.PLAY,
-      Capability.PAUSE,
-      Capability.SKIP_TO_NEXT,
-      Capability.SKIP_TO_PREVIOUS,
-      Capability.SEEK_TO,
-    ),
+  // Player capabilities - most enabled by default, only false values disable
+  // Exceptions: bookmark, jumpForward, jumpBackward default to false
+  var capabilities: PlayerCapabilities = PlayerCapabilities(
+    play = null, pause = null, stop = null, seekTo = null,
+    skipToNext = null, skipToPrevious = null,
+    jumpForward = false, jumpBackward = false,
+    favorite = null, bookmark = false,
+    shuffleMode = null, repeatMode = null, playbackRate = null
+  ),
 
   // Notification button layout (null = derive from capabilities)
   var notificationButtons: NotificationButtonLayout? = null,
@@ -52,7 +52,9 @@ data class PlayerUpdateOptions(
         }
     }
 
-    options.capabilities?.let { nitroCaps -> capabilities = nitroCaps.toList() }
+    options.capabilities?.let { newCaps ->
+      capabilities = mergeCapabilities(capabilities, newCaps)
+    }
 
     // Update Android-specific options
     options.android?.let { androidOptions ->
@@ -78,9 +80,6 @@ data class PlayerUpdateOptions(
   }
 
   fun toNitro(): UpdateOptions {
-    // Convert capabilities
-    val nitroCapabilities = capabilities.toTypedArray()
-
     // Create Android options
     val androidOptions =
       AndroidUpdateOptions(
@@ -99,7 +98,30 @@ data class PlayerUpdateOptions(
       backwardJumpInterval = backwardJumpInterval,
       progressUpdateEventInterval =
         progressUpdateEventInterval?.let { Variant_NullType_Double.create(it) },
-      capabilities = nitroCapabilities,
+      capabilities = capabilities,
+      iosPlaybackRates = null, // iOS-only option
+    )
+  }
+
+  /** Merge incoming capabilities with existing - only explicitly set values override */
+  private fun mergeCapabilities(
+    existing: PlayerCapabilities,
+    incoming: PlayerCapabilities
+  ): PlayerCapabilities {
+    return PlayerCapabilities(
+      play = incoming.play ?: existing.play,
+      pause = incoming.pause ?: existing.pause,
+      stop = incoming.stop ?: existing.stop,
+      seekTo = incoming.seekTo ?: existing.seekTo,
+      skipToNext = incoming.skipToNext ?: existing.skipToNext,
+      skipToPrevious = incoming.skipToPrevious ?: existing.skipToPrevious,
+      jumpForward = incoming.jumpForward ?: existing.jumpForward,
+      jumpBackward = incoming.jumpBackward ?: existing.jumpBackward,
+      favorite = incoming.favorite ?: existing.favorite,
+      bookmark = incoming.bookmark ?: existing.bookmark,
+      shuffleMode = incoming.shuffleMode ?: existing.shuffleMode,
+      repeatMode = incoming.repeatMode ?: existing.repeatMode,
+      playbackRate = incoming.playbackRate ?: existing.playbackRate
     )
   }
 }

@@ -7,9 +7,9 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.R
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionCommands
-import com.margelo.nitro.audiobrowser.ButtonCapability
-import com.margelo.nitro.audiobrowser.Capability
+import com.margelo.nitro.audiobrowser.NotificationButton
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import timber.log.Timber
 
 /**
@@ -59,21 +59,20 @@ class MediaSessionCommandManager {
     private set
 
   /** Stored state for rebuilding layout */
-  private var currentCapabilities: List<Capability> = emptyList()
+  private var currentCapabilities: PlayerCapabilities = PlayerCapabilities(
+    play = null, pause = null, stop = null, seekTo = null,
+    skipToNext = null, skipToPrevious = null,
+    jumpForward = null, jumpBackward = null,
+    favorite = null, bookmark = false,
+    shuffleMode = null, repeatMode = null, playbackRate = null
+  )
   private var currentNotificationButtons: NotificationButtonLayout? = null
   private var currentSearchAvailable: Boolean = false
   private var currentFavorited: Boolean? = null
 
   init {
-    // Initialize with defaults matching PlayerUpdateOptions
-    val defaultCapabilities =
-      listOf(
-        Capability.PLAY,
-        Capability.PAUSE,
-        Capability.SKIP_TO_NEXT,
-        Capability.SKIP_TO_PREVIOUS,
-        Capability.SEEK_TO,
-      )
+    // Initialize with defaults matching PlayerUpdateOptions (all capabilities enabled)
+    val defaultCapabilities = currentCapabilities
 
     playerCommands = buildPlayerCommands(defaultCapabilities)
     notificationPlayerCommands = buildPlayerCommands(defaultCapabilities)
@@ -92,7 +91,8 @@ class MediaSessionCommandManager {
    *
    * @param mediaSession The MediaSession to configure
    * @param capabilities Global capabilities that enable commands for ALL MediaSession controllers
-   *   (Bluetooth, Android Auto, lock screen, notification, etc.).
+   *   (Bluetooth, Android Auto, lock screen, notification, etc.). All capabilities are enabled
+   *   by default - only false values disable them.
    * @param notificationButtons Slot-based button layout for notifications. When null, button layout
    *   is derived from capabilities using smart defaults.
    * @param searchAvailable Whether search functionality is configured and available
@@ -101,7 +101,7 @@ class MediaSessionCommandManager {
    */
   fun updateMediaSession(
     mediaSession: MediaSession,
-    capabilities: List<Capability>,
+    capabilities: PlayerCapabilities,
     notificationButtons: NotificationButtonLayout?,
     searchAvailable: Boolean,
     favorited: Boolean? = null,
@@ -235,7 +235,7 @@ class MediaSessionCommandManager {
     }
   }
 
-  private fun buildPlayerCommands(capabilities: List<Capability>): MediaPlayer.Commands {
+  private fun buildPlayerCommands(capabilities: PlayerCapabilities): MediaPlayer.Commands {
     val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
 
     // Commands to remove - start with always-disabled commands
@@ -247,33 +247,33 @@ class MediaSessionCommandManager {
         MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
       )
 
-    // Only disable jump commands if capabilities are not present
-    if (!capabilities.contains(Capability.JUMP_FORWARD)) {
+    // Only disable jump commands if capabilities are explicitly disabled (false)
+    if (capabilities.jumpForward == false) {
       disabledCommands.add(MediaPlayer.COMMAND_SEEK_FORWARD)
     }
-    if (!capabilities.contains(Capability.JUMP_BACKWARD)) {
+    if (capabilities.jumpBackward == false) {
       disabledCommands.add(MediaPlayer.COMMAND_SEEK_BACK)
     }
 
-    // Check each capability and add commands to remove if not enabled
-    val hasPlayPause = capabilities.any { it == Capability.PLAY || it == Capability.PAUSE }
-    if (!hasPlayPause) {
+    // Check each capability and add commands to remove if explicitly disabled
+    // Both play and pause must be disabled to remove PLAY_PAUSE command
+    if (capabilities.play == false && capabilities.pause == false) {
       disabledCommands.add(MediaPlayer.COMMAND_PLAY_PAUSE)
     }
 
-    if (!capabilities.contains(Capability.STOP)) {
+    if (capabilities.stop == false) {
       disabledCommands.add(MediaPlayer.COMMAND_STOP)
     }
 
-    if (!capabilities.contains(Capability.SEEK_TO)) {
+    if (capabilities.seekTo == false) {
       disabledCommands.add(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
     }
 
-    if (!capabilities.contains(Capability.SKIP_TO_NEXT)) {
+    if (capabilities.skipToNext == false) {
       disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_NEXT)
     }
 
-    if (!capabilities.contains(Capability.SKIP_TO_PREVIOUS)) {
+    if (capabilities.skipToPrevious == false) {
       disabledCommands.add(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
     }
 
@@ -287,7 +287,7 @@ class MediaSessionCommandManager {
   }
 
   private fun buildSessionCommandsAndLayout(
-    capabilities: List<Capability>,
+    capabilities: PlayerCapabilities,
     searchAvailable: Boolean,
     favorited: Boolean?,
   ): Pair<SessionCommands, List<CommandButton>> {
@@ -303,7 +303,8 @@ class MediaSessionCommandManager {
     }
 
     // Create custom command buttons for jump commands (required for notification visibility)
-    if (capabilities.contains(Capability.JUMP_BACKWARD)) {
+    // All capabilities enabled by default - only false disables
+    if (capabilities.jumpBackward != false) {
       val jumpBackCommand = SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
       customLayoutButtons.add(
         CommandButton.Builder()
@@ -315,7 +316,7 @@ class MediaSessionCommandManager {
       sessionCommandsBuilder.add(jumpBackCommand)
     }
 
-    if (capabilities.contains(Capability.JUMP_FORWARD)) {
+    if (capabilities.jumpForward != false) {
       val jumpForwardCommand = SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
       customLayoutButtons.add(
         CommandButton.Builder()
@@ -327,8 +328,8 @@ class MediaSessionCommandManager {
       sessionCommandsBuilder.add(jumpForwardCommand)
     }
 
-    // Add favorite button when FAVORITE capability is enabled
-    if (capabilities.contains(Capability.FAVORITE)) {
+    // Add favorite button when FAVORITE capability is not disabled
+    if (capabilities.favorite != false) {
       val heartIcon =
         if (favorited == true) {
           CommandButton.ICON_HEART_FILLED
@@ -356,7 +357,7 @@ class MediaSessionCommandManager {
    * is null, derives button layout from capabilities.
    */
   private fun buildNotificationButtonPreferences(
-    capabilities: List<Capability>,
+    capabilities: PlayerCapabilities,
     notificationButtons: NotificationButtonLayout?,
     searchAvailable: Boolean,
     favorited: Boolean?,
@@ -371,11 +372,12 @@ class MediaSessionCommandManager {
       sessionCommandsBuilder.remove(SessionCommand.COMMAND_CODE_LIBRARY_GET_SEARCH_RESULT)
     }
 
-    // Helper to create a CommandButton for a ButtonCapability with specific slot
-    fun createButton(capability: ButtonCapability, slot: Int): CommandButton? {
-      return when (capability) {
-        ButtonCapability.SKIP_TO_PREVIOUS -> {
-          if (capabilities.contains(Capability.SKIP_TO_PREVIOUS)) {
+    // Helper to create a CommandButton for a NotificationButton with specific slot
+    // Only creates button if the corresponding capability is not disabled
+    fun createButton(button: NotificationButton, slot: Int): CommandButton? {
+      return when (button) {
+        NotificationButton.SKIP_TO_PREVIOUS -> {
+          if (capabilities.skipToPrevious != false) {
             CommandButton.Builder(CommandButton.ICON_PREVIOUS)
               .setDisplayName("Previous")
               .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
@@ -383,8 +385,8 @@ class MediaSessionCommandManager {
               .build()
           } else null
         }
-        ButtonCapability.SKIP_TO_NEXT -> {
-          if (capabilities.contains(Capability.SKIP_TO_NEXT)) {
+        NotificationButton.SKIP_TO_NEXT -> {
+          if (capabilities.skipToNext != false) {
             CommandButton.Builder(CommandButton.ICON_NEXT)
               .setDisplayName("Next")
               .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_NEXT)
@@ -392,8 +394,8 @@ class MediaSessionCommandManager {
               .build()
           } else null
         }
-        ButtonCapability.JUMP_BACKWARD -> {
-          if (capabilities.contains(Capability.JUMP_BACKWARD)) {
+        NotificationButton.JUMP_BACKWARD -> {
+          if (capabilities.jumpBackward != false) {
             val command = SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
             sessionCommandsBuilder.add(command)
             CommandButton.Builder()
@@ -404,8 +406,8 @@ class MediaSessionCommandManager {
               .build()
           } else null
         }
-        ButtonCapability.JUMP_FORWARD -> {
-          if (capabilities.contains(Capability.JUMP_FORWARD)) {
+        NotificationButton.JUMP_FORWARD -> {
+          if (capabilities.jumpForward != false) {
             val command = SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
             sessionCommandsBuilder.add(command)
             CommandButton.Builder()
@@ -416,8 +418,8 @@ class MediaSessionCommandManager {
               .build()
           } else null
         }
-        ButtonCapability.FAVORITE -> {
-          if (capabilities.contains(Capability.FAVORITE)) {
+        NotificationButton.FAVORITE -> {
+          if (capabilities.favorite != false) {
             val heartIcon =
               if (favorited == true) CommandButton.ICON_HEART_FILLED
               else CommandButton.ICON_HEART_UNFILLED
@@ -436,63 +438,64 @@ class MediaSessionCommandManager {
 
     if (notificationButtons != null) {
       // Use explicit slot configuration
-      notificationButtons.back?.let { cap ->
-        createButton(cap, CommandButton.SLOT_BACK)?.let { buttons.add(it) }
+      notificationButtons.back?.let { btn ->
+        createButton(btn, CommandButton.SLOT_BACK)?.let { buttons.add(it) }
       }
-      notificationButtons.forward?.let { cap ->
-        createButton(cap, CommandButton.SLOT_FORWARD)?.let { buttons.add(it) }
+      notificationButtons.forward?.let { btn ->
+        createButton(btn, CommandButton.SLOT_FORWARD)?.let { buttons.add(it) }
       }
-      notificationButtons.backSecondary?.let { cap ->
-        createButton(cap, CommandButton.SLOT_BACK_SECONDARY)?.let { buttons.add(it) }
+      notificationButtons.backSecondary?.let { btn ->
+        createButton(btn, CommandButton.SLOT_BACK_SECONDARY)?.let { buttons.add(it) }
       }
-      notificationButtons.forwardSecondary?.let { cap ->
-        createButton(cap, CommandButton.SLOT_FORWARD_SECONDARY)?.let { buttons.add(it) }
+      notificationButtons.forwardSecondary?.let { btn ->
+        createButton(btn, CommandButton.SLOT_FORWARD_SECONDARY)?.let { buttons.add(it) }
       }
-      notificationButtons.overflow?.forEach { cap ->
-        createButton(cap, CommandButton.SLOT_OVERFLOW)?.let { buttons.add(it) }
+      notificationButtons.overflow?.forEach { btn ->
+        createButton(btn, CommandButton.SLOT_OVERFLOW)?.let { buttons.add(it) }
       }
     } else {
       // Derive from capabilities with default slot mapping
-      val hasSkipPrevious = capabilities.contains(Capability.SKIP_TO_PREVIOUS)
-      val hasSkipNext = capabilities.contains(Capability.SKIP_TO_NEXT)
+      // All capabilities enabled by default - only false disables
+      val hasSkipPrevious = capabilities.skipToPrevious != false
+      val hasSkipNext = capabilities.skipToNext != false
 
       // Back slot: skip-to-previous, or jump-backward if no skip
       if (hasSkipPrevious) {
-        createButton(ButtonCapability.SKIP_TO_PREVIOUS, CommandButton.SLOT_BACK)?.let {
+        createButton(NotificationButton.SKIP_TO_PREVIOUS, CommandButton.SLOT_BACK)?.let {
           buttons.add(it)
         }
-      } else if (capabilities.contains(Capability.JUMP_BACKWARD)) {
-        createButton(ButtonCapability.JUMP_BACKWARD, CommandButton.SLOT_BACK)?.let {
+      } else if (capabilities.jumpBackward != false) {
+        createButton(NotificationButton.JUMP_BACKWARD, CommandButton.SLOT_BACK)?.let {
           buttons.add(it)
         }
       }
 
       // Forward slot: skip-to-next, or jump-forward if no skip
       if (hasSkipNext) {
-        createButton(ButtonCapability.SKIP_TO_NEXT, CommandButton.SLOT_FORWARD)?.let {
+        createButton(NotificationButton.SKIP_TO_NEXT, CommandButton.SLOT_FORWARD)?.let {
           buttons.add(it)
         }
-      } else if (capabilities.contains(Capability.JUMP_FORWARD)) {
-        createButton(ButtonCapability.JUMP_FORWARD, CommandButton.SLOT_FORWARD)?.let {
+      } else if (capabilities.jumpForward != false) {
+        createButton(NotificationButton.JUMP_FORWARD, CommandButton.SLOT_FORWARD)?.let {
           buttons.add(it)
         }
       }
 
       // Secondary slots for jump buttons if skip buttons are present
-      if (hasSkipPrevious && capabilities.contains(Capability.JUMP_BACKWARD)) {
-        createButton(ButtonCapability.JUMP_BACKWARD, CommandButton.SLOT_BACK_SECONDARY)?.let {
+      if (hasSkipPrevious && capabilities.jumpBackward != false) {
+        createButton(NotificationButton.JUMP_BACKWARD, CommandButton.SLOT_BACK_SECONDARY)?.let {
           buttons.add(it)
         }
       }
-      if (hasSkipNext && capabilities.contains(Capability.JUMP_FORWARD)) {
-        createButton(ButtonCapability.JUMP_FORWARD, CommandButton.SLOT_FORWARD_SECONDARY)?.let {
+      if (hasSkipNext && capabilities.jumpForward != false) {
+        createButton(NotificationButton.JUMP_FORWARD, CommandButton.SLOT_FORWARD_SECONDARY)?.let {
           buttons.add(it)
         }
       }
 
       // Overflow: favorite
-      if (capabilities.contains(Capability.FAVORITE)) {
-        createButton(ButtonCapability.FAVORITE, CommandButton.SLOT_OVERFLOW)?.let {
+      if (capabilities.favorite != false) {
+        createButton(NotificationButton.FAVORITE, CommandButton.SLOT_OVERFLOW)?.let {
           buttons.add(it)
         }
       }
@@ -507,7 +510,7 @@ class MediaSessionCommandManager {
    * the commands needed for the buttons that will be shown.
    */
   private fun buildNotificationPlayerCommands(
-    capabilities: List<Capability>,
+    capabilities: PlayerCapabilities,
     notificationButtons: NotificationButtonLayout?,
   ): MediaPlayer.Commands {
     val builder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
@@ -524,50 +527,49 @@ class MediaSessionCommandManager {
 
     if (notificationButtons != null) {
       showSkipPrevious =
-        notificationButtons.back == ButtonCapability.SKIP_TO_PREVIOUS ||
-          notificationButtons.backSecondary == ButtonCapability.SKIP_TO_PREVIOUS
+        notificationButtons.back == NotificationButton.SKIP_TO_PREVIOUS ||
+          notificationButtons.backSecondary == NotificationButton.SKIP_TO_PREVIOUS
       showSkipNext =
-        notificationButtons.forward == ButtonCapability.SKIP_TO_NEXT ||
-          notificationButtons.forwardSecondary == ButtonCapability.SKIP_TO_NEXT
+        notificationButtons.forward == NotificationButton.SKIP_TO_NEXT ||
+          notificationButtons.forwardSecondary == NotificationButton.SKIP_TO_NEXT
       showJumpBackward =
-        notificationButtons.back == ButtonCapability.JUMP_BACKWARD ||
-          notificationButtons.backSecondary == ButtonCapability.JUMP_BACKWARD
+        notificationButtons.back == NotificationButton.JUMP_BACKWARD ||
+          notificationButtons.backSecondary == NotificationButton.JUMP_BACKWARD
       showJumpForward =
-        notificationButtons.forward == ButtonCapability.JUMP_FORWARD ||
-          notificationButtons.forwardSecondary == ButtonCapability.JUMP_FORWARD
+        notificationButtons.forward == NotificationButton.JUMP_FORWARD ||
+          notificationButtons.forwardSecondary == NotificationButton.JUMP_FORWARD
     } else {
       // Default derivation from capabilities
-      val hasSkipPrevious = capabilities.contains(Capability.SKIP_TO_PREVIOUS)
-      val hasSkipNext = capabilities.contains(Capability.SKIP_TO_NEXT)
-      showSkipPrevious = hasSkipPrevious
-      showSkipNext = hasSkipNext
-      showJumpBackward = capabilities.contains(Capability.JUMP_BACKWARD)
-      showJumpForward = capabilities.contains(Capability.JUMP_FORWARD)
+      // All capabilities enabled by default - only false disables
+      showSkipPrevious = capabilities.skipToPrevious != false
+      showSkipNext = capabilities.skipToNext != false
+      showJumpBackward = capabilities.jumpBackward != false
+      showJumpForward = capabilities.jumpForward != false
     }
 
-    // Enable/disable commands based on what buttons are shown
-    if (!showSkipPrevious || !capabilities.contains(Capability.SKIP_TO_PREVIOUS)) {
+    // Enable/disable commands based on what buttons are shown and capabilities
+    if (!showSkipPrevious || capabilities.skipToPrevious == false) {
       builder.remove(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
     }
-    if (!showSkipNext || !capabilities.contains(Capability.SKIP_TO_NEXT)) {
+    if (!showSkipNext || capabilities.skipToNext == false) {
       builder.remove(MediaPlayer.COMMAND_SEEK_TO_NEXT)
     }
-    if (!showJumpBackward || !capabilities.contains(Capability.JUMP_BACKWARD)) {
+    if (!showJumpBackward || capabilities.jumpBackward == false) {
       builder.remove(MediaPlayer.COMMAND_SEEK_BACK)
     }
-    if (!showJumpForward || !capabilities.contains(Capability.JUMP_FORWARD)) {
+    if (!showJumpForward || capabilities.jumpForward == false) {
       builder.remove(MediaPlayer.COMMAND_SEEK_FORWARD)
     }
 
     // Other commands based on global capabilities
-    val hasPlayPause = capabilities.any { it == Capability.PLAY || it == Capability.PAUSE }
-    if (!hasPlayPause) {
+    // Both play and pause must be disabled to remove PLAY_PAUSE
+    if (capabilities.play == false && capabilities.pause == false) {
       builder.remove(MediaPlayer.COMMAND_PLAY_PAUSE)
     }
-    if (!capabilities.contains(Capability.STOP)) {
+    if (capabilities.stop == false) {
       builder.remove(MediaPlayer.COMMAND_STOP)
     }
-    if (!capabilities.contains(Capability.SEEK_TO)) {
+    if (capabilities.seekTo == false) {
       builder.remove(MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
     }
 

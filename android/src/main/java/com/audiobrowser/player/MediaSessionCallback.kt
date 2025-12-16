@@ -18,9 +18,9 @@ import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.margelo.nitro.audiobrowser.Capability
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +80,7 @@ class MediaSessionCallback(private val player: Player) :
 
   fun updateMediaSession(
     mediaSession: MediaSession,
-    capabilities: List<Capability>,
+    capabilities: PlayerCapabilities,
     notificationButtons: NotificationButtonLayout?,
     searchAvailable: Boolean,
   ) {
