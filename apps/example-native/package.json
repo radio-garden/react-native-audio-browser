@@ -9,7 +9,7 @@
     "android:clean": "rm -rf android/.gradle && rm -rf android/build && rm -rf android/app/build && rm -rf android/app/.cxx",
     "android:dhu": "pkill -f 'desktop-head-unit' || true && $HOME/Library/Android/sdk/extras/google/auto/desktop-head-unit",
     "android:format": "cd android && ./gradlew :react-native-audio-browser:format",
-    "android:ide": "open -a /Applications/Android\\ Studio.app android",
+    "android:ide": "sed -i '' '/^NODE_BINARY=/d' android/local.properties && echo \"NODE_BINARY=$(which node)\" >> android/local.properties && open -a /Applications/Android\\ Studio.app android",
     "android:install-release": "RD=android/app/build/outputs/bundle/release && (rm $RD/app.apks || true) && bundletool build-apks --bundle=$RD/app-release.aab --output=$RD/app.apks && (adb uninstall com.example || true) && bundletool install-apks --apks=$RD/app.apks",
     "android:logs": "react-native log-android",
     "android:release": "cd android && ./gradlew clean && ./gradlew bundleRelease && cd app/build/outputs/bundle/release && pwd && ls",
