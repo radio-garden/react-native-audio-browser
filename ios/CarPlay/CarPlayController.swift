@@ -611,9 +611,13 @@ public final class RNABCarPlayController: NSObject {
   }
 
   /// Returns the appropriate image for the favorite button based on state
+  /// Sized to CPNowPlayingButtonMaximumImageSize per Apple docs
   private func favoriteButtonImage(isFavorited: Bool) -> UIImage {
     let symbolName = isFavorited ? "heart.fill" : "heart"
-    return UIImage(systemName: symbolName) ?? UIImage()
+    guard let image = UIImage(systemName: symbolName)?.resized(to: CPNowPlayingButtonMaximumImageSize) else {
+      return UIImage()
+    }
+    return image
   }
 
   /// Handles shuffle button tap - toggles shuffle mode
@@ -1312,5 +1316,29 @@ private extension RNABCarPlayController {
     Task {
       await loadContent(for: path, into: template)
     }
+  }
+}
+
+// MARK: - UIImage Resize
+
+private extension UIImage {
+  /// Draws the image centered within the target size, maintaining aspect ratio
+  func resized(to targetSize: CGSize) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
+    defer { UIGraphicsEndImageContext() }
+
+    // Scale to fit while maintaining aspect ratio
+    let widthRatio = targetSize.width / size.width
+    let heightRatio = targetSize.height / size.height
+    let scale = min(widthRatio, heightRatio)
+
+    let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
+    let origin = CGPoint(
+      x: (targetSize.width - scaledSize.width) / 2,
+      y: (targetSize.height - scaledSize.height) / 2
+    )
+
+    draw(in: CGRect(origin: origin, size: scaledSize))
+    return UIGraphicsGetImageFromCurrentImageContext()?.withRenderingMode(.alwaysTemplate)
   }
 }
