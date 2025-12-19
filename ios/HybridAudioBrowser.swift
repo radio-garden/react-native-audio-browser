@@ -758,6 +758,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         src: track.src,
         artwork: track.artwork,
         artworkSource: track.artworkSource,
+        artworkCarPlayTinted: track.artworkCarPlayTinted,
         title: track.title,
         subtitle: track.subtitle,
         artist: track.artist,
