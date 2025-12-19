@@ -125,7 +125,11 @@ final class BrowserManager: @unchecked Sendable {
   }
 
   /// Callback to transform artwork URLs for tracks.
-  var artworkUrlResolver: ((Track, MediaRequestConfig?) async -> ImageSource?)?
+  /// - Parameters:
+  ///   - track: The track whose artwork URL should be transformed
+  ///   - artworkConfig: Per-route artwork config (or nil to use global)
+  ///   - imageContext: Optional size context for CDN URL generation (nil at browse-time)
+  var artworkUrlResolver: ((Track, ArtworkRequestConfig?, ImageContext?) async -> ImageSource?)?
 
   // MARK: - Callbacks
 
@@ -522,9 +526,11 @@ final class BrowserManager: @unchecked Sendable {
       }
 
       // Transform artwork URL if resolver is configured
+      // At browse-time, we don't have display size info
       if let resolver = artworkUrlResolver {
         let artworkConfig = routeEntry.artwork ?? config.artwork
-        if let imageSource = await resolver(transformedTrack, artworkConfig) {
+        let browseContext = ImageContext(width: nil, height: nil)
+        if let imageSource = await resolver(transformedTrack, artworkConfig, browseContext) {
           transformedTrack = Track(
             url: transformedTrack.url,
             src: transformedTrack.src,
@@ -730,6 +736,7 @@ final class BrowserManager: @unchecked Sendable {
         )
 
         logger.debug("resolveMediaUrl: calling transform callback...")
+        // MediaRequestConfig.transform takes (request, routeParams) - pass nil for routeParams
         let outerPromise = transform(baseRequest, nil)
         logger.debug("resolveMediaUrl: awaiting outer promise...")
         let innerPromise = try await outerPromise.await()
@@ -802,8 +809,9 @@ final class BrowserManager: @unchecked Sendable {
   /// - Parameters:
   ///   - track: The track whose artwork URL should be transformed
   ///   - perRouteConfig: Optional per-route artwork config that overrides global config
+  ///   - imageContext: Optional size context for CDN URL generation (nil at browse-time)
   /// - Returns: ImageSource ready for image loading, or nil if no artwork
-  func resolveArtworkUrl(track: Track, perRouteConfig: MediaRequestConfig?) async -> ImageSource? {
+  func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
     // Determine effective artwork config: per-route overrides global
     let effectiveArtworkConfig = perRouteConfig ?? config.artwork
 
@@ -854,9 +862,42 @@ final class BrowserManager: @unchecked Sendable {
         mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
       }
 
-      // Apply transform callback if present
-      if let transform = artworkConfig.transform {
-        let outerPromise = transform(mergedConfig, nil)
+      // Apply image query params if configured and imageContext is provided
+      let queryParams = artworkConfig.imageQueryParams
+      if let queryParams, let imageContext = imageContext {
+        var contextQuery: [String: String] = [:]
+        if let widthKey = queryParams.width, let width = imageContext.width {
+          contextQuery[widthKey] = String(Int(width))
+        }
+        if let heightKey = queryParams.height, let height = imageContext.height {
+          contextQuery[heightKey] = String(Int(height))
+        }
+
+        if !contextQuery.isEmpty {
+          logger.debug("Adding image query params: \(contextQuery)")
+          var existingQuery = mergedConfig.query ?? [:]
+          for (key, value) in contextQuery {
+            existingQuery[key] = value
+          }
+          mergedConfig = RequestConfig(
+            method: mergedConfig.method,
+            path: mergedConfig.path,
+            baseUrl: mergedConfig.baseUrl,
+            headers: mergedConfig.headers,
+            query: existingQuery,
+            body: mergedConfig.body,
+            contentType: mergedConfig.contentType,
+            userAgent: mergedConfig.userAgent
+          )
+        }
+      }
+
+      // Apply transform callback if present (can override imageQueryParams)
+      // Skip transform at browse-time (no size context) to avoid excessive JS callbacks
+      // Transform will be called at load-time when actual display size is known
+      let hasSize = imageContext?.width != nil || imageContext?.height != nil
+      if let transform = artworkConfig.transform, hasSize {
+        let outerPromise = transform(MediaTransformParams(request: mergedConfig, context: imageContext))
         let innerPromise = try await outerPromise.await()
         let transformedConfig = try await innerPromise.await()
 
@@ -864,7 +905,11 @@ final class BrowserManager: @unchecked Sendable {
         mergedConfig = extractConfig(transformedConfig)
       }
 
-      // Build final URL
+      // Build final URL - if no path after merging, no artwork to transform
+      guard mergedConfig.path != nil else {
+        return nil
+      }
+
       let uri = buildUrl(from: mergedConfig)
 
       // Build headers map, merging explicit headers with userAgent

@@ -8,6 +8,7 @@ import androidx.media3.common.Rating
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaConstants
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
@@ -42,6 +43,13 @@ class MediaSessionCallback(private val player: Player) :
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
+
+  /**
+   * Recommended artwork size in pixels from the connected media browser (e.g., Android Auto).
+   * Updated when onGetLibraryRoot is called with EXTRAS_KEY_MEDIA_ART_SIZE_PIXELS hint.
+   */
+  @Volatile var artworkSizeHintPixels: Int? = null
+    private set
 
   init {
     // Observe network state changes and notify subscribers
@@ -151,19 +159,25 @@ class MediaSessionCallback(private val player: Player) :
     return super.onSetRating(session, controller, rating)
   }
 
+  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
   override fun onGetLibraryRoot(
     session: MediaLibraryService.MediaLibrarySession,
     browser: MediaSession.ControllerInfo,
     params: MediaLibraryService.LibraryParams?,
   ): ListenableFuture<LibraryResult<MediaItem>> {
-
-    // Look into:
-    // KEY_ROOT_HINT_MEDIA_HOST_VERSION
-    // KEY_ROOT_HINT_MEDIA_SESSION_API
-    // BROWSER_ROOT_HINTS_KEY_MEDIA_ART_SIZE_PIXELS
-    // BROWSER_ROOT_HINTS_KEY_CUSTOM_BROWSER_ACTION_LIMIT
-    // BROWSER_ROOT_HINTS_KEY_ROOT_CHILDREN_LIMIT
-    // KEY_ROOT_HINT_MAX_QUEUE_ITEMS_WHILE_RESTRICTED
+    // Extract artwork size hint from root hints (e.g., from Android Auto)
+    // TODO: Also consider these other root hints in the future:
+    // - KEY_ROOT_HINT_MEDIA_HOST_VERSION
+    // - KEY_ROOT_HINT_MEDIA_SESSION_API
+    // - BROWSER_ROOT_HINTS_KEY_CUSTOM_BROWSER_ACTION_LIMIT
+    // - BROWSER_ROOT_HINTS_KEY_ROOT_CHILDREN_LIMIT
+    // - KEY_ROOT_HINT_MAX_QUEUE_ITEMS_WHILE_RESTRICTED
+    params?.extras?.getInt(MediaConstants.EXTRAS_KEY_MEDIA_ART_SIZE_PIXELS, 0)?.let { size ->
+      if (size > 0) {
+        artworkSizeHintPixels = size
+        Timber.d("Received artwork size hint: ${size}px from ${browser.packageName}")
+      }
+    }
 
     if (params?.isRecent == true) {
       // TODO: support recent queries through something like onRecent and return a MediaItem with
@@ -218,6 +232,10 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       try {
+        // Get context and imageLoader for SVG pre-rendering
+        val context = player.context
+        val imageLoader = player.imageLoader
+
         val children =
           if (parentId == BrowserPathHelper.RECENT_PATH) {
             // TODO: implement recent media items
@@ -225,16 +243,26 @@ class MediaSessionCallback(private val player: Player) :
           } else if (parentId == BrowserPathHelper.ROOT_PATH) {
             // Return tabs as root children (limited to 4 for automotive platform compatibility)
             // TODO: Check what Android Auto does with empty tabs list - may need to return error?
-            browserManager.queryTabs().take(4).map { tab -> TrackFactory.toMedia3(tab) }
+            val tabs = browserManager.queryTabs().take(4)
+            if (imageLoader != null) {
+              tabs.map { tab -> TrackFactory.toMedia3WithSvgSupport(tab, context, imageLoader) }
+            } else {
+              tabs.map { tab -> TrackFactory.toMedia3(tab) }
+            }
           } else {
             // Resolve the specific path and get its children
             val resolvedTrack = browserManager.resolve(parentId)
 
             // Convert children to MediaItems (url is already set to contextual URL)
-            resolvedTrack.children?.map { track -> TrackFactory.toMedia3(track) }
+            val trackChildren = resolvedTrack.children
               ?: throw IllegalStateException(
                 "Expected browsed ResolvedTrack to have a children array"
               )
+            if (imageLoader != null) {
+              trackChildren.map { track -> TrackFactory.toMedia3WithSvgSupport(track, context, imageLoader) }
+            } else {
+              trackChildren.map { track -> TrackFactory.toMedia3(track) }
+            }
           }
 
         LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)

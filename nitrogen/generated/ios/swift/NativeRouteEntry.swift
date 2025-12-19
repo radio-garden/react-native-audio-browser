@@ -19,7 +19,7 @@ public extension NativeRouteEntry {
   /**
    * Create a new instance of `NativeRouteEntry`.
    */
-  init(path: String, browseCallback: ((_ param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((_ params: SearchParams) -> Promise<Promise<[Track]>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: MediaRequestConfig?) {
+  init(path: String, browseCallback: ((_ param: BrowserSourceCallbackParam) -> Promise<Promise<BrowseResult>>)?, browseConfig: TransformableRequestConfig?, browseStatic: ResolvedTrack?, searchCallback: ((_ params: SearchParams) -> Promise<Promise<[Track]>>)?, searchConfig: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?) {
     self.init(std.string(path), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______ in
       if let __unwrappedValue = browseCallback {
         return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam in
@@ -62,9 +62,9 @@ public extension NativeRouteEntry {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_MediaRequestConfig_ in
+    }(), { () -> bridge.std__optional_ArtworkRequestConfig_ in
       if let __unwrappedValue = artwork {
-        return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
+        return bridge.create_std__optional_ArtworkRequestConfig_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -256,16 +256,16 @@ public extension NativeRouteEntry {
     }
   }
   
-  var artwork: MediaRequestConfig? {
+  var artwork: ArtworkRequestConfig? {
     @inline(__always)
     get {
       return self.__artwork.value
     }
     @inline(__always)
     set {
-      self.__artwork = { () -> bridge.std__optional_MediaRequestConfig_ in
+      self.__artwork = { () -> bridge.std__optional_ArtworkRequestConfig_ in
         if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_MediaRequestConfig_(__unwrappedValue)
+          return bridge.create_std__optional_ArtworkRequestConfig_(__unwrappedValue)
         } else {
           return .init()
         }

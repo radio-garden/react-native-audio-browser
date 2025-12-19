@@ -277,9 +277,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
 
     // Configure artwork URL resolver for transforming artwork URLs during browsing
-    browserManager.artworkUrlResolver = { [weak browserManager] track, artworkConfig in
+    browserManager.artworkUrlResolver = { [weak browserManager] track, artworkConfig, imageContext in
       guard let browserManager else { return nil }
-      return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig)
+      return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: artworkConfig, imageContext: imageContext)
     }
   }
 
@@ -498,6 +498,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
             return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
           }
           return await browserManager.resolveMediaUrl(src)
+        }
+
+        // Configure artwork URL resolver for Now Playing (with size context)
+        player?.artworkUrlResolver = { [weak self] track, imageContext in
+          guard let self else { return nil }
+          return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext)
         }
 
         // Configure sleep timer callback

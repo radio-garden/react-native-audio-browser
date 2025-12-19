@@ -7,6 +7,7 @@
  */
 
 import type {
+  ArtworkRequestConfig,
   BrowserSourceCallback,
   CarPlayNowPlayingButton,
   FormatNavigationErrorCallback,
@@ -30,7 +31,7 @@ export interface NativeRouteEntry {
   searchConfig?: TransformableRequestConfig
   // Per-route media/artwork config
   media?: MediaRequestConfig
-  artwork?: MediaRequestConfig
+  artwork?: ArtworkRequestConfig
 }
 
 /**
@@ -45,7 +46,7 @@ export interface NativeBrowserConfiguration {
 
   // Global media/artwork config (applied when route doesn't override)
   media?: MediaRequestConfig
-  artwork?: MediaRequestConfig
+  artwork?: ArtworkRequestConfig
 
   // Routes as array - includes:
   // - Explicit routes from config.routes

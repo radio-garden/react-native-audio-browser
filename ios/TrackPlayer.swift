@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import Foundation
+import Kingfisher
 import MediaPlayer
 import NitroModules
 import os.log
@@ -24,6 +25,10 @@ class TrackPlayer {
 
   /// Callback to resolve media URLs with optional transform
   var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
+
+  /// Callback to resolve artwork URLs with size context for Now Playing.
+  /// Returns an ImageSource with potentially size-optimized URL.
+  var artworkUrlResolver: ((Track, ImageContext?) async -> ImageSource?)?
 
   /// The repeat mode for the queue player.
   var repeatMode: RepeatMode = .off {
@@ -704,8 +709,21 @@ class TrackPlayer {
     let artworkUrl = track.artworkSource?.uri ?? track.artwork
     logger.debug("loadArtworkForTrack: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
 
+    // Now Playing artwork size (reasonable default for lock screen / Control Center)
+    let nowPlayingSize = ImageContext(width: 600, height: 600)
+
     Task {
-      let image = await track.loadArtwork()
+      let image: UIImage?
+
+      // Try to resolve artwork URL with size context for CDN optimization
+      if let resolver = artworkUrlResolver,
+         let imageSource = await resolver(track, nowPlayingSize) {
+        logger.debug("loadArtworkForTrack: using resolved URL: \(imageSource.uri)")
+        image = await loadImage(from: imageSource)
+      } else {
+        // Fall back to loading from track's existing artwork URL
+        image = await track.loadArtwork()
+      }
 
       // Verify we're still on the same track after async load
       guard currentTrack?.src == track.src else { return }
@@ -714,12 +732,46 @@ class TrackPlayer {
         logger.debug("loadArtworkForTrack: loaded image \(image.size.width)x\(image.size.height)")
         // Note: The requestHandler closure is called from MediaPlayer's background queue,
         // so we must mark it @Sendable to break @MainActor isolation inheritance.
-        let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable requestedSize in
+          // TODO: Remove this logging after investigating what sizes iOS requests
+          print("🎨 MPMediaItemArtwork requested size: \(requestedSize.width)x\(requestedSize.height), have: \(image.size.width)x\(image.size.height)")
+          return image
+        }
         nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
       } else {
         logger.debug("loadArtworkForTrack: no image loaded")
         nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
       }
+    }
+  }
+
+  /// Loads an image from an ImageSource using Kingfisher.
+  private func loadImage(from imageSource: ImageSource) async -> UIImage? {
+    guard let url = URL(string: imageSource.uri) else { return nil }
+
+    if url.isFileURL {
+      return UIImage(contentsOfFile: url.path)
+    }
+
+    // Build Kingfisher options with headers if provided
+    var options: KingfisherOptionsInfo = []
+    if let headers = imageSource.headers, !headers.isEmpty {
+      let modifier = AnyModifier { request in
+        var mutableRequest = request
+        for (key, value) in headers {
+          mutableRequest.setValue(value, forHTTPHeaderField: key)
+        }
+        return mutableRequest
+      }
+      options.append(.requestModifier(modifier))
+    }
+
+    do {
+      let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
+      return result.image
+    } catch {
+      logger.error("Failed to load artwork from \(imageSource.uri): \(error.localizedDescription)")
+      return nil
     }
   }
 

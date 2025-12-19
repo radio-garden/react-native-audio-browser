@@ -1,7 +1,10 @@
 package com.audiobrowser.http
 
 import com.audiobrowser.util.BrowserPathHelper
+import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
+import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import java.net.URLEncoder
@@ -63,13 +66,17 @@ object RequestConfigBuilder {
     } ?: mergeConfig(base, toRequestConfig(override)) // Only merge if no transform
   }
 
-  suspend fun mergeConfig(base: RequestConfig, override: MediaRequestConfig): MediaRequestConfig {
+  suspend fun mergeConfig(
+    base: RequestConfig,
+    override: MediaRequestConfig,
+    routeParams: Map<String, String>? = null,
+  ): MediaRequestConfig {
     // Apply transform function if provided - transform result wins completely
     val finalConfig: RequestConfig =
       override.transform?.let { transformFn ->
         try {
           Timber.d("Invoking media transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(base, null).await().await()
+          val transformed = transformFn.invoke(base, routeParams).await().await()
           Timber.d(
             "Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
           )
@@ -92,16 +99,80 @@ object RequestConfigBuilder {
 
     // Wrap the final RequestConfig in MediaRequestConfig to preserve resolve callback
     return MediaRequestConfig(
-      override.resolve,
+      resolve = override.resolve,
       transform = override.transform,
-      path = finalConfig.path,
       method = finalConfig.method,
+      path = finalConfig.path,
       baseUrl = finalConfig.baseUrl,
       headers = finalConfig.headers,
       query = finalConfig.query,
       body = finalConfig.body,
       contentType = finalConfig.contentType,
       userAgent = finalConfig.userAgent,
+    )
+  }
+
+  /**
+   * Merges artwork request config with base config, applying transform with ImageContext.
+   * Used for artwork URL transformation where size hints are needed.
+   */
+  suspend fun mergeConfig(
+    base: RequestConfig,
+    override: ArtworkRequestConfig,
+    imageContext: ImageContext? = null,
+  ): ArtworkRequestConfig {
+    // Apply transform function if provided - transform result wins completely
+    val finalConfig: RequestConfig =
+      override.transform?.let { transformFn ->
+        try {
+          Timber.d("Invoking artwork transform for URL: ${base.path}")
+          val transformed = transformFn.invoke(MediaTransformParams(base, imageContext)).await().await()
+          Timber.d(
+            "Artwork transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
+          )
+          transformed
+        } catch (e: Exception) {
+          Timber.e(e, "Failed to apply artwork transform function, using base config")
+          base
+        }
+      }
+        ?: RequestConfig(
+          path = override.path ?: base.path,
+          method = override.method ?: base.method,
+          baseUrl = override.baseUrl ?: base.baseUrl,
+          headers = mergeHeaders(base.headers, override.headers),
+          query = mergeQuery(base.query, override.query),
+          body = override.body ?: base.body,
+          contentType = override.contentType ?: base.contentType,
+          userAgent = override.userAgent ?: base.userAgent,
+        )
+
+    // Wrap the final RequestConfig in ArtworkRequestConfig to preserve callbacks and query params
+    return ArtworkRequestConfig(
+      resolve = override.resolve,
+      transform = override.transform,
+      imageQueryParams = override.imageQueryParams,
+      method = finalConfig.method,
+      path = finalConfig.path,
+      baseUrl = finalConfig.baseUrl,
+      headers = finalConfig.headers,
+      query = finalConfig.query,
+      body = finalConfig.body,
+      contentType = finalConfig.contentType,
+      userAgent = finalConfig.userAgent,
+    )
+  }
+
+  fun toRequestConfig(artworkConfig: ArtworkRequestConfig): RequestConfig {
+    return RequestConfig(
+      path = artworkConfig.path,
+      method = artworkConfig.method,
+      baseUrl = artworkConfig.baseUrl,
+      headers = artworkConfig.headers,
+      query = artworkConfig.query,
+      body = artworkConfig.body,
+      contentType = artworkConfig.contentType,
+      userAgent = artworkConfig.userAgent,
     )
   }
 

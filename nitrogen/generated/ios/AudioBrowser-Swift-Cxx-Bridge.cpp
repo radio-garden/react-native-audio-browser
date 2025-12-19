@@ -96,6 +96,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const MediaTransformParams& params) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
+      auto __result = swiftClosure.call(params);
+      return __result;
+    };
+  }
+  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>
   Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam::fromUnsafe(swiftClosureWrapper);

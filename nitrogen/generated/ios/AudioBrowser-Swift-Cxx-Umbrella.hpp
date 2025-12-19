@@ -20,6 +20,8 @@ namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
 // Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
@@ -66,10 +68,16 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `IOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSUpdateOptions; }
+// Forward declaration of `ImageContext` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageContext; }
+// Forward declaration of `ImageQueryParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `MediaTransformParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -180,6 +188,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AndroidPlayerWakeMode.hpp"
 #include "AndroidUpdateOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
+#include "ArtworkRequestConfig.hpp"
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
@@ -203,8 +212,11 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
 #include "IOSUpdateOptions.hpp"
+#include "ImageContext.hpp"
+#include "ImageQueryParams.hpp"
 #include "ImageSource.hpp"
 #include "MediaRequestConfig.hpp"
+#include "MediaTransformParams.hpp"
 #include "NativeBrowserConfiguration.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NativeUpdateOptions.hpp"

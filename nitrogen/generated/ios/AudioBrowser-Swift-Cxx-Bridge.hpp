@@ -18,6 +18,8 @@ namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
+// Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
 // Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
 // Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
@@ -62,10 +64,16 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 // Forward declaration of `IOSOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IOSOptions; }
+// Forward declaration of `ImageContext` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageContext; }
+// Forward declaration of `ImageQueryParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `MediaTransformParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -165,6 +173,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AndroidOptions.hpp"
 #include "AndroidPlayerWakeMode.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
+#include "ArtworkRequestConfig.hpp"
 #include "AudioCommonMetadataReceivedEvent.hpp"
 #include "AudioMetadata.hpp"
 #include "AudioMetadataReceivedEvent.hpp"
@@ -187,8 +196,11 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "IOSOptions.hpp"
+#include "ImageContext.hpp"
+#include "ImageQueryParams.hpp"
 #include "ImageSource.hpp"
 #include "MediaRequestConfig.hpp"
+#include "MediaTransformParams.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorEvent.hpp"
@@ -780,6 +792,89 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track value) noexcept {
     return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<ArtworkRequestConfig>
+  /**
+   * Specialized version of `std::optional<ArtworkRequestConfig>`.
+   */
+  using std__optional_ArtworkRequestConfig_ = std::optional<ArtworkRequestConfig>;
+  inline std::optional<ArtworkRequestConfig> create_std__optional_ArtworkRequestConfig_(const ArtworkRequestConfig& value) noexcept {
+    return std::optional<ArtworkRequestConfig>(value);
+  }
+  inline bool has_value_std__optional_ArtworkRequestConfig_(const std::optional<ArtworkRequestConfig>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ArtworkRequestConfig get_std__optional_ArtworkRequestConfig_(const std::optional<ArtworkRequestConfig>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& / * params * /)>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& / * params * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(MediaTransformParams params) const noexcept {
+      auto __result = _function->operator()(params);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<ImageContext>
+  /**
+   * Specialized version of `std::optional<ImageContext>`.
+   */
+  using std__optional_ImageContext_ = std::optional<ImageContext>;
+  inline std::optional<ImageContext> create_std__optional_ImageContext_(const ImageContext& value) noexcept {
+    return std::optional<ImageContext>(value);
+  }
+  inline bool has_value_std__optional_ImageContext_(const std::optional<ImageContext>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ImageContext get_std__optional_ImageContext_(const std::optional<ImageContext>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<ImageQueryParams>
+  /**
+   * Specialized version of `std::optional<ImageQueryParams>`.
+   */
+  using std__optional_ImageQueryParams_ = std::optional<ImageQueryParams>;
+  inline std::optional<ImageQueryParams> create_std__optional_ImageQueryParams_(const ImageQueryParams& value) noexcept {
+    return std::optional<ImageQueryParams>(value);
+  }
+  inline bool has_value_std__optional_ImageQueryParams_(const std::optional<ImageQueryParams>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ImageQueryParams get_std__optional_ImageQueryParams_(const std::optional<ImageQueryParams>& optional) noexcept {
+    return *optional;
   }
   
   // pragma MARK: std::optional<std::vector<NativeRouteEntry>>

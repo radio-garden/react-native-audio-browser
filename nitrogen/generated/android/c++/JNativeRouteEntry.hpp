@@ -10,20 +10,28 @@
 #include <fbjni/fbjni.h>
 #include "NativeRouteEntry.hpp"
 
+#include "ArtworkRequestConfig.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "HttpMethod.hpp"
+#include "ImageContext.hpp"
+#include "ImageQueryParams.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkRequestConfig.hpp"
 #include "JBrowseError.hpp"
 #include "JBrowseResult.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JHttpMethod.hpp"
+#include "JImageContext.hpp"
+#include "JImageQueryParams.hpp"
 #include "JImageSource.hpp"
 #include "JMediaRequestConfig.hpp"
+#include "JMediaTransformParams.hpp"
 #include "JRequestConfig.hpp"
 #include "JResolvedTrack.hpp"
 #include "JSearchMode.hpp"
@@ -32,6 +40,7 @@
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "MediaRequestConfig.hpp"
+#include "MediaTransformParams.hpp"
 #include "RequestConfig.hpp"
 #include "ResolvedTrack.hpp"
 #include "SearchMode.hpp"
@@ -82,8 +91,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JTransformableRequestConfig> searchConfig = this->getFieldValue(fieldSearchConfig);
       static const auto fieldMedia = clazz->getField<JMediaRequestConfig>("media");
       jni::local_ref<JMediaRequestConfig> media = this->getFieldValue(fieldMedia);
-      static const auto fieldArtwork = clazz->getField<JMediaRequestConfig>("artwork");
-      jni::local_ref<JMediaRequestConfig> artwork = this->getFieldValue(fieldArtwork);
+      static const auto fieldArtwork = clazz->getField<JArtworkRequestConfig>("artwork");
+      jni::local_ref<JArtworkRequestConfig> artwork = this->getFieldValue(fieldArtwork);
       return NativeRouteEntry(
         path->toStdString(),
         browseCallback != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)> {
@@ -118,7 +127,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeRouteEntry::javaobject> fromCpp(const NativeRouteEntry& value) {
-      using JSignature = JNativeRouteEntry(jni::alias_ref<jni::JString>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JResolvedTrack>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JMediaRequestConfig>);
+      using JSignature = JNativeRouteEntry(jni::alias_ref<jni::JString>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JResolvedTrack>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -130,7 +139,7 @@ namespace margelo::nitro::audiobrowser {
         value.searchCallback.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::fromCpp(value.searchCallback.value()) : nullptr,
         value.searchConfig.has_value() ? JTransformableRequestConfig::fromCpp(value.searchConfig.value()) : nullptr,
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
-        value.artwork.has_value() ? JMediaRequestConfig::fromCpp(value.artwork.value()) : nullptr
+        value.artwork.has_value() ? JArtworkRequestConfig::fromCpp(value.artwork.value()) : nullptr
       );
     }
   };

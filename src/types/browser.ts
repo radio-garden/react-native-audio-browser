@@ -124,6 +124,82 @@ export interface RequestConfig {
 }
 
 /**
+ * Context for image loading requests.
+ * Provides pixel dimensions and appearance info from Android Auto/CarPlay.
+ *
+ * @example
+ * ```typescript
+ * // Use transform for custom URL manipulation
+ * transform: async ({ request, context }) => ({
+ *   ...request,
+ *   query: {
+ *     ...request.query,
+ *     variant: context?.width && context.width < 200 ? 'thumb' : 'full'
+ *   }
+ * })
+ *
+ * // Or use imageQueryParams for simple declarative mapping
+ * artwork: {
+ *   imageQueryParams: { width: 'w', height: 'h' }
+ * }
+ * ```
+ */
+export interface ImageContext {
+  /**
+   * Requested image width in pixels.
+   * Only provided when the display size is known (e.g., CarPlay, Android Auto, Now Playing).
+   * Undefined at browse-time when display size is unknown.
+   */
+  width?: number
+  /**
+   * Requested image height in pixels.
+   * Only provided when the display size is known (e.g., CarPlay, Android Auto, Now Playing).
+   * Undefined at browse-time when display size is unknown.
+   */
+  height?: number
+}
+
+/**
+ * Parameters for the media request transform callback.
+ */
+export interface MediaTransformParams {
+  /** The merged request configuration to transform */
+  request: RequestConfig
+  /** Optional image context with size hints from Android Auto/CarPlay */
+  context?: ImageContext
+}
+
+/**
+ * Transform callback for media/artwork requests.
+ * Unlike the route-based RequestConfigTransformer, this receives ImageContext
+ * for size-aware transformations instead of route parameters.
+ *
+ * Use this when your CDN uses named variants or size presets. For simple
+ * pixel-based query params, use `imageQueryParams` instead.
+ *
+ * @param params - The transform parameters containing request and optional context
+ * @returns Modified request configuration
+ *
+ * @example
+ * ```typescript
+ * artwork: {
+ *   transform: async ({ request, context }) => ({
+ *     ...request,
+ *     query: {
+ *       ...request.query,
+ *       // Use semantic size for CDN variant selection
+ *       variant: context?.width && context.width < 200 ? 'thumb' : 'full',
+ *       sig: await signUrl(request.path)
+ *     }
+ *   })
+ * }
+ * ```
+ */
+export type MediaRequestConfigTransformer = (
+  params: MediaTransformParams
+) => Promise<RequestConfig>
+
+/**
  * Request configuration that supports async transformation.
  * Extends RequestConfig with a transform callback for dynamic request modification.
  *
@@ -147,6 +223,77 @@ export interface RequestConfig {
  */
 export interface TransformableRequestConfig extends RequestConfig {
   transform?: RequestConfigTransformer
+}
+
+/**
+ * Configuration for artwork image requests
+ *
+ * ## Configuration Hierarchy
+ *
+ * When a request is made, configs are merged in this order (later overrides earlier):
+ * 1. `request` (base config) - shared settings like user agent, common headers
+ * 2. `artwork` config - resource-specific settings
+ * 3. `resolve(track)` result - per-track overrides (if provided)
+ * 4. `imageQueryParams` - automatic size query param injection (if configured)
+ * 5. `transform(request, context)` result - final modifications (if provided)
+ *
+ * ## Usage Patterns
+ *
+ * **Simple CDN configuration:**
+ * ```typescript
+ * media: {
+ *   baseUrl: 'https://audio.cdn.example.com',
+ *   headers: { 'X-API-Key': 'your-api-key' }
+ * }
+ * ```
+ *
+ * **Per-track URL resolution:**
+ * ```typescript
+ * media: {
+ *   resolve: async (track) => ({
+ *     baseUrl: 'https://audio.cdn.example.com',
+ *     path: `/streams/${track.src}`,
+ *     query: { token: await getSignedToken(track.src) }
+ *   })
+ * }
+ * ```
+ *
+ * **Size-aware transformation (for artwork):**
+ * ```typescript
+ * artwork: {
+ *   baseUrl: 'https://images.cdn.example.com',
+ *   transform: async ({ request, context }) => ({
+ *     ...request,
+ *     query: {
+ *       ...request.query,
+ *       w: context?.width ? String(context.width) : '600',
+ *       sig: await signUrl(request.path)
+ *     }
+ *   })
+ * }
+ * ```
+ *
+ * **Simple size params (declarative alternative):**
+ * ```typescript
+ * artwork: {
+ *   baseUrl: 'https://images.cdn.example.com',
+ *   imageQueryParams: { width: 'w', height: 'h' }
+ * }
+ * ```
+ *
+ * @see BrowserConfiguration.media - Audio stream configuration
+ * @see BrowserConfiguration.artwork - Image/artwork configuration
+ */
+
+/**
+ * Query parameter names for automatic context injection from CarPlay/Android Auto.
+ * Maps ImageContext fields to query parameter names for your CDN.
+ */
+export interface ImageQueryParams {
+  /** Query parameter name for width (e.g., 'w', 'width', 'size') */
+  width?: string
+  /** Query parameter name for height (e.g., 'h', 'height'). If omitted, only width is added. */
+  height?: string
 }
 
 /**
@@ -224,6 +371,88 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
   resolve?: (track: Track) => Promise<RequestConfig>
 }
 
+export interface ArtworkRequestConfig extends RequestConfig {
+  /**
+   * Per-track request resolution callback.
+   *
+   * Called for each track to generate the request configuration based on
+   * track metadata (artist, album, src, etc.).
+   *
+   * The returned config is merged with base configs, then passed to
+   * `transform` if provided.
+   *
+   * @param track - The track being requested
+   * @returns Request configuration for this specific track
+   *
+   * @example
+   * ```typescript
+   * artwork: {
+   *   resolve: async (track) => ({
+   *     path: `/covers/${track.artist}/${track.album}.jpg`,
+   *     query: { quality: 'high' }
+   *   })
+   * }
+   * ```
+   */
+  resolve?: (track: Track) => Promise<RequestConfig>
+
+  /**
+   * Final transformation callback for media/artwork requests.
+   *
+   * Called after `resolve` (if provided) with the merged request config.
+   * Receives optional ImageContext with size hints from Android Auto/CarPlay.
+   *
+   * Use this for:
+   * - Adding size query params dynamically
+   * - URL signing
+   * - Adding authentication tokens
+   *
+   * @param request - The merged request configuration
+   * @param context - Optional image context with size hints
+   * @returns Modified request configuration
+   *
+   * @example
+   * ```typescript
+   * artwork: {
+   *   transform: async ({ request, context }) => ({
+   *     ...request,
+   *     query: {
+   *       ...request.query,
+   *       w: context?.width ? String(context.width) : '600',
+   *       sig: await signUrl(request.path)
+   *     }
+   *   })
+   * }
+   * ```
+   */
+  transform?: MediaRequestConfigTransformer
+
+  /**
+   * Query parameter names for automatic context injection from CarPlay/Android Auto.
+   *
+   * When configured, the image context (size, color scheme) from CarPlay/Android Auto
+   * is automatically added as query parameters to artwork URLs.
+   *
+   * This is a simpler alternative to using `transform` for context-aware URLs.
+   *
+   * @example
+   * ```typescript
+   * // CDN expects ?w=400&h=400
+   * artwork: {
+   *   baseUrl: 'https://images.cdn.com',
+   *   imageQueryParams: { width: 'w', height: 'h' }
+   * }
+   *
+   * // CDN expects single size param ?size=400
+   * artwork: {
+   *   baseUrl: 'https://images.cdn.com',
+   *   imageQueryParams: { width: 'size' }
+   * }
+   * ```
+   */
+  imageQueryParams?: ImageQueryParams
+}
+
 export type BrowserSource =
   | ResolvedTrack
   | BrowserSourceCallback
@@ -251,7 +480,7 @@ export type RouteConfig = {
   /** Override media config for this route. */
   media?: MediaRequestConfig
   /** Override artwork config for this route. */
-  artwork?: MediaRequestConfig
+  artwork?: ArtworkRequestConfig
 }
 
 export type TabsSourceCallback = () => Promise<Track[]>
@@ -324,7 +553,7 @@ export type BrowserConfiguration = {
    * }
    * ```
    */
-  artwork?: MediaRequestConfig
+  artwork?: ArtworkRequestConfig
 
   // ─── Navigation ────────────────────────────────────────────────────────────
 

@@ -7,7 +7,9 @@ import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
+import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
@@ -103,8 +105,9 @@ class BrowserManager {
   /**
    * Callback to transform artwork URLs for tracks. Takes a track and optional per-route artwork
    * config, returns ImageSource or null. Injected by AudioBrowser when artwork config is set.
+   * The ImageContext parameter provides size hints for CDN URL generation.
    */
-  var artworkUrlResolver: (suspend (Track, MediaRequestConfig?) -> ImageSource?)? = null
+  var artworkUrlResolver: (suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?)? = null
 
   /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
@@ -382,6 +385,12 @@ class BrowserManager {
     Timber.d("Invalidated content cache for path='$path'")
   }
 
+  /** Clears all cached content. Used when artwork resolver is wired up to force re-fetch. */
+  fun clearContentCache() {
+    contentCache.evictAll()
+    Timber.d("Cleared all content cache")
+  }
+
   private suspend fun resolveUncached(path: String): ResolvedTrack {
     val routes = config.routes
     if (routes.isNullOrEmpty()) {
@@ -436,8 +445,10 @@ class BrowserManager {
                 }
 
                 // Transform artwork URL if resolver is configured
+                // At browse-time, we don't have display size info
                 val resolver = artworkUrlResolver
                 if (resolver != null) {
+                  val browseContext = ImageContext(null, null)
                   transformedTrack =
                     transformArtworkUrl(
                       transformedTrack,
@@ -445,6 +456,7 @@ class BrowserManager {
                       resolver,
                       path,
                       index,
+                      browseContext,
                     )
                 }
 
@@ -467,13 +479,16 @@ class BrowserManager {
    * Transforms a track's artwork using the configured resolver. Populates artworkSource with the
    * transformed ImageSource, keeping artwork unchanged. Handles all edge cases: undefined returns,
    * errors, missing artwork.
+   *
+   * @param imageContext Optional size context for CDN URL generation (null at browse-time)
    */
   private suspend fun transformArtworkUrl(
     track: Track,
-    artworkConfig: MediaRequestConfig?,
-    resolver: suspend (Track, MediaRequestConfig?) -> ImageSource?,
+    artworkConfig: ArtworkRequestConfig?,
+    resolver: suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?,
     path: String,
     index: Int,
+    imageContext: ImageContext? = null,
   ): Track {
     // No artwork config and no track.artwork - nothing to transform
     if (artworkConfig == null && track.artwork == null) {
@@ -481,7 +496,7 @@ class BrowserManager {
     }
 
     return try {
-      val imageSource = resolver(track, artworkConfig)
+      val imageSource = resolver(track, artworkConfig, imageContext)
 
       when {
         // resolve returned null → no artwork source
@@ -1134,7 +1149,7 @@ class CallbackException(message: String) : Exception(message)
 data class BrowserConfig(
   val request: TransformableRequestConfig? = null,
   val media: MediaRequestConfig? = null,
-  val artwork: MediaRequestConfig? = null,
+  val artwork: ArtworkRequestConfig? = null,
   // Routes as array with flattened entries (includes __tabs__, __search__, and __default__ special
   // routes)
   val routes: Array<NativeRouteEntry>? = null,

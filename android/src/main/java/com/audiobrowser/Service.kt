@@ -105,10 +105,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         context = this,
         imageLoader = imageLoader,
         getArtworkConfig = { player.browser?.getArtworkConfig() },
+        getArtworkSizeHint = { player.artworkSizeHintPixels },
       )
 
-    // Store reference in Player for artwork URL transformation during browsing
+    // Store references in Player for artwork URL transformation and SVG pre-rendering
     player.coilBitmapLoader = coilBitmapLoader
+    player.imageLoader = imageLoader
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {

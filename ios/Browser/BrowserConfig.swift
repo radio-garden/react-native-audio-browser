@@ -13,7 +13,7 @@ struct BrowserConfig {
   let media: MediaRequestConfig?
 
   /// Artwork URL transformation configuration
-  let artwork: MediaRequestConfig?
+  let artwork: ArtworkRequestConfig?
 
   /// Routes as array with flattened entries
   /// Includes __tabs__, __search__, and __default__ special routes
@@ -40,7 +40,7 @@ struct BrowserConfig {
   init(
     request: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
-    artwork: MediaRequestConfig? = nil,
+    artwork: ArtworkRequestConfig? = nil,
     routes: [NativeRouteEntry]? = nil,
     singleTrack: Bool = false,
     androidControllerOfflineError: Bool = true,

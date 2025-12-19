@@ -10,6 +10,9 @@ object ResolvedTrackFactory {
   fun toMedia3(resolvedTrack: ResolvedTrack): MediaItem {
     val extras = MediaExtrasBuilder.build(resolvedTrack)
 
+    // Use transformed artworkSource.uri if available, otherwise fall back to original artwork
+    val artworkUri = resolvedTrack.artworkSource?.uri ?: resolvedTrack.artwork
+
     val mediaMetadata =
       MediaMetadata.Builder()
         .setTitle(resolvedTrack.title)
@@ -17,7 +20,7 @@ object ResolvedTrackFactory {
         .setAlbumTitle(resolvedTrack.album)
         .setDescription(resolvedTrack.description)
         .setGenre(resolvedTrack.genre)
-        .setArtworkUri(resolvedTrack.artwork?.toUri())
+        .setArtworkUri(artworkUri?.toUri())
         .setIsBrowsable(resolvedTrack.src == null)
         .setIsPlayable(resolvedTrack.src != null)
         .setExtras(extras)

@@ -337,6 +337,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       _configuration = value
       browserManager.config = buildConfig()
 
+      // Notify player that browser configuration is ready (routes/tabs available)
+      // This allows Android Auto to start browsing content
+      connectedService?.player?.notifyBrowserConfigurationReady()
+
       // Navigate to initial path or default to first tab
       (value.path ?: getDefaultPath())?.let { path ->
         clearNavigationError()
@@ -912,6 +916,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           player.observeNetworkConnectivity(mainScope)
           // Set browser reference for media URL transformation
           player.browser = this@AudioBrowser
+
+          // If configuration was already set before service connected,
+          // notify player now so Android Auto can start browsing
+          if (_configuration.routes?.isNotEmpty() == true) {
+            player.notifyBrowserConfigurationReady()
+          }
         }
 
       // Wire up battery warning callback from service

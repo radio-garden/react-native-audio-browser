@@ -36,6 +36,14 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
+// Forward declaration of `MediaTransformParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
+// Forward declaration of `ImageContext` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageContext; }
+// Forward declaration of `ImageQueryParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 // Forward declaration of `BrowseError` to properly resolve imports.
@@ -187,6 +195,10 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
 #include "MediaRequestConfig.hpp"
+#include "ArtworkRequestConfig.hpp"
+#include "MediaTransformParams.hpp"
+#include "ImageContext.hpp"
+#include "ImageQueryParams.hpp"
 #include "NativeRouteEntry.hpp"
 #include "BrowseError.hpp"
 #include <variant>

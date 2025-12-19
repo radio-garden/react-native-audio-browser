@@ -19,6 +19,7 @@ import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
+import com.margelo.nitro.audiobrowser.ImageContext
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
@@ -91,6 +92,12 @@ class Player(internal val context: Context) {
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
   /**
+   * Coil ImageLoader for SVG pre-rendering in Android Auto browse items.
+   * Set by Service after creation.
+   */
+  var imageLoader: coil3.ImageLoader? = null
+
+  /**
    * Set the CoilBitmapLoader for artwork URL transformation. Called from Service after creation.
    */
   var coilBitmapLoader: CoilBitmapLoader?
@@ -106,31 +113,46 @@ class Player(internal val context: Context) {
     set(value) {
       _browser = value
       value?.let { audioBrowser ->
-        // Complete the deferred when browser is registered
-        if (!browserRegistered.isCompleted) {
-          Timber.d("Browser registered - completing deferred")
-          browserRegistered.complete(audioBrowser)
-          // Notify any subscribed controllers that content is now available
-          // This handles the cold-start case where AA subscribed before browser was ready
-          mediaSessionCallback.notifyBrowserReady()
-        }
-        // Update MediaSession commands when browser becomes available with search configured
-        // Only update if search is available, since default state is "no search"
-        if (::mediaSession.isInitialized) {
-          val searchAvailable = audioBrowser.browserManager.config.hasSearch
-          if (searchAvailable) {
-            mediaSessionCallback.updateMediaSession(
-              mediaSession,
-              options.capabilities,
-              options.notificationButtons,
-              searchAvailable,
-            )
-          }
-        }
-        // Wire up artwork URL resolver if CoilBitmapLoader is available
+        // Wire up artwork URL resolver
+        // This ensures the resolver is available when onGetChildren resumes
         wireUpArtworkResolver(audioBrowser, _coilBitmapLoader)
+
+        // NOTE: We do NOT complete browserRegistered here.
+        // Configuration (routes/tabs) must be set before Android Auto can browse.
+        // Call notifyBrowserConfigurationReady() after configuration is set.
       }
     }
+
+  /**
+   * Notifies that the browser configuration is ready (routes/tabs are configured).
+   * This should be called after setting the browser AND its configuration.
+   * Only then will Android Auto be able to browse content.
+   */
+  fun notifyBrowserConfigurationReady() {
+    val audioBrowser = _browser ?: return
+
+    if (!browserRegistered.isCompleted) {
+      Timber.d("Browser configuration ready - completing deferred")
+      browserRegistered.complete(audioBrowser)
+      // Notify any subscribed controllers that content is now available
+      // This handles the cold-start case where AA subscribed before browser was ready
+      mediaSessionCallback.notifyBrowserReady()
+    }
+
+    // Update MediaSession commands when browser becomes available with search configured
+    // Only update if search is available, since default state is "no search"
+    if (::mediaSession.isInitialized) {
+      val searchAvailable = audioBrowser.browserManager.config.hasSearch
+      if (searchAvailable) {
+        mediaSessionCallback.updateMediaSession(
+          mediaSession,
+          options.capabilities,
+          options.notificationButtons,
+          searchAvailable,
+        )
+      }
+    }
+  }
 
   /**
    * Wires up the artwork URL resolver between BrowserManager and CoilBitmapLoader. This enables
@@ -140,9 +162,13 @@ class Player(internal val context: Context) {
     val browserManager = audioBrowser.browserManager
     if (loader != null) {
       Timber.d("Wiring up artwork URL resolver")
-      browserManager.artworkUrlResolver = { track, perRouteConfig ->
-        loader.transformArtworkUrlForTrack(track, perRouteConfig)
+      browserManager.artworkUrlResolver = { track, perRouteConfig, imageContext ->
+        loader.transformArtworkUrlForTrack(track, perRouteConfig, imageContext)
       }
+      // Clear content cache so that content resolved before the resolver was wired up
+      // will be re-fetched with artwork transformation applied
+      browserManager.clearContentCache()
+      Timber.d("Cleared content cache after wiring artwork resolver")
     } else {
       Timber.d("CoilBitmapLoader not available - artwork URL transformation disabled")
       browserManager.artworkUrlResolver = null
@@ -1402,6 +1428,13 @@ class Player(internal val context: Context) {
   fun notifyContentChanged(path: String) {
     mediaSessionCallback.notifyContentChanged(path)
   }
+
+  /**
+   * Returns the recommended artwork size in pixels from the connected media browser (e.g., Android
+   * Auto), or null if not provided.
+   */
+  val artworkSizeHintPixels: Int?
+    get() = mediaSessionCallback.artworkSizeHintPixels
 
   /** Returns true if the current media item is a live stream. */
   val isCurrentItemLive: Boolean

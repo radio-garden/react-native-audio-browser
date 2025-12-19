@@ -265,17 +265,24 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Set tab image - CarPlay requires an image for proper tab display
-    if let artwork = track.artwork, let url = URL(string: artwork) {
-      template.tabImage = defaultTabImage()
-      // Load and cache image asynchronously via Kingfisher, then update tab
-      KingfisherManager.shared.retrieveImage(with: url) { [weak template] result in
-        if case let .success(imageResult) = result {
-          template?.tabImage = imageResult.image
+    // Tab bar icons are 24pt x 24pt per CarPlay Developer Guide
+    // https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
+    template.tabImage = defaultTabImage()
+
+    // Support SF Symbols via "sf:" prefix (e.g., "sf:heart.fill")
+    if let artwork = track.artwork, artwork.hasPrefix("sf:") {
+      let symbolName = String(artwork.dropFirst(3))
+      if let image = sfSymbolImage(symbolName) {
+        template.tabImage = image
+      }
+    } else if track.artwork != nil || track.artworkSource != nil {
+      // loadArtwork handles both artwork and artworkSource
+      let tabImageSize = CGSize(width: 24, height: 24)
+      loadArtwork(for: track, size: tabImageSize) { [weak template] image in
+        if let image {
+          template?.tabImage = image
         }
       }
-    } else {
-      // Default icon when no artwork available
-      template.tabImage = defaultTabImage()
     }
 
     return template
@@ -383,11 +390,19 @@ public final class RNABCarPlayController: NSObject {
       item.accessoryType = .disclosureIndicator
     }
 
-    // Load artwork asynchronously with caching via Kingfisher
-    if let artworkUrl = track.artwork ?? track.artworkSource?.uri,
-       let url = URL(string: artworkUrl)
-    {
-      item.kf.setImage(with: url)
+    // Load artwork with size context for proper CDN optimization
+    // Support SF Symbols via "sf:" prefix (e.g., "sf:heart.fill")
+    if let artwork = track.artwork, artwork.hasPrefix("sf:") {
+      let symbolName = String(artwork.dropFirst(3))
+      if let image = sfSymbolImageForListItem(symbolName) {
+        item.setImage(image)
+      }
+    } else if track.artwork != nil || track.artworkSource != nil {
+      // Set empty placeholder to reserve space while loading
+      item.setImage(placeholderImage)
+      loadArtwork(for: track, size: CPListItem.maximumImageSize) { [weak item] image in
+        item?.setImage(image)
+      }
     }
 
     // Set selection handler
@@ -956,9 +971,214 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Image Loading
 
+  /// Creates an SF Symbol image for tabs - plain systemName, CarPlay handles tinting
+  private func sfSymbolImage(_ symbolName: String) -> UIImage? {
+    return UIImage(systemName: symbolName)
+  }
+
+  /// Creates an SF Symbol image for list items with light/dark mode support
+  private func sfSymbolImageForListItem(_ symbolName: String) -> UIImage? {
+    guard let symbol = UIImage(systemName: symbolName) else { return nil }
+
+    let size = symbol.size
+    let scale = symbol.scale
+
+    // Create both light and dark bitmap variants
+    let lightImage = renderSymbolToBitmap(symbol, tintColor: .black, size: size, scale: scale)
+    let darkImage = renderSymbolToBitmap(symbol, tintColor: .white, size: size, scale: scale)
+
+    // Combine with UIImageAsset for automatic light/dark switching
+    let asset = UIImageAsset()
+    asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
+    asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
+
+    return asset.image(with: interfaceController.carTraitCollection)
+  }
+
+  /// Renders an SF Symbol to a bitmap with the specified tint color
+  nonisolated private func renderSymbolToBitmap(_ symbol: UIImage, tintColor: UIColor, size: CGSize, scale: CGFloat) -> UIImage {
+    UIGraphicsBeginImageContextWithOptions(size, false, scale)
+    defer { UIGraphicsEndImageContext() }
+
+    tintColor.set()
+    symbol.withRenderingMode(.alwaysTemplate).draw(in: CGRect(origin: .zero, size: size))
+
+    guard let rendered = UIGraphicsGetImageFromCurrentImageContext() else {
+      return symbol // Fallback to original if rendering fails
+    }
+    return rendered.withRenderingMode(.alwaysOriginal)
+  }
+
   private func defaultTabImage() -> UIImage? {
-    let config = UIImage.SymbolConfiguration(scale: .large)
-    return UIImage(systemName: "music.note.list", withConfiguration: config)
+    return sfSymbolImage("music.note.list")
+  }
+
+  /// Cached empty placeholder image to reserve space while artwork loads
+  private lazy var placeholderImage: UIImage? = {
+    let size = CPListItem.maximumImageSize
+    let scale = interfaceController.carTraitCollection.displayScale
+    UIGraphicsBeginImageContextWithOptions(size, false, scale)
+    defer { UIGraphicsEndImageContext() }
+    return UIGraphicsGetImageFromCurrentImageContext()
+  }()
+
+  /// Loads artwork for a track with size context, using the artwork transform if configured.
+  /// - Parameters:
+  ///   - track: The track to load artwork for
+  ///   - size: The target size in points (will be multiplied by CarPlay display scale)
+  ///   - completion: Called with the loaded image, or nil on failure
+  private func loadArtwork(for track: Track, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
+    guard let browserManager = audioBrowser?.browserManager else {
+      // Fall back to direct URL loading
+      loadArtworkDirect(track: track, completion: completion)
+      return
+    }
+
+    // Convert points to pixels using CarPlay display scale (not iPhone screen scale)
+    let carTraits = interfaceController.carTraitCollection
+    let scale = carTraits.displayScale
+    let imageContext = ImageContext(width: size.width * scale, height: size.height * scale)
+
+    Task {
+      // Resolve artwork URL with size context
+      let imageSource = await browserManager.resolveArtworkUrl(
+        track: track,
+        perRouteConfig: nil,
+        imageContext: imageContext
+      )
+
+      await MainActor.run {
+        if let imageSource {
+          // Check for SF Symbol URI (e.g., "sf:heart.fill")
+          if imageSource.uri.hasPrefix("sf:") {
+            let symbolName = String(imageSource.uri.dropFirst(3))
+            completion(self.sfSymbolImageForListItem(symbolName))
+            return
+          }
+
+          // Parse URL - skip if invalid
+          guard let url = URL(string: imageSource.uri) else {
+            self.loadArtworkDirect(track: track, completion: completion)
+            return
+          }
+
+          // Capture trait collection before async call
+          let carTraitCollection = self.interfaceController.carTraitCollection
+
+          // Load from resolved URL with any custom headers
+          var options: KingfisherOptionsInfo = []
+          if let headers = imageSource.headers, !headers.isEmpty {
+            let modifier = AnyModifier { request in
+              var request = request
+              for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+              }
+              return request
+            }
+            options.append(.requestModifier(modifier))
+          }
+
+          // Add SVG processor if URL is an SVG
+          if url.pathExtension.lowercased() == "svg" {
+            options.append(.processor(SVGProcessor(size: nil, scale: carTraitCollection.displayScale)))
+          }
+
+          let isSvg = url.pathExtension.lowercased() == "svg"
+
+          KingfisherManager.shared.retrieveImage(with: url, options: options) { result in
+            if case let .success(imageResult) = result {
+              let image = imageResult.image
+
+              if isSvg {
+                // SVGs are icons - apply light/dark tinting
+                completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
+              } else {
+                // Regular images (photos, album art) - show as-is
+                completion(image)
+              }
+            } else {
+              completion(nil)
+            }
+          }
+        } else {
+          // No resolved URL - try direct loading as fallback
+          self.loadArtworkDirect(track: track, completion: completion)
+        }
+      }
+    }
+  }
+
+  /// Loads artwork directly from track's artwork URL without transform.
+  private func loadArtworkDirect(track: Track, completion: @escaping @Sendable (UIImage?) -> Void) {
+    guard let artworkUrl = track.artwork ?? track.artworkSource?.uri else {
+      completion(nil)
+      return
+    }
+
+    // Check for SF Symbol URI (e.g., "sf:heart.fill")
+    if artworkUrl.hasPrefix("sf:") {
+      let symbolName = String(artworkUrl.dropFirst(3))
+      completion(sfSymbolImageForListItem(symbolName))
+      return
+    }
+
+    guard let url = URL(string: artworkUrl) else {
+      completion(nil)
+      return
+    }
+
+    // Capture trait collection before async call
+    let carTraitCollection = interfaceController.carTraitCollection
+    let isSvg = url.pathExtension.lowercased() == "svg"
+
+    // Add SVG processor if URL is an SVG
+    var options: KingfisherOptionsInfo = []
+    if isSvg {
+      options.append(.processor(SVGProcessor(size: nil, scale: carTraitCollection.displayScale)))
+    }
+
+    KingfisherManager.shared.retrieveImage(with: url, options: options) { result in
+      if case let .success(imageResult) = result {
+        let image = imageResult.image
+
+        if isSvg {
+          // SVGs are icons - apply light/dark tinting
+          completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
+        } else {
+          // Regular images (photos, album art) - show as-is
+          completion(image)
+        }
+      } else {
+        completion(nil)
+      }
+    }
+  }
+
+  /// Renders an image to a bitmap with the specified tint color (for monochrome icons).
+  /// Thread-safe: UIGraphicsBeginImageContextWithOptions is safe to call from any thread (iOS 4+).
+  nonisolated private func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
+    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+    defer { UIGraphicsEndImageContext() }
+
+    tintColor.set()
+    image.withRenderingMode(.alwaysTemplate).draw(in: CGRect(origin: .zero, size: image.size))
+
+    guard let rendered = UIGraphicsGetImageFromCurrentImageContext() else {
+      return image // Fallback to original if rendering fails
+    }
+    return rendered.withRenderingMode(.alwaysOriginal)
+  }
+
+  /// Creates light/dark tinted variants of an image and returns the appropriate one for current appearance
+  nonisolated private func createAdaptiveImage(_ image: UIImage, carTraitCollection: UITraitCollection) -> UIImage {
+    let lightImage = renderImageToBitmap(image, tintColor: .black)
+    let darkImage = renderImageToBitmap(image, tintColor: .white)
+
+    let asset = UIImageAsset()
+    asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
+    asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
+
+    return asset.image(with: carTraitCollection)
   }
 }
 
