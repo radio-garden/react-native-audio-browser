@@ -54,6 +54,12 @@ class CoilBitmapLoader(
 
   private val scope = CoroutineScope(Dispatchers.IO)
 
+  /**
+   * Default artwork size in pixels when no hint is provided by the media browser.
+   * Lock screen media controls are ~128dp, at 4x density (xxxhdpi) = 512px.
+   */
+  private val defaultArtworkSizePixels = 512
+
   /** Configuration for artwork requests including headers and URL transformation. */
   data class ArtworkConfig(val baseConfig: RequestConfig?, val artworkConfig: ArtworkRequestConfig?)
 
@@ -84,7 +90,8 @@ class CoilBitmapLoader(
     scope.launch {
       try {
         val artworkUrl = uri.toString()
-        val sizeHint = getArtworkSizeHint()
+        // Use hint from media browser (Android Auto), or fall back to screen-based size
+        val sizeHint = getArtworkSizeHint() ?: defaultArtworkSizePixels
 
         val (finalUrl, headers) = transformArtworkUrl(artworkUrl, sizeHint)
 
