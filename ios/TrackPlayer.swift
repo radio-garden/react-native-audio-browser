@@ -709,8 +709,11 @@ class TrackPlayer {
     let artworkUrl = track.artworkSource?.uri ?? track.artwork
     logger.debug("loadArtworkForTrack: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
 
-    // Now Playing artwork size (reasonable default for lock screen / Control Center)
-    let nowPlayingSize = ImageContext(width: 600, height: 600)
+    // Now Playing artwork: use screen width in pixels, capped at 1200px
+    let screenScale = UIScreen.main.scale
+    let screenWidth = UIScreen.main.bounds.width * screenScale
+    let artworkSize = min(screenWidth, 1200)
+    let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
 
     Task {
       let image: UIImage?
