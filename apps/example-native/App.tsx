@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import AudioBrowser, {
   BrowserConfiguration,
   getActiveTrack,
@@ -100,15 +100,24 @@ const configuration: BrowserConfiguration = {
   tabs: [
     {
       title: 'Library',
-      url: '/library'
+      url: '/library',
+      artwork: Platform.select({
+        ios: 'sf:music.note.list'
+      })
     },
     {
       title: 'JSON API',
-      url: '/api'
+      url: '/api',
+      artwork: Platform.select({
+        ios: 'sf:server.rack'
+      })
     },
     {
       title: 'Favorites',
-      url: '/favorites'
+      url: '/favorites',
+      artwork: Platform.select({
+        ios: 'sf:heart.fill'
+      }),
     }
   ],
   media: {
