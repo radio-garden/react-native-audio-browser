@@ -37,9 +37,9 @@
     "@react-native/new-app-screen": "0.82.0",
     "common-app": "*",
     "react": "19.1.1",
-    "react-native": "0.82.0",
+    "react-native": "0.83.0",
     "react-native-audio-browser": "link:react-native-audio-browser",
-    "react-native-mmkv": "^4.0.1",
+    "react-native-mmkv": "^4.1.0",
     "react-native-nitro-modules": "0.31.10",
     "react-native-safe-area-context": "^5.6.2"
   },
