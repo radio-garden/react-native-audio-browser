@@ -2,21 +2,13 @@ package com.audiobrowser.util
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import android.net.Uri
 import androidx.media3.common.MediaMetadata
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
-import coil3.request.transformations
-import coil3.size.Size
 import coil3.svg.SvgDecoder
 import coil3.toBitmap
-import coil3.transform.Transformation
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,25 +21,12 @@ import timber.log.Timber
  * This class pre-renders SVG images to PNG bitmaps that can be embedded in MediaMetadata
  * using setArtworkData().
  *
- * SVG icons are automatically tinted based on the current dark/light mode:
- * - Light mode: tinted black for visibility on light backgrounds
- * - Dark mode: tinted white for visibility on dark backgrounds
+ * Note: SVGs are rendered as-is without tinting. Content providers should provide
+ * appropriately colored icons for Android Auto's dark UI (e.g., white icons).
  */
 object SvgArtworkRenderer {
 
   private const val DEFAULT_SIZE = 256 // Default size for rendered SVGs
-
-  /**
-   * Coil transformation that applies a tint color to a bitmap.
-   * The tint color is included in the cache key, so different tints are cached separately.
-   */
-  private class TintTransformation(private val tintColor: Int) : Transformation() {
-    override val cacheKey: String = "tint($tintColor)"
-
-    override suspend fun transform(input: Bitmap, size: Size): Bitmap {
-      return tintBitmap(input, tintColor)
-    }
-  }
 
   /**
    * Checks if a URL points to an SVG image.
@@ -63,41 +42,11 @@ object SvgArtworkRenderer {
   }
 
   /**
-   * Always returns true (white icons for dark backgrounds).
+   * Pre-renders an SVG URL to PNG bitmap bytes.
    *
-   * This renderer is used for Android Auto browse items, and Android Auto
-   * has been dark-only since 2019. The DHU (Desktop Head Unit) doesn't put
-   * the phone in actual car mode (UI_MODE_TYPE_CAR), so we can't detect it.
-   * Since this code path is specifically for AA browse items, we always use
-   * white icons which work on AA's dark background.
-   */
-  @Suppress("UNUSED_PARAMETER")
-  private fun isDarkMode(context: Context): Boolean {
-    // Android Auto has been dark-only since 2019
-    // When AA gets a light theme (in progress as of 2025), this may need updating
-    return true
-  }
-
-  /**
-   * Applies a tint color to a bitmap using SRC_IN mode.
-   * This replaces all non-transparent pixels with the tint color.
-   */
-  fun tintBitmap(bitmap: Bitmap, tintColor: Int): Bitmap {
-    val tintedBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(tintedBitmap)
-    val paint = Paint().apply {
-      colorFilter = PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN)
-    }
-    canvas.drawBitmap(bitmap, 0f, 0f, paint)
-    return tintedBitmap
-  }
-
-  /**
-   * Pre-renders an SVG URL to PNG bitmap bytes with automatic tinting.
-   *
-   * The rendered SVG is tinted based on the current dark/light mode:
-   * - Light mode: tinted black
-   * - Dark mode: tinted white
+   * The SVG is rendered as-is without color modification. Content providers
+   * should provide icons in the appropriate color for the target UI (e.g.,
+   * white icons for Android Auto's dark background).
    *
    * @param context Android context
    * @param imageLoader Coil ImageLoader instance
@@ -112,12 +61,8 @@ object SvgArtworkRenderer {
     size: Int = DEFAULT_SIZE,
   ): ByteArray? = withContext(Dispatchers.IO) {
     try {
-      val darkMode = isDarkMode(context)
-      val tintColor = if (darkMode) Color.WHITE else Color.BLACK
-      Timber.d("Pre-rendering SVG: $url (darkMode=$darkMode)")
+      Timber.d("Pre-rendering SVG: $url")
 
-      // Use Coil transformation for tinting - this gets cached by Coil
-      // The cache key includes URL + size + tint color
       val request = ImageRequest.Builder(context)
         .data(url)
         .size(size)
@@ -125,7 +70,6 @@ object SvgArtworkRenderer {
         .decoderFactory { result, options, _ ->
           SvgDecoder(result.source, options)
         }
-        .transformations(TintTransformation(tintColor))
         .build()
 
       val result = imageLoader.execute(request)

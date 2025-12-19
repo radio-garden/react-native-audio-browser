@@ -1,10 +1,8 @@
 package com.audiobrowser.util
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.net.Uri
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
@@ -90,7 +88,7 @@ class CoilBitmapLoader(
 
         val (finalUrl, headers) = transformArtworkUrl(artworkUrl, sizeHint)
 
-        // Check if this is an SVG (icon) that needs tinting
+        // Check if this is an SVG that needs special decoding
         val isSvg = SvgArtworkRenderer.isSvgUrl(finalUrl)
 
         Timber.d("Loading artwork: $finalUrl (headers: ${headers.keys}, svg: $isSvg)")
@@ -115,15 +113,10 @@ class CoilBitmapLoader(
         }
 
         val result = imageLoader.execute(requestBuilder.build())
-        var bitmap = result.image?.toBitmap()
+        val bitmap = result.image?.toBitmap()
 
         if (bitmap != null) {
           Timber.d("Loaded bitmap: ${bitmap.width}x${bitmap.height} from $finalUrl")
-          // Apply tinting for SVG icons based on dark/light mode
-          if (isSvg) {
-            Timber.d("Applying icon tinting to SVG (darkMode: ${isDarkMode()})")
-            bitmap = applyIconTinting(bitmap)
-          }
           future.set(bitmap)
         } else {
           Timber.e("Failed to decode image from $finalUrl - result.image was null")
@@ -386,30 +379,5 @@ class CoilBitmapLoader(
     imageContext: ImageContext? = null,
   ): ImageSource? {
     return runBlocking { transformArtworkUrlForTrack(track, perRouteConfig, imageContext) }
-  }
-
-  // MARK: - SVG Tinting Support
-
-  /**
-   * Checks if the device is currently in dark mode.
-   * Used to determine tint color for SVG icons in Android Auto.
-   */
-  private fun isDarkMode(): Boolean {
-    val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-    return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
-  }
-
-  /**
-   * Applies appropriate tinting to an SVG bitmap based on current dark/light mode.
-   * SVGs are treated as icons and tinted for visibility:
-   * - Light mode: tinted black
-   * - Dark mode: tinted white
-   *
-   * @param bitmap The SVG bitmap to tint
-   * @return The tinted bitmap
-   */
-  private fun applyIconTinting(bitmap: Bitmap): Bitmap {
-    val tintColor = if (isDarkMode()) Color.WHITE else Color.BLACK
-    return SvgArtworkRenderer.tintBitmap(bitmap, tintColor)
   }
 }
