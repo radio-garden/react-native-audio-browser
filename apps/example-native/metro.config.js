@@ -17,6 +17,10 @@ const config = {
       path.resolve(__dirname, 'node_modules'),
       path.resolve(root, 'node_modules'),
     ],
+    // Force single resolution for packages that must be singletons
+    extraNodeModules: {
+      'react-native-nitro-modules': path.resolve(__dirname, 'node_modules', 'react-native-nitro-modules'),
+    },
   },
 
   transformer: {
