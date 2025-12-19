@@ -4,6 +4,13 @@ Ideas for future improvements that aren't urgent but worth considering.
 
 Note: FUTURE items are AI coauthored and can include incorrect or incomplete details
 
+## Artwork (iOS)
+
+- [ ] Support animated artwork for Now Playing
+  - Apple docs: https://developer.apple.com/documentation/mediaplayer/providing-animated-artwork-for-media-items
+  - Would allow animated album art on lock screen / CarPlay
+  - Requires using `MPMediaItemPropertyArtwork` with animated image data
+
 ## Playback Resumption Cache
 
 Currently, playback resumption always resolves via the `browse` callback, which requires JS to be ready and potentially a network request.
@@ -515,6 +522,48 @@ iOS uses system-localized text via `HTTPURLResponse.localizedString(forStatusCod
 **Workaround:** Users can provide their own translations via `formatNavigationError` callback.
 
 **Potential solution:** Bundle localized strings for common HTTP status codes (401, 403, 404, 500, 502, 503, etc.) using Android's resources system.
+
+## Extensible NowPlayingButtons as Nitro Type
+
+Make `NowPlayingButtons` a .nitro.ts type to allow developers to create custom transport buttons beyond the standard set.
+
+**Current state:** `NowPlayingButtons` is a simple boolean struct for standard transport controls (skipNext, skipPrevious, jumpBack, jumpForward).
+
+**Potential API:**
+```typescript
+// Instead of just booleans
+export type NowPlayingButton =
+  | 'skipNext'
+  | 'skipPrevious'
+  | 'jumpBack'
+  | 'jumpForward'
+  | CustomButton
+
+export interface CustomButton {
+  id: string
+  title: string
+  icon?: string // platform-specific icon identifier
+  onPress: () => void
+}
+
+export type NowPlayingButtons = NowPlayingButton[]
+```
+
+**Benefits:**
+- Developers could add custom transport buttons (sleep timer, playback speed, share)
+- Better extensibility for specialized use cases
+- Type-safe integration with native code
+
+**Implementation challenges:**
+- iOS `MPRemoteCommandCenter` has a fixed set of standard commands - custom buttons would need different approach
+- Android MediaSession custom actions are complex to implement properly
+- Would need comprehensive custom button handling system across platforms
+- Platform differences make truly custom buttons difficult
+
+**Alternative approach:**
+- Keep current boolean-based approach for standard transport controls (covers 95% of use cases)
+- Add separate custom button system if real demand emerges
+- Consider this for v2 if standard controls prove insufficient
 
 ## Custom CarPlay Now Playing Buttons
 
