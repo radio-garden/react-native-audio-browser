@@ -736,8 +736,6 @@ class TrackPlayer {
         // Note: The requestHandler closure is called from MediaPlayer's background queue,
         // so we must mark it @Sendable to break @MainActor isolation inheritance.
         let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable requestedSize in
-          // TODO: Remove this logging after investigating what sizes iOS requests
-          print("🎨 MPMediaItemArtwork requested size: \(requestedSize.width)x\(requestedSize.height), have: \(image.size.width)x\(image.size.height)")
           return image
         }
         nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
