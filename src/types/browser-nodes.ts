@@ -74,6 +74,23 @@ export interface Track {
    */
   readonly artworkSource?: ImageSource
 
+  /**
+   * Whether this artwork should be tinted based on CarPlay's current appearance (light/dark mode).
+   *
+   * When `true`, the artwork is treated as a monochrome icon and tinted:
+   * - Light mode: tinted black for visibility on light backgrounds
+   * - Dark mode: tinted white for visibility on dark backgrounds
+   *
+   * This is useful for SVG or PNG icons that need to adapt to CarPlay's light/dark themes.
+   * Full-color artwork (album covers, logos) should not use this.
+   *
+   * **iOS CarPlay only** - Android Auto is dark-only, so content providers should
+   * provide appropriately colored icons directly (e.g., white icons).
+   *
+   * @default false
+   */
+  artworkCarPlayTinted?: boolean
+
   // type?: TrackType
   title: string
   subtitle?: string

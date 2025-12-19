@@ -788,6 +788,7 @@ class Player(internal val context: Context) {
         src = currentTrack.src,
         artwork = currentTrack.artwork,
         artworkSource = currentTrack.artworkSource,
+        artworkCarPlayTinted = currentTrack.artworkCarPlayTinted,
         title = currentTrack.title,
         subtitle = currentTrack.subtitle,
         artist = currentTrack.artist,

@@ -44,6 +44,7 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::string> src     SWIFT_PRIVATE;
     std::optional<std::string> artwork     SWIFT_PRIVATE;
     std::optional<ImageSource> artworkSource     SWIFT_PRIVATE;
+    std::optional<bool> artworkCarPlayTinted     SWIFT_PRIVATE;
     std::string title     SWIFT_PRIVATE;
     std::optional<std::string> subtitle     SWIFT_PRIVATE;
     std::optional<std::string> artist     SWIFT_PRIVATE;
@@ -59,7 +60,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     Track() = default;
-    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style, std::optional<TrackStyle> childrenStyle, std::optional<bool> favorited, std::optional<std::string> groupTitle, std::optional<bool> live): url(url), src(src), artwork(artwork), artworkSource(artworkSource), title(title), subtitle(subtitle), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style), childrenStyle(childrenStyle), favorited(favorited), groupTitle(groupTitle), live(live) {}
+    explicit Track(std::optional<std::string> url, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::optional<bool> artworkCarPlayTinted, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style, std::optional<TrackStyle> childrenStyle, std::optional<bool> favorited, std::optional<std::string> groupTitle, std::optional<bool> live): url(url), src(src), artwork(artwork), artworkSource(artworkSource), artworkCarPlayTinted(artworkCarPlayTinted), title(title), subtitle(subtitle), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style), childrenStyle(childrenStyle), favorited(favorited), groupTitle(groupTitle), live(live) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -76,6 +77,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "src")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artwork")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageSource>>::fromJSI(runtime, obj.getProperty(runtime, "artworkSource")),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "artworkCarPlayTinted")),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, "title")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "subtitle")),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "artist")),
@@ -96,6 +98,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "src", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.src));
       obj.setProperty(runtime, "artwork", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artwork));
       obj.setProperty(runtime, "artworkSource", JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageSource>>::toJSI(runtime, arg.artworkSource));
+      obj.setProperty(runtime, "artworkCarPlayTinted", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.artworkCarPlayTinted));
       obj.setProperty(runtime, "title", JSIConverter<std::string>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, "subtitle", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.subtitle));
       obj.setProperty(runtime, "artist", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artist));
@@ -122,6 +125,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "src"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artwork"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageSource>>::canConvert(runtime, obj.getProperty(runtime, "artworkSource"))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "artworkCarPlayTinted"))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, "title"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "subtitle"))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "artist"))) return false;

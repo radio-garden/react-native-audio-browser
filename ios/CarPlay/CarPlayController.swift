@@ -1083,14 +1083,15 @@ public final class RNABCarPlayController: NSObject {
             options.append(.processor(SVGProcessor(size: nil, scale: carTraitCollection.displayScale)))
           }
 
-          let isSvg = url.pathExtension.lowercased() == "svg"
+          // Capture tinting preference before async call
+          let shouldTint = track.artworkCarPlayTinted ?? false
 
           KingfisherManager.shared.retrieveImage(with: url, options: options) { result in
             if case let .success(imageResult) = result {
               let image = imageResult.image
 
-              if isSvg {
-                // SVGs are icons - apply light/dark tinting
+              if shouldTint {
+                // Apply light/dark tinting for monochrome icons
                 completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
               } else {
                 // Regular images (photos, album art) - show as-is
@@ -1130,6 +1131,7 @@ public final class RNABCarPlayController: NSObject {
     // Capture trait collection before async call
     let carTraitCollection = interfaceController.carTraitCollection
     let isSvg = url.pathExtension.lowercased() == "svg"
+    let shouldTint = track.artworkCarPlayTinted ?? false
 
     // Add SVG processor if URL is an SVG
     var options: KingfisherOptionsInfo = []
@@ -1141,8 +1143,8 @@ public final class RNABCarPlayController: NSObject {
       if case let .success(imageResult) = result {
         let image = imageResult.image
 
-        if isSvg {
-          // SVGs are icons - apply light/dark tinting
+        if shouldTint {
+          // Apply light/dark tinting for monochrome icons
           completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
         } else {
           // Regular images (photos, album art) - show as-is
