@@ -1,26 +1,35 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const { getMonorepoMetroOptions } = require('../../scripts/metro.cjs');
 const path = require('path');
 
-const root = path.resolve(__dirname, '..', '..');
+const defaultConfig = getDefaultConfig(__dirname);
+
+// Filter React and React Native to prevent duplicates
+// Also filter react-native-safe-area-context to prevent context issues
+// Also filter react-native-mmkv to prevent duplicate instances
+const modulesToFilter = ['react', 'react-native', 'react-native-safe-area-context', 'react-native-nitro-modules'];
+const { blockList, extraNodeModules } = getMonorepoMetroOptions(
+  modulesToFilter,
+  __dirname,
+  defaultConfig
+);
+
+const monorepoRoot = path.resolve(__dirname, '..', '..');
+const appsRoot = path.resolve(monorepoRoot, 'apps');
 
 /**
- * Metro configuration
+ * Metro configuration for monorepo
  * https://facebook.github.io/metro/docs/configuration
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 const config = {
-  watchFolders: [root],
+  projectRoot: __dirname,
+  watchFolders: [monorepoRoot, appsRoot],
 
   resolver: {
-    nodeModulesPaths: [
-      path.resolve(__dirname, 'node_modules'),
-      path.resolve(root, 'node_modules'),
-    ],
-    // Force single resolution for packages that must be singletons
-    extraNodeModules: {
-      'react-native-nitro-modules': path.resolve(__dirname, 'node_modules', 'react-native-nitro-modules'),
-    },
+    blockList,
+    extraNodeModules,
   },
 
   transformer: {
@@ -33,4 +42,4 @@ const config = {
   },
 };
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = mergeConfig(defaultConfig, config);
