@@ -117,29 +117,29 @@ public final class RNABCarPlayController: NSObject {
 
     // Subscribe to tab changes
     audioBrowser.tabsChangedEmitter.addListener { [weak self] tabs in
-      Task {
-        await self?.handleTabsChanged(tabs)
+      Task { @MainActor in
+        self?.handleTabsChanged(tabs)
       }
     }
 
     // Subscribe to content changes
     audioBrowser.contentChangedEmitter.addListener { [weak self] content in
-      Task {
-        await self?.handleContentChanged(content)
+      Task { @MainActor in
+        self?.handleContentChanged(content)
       }
     }
 
     // Subscribe to config changes (for Now Playing buttons)
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
-      Task {
-        await self?.setupNowPlayingButtons()
+      Task { @MainActor in
+        self?.setupNowPlayingButtons()
       }
     }
 
     // Subscribe to favorite changes (for Now Playing button)
     audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in
-      Task {
-        await self?.updateFavoriteButtonState()
+      Task { @MainActor in
+        self?.updateFavoriteButtonState()
       }
     }
 
@@ -150,22 +150,22 @@ public final class RNABCarPlayController: NSObject {
 
     // Subscribe to active track changes (for playing indicator in lists)
     audioBrowser.activeTrackChangedEmitter.addListener { [weak self] event in
-      Task {
-        await self?.handleActiveTrackChanged(event)
+      Task { @MainActor in
+        self?.handleActiveTrackChanged(event)
       }
     }
 
     // Subscribe to queue changes (for Up Next list updates)
     audioBrowser.queueChangedEmitter.addListener { [weak self] tracks in
-      Task {
-        await self?.handleQueueChanged(tracks)
+      Task { @MainActor in
+        self?.handleQueueChanged(tracks)
       }
     }
 
     // Subscribe to navigation errors (from browser layer)
     audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
-      Task {
-        await self?.handleNavigationError(event)
+      Task { @MainActor in
+        self?.handleNavigationError(event)
       }
     }
   }
@@ -279,8 +279,10 @@ public final class RNABCarPlayController: NSObject {
       // loadArtwork handles both artwork and artworkSource
       let tabImageSize = CGSize(width: 24, height: 24)
       loadArtwork(for: track, size: tabImageSize) { [weak template] image in
-        if let image {
-          template?.tabImage = image
+        Task { @MainActor in
+          if let image {
+            template?.tabImage = image
+          }
         }
       }
     }
@@ -401,7 +403,9 @@ public final class RNABCarPlayController: NSObject {
       // Set empty placeholder to reserve space while loading
       item.setImage(placeholderImage)
       loadArtwork(for: track, size: CPListItem.maximumImageSize) { [weak item] image in
-        item?.setImage(image)
+        Task { @MainActor in
+          item?.setImage(image)
+        }
       }
     }
 
