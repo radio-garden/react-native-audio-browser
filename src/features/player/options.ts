@@ -72,12 +72,6 @@ export interface PlayerCapabilities {
    */
   favorite?: boolean
   /**
-   * Enable bookmark control (iOS only - appears in Control Center).
-   * Note: No default implementation - you must handle `onRemoteBookmark` event.
-   * @default false
-   */
-  bookmark?: boolean
-  /**
    * Enable shuffle mode toggle.
    * @default true
    */
@@ -181,9 +175,6 @@ export type AppKilledPlaybackBehavior =
 export interface Options {
   /** Android-specific configuration options with resolved defaults (only present on Android) */
   android?: AndroidOptions
-
-  /** iOS-specific configuration options with resolved defaults (only present on iOS) */
-  ios?: IOSOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
@@ -315,51 +306,6 @@ export interface NitroAndroidUpdateOptions {
   notificationButtons?: NotificationButtonLayout | null
 }
 
-export interface IOSUpdateOptions {
-  /**
-   * Configuration for the like/heart button in iOS control center.
-   * Only available on iOS.
-   * @default { isActive: false, title: "Like" }
-   */
-  likeOptions?: FeedbackOptions
-
-  /**
-   * Configuration for the dislike button in iOS control center.
-   * Only available on iOS.
-   * @default { isActive: false, title: "Dislike" }
-   */
-  dislikeOptions?: FeedbackOptions
-
-  /**
-   * Configuration for the bookmark button in iOS control center.
-   * Only available on iOS.
-   * @default { isActive: false, title: "Bookmark" }
-   */
-  bookmarkOptions?: FeedbackOptions
-}
-
-export interface IOSOptions {
-  /**
-   * Configuration for the like/heart button in iOS control center.
-   * Only available on iOS.
-   * @default { isActive: false, title: "Like" }
-   */
-  likeOptions: FeedbackOptions
-
-  /**
-   * Configuration for the dislike button in iOS control center.
-   * Only available on iOS.
-   * @default { isActive: false, title: "Dislike" }
-   */
-  dislikeOptions: FeedbackOptions
-
-  /**
-   * Configuration for the bookmark button in iOS control center.
-   * Only available on iOS.
-   * @default { isActive: false, title: "Bookmark" }
-   */
-  bookmarkOptions: FeedbackOptions
-}
 
 /**
  * Partial options for updating player configuration.
@@ -391,9 +337,6 @@ export interface IOSOptions {
 export interface UpdateOptions {
   /** Android-specific configuration options */
   android?: AndroidUpdateOptions
-
-  /** iOS-specific configuration options */
-  ios?: IOSUpdateOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
@@ -443,9 +386,6 @@ export interface UpdateOptions {
 export interface NativeUpdateOptions {
   /** Android-specific configuration options */
   android?: NitroAndroidUpdateOptions
-
-  /** iOS-specific configuration options */
-  ios?: IOSUpdateOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.

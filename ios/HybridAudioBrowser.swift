@@ -538,9 +538,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     let remoteCommands = playerOptions.capabilities.buildRemoteCommands(
       forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
       backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
-      likeOptions: playerOptions.likeOptions,
-      dislikeOptions: playerOptions.dislikeOptions,
-      bookmarkOptions: playerOptions.bookmarkOptions,
       playbackRates: playerOptions.playbackRates
     )
 

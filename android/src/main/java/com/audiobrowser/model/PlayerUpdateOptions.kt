@@ -26,7 +26,7 @@ data class PlayerUpdateOptions(
     play = null, pause = null, stop = null, seekTo = null,
     skipToNext = null, skipToPrevious = null,
     jumpForward = false, jumpBackward = false,
-    favorite = null, bookmark = false,
+    favorite = null,
     shuffleMode = null, repeatMode = null, playbackRate = null
   ),
 
@@ -93,7 +93,6 @@ data class PlayerUpdateOptions(
 
     return UpdateOptions(
       android = androidOptions,
-      ios = null, // iOS options not handled in this class
       forwardJumpInterval = forwardJumpInterval,
       backwardJumpInterval = backwardJumpInterval,
       progressUpdateEventInterval =
@@ -118,7 +117,6 @@ data class PlayerUpdateOptions(
       jumpForward = incoming.jumpForward ?: existing.jumpForward,
       jumpBackward = incoming.jumpBackward ?: existing.jumpBackward,
       favorite = incoming.favorite ?: existing.favorite,
-      bookmark = incoming.bookmark ?: existing.bookmark,
       shuffleMode = incoming.shuffleMode ?: existing.shuffleMode,
       repeatMode = incoming.repeatMode ?: existing.repeatMode,
       playbackRate = incoming.playbackRate ?: existing.playbackRate

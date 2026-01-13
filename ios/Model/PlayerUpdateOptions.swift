@@ -14,22 +14,17 @@ class PlayerUpdateOptions {
   var progressUpdateEventInterval: Double?
 
   /// Player capabilities - most enabled by default, only false values disable
-  /// Exceptions: bookmark, jumpForward, jumpBackward default to false
+  /// Exceptions: jumpForward, jumpBackward default to false
   var capabilities: PlayerCapabilities = .init(
     play: nil, pause: nil, stop: nil, seekTo: nil,
     skipToNext: nil, skipToPrevious: nil,
     jumpForward: false, jumpBackward: false,
-    favorite: nil, bookmark: false,
+    favorite: nil,
     shuffleMode: nil, repeatMode: nil, playbackRate: nil
   )
 
   /// Repeat mode
   var repeatMode: RepeatMode = .off
-
-  /// iOS-specific options
-  var likeOptions: FeedbackOptions = .init(isActive: false, title: "Like")
-  var dislikeOptions: FeedbackOptions = .init(isActive: false, title: "Dislike")
-  var bookmarkOptions: FeedbackOptions = .init(isActive: false, title: "Bookmark")
 
   /// Supported playback rates for the playback-rate capability
   var playbackRates: [Double] = [0.5, 1.0, 1.5, 2.0]
@@ -65,19 +60,6 @@ class PlayerUpdateOptions {
       capabilities = mergeCapabilities(existing: capabilities, incoming: caps)
     }
 
-    // Update iOS-specific options
-    if let iosOptions = options.ios {
-      if let like = iosOptions.likeOptions {
-        likeOptions = like
-      }
-      if let dislike = iosOptions.dislikeOptions {
-        dislikeOptions = dislike
-      }
-      if let bookmark = iosOptions.bookmarkOptions {
-        bookmarkOptions = bookmark
-      }
-    }
-
     // Update playback rates
     if let rates = options.iosPlaybackRates {
       playbackRates = rates
@@ -91,16 +73,11 @@ class PlayerUpdateOptions {
 
     return Options(
       android: nil,
-      ios: IOSOptions(
-        likeOptions: likeOptions,
-        dislikeOptions: dislikeOptions,
-        bookmarkOptions: bookmarkOptions,
-      ),
       forwardJumpInterval: forwardJumpInterval,
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      repeatMode: repeatMode,
+      repeatMode: repeatMode
     )
   }
 
@@ -111,16 +88,11 @@ class PlayerUpdateOptions {
 
     return UpdateOptions(
       android: nil,
-      ios: IOSUpdateOptions(
-        likeOptions: likeOptions,
-        dislikeOptions: dislikeOptions,
-        bookmarkOptions: bookmarkOptions,
-      ),
       forwardJumpInterval: forwardJumpInterval,
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      iosPlaybackRates: playbackRates,
+      iosPlaybackRates: playbackRates
     )
   }
 
@@ -136,7 +108,6 @@ class PlayerUpdateOptions {
       jumpForward: incoming.jumpForward ?? existing.jumpForward,
       jumpBackward: incoming.jumpBackward ?? existing.jumpBackward,
       favorite: incoming.favorite ?? existing.favorite,
-      bookmark: incoming.bookmark ?? existing.bookmark,
       shuffleMode: incoming.shuffleMode ?? existing.shuffleMode,
       repeatMode: incoming.repeatMode ?? existing.repeatMode,
       playbackRate: incoming.playbackRate ?? existing.playbackRate

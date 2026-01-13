@@ -181,16 +181,6 @@ class RemoteCommandController {
       center.likeCommand.localizedTitle = localizedTitle
       center.likeCommand.localizedShortTitle = localizedShortTitle
       enableRemoteCommand(center.likeCommand, key: command.key, handler: handleLikeCommand)
-    case let .dislike(isActive, localizedTitle, localizedShortTitle):
-      center.dislikeCommand.isActive = isActive
-      center.dislikeCommand.localizedTitle = localizedTitle
-      center.dislikeCommand.localizedShortTitle = localizedShortTitle
-      enableRemoteCommand(center.dislikeCommand, key: command.key, handler: handleDislikeCommand)
-    case let .bookmark(isActive, localizedTitle, localizedShortTitle):
-      center.bookmarkCommand.isActive = isActive
-      center.bookmarkCommand.localizedTitle = localizedTitle
-      center.bookmarkCommand.localizedShortTitle = localizedShortTitle
-      enableRemoteCommand(center.bookmarkCommand, key: command.key, handler: handleBookmarkCommand)
     case .changeRepeatMode:
       enableRemoteCommand(
         center.changeRepeatModeCommand,
@@ -235,10 +225,6 @@ class RemoteCommandController {
       disableRemoteCommand(center.skipBackwardCommand, key: command.key)
     case .like:
       disableRemoteCommand(center.likeCommand, key: command.key)
-    case .dislike:
-      disableRemoteCommand(center.dislikeCommand, key: command.key)
-    case .bookmark:
-      disableRemoteCommand(center.bookmarkCommand, key: command.key)
     case .changeRepeatMode:
       disableRemoteCommand(center.changeRepeatModeCommand, key: command.key)
     case .changeShuffleMode:
@@ -275,8 +261,6 @@ class RemoteCommandController {
   lazy var handlePreviousTrackCommand: RemoteCommandHandler =
     handlePreviousTrackCommandDefault
   lazy var handleLikeCommand: RemoteCommandHandler = handleLikeCommandDefault
-  lazy var handleDislikeCommand: RemoteCommandHandler = handleDislikeCommandDefault
-  lazy var handleBookmarkCommand: RemoteCommandHandler = handleBookmarkCommandDefault
   lazy var handleChangeRepeatModeCommand: RemoteCommandHandler =
     handleChangeRepeatModeCommandDefault
   lazy var handleChangeShuffleModeCommand: RemoteCommandHandler =
@@ -369,19 +353,6 @@ class RemoteCommandController {
     return MPRemoteCommandHandlerStatus.success
   }
 
-  private func handleDislikeCommandDefault(event _: MPRemoteCommandEvent)
-    -> MPRemoteCommandHandlerStatus
-  {
-    callbacks?.remoteDislike()
-    return MPRemoteCommandHandlerStatus.success
-  }
-
-  private func handleBookmarkCommandDefault(event _: MPRemoteCommandEvent)
-    -> MPRemoteCommandHandlerStatus
-  {
-    callbacks?.remoteBookmark()
-    return MPRemoteCommandHandlerStatus.success
-  }
 
   private func handleChangeRepeatModeCommandDefault(event: MPRemoteCommandEvent)
     -> MPRemoteCommandHandlerStatus

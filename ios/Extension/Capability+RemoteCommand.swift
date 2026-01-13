@@ -8,9 +8,6 @@ extension PlayerCapabilities {
   func buildRemoteCommands(
     forwardJumpInterval: NSNumber?,
     backwardJumpInterval: NSNumber?,
-    likeOptions: FeedbackOptions,
-    dislikeOptions _: FeedbackOptions,
-    bookmarkOptions: FeedbackOptions,
     playbackRates: [Double]
   ) -> [RemoteCommand] {
     var commands: [RemoteCommand] = []
@@ -51,19 +48,13 @@ extension PlayerCapabilities {
       ))
     }
 
-    // Feedback buttons
+    // TODO: Investigate where localizedTitle/localizedShortTitle are displayed
+    // (possibly only for accessibility/VoiceOver). See TODO.md for details.
     if favorite != false {
       commands.append(.like(
-        isActive: likeOptions.isActive,
-        localizedTitle: likeOptions.title,
-        localizedShortTitle: likeOptions.title
-      ))
-    }
-    if bookmark != false {
-      commands.append(.bookmark(
-        isActive: bookmarkOptions.isActive,
-        localizedTitle: bookmarkOptions.title,
-        localizedShortTitle: bookmarkOptions.title
+        isActive: false,
+        localizedTitle: "Favorite",
+        localizedShortTitle: "Favorite"
       ))
     }
 

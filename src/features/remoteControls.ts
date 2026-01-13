@@ -228,23 +228,6 @@ export function handleRemoteJumpBackward(
 // Multiple listeners can be registered for the same event.
 // To override the default behavior, use the handleRemote* functions above.
 
-/**
- * Subscribes to remote bookmark events (iOS only).
- * @param callback - Called when the user presses the bookmark button
- * @returns Cleanup function to unsubscribe
- */
-export const onRemoteBookmark = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativeBrowser.onRemoteBookmark = cb)
-)
-
-/**
- * Subscribes to remote dislike events (iOS only).
- * @param callback - Called when the user presses the dislike button
- * @returns Cleanup function to unsubscribe
- */
-export const onRemoteDislike = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativeBrowser.onRemoteDislike = cb)
-)
 
 /**
  * Subscribes to remote jump backward events.
@@ -266,14 +249,6 @@ export const onRemoteJumpForward =
     (cb) => (nativeBrowser.onRemoteJumpForward = cb)
   )
 
-/**
- * Subscribes to remote like events (iOS only).
- * @param callback - Called when the user presses the like button
- * @returns Cleanup function to unsubscribe
- */
-export const onRemoteLike = LazyNativeEmitter.emitterize<void>(
-  (cb) => (nativeBrowser.onRemoteLike = cb)
-)
 
 /**
  * Subscribes to remote next events.

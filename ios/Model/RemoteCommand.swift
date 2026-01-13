@@ -21,9 +21,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   case like(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
 
-  case dislike(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
-
-  case bookmark(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
 
   case changeRepeatMode
 
@@ -43,8 +40,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
     case .skipForward: "skipForward"
     case .skipBackward: "skipBackward"
     case .like: "like"
-    case .dislike: "dislike"
-    case .bookmark: "bookmark"
     case .changeRepeatMode: "changeRepeatMode"
     case .changeShuffleMode: "changeShuffleMode"
     case .changePlaybackRate: "changePlaybackRate"
@@ -69,8 +64,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
       .skipForward(preferredIntervals: []),
       .skipBackward(preferredIntervals: []),
       .like(isActive: false, localizedTitle: "", localizedShortTitle: ""),
-      .dislike(isActive: false, localizedTitle: "", localizedShortTitle: ""),
-      .bookmark(isActive: false, localizedTitle: "", localizedShortTitle: ""),
       .changeRepeatMode,
       .changeShuffleMode,
       .changePlaybackRate(supportedPlaybackRates: []),

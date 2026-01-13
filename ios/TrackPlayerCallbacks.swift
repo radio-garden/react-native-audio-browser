@@ -105,12 +105,6 @@ protocol TrackPlayerCallbacks: AnyObject {
   /// Called when like is triggered remotely.
   func remoteLike()
 
-  /// Called when dislike is triggered remotely.
-  func remoteDislike()
-
-  /// Called when bookmark is triggered remotely.
-  func remoteBookmark()
-
   /// Called when repeat mode change is triggered remotely (CarPlay/lock screen).
   func remoteChangeRepeatMode(mode: RepeatMode)
 

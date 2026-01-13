@@ -63,7 +63,7 @@ class MediaSessionCommandManager {
     play = null, pause = null, stop = null, seekTo = null,
     skipToNext = null, skipToPrevious = null,
     jumpForward = null, jumpBackward = null,
-    favorite = null, bookmark = false,
+    favorite = null,
     shuffleMode = null, repeatMode = null, playbackRate = null
   )
   private var currentNotificationButtons: NotificationButtonLayout? = null
