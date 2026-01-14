@@ -88,7 +88,7 @@ enum SessionCategoryOptions: String {
     case .interruptSpokenAudioAndMixWithOthers:
       .interruptSpokenAudioAndMixWithOthers
     case .allowBluetooth:
-      .allowBluetooth
+      .allowBluetoothHFP
     case .allowBluetoothA2DP:
       .allowBluetoothA2DP
     case .allowAirPlay:
