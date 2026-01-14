@@ -351,7 +351,7 @@ final class BrowserManager: @unchecked Sendable {
         childrenStyle: resolvedTrack.childrenStyle,
         favorited: resolvedTrack.favorited,
         groupTitle: resolvedTrack.groupTitle,
-        live: resolvedTrack.live
+        live: resolvedTrack.live,
       )
     }
 
@@ -588,7 +588,7 @@ final class BrowserManager: @unchecked Sendable {
         childrenStyle: nil,
         favorited: nil,
         groupTitle: nil,
-        live: nil
+        live: nil,
       )
     }
 
@@ -652,7 +652,7 @@ final class BrowserManager: @unchecked Sendable {
       childrenStyle: nil,
       favorited: nil,
       groupTitle: nil,
-      live: nil
+      live: nil,
     )
   }
 
@@ -871,7 +871,7 @@ final class BrowserManager: @unchecked Sendable {
 
       // Apply image query params if configured and imageContext is provided
       let queryParams = artworkConfig.imageQueryParams
-      if let queryParams, let imageContext = imageContext {
+      if let queryParams, let imageContext {
         var contextQuery: [String: String] = [:]
         if let widthKey = queryParams.width, let width = imageContext.width {
           contextQuery[widthKey] = String(Int(width))
@@ -894,7 +894,7 @@ final class BrowserManager: @unchecked Sendable {
             query: existingQuery,
             body: mergedConfig.body,
             contentType: mergedConfig.contentType,
-            userAgent: mergedConfig.userAgent
+            userAgent: mergedConfig.userAgent,
           )
         }
       }

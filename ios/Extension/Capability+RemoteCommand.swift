@@ -8,7 +8,7 @@ extension PlayerCapabilities {
   func buildRemoteCommands(
     forwardJumpInterval: NSNumber?,
     backwardJumpInterval: NSNumber?,
-    playbackRates: [Double]
+    playbackRates: [Double],
   ) -> [RemoteCommand] {
     var commands: [RemoteCommand] = []
 
@@ -39,12 +39,12 @@ extension PlayerCapabilities {
     // Jump forward/backward
     if jumpForward != false {
       commands.append(.skipForward(
-        preferredIntervals: [(forwardJumpInterval ?? backwardJumpInterval) ?? 15]
+        preferredIntervals: [(forwardJumpInterval ?? backwardJumpInterval) ?? 15],
       ))
     }
     if jumpBackward != false {
       commands.append(.skipBackward(
-        preferredIntervals: [(backwardJumpInterval ?? forwardJumpInterval) ?? 15]
+        preferredIntervals: [(backwardJumpInterval ?? forwardJumpInterval) ?? 15],
       ))
     }
 
@@ -54,7 +54,7 @@ extension PlayerCapabilities {
       commands.append(.like(
         isActive: false,
         localizedTitle: "Favorite",
-        localizedShortTitle: "Favorite"
+        localizedShortTitle: "Favorite",
       ))
     }
 
@@ -67,7 +67,7 @@ extension PlayerCapabilities {
     }
     if playbackRate != false {
       commands.append(.changePlaybackRate(
-        supportedPlaybackRates: playbackRates.map { NSNumber(value: $0) }
+        supportedPlaybackRates: playbackRates.map { NSNumber(value: $0) },
       ))
     }
 

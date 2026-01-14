@@ -4,7 +4,7 @@ import Foundation
 /**
  Observes time-based player events and invokes callbacks passed at initialization.
  */
-class PlayerTimeObserver {
+class PlayerTimeObserver: @unchecked Sendable {
   /// The time to use as start boundary time. Cannot be zero.
   private static let startBoundaryTime: CMTime = .init(value: 1, timescale: 1000)
 

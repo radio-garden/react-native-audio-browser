@@ -20,7 +20,7 @@ class PlayerUpdateOptions {
     skipToNext: nil, skipToPrevious: nil,
     jumpForward: false, jumpBackward: false,
     favorite: nil,
-    shuffleMode: nil, repeatMode: nil, playbackRate: nil
+    shuffleMode: nil, repeatMode: nil, playbackRate: nil,
   )
 
   /// Repeat mode
@@ -77,7 +77,7 @@ class PlayerUpdateOptions {
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      repeatMode: repeatMode
+      repeatMode: repeatMode,
     )
   }
 
@@ -92,13 +92,13 @@ class PlayerUpdateOptions {
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      iosPlaybackRates: playbackRates
+      iosPlaybackRates: playbackRates,
     )
   }
 
   /// Merge incoming capabilities with existing - only explicitly set values override
   private func mergeCapabilities(existing: PlayerCapabilities, incoming: PlayerCapabilities) -> PlayerCapabilities {
-    return PlayerCapabilities(
+    PlayerCapabilities(
       play: incoming.play ?? existing.play,
       pause: incoming.pause ?? existing.pause,
       stop: incoming.stop ?? existing.stop,
@@ -110,7 +110,7 @@ class PlayerUpdateOptions {
       favorite: incoming.favorite ?? existing.favorite,
       shuffleMode: incoming.shuffleMode ?? existing.shuffleMode,
       repeatMode: incoming.repeatMode ?? existing.repeatMode,
-      playbackRate: incoming.playbackRate ?? existing.playbackRate
+      playbackRate: incoming.playbackRate ?? existing.playbackRate,
     )
   }
 }

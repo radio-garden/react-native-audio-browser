@@ -9,6 +9,12 @@
 #import "AudioBrowser-Swift.h"
 #endif
 
+// Protocol for optional app delegate method to start React Native in headless mode
+@protocol RNABHeadlessAppDelegate <NSObject>
+@optional
+- (void)startReactNativeHeadless;
+@end
+
 @interface RNABCarPlaySceneDelegate ()
 @property (nonatomic, strong, nullable) RNABCarPlayController *carPlayController;
 @end
@@ -22,9 +28,9 @@ API_AVAILABLE(ios(14.0))
 
     // Ensure React Native is started (for standalone CarPlay mode)
     // The app delegate should implement startReactNativeHeadless
-    id appDelegate = [UIApplication sharedApplication].delegate;
+    id<RNABHeadlessAppDelegate> appDelegate = (id<RNABHeadlessAppDelegate>)[UIApplication sharedApplication].delegate;
     if ([appDelegate respondsToSelector:@selector(startReactNativeHeadless)]) {
-        [appDelegate performSelector:@selector(startReactNativeHeadless)];
+        [appDelegate startReactNativeHeadless];
     }
 
     // Create and start the CarPlay controller

@@ -18,7 +18,7 @@ struct SVGProcessor: ImageProcessor {
     self.scale = scale ?? UIScreen.main.scale
   }
 
-  func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+  func process(item: ImageProcessItem, options _: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
     switch item {
     case let .data(data):
       return renderSVG(from: data)
@@ -35,12 +35,10 @@ struct SVGProcessor: ImageProcessor {
       return nil
     }
 
-    let renderSize: CGSize
-
-    if let size {
-      renderSize = size
+    let renderSize: CGSize = if let size {
+      size
     } else {
-      renderSize = svg.size
+      svg.size
     }
 
     return svg.rasterize(size: renderSize, scale: scale)
@@ -53,6 +51,6 @@ extension KingfisherOptionsInfoItem {
   /// Returns an SVG processor option for Kingfisher.
   @MainActor
   static func svgProcessor(size: CGSize? = nil, scale: CGFloat? = nil) -> KingfisherOptionsInfoItem {
-    return .processor(SVGProcessor(size: size, scale: scale))
+    .processor(SVGProcessor(size: size, scale: scale))
   }
 }

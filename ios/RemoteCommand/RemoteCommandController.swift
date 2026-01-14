@@ -353,7 +353,6 @@ class RemoteCommandController {
     return MPRemoteCommandHandlerStatus.success
   }
 
-
   private func handleChangeRepeatModeCommandDefault(event: MPRemoteCommandEvent)
     -> MPRemoteCommandHandlerStatus
   {

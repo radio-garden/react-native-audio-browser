@@ -900,12 +900,6 @@ public final class RNABCarPlayController: NSObject {
   /// Presents the error action sheet with the given display info.
   /// - Parameter customDisplay: The formatted error to display
   private func presentErrorActionSheet(customDisplay: FormattedNavigationError) {
-    // Can only present action sheet if a root template exists
-    guard interfaceController.rootTemplate != nil else {
-      logger.warning("Cannot present error action sheet - no root template set")
-      return
-    }
-
     // If another template is already presented, dismiss it first
     if interfaceController.presentedTemplate != nil {
       interfaceController.dismissTemplate(animated: false) { [weak self] _, _ in
@@ -927,7 +921,7 @@ public final class RNABCarPlayController: NSObject {
     let actionSheet = CPActionSheetTemplate(
       title: customDisplay.title,
       message: customDisplay.message,
-      actions: [ok]
+      actions: [ok],
     )
 
     interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
@@ -956,24 +950,24 @@ public final class RNABCarPlayController: NSObject {
     if let browserError = error as? BrowserError {
       switch browserError {
       case .contentNotFound:
-        return NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case let .httpError(code, _):
-        return NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
+        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
       case .networkError:
-        return NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
-        return NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .callbackError:
-        return NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       }
     } else if let httpError = error as? HttpClient.HttpException {
       // HTTP error from HttpClient (non-2xx response)
-      return NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
+      NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
     } else if error is URLError {
       // Network error (connection failed, timeout, no internet, etc.)
-      return NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+      NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     } else {
-      return NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+      NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     }
   }
 
@@ -981,7 +975,7 @@ public final class RNABCarPlayController: NSObject {
 
   /// Creates an SF Symbol image for tabs - plain systemName, CarPlay handles tinting
   private func sfSymbolImage(_ symbolName: String) -> UIImage? {
-    return UIImage(systemName: symbolName)
+    UIImage(systemName: symbolName)
   }
 
   /// Creates an SF Symbol image for list items with light/dark mode support
@@ -1004,7 +998,7 @@ public final class RNABCarPlayController: NSObject {
   }
 
   /// Renders an SF Symbol to a bitmap with the specified tint color
-  nonisolated private func renderSymbolToBitmap(_ symbol: UIImage, tintColor: UIColor, size: CGSize, scale: CGFloat) -> UIImage {
+  private nonisolated func renderSymbolToBitmap(_ symbol: UIImage, tintColor: UIColor, size: CGSize, scale: CGFloat) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(size, false, scale)
     defer { UIGraphicsEndImageContext() }
 
@@ -1018,7 +1012,7 @@ public final class RNABCarPlayController: NSObject {
   }
 
   private func defaultTabImage() -> UIImage? {
-    return sfSymbolImage("music.note.list")
+    sfSymbolImage("music.note.list")
   }
 
   /// Cached empty placeholder image to reserve space while artwork loads
@@ -1052,7 +1046,7 @@ public final class RNABCarPlayController: NSObject {
       let imageSource = await browserManager.resolveArtworkUrl(
         track: track,
         perRouteConfig: nil,
-        imageContext: imageContext
+        imageContext: imageContext,
       )
 
       await MainActor.run {
@@ -1166,7 +1160,7 @@ public final class RNABCarPlayController: NSObject {
 
   /// Renders an image to a bitmap with the specified tint color (for monochrome icons).
   /// Thread-safe: UIGraphicsBeginImageContextWithOptions is safe to call from any thread (iOS 4+).
-  nonisolated private func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
+  private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
     defer { UIGraphicsEndImageContext() }
 
@@ -1180,7 +1174,7 @@ public final class RNABCarPlayController: NSObject {
   }
 
   /// Creates light/dark tinted variants of an image and returns the appropriate one for current appearance
-  nonisolated private func createAdaptiveImage(_ image: UIImage, carTraitCollection: UITraitCollection) -> UIImage {
+  private nonisolated func createAdaptiveImage(_ image: UIImage, carTraitCollection: UITraitCollection) -> UIImage {
     let lightImage = renderImageToBitmap(image, tintColor: .black)
     let darkImage = renderImageToBitmap(image, tintColor: .white)
 
@@ -1339,7 +1333,7 @@ private extension UIImage {
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let origin = CGPoint(
       x: (targetSize.width - scaledSize.width) / 2,
-      y: (targetSize.height - scaledSize.height) / 2
+      y: (targetSize.height - scaledSize.height) / 2,
     )
 
     draw(in: CGRect(origin: origin, size: scaledSize))

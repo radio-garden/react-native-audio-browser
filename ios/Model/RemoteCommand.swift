@@ -21,7 +21,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   case like(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
 
-
   case changeRepeatMode
 
   case changeShuffleMode

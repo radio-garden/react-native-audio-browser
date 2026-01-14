@@ -29,7 +29,7 @@ public final class Emitter<T>: @unchecked Sendable {
   /// - Parameter event: The event data to emit
   public func emit(_ event: T) {
     lock.lock()
-    let current = snapshot   // O(1) reference bump; no array copy here
+    let current = snapshot // O(1) reference bump; no array copy here
     lock.unlock()
 
     for listener in current {

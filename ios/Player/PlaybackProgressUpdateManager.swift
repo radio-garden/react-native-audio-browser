@@ -5,7 +5,7 @@ import NitroModules
  Manages periodic progress updates during playback.
  Emits progress events at configurable intervals based on playback state.
  */
-class PlaybackProgressUpdateManager {
+class PlaybackProgressUpdateManager: @unchecked Sendable {
   private var timer: Timer?
   private var updateInterval: TimeInterval?
   private let onProgressUpdate: () -> Void

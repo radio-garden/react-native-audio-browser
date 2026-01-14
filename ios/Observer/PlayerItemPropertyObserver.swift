@@ -9,7 +9,7 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
  Observes player item property changes and invokes callbacks passed at initialization.
  Uses modern block-based KVO for type-safe observation with automatic cleanup.
  */
-final class PlayerItemPropertyObserver: NSObject {
+final class PlayerItemPropertyObserver: NSObject, @unchecked Sendable {
   private var observations: [NSKeyValueObservation] = []
   private var currentMetadataOutput: AVPlayerItemMetadataOutput?
 
@@ -24,7 +24,7 @@ final class PlayerItemPropertyObserver: NSObject {
   init(
     onDurationUpdate: @escaping @Sendable (Double) -> Void,
     onPlaybackLikelyToKeepUpUpdate: @escaping @Sendable (Bool) -> Void,
-    onTimedMetadataReceived: @escaping @MainActor ([AVTimedMetadataGroup]) -> Void
+    onTimedMetadataReceived: @escaping @MainActor ([AVTimedMetadataGroup]) -> Void,
   ) {
     self.onDurationUpdate = onDurationUpdate
     self.onPlaybackLikelyToKeepUpUpdate = onPlaybackLikelyToKeepUpUpdate
@@ -70,7 +70,10 @@ final class PlayerItemPropertyObserver: NSObject {
     observations.removeAll()
 
     if let observingAVItem {
-      observingAVItem.removeAllMetadataOutputs()
+      // removeAllMetadataOutputs is MainActor-isolated; this observer is used from main thread
+      MainActor.assumeIsolated {
+        observingAVItem.removeAllMetadataOutputs()
+      }
     }
 
     observingAVItem = nil
@@ -82,7 +85,7 @@ extension PlayerItemPropertyObserver: AVPlayerItemMetadataOutputPushDelegate {
   func metadataOutput(
     _ output: AVPlayerItemMetadataOutput,
     didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
-    from _: AVPlayerItemTrack?
+    from _: AVPlayerItemTrack?,
   ) {
     if output == currentMetadataOutput {
       // Delegate is called on main thread (queue: .main), so we can assume isolation
@@ -92,6 +95,7 @@ extension PlayerItemPropertyObserver: AVPlayerItemMetadataOutputPushDelegate {
 }
 
 extension AVPlayerItem {
+  @MainActor
   func removeAllMetadataOutputs() {
     for output in outputs.filter({ $0 is AVPlayerItemMetadataOutput }) {
       remove(output)

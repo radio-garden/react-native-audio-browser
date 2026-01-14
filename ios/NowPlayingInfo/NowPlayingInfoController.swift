@@ -6,6 +6,12 @@ import os.log
 // MPRemoteCommandCenter is not Sendable, but we only use it on the main thread
 extension MPRemoteCommandCenter: @retroactive @unchecked Sendable {}
 
+/// Wrapper to pass non-Sendable values across concurrency boundaries.
+/// Only use when you know the value is safe to transfer (e.g., value types, immutable objects).
+private struct UncheckedSendableBox<T>: @unchecked Sendable {
+  let value: T
+}
+
 /// Thread-safe controller for managing Now Playing info.
 ///
 /// On iOS 16+, uses `MPNowPlayingSession` with `automaticallyPublishNowPlayingInfo` to let the system
@@ -13,7 +19,9 @@ extension MPRemoteCommandCenter: @retroactive @unchecked Sendable {}
 /// (title, artist, artwork) which the automatic publishing doesn't handle.
 ///
 /// On iOS 15.x, falls back to manual `MPNowPlayingInfoCenter` updates for all properties.
-class NowPlayingInfoController {
+///
+/// Thread safety is managed via a concurrent DispatchQueue with barriers.
+class NowPlayingInfoController: @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingInfoController")
   private var infoQueue = DispatchQueue(
     label: "NowPlayingInfoController.infoQueue",
@@ -33,7 +41,7 @@ class NowPlayingInfoController {
   private var isAutomaticPublishingEnabled: Bool = false
 
   /// The current remote command center - either the session's (iOS 16+) or shared
-  private var _remoteCommandCenter: MPRemoteCommandCenter = MPRemoteCommandCenter.shared()
+  private var _remoteCommandCenter: MPRemoteCommandCenter = .shared()
 
   /// Returns the appropriate remote command center.
   /// On iOS 16+ with an active session, returns the session's command center.
@@ -72,35 +80,35 @@ class NowPlayingInfoController {
   ///   The `onRemoteCommandCenterChanged` callback will be invoked with the new command center.
   func linkPlayer(_ player: AVPlayer) {
     if #available(iOS 16.0, *) {
-      infoQueue.async(flags: .barrier) { [weak self] in
-        guard let self else { return }
-        logger.info("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
+      // Box callback to safely cross concurrency boundary
+      let boxedCallback = UncheckedSendableBox(value: onRemoteCommandCenterChanged)
+      infoQueue.async(flags: .barrier) {
+        self.logger.info("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
 
         // Store player reference
-        _linkedPlayer = player
+        self._linkedPlayer = player
 
         // Create a new session with the player (players is read-only after init)
         let session = MPNowPlayingSession(players: [player])
-        _nowPlayingSession = session
+        self._nowPlayingSession = session
 
         // Use the session's remote command center instead of the shared one
-        _remoteCommandCenter = session.remoteCommandCenter
+        self._remoteCommandCenter = session.remoteCommandCenter
 
         // Enable automatic publishing - system tracks elapsed time and duration from AVPlayer
         session.automaticallyPublishesNowPlayingInfo = true
 
         // Become the active session
-        session.becomeActiveIfPossible { [weak self] success in
-          self?.logger.info("MPNowPlayingSession becomeActiveIfPossible: \(success)")
+        session.becomeActiveIfPossible { success in
+          self.logger.info("MPNowPlayingSession becomeActiveIfPossible: \(success)")
         }
 
-        isAutomaticPublishingEnabled = true
+        self.isAutomaticPublishingEnabled = true
 
         // Notify about the command center change on main thread
-        let newCommandCenter = _remoteCommandCenter
-        let callback = onRemoteCommandCenterChanged
+        let newCommandCenter = self._remoteCommandCenter
         DispatchQueue.main.async {
-          callback?(newCommandCenter)
+          boxedCallback.value?(newCommandCenter)
         }
       }
     } else {
@@ -111,28 +119,28 @@ class NowPlayingInfoController {
   /// Unlinks the AVPlayer, disabling automatic publishing.
   func unlinkPlayer() {
     if #available(iOS 16.0, *) {
-      infoQueue.async(flags: .barrier) { [weak self] in
-        guard let self else { return }
-        logger.info("Unlinking AVPlayer from MPNowPlayingSession")
+      // Box callback to safely cross concurrency boundary
+      let boxedCallback = UncheckedSendableBox(value: onRemoteCommandCenterChanged)
+      infoQueue.async(flags: .barrier) {
+        self.logger.info("Unlinking AVPlayer from MPNowPlayingSession")
 
         // Clear player reference
-        _linkedPlayer = nil
+        self._linkedPlayer = nil
 
         // Disable automatic publishing and release the session
-        if let session = _nowPlayingSession as? MPNowPlayingSession {
+        if let session = self._nowPlayingSession as? MPNowPlayingSession {
           session.automaticallyPublishesNowPlayingInfo = false
         }
-        _nowPlayingSession = nil
-        isAutomaticPublishingEnabled = false
+        self._nowPlayingSession = nil
+        self.isAutomaticPublishingEnabled = false
 
         // Revert to shared command center
-        _remoteCommandCenter = MPRemoteCommandCenter.shared()
+        self._remoteCommandCenter = MPRemoteCommandCenter.shared()
 
         // Notify about the command center change on main thread
-        let newCommandCenter = _remoteCommandCenter
-        let callback = onRemoteCommandCenterChanged
+        let newCommandCenter = self._remoteCommandCenter
         DispatchQueue.main.async {
-          callback?(newCommandCenter)
+          boxedCallback.value?(newCommandCenter)
         }
       }
     }
@@ -154,14 +162,15 @@ class NowPlayingInfoController {
   /// Sets key-values and immediately updates the Now Playing Info Center.
   /// When automatic publishing is enabled (iOS 16+), playback-related keys are skipped.
   func set(keyValues: [NowPlayingInfoKeyValue]) {
-    infoQueue.async(flags: .barrier) { [weak self] in
-      guard let self else { return }
-      for keyValue in keyValues {
-        if !shouldSkipKey(keyValue.key) {
-          _info[keyValue.key] = keyValue.value
+    // Extract and box key-value pairs before closure to safely cross concurrency boundary
+    let boxedPairs = UncheckedSendableBox(value: keyValues.map { ($0.key, $0.value) })
+    infoQueue.async(flags: .barrier) {
+      for (key, value) in boxedPairs.value {
+        if !self.shouldSkipKey(key) {
+          self._info[key] = value
         }
       }
-      performUpdate()
+      self.performUpdate()
     }
   }
 
@@ -169,11 +178,12 @@ class NowPlayingInfoController {
   /// Useful for batching multiple updates - call update() when ready to commit.
   /// When automatic publishing is enabled (iOS 16+), playback-related keys are skipped.
   func setWithoutUpdate(keyValues: [NowPlayingInfoKeyValue]) {
-    infoQueue.async(flags: .barrier) { [weak self] in
-      guard let self else { return }
-      for keyValue in keyValues {
-        if !shouldSkipKey(keyValue.key) {
-          _info[keyValue.key] = keyValue.value
+    // Extract and box key-value pairs before closure to safely cross concurrency boundary
+    let boxedPairs = UncheckedSendableBox(value: keyValues.map { ($0.key, $0.value) })
+    infoQueue.async(flags: .barrier) {
+      for (key, value) in boxedPairs.value {
+        if !self.shouldSkipKey(key) {
+          self._info[key] = value
         }
       }
     }
@@ -182,11 +192,13 @@ class NowPlayingInfoController {
   /// Sets a single key-value and immediately updates the Now Playing Info Center.
   /// When automatic publishing is enabled (iOS 16+), playback-related keys are skipped.
   func set(keyValue: NowPlayingInfoKeyValue) {
-    infoQueue.async(flags: .barrier) { [weak self] in
-      guard let self else { return }
-      if !shouldSkipKey(keyValue.key) {
-        _info[keyValue.key] = keyValue.value
-        performUpdate()
+    // Box key and value before closure to safely cross concurrency boundary
+    let key = keyValue.key
+    let boxedValue = UncheckedSendableBox(value: keyValue.value)
+    infoQueue.async(flags: .barrier) {
+      if !self.shouldSkipKey(key) {
+        self._info[key] = boxedValue.value
+        self.performUpdate()
       }
     }
   }
@@ -195,9 +207,8 @@ class NowPlayingInfoController {
   /// Thread-safe - can be called from any thread.
   /// Use after calling setWithoutUpdate() to commit batched changes.
   func update() {
-    infoQueue.async(flags: .barrier) { [weak self] in
-      guard let self else { return }
-      performUpdate()
+    infoQueue.async(flags: .barrier) {
+      self.performUpdate()
     }
   }
 
@@ -219,7 +230,12 @@ class NowPlayingInfoController {
     if #available(iOS 16.0, *), isAutomaticPublishingEnabled {
       // iOS 16+ with automatic publishing: set metadata on player item
       // If no current item yet, info is stored in _info and will be applied when reapplyToCurrentItem() is called
-      _linkedPlayer?.currentItem?.nowPlayingInfo = _info
+      // AVPlayerItem.nowPlayingInfo is MainActor-isolated, so dispatch to main thread
+      let info = _info
+      let player = _linkedPlayer
+      DispatchQueue.main.async {
+        player?.currentItem?.nowPlayingInfo = info
+      }
     } else {
       // iOS 15.x or no automatic publishing: use MPNowPlayingInfoCenter
       infoCenter.nowPlayingInfo = _info
@@ -228,34 +244,40 @@ class NowPlayingInfoController {
 
   /// Prepares an AVPlayerItem with stored metadata before it becomes current.
   /// Call this before `replaceCurrentItem(with:)` so the item has metadata from the start.
+  /// Must be called from the main thread since AVPlayerItem.nowPlayingInfo is MainActor-isolated.
+  @MainActor
   func prepareItem(_ item: AVPlayerItem) {
-    infoQueue.sync {
-      if #available(iOS 16.0, *), isAutomaticPublishingEnabled {
-        item.nowPlayingInfo = _info
+    // Read state synchronously from the queue
+    let (shouldApply, info) = infoQueue.sync {
+      if #available(iOS 16.0, *) {
+        return (isAutomaticPublishingEnabled, _info)
       }
+      return (false, [:] as [String: Any])
+    }
+    // Apply on main thread (we're already on main due to @MainActor)
+    if #available(iOS 16.0, *), shouldApply {
+      item.nowPlayingInfo = info
     }
   }
 
   /// Clears all Now Playing info
   func clear() {
-    infoQueue.async(flags: .barrier) { [weak self] in
-      guard let self else { return }
-      _info = [:]
+    infoQueue.async(flags: .barrier) {
+      self._info = [:]
 
       // With automatic publishing, the session handles clearing when the player stops
       // Without automatic publishing, we need to clear MPNowPlayingInfoCenter manually
-      if !isAutomaticPublishingEnabled {
-        infoCenter.nowPlayingInfo = nil
+      if !self.isAutomaticPublishingEnabled {
+        self.infoCenter.nowPlayingInfo = nil
       }
     }
   }
 
   /// Sets the playback state (required for CarPlay Now Playing to show correct play/pause state)
   func setPlaybackState(_ state: MPNowPlayingPlaybackState) {
-    infoQueue.async(flags: .barrier) { [weak self] in
-      guard let self else { return }
-      logger.debug("setPlaybackState: \(state.rawValue)")
-      infoCenter.playbackState = state
+    infoQueue.async(flags: .barrier) {
+      self.logger.debug("setPlaybackState: \(state.rawValue)")
+      self.infoCenter.playbackState = state
     }
   }
 }

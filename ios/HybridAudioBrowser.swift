@@ -17,7 +17,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Shared Instance for CarPlay
 
   /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
-  nonisolated(unsafe) private(set) weak static var shared: HybridAudioBrowser?
+  private(set) nonisolated(unsafe) weak static var shared: HybridAudioBrowser?
 
   // MARK: - Private Properties
 
@@ -69,9 +69,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Uses MainActor.assumeIsolated when already on main thread, otherwise dispatches synchronously.
   private func onMainActor<T: Sendable>(_ work: @MainActor () -> T) -> T {
     if Thread.isMainThread {
-      return MainActor.assumeIsolated { work() }
+      MainActor.assumeIsolated { work() }
     } else {
-      return DispatchQueue.main.sync {
+      DispatchQueue.main.sync {
         MainActor.assumeIsolated { work() }
       }
     }
@@ -80,9 +80,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Executes a throwing closure on the main actor synchronously.
   private func onMainActor<T: Sendable>(_ work: @MainActor () throws -> T) throws -> T {
     if Thread.isMainThread {
-      return try MainActor.assumeIsolated { try work() }
+      try MainActor.assumeIsolated { try work() }
     } else {
-      return try DispatchQueue.main.sync {
+      try DispatchQueue.main.sync {
         try MainActor.assumeIsolated { try work() }
       }
     }
@@ -112,7 +112,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
     singleTrack: nil, androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, formatNavigationError: nil
+    carPlayNowPlayingButtons: nil, formatNavigationError: nil,
   ) {
     didSet {
       browserManager.config = BrowserConfig(from: configuration)
@@ -284,28 +284,27 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   private func handleNavigationError(_ error: Error, path: String) {
-    let navError: NavigationError
-    if let browserError = error as? BrowserError {
+    let navError = if let browserError = error as? BrowserError {
       switch browserError {
       case .contentNotFound:
-        navError = NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case let .httpError(code, _):
-        navError = NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
+        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
       case .networkError:
-        navError = NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .invalidConfiguration:
-        navError = NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       case .callbackError:
-        navError = NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+        NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
       }
     } else if let httpError = error as? HttpClient.HttpException {
       // HTTP error from HttpClient (non-2xx response)
-      navError = NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
+      NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
     } else if error is URLError {
       // Network error (connection failed, timeout, no internet, etc.)
-      navError = NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+      NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     } else {
-      navError = NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
+      NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
     }
 
     lastNavigationError = navError
@@ -327,23 +326,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   private func defaultFormattedError(_ error: NavigationError) -> FormattedNavigationError {
-    let title: String
-    switch error.code {
+    let title: String = switch error.code {
     case .contentNotFound:
-      title = "Content Not Found"
+      "Content Not Found"
     case .networkError:
-      title = "Network Error"
+      "Network Error"
     case .httpError:
       if let statusCode = error.statusCode {
         // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
-        title = HTTPURLResponse.localizedString(forStatusCode: Int(statusCode)).capitalized
+        HTTPURLResponse.localizedString(forStatusCode: Int(statusCode)).capitalized
       } else {
-        title = "Server Error"
+        "Server Error"
       }
     case .callbackError:
-      title = "Error"
+      "Error"
     case .unknownError:
-      title = "Error"
+      "Error"
     }
     return FormattedNavigationError(title: title, message: error.message)
   }
@@ -520,8 +518,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  public func updateOptions(options: NativeUpdateOptions) throws {
-    try onMainActor {
+  public func updateOptions(options: NativeUpdateOptions) {
+    onMainActor {
       // Update stored options
       playerOptions.update(from: options)
 
@@ -538,7 +536,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     let remoteCommands = playerOptions.capabilities.buildRemoteCommands(
       forwardJumpInterval: NSNumber(value: playerOptions.forwardJumpInterval),
       backwardJumpInterval: NSNumber(value: playerOptions.backwardJumpInterval),
-      playbackRates: playerOptions.playbackRates
+      playbackRates: playerOptions.playbackRates,
     )
 
     player.remoteCommands = remoteCommands

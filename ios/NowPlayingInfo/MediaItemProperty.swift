@@ -1,5 +1,5 @@
 import Foundation
-import MediaPlayer
+@preconcurrency import MediaPlayer
 
 /**
  Enum representing MPMediaItemProperties.

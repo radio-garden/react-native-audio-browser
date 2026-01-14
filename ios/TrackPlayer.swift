@@ -148,15 +148,18 @@ class TrackPlayer {
   // MARK: - AVPlayer Properties (from AVPlayerWrapper)
 
   /// Represents a seek operation that's pending while a track loads
-  private struct PendingSeek {
+  private struct PendingSeek: Sendable {
     let time: TimeInterval
-    let completion: ((Bool) -> Void)?
+    let completion: (@Sendable (Bool) -> Void)?
 
     func execute(on player: AVPlayer, delegate: TrackPlayer?) {
       let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
+      let seekTime = time
       player
         .seek(to: cmTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
-          delegate?.handleSeekCompleted(to: Double(time), didFinish: finished)
+          Task { @MainActor in
+            delegate?.handleSeekCompleted(to: Double(seekTime), didFinish: finished)
+          }
           completion?(finished)
         }
     }
@@ -174,7 +177,7 @@ class TrackPlayer {
     },
     onTimeControlStatusChange: { [weak self] status in
       Task { @MainActor in self?.avPlayerDidChangeTimeControlStatus(status) }
-    }
+    },
   )
 
   private lazy var playerTimeObserver: PlayerTimeObserver = .init(
@@ -184,7 +187,7 @@ class TrackPlayer {
     },
     onSecondElapsed: { [weak self] seconds in
       Task { @MainActor in self?.setNowPlayingCurrentTime(seconds: seconds) }
-    }
+    },
   )
 
   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
@@ -193,7 +196,7 @@ class TrackPlayer {
     },
     onFailedToPlayToEndTime: { [weak self] in
       Task { @MainActor in self?.playbackError = TrackPlayerError.PlaybackError.playbackFailed }
-    }
+    },
   )
 
   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
@@ -205,7 +208,7 @@ class TrackPlayer {
     },
     onTimedMetadataReceived: { [weak self] groups in
       self?.callbacks?.playerDidReceiveTimedMetadata(groups)
-    }
+    },
   )
 
   private lazy var progressUpdateManager: PlaybackProgressUpdateManager =
@@ -594,7 +597,7 @@ class TrackPlayer {
    - parameter seconds: The time to seek to.
    - parameter completion: Called when the seek operation completes. The Bool parameter indicates whether the seek finished successfully (true) or was interrupted/deferred (false).
    */
-  func seekTo(_ seconds: TimeInterval, completion: @escaping (Bool) -> Void) {
+  func seekTo(_ seconds: TimeInterval, completion: @escaping @Sendable (Bool) -> Void) {
     // If an track is currently being loaded asynchronously, defer the seek until it's ready.
     if state == .loading {
       // Cancel any previous pending seek before creating a new one
@@ -602,9 +605,12 @@ class TrackPlayer {
       pendingSeek = PendingSeek(time: seconds, completion: completion)
     } else if avPlayer.currentItem != nil {
       let time = CMTime(seconds: seconds, preferredTimescale: 1000)
+      let seekSeconds = seconds
       avPlayer
-        .seek(to: time, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
-          self.handleSeekCompleted(to: Double(seconds), didFinish: finished)
+        .seek(to: time, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { [weak self] finished in
+          Task { @MainActor in
+            self?.handleSeekCompleted(to: Double(seekSeconds), didFinish: finished)
+          }
           completion(finished)
         }
     } else {
@@ -691,7 +697,6 @@ class TrackPlayer {
 
   func clear() {
     clearTracks()
-    let playbackWasActive = playbackActive
     unloadAVPlayer()
     nowPlayingInfoController.unlinkPlayer()
     nowPlayingInfoController.clear()
@@ -720,7 +725,8 @@ class TrackPlayer {
 
       // Try to resolve artwork URL with size context for CDN optimization
       if let resolver = artworkUrlResolver,
-         let imageSource = await resolver(track, nowPlayingSize) {
+         let imageSource = await resolver(track, nowPlayingSize)
+      {
         logger.debug("loadArtworkForTrack: using resolved URL: \(imageSource.uri)")
         image = await loadImage(from: imageSource)
       } else {
@@ -892,7 +898,7 @@ class TrackPlayer {
         guard let (commonMetadata, chapterLocales, metadataFormats) = try? await pendingAsset.load(
           .commonMetadata,
           .availableChapterLocales,
-          .availableMetadataFormats
+          .availableMetadataFormats,
         ) else { return }
 
         guard !Task.isCancelled, pendingAsset == asset else { return }
@@ -906,19 +912,19 @@ class TrackPlayer {
             guard !Task.isCancelled else { return }
             if let chapters = try? await pendingAsset.loadChapterMetadataGroups(
               withTitleLocale: locale,
-              containingItemsWithCommonKeys: []
+              containingItemsWithCommonKeys: [],
             ) {
               callbacks?.playerDidReceiveChapterMetadata(chapters)
             }
           }
         } else {
-          let duration = (try? await pendingAsset.load(.duration)) ?? .zero
+          let duration = await (try? pendingAsset.load(.duration)) ?? .zero
           for format in metadataFormats {
             guard !Task.isCancelled else { return }
             if let metadata = try? await pendingAsset.loadMetadata(for: format) {
               let timeRange = CMTimeRange(
                 start: CMTime(seconds: 0, preferredTimescale: 1000),
-                end: duration
+                end: duration,
               )
               let group = AVTimedMetadataGroup(items: metadata, timeRange: timeRange)
               callbacks?.playerDidReceiveTimedMetadata([group])
@@ -1361,7 +1367,9 @@ class TrackPlayer {
   func replay() {
     seekTo(0) { [weak self] succeeded in
       if succeeded {
-        self?.play()
+        Task { @MainActor in
+          self?.play()
+        }
       }
     }
   }
@@ -1413,7 +1421,6 @@ class TrackPlayer {
         resolveAndLoadMedia(src: src, track: currentTrack)
       }
     } else {
-      let playbackWasActive = playbackActive
       unloadAVPlayer()
       nowPlayingInfoController.clear()
     }
@@ -1471,7 +1478,6 @@ class TrackPlayer {
 
   /// Loads the AVPlayer with a resolved media URL
   private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track _: Track) {
-
     guard let mediaUrl = URL(string: resolved.url) else {
       logger.error("Invalid media URL: \(resolved.url)")
       playbackError = TrackPlayerError.PlaybackError.invalidSourceUrl(resolved.url)
