@@ -143,7 +143,7 @@ server.on('error', (error) => {
 
 server.listen(PORT, () => {
   console.log(
-    `🎵 Audio Browser Test Server running on http://localhost:${PORT}`
+    `Audio Browser Test Server running on http://localhost:${PORT}`
   )
 
   console.log(
