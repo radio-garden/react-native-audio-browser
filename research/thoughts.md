@@ -1,3 +1,0 @@
-looking into this more and more I get the strong sense that it is a mistake to need js for AA to run.. just so many headaches with AA -> MediaLibraryService -> JS.. I have been putting more thought in cutting out the js middleman completely.. which also means cutting out all callbacks from native to js when it comes to player interaction..
-
-an alternative for AA is to just have it interact with a json based api -
