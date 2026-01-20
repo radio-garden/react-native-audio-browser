@@ -95,6 +95,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+    // Update thread-safe cache for access from non-main threads (e.g., retry policy)
+    player.playWhenReadyCache = playWhenReady
     player.callbacks?.onPlaybackPlayWhenReadyChanged(
       PlaybackPlayWhenReadyChangedEvent(playWhenReady)
     )

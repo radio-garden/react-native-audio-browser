@@ -83,6 +83,8 @@ class Player(internal val context: Context) {
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
+  /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
+  @Volatile internal var playWhenReadyCache = false
   private lateinit var mediaFactory: MediaFactory
   private lateinit var loadControl: DynamicLoadControl
   private var automaticBufferManager: AutomaticBufferManager? = null
@@ -358,6 +360,7 @@ class Player(internal val context: Context) {
   var playWhenReady: Boolean
     get() = exoPlayer.playWhenReady
     set(value) {
+      playWhenReadyCache = value
       exoPlayer.playWhenReady = value
     }
 
@@ -508,13 +511,13 @@ class Player(internal val context: Context) {
     }
     // Create MediaFactory with reference to browser for media URL transformation
     // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio
-    // focus)
+    // focus). Uses thread-safe cache since this is called from ExoPlayer's playback thread.
     mediaFactory =
       MediaFactory(
         context,
         cache,
         setupOptions.retryPolicy,
-        shouldRetry = { exoPlayer.playWhenReady },
+        shouldRetry = { playWhenReadyCache },
         transferListener = bandwidthMeter,
       ) { url ->
         browser?.getMediaRequestConfig(url)
