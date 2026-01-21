@@ -19,6 +19,9 @@ import com.margelo.nitro.core.NullType
 data class PartialAndroidSetupPlayerOptions(
   @DoNotStrip
   @Keep
+  val minBuffer: Double?,
+  @DoNotStrip
+  @Keep
   val audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?,
   @DoNotStrip
   @Keep
@@ -58,8 +61,8 @@ data class PartialAndroidSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
-      return PartialAndroidSetupPlayerOptions(audioOffload, retry, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
+    private fun fromCpp(minBuffer: Double?, audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
+      return PartialAndroidSetupPlayerOptions(minBuffer, audioOffload, retry, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
     }
   }
 }

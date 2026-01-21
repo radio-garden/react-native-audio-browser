@@ -432,11 +432,11 @@ class TrackPlayer {
   }
 
   /**
-   The amount of seconds to be buffered by the player. Default value is 0 seconds, this means the AVPlayer will choose an appropriate level of buffering. Setting `bufferDuration` to larger than zero automatically disables `automaticallyWaitsToMinimizeStalling`. Setting it back to zero automatically enables `automaticallyWaitsToMinimizeStalling`.
+   The amount of milliseconds to be buffered by the player. Default value is 0, this means the AVPlayer will choose an appropriate level of buffering. Setting `bufferDuration` to larger than zero automatically disables `automaticallyWaitsToMinimizeStalling`. Setting it back to zero automatically enables `automaticallyWaitsToMinimizeStalling`.
 
    [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
    */
-  var bufferDuration: TimeInterval = 0 {
+  var bufferDuration: Double = 0 {
     didSet {
       avPlayer.automaticallyWaitsToMinimizeStalling = bufferDuration == 0
     }
@@ -951,7 +951,7 @@ class TrackPlayer {
             }
 
             let avItem = AVPlayerItem(asset: pendingAsset)
-            avItem.preferredForwardBufferDuration = self.bufferDuration
+            avItem.preferredForwardBufferDuration = self.bufferDuration / 1000.0
             // Set metadata on item before it becomes current, so there's no gap
             self.nowPlayingInfoController.prepareItem(avItem)
             self.logger.debug("AVPlayerItem created, calling replaceCurrentItem")

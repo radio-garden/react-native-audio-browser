@@ -58,8 +58,6 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     PartialSetupPlayerOptions toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldMinBuffer = clazz->getField<jni::JDouble>("minBuffer");
-      jni::local_ref<jni::JDouble> minBuffer = this->getFieldValue(fieldMinBuffer);
       static const auto fieldAndroid = clazz->getField<JPartialAndroidSetupPlayerOptions>("android");
       jni::local_ref<JPartialAndroidSetupPlayerOptions> android = this->getFieldValue(fieldAndroid);
       static const auto fieldIos = clazz->getField<JPartialIOSSetupPlayerOptions>("ios");
@@ -67,7 +65,6 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldAutoUpdateMetadata = clazz->getField<jni::JBoolean>("autoUpdateMetadata");
       jni::local_ref<jni::JBoolean> autoUpdateMetadata = this->getFieldValue(fieldAutoUpdateMetadata);
       return PartialSetupPlayerOptions(
-        minBuffer != nullptr ? std::make_optional(minBuffer->value()) : std::nullopt,
         android != nullptr ? std::make_optional(android->toCpp()) : std::nullopt,
         ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt,
         autoUpdateMetadata != nullptr ? std::make_optional(static_cast<bool>(autoUpdateMetadata->value())) : std::nullopt
@@ -80,12 +77,11 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialSetupPlayerOptions::javaobject> fromCpp(const PartialSetupPlayerOptions& value) {
-      using JSignature = JPartialSetupPlayerOptions(jni::alias_ref<jni::JDouble>, jni::alias_ref<JPartialAndroidSetupPlayerOptions>, jni::alias_ref<JPartialIOSSetupPlayerOptions>, jni::alias_ref<jni::JBoolean>);
+      using JSignature = JPartialSetupPlayerOptions(jni::alias_ref<JPartialAndroidSetupPlayerOptions>, jni::alias_ref<JPartialIOSSetupPlayerOptions>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        value.minBuffer.has_value() ? jni::JDouble::valueOf(value.minBuffer.value()) : nullptr,
         value.android.has_value() ? JPartialAndroidSetupPlayerOptions::fromCpp(value.android.value()) : nullptr,
         value.ios.has_value() ? JPartialIOSSetupPlayerOptions::fromCpp(value.ios.value()) : nullptr,
         value.autoUpdateMetadata.has_value() ? jni::JBoolean::valueOf(value.autoUpdateMetadata.value()) : nullptr

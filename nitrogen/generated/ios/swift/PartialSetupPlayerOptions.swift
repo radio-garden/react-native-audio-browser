@@ -19,14 +19,8 @@ public extension PartialSetupPlayerOptions {
   /**
    * Create a new instance of `PartialSetupPlayerOptions`.
    */
-  init(minBuffer: Double?, android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Bool?) {
-    self.init({ () -> bridge.std__optional_double_ in
-      if let __unwrappedValue = minBuffer {
-        return bridge.create_std__optional_double_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_PartialAndroidSetupPlayerOptions_ in
+  init(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Bool?) {
+    self.init({ () -> bridge.std__optional_PartialAndroidSetupPlayerOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_PartialAndroidSetupPlayerOptions_(__unwrappedValue)
       } else {
@@ -47,23 +41,6 @@ public extension PartialSetupPlayerOptions {
     }())
   }
 
-  var minBuffer: Double? {
-    @inline(__always)
-    get {
-      return self.__minBuffer.value
-    }
-    @inline(__always)
-    set {
-      self.__minBuffer = { () -> bridge.std__optional_double_ in
-        if let __unwrappedValue = newValue {
-          return bridge.create_std__optional_double_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-  }
-  
   var android: PartialAndroidSetupPlayerOptions? {
     @inline(__always)
     get {

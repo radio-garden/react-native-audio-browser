@@ -19,8 +19,14 @@ public extension PartialIOSSetupPlayerOptions {
   /**
    * Create a new instance of `PartialIOSSetupPlayerOptions`.
    */
-  init(category: IOSCategory?, categoryMode: IOSCategoryMode?, categoryOptions: [IOSCategoryOptions]?, categoryPolicy: IOSCategoryPolicy?) {
-    self.init({ () -> bridge.std__optional_IOSCategory_ in
+  init(buffer: Double?, category: IOSCategory?, categoryMode: IOSCategoryMode?, categoryOptions: [IOSCategoryOptions]?, categoryPolicy: IOSCategoryPolicy?) {
+    self.init({ () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = buffer {
+        return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_IOSCategory_ in
       if let __unwrappedValue = category {
         return bridge.create_std__optional_IOSCategory_(__unwrappedValue)
       } else {
@@ -53,6 +59,23 @@ public extension PartialIOSSetupPlayerOptions {
     }())
   }
 
+  var buffer: Double? {
+    @inline(__always)
+    get {
+      return self.__buffer.value
+    }
+    @inline(__always)
+    set {
+      self.__buffer = { () -> bridge.std__optional_double_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_double_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
   var category: IOSCategory? {
     @inline(__always)
     get {

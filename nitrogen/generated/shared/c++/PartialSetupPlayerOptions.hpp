@@ -28,8 +28,8 @@ namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions
 // Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 
-#include <optional>
 #include "PartialAndroidSetupPlayerOptions.hpp"
+#include <optional>
 #include "PartialIOSSetupPlayerOptions.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -39,14 +39,13 @@ namespace margelo::nitro::audiobrowser {
    */
   struct PartialSetupPlayerOptions {
   public:
-    std::optional<double> minBuffer     SWIFT_PRIVATE;
     std::optional<PartialAndroidSetupPlayerOptions> android     SWIFT_PRIVATE;
     std::optional<PartialIOSSetupPlayerOptions> ios     SWIFT_PRIVATE;
     std::optional<bool> autoUpdateMetadata     SWIFT_PRIVATE;
 
   public:
     PartialSetupPlayerOptions() = default;
-    explicit PartialSetupPlayerOptions(std::optional<double> minBuffer, std::optional<PartialAndroidSetupPlayerOptions> android, std::optional<PartialIOSSetupPlayerOptions> ios, std::optional<bool> autoUpdateMetadata): minBuffer(minBuffer), android(android), ios(ios), autoUpdateMetadata(autoUpdateMetadata) {}
+    explicit PartialSetupPlayerOptions(std::optional<PartialAndroidSetupPlayerOptions> android, std::optional<PartialIOSSetupPlayerOptions> ios, std::optional<bool> autoUpdateMetadata): android(android), ios(ios), autoUpdateMetadata(autoUpdateMetadata) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -59,7 +58,6 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::PartialSetupPlayerOptions fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::PartialSetupPlayerOptions(
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "minBuffer")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::fromJSI(runtime, obj.getProperty(runtime, "android")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::fromJSI(runtime, obj.getProperty(runtime, "ios")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "autoUpdateMetadata"))
@@ -67,7 +65,6 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PartialSetupPlayerOptions& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, "minBuffer", JSIConverter<std::optional<double>>::toJSI(runtime, arg.minBuffer));
       obj.setProperty(runtime, "android", JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::toJSI(runtime, arg.android));
       obj.setProperty(runtime, "ios", JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::toJSI(runtime, arg.ios));
       obj.setProperty(runtime, "autoUpdateMetadata", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.autoUpdateMetadata));
@@ -81,7 +78,6 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "minBuffer"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::canConvert(runtime, obj.getProperty(runtime, "android"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::canConvert(runtime, obj.getProperty(runtime, "ios"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "autoUpdateMetadata"))) return false;

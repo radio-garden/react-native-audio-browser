@@ -40,6 +40,8 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     PartialIOSSetupPlayerOptions toCpp() const {
       static const auto clazz = javaClassStatic();
+      static const auto fieldBuffer = clazz->getField<jni::JDouble>("buffer");
+      jni::local_ref<jni::JDouble> buffer = this->getFieldValue(fieldBuffer);
       static const auto fieldCategory = clazz->getField<JIOSCategory>("category");
       jni::local_ref<JIOSCategory> category = this->getFieldValue(fieldCategory);
       static const auto fieldCategoryMode = clazz->getField<JIOSCategoryMode>("categoryMode");
@@ -49,6 +51,7 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldCategoryPolicy = clazz->getField<JIOSCategoryPolicy>("categoryPolicy");
       jni::local_ref<JIOSCategoryPolicy> categoryPolicy = this->getFieldValue(fieldCategoryPolicy);
       return PartialIOSSetupPlayerOptions(
+        buffer != nullptr ? std::make_optional(buffer->value()) : std::nullopt,
         category != nullptr ? std::make_optional(category->toCpp()) : std::nullopt,
         categoryMode != nullptr ? std::make_optional(categoryMode->toCpp()) : std::nullopt,
         categoryOptions != nullptr ? std::make_optional([&]() {
@@ -71,11 +74,12 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialIOSSetupPlayerOptions::javaobject> fromCpp(const PartialIOSSetupPlayerOptions& value) {
-      using JSignature = JPartialIOSSetupPlayerOptions(jni::alias_ref<JIOSCategory>, jni::alias_ref<JIOSCategoryMode>, jni::alias_ref<jni::JArrayClass<JIOSCategoryOptions>>, jni::alias_ref<JIOSCategoryPolicy>);
+      using JSignature = JPartialIOSSetupPlayerOptions(jni::alias_ref<jni::JDouble>, jni::alias_ref<JIOSCategory>, jni::alias_ref<JIOSCategoryMode>, jni::alias_ref<jni::JArrayClass<JIOSCategoryOptions>>, jni::alias_ref<JIOSCategoryPolicy>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
+        value.buffer.has_value() ? jni::JDouble::valueOf(value.buffer.value()) : nullptr,
         value.category.has_value() ? JIOSCategory::fromCpp(value.category.value()) : nullptr,
         value.categoryMode.has_value() ? JIOSCategoryMode::fromCpp(value.categoryMode.value()) : nullptr,
         value.categoryOptions.has_value() ? [&]() {

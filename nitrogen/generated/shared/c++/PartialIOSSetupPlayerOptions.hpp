@@ -32,8 +32,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 
-#include "IOSCategory.hpp"
 #include <optional>
+#include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include <vector>
@@ -46,6 +46,7 @@ namespace margelo::nitro::audiobrowser {
    */
   struct PartialIOSSetupPlayerOptions {
   public:
+    std::optional<double> buffer     SWIFT_PRIVATE;
     std::optional<IOSCategory> category     SWIFT_PRIVATE;
     std::optional<IOSCategoryMode> categoryMode     SWIFT_PRIVATE;
     std::optional<std::vector<IOSCategoryOptions>> categoryOptions     SWIFT_PRIVATE;
@@ -53,7 +54,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     PartialIOSSetupPlayerOptions() = default;
-    explicit PartialIOSSetupPlayerOptions(std::optional<IOSCategory> category, std::optional<IOSCategoryMode> categoryMode, std::optional<std::vector<IOSCategoryOptions>> categoryOptions, std::optional<IOSCategoryPolicy> categoryPolicy): category(category), categoryMode(categoryMode), categoryOptions(categoryOptions), categoryPolicy(categoryPolicy) {}
+    explicit PartialIOSSetupPlayerOptions(std::optional<double> buffer, std::optional<IOSCategory> category, std::optional<IOSCategoryMode> categoryMode, std::optional<std::vector<IOSCategoryOptions>> categoryOptions, std::optional<IOSCategoryPolicy> categoryPolicy): buffer(buffer), category(category), categoryMode(categoryMode), categoryOptions(categoryOptions), categoryPolicy(categoryPolicy) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -66,6 +67,7 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions(
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "buffer")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::IOSCategory>>::fromJSI(runtime, obj.getProperty(runtime, "category")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::IOSCategoryMode>>::fromJSI(runtime, obj.getProperty(runtime, "categoryMode")),
         JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::IOSCategoryOptions>>>::fromJSI(runtime, obj.getProperty(runtime, "categoryOptions")),
@@ -74,6 +76,7 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions& arg) {
       jsi::Object obj(runtime);
+      obj.setProperty(runtime, "buffer", JSIConverter<std::optional<double>>::toJSI(runtime, arg.buffer));
       obj.setProperty(runtime, "category", JSIConverter<std::optional<margelo::nitro::audiobrowser::IOSCategory>>::toJSI(runtime, arg.category));
       obj.setProperty(runtime, "categoryMode", JSIConverter<std::optional<margelo::nitro::audiobrowser::IOSCategoryMode>>::toJSI(runtime, arg.categoryMode));
       obj.setProperty(runtime, "categoryOptions", JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::IOSCategoryOptions>>>::toJSI(runtime, arg.categoryOptions));
@@ -88,6 +91,7 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "buffer"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::IOSCategory>>::canConvert(runtime, obj.getProperty(runtime, "category"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::IOSCategoryMode>>::canConvert(runtime, obj.getProperty(runtime, "categoryMode"))) return false;
       if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::IOSCategoryOptions>>>::canConvert(runtime, obj.getProperty(runtime, "categoryOptions"))) return false;

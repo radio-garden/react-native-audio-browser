@@ -19,6 +19,9 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class PartialIOSSetupPlayerOptions(
   @DoNotStrip
   @Keep
+  val buffer: Double?,
+  @DoNotStrip
+  @Keep
   val category: IOSCategory?,
   @DoNotStrip
   @Keep
@@ -40,8 +43,8 @@ data class PartialIOSSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(category: IOSCategory?, categoryMode: IOSCategoryMode?, categoryOptions: Array<IOSCategoryOptions>?, categoryPolicy: IOSCategoryPolicy?): PartialIOSSetupPlayerOptions {
-      return PartialIOSSetupPlayerOptions(category, categoryMode, categoryOptions, categoryPolicy)
+    private fun fromCpp(buffer: Double?, category: IOSCategory?, categoryMode: IOSCategoryMode?, categoryOptions: Array<IOSCategoryOptions>?, categoryPolicy: IOSCategoryPolicy?): PartialIOSSetupPlayerOptions {
+      return PartialIOSSetupPlayerOptions(buffer, category, categoryMode, categoryOptions, categoryPolicy)
     }
   }
 }

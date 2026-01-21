@@ -482,7 +482,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Player Setup
 
-  public func setupPlayer(options _: PartialSetupPlayerOptions) throws -> Promise<Void> {
+  public func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void> {
     Promise.async {
       // Configure audio session
       let session = AVAudioSession.sharedInstance()
@@ -495,6 +495,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)
+
+        // Apply buffer duration from options (in ms)
+        if let buffer = options.ios?.buffer {
+          player?.bufferDuration = buffer
+        }
 
         // Configure media URL resolver
         player?.mediaUrlResolver = { [weak self] src in

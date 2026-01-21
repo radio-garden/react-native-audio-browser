@@ -19,8 +19,14 @@ public extension PartialAndroidSetupPlayerOptions {
   /**
    * Create a new instance of `PartialAndroidSetupPlayerOptions`.
    */
-  init(audioOffload: Variant_Bool_AndroidAudioOffloadSettings?, retry: Variant_Bool_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Bool?, wakeMode: AndroidPlayerWakeMode?) {
-    self.init({ () -> bridge.std__optional_std__variant_bool__AndroidAudioOffloadSettings__ in
+  init(minBuffer: Double?, audioOffload: Variant_Bool_AndroidAudioOffloadSettings?, retry: Variant_Bool_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Bool?, wakeMode: AndroidPlayerWakeMode?) {
+    self.init({ () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = minBuffer {
+        return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__variant_bool__AndroidAudioOffloadSettings__ in
       if let __unwrappedValue = audioOffload {
         return bridge.create_std__optional_std__variant_bool__AndroidAudioOffloadSettings__({ () -> bridge.std__variant_bool__AndroidAudioOffloadSettings_ in
           switch __unwrappedValue {
@@ -104,6 +110,23 @@ public extension PartialAndroidSetupPlayerOptions {
     }())
   }
 
+  var minBuffer: Double? {
+    @inline(__always)
+    get {
+      return self.__minBuffer.value
+    }
+    @inline(__always)
+    set {
+      self.__minBuffer = { () -> bridge.std__optional_double_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_double_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
   var audioOffload: Variant_Bool_AndroidAudioOffloadSettings? {
     @inline(__always)
     get {

@@ -183,6 +183,14 @@ export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
  */
 export type PartialAndroidSetupPlayerOptions = {
   /**
+   * Minimum duration of media that the player will attempt to buffer in ms.
+   *
+   * @throws Will throw if min buffer is higher than max buffer.
+   * @default 50000
+   */
+  minBuffer?: number
+
+  /**
    * Enable audio offload for power-efficient playback.
    *
    * When enabled, audio decoding is offloaded to dedicated hardware, reducing
@@ -292,6 +300,14 @@ export type PartialAndroidSetupPlayerOptions = {
 }
 
 export interface AndroidSetupPlayerOptions {
+  /**
+   * Minimum duration of media that the player will attempt to buffer in ms.
+   *
+   * @throws Will throw if min buffer is higher than max buffer.
+   * @default 50000
+   */
+  minBuffer: number
+
   /**
    * Audio offload configuration for power-efficient playback.
    *
@@ -405,6 +421,18 @@ export interface AndroidSetupPlayerOptions {
 
 export interface PartialIOSSetupPlayerOptions {
   /**
+   * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
+   * chooses an appropriate level of buffering automatically.
+   *
+   * Setting this to a value greater than 0 disables `automaticallyWaitsToMinimizeStalling`.
+   *
+   * [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
+   *
+   * @default 0
+   */
+  buffer?: number
+
+  /**
    * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
    * for iOS. Sets on `play()`.
    */
@@ -436,6 +464,18 @@ export interface PartialIOSSetupPlayerOptions {
 
 export interface IOSSetupPlayerOptions {
   /**
+   * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
+   * chooses an appropriate level of buffering automatically.
+   *
+   * Setting this to a value greater than 0 disables `automaticallyWaitsToMinimizeStalling`.
+   *
+   * [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
+   *
+   * @default 0
+   */
+  buffer?: number
+
+  /**
    * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
    * for iOS. Sets on `play()`.
    */
@@ -466,16 +506,6 @@ export interface IOSSetupPlayerOptions {
 }
 
 export interface PartialSetupPlayerOptions {
-  /**
-   * Minimum duration of media that the player will attempt to buffer in seconds.
-   *
-   * Supported on Android & iOS.
-   *
-   * @throws Will throw on Android if min buffer is higher than max buffer.
-   * @default 50
-   */
-  minBuffer?: number
-
   /** Android-specific configuration options for setup */
   android?: PartialAndroidSetupPlayerOptions
   /** iOS-specific configuration options for setup */
@@ -488,16 +518,6 @@ export interface PartialSetupPlayerOptions {
 }
 
 export interface PlayerOptions {
-  /**
-   * Minimum duration of media that the player will attempt to buffer in seconds.
-   *
-   * Supported on Android & iOS.
-   *
-   * @throws Will throw on Android if min buffer is higher than max buffer.
-   * @default 50
-   */
-  minBuffer: number
-
   /** Android-specific configuration options for setup */
   android?: AndroidSetupPlayerOptions
   /** iOS-specific configuration options for setup */

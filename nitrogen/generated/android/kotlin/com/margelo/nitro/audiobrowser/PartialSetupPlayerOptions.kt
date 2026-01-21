@@ -19,9 +19,6 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class PartialSetupPlayerOptions(
   @DoNotStrip
   @Keep
-  val minBuffer: Double?,
-  @DoNotStrip
-  @Keep
   val android: PartialAndroidSetupPlayerOptions?,
   @DoNotStrip
   @Keep
@@ -40,8 +37,8 @@ data class PartialSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(minBuffer: Double?, android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?): PartialSetupPlayerOptions {
-      return PartialSetupPlayerOptions(minBuffer, android, ios, autoUpdateMetadata)
+    private fun fromCpp(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?): PartialSetupPlayerOptions {
+      return PartialSetupPlayerOptions(android, ios, autoUpdateMetadata)
     }
   }
 }

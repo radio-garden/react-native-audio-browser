@@ -33,11 +33,9 @@ sealed class RetryPolicy {
  * options configure the audio engine and system-level behavior.
  */
 data class PlayerSetupOptions(
-  // Cross-platform audio engine buffer options
+  // Android-specific options (all under android.* in JS)
   var minBuffer: Double = DefaultLoadControl.DEFAULT_MIN_BUFFER_MS.toDouble(),
   var audioContentType: AndroidAudioContentType = AndroidAudioContentType.MUSIC,
-
-  // Android-specific options (all under android.* in JS)
   var maxBuffer: Double = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS.toDouble(),
   var playBuffer: Double = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS.toDouble(),
   var rebufferBuffer: Double? = null,
@@ -56,11 +54,9 @@ data class PlayerSetupOptions(
     get() = rebufferBuffer == null
 
   fun update(options: PartialSetupPlayerOptions) {
-    // Cross-platform audio engine options
-    options.minBuffer?.let { minBuffer = it }
-
     // Android-specific options
     options.android?.let { android ->
+      android.minBuffer?.let { minBuffer = it }
       android.maxBuffer?.let { maxBuffer = it }
       android.playBuffer?.let { playBuffer = it }
       android.rebufferBuffer?.let { rebufferBuffer = it.asSecondOrNull() }
