@@ -204,6 +204,21 @@ export interface AudioBrowser
   getOnline(): boolean
   onOnlineChanged: (online: boolean) => void
 
+  // MARK: system volume
+  /**
+   * Gets the current system volume (0.0 to 1.0).
+   */
+  getSystemVolume(): number
+  /**
+   * Sets the system volume (0.0 to 1.0).
+   * Note: On iOS this is a no-op as Apple doesn't provide a public API to set system volume.
+   */
+  setSystemVolume(volume: number): void
+  /**
+   * Called when the system volume changes.
+   */
+  onSystemVolumeChanged: (volume: number) => void
+
   // MARK: equalizer (Android only)
   getEqualizerSettings(): EqualizerSettings | undefined
   setEqualizerEnabled(enabled: boolean): void

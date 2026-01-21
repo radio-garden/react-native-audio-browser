@@ -162,6 +162,8 @@ namespace margelo::nitro::audiobrowser {
     void setHandleRemoteStop(const std::optional<std::function<void()>>& handleRemoteStop) override;
     std::function<void(bool /* online */)> getOnOnlineChanged() override;
     void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) override;
+    std::function<void(double /* volume */)> getOnSystemVolumeChanged() override;
+    void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) override;
     std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() override;
     void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) override;
     std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() override;
@@ -226,6 +228,8 @@ namespace margelo::nitro::audiobrowser {
     void updateNowPlaying(const std::optional<NowPlayingUpdate>& update) override;
     std::optional<NowPlayingMetadata> getNowPlaying() override;
     bool getOnline() override;
+    double getSystemVolume() override;
+    void setSystemVolume(double volume) override;
     std::optional<EqualizerSettings> getEqualizerSettings() override;
     void setEqualizerEnabled(bool enabled) override;
     void setEqualizerPreset(const std::string& preset) override;

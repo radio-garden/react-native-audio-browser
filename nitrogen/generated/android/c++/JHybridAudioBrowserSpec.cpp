@@ -338,6 +338,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "NowPlayingMetadata.hpp"
 #include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JNowPlayingMetadata.hpp"
+#include "JFunc_void_double.hpp"
 #include "EqualizerSettings.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JEqualizerSettings.hpp"
@@ -1359,6 +1360,23 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onOnlineChanged */)>("setOnOnlineChanged_cxx");
     method(_javaPart, JFunc_void_bool_cxx::fromCpp(onOnlineChanged));
   }
+  std::function<void(double /* volume */)> JHybridAudioBrowserSpec::getOnSystemVolumeChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_double::javaobject>()>("getOnSystemVolumeChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(double /* volume */)> {
+      if (__result->isInstanceOf(JFunc_void_double_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_double_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_double, void(double)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_double::javaobject> /* onSystemVolumeChanged */)>("setOnSystemVolumeChanged_cxx");
+    method(_javaPart, JFunc_void_double_cxx::fromCpp(onSystemVolumeChanged));
+  }
   std::function<void(const EqualizerSettings& /* settings */)> JHybridAudioBrowserSpec::getOnEqualizerChanged() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_EqualizerSettings::javaobject>()>("getOnEqualizerChanged_cxx");
     auto __result = method(_javaPart);
@@ -1725,6 +1743,15 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<jboolean()>("getOnline");
     auto __result = method(_javaPart);
     return static_cast<bool>(__result);
+  }
+  double JHybridAudioBrowserSpec::getSystemVolume() {
+    static const auto method = javaClassStatic()->getMethod<double()>("getSystemVolume");
+    auto __result = method(_javaPart);
+    return __result;
+  }
+  void JHybridAudioBrowserSpec::setSystemVolume(double volume) {
+    static const auto method = javaClassStatic()->getMethod<void(double /* volume */)>("setSystemVolume");
+    method(_javaPart, volume);
   }
   std::optional<EqualizerSettings> JHybridAudioBrowserSpec::getEqualizerSettings() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JEqualizerSettings>()>("getEqualizerSettings");

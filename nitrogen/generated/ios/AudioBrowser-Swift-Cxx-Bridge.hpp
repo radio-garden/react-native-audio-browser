@@ -2466,6 +2466,28 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
+  // pragma MARK: std::function<void(double /* volume */)>
+  /**
+   * Specialized version of `std::function<void(double)>`.
+   */
+  using Func_void_double = std::function<void(double /* volume */)>;
+  /**
+   * Wrapper class for a `std::function<void(double / * volume * /)>`, this can be used from Swift.
+   */
+  class Func_void_double_Wrapper final {
+  public:
+    explicit Func_void_double_Wrapper(std::function<void(double /* volume */)>&& func): _function(std::make_unique<std::function<void(double /* volume */)>>(std::move(func))) {}
+    inline void call(double volume) const noexcept {
+      _function->operator()(volume);
+    }
+  private:
+    std::unique_ptr<std::function<void(double /* volume */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_double create_Func_void_double(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_double_Wrapper wrap_Func_void_double(Func_void_double value) noexcept {
+    return Func_void_double_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<EqualizerSettings>
   /**
    * Specialized version of `std::optional<EqualizerSettings>`.

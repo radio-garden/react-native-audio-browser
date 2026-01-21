@@ -24,6 +24,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
+  private var volumeObservation: NSKeyValueObservation?
   private var nowPlayingOverride: NowPlayingUpdate?
   private let playerOptions = PlayerUpdateOptions()
 
@@ -219,6 +220,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onEqualizerChanged: (EqualizerSettings) -> Void = { _ in }
   public var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Void = { _ in }
   public var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Void = { _ in }
+  public var onSystemVolumeChanged: (Double) -> Void = { _ in } {
+    didSet {
+      setupVolumeObserver()
+    }
+  }
 
   // MARK: - Initialization
 
@@ -890,6 +896,30 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func getOnline() throws -> Bool {
     networkMonitor.getOnline()
+  }
+
+  // MARK: - System Volume
+
+  /// Sets up KVO observer for system volume changes
+  private func setupVolumeObserver() {
+    // Remove existing observation if any
+    volumeObservation?.invalidate()
+
+    let audioSession = AVAudioSession.sharedInstance()
+    volumeObservation = audioSession.observe(\.outputVolume, options: [.new]) { [weak self] _, change in
+      guard let newVolume = change.newValue else { return }
+      self?.onSystemVolumeChanged(Double(newVolume))
+    }
+  }
+
+  public func getSystemVolume() throws -> Double {
+    Double(AVAudioSession.sharedInstance().outputVolume)
+  }
+
+  public func setSystemVolume(volume: Double) throws {
+    // iOS doesn't provide a public API to set system volume programmatically.
+    // Users must adjust volume via hardware buttons or Control Center.
+    logger.debug("setSystemVolume is not supported on iOS - volume must be adjusted via hardware buttons or Control Center")
   }
 
   // MARK: - Equalizer (unsupported on iOS)

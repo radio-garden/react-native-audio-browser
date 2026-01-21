@@ -126,6 +126,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("handleRemoteStop", &HybridAudioBrowserSpec::setHandleRemoteStop);
       prototype.registerHybridGetter("onOnlineChanged", &HybridAudioBrowserSpec::getOnOnlineChanged);
       prototype.registerHybridSetter("onOnlineChanged", &HybridAudioBrowserSpec::setOnOnlineChanged);
+      prototype.registerHybridGetter("onSystemVolumeChanged", &HybridAudioBrowserSpec::getOnSystemVolumeChanged);
+      prototype.registerHybridSetter("onSystemVolumeChanged", &HybridAudioBrowserSpec::setOnSystemVolumeChanged);
       prototype.registerHybridGetter("onEqualizerChanged", &HybridAudioBrowserSpec::getOnEqualizerChanged);
       prototype.registerHybridSetter("onEqualizerChanged", &HybridAudioBrowserSpec::setOnEqualizerChanged);
       prototype.registerHybridGetter("onBatteryWarningPendingChanged", &HybridAudioBrowserSpec::getOnBatteryWarningPendingChanged);
@@ -187,6 +189,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("updateNowPlaying", &HybridAudioBrowserSpec::updateNowPlaying);
       prototype.registerHybridMethod("getNowPlaying", &HybridAudioBrowserSpec::getNowPlaying);
       prototype.registerHybridMethod("getOnline", &HybridAudioBrowserSpec::getOnline);
+      prototype.registerHybridMethod("getSystemVolume", &HybridAudioBrowserSpec::getSystemVolume);
+      prototype.registerHybridMethod("setSystemVolume", &HybridAudioBrowserSpec::setSystemVolume);
       prototype.registerHybridMethod("getEqualizerSettings", &HybridAudioBrowserSpec::getEqualizerSettings);
       prototype.registerHybridMethod("setEqualizerEnabled", &HybridAudioBrowserSpec::setEqualizerEnabled);
       prototype.registerHybridMethod("setEqualizerPreset", &HybridAudioBrowserSpec::setEqualizerPreset);

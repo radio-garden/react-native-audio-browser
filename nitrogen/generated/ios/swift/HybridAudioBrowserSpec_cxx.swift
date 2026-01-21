@@ -1407,6 +1407,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onSystemVolumeChanged: bridge.Func_void_double {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_double in
+        let __closureWrapper = Func_void_double(self.__implementation.onSystemVolumeChanged)
+        return bridge.create_Func_void_double(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onSystemVolumeChanged = { () -> (Double) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_double(newValue)
+        return { (__volume: Double) -> Void in
+          __wrappedFunction.call(__volume)
+        }
+      }()
+    }
+  }
+  
   public final var onEqualizerChanged: bridge.Func_void_EqualizerSettings {
     @inline(__always)
     get {
@@ -2173,6 +2192,29 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getSystemVolume() -> bridge.Result_double_ {
+    do {
+      let __result = try self.__implementation.getSystemVolume()
+      let __resultCpp = __result
+      return bridge.create_Result_double_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_double_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setSystemVolume(volume: Double) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setSystemVolume(volume: volume)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
   

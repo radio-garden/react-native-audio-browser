@@ -29,6 +29,7 @@ import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.CoilBitmapLoader
+import com.audiobrowser.util.SystemVolumeMonitor
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
@@ -122,6 +123,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       setOnTabsChanged { tabs -> onTabsChanged(tabs) }
     }
 
+  private val systemVolumeMonitor = SystemVolumeMonitor(context)
+
   // MARK: Player state
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
@@ -179,6 +182,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onBatteryWarningPendingChanged: (BatteryWarningPendingChangedEvent) -> Unit = {}
   override var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Unit =
     {}
+  override var onSystemVolumeChanged: (Double) -> Unit = {}
 
   // MARK: Remote handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -224,6 +228,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Observe app lifecycle to check battery status on foreground
     // Must run on main thread as required by LifecycleRegistry.addObserver
     handler.post { ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver) }
+
+    // Observe system volume changes
+    systemVolumeMonitor.setOnVolumeChanged { volume ->
+      post { onSystemVolumeChanged(volume) }
+    }
   }
 
   // ============================================================================
@@ -799,6 +808,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // ============================================================================
 
   override fun getOnline(): Boolean = runBlockingOnMain { player.getOnline() }
+
+  // ============================================================================
+  // MARK: System Volume
+  // ============================================================================
+
+  override fun getSystemVolume(): Double = systemVolumeMonitor.getVolume()
+
+  override fun setSystemVolume(volume: Double) = systemVolumeMonitor.setVolume(volume)
 
   // ============================================================================
   // MARK: Equalizer (Android only)

@@ -348,6 +348,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(double /* volume */)>
+  Func_void_double create_Func_void_double(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_double::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](double volume) mutable -> void {
+      swiftClosure.call(volume);
+    };
+  }
+  
   // pragma MARK: std::function<void(const EqualizerSettings& /* settings */)>
   Func_void_EqualizerSettings create_Func_void_EqualizerSettings(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_EqualizerSettings::fromUnsafe(swiftClosureWrapper);

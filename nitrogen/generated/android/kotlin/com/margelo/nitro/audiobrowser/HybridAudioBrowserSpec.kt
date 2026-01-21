@@ -804,6 +804,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onOnlineChanged = value
     }
   
+  abstract var onSystemVolumeChanged: (volume: Double) -> Unit
+  
+  private var onSystemVolumeChanged_cxx: Func_void_double
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_double_java(onSystemVolumeChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onSystemVolumeChanged = value
+    }
+  
   abstract var onEqualizerChanged: (settings: EqualizerSettings) -> Unit
   
   private var onEqualizerChanged_cxx: Func_void_EqualizerSettings
@@ -1066,6 +1080,14 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getOnline(): Boolean
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getSystemVolume(): Double
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setSystemVolume(volume: Double): Unit
   
   @DoNotStrip
   @Keep

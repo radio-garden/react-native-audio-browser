@@ -690,6 +690,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) noexcept override {
       _swiftPart.setOnOnlineChanged(onOnlineChanged);
     }
+    inline std::function<void(double /* volume */)> getOnSystemVolumeChanged() noexcept override {
+      auto __result = _swiftPart.getOnSystemVolumeChanged();
+      return __result;
+    }
+    inline void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) noexcept override {
+      _swiftPart.setOnSystemVolumeChanged(onSystemVolumeChanged);
+    }
     inline std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() noexcept override {
       auto __result = _swiftPart.getOnEqualizerChanged();
       return __result;
@@ -1089,6 +1096,20 @@ namespace margelo::nitro::audiobrowser {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline double getSystemVolume() override {
+      auto __result = _swiftPart.getSystemVolume();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void setSystemVolume(double volume) override {
+      auto __result = _swiftPart.setSystemVolume(std::forward<decltype(volume)>(volume));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline std::optional<EqualizerSettings> getEqualizerSettings() override {
       auto __result = _swiftPart.getEqualizerSettings();
