@@ -57,23 +57,25 @@ extension TrackMetadata {
       }
 
       // Check ID3-specific identifiers for additional fields
-      switch item.identifier {
-      case .id3MetadataSubtitle:
-        subtitle = item.stringValue
-      case .id3MetadataTrackNumber:
-        trackNumber = item.stringValue
-      case .id3MetadataComposer:
-        composer = item.stringValue
-      case .id3MetadataConductor:
-        conductor = item.stringValue
-      case .id3MetadataContentType:
-        genre = item.stringValue
-      case .id3MetadataRecordingTime:
-        creationDate = item.stringValue
-      case .id3MetadataYear:
-        creationYear = creationYear ?? item.stringValue
-      default:
-        break
+      if item.keySpace == .id3, let key = item.key as? String {
+        switch key {
+        case "TIT3": // Subtitle
+          subtitle = subtitle ?? item.stringValue
+        case "TRCK": // Track number
+          trackNumber = trackNumber ?? item.stringValue
+        case "TCOM": // Composer
+          composer = composer ?? item.stringValue
+        case "TPE3": // Conductor
+          conductor = conductor ?? item.stringValue
+        case "TCON": // Content type (genre)
+          genre = genre ?? item.stringValue
+        case "TDRC": // Recording time (ID3v2.4)
+          creationDate = creationDate ?? item.stringValue
+        case "TYER": // Year (ID3v2.3)
+          creationYear = creationYear ?? item.stringValue
+        default:
+          break
+        }
       }
 
       // Check iTunes-specific identifiers
