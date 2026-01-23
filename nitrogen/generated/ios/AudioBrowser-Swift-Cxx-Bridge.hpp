@@ -1288,50 +1288,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__AndroidAudioOffloadSettings_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
-  /**
-   * Specialized version of `std::optional<std::variant<bool, RetryConfig>>`.
-   */
-  using std__optional_std__variant_bool__RetryConfig__ = std::optional<std::variant<bool, RetryConfig>>;
-  inline std::optional<std::variant<bool, RetryConfig>> create_std__optional_std__variant_bool__RetryConfig__(const std::variant<bool, RetryConfig>& value) noexcept {
-    return std::optional<std::variant<bool, RetryConfig>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
-    return *optional;
-  }
-  
-  // pragma MARK: std::variant<bool, RetryConfig>
-  /**
-   * Wrapper struct for `std::variant<bool, RetryConfig>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
-   */
-  struct std__variant_bool__RetryConfig_ {
-    std::variant<bool, RetryConfig> variant;
-    std__variant_bool__RetryConfig_(std::variant<bool, RetryConfig> variant): variant(variant) { }
-    operator std::variant<bool, RetryConfig>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline bool get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline RetryConfig get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-  };
-  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(bool value) noexcept {
-    return std__variant_bool__RetryConfig_(value);
-  }
-  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(const RetryConfig& value) noexcept {
-    return std__variant_bool__RetryConfig_(value);
-  }
-  
   // pragma MARK: std::optional<std::variant<nitro::NullType, double>>
   /**
    * Specialized version of `std::optional<std::variant<nitro::NullType, double>>`.
@@ -1490,6 +1446,50 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline IOSCategoryPolicy get_std__optional_IOSCategoryPolicy_(const std::optional<IOSCategoryPolicy>& optional) noexcept {
     return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
+  /**
+   * Specialized version of `std::optional<std::variant<bool, RetryConfig>>`.
+   */
+  using std__optional_std__variant_bool__RetryConfig__ = std::optional<std::variant<bool, RetryConfig>>;
+  inline std::optional<std::variant<bool, RetryConfig>> create_std__optional_std__variant_bool__RetryConfig__(const std::variant<bool, RetryConfig>& value) noexcept {
+    return std::optional<std::variant<bool, RetryConfig>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::variant<bool, RetryConfig>
+  /**
+   * Wrapper struct for `std::variant<bool, RetryConfig>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_bool__RetryConfig_ {
+    std::variant<bool, RetryConfig> variant;
+    std__variant_bool__RetryConfig_(std::variant<bool, RetryConfig> variant): variant(variant) { }
+    operator std::variant<bool, RetryConfig>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline bool get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline RetryConfig get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(bool value) noexcept {
+    return std__variant_bool__RetryConfig_(value);
+  }
+  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(const RetryConfig& value) noexcept {
+    return std__variant_bool__RetryConfig_(value);
   }
   
   // pragma MARK: std::optional<NitroAndroidUpdateOptions>

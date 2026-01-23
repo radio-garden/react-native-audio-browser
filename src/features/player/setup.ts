@@ -159,13 +159,21 @@ export interface AndroidAudioOffloadSettings {
 }
 
 /**
- * Configuration for limited retry behavior.
+ * Configuration for retry behavior.
  */
 export type RetryConfig = {
   /**
    * Maximum number of retry attempts before giving up.
    */
   maxRetries: number
+
+  /**
+   * Maximum duration in milliseconds to keep retrying before giving up.
+   * This prevents surprising playback resumption after long periods offline.
+   *
+   * @default 120000 (2 minutes)
+   */
+  maxRetryDurationMs?: number
 }
 
 /**
@@ -204,18 +212,6 @@ export type PartialAndroidSetupPlayerOptions = {
    * @default false
    */
   audioOffload?: boolean | AndroidAudioOffloadSettings
-
-  /**
-   * Retry policy for load errors (network failures, timeouts, etc.)
-   * - `true`: Retry indefinitely with exponential backoff (good for streaming)
-   * - `false`/`undefined`: Use ExoPlayer's default behavior (limited retries, surfaces errors)
-   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
-   *
-   * Exponential backoff delays: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped)
-   *
-   * @default false
-   */
-  retry?: boolean | RetryConfig
 
   /**
    * Maximum duration of media that the player will attempt to buffer in ms.
@@ -324,18 +320,6 @@ export interface AndroidSetupPlayerOptions {
    * @see https://developer.android.com/media/media3/exoplayer/track-selection#audioOffload
    */
   audioOffload: boolean | AndroidAudioOffloadSettings
-
-  /**
-   * Retry policy for load errors (network failures, timeouts, etc.)
-   * - `true`: Retry indefinitely with exponential backoff (good for streaming)
-   * - `false`/`undefined`: Use ExoPlayer's default behavior (limited retries, surfaces errors)
-   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
-   *
-   * Exponential backoff delays: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped)
-   *
-   * @default false
-   */
-  retry: boolean | RetryConfig
 
   /**
    * Maximum duration of media that the player will attempt to buffer in ms.
@@ -515,6 +499,19 @@ export interface PartialSetupPlayerOptions {
    * Defaults to `true`.
    */
   autoUpdateMetadata?: boolean
+
+  /**
+   * Retry policy for load errors (network failures, timeouts, etc.)
+   * - `true`: Retry indefinitely with exponential backoff (2 minute timeout)
+   * - `false`/`undefined`: No automatic retry (default)
+   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
+   * - `{ maxRetries: n, maxRetryDurationMs: m }`: Retry with custom timeout
+   *
+   * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
+   *
+   * @default false
+   */
+  retry?: boolean | RetryConfig
 }
 
 export interface PlayerOptions {
@@ -527,6 +524,19 @@ export interface PlayerOptions {
    * Defaults to `true`.
    */
   autoUpdateMetadata: boolean
+
+  /**
+   * Retry policy for load errors (network failures, timeouts, etc.)
+   * - `true`: Retry indefinitely with exponential backoff (2 minute timeout)
+   * - `false`/`undefined`: No automatic retry (default)
+   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
+   * - `{ maxRetries: n, maxRetryDurationMs: m }`: Retry with custom timeout
+   *
+   * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
+   *
+   * @default false
+   */
+  retry?: boolean | RetryConfig
 }
 
 // MARK: - Lifecycle

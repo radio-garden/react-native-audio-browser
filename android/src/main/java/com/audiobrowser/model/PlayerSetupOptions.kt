@@ -22,10 +22,10 @@ sealed class RetryPolicy {
   data object Default : RetryPolicy()
 
   /** Retry indefinitely with exponential backoff */
-  data object Infinite : RetryPolicy()
+  data class Infinite(val maxRetryDurationMs: Long? = null) : RetryPolicy()
 
   /** Retry up to maxRetries times with exponential backoff */
-  data class Limited(val maxRetries: Int) : RetryPolicy()
+  data class Limited(val maxRetries: Int, val maxRetryDurationMs: Long? = null) : RetryPolicy()
 }
 
 /**
@@ -80,17 +80,22 @@ data class PlayerSetupOptions(
             }
           }
       }
-      android.retry?.let {
-        retryPolicy =
-          when (it) {
-            is Variant_Boolean_RetryConfig.First -> {
-              if (it.value) RetryPolicy.Infinite else RetryPolicy.Default
-            }
-            is Variant_Boolean_RetryConfig.Second -> {
-              RetryPolicy.Limited(it.value.maxRetries.toInt())
-            }
+    }
+
+    // Top-level cross-platform options
+    options.retry?.let {
+      retryPolicy =
+        when (it) {
+          is Variant_Boolean_RetryConfig.First -> {
+            if (it.value) RetryPolicy.Infinite() else RetryPolicy.Default
           }
-      }
+          is Variant_Boolean_RetryConfig.Second -> {
+            RetryPolicy.Limited(
+              maxRetries = it.value.maxRetries.toInt(),
+              maxRetryDurationMs = it.value.maxRetryDurationMs?.toLong(),
+            )
+          }
+        }
     }
   }
 }

@@ -86,6 +86,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Clear now playing override when track changes (new track = clean slate)
     player.clearNowPlayingOverride()
 
+    // Reset retry timer so new track gets fresh 2-minute window
+    player.resetRetryTimer()
+
     // Notify JS of the now playing metadata for the new track
     player.getNowPlaying()?.let { player.callbacks?.onNowPlayingChanged(it) }
 

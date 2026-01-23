@@ -64,10 +64,13 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JPartialIOSSetupPlayerOptions> ios = this->getFieldValue(fieldIos);
       static const auto fieldAutoUpdateMetadata = clazz->getField<jni::JBoolean>("autoUpdateMetadata");
       jni::local_ref<jni::JBoolean> autoUpdateMetadata = this->getFieldValue(fieldAutoUpdateMetadata);
+      static const auto fieldRetry = clazz->getField<JVariant_Boolean_RetryConfig>("retry");
+      jni::local_ref<JVariant_Boolean_RetryConfig> retry = this->getFieldValue(fieldRetry);
       return PartialSetupPlayerOptions(
         android != nullptr ? std::make_optional(android->toCpp()) : std::nullopt,
         ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt,
-        autoUpdateMetadata != nullptr ? std::make_optional(static_cast<bool>(autoUpdateMetadata->value())) : std::nullopt
+        autoUpdateMetadata != nullptr ? std::make_optional(static_cast<bool>(autoUpdateMetadata->value())) : std::nullopt,
+        retry != nullptr ? std::make_optional(retry->toCpp()) : std::nullopt
       );
     }
 
@@ -77,14 +80,15 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialSetupPlayerOptions::javaobject> fromCpp(const PartialSetupPlayerOptions& value) {
-      using JSignature = JPartialSetupPlayerOptions(jni::alias_ref<JPartialAndroidSetupPlayerOptions>, jni::alias_ref<JPartialIOSSetupPlayerOptions>, jni::alias_ref<jni::JBoolean>);
+      using JSignature = JPartialSetupPlayerOptions(jni::alias_ref<JPartialAndroidSetupPlayerOptions>, jni::alias_ref<JPartialIOSSetupPlayerOptions>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JVariant_Boolean_RetryConfig>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.android.has_value() ? JPartialAndroidSetupPlayerOptions::fromCpp(value.android.value()) : nullptr,
         value.ios.has_value() ? JPartialIOSSetupPlayerOptions::fromCpp(value.ios.value()) : nullptr,
-        value.autoUpdateMetadata.has_value() ? jni::JBoolean::valueOf(value.autoUpdateMetadata.value()) : nullptr
+        value.autoUpdateMetadata.has_value() ? jni::JBoolean::valueOf(value.autoUpdateMetadata.value()) : nullptr,
+        value.retry.has_value() ? JVariant_Boolean_RetryConfig::fromCpp(value.retry.value()) : nullptr
       );
     }
   };

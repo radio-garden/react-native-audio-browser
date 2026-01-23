@@ -25,7 +25,7 @@
 
 
 
-
+#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -35,10 +35,11 @@ namespace margelo::nitro::audiobrowser {
   struct RetryConfig {
   public:
     double maxRetries     SWIFT_PRIVATE;
+    std::optional<double> maxRetryDurationMs     SWIFT_PRIVATE;
 
   public:
     RetryConfig() = default;
-    explicit RetryConfig(double maxRetries): maxRetries(maxRetries) {}
+    explicit RetryConfig(double maxRetries, std::optional<double> maxRetryDurationMs): maxRetries(maxRetries), maxRetryDurationMs(maxRetryDurationMs) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -51,12 +52,14 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::RetryConfig fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::RetryConfig(
-        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, "maxRetries"))
+        JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, "maxRetries")),
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, "maxRetryDurationMs"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::RetryConfig& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, "maxRetries", JSIConverter<double>::toJSI(runtime, arg.maxRetries));
+      obj.setProperty(runtime, "maxRetryDurationMs", JSIConverter<std::optional<double>>::toJSI(runtime, arg.maxRetryDurationMs));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -68,6 +71,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, "maxRetries"))) return false;
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, "maxRetryDurationMs"))) return false;
       return true;
     }
   };

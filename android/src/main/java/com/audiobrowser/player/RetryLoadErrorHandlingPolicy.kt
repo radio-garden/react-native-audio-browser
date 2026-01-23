@@ -12,18 +12,36 @@ import timber.log.Timber
 /**
  * Custom LoadErrorHandlingPolicy that retries on recoverable IO errors with exponential backoff.
  *
+ * When a network monitor is provided and the device is offline during a network error, the policy
+ * will use a shorter retry delay and the network restoration callback can trigger an immediate
+ * retry when connectivity is restored.
+ *
  * @param maxRetries Maximum number of retries, or null for infinite retries
+ * @param maxRetryDurationMs Maximum duration to keep retrying before giving up, or null for default (2 minutes)
  * @param shouldRetry Optional callback to check if retry should proceed (e.g., check playWhenReady)
+ * @param isOnline Optional callback to check current network state
+ * @param onRetryPending Optional callback invoked when a retry is pending (for network restoration
+ *   acceleration)
  */
 class RetryLoadErrorHandlingPolicy(
   private val maxRetries: Int? = null,
+  maxRetryDurationMs: Long? = null,
   private val shouldRetry: () -> Boolean = { true },
+  private val isOnline: () -> Boolean = { true },
+  private val onRetryPending: ((isNetworkError: Boolean) -> Unit)? = null,
 ) : DefaultLoadErrorHandlingPolicy() {
 
   companion object {
     private const val INITIAL_RETRY_DELAY_MS = 1000L // 1 second
     private const val MAX_RETRY_DELAY_MS = 5000L // 5 seconds cap
     private const val BACKOFF_MULTIPLIER = 1.5
+    // When offline, use a short fixed delay instead of exponential backoff.
+    // ExoPlayer's retry timer can't be interrupted, so we use a short delay to:
+    // 1. Allow our network restoration callback to trigger immediate retry
+    // 2. Keep polling in case the callback doesn't fire
+    private const val OFFLINE_RETRY_DELAY_MS = 1000L
+    // Default maximum duration to keep retrying before giving up (in milliseconds).
+    private const val DEFAULT_MAX_RETRY_DURATION_MS = 120_000L // 2 minutes
 
     // HTTP status codes that are worth retrying
     private val RETRYABLE_HTTP_STATUS_CODES =
@@ -35,6 +53,19 @@ class RetryLoadErrorHandlingPolicy(
         503, // Service Unavailable
         504, // Gateway Timeout
       )
+  }
+
+  // Maximum duration to keep retrying before giving up.
+  // This prevents surprising playback resumption after long periods offline.
+  private val maxRetryDurationMs: Long = maxRetryDurationMs ?: DEFAULT_MAX_RETRY_DURATION_MS
+
+  // Track when we started retrying to enforce max duration
+  @Volatile
+  private var firstErrorTime: Long? = null
+
+  /** Resets the retry timer. Call when track changes. */
+  fun reset() {
+    firstErrorTime = null
   }
 
   /** Calculates exponential backoff delay: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped) */
@@ -64,6 +95,7 @@ class RetryLoadErrorHandlingPolicy(
   override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
     val exception = loadErrorInfo.exception
     val errorCount = loadErrorInfo.errorCount
+    val currentTime = System.currentTimeMillis()
 
     // Don't retry if player is paused/stopped (e.g., another app took audio focus)
     if (!shouldRetry()) {
@@ -77,46 +109,78 @@ class RetryLoadErrorHandlingPolicy(
       return C.TIME_UNSET
     }
 
-    // For recoverable IO errors, return retry delay with exponential backoff
-    val isRecoverableError =
-      when {
-        exception is PlaybackException -> {
-          when (exception.errorCode) {
-            // Network errors are always retryable
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> true
-            // HTTP errors need status code inspection
-            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> isRetryableHttpError(exception)
-            // Unspecified IO errors might be transient
-            PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> true
-            // These are permanent failures, don't retry:
-            // - ERROR_CODE_IO_FILE_NOT_FOUND (404)
-            // - ERROR_CODE_IO_NO_PERMISSION (403)
-            // - ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED (config issue)
-            // - ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE (seek issue)
-            else -> false
-          }
-        }
-        // Catch IOExceptions that haven't been wrapped in PlaybackException yet
-        // Check for retryable HTTP errors first
-        isRetryableHttpError(exception) -> true
-        // Generic IOExceptions (not HTTP-related) are likely network issues
-        exception is java.io.IOException || exception.cause is java.io.IOException -> {
-          // But not if it's an HTTP error we already determined isn't retryable
-          exception !is HttpDataSource.InvalidResponseCodeException
-        }
-        else -> false
-      }
+    // Track when we started retrying
+    if (firstErrorTime == null) {
+      firstErrorTime = currentTime
+    }
 
-    return if (isRecoverableError) {
-      val delay = calculateBackoffDelay(errorCount)
+    // Check if we've been retrying too long (prevents surprising resumption after long offline)
+    val startTime = firstErrorTime
+    if (startTime != null) {
+      val elapsed = currentTime - startTime
+      if (elapsed >= maxRetryDurationMs) {
+        Timber.d("Max retry duration (${maxRetryDurationMs}ms) exceeded after ${elapsed}ms, giving up")
+        return C.TIME_UNSET
+      }
+    }
+
+    // Classify the error
+    val errorClassification = classifyError(exception)
+
+    return if (errorClassification.isRecoverable) {
+      // Check if we're offline during a network error
+      val currentlyOffline = !isOnline()
+      val isNetworkError = errorClassification.isNetworkError
+
+      val delay =
+        if (currentlyOffline && isNetworkError) {
+          // Use shorter delay when offline - we'll retry immediately when network comes back
+          Timber.d(
+            "Device is offline, using short retry delay (will accelerate when network returns)"
+          )
+          OFFLINE_RETRY_DELAY_MS
+        } else {
+          calculateBackoffDelay(errorCount)
+        }
+
       Timber.d(
-        "Retrying after IO error (attempt $errorCount, delay ${delay}ms): ${exception.message}"
+        "Retrying after IO error (attempt $errorCount, delay ${delay}ms, offline=$currentlyOffline): ${exception.message}"
       )
+
+      // Notify that a retry is pending (for network restoration acceleration)
+      onRetryPending?.invoke(isNetworkError)
+
       delay
     } else {
       // For non-recoverable errors, use default behavior (no retry)
       super.getRetryDelayMsFor(loadErrorInfo)
+    }
+  }
+
+  /** Classification result for an error */
+  private data class ErrorClassification(val isRecoverable: Boolean, val isNetworkError: Boolean)
+
+  /** Classifies whether an error is recoverable and whether it's network-related */
+  private fun classifyError(exception: Throwable): ErrorClassification {
+    return when {
+      exception is PlaybackException -> {
+        when (exception.errorCode) {
+          // Clearly transient network errors
+          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+          PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
+            ErrorClassification(isRecoverable = true, isNetworkError = true)
+          // HTTP errors - retry on server errors and specific client errors
+          PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
+            val isRetryable = isRetryableHttpError(exception)
+            ErrorClassification(isRecoverable = isRetryable, isNetworkError = isRetryable)
+          }
+          else -> ErrorClassification(isRecoverable = false, isNetworkError = false)
+        }
+      }
+      // HTTP errors outside PlaybackException wrapper
+      isRetryableHttpError(exception) ->
+        ErrorClassification(isRecoverable = true, isNetworkError = true)
+      else -> ErrorClassification(isRecoverable = false, isNetworkError = false)
     }
   }
 

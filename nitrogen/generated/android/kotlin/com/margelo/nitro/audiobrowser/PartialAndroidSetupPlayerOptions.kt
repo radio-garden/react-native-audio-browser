@@ -25,9 +25,6 @@ data class PartialAndroidSetupPlayerOptions(
   val audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?,
   @DoNotStrip
   @Keep
-  val retry: Variant_Boolean_RetryConfig?,
-  @DoNotStrip
-  @Keep
   val maxBuffer: Double?,
   @DoNotStrip
   @Keep
@@ -61,8 +58,8 @@ data class PartialAndroidSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(minBuffer: Double?, audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, retry: Variant_Boolean_RetryConfig?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
-      return PartialAndroidSetupPlayerOptions(minBuffer, audioOffload, retry, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
+    private fun fromCpp(minBuffer: Double?, audioOffload: Variant_Boolean_AndroidAudioOffloadSettings?, maxBuffer: Double?, backBuffer: Double?, playBuffer: Double?, rebufferBuffer: Variant_NullType_Double?, maxCacheSize: Double?, audioContentType: AndroidAudioContentType?, handleAudioBecomingNoisy: Boolean?, wakeMode: AndroidPlayerWakeMode?): PartialAndroidSetupPlayerOptions {
+      return PartialAndroidSetupPlayerOptions(minBuffer, audioOffload, maxBuffer, backBuffer, playBuffer, rebufferBuffer, maxCacheSize, audioContentType, handleAudioBecomingNoisy, wakeMode)
     }
   }
 }

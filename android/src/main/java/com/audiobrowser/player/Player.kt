@@ -89,6 +89,12 @@ class Player(internal val context: Context) {
   private lateinit var loadControl: DynamicLoadControl
   private var automaticBufferManager: AutomaticBufferManager? = null
 
+  /**
+   * Tracks whether a network-related retry is pending. When true, network restoration will trigger
+   * an immediate retry via exoPlayer.prepare().
+   */
+  @Volatile private var pendingNetworkRetry = false
+
   private var _browser: AudioBrowser? = null
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
@@ -512,12 +518,21 @@ class Player(internal val context: Context) {
     // Create MediaFactory with reference to browser for media URL transformation
     // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio
     // focus). Uses thread-safe cache since this is called from ExoPlayer's playback thread.
+    // isOnline and onRetryPending enable network-aware retry acceleration.
     mediaFactory =
       MediaFactory(
         context,
         cache,
         setupOptions.retryPolicy,
         shouldRetry = { playWhenReadyCache },
+        isOnline = { networkMonitor.getOnline() },
+        onRetryPending = { isNetworkError ->
+          // Track pending network retries for acceleration when connectivity returns
+          pendingNetworkRetry = isNetworkError
+          if (isNetworkError) {
+            Timber.d("Network retry pending, will accelerate on connectivity restoration")
+          }
+        },
         transferListener = bandwidthMeter,
       ) { url ->
         browser?.getMediaRequestConfig(url)
@@ -606,11 +621,24 @@ class Player(internal val context: Context) {
 
   /**
    * Starts observing network connectivity changes and invokes the callback when state changes.
+   * Also handles accelerating pending network retries when connectivity is restored.
    *
    * @param scope The coroutine scope to use for observation
    */
   fun observeNetworkConnectivity(scope: kotlinx.coroutines.CoroutineScope) {
-    networkMonitor.observeOnline(scope) { isOnline -> callbacks?.onOnlineChanged(isOnline) }
+    networkMonitor.observeOnline(scope) { isOnline ->
+      callbacks?.onOnlineChanged(isOnline)
+
+      // Accelerate pending network retry when connectivity is restored
+      if (isOnline && pendingNetworkRetry) {
+        Timber.d("Network restored with pending retry, triggering immediate retry")
+        pendingNetworkRetry = false
+        // Only retry if player is still expecting to play
+        if (playWhenReadyCache) {
+          exoPlayer.prepare()
+        }
+      }
+    }
   }
 
   /**
@@ -885,6 +913,13 @@ class Player(internal val context: Context) {
    */
   internal fun clearNowPlayingOverride() {
     nowPlayingOverride = null
+  }
+
+  /**
+   * Resets the retry timer when track changes. Called from PlayerListener.onMediaItemTransition.
+   */
+  internal fun resetRetryTimer() {
+    mediaFactory.resetRetryTimer()
   }
 
   /**

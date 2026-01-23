@@ -1,11 +1,13 @@
 import Foundation
 import Network
+import os.log
 
 /// Monitors network connectivity state using NWPathMonitor.
 /// Notifies listeners when the connection state changes.
 final class NetworkMonitor: @unchecked Sendable {
   // MARK: - Properties
 
+  private let logger = Logger(subsystem: "com.audiobrowser", category: "NetworkMonitor")
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
@@ -13,6 +15,7 @@ final class NetworkMonitor: @unchecked Sendable {
   private(set) var isOnline: Bool = false {
     didSet {
       if oldValue != isOnline {
+        logger.info("Network status changed: \(oldValue) -> \(self.isOnline)")
         DispatchQueue.main.async { [weak self] in
           guard let self else { return }
           onChanged?(isOnline)
@@ -41,7 +44,9 @@ final class NetworkMonitor: @unchecked Sendable {
     monitor.start(queue: queue)
 
     // Read initial state after starting (currentPath is now valid)
-    isOnline = monitor.currentPath.status == .satisfied
+    let initialStatus = monitor.currentPath.status == .satisfied
+    logger.info("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
+    isOnline = initialStatus
   }
 
   // MARK: - Public Methods

@@ -16,11 +16,8 @@
 #include "JAndroidAudioContentType.hpp"
 #include "JAndroidAudioOffloadSettings.hpp"
 #include "JAndroidPlayerWakeMode.hpp"
-#include "JRetryConfig.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
-#include "JVariant_Boolean_RetryConfig.hpp"
 #include "JVariant_NullType_Double.hpp"
-#include "RetryConfig.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>
@@ -49,8 +46,6 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JDouble> minBuffer = this->getFieldValue(fieldMinBuffer);
       static const auto fieldAudioOffload = clazz->getField<JVariant_Boolean_AndroidAudioOffloadSettings>("audioOffload");
       jni::local_ref<JVariant_Boolean_AndroidAudioOffloadSettings> audioOffload = this->getFieldValue(fieldAudioOffload);
-      static const auto fieldRetry = clazz->getField<JVariant_Boolean_RetryConfig>("retry");
-      jni::local_ref<JVariant_Boolean_RetryConfig> retry = this->getFieldValue(fieldRetry);
       static const auto fieldMaxBuffer = clazz->getField<jni::JDouble>("maxBuffer");
       jni::local_ref<jni::JDouble> maxBuffer = this->getFieldValue(fieldMaxBuffer);
       static const auto fieldBackBuffer = clazz->getField<jni::JDouble>("backBuffer");
@@ -70,7 +65,6 @@ namespace margelo::nitro::audiobrowser {
       return PartialAndroidSetupPlayerOptions(
         minBuffer != nullptr ? std::make_optional(minBuffer->value()) : std::nullopt,
         audioOffload != nullptr ? std::make_optional(audioOffload->toCpp()) : std::nullopt,
-        retry != nullptr ? std::make_optional(retry->toCpp()) : std::nullopt,
         maxBuffer != nullptr ? std::make_optional(maxBuffer->value()) : std::nullopt,
         backBuffer != nullptr ? std::make_optional(backBuffer->value()) : std::nullopt,
         playBuffer != nullptr ? std::make_optional(playBuffer->value()) : std::nullopt,
@@ -88,14 +82,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialAndroidSetupPlayerOptions::javaobject> fromCpp(const PartialAndroidSetupPlayerOptions& value) {
-      using JSignature = JPartialAndroidSetupPlayerOptions(jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_Boolean_AndroidAudioOffloadSettings>, jni::alias_ref<JVariant_Boolean_RetryConfig>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JAndroidAudioContentType>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JAndroidPlayerWakeMode>);
+      using JSignature = JPartialAndroidSetupPlayerOptions(jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_Boolean_AndroidAudioOffloadSettings>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JAndroidAudioContentType>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JAndroidPlayerWakeMode>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.minBuffer.has_value() ? jni::JDouble::valueOf(value.minBuffer.value()) : nullptr,
         value.audioOffload.has_value() ? JVariant_Boolean_AndroidAudioOffloadSettings::fromCpp(value.audioOffload.value()) : nullptr,
-        value.retry.has_value() ? JVariant_Boolean_RetryConfig::fromCpp(value.retry.value()) : nullptr,
         value.maxBuffer.has_value() ? jni::JDouble::valueOf(value.maxBuffer.value()) : nullptr,
         value.backBuffer.has_value() ? jni::JDouble::valueOf(value.backBuffer.value()) : nullptr,
         value.playBuffer.has_value() ? jni::JDouble::valueOf(value.playBuffer.value()) : nullptr,

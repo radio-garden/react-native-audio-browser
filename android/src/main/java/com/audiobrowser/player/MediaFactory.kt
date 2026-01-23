@@ -24,6 +24,8 @@ class MediaFactory(
   private val cache: SimpleCache?,
   private val retryPolicy: RetryPolicy,
   private val shouldRetry: () -> Boolean,
+  private val isOnline: () -> Boolean = { true },
+  private val onRetryPending: ((isNetworkError: Boolean) -> Unit)? = null,
   private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
@@ -37,28 +39,37 @@ class MediaFactory(
       // TODO: reconsider whether this should be enabled by default:
       .setConstantBitrateSeekingEnabled(true)
 
+  // Store reference to custom retry policy so we can reset it on track changes
+  private val customRetryPolicy: RetryLoadErrorHandlingPolicy? =
+    when (retryPolicy) {
+      is RetryPolicy.Default -> null
+      is RetryPolicy.Infinite ->
+        RetryLoadErrorHandlingPolicy(
+          maxRetries = null,
+          maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
+          shouldRetry = shouldRetry,
+          isOnline = isOnline,
+          onRetryPending = onRetryPending,
+        )
+      is RetryPolicy.Limited ->
+        RetryLoadErrorHandlingPolicy(
+          maxRetries = retryPolicy.maxRetries,
+          maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
+          shouldRetry = shouldRetry,
+          isOnline = isOnline,
+          onRetryPending = onRetryPending,
+        )
+    }
+
   private val mediaFactory =
     DefaultMediaSourceFactory(context, extractorsFactory).apply {
-      // Only apply custom retry policy if not using default ExoPlayer behavior
-      when (retryPolicy) {
-        is RetryPolicy.Default -> {
-          // Use ExoPlayer's default load error handling
-        }
-        is RetryPolicy.Infinite -> {
-          setLoadErrorHandlingPolicy(
-            RetryLoadErrorHandlingPolicy(maxRetries = null, shouldRetry = shouldRetry)
-          )
-        }
-        is RetryPolicy.Limited -> {
-          setLoadErrorHandlingPolicy(
-            RetryLoadErrorHandlingPolicy(
-              maxRetries = retryPolicy.maxRetries,
-              shouldRetry = shouldRetry,
-            )
-          )
-        }
-      }
+      customRetryPolicy?.let { setLoadErrorHandlingPolicy(it) }
     }
+
+  /** Resets the retry timer. Call when track changes. */
+  fun resetRetryTimer() {
+    customRetryPolicy?.reset()
+  }
 
   override fun setDrmSessionManagerProvider(
     drmSessionManagerProvider: DrmSessionManagerProvider

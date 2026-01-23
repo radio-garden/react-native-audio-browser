@@ -13,6 +13,7 @@
 #include "RetryConfig.hpp"
 #include <variant>
 #include "JRetryConfig.hpp"
+#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 

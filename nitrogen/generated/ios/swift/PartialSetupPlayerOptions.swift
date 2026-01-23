@@ -19,7 +19,7 @@ public extension PartialSetupPlayerOptions {
   /**
    * Create a new instance of `PartialSetupPlayerOptions`.
    */
-  init(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Bool?) {
+  init(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Bool?, retry: Variant_Bool_RetryConfig?) {
     self.init({ () -> bridge.std__optional_PartialAndroidSetupPlayerOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_PartialAndroidSetupPlayerOptions_(__unwrappedValue)
@@ -35,6 +35,19 @@ public extension PartialSetupPlayerOptions {
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = autoUpdateMetadata {
         return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__variant_bool__RetryConfig__ in
+      if let __unwrappedValue = retry {
+        return bridge.create_std__optional_std__variant_bool__RetryConfig__({ () -> bridge.std__variant_bool__RetryConfig_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_bool__RetryConfig_(__value)
+            case .second(let __value):
+              return bridge.create_std__variant_bool__RetryConfig_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
@@ -92,6 +105,49 @@ public extension PartialSetupPlayerOptions {
       self.__autoUpdateMetadata = { () -> bridge.std__optional_bool_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_bool_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var retry: Variant_Bool_RetryConfig? {
+    @inline(__always)
+    get {
+      return { () -> Variant_Bool_RetryConfig? in
+        if bridge.has_value_std__optional_std__variant_bool__RetryConfig__(self.__retry) {
+          let __unwrapped = bridge.get_std__optional_std__variant_bool__RetryConfig__(self.__retry)
+          return { () -> Variant_Bool_RetryConfig in
+            let __variant = bridge.std__variant_bool__RetryConfig_(__unwrapped)
+            switch __variant.index() {
+              case 0:
+                let __actual = __variant.get_0()
+                return .first(__actual)
+              case 1:
+                let __actual = __variant.get_1()
+                return .second(__actual)
+              default:
+                fatalError("Variant can never have index \(__variant.index())!")
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__retry = { () -> bridge.std__optional_std__variant_bool__RetryConfig__ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__variant_bool__RetryConfig__({ () -> bridge.std__variant_bool__RetryConfig_ in
+            switch __unwrappedValue {
+              case .first(let __value):
+                return bridge.create_std__variant_bool__RetryConfig_(__value)
+              case .second(let __value):
+                return bridge.create_std__variant_bool__RetryConfig_(__value)
+            }
+          }().variant)
         } else {
           return .init()
         }

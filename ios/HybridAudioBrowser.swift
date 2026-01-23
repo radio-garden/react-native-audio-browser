@@ -501,6 +501,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           player?.bufferDuration = buffer
         }
 
+        // Apply retry configuration (top-level, cross-platform)
+        if let retry = options.retry {
+          player?.retryConfig = retry
+        }
+
+        // Wire up network monitor for accelerated retries when connectivity is restored
+        player?.networkMonitor = networkMonitor
+
         // Configure media URL resolver
         player?.mediaUrlResolver = { [weak self] src in
           guard let self else {
@@ -921,7 +929,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     Double(AVAudioSession.sharedInstance().outputVolume)
   }
 
-  public func setSystemVolume(volume: Double) throws {
+  public func setSystemVolume(volume _: Double) throws {
     // iOS doesn't provide a public API to set system volume programmatically.
     // Users must adjust volume via hardware buttons or Control Center.
     logger.debug("setSystemVolume is not supported on iOS - volume must be adjusted via hardware buttons or Control Center")

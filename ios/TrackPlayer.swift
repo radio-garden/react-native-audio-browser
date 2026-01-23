@@ -19,9 +19,27 @@ class TrackPlayer {
   let nowPlayingInfoController: NowPlayingInfoController
   let remoteCommandController: RemoteCommandController
   let sleepTimerManager = SleepTimerManager()
+  private let retryManager = RetryManager()
+  private var pendingRetryTask: Task<Void, Never>?
   private weak var callbacks: TrackPlayerCallbacks?
   private var lastIndex: Int = -1
   private var lastTrack: Track?
+
+  /// Retry configuration for load errors (network failures, timeouts, etc.)
+  var retryConfig: Variant_Bool_RetryConfig? {
+    didSet {
+      retryManager.updatePolicy(from: retryConfig)
+    }
+  }
+
+  /// Network monitor for accelerating retries when connectivity is restored.
+  /// When set, retries will trigger immediately when network comes back online
+  /// instead of waiting for the full exponential backoff delay.
+  weak var networkMonitor: NetworkMonitor? {
+    didSet {
+      retryManager.networkMonitor = networkMonitor
+    }
+  }
 
   /// Callback to resolve media URLs with optional transform
   var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
@@ -194,8 +212,8 @@ class TrackPlayer {
     onDidPlayToEndTime: { [weak self] in
       Task { @MainActor in self?.handleTrackDidPlayToEndTime() }
     },
-    onFailedToPlayToEndTime: { [weak self] in
-      Task { @MainActor in self?.playbackError = TrackPlayerError.PlaybackError.playbackFailed }
+    onFailedToPlayToEndTime: { [weak self] error in
+      Task { @MainActor in self?.handleItemFailedToPlayToEndTime(error: error) }
     },
   )
 
@@ -205,6 +223,9 @@ class TrackPlayer {
     },
     onPlaybackLikelyToKeepUpUpdate: { [weak self] isLikely in
       Task { @MainActor in self?.avItemDidUpdatePlaybackLikelyToKeepUp(isLikely) }
+    },
+    onStatusChange: { [weak self] status, error in
+      Task { @MainActor in self?.avItemStatusDidChange(status, error: error) }
     },
     onTimedMetadataReceived: { [weak self] groups in
       self?.callbacks?.playerDidReceiveTimedMetadata(groups)
@@ -487,6 +508,14 @@ class TrackPlayer {
     // Configure sleep timer
     sleepTimerManager.onComplete = { [weak self] in
       self?.pause()
+    }
+
+    // Configure retry manager
+    retryManager.shouldRetry = { [weak self] in
+      self?.playWhenReady ?? false
+    }
+    retryManager.onRetry = { [weak self] startFromCurrentTime in
+      self?.reload(startFromCurrentTime: startFromCurrentTime)
     }
 
     // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
@@ -970,6 +999,15 @@ class TrackPlayer {
           }
         } catch {
           guard !Task.isCancelled else { return }
+
+          // Try retry before setting error
+          if self.retryManager.isRetryable(error) {
+            let retried = await self.retryManager.attemptRetry(startFromCurrentTime: false)
+            if retried {
+              return // Retry was triggered, don't set error
+            }
+          }
+
           await MainActor.run {
             guard pendingAsset == self.asset else { return }
             self.playbackError = TrackPlayerError.PlaybackError.failedToLoadKeyValue
@@ -1051,11 +1089,56 @@ class TrackPlayer {
 
   func avPlayerStatusDidChange(_ status: AVPlayer.Status) {
     if status == .failed {
-      let error = avPlayer.currentItem?.error as NSError?
-      playbackError = error?.code == URLError.notConnectedToInternet.rawValue
-        ? TrackPlayerError.PlaybackError.notConnectedToInternet
-        : TrackPlayerError.PlaybackError.playbackFailed
+      handlePlaybackFailure(error: avPlayer.currentItem?.error)
     }
+  }
+
+  /// Handles AVPlayerItem status changes - this catches errors that don't show up in AVPlayer.status
+  func avItemStatusDidChange(_ status: AVPlayerItem.Status, error: Error?) {
+    if status == .failed {
+      let effectiveError = error ?? avPlayer.currentItem?.error
+      handlePlaybackFailure(error: effectiveError)
+    }
+  }
+
+  /// Common handler for playback failures from either AVPlayer or AVPlayerItem
+  private func handlePlaybackFailure(error: Error?) {
+    if let error {
+      let nsError = error as NSError
+      logger.error("Playback failure: domain=\(nsError.domain), code=\(nsError.code), localizedDescription=\(error.localizedDescription)")
+    } else {
+      logger.error("Playback failure with nil error")
+    }
+
+    // Try retry before setting error state
+    if retryManager.isRetryable(error) {
+      pendingRetryTask?.cancel()
+      pendingRetryTask = Task {
+        let retried = await retryManager.attemptRetry(startFromCurrentTime: true)
+        if !retried {
+          // Max retries exceeded or retry cancelled, surface error
+          self.setPlaybackError(from: error)
+        }
+      }
+      return
+    }
+
+    logger.warning("Error not retryable, surfacing playback_failed")
+    setPlaybackError(from: error)
+  }
+
+  /// Sets the playback error from an Error, with appropriate classification
+  private func setPlaybackError(from error: Error?) {
+    let nsError = error as NSError?
+    playbackError = nsError?.code == URLError.notConnectedToInternet.rawValue
+      ? TrackPlayerError.PlaybackError.notConnectedToInternet
+      : TrackPlayerError.PlaybackError.playbackFailed
+  }
+
+  /// Handles AVPlayerItemFailedToPlayToEndTime notification with retry logic
+  private func handleItemFailedToPlayToEndTime(error: Error?) {
+    let effectiveError = error ?? avPlayer.currentItem?.error
+    handlePlaybackFailure(error: effectiveError)
   }
 
   func audioDidStart() {
@@ -1377,6 +1460,11 @@ class TrackPlayer {
   func handleCurrentTrackChanged() {
     // Reset end-of-track sleep timer when track changes
     sleepTimerManager.onTrackChanged()
+
+    // Cancel any pending retry and reset count when track changes
+    pendingRetryTask?.cancel()
+    pendingRetryTask = nil
+    retryManager.reset()
 
     // Clear any previous playback error when switching tracks
     if playbackError != nil {

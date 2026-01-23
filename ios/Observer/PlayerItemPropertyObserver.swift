@@ -17,6 +17,7 @@ final class PlayerItemPropertyObserver: NSObject, @unchecked Sendable {
 
   private let onDurationUpdate: @Sendable (Double) -> Void
   private let onPlaybackLikelyToKeepUpUpdate: @Sendable (Bool) -> Void
+  private let onStatusChange: @Sendable (AVPlayerItem.Status, Error?) -> Void
   // Note: AVTimedMetadataGroup is not Sendable, but this callback is always invoked
   // on the main thread via AVPlayerItemMetadataOutputPushDelegate (queue: .main)
   private let onTimedMetadataReceived: @MainActor ([AVTimedMetadataGroup]) -> Void
@@ -24,10 +25,12 @@ final class PlayerItemPropertyObserver: NSObject, @unchecked Sendable {
   init(
     onDurationUpdate: @escaping @Sendable (Double) -> Void,
     onPlaybackLikelyToKeepUpUpdate: @escaping @Sendable (Bool) -> Void,
+    onStatusChange: @escaping @Sendable (AVPlayerItem.Status, Error?) -> Void,
     onTimedMetadataReceived: @escaping @MainActor ([AVTimedMetadataGroup]) -> Void,
   ) {
     self.onDurationUpdate = onDurationUpdate
     self.onPlaybackLikelyToKeepUpUpdate = onPlaybackLikelyToKeepUpUpdate
+    self.onStatusChange = onStatusChange
     self.onTimedMetadataReceived = onTimedMetadataReceived
   }
 
@@ -56,6 +59,9 @@ final class PlayerItemPropertyObserver: NSObject, @unchecked Sendable {
       },
       avItem.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] item, _ in
         self?.onPlaybackLikelyToKeepUpUpdate(item.isPlaybackLikelyToKeepUp)
+      },
+      avItem.observe(\.status, options: [.new]) { [weak self] item, _ in
+        self?.onStatusChange(item.status, item.error)
       },
     ]
 

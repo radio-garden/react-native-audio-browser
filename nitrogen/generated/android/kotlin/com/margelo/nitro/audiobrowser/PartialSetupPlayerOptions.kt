@@ -25,7 +25,10 @@ data class PartialSetupPlayerOptions(
   val ios: PartialIOSSetupPlayerOptions?,
   @DoNotStrip
   @Keep
-  val autoUpdateMetadata: Boolean?
+  val autoUpdateMetadata: Boolean?,
+  @DoNotStrip
+  @Keep
+  val retry: Variant_Boolean_RetryConfig?
 ) {
   /* primary constructor */
 
@@ -37,8 +40,8 @@ data class PartialSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?): PartialSetupPlayerOptions {
-      return PartialSetupPlayerOptions(android, ios, autoUpdateMetadata)
+    private fun fromCpp(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?, retry: Variant_Boolean_RetryConfig?): PartialSetupPlayerOptions {
+      return PartialSetupPlayerOptions(android, ios, autoUpdateMetadata, retry)
     }
   }
 }

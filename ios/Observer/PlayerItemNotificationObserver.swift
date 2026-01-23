@@ -11,11 +11,11 @@ class PlayerItemNotificationObserver {
   private(set) var isObserving: Bool = false
 
   private let onDidPlayToEndTime: @Sendable () -> Void
-  private let onFailedToPlayToEndTime: @Sendable () -> Void
+  private let onFailedToPlayToEndTime: @Sendable (Error?) -> Void
 
   init(
     onDidPlayToEndTime: @escaping @Sendable () -> Void,
-    onFailedToPlayToEndTime: @escaping @Sendable () -> Void,
+    onFailedToPlayToEndTime: @escaping @Sendable (Error?) -> Void,
   ) {
     self.onDidPlayToEndTime = onDidPlayToEndTime
     self.onFailedToPlayToEndTime = onFailedToPlayToEndTime
@@ -43,7 +43,7 @@ class PlayerItemNotificationObserver {
     )
     notificationCenter.addObserver(
       self,
-      selector: #selector(avItemFailedToPlayToEndTime),
+      selector: #selector(avItemFailedToPlayToEndTime(_:)),
       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
       object: avItem,
     )
@@ -74,7 +74,10 @@ class PlayerItemNotificationObserver {
     onDidPlayToEndTime()
   }
 
-  @objc private func avItemFailedToPlayToEndTime() {
-    onFailedToPlayToEndTime()
+  @objc private func avItemFailedToPlayToEndTime(_ notification: Notification) {
+    // Extract the error from the notification's userInfo
+    // AVPlayerItemFailedToPlayToEndTimeErrorKey contains the actual error
+    let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+    onFailedToPlayToEndTime(error)
   }
 }

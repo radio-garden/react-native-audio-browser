@@ -143,8 +143,6 @@ namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
-// Forward declaration of `RetryConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `AndroidAudioContentType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
@@ -159,6 +157,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
@@ -361,9 +361,6 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "AndroidAudioOffloadSettings.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
 #include "JAndroidAudioOffloadSettings.hpp"
-#include "RetryConfig.hpp"
-#include "JVariant_Boolean_RetryConfig.hpp"
-#include "JRetryConfig.hpp"
 #include "AndroidAudioContentType.hpp"
 #include "JAndroidAudioContentType.hpp"
 #include "AndroidPlayerWakeMode.hpp"
@@ -378,6 +375,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JIOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "JIOSCategoryPolicy.hpp"
+#include "RetryConfig.hpp"
+#include "JVariant_Boolean_RetryConfig.hpp"
+#include "JRetryConfig.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "JNativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"

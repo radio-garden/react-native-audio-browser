@@ -146,8 +146,6 @@ namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
 namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
-// Forward declaration of `RetryConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `AndroidAudioContentType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
@@ -162,6 +160,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
@@ -246,7 +246,6 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "PartialSetupPlayerOptions.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
-#include "RetryConfig.hpp"
 #include "AndroidAudioContentType.hpp"
 #include "AndroidPlayerWakeMode.hpp"
 #include "PartialIOSSetupPlayerOptions.hpp"
@@ -254,6 +253,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "RetryConfig.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"

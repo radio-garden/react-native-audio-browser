@@ -27,10 +27,14 @@
 namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
 // Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include <optional>
 #include "PartialIOSSetupPlayerOptions.hpp"
+#include "RetryConfig.hpp"
+#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -42,10 +46,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<PartialAndroidSetupPlayerOptions> android     SWIFT_PRIVATE;
     std::optional<PartialIOSSetupPlayerOptions> ios     SWIFT_PRIVATE;
     std::optional<bool> autoUpdateMetadata     SWIFT_PRIVATE;
+    std::optional<std::variant<bool, RetryConfig>> retry     SWIFT_PRIVATE;
 
   public:
     PartialSetupPlayerOptions() = default;
-    explicit PartialSetupPlayerOptions(std::optional<PartialAndroidSetupPlayerOptions> android, std::optional<PartialIOSSetupPlayerOptions> ios, std::optional<bool> autoUpdateMetadata): android(android), ios(ios), autoUpdateMetadata(autoUpdateMetadata) {}
+    explicit PartialSetupPlayerOptions(std::optional<PartialAndroidSetupPlayerOptions> android, std::optional<PartialIOSSetupPlayerOptions> ios, std::optional<bool> autoUpdateMetadata, std::optional<std::variant<bool, RetryConfig>> retry): android(android), ios(ios), autoUpdateMetadata(autoUpdateMetadata), retry(retry) {}
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -60,7 +65,8 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::PartialSetupPlayerOptions(
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::fromJSI(runtime, obj.getProperty(runtime, "android")),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::fromJSI(runtime, obj.getProperty(runtime, "ios")),
-        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "autoUpdateMetadata"))
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "autoUpdateMetadata")),
+        JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::fromJSI(runtime, obj.getProperty(runtime, "retry"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PartialSetupPlayerOptions& arg) {
@@ -68,6 +74,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "android", JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::toJSI(runtime, arg.android));
       obj.setProperty(runtime, "ios", JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::toJSI(runtime, arg.ios));
       obj.setProperty(runtime, "autoUpdateMetadata", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.autoUpdateMetadata));
+      obj.setProperty(runtime, "retry", JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::toJSI(runtime, arg.retry));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -81,6 +88,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::canConvert(runtime, obj.getProperty(runtime, "android"))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::canConvert(runtime, obj.getProperty(runtime, "ios"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "autoUpdateMetadata"))) return false;
+      if (!JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::canConvert(runtime, obj.getProperty(runtime, "retry"))) return false;
       return true;
     }
   };

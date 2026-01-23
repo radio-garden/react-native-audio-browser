@@ -19,7 +19,10 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class RetryConfig(
   @DoNotStrip
   @Keep
-  val maxRetries: Double
+  val maxRetries: Double,
+  @DoNotStrip
+  @Keep
+  val maxRetryDurationMs: Double?
 ) {
   /* primary constructor */
 
@@ -31,8 +34,8 @@ data class RetryConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(maxRetries: Double): RetryConfig {
-      return RetryConfig(maxRetries)
+    private fun fromCpp(maxRetries: Double, maxRetryDurationMs: Double?): RetryConfig {
+      return RetryConfig(maxRetries, maxRetryDurationMs)
     }
   }
 }
