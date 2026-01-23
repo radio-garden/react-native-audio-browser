@@ -2,129 +2,63 @@ package com.audiobrowser.util
 
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
-import androidx.media3.container.MdtaMetadataEntry
-import androidx.media3.extractor.metadata.icy.IcyHeaders
-import androidx.media3.extractor.metadata.icy.IcyInfo
 import androidx.media3.extractor.metadata.id3.ChapterFrame
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.id3.UrlLinkFrame
-import androidx.media3.extractor.metadata.vorbis.VorbisComment
-import com.audiobrowser.model.MetadataEntry
-import com.audiobrowser.model.TimedMetadata
-import com.margelo.nitro.audiobrowser.AudioMetadata
-import timber.log.Timber
+import com.margelo.nitro.audiobrowser.ChapterMetadata
+import com.margelo.nitro.audiobrowser.TrackMetadata
 
 sealed class MetadataAdapter {
   companion object {
-    fun toTimedMetadata(metadata: Metadata): TimedMetadata {
-      val entries = mutableListOf<MetadataEntry>()
+    /**
+     * Extracts chapter metadata from ID3 ChapterFrames.
+     * Returns a list of ChapterMetadata, one per chapter.
+     */
+    fun extractChapters(metadata: Metadata): List<ChapterMetadata> {
+      val chapters = mutableListOf<ChapterMetadata>()
 
-      (0 until metadata.length()).forEach { i ->
-        var title: String? = null
-        var artist: String? = null
-        var albumTitle: String? = null
-        var genre: String? = null
-        var creationDate: String? = null
-        var url: String? = null
+      for (i in 0 until metadata.length()) {
+        val entry = metadata[i]
+        if (entry is ChapterFrame) {
+          // TODO: Artwork extraction missing. Requires converting ApicFrame binary
+          // image data to a URL (base64 data URL or temp file).
+          // See also: iOS implementation in ChapterMetadata+AVFoundation.swift
+          var title: String? = null
+          var url: String? = null
 
-        when (val entry = metadata[i]) {
-          is ChapterFrame -> {
-            Timber.d("ChapterFrame: ${entry.id}")
-          }
-          is TextInformationFrame -> {
-            when (entry.id.uppercase()) {
-              "TIT2",
-              "TT2" -> {
-                title = entry.values[0]
+          // Parse sub-frames for chapter metadata
+          for (j in 0 until entry.subFrameCount) {
+            when (val subFrame = entry.getSubFrame(j)) {
+              is TextInformationFrame -> {
+                when (subFrame.id.uppercase()) {
+                  "TIT2", "TT2" -> title = subFrame.values.firstOrNull()
+                }
               }
-              "TALB",
-              "TOAL",
-              "TAL" -> {
-                albumTitle = entry.values[0]
-              }
-              "TOPE",
-              "TPE1",
-              "TP1" -> {
-                artist = entry.values[0]
-              }
-              "TDRC",
-              "TOR" -> {
-                creationDate = entry.values[0]
-              }
-              "TCON",
-              "TCO" -> {
-                genre = entry.values[0]
-              }
-              else -> {}
-            }
-          }
-          is UrlLinkFrame -> {
-            url = entry.url
-          }
-          is IcyHeaders -> {
-            title = entry.name
-            genre = entry.genre
-          }
-          is IcyInfo -> {
-            title = entry.title
-            url = entry.url
-          }
-          is VorbisComment -> {
-            when (entry.key) {
-              "TITLE" -> {
-                title = entry.value
-              }
-              "ARTIST" -> {
-                artist = entry.value
-              }
-              "ALBUM" -> {
-                albumTitle = entry.value
-              }
-              "DATE" -> {
-                creationDate = entry.value
-              }
-              "GENRE" -> {
-                genre = entry.value
+              is UrlLinkFrame -> {
+                url = subFrame.url
               }
             }
           }
-          is MdtaMetadataEntry -> {
-            when (entry.key) {
-              "com.apple.quicktime.title" -> {
-                title = entry.value.toString()
-              }
-              "com.apple.quicktime.artist" -> {
-                artist = entry.value.toString()
-              }
-              "com.apple.quicktime.album" -> {
-                albumTitle = entry.value.toString()
-              }
-              "com.apple.quicktime.creationdate" -> {
-                creationDate = entry.value.toString()
-              }
-              "com.apple.quicktime.genre" -> {
-                genre = entry.value.toString()
-              }
-            }
-          }
-        }
 
-        entries.add(
-          MetadataEntry(
-            title = title,
-            artist = artist,
-            albumTitle = albumTitle,
-            genre = genre,
-            creationDate = creationDate,
-            url = url,
+          // Convert milliseconds to seconds
+          val startTime = entry.startTimeMs / 1_000.0
+          val endTime = entry.endTimeMs / 1_000.0
+
+          chapters.add(
+            ChapterMetadata(
+              startTime = startTime,
+              endTime = endTime,
+              title = title ?: entry.id,
+              url = url,
+            )
           )
-        )
+        }
       }
 
-      return TimedMetadata(entries)
+      return chapters
     }
 
-    fun audioMetadataFromMediaMetadata(metadata: MediaMetadata): AudioMetadata {
+    fun trackMetadataFromMediaMetadata(metadata: MediaMetadata): TrackMetadata {
       // Handle creation date from recording day and month
       val creationDate =
         (metadata.recordingDay to metadata.recordingMonth).let { (day, month) ->
@@ -140,7 +74,7 @@ sealed class MetadataAdapter {
           }
         }
 
-      return AudioMetadata(
+      return TrackMetadata(
         title = metadata.title as String?,
         artist = metadata.artist as String?,
         albumTitle = metadata.albumTitle as String?,

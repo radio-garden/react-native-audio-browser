@@ -27,9 +27,9 @@
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
-#include "JFunc_void_AudioMetadataReceivedEvent.hpp"
-#include "JFunc_void_AudioCommonMetadataReceivedEvent.hpp"
-#include "JFunc_void_PlaybackMetadata.hpp"
+#include "JFunc_void_std__vector_ChapterMetadata_.hpp"
+#include "JFunc_void_TrackMetadata.hpp"
+#include "JFunc_void_TimedMetadata.hpp"
 #include "JFunc_void_PlaybackActiveTrackChangedEvent.hpp"
 #include "JFunc_void_PlaybackErrorEvent.hpp"
 #include "JFunc_void_PlaybackPlayWhenReadyChangedEvent.hpp"
@@ -78,9 +78,9 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_AudioMetadataReceivedEvent_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_AudioCommonMetadataReceivedEvent_cxx::registerNatives();
-    margelo::nitro::audiobrowser::JFunc_void_PlaybackMetadata_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_std__vector_ChapterMetadata__cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_TrackMetadata_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_TimedMetadata_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_PlaybackActiveTrackChangedEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_PlaybackErrorEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::registerNatives();

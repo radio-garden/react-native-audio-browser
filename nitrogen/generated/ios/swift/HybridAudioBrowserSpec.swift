@@ -19,10 +19,9 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onNavigationError: (_ data: NavigationErrorEvent) -> Void { get set }
   var onFormattedNavigationError: (_ formattedError: FormattedNavigationError?) -> Void { get set }
   var configuration: NativeBrowserConfiguration { get set }
-  var onMetadataChapterReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
-  var onMetadataCommonReceived: (_ event: AudioCommonMetadataReceivedEvent) -> Void { get set }
-  var onMetadataTimedReceived: (_ event: AudioMetadataReceivedEvent) -> Void { get set }
-  var onPlaybackMetadata: (_ data: PlaybackMetadata) -> Void { get set }
+  var onChapterMetadata: (_ chapters: [ChapterMetadata]) -> Void { get set }
+  var onTrackMetadata: (_ metadata: TrackMetadata) -> Void { get set }
+  var onTimedMetadata: (_ metadata: TimedMetadata) -> Void { get set }
   var onPlaybackActiveTrackChanged: (_ data: PlaybackActiveTrackChangedEvent) -> Void { get set }
   var onPlaybackError: (_ data: PlaybackErrorEvent) -> Void { get set }
   var onPlaybackPlayWhenReadyChanged: (_ data: PlaybackPlayWhenReadyChangedEvent) -> Void { get set }

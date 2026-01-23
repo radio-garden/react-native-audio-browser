@@ -151,10 +151,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Player Callbacks
 
-  public var onMetadataChapterReceived: (AudioMetadataReceivedEvent) -> Void = { _ in }
-  public var onMetadataCommonReceived: (AudioCommonMetadataReceivedEvent) -> Void = { _ in }
-  public var onMetadataTimedReceived: (AudioMetadataReceivedEvent) -> Void = { _ in }
-  public var onPlaybackMetadata: (PlaybackMetadata) -> Void = { _ in }
+  public var onChapterMetadata: ([ChapterMetadata]) -> Void = { _ in }
+  public var onTrackMetadata: (TrackMetadata) -> Void = { _ in }
+  public var onTimedMetadata: (TimedMetadata) -> Void = { _ in }
   public var onPlaybackActiveTrackChanged: (PlaybackActiveTrackChangedEvent) -> Void = { _ in }
   public var onPlaybackError: (PlaybackErrorEvent) -> Void = { _ in }
   public var onPlaybackPlayWhenReadyChanged: (PlaybackPlayWhenReadyChangedEvent) -> Void = { _ in }
@@ -1021,16 +1020,22 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     onPlaybackError(event)
   }
 
-  public func playerDidReceiveCommonMetadata(_: [AVMetadataItem]) {
-    // TODO: Convert to AudioCommonMetadataReceivedEvent
+  public func playerDidReceiveCommonMetadata(_ items: [AVMetadataItem]) {
+    let metadata = TrackMetadata.from(items: items)
+    onTrackMetadata(metadata)
   }
 
-  public func playerDidReceiveTimedMetadata(_: [AVTimedMetadataGroup]) {
-    // TODO: Convert to AudioMetadataReceivedEvent
+  public func playerDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
+    for group in groups {
+      if let metadata = TimedMetadata.from(items: group.items) {
+        onTimedMetadata(metadata)
+      }
+    }
   }
 
-  public func playerDidReceiveChapterMetadata(_: [AVTimedMetadataGroup]) {
-    // TODO: Convert to AudioMetadataReceivedEvent
+  public func playerDidReceiveChapterMetadata(_ groups: [AVTimedMetadataGroup]) {
+    let chapters = ChapterMetadata.from(groups: groups)
+    onChapterMetadata(chapters)
   }
 
   public func playerDidCompleteSeek(position _: Double, didFinish _: Bool) {

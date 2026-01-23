@@ -1,9 +1,9 @@
 package com.audiobrowser
 
-import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.audiobrowser.model.TimedMetadata
-import com.margelo.nitro.audiobrowser.AudioMetadata
+import com.margelo.nitro.audiobrowser.ChapterMetadata
+import com.margelo.nitro.audiobrowser.TimedMetadata
+import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
@@ -46,11 +46,11 @@ interface Callbacks {
   fun onPlaybackError(error: PlaybackError?)
 
   // Metadata events
-  fun onMetadataCommonReceived(metadata: AudioMetadata)
+  fun onTrackMetadata(metadata: TrackMetadata)
 
-  fun onMetadataTimedReceived(metadata: TimedMetadata)
+  fun onChapterMetadata(chapters: List<ChapterMetadata>)
 
-  fun onPlaybackMetadata(metadata: PlaybackMetadata)
+  fun onTimedMetadata(metadata: TimedMetadata)
 
   // Remote control events
   fun handleRemotePlay(): Boolean

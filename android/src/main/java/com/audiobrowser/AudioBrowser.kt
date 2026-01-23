@@ -24,7 +24,6 @@ import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.audiobrowser.model.TimedMetadata
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
@@ -33,9 +32,9 @@ import com.audiobrowser.util.SystemVolumeMonitor
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
-import com.margelo.nitro.audiobrowser.AudioCommonMetadataReceivedEvent
-import com.margelo.nitro.audiobrowser.AudioMetadata
-import com.margelo.nitro.audiobrowser.AudioMetadataReceivedEvent
+import com.margelo.nitro.audiobrowser.ChapterMetadata
+import com.margelo.nitro.audiobrowser.TimedMetadata
+import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatus
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
 import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
@@ -151,10 +150,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onRemoteLike: () -> Unit = {}
   override var onRemoteNext: () -> Unit = {}
   override var onRemotePause: () -> Unit = {}
-  override var onMetadataChapterReceived: (AudioMetadataReceivedEvent) -> Unit = {}
-  override var onMetadataCommonReceived: (AudioCommonMetadataReceivedEvent) -> Unit = {}
-  override var onMetadataTimedReceived: (AudioMetadataReceivedEvent) -> Unit = {}
-  override var onPlaybackMetadata: (com.margelo.nitro.audiobrowser.PlaybackMetadata) -> Unit = {}
+  override var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit = {}
+  override var onTrackMetadata: (metadata: TrackMetadata) -> Unit = {}
+  override var onTimedMetadata: (metadata: TimedMetadata) -> Unit = {}
   override var onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) -> Unit = {}
   override var onPlaybackError: (data: PlaybackErrorEvent) -> Unit = {}
   override var onPlaybackPlayWhenReadyChanged: (data: PlaybackPlayWhenReadyChangedEvent) -> Unit =
@@ -1034,18 +1032,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         post { this@AudioBrowser.onPlaybackError(PlaybackErrorEvent(error)) }
       }
 
-      override fun onMetadataCommonReceived(metadata: AudioMetadata) {
-        post {
-          this@AudioBrowser.onMetadataCommonReceived(AudioCommonMetadataReceivedEvent(metadata))
-        }
+      override fun onTrackMetadata(metadata: TrackMetadata) {
+        post { this@AudioBrowser.onTrackMetadata(metadata) }
       }
 
-      override fun onMetadataTimedReceived(metadata: TimedMetadata) {
-        post { this@AudioBrowser.onMetadataTimedReceived(metadata.toNitro()) }
+      override fun onChapterMetadata(chapters: List<ChapterMetadata>) {
+        post { this@AudioBrowser.onChapterMetadata(chapters.toTypedArray()) }
       }
 
-      override fun onPlaybackMetadata(metadata: PlaybackMetadata) {
-        post { this@AudioBrowser.onPlaybackMetadata(metadata.toNitro()) }
+      override fun onTimedMetadata(metadata: TimedMetadata) {
+        post { this@AudioBrowser.onTimedMetadata(metadata) }
       }
 
       override fun handleRemotePlay(): Boolean {

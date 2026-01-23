@@ -132,60 +132,46 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @set:Keep
   abstract var configuration: NativeBrowserConfiguration
   
-  abstract var onMetadataChapterReceived: (event: AudioMetadataReceivedEvent) -> Unit
+  abstract var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit
   
-  private var onMetadataChapterReceived_cxx: Func_void_AudioMetadataReceivedEvent
+  private var onChapterMetadata_cxx: Func_void_std__vector_ChapterMetadata_
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_AudioMetadataReceivedEvent_java(onMetadataChapterReceived)
+      return Func_void_std__vector_ChapterMetadata__java(onChapterMetadata)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onMetadataChapterReceived = value
+      onChapterMetadata = value
     }
   
-  abstract var onMetadataCommonReceived: (event: AudioCommonMetadataReceivedEvent) -> Unit
+  abstract var onTrackMetadata: (metadata: TrackMetadata) -> Unit
   
-  private var onMetadataCommonReceived_cxx: Func_void_AudioCommonMetadataReceivedEvent
+  private var onTrackMetadata_cxx: Func_void_TrackMetadata
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_AudioCommonMetadataReceivedEvent_java(onMetadataCommonReceived)
+      return Func_void_TrackMetadata_java(onTrackMetadata)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onMetadataCommonReceived = value
+      onTrackMetadata = value
     }
   
-  abstract var onMetadataTimedReceived: (event: AudioMetadataReceivedEvent) -> Unit
+  abstract var onTimedMetadata: (metadata: TimedMetadata) -> Unit
   
-  private var onMetadataTimedReceived_cxx: Func_void_AudioMetadataReceivedEvent
+  private var onTimedMetadata_cxx: Func_void_TimedMetadata
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_AudioMetadataReceivedEvent_java(onMetadataTimedReceived)
+      return Func_void_TimedMetadata_java(onTimedMetadata)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onMetadataTimedReceived = value
-    }
-  
-  abstract var onPlaybackMetadata: (data: PlaybackMetadata) -> Unit
-  
-  private var onPlaybackMetadata_cxx: Func_void_PlaybackMetadata
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_PlaybackMetadata_java(onPlaybackMetadata)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onPlaybackMetadata = value
+      onTimedMetadata = value
     }
   
   abstract var onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) -> Unit

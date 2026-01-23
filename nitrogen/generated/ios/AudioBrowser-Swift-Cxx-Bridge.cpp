@@ -164,27 +164,27 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<void(const AudioMetadataReceivedEvent& /* event */)>
-  Func_void_AudioMetadataReceivedEvent create_Func_void_AudioMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_AudioMetadataReceivedEvent::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const AudioMetadataReceivedEvent& event) mutable -> void {
-      swiftClosure.call(event);
+  // pragma MARK: std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>
+  Func_void_std__vector_ChapterMetadata_ create_Func_void_std__vector_ChapterMetadata_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__vector_ChapterMetadata_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::vector<ChapterMetadata>& chapters) mutable -> void {
+      swiftClosure.call(chapters);
     };
   }
   
-  // pragma MARK: std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>
-  Func_void_AudioCommonMetadataReceivedEvent create_Func_void_AudioCommonMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_AudioCommonMetadataReceivedEvent::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const AudioCommonMetadataReceivedEvent& event) mutable -> void {
-      swiftClosure.call(event);
+  // pragma MARK: std::function<void(const TrackMetadata& /* metadata */)>
+  Func_void_TrackMetadata create_Func_void_TrackMetadata(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_TrackMetadata::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const TrackMetadata& metadata) mutable -> void {
+      swiftClosure.call(metadata);
     };
   }
   
-  // pragma MARK: std::function<void(const PlaybackMetadata& /* data */)>
-  Func_void_PlaybackMetadata create_Func_void_PlaybackMetadata(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_PlaybackMetadata::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const PlaybackMetadata& data) mutable -> void {
-      swiftClosure.call(data);
+  // pragma MARK: std::function<void(const TimedMetadata& /* metadata */)>
+  Func_void_TimedMetadata create_Func_void_TimedMetadata(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_TimedMetadata::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const TimedMetadata& metadata) mutable -> void {
+      swiftClosure.call(metadata);
     };
   }
   

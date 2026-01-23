@@ -22,12 +22,6 @@ namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
-// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
-// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
-// Forward declaration of `AudioMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 // Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
@@ -40,6 +34,8 @@ namespace margelo::nitro::audiobrowser { struct BrowseError; }
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `ChapterMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
@@ -110,8 +106,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent;
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlaybackMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 // Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
 // Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
@@ -166,6 +160,10 @@ namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `TimedMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
+// Forward declaration of `TrackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -183,15 +181,13 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "AndroidUpdateOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "ArtworkRequestConfig.hpp"
-#include "AudioCommonMetadataReceivedEvent.hpp"
-#include "AudioMetadata.hpp"
-#include "AudioMetadataReceivedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "CarPlayNowPlayingButton.hpp"
+#include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FormatNavigationErrorParams.hpp"
@@ -228,7 +224,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
-#include "PlaybackMetadata.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
@@ -255,7 +250,9 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "SleepTimerTime.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
+#include "TimedMetadata.hpp"
 #include "Track.hpp"
+#include "TrackMetadata.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"

@@ -23,12 +23,12 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
-// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
-// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
-// Forward declaration of `PlaybackMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
+// Forward declaration of `ChapterMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
+// Forward declaration of `TrackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
+// Forward declaration of `TimedMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -103,9 +103,9 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "NavigationErrorEvent.hpp"
 #include "FormattedNavigationError.hpp"
 #include "NativeBrowserConfiguration.hpp"
-#include "AudioMetadataReceivedEvent.hpp"
-#include "AudioCommonMetadataReceivedEvent.hpp"
-#include "PlaybackMetadata.hpp"
+#include "ChapterMetadata.hpp"
+#include "TrackMetadata.hpp"
+#include "TimedMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
@@ -185,14 +185,12 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) = 0;
       virtual NativeBrowserConfiguration getConfiguration() = 0;
       virtual void setConfiguration(const NativeBrowserConfiguration& configuration) = 0;
-      virtual std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataChapterReceived() = 0;
-      virtual void setOnMetadataChapterReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataChapterReceived) = 0;
-      virtual std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)> getOnMetadataCommonReceived() = 0;
-      virtual void setOnMetadataCommonReceived(const std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>& onMetadataCommonReceived) = 0;
-      virtual std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataTimedReceived() = 0;
-      virtual void setOnMetadataTimedReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataTimedReceived) = 0;
-      virtual std::function<void(const PlaybackMetadata& /* data */)> getOnPlaybackMetadata() = 0;
-      virtual void setOnPlaybackMetadata(const std::function<void(const PlaybackMetadata& /* data */)>& onPlaybackMetadata) = 0;
+      virtual std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() = 0;
+      virtual void setOnChapterMetadata(const std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>& onChapterMetadata) = 0;
+      virtual std::function<void(const TrackMetadata& /* metadata */)> getOnTrackMetadata() = 0;
+      virtual void setOnTrackMetadata(const std::function<void(const TrackMetadata& /* metadata */)>& onTrackMetadata) = 0;
+      virtual std::function<void(const TimedMetadata& /* metadata */)> getOnTimedMetadata() = 0;
+      virtual void setOnTimedMetadata(const std::function<void(const TimedMetadata& /* metadata */)>& onTimedMetadata) = 0;
       virtual std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)> getOnPlaybackActiveTrackChanged() = 0;
       virtual void setOnPlaybackActiveTrackChanged(const std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)>& onPlaybackActiveTrackChanged) = 0;
       virtual std::function<void(const PlaybackErrorEvent& /* data */)> getOnPlaybackError() = 0;

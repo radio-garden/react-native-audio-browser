@@ -8,11 +8,11 @@ import type {
 } from '../features'
 import type { NavigationError, NavigationErrorEvent, FormattedNavigationError, PlaybackError, PlaybackErrorEvent } from '../features/errors'
 import type {
-  AudioCommonMetadataReceivedEvent,
-  AudioMetadataReceivedEvent,
+  ChapterMetadata,
   NowPlayingMetadata,
   NowPlayingUpdate,
-  PlaybackMetadata
+  TimedMetadata,
+  TrackMetadata
 } from '../features/metadata'
 import type { PlayingState } from '../features/playback/playing'
 import type { PlaybackPlayWhenReadyChangedEvent } from '../features/playback/playWhenReady'
@@ -83,10 +83,9 @@ export interface AudioBrowser
   getOptions(): UpdateOptions
 
   // // MARK: player events
-  onMetadataChapterReceived: (event: AudioMetadataReceivedEvent) => void
-  onMetadataCommonReceived: (event: AudioCommonMetadataReceivedEvent) => void
-  onMetadataTimedReceived: (event: AudioMetadataReceivedEvent) => void
-  onPlaybackMetadata: (data: PlaybackMetadata) => void
+  onChapterMetadata: (chapters: ChapterMetadata[]) => void
+  onTrackMetadata: (metadata: TrackMetadata) => void
+  onTimedMetadata: (metadata: TimedMetadata) => void
   onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) => void
   onPlaybackError: (data: PlaybackErrorEvent) => void
   onPlaybackPlayWhenReadyChanged: (

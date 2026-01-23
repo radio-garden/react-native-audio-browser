@@ -58,14 +58,12 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
-// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
-// Forward declaration of `AudioMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
-// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
-// Forward declaration of `PlaybackMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
+// Forward declaration of `ChapterMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
+// Forward declaration of `TrackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
+// Forward declaration of `TimedMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -201,10 +199,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "SearchMode.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "FormatNavigationErrorParams.hpp"
-#include "AudioMetadataReceivedEvent.hpp"
-#include "AudioMetadata.hpp"
-#include "AudioCommonMetadataReceivedEvent.hpp"
-#include "PlaybackMetadata.hpp"
+#include "ChapterMetadata.hpp"
+#include "TrackMetadata.hpp"
+#include "TimedMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
@@ -354,33 +351,26 @@ namespace margelo::nitro::audiobrowser {
     inline void setConfiguration(const NativeBrowserConfiguration& configuration) noexcept override {
       _swiftPart.setConfiguration(std::forward<decltype(configuration)>(configuration));
     }
-    inline std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataChapterReceived() noexcept override {
-      auto __result = _swiftPart.getOnMetadataChapterReceived();
+    inline std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() noexcept override {
+      auto __result = _swiftPart.getOnChapterMetadata();
       return __result;
     }
-    inline void setOnMetadataChapterReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataChapterReceived) noexcept override {
-      _swiftPart.setOnMetadataChapterReceived(onMetadataChapterReceived);
+    inline void setOnChapterMetadata(const std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>& onChapterMetadata) noexcept override {
+      _swiftPart.setOnChapterMetadata(onChapterMetadata);
     }
-    inline std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)> getOnMetadataCommonReceived() noexcept override {
-      auto __result = _swiftPart.getOnMetadataCommonReceived();
+    inline std::function<void(const TrackMetadata& /* metadata */)> getOnTrackMetadata() noexcept override {
+      auto __result = _swiftPart.getOnTrackMetadata();
       return __result;
     }
-    inline void setOnMetadataCommonReceived(const std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>& onMetadataCommonReceived) noexcept override {
-      _swiftPart.setOnMetadataCommonReceived(onMetadataCommonReceived);
+    inline void setOnTrackMetadata(const std::function<void(const TrackMetadata& /* metadata */)>& onTrackMetadata) noexcept override {
+      _swiftPart.setOnTrackMetadata(onTrackMetadata);
     }
-    inline std::function<void(const AudioMetadataReceivedEvent& /* event */)> getOnMetadataTimedReceived() noexcept override {
-      auto __result = _swiftPart.getOnMetadataTimedReceived();
+    inline std::function<void(const TimedMetadata& /* metadata */)> getOnTimedMetadata() noexcept override {
+      auto __result = _swiftPart.getOnTimedMetadata();
       return __result;
     }
-    inline void setOnMetadataTimedReceived(const std::function<void(const AudioMetadataReceivedEvent& /* event */)>& onMetadataTimedReceived) noexcept override {
-      _swiftPart.setOnMetadataTimedReceived(onMetadataTimedReceived);
-    }
-    inline std::function<void(const PlaybackMetadata& /* data */)> getOnPlaybackMetadata() noexcept override {
-      auto __result = _swiftPart.getOnPlaybackMetadata();
-      return __result;
-    }
-    inline void setOnPlaybackMetadata(const std::function<void(const PlaybackMetadata& /* data */)>& onPlaybackMetadata) noexcept override {
-      _swiftPart.setOnPlaybackMetadata(onPlaybackMetadata);
+    inline void setOnTimedMetadata(const std::function<void(const TimedMetadata& /* metadata */)>& onTimedMetadata) noexcept override {
+      _swiftPart.setOnTimedMetadata(onTimedMetadata);
     }
     inline std::function<void(const PlaybackActiveTrackChangedEvent& /* data */)> getOnPlaybackActiveTrackChanged() noexcept override {
       auto __result = _swiftPart.getOnPlaybackActiveTrackChanged();

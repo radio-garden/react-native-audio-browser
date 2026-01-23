@@ -20,12 +20,6 @@ namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
-// Forward declaration of `AudioCommonMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioCommonMetadataReceivedEvent; }
-// Forward declaration of `AudioMetadataReceivedEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadataReceivedEvent; }
-// Forward declaration of `AudioMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AudioMetadata; }
 // Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
@@ -38,6 +32,8 @@ namespace margelo::nitro::audiobrowser { struct BrowseError; }
 namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `ChapterMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
@@ -94,8 +90,6 @@ namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent;
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
-// Forward declaration of `PlaybackMetadata` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PlaybackMetadata; }
 // Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
 // Forward declaration of `PlaybackProgressUpdatedEvent` to properly resolve imports.
@@ -150,6 +144,10 @@ namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
+// Forward declaration of `TimedMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
+// Forward declaration of `TrackMetadata` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -170,15 +168,13 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AndroidPlayerWakeMode.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "ArtworkRequestConfig.hpp"
-#include "AudioCommonMetadataReceivedEvent.hpp"
-#include "AudioMetadata.hpp"
-#include "AudioMetadataReceivedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "CarPlayNowPlayingButton.hpp"
+#include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "FormatNavigationErrorParams.hpp"
@@ -208,7 +204,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
-#include "PlaybackMetadata.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
@@ -235,7 +230,9 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "SleepTimerTime.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
+#include "TimedMetadata.hpp"
 #include "Track.hpp"
+#include "TrackMetadata.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"
@@ -1678,81 +1675,81 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return *optional;
   }
   
-  // pragma MARK: std::vector<AudioMetadata>
+  // pragma MARK: std::vector<ChapterMetadata>
   /**
-   * Specialized version of `std::vector<AudioMetadata>`.
+   * Specialized version of `std::vector<ChapterMetadata>`.
    */
-  using std__vector_AudioMetadata_ = std::vector<AudioMetadata>;
-  inline std::vector<AudioMetadata> create_std__vector_AudioMetadata_(size_t size) noexcept {
-    std::vector<AudioMetadata> vector;
+  using std__vector_ChapterMetadata_ = std::vector<ChapterMetadata>;
+  inline std::vector<ChapterMetadata> create_std__vector_ChapterMetadata_(size_t size) noexcept {
+    std::vector<ChapterMetadata> vector;
     vector.reserve(size);
     return vector;
   }
   
-  // pragma MARK: std::function<void(const AudioMetadataReceivedEvent& /* event */)>
+  // pragma MARK: std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>
   /**
-   * Specialized version of `std::function<void(const AudioMetadataReceivedEvent&)>`.
+   * Specialized version of `std::function<void(const std::vector<ChapterMetadata>&)>`.
    */
-  using Func_void_AudioMetadataReceivedEvent = std::function<void(const AudioMetadataReceivedEvent& /* event */)>;
+  using Func_void_std__vector_ChapterMetadata_ = std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>;
   /**
-   * Wrapper class for a `std::function<void(const AudioMetadataReceivedEvent& / * event * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const std::vector<ChapterMetadata>& / * chapters * /)>`, this can be used from Swift.
    */
-  class Func_void_AudioMetadataReceivedEvent_Wrapper final {
+  class Func_void_std__vector_ChapterMetadata__Wrapper final {
   public:
-    explicit Func_void_AudioMetadataReceivedEvent_Wrapper(std::function<void(const AudioMetadataReceivedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const AudioMetadataReceivedEvent& /* event */)>>(std::move(func))) {}
-    inline void call(AudioMetadataReceivedEvent event) const noexcept {
-      _function->operator()(event);
+    explicit Func_void_std__vector_ChapterMetadata__Wrapper(std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>&& func): _function(std::make_unique<std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>>(std::move(func))) {}
+    inline void call(std::vector<ChapterMetadata> chapters) const noexcept {
+      _function->operator()(chapters);
     }
   private:
-    std::unique_ptr<std::function<void(const AudioMetadataReceivedEvent& /* event */)>> _function;
+    std::unique_ptr<std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_AudioMetadataReceivedEvent create_Func_void_AudioMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_AudioMetadataReceivedEvent_Wrapper wrap_Func_void_AudioMetadataReceivedEvent(Func_void_AudioMetadataReceivedEvent value) noexcept {
-    return Func_void_AudioMetadataReceivedEvent_Wrapper(std::move(value));
+  Func_void_std__vector_ChapterMetadata_ create_Func_void_std__vector_ChapterMetadata_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__vector_ChapterMetadata__Wrapper wrap_Func_void_std__vector_ChapterMetadata_(Func_void_std__vector_ChapterMetadata_ value) noexcept {
+    return Func_void_std__vector_ChapterMetadata__Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>
+  // pragma MARK: std::function<void(const TrackMetadata& /* metadata */)>
   /**
-   * Specialized version of `std::function<void(const AudioCommonMetadataReceivedEvent&)>`.
+   * Specialized version of `std::function<void(const TrackMetadata&)>`.
    */
-  using Func_void_AudioCommonMetadataReceivedEvent = std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>;
+  using Func_void_TrackMetadata = std::function<void(const TrackMetadata& /* metadata */)>;
   /**
-   * Wrapper class for a `std::function<void(const AudioCommonMetadataReceivedEvent& / * event * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const TrackMetadata& / * metadata * /)>`, this can be used from Swift.
    */
-  class Func_void_AudioCommonMetadataReceivedEvent_Wrapper final {
+  class Func_void_TrackMetadata_Wrapper final {
   public:
-    explicit Func_void_AudioCommonMetadataReceivedEvent_Wrapper(std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>>(std::move(func))) {}
-    inline void call(AudioCommonMetadataReceivedEvent event) const noexcept {
-      _function->operator()(event);
+    explicit Func_void_TrackMetadata_Wrapper(std::function<void(const TrackMetadata& /* metadata */)>&& func): _function(std::make_unique<std::function<void(const TrackMetadata& /* metadata */)>>(std::move(func))) {}
+    inline void call(TrackMetadata metadata) const noexcept {
+      _function->operator()(metadata);
     }
   private:
-    std::unique_ptr<std::function<void(const AudioCommonMetadataReceivedEvent& /* event */)>> _function;
+    std::unique_ptr<std::function<void(const TrackMetadata& /* metadata */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_AudioCommonMetadataReceivedEvent create_Func_void_AudioCommonMetadataReceivedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_AudioCommonMetadataReceivedEvent_Wrapper wrap_Func_void_AudioCommonMetadataReceivedEvent(Func_void_AudioCommonMetadataReceivedEvent value) noexcept {
-    return Func_void_AudioCommonMetadataReceivedEvent_Wrapper(std::move(value));
+  Func_void_TrackMetadata create_Func_void_TrackMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_TrackMetadata_Wrapper wrap_Func_void_TrackMetadata(Func_void_TrackMetadata value) noexcept {
+    return Func_void_TrackMetadata_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::function<void(const PlaybackMetadata& /* data */)>
+  // pragma MARK: std::function<void(const TimedMetadata& /* metadata */)>
   /**
-   * Specialized version of `std::function<void(const PlaybackMetadata&)>`.
+   * Specialized version of `std::function<void(const TimedMetadata&)>`.
    */
-  using Func_void_PlaybackMetadata = std::function<void(const PlaybackMetadata& /* data */)>;
+  using Func_void_TimedMetadata = std::function<void(const TimedMetadata& /* metadata */)>;
   /**
-   * Wrapper class for a `std::function<void(const PlaybackMetadata& / * data * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const TimedMetadata& / * metadata * /)>`, this can be used from Swift.
    */
-  class Func_void_PlaybackMetadata_Wrapper final {
+  class Func_void_TimedMetadata_Wrapper final {
   public:
-    explicit Func_void_PlaybackMetadata_Wrapper(std::function<void(const PlaybackMetadata& /* data */)>&& func): _function(std::make_unique<std::function<void(const PlaybackMetadata& /* data */)>>(std::move(func))) {}
-    inline void call(PlaybackMetadata data) const noexcept {
-      _function->operator()(data);
+    explicit Func_void_TimedMetadata_Wrapper(std::function<void(const TimedMetadata& /* metadata */)>&& func): _function(std::make_unique<std::function<void(const TimedMetadata& /* metadata */)>>(std::move(func))) {}
+    inline void call(TimedMetadata metadata) const noexcept {
+      _function->operator()(metadata);
     }
   private:
-    std::unique_ptr<std::function<void(const PlaybackMetadata& /* data */)>> _function;
+    std::unique_ptr<std::function<void(const TimedMetadata& /* metadata */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_PlaybackMetadata create_Func_void_PlaybackMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_PlaybackMetadata_Wrapper wrap_Func_void_PlaybackMetadata(Func_void_PlaybackMetadata value) noexcept {
-    return Func_void_PlaybackMetadata_Wrapper(std::move(value));
+  Func_void_TimedMetadata create_Func_void_TimedMetadata(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_TimedMetadata_Wrapper wrap_Func_void_TimedMetadata(Func_void_TimedMetadata value) noexcept {
+    return Func_void_TimedMetadata_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<Track>

@@ -50,10 +50,12 @@ export type NowPlayingUpdate = {
   artist?: string
 }
 
-export interface PlaybackMetadata {
-  source: string
+/**
+ * Timed metadata received during playback.
+ * Contains metadata from ICY streams (radio) or ID3 frames.
+ */
+export interface TimedMetadata {
   title?: string
-  url?: string
   artist?: string
   album?: string
   date?: string
@@ -61,10 +63,10 @@ export interface PlaybackMetadata {
 }
 
 /**
- * An object representing the common metadata received for a track.
- * This is used for common metadata events which do not include raw metadata.
+ * Static track metadata from the media file.
+ * Contains standardized metadata fields.
  */
-export interface AudioMetadata {
+export interface TrackMetadata {
   title?: string
   artist?: string
   albumTitle?: string
@@ -84,62 +86,45 @@ export interface AudioMetadata {
 }
 
 /**
- * Common metadata received event.
- * Contains standardized metadata fields without raw metadata entries.
- * Available on both iOS and Android.
+ * Chapter metadata with time range.
+ * Used for podcast chapters, audiobook chapters, etc.
  */
-export interface AudioCommonMetadataReceivedEvent {
-  metadata: AudioMetadata
-}
-
-/**
- * Timed and chapter metadata received event.
- * Contains standardized metadata fields plus raw metadata entries.
- * Available on both iOS and Android for timed metadata.
- * Chapter metadata is iOS-only.
- */
-export interface AudioMetadataReceivedEvent {
-  metadata: AudioMetadata[]
+export interface ChapterMetadata {
+  /** Chapter start time in seconds */
+  startTime: number
+  /** Chapter end time in seconds */
+  endTime: number
+  /** Chapter title */
+  title?: string
+  /** URL associated with the chapter */
+  url?: string
 }
 
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to chapter metadata events (iOS only).
+ * Subscribes to chapter metadata events.
  * @param callback - Called when chapter metadata is received
  * @returns Cleanup function to unsubscribe
  */
-export const onMetadataChapterReceived =
-  NativeUpdatedValue.emitterize<AudioMetadataReceivedEvent>(
-    (cb) => (nativeBrowser.onMetadataChapterReceived = cb)
-  )
+export const onChapterMetadata = NativeUpdatedValue.emitterize<ChapterMetadata[]>(
+  (cb) => (nativeBrowser.onChapterMetadata = cb)
+)
 
 /**
- * Subscribes to common metadata events.
- * @param callback - Called when common (static) metadata is received
+ * Subscribes to track metadata events.
+ * @param callback - Called when static track metadata is received
  * @returns Cleanup function to unsubscribe
  */
-export const onMetadataCommonReceived =
-  NativeUpdatedValue.emitterize<AudioCommonMetadataReceivedEvent>(
-    (cb) => (nativeBrowser.onMetadataCommonReceived = cb)
-  )
+export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
+  (cb) => (nativeBrowser.onTrackMetadata = cb)
+)
 
 /**
- * Subscribes to playback metadata events (ICY/ID3 from live streams).
+ * Subscribes to timed metadata events (ICY/ID3 from live streams).
  * @param callback - Called when stream metadata is received (title, artist from ICY/ID3 tags)
  * @returns Cleanup function to unsubscribe
  */
-export const onPlaybackMetadata =
-  NativeUpdatedValue.emitterize<PlaybackMetadata>(
-    (cb) => (nativeBrowser.onPlaybackMetadata = cb)
-  )
-
-/**
- * Subscribes to timed metadata events.
- * @param callback - Called when timed metadata is received
- * @returns Cleanup function to unsubscribe
- */
-export const onMetadataTimedReceived =
-  NativeUpdatedValue.emitterize<AudioMetadataReceivedEvent>(
-    (cb) => (nativeBrowser.onMetadataTimedReceived = cb)
-  )
+export const onTimedMetadata = NativeUpdatedValue.emitterize<TimedMetadata>(
+  (cb) => (nativeBrowser.onTimedMetadata = cb)
+)

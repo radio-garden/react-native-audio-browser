@@ -292,77 +292,64 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onMetadataChapterReceived: bridge.Func_void_AudioMetadataReceivedEvent {
+  public final var onChapterMetadata: bridge.Func_void_std__vector_ChapterMetadata_ {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_AudioMetadataReceivedEvent in
-        let __closureWrapper = Func_void_AudioMetadataReceivedEvent(self.__implementation.onMetadataChapterReceived)
-        return bridge.create_Func_void_AudioMetadataReceivedEvent(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_std__vector_ChapterMetadata_ in
+        let __closureWrapper = Func_void_std__vector_ChapterMetadata_(self.__implementation.onChapterMetadata)
+        return bridge.create_Func_void_std__vector_ChapterMetadata_(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onMetadataChapterReceived = { () -> (AudioMetadataReceivedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_AudioMetadataReceivedEvent(newValue)
-        return { (__event: AudioMetadataReceivedEvent) -> Void in
-          __wrappedFunction.call(__event)
+      self.__implementation.onChapterMetadata = { () -> ([ChapterMetadata]) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_std__vector_ChapterMetadata_(newValue)
+        return { (__chapters: [ChapterMetadata]) -> Void in
+          __wrappedFunction.call({ () -> bridge.std__vector_ChapterMetadata_ in
+            var __vector = bridge.create_std__vector_ChapterMetadata_(__chapters.count)
+            for __item in __chapters {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
         }
       }()
     }
   }
   
-  public final var onMetadataCommonReceived: bridge.Func_void_AudioCommonMetadataReceivedEvent {
+  public final var onTrackMetadata: bridge.Func_void_TrackMetadata {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_AudioCommonMetadataReceivedEvent in
-        let __closureWrapper = Func_void_AudioCommonMetadataReceivedEvent(self.__implementation.onMetadataCommonReceived)
-        return bridge.create_Func_void_AudioCommonMetadataReceivedEvent(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_TrackMetadata in
+        let __closureWrapper = Func_void_TrackMetadata(self.__implementation.onTrackMetadata)
+        return bridge.create_Func_void_TrackMetadata(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onMetadataCommonReceived = { () -> (AudioCommonMetadataReceivedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_AudioCommonMetadataReceivedEvent(newValue)
-        return { (__event: AudioCommonMetadataReceivedEvent) -> Void in
-          __wrappedFunction.call(__event)
+      self.__implementation.onTrackMetadata = { () -> (TrackMetadata) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_TrackMetadata(newValue)
+        return { (__metadata: TrackMetadata) -> Void in
+          __wrappedFunction.call(__metadata)
         }
       }()
     }
   }
   
-  public final var onMetadataTimedReceived: bridge.Func_void_AudioMetadataReceivedEvent {
+  public final var onTimedMetadata: bridge.Func_void_TimedMetadata {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_AudioMetadataReceivedEvent in
-        let __closureWrapper = Func_void_AudioMetadataReceivedEvent(self.__implementation.onMetadataTimedReceived)
-        return bridge.create_Func_void_AudioMetadataReceivedEvent(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_TimedMetadata in
+        let __closureWrapper = Func_void_TimedMetadata(self.__implementation.onTimedMetadata)
+        return bridge.create_Func_void_TimedMetadata(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onMetadataTimedReceived = { () -> (AudioMetadataReceivedEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_AudioMetadataReceivedEvent(newValue)
-        return { (__event: AudioMetadataReceivedEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onPlaybackMetadata: bridge.Func_void_PlaybackMetadata {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_PlaybackMetadata in
-        let __closureWrapper = Func_void_PlaybackMetadata(self.__implementation.onPlaybackMetadata)
-        return bridge.create_Func_void_PlaybackMetadata(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onPlaybackMetadata = { () -> (PlaybackMetadata) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_PlaybackMetadata(newValue)
-        return { (__data: PlaybackMetadata) -> Void in
-          __wrappedFunction.call(__data)
+      self.__implementation.onTimedMetadata = { () -> (TimedMetadata) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_TimedMetadata(newValue)
+        return { (__metadata: TimedMetadata) -> Void in
+          __wrappedFunction.call(__metadata)
         }
       }()
     }

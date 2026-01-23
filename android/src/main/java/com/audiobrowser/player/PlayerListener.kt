@@ -22,19 +22,19 @@ import timber.log.Timber
 class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   /** Called when there is metadata associated with the current playback time. */
   override fun onMetadata(metadata: Metadata) {
-    // Parse playback metadata from different formats
-    val playbackMetadata =
-      PlaybackMetadata.Companion.fromId3Metadata(metadata)
-        ?: PlaybackMetadata.Companion.fromIcy(metadata)
-        ?: PlaybackMetadata.Companion.fromVorbisComment(metadata)
-        ?: PlaybackMetadata.Companion.fromQuickTime(metadata)
+    // Extract and emit chapter metadata if present
+    val chapters = MetadataAdapter.extractChapters(metadata)
+    if (chapters.isNotEmpty()) {
+      player.callbacks?.onChapterMetadata(chapters)
+    }
 
-    playbackMetadata?.let { player.callbacks?.onPlaybackMetadata(it) }
+    // Extract and emit timed metadata (ICY, ID3, etc.)
+    PlaybackMetadata.from(metadata)?.let { player.callbacks?.onTimedMetadata(it.toNitro()) }
   }
 
   override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-    player.callbacks?.onMetadataCommonReceived(
-      MetadataAdapter.Companion.audioMetadataFromMediaMetadata(mediaMetadata)
+    player.callbacks?.onTrackMetadata(
+      MetadataAdapter.Companion.trackMetadataFromMediaMetadata(mediaMetadata)
     )
   }
 
