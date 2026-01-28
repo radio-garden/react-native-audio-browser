@@ -13,7 +13,7 @@ import type {
   FormatNavigationErrorCallback,
   MediaRequestConfig,
   SearchSourceCallback,
-  TransformableRequestConfig,
+  TransformableRequestConfig
 } from './browser'
 import type { ResolvedTrack } from './browser-nodes'
 

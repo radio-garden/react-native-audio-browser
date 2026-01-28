@@ -48,9 +48,10 @@ export function setEqualizerLevels(levels: number[]): void {
  * @param callback - Called when equalizer settings change
  * @returns Cleanup function to unsubscribe
  */
-export const onEqualizerChanged = NativeUpdatedValue.emitterize<EqualizerSettings>(
-  (cb) => (nativeBrowser.onEqualizerChanged = cb)
-)
+export const onEqualizerChanged =
+  NativeUpdatedValue.emitterize<EqualizerSettings>(
+    (cb) => (nativeBrowser.onEqualizerChanged = cb)
+  )
 
 // MARK: - Hooks
 

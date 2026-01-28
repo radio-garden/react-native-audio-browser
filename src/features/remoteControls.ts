@@ -228,7 +228,6 @@ export function handleRemoteJumpBackward(
 // Multiple listeners can be registered for the same event.
 // To override the default behavior, use the handleRemote* functions above.
 
-
 /**
  * Subscribes to remote jump backward events.
  * @param callback - Called when the user presses the jump backward button
@@ -248,7 +247,6 @@ export const onRemoteJumpForward =
   LazyNativeEmitter.emitterize<RemoteJumpForwardEvent>(
     (cb) => (nativeBrowser.onRemoteJumpForward = cb)
   )
-
 
 /**
  * Subscribes to remote next events.
@@ -291,9 +289,10 @@ export const onRemotePlayId = LazyNativeEmitter.emitterize<RemotePlayIdEvent>(
  * @param callback - Called when the user searches for a track (usually voice search)
  * @returns Cleanup function to unsubscribe
  */
-export const onRemotePlaySearch = LazyNativeEmitter.emitterize<RemotePlaySearchEvent>(
-  (cb) => (nativeBrowser.onRemotePlaySearch = cb)
-)
+export const onRemotePlaySearch =
+  LazyNativeEmitter.emitterize<RemotePlaySearchEvent>(
+    (cb) => (nativeBrowser.onRemotePlaySearch = cb)
+  )
 
 /**
  * Subscribes to remote previous events.
@@ -318,9 +317,10 @@ export const onRemoteSeek = LazyNativeEmitter.emitterize<RemoteSeekEvent>(
  * @param callback - Called when the user changes the rating for the track remotely
  * @returns Cleanup function to unsubscribe
  */
-export const onRemoteSetRating = LazyNativeEmitter.emitterize<RemoteSetRatingEvent>(
-  (cb) => (nativeBrowser.onRemoteSetRating = cb)
-)
+export const onRemoteSetRating =
+  LazyNativeEmitter.emitterize<RemoteSetRatingEvent>(
+    (cb) => (nativeBrowser.onRemoteSetRating = cb)
+  )
 
 /**
  * Subscribes to remote skip events (Android only).

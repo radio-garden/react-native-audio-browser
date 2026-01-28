@@ -144,10 +144,13 @@ export function useSleepTimer(params?: {
 
     // In order to make time update reaching 0 sync with firing of completion,
     // first wait for the next interval to start before starting update loop
-    const initialTimeoutId = setTimeout(() => {
-      update()
-      intervalId = setInterval(update, updateInterval)
-    }, updateInterval - (time % updateInterval))
+    const initialTimeoutId = setTimeout(
+      () => {
+        update()
+        intervalId = setInterval(update, updateInterval)
+      },
+      updateInterval - (time % updateInterval)
+    )
     let intervalId: ReturnType<typeof setInterval> | undefined
     const clear = () => {
       clearTimeout(initialTimeoutId)
@@ -171,14 +174,12 @@ export type SleepTimerState =
   | { time: number; secondsLeft: number }
   | { sleepWhenPlayedToEnd: boolean }
 
-function addSecondsLeft(
-  state: SleepTimer
-): SleepTimerState | undefined {
+function addSecondsLeft(state: SleepTimer): SleepTimerState | undefined {
   if (!state) return undefined
   if ('time' in state) {
     return {
       ...state,
-      secondsLeft: Math.max(0, Math.round((state.time - Date.now()) / 1000)),
+      secondsLeft: Math.max(0, Math.round((state.time - Date.now()) / 1000))
     }
   }
   return state

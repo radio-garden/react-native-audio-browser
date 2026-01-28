@@ -1,7 +1,6 @@
-
 // MARK: - Types
 
-import { nativeBrowser } from "../../native"
+import { nativeBrowser } from '../../native'
 
 /**
  * AndroidAudioContentType options:

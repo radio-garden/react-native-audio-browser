@@ -13,7 +13,7 @@ import type {
 } from '../types'
 import type {
   NativeBrowserConfiguration,
-  NativeRouteEntry,
+  NativeRouteEntry
 } from '../types/browser-native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
@@ -22,7 +22,9 @@ import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 // Configuration Transformation
 // ─────────────────────────────────────────────────────────────────────────────
 
-function isCallback(source: unknown): source is (...args: unknown[]) => unknown {
+function isCallback(
+  source: unknown
+): source is (...args: unknown[]) => unknown {
   return typeof source === 'function'
 }
 
@@ -68,12 +70,12 @@ function searchSourceToRouteEntry(source: SearchSource): NativeRouteEntry {
   if (isCallback(source)) {
     return {
       path: SEARCH_ROUTE_PATH,
-      searchCallback: source as SearchSourceCallback,
+      searchCallback: source as SearchSourceCallback
     }
   }
   return {
     path: SEARCH_ROUTE_PATH,
-    searchConfig: source as TransformableRequestConfig,
+    searchConfig: source as TransformableRequestConfig
   }
 }
 
@@ -85,7 +87,7 @@ function wrapTracksAsResolvedTrack(tracks: Track[]): ResolvedTrack {
   return {
     url: TABS_ROUTE_PATH,
     title: 'Tabs',
-    children: tracks,
+    children: tracks
   }
 }
 
@@ -98,26 +100,26 @@ function tabsSourceToRouteEntry(source: TabsSource): NativeRouteEntry {
     // Static Track[] - wrap as ResolvedTrack
     return {
       path: TABS_ROUTE_PATH,
-      browseStatic: wrapTracksAsResolvedTrack(source),
+      browseStatic: wrapTracksAsResolvedTrack(source)
     }
   }
 
   if (isCallback(source)) {
     // Callback returning Track[] - wrap to return ResolvedTrack
     const wrappedCallback: BrowserSourceCallback = async () => {
-      const tracks = await (source)()
+      const tracks = await source()
       return wrapTracksAsResolvedTrack(tracks)
     }
     return {
       path: TABS_ROUTE_PATH,
-      browseCallback: wrappedCallback,
+      browseCallback: wrappedCallback
     }
   }
 
   // TransformableRequestConfig - native will handle wrapping the response
   return {
     path: TABS_ROUTE_PATH,
-    browseConfig: source,
+    browseConfig: source
   }
 }
 
@@ -130,7 +132,7 @@ function flattenRouteEntry(
       path,
       ...flattenBrowseSource(source.browse),
       media: source.media,
-      artwork: source.artwork,
+      artwork: source.artwork
     }
   }
   return { path, ...flattenBrowseSource(source) }
@@ -178,18 +180,25 @@ function flattenRoutes(
   return entries.length > 0 ? entries : undefined
 }
 
-function toNativeConfig(config: BrowserConfiguration): NativeBrowserConfiguration {
+function toNativeConfig(
+  config: BrowserConfiguration
+): NativeBrowserConfiguration {
   return {
     path: config.path,
     request: config.request,
     media: config.media,
     artwork: config.artwork,
-    routes: flattenRoutes(config.routes, config.browse, config.tabs, config.search),
+    routes: flattenRoutes(
+      config.routes,
+      config.browse,
+      config.tabs,
+      config.search
+    ),
     singleTrack: config.singleTrack,
     androidControllerOfflineError: config.androidControllerOfflineError,
     carPlayUpNextButton: config.carPlayUpNextButton,
     carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
-    formatNavigationError: config.formatNavigationError,
+    formatNavigationError: config.formatNavigationError
   }
 }
 

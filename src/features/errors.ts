@@ -30,7 +30,12 @@ export interface PlaybackErrorEvent {
  *   Use this for business logic errors like authentication failures or subscription requirements.
  * - `'unknown-error'` - An unexpected error occurred (e.g., invalid configuration).
  */
-export type NavigationErrorType = 'content-not-found' | 'network-error' | 'http-error' | 'callback-error' | 'unknown-error'
+export type NavigationErrorType =
+  | 'content-not-found'
+  | 'network-error'
+  | 'http-error'
+  | 'callback-error'
+  | 'unknown-error'
 
 export type NavigationError = {
   code: NavigationErrorType
@@ -65,9 +70,10 @@ export function getPlaybackError(): PlaybackError | undefined {
  * @param callback - Called when a playback error occurs
  * @returns Cleanup function to unsubscribe
  */
-export const onPlaybackError = NativeUpdatedValue.emitterize<PlaybackErrorEvent>(
-  (cb) => (nativeBrowser.onPlaybackError = cb)
-)
+export const onPlaybackError =
+  NativeUpdatedValue.emitterize<PlaybackErrorEvent>(
+    (cb) => (nativeBrowser.onPlaybackError = cb)
+  )
 
 // MARK: - Hooks
 
@@ -95,9 +101,10 @@ export function getNavigationError(): NavigationError | undefined {
  * @param callback - Called when a navigation error occurs
  * @returns Cleanup function to unsubscribe
  */
-export const onNavigationError = NativeUpdatedValue.emitterize<NavigationErrorEvent>(
-  (cb) => (nativeBrowser.onNavigationError = cb)
-)
+export const onNavigationError =
+  NativeUpdatedValue.emitterize<NavigationErrorEvent>(
+    (cb) => (nativeBrowser.onNavigationError = cb)
+  )
 
 /**
  * Hook that returns the current navigation error and updates when it changes.
@@ -116,7 +123,9 @@ export function useNavigationError(): NavigationError | undefined {
  *
  * @returns Formatted error with title and message, or undefined if no error
  */
-export function getFormattedNavigationError(): FormattedNavigationError | undefined {
+export function getFormattedNavigationError():
+  | FormattedNavigationError
+  | undefined {
   return nativeBrowser.getFormattedNavigationError() ?? undefined
 }
 
@@ -125,9 +134,9 @@ export function getFormattedNavigationError(): FormattedNavigationError | undefi
  * @param callback - Called when the formatted navigation error changes
  * @returns Cleanup function to unsubscribe
  */
-export const onFormattedNavigationError = NativeUpdatedValue.emitterize<FormattedNavigationError | undefined>(
-  (cb) => (nativeBrowser.onFormattedNavigationError = cb)
-)
+export const onFormattedNavigationError = NativeUpdatedValue.emitterize<
+  FormattedNavigationError | undefined
+>((cb) => (nativeBrowser.onFormattedNavigationError = cb))
 
 /**
  * Hook that returns the current navigation error formatted for display.
@@ -177,7 +186,9 @@ export const onFormattedNavigationError = NativeUpdatedValue.emitterize<Formatte
  * @see {@link BrowserConfiguration.formatNavigationError} - Configure custom error formatting
  * @see {@link useNavigationError} - Access the raw error with code and status details
  */
-export function useFormattedNavigationError(): FormattedNavigationError | undefined {
+export function useFormattedNavigationError():
+  | FormattedNavigationError
+  | undefined {
   return useNativeUpdatedValue(
     getFormattedNavigationError,
     onFormattedNavigationError

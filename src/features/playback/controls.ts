@@ -1,7 +1,6 @@
-
 // MARK: - Playback Controls
 
-import { nativeBrowser } from "../../native"
+import { nativeBrowser } from '../../native'
 
 /**
  * Resets the player stopping the current track and clearing the queue.

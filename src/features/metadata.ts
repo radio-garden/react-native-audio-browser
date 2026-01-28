@@ -107,9 +107,9 @@ export interface ChapterMetadata {
  * @param callback - Called when chapter metadata is received
  * @returns Cleanup function to unsubscribe
  */
-export const onChapterMetadata = NativeUpdatedValue.emitterize<ChapterMetadata[]>(
-  (cb) => (nativeBrowser.onChapterMetadata = cb)
-)
+export const onChapterMetadata = NativeUpdatedValue.emitterize<
+  ChapterMetadata[]
+>((cb) => (nativeBrowser.onChapterMetadata = cb))
 
 /**
  * Subscribes to track metadata events.

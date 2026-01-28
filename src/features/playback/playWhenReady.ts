@@ -49,5 +49,9 @@ export const onPlayWhenReadyChanged =
  * @returns The current playWhenReady state
  */
 export function usePlayWhenReady(): boolean {
-  return useNativeUpdatedValue(getPlayWhenReady, onPlayWhenReadyChanged, 'playWhenReady')
+  return useNativeUpdatedValue(
+    getPlayWhenReady,
+    onPlayWhenReadyChanged,
+    'playWhenReady'
+  )
 }

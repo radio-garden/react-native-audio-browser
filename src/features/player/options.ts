@@ -306,7 +306,6 @@ export interface NitroAndroidUpdateOptions {
   notificationButtons?: NotificationButtonLayout | null
 }
 
-
 /**
  * Partial options for updating player configuration.
  * Only specify the properties you want to change - all properties are optional.

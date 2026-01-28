@@ -6,7 +6,13 @@ import type {
   BatteryWarningPendingChangedEvent,
   FavoriteChangedEvent
 } from '../features'
-import type { NavigationError, NavigationErrorEvent, FormattedNavigationError, PlaybackError, PlaybackErrorEvent } from '../features/errors'
+import type {
+  NavigationError,
+  NavigationErrorEvent,
+  FormattedNavigationError,
+  PlaybackError,
+  PlaybackErrorEvent
+} from '../features/errors'
 import type {
   ChapterMetadata,
   NowPlayingMetadata,
@@ -27,11 +33,12 @@ import type {
   PartialSetupPlayerOptions,
   UpdateOptions
 } from '../features/player'
-import type {
-  PlaybackActiveTrackChangedEvent
-} from '../features/queue/activeTrack'
+import type { PlaybackActiveTrackChangedEvent } from '../features/queue/activeTrack'
 import type { PlaybackQueueEndedEvent } from '../features/queue/queue'
-import type { RepeatMode, RepeatModeChangedEvent } from '../features/queue/repeatMode'
+import type {
+  RepeatMode,
+  RepeatModeChangedEvent
+} from '../features/queue/repeatMode'
 import type {
   RemoteJumpBackwardEvent,
   RemoteJumpForwardEvent,
@@ -56,9 +63,10 @@ export type EqualizerSettings = {
   upperBandLevelLimit: number
 }
 
-export interface AudioBrowser
-  extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
-
+export interface AudioBrowser extends HybridObject<{
+  ios: 'swift'
+  android: 'kotlin'
+}> {
   // MARK: browser api
   path: string | undefined
   tabs: Track[] | undefined
@@ -71,7 +79,9 @@ export interface AudioBrowser
   onTabsChanged: (tabs: Track[]) => void
   onNavigationError: (data: NavigationErrorEvent) => void
   getNavigationError(): NavigationError | undefined
-  onFormattedNavigationError: (formattedError: FormattedNavigationError | undefined) => void
+  onFormattedNavigationError: (
+    formattedError: FormattedNavigationError | undefined
+  ) => void
   getFormattedNavigationError(): FormattedNavigationError | undefined
   notifyContentChanged(path: string): void
   setFavorites(favorites: string[]): void

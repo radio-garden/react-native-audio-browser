@@ -147,9 +147,10 @@ export function getQueue(): Track[] {
  * @param callback - Called when playback has paused due to reaching the end of the queue
  * @returns Cleanup function to unsubscribe
  */
-export const onQueueEnded = NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
-  (cb) => (nativeBrowser.onPlaybackQueueEnded = cb)
-)
+export const onQueueEnded =
+  NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
+    (cb) => (nativeBrowser.onPlaybackQueueEnded = cb)
+  )
 
 /**
  * Subscribes to queue change events.

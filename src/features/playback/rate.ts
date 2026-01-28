@@ -1,6 +1,6 @@
 // MARK: - Getters
 
-import { nativeBrowser } from "../../native"
+import { nativeBrowser } from '../../native'
 
 /**
  * Gets the playback rate where 0.5 would be half speed, 1 would be
