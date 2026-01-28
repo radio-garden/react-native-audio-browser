@@ -63,7 +63,7 @@ export function SearchScreen({ query, onQueryChange, onNavigate }: SearchScreenP
       track={item}
       isActive={item.src != null && activeTrack?.src === item.src}
       onPress={() => {
-        void navigate(item)
+        navigate(item)
         // Push browser on top of search when navigating to a browsable item
         if (item.url && !item.src) {
           onNavigate?.()

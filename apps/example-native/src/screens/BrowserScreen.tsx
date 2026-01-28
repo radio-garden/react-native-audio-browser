@@ -79,7 +79,7 @@ export function BrowserScreen() {
     <TrackListItem
       track={item}
       isActive={item.src != null && activeTrack?.src === item.src}
-      onPress={() => void navigate(item)}
+      onPress={() => navigate(item)}
     />
   )
 
@@ -133,7 +133,7 @@ export function BrowserScreen() {
             error={navigationError}
             onRetry={() => {
               if (path) {
-                void navigate(path)
+                navigate(path)
               }
             }}
           />
@@ -179,7 +179,7 @@ export function BrowserScreen() {
               key={index}
               style={styles.tab}
               onPress={() => {
-                void navigate(tab)
+                navigate(tab)
               }}
             >
               <Text

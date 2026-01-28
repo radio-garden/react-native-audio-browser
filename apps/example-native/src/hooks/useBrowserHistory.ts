@@ -78,7 +78,7 @@ export function useBrowserHistory(): (() => void) | undefined {
     if (history.length > 1) {
       setHistory((history) => history.slice(0, -1))
       isNavigatingBackRef.current = true
-      void navigate(history[history.length - 2])
+      navigate(history[history.length - 2])
     }
   }
 }
