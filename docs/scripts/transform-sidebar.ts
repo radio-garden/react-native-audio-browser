@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import { prefixOrder } from './base-name'
+import { prefixOrder } from './base-name.ts'
 
 interface SidebarItem {
   text: string
