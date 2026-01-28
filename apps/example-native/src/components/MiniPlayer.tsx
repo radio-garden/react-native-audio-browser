@@ -33,11 +33,11 @@ type MiniPlayerProps = {
 }
 
 function cycleRepeatMode() {
-    const modes: RepeatMode[] = ['off', 'track', 'queue']
-    const currentIndex = modes.indexOf(getRepeatMode())
-    const nextIndex = (currentIndex + 1) % modes.length
-    setRepeatMode(modes[nextIndex])
-  }
+  const modes: RepeatMode[] = ['off', 'track', 'queue']
+  const currentIndex = modes.indexOf(getRepeatMode())
+  const nextIndex = (currentIndex + 1) % modes.length
+  setRepeatMode(modes[nextIndex])
+}
 
 export function MiniPlayer({
   onEqualizerPress,
@@ -130,7 +130,10 @@ export function MiniPlayer({
           </TouchableOpacity>
         </View>
         <View style={styles.controlRow}>
-          <TouchableOpacity style={styles.controlButton} onPress={toggleShuffle}>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={toggleShuffle}
+          >
             <Icon
               name="shuffle"
               size={20}

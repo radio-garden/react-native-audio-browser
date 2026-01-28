@@ -29,7 +29,7 @@ const errors = [
     {
       url: '/api/errors/premium',
       title: 'Premium Music (402)',
-      error: 'Payment Required',
+      error: 'Payment Required'
     }
   ],
   [
@@ -88,7 +88,7 @@ const server = createServer((req, res) => {
   if (path === '/api') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify(root))
-    return;
+    return
   }
 
   if (path === '/api/errors') {
@@ -142,9 +142,7 @@ server.on('error', (error) => {
 })
 
 server.listen(PORT, () => {
-  console.log(
-    `Audio Browser Test Server running on http://localhost:${PORT}`
-  )
+  console.log(`Audio Browser Test Server running on http://localhost:${PORT}`)
 
   console.log(
     `   For Android emulator support, make sure to run: ${PORT === 3003 ? '' : `EXAMPLE_API_PORT=${PORT} `}yarn android:adb-reverse\n`

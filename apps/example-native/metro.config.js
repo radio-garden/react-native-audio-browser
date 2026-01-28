@@ -1,7 +1,7 @@
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const path = require('path');
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config')
+const path = require('path')
 
-const root = path.resolve(__dirname, '..', '..');
+const root = path.resolve(__dirname, '..', '..')
 
 /**
  * Metro configuration
@@ -15,22 +15,26 @@ const config = {
   resolver: {
     nodeModulesPaths: [
       path.resolve(__dirname, 'node_modules'),
-      path.resolve(root, 'node_modules'),
+      path.resolve(root, 'node_modules')
     ],
     // Force single resolution for packages that must be singletons
     extraNodeModules: {
-      'react-native-nitro-modules': path.resolve(__dirname, 'node_modules', 'react-native-nitro-modules'),
-    },
+      'react-native-nitro-modules': path.resolve(
+        __dirname,
+        'node_modules',
+        'react-native-nitro-modules'
+      )
+    }
   },
 
   transformer: {
     getTransformOptions: async () => ({
       transform: {
         experimentalImportSupport: false,
-        inlineRequires: true,
-      },
-    }),
-  },
-};
+        inlineRequires: true
+      }
+    })
+  }
+}
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = mergeConfig(getDefaultConfig(__dirname), config)

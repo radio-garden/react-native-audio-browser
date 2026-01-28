@@ -1,11 +1,5 @@
 import React from 'react'
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native'
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import {
   clearSleepTimer,
   setSleepTimer,

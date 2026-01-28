@@ -94,7 +94,12 @@ export function BrowserScreen() {
       >
         {canGoBack && (
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Icon name="chevron-left" size={18} color="#888888" iconStyle="solid" />
+            <Icon
+              name="chevron-left"
+              size={18}
+              color="#888888"
+              iconStyle="solid"
+            />
           </TouchableOpacity>
         )}
         <Text style={styles.pathText}>{showSearch ? '' : path}</Text>

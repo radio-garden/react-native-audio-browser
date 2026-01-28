@@ -23,7 +23,11 @@ type SearchScreenProps = {
   onNavigate?: () => void
 }
 
-export function SearchScreen({ query, onQueryChange, onNavigate }: SearchScreenProps) {
+export function SearchScreen({
+  query,
+  onQueryChange,
+  onNavigate
+}: SearchScreenProps) {
   const [results, setResults] = useState<Track[]>([])
   const [loading, setLoading] = useState(false)
   const activeTrack = useActiveTrack()
@@ -77,7 +81,13 @@ export function SearchScreen({ query, onQueryChange, onNavigate }: SearchScreenP
       <Text style={styles.title}>Search</Text>
 
       <View style={styles.searchContainer}>
-        <Icon name="magnifying-glass" size={16} color="#666666" iconStyle="solid" style={styles.searchIcon} />
+        <Icon
+          name="magnifying-glass"
+          size={16}
+          color="#666666"
+          iconStyle="solid"
+          style={styles.searchIcon}
+        />
         <TextInput
           style={styles.searchInput}
           placeholder="Search for tracks..."
@@ -90,7 +100,10 @@ export function SearchScreen({ query, onQueryChange, onNavigate }: SearchScreenP
           autoFocus
         />
         {query.length > 0 && (
-          <TouchableOpacity style={styles.clearButton} onPress={() => onQueryChange('')}>
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => onQueryChange('')}
+          >
             <Icon name="xmark" size={14} color="#666666" iconStyle="solid" />
           </TouchableOpacity>
         )}
@@ -111,13 +124,23 @@ export function SearchScreen({ query, onQueryChange, onNavigate }: SearchScreenP
         />
       ) : query.trim() ? (
         <View style={styles.centered}>
-          <Icon name="magnifying-glass" size={48} color="#333333" iconStyle="solid" />
+          <Icon
+            name="magnifying-glass"
+            size={48}
+            color="#333333"
+            iconStyle="solid"
+          />
           <Text style={styles.emptyText}>No results found</Text>
           <Text style={styles.emptySubtext}>Try a different search term</Text>
         </View>
       ) : (
         <View style={styles.centered}>
-          <Icon name="magnifying-glass" size={48} color="#333333" iconStyle="solid" />
+          <Icon
+            name="magnifying-glass"
+            size={48}
+            color="#333333"
+            iconStyle="solid"
+          />
           <Text style={styles.emptyText}>Search for music</Text>
           <Text style={styles.emptySubtext}>
             Try "radio", "jazz", "soul", or "david"
