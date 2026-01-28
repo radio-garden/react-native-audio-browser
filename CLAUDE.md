@@ -32,6 +32,7 @@ This is an **alpha product** - we do not care about breaking changes. Feel free 
 ### Important Callback Behaviors
 
 **Callbacks work seamlessly across JS/native boundary:**
+
 - Functions can be passed directly as parameters (no registration needed)
 - Reference counting system holds strong references safely
 - Can be called multiple times and stored in memory

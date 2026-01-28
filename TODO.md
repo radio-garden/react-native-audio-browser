@@ -11,22 +11,27 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
 - [ ] Simplify by removing `resolve` and passing `track` to `transform` instead
   - Current: two callbacks (`resolve` + `transform`) with overlapping responsibilities
   - Proposed: single `transform` callback that receives everything
+
   ```typescript
   interface ArtworkTransformParams {
-    request: RequestConfig  // Merged base config (track.artwork as default path)
-    track: Track           // The track being processed
+    request: RequestConfig // Merged base config (track.artwork as default path)
+    track: Track // The track being processed
     context?: ImageContext // Size hints from AA/CarPlay (undefined at browse-time)
   }
 
   interface ArtworkRequestConfig extends RequestConfig {
-    transform?: (params: ArtworkTransformParams) => Promise<RequestConfig | null>
+    transform?: (
+      params: ArtworkTransformParams
+    ) => Promise<RequestConfig | null>
     imageQueryParams?: ImageQueryParams
   }
   ```
+
   - Return `null` from transform to skip artwork for a track
   - Covers all use cases: URL construction, signing, size params, conditional artwork
 
 - [ ] Apply same pattern to `MediaRequestConfig` for audio streams
+
   ```typescript
   interface MediaTransformParams {
     request: RequestConfig
@@ -37,6 +42,7 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
     transform?: (params: MediaTransformParams) => Promise<RequestConfig>
   }
   ```
+
   - Enables per-track URL signing for audio streams too
 
 ## CarPlay (iOS)
@@ -128,6 +134,14 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
 
 ## Capabilities API
 
+- [ ] Investigate where MPFeedbackCommand `localizedTitle`/`localizedShortTitle` are displayed
+  - iOS `likeCommand` uses these properties but unclear where they're visible to users
+  - Possibilities: VoiceOver/accessibility, Siri, CarPlay, or not displayed at all
+  - Currently hardcoded to "Favorite" in `Capability+RemoteCommand.swift`
+  - If visible somewhere useful, consider making configurable via `iosFavoriteTitle` in `updateOptions()`
+  - Apple docs: "a localized string used to describe the context of a command"
+  - See: https://developer.apple.com/documentation/mediaplayer/mpfeedbackcommand/1622905-localizedtitle
+
 - [ ] Remove like/dislike/bookmark capabilities and callbacks until proper implementation
   - Currently half-implemented: capabilities exist but no clear user-facing functionality
   - `like` maps to iOS dislike command (confusing mapping)
@@ -150,6 +164,7 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
   - Use an interface with optional boolean properties instead of an array
   - All capabilities enabled by default (`undefined` or `true` = enabled, `false` = disabled)
   - More ergonomic: only specify what you want to disable
+
   ```typescript
   interface PlayerCapabilities {
     play?: boolean
@@ -171,10 +186,11 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
   updateOptions({
     capabilities: {
       shuffleMode: false,
-      repeatMode: false,
+      repeatMode: false
     }
   })
   ```
+
   - [x] Breaking change - updated iOS and Android to check for `!= false` instead of array membership
   - [x] Removed `playFromId`, `playFromSearch`, and `skip` - they didn't gate any functionality
   - [x] Renamed `ButtonCapability` to `NotificationButton` for clarity
@@ -197,6 +213,7 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
   - Android Auto has similar constraints
   - Currently: CarPlay truncates data after fetching full content
   - Proposed: Pass limits in `BrowserSourceCallbackParam` so data sources can optimize
+
   ```typescript
   interface BrowserSourceCallbackParam {
     path: string
@@ -207,6 +224,7 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
     }
   }
   ```
+
   - Requires: CarPlay/Android Auto to make separate requests rather than sharing `onContentChanged`
 
 ## Browser Architecture
@@ -238,6 +256,7 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
   - Benefits: Cleaner separation, self-contained BrowserManager, less duplication between platforms
 
 ## Queue Optimization
+
 - [ ] Handle duplicate tracks in queue source optimization
   - **Problem:** Current optimization uses `firstIndex(where: { $0.src == trackId })` / `indexOfFirst { it.src == trackId }`
   - If a playlist contains the same track twice, selecting the second instance jumps to the first
@@ -266,3 +285,19 @@ Note: TODO items are AI generated and can include incorrect or incomplete detail
   - Issue: The boolean return from `playFromSearch()` is ignored - user gets no feedback if search fails
   - Recommendation: Log the result or show notification/toast when search fails (e.g., "No results found for 'query'")
 - [ ] Test with voice commands like "play michael jackson billie jean"
+
+## Example App
+
+- [ ] Replace current example audio tracks with something else
+  - Need to update the example app's audio content
+  - Potential sources for freely usable and self-hostable audio files:
+    - **Free Music Archive (FMA)**: CC-licensed music tracks
+    - **ccMixter**: Community music remixes under Creative Commons
+    - **Incompetech**: Royalty-free music by Kevin MacLeod
+    - **Freesound**: Short audio clips and sound effects (CC licenses)
+    - **YouTube Audio Library**: Free music and sound effects
+    - **Internet Archive's Audio Collection**: Public domain recordings
+    - **Musopen**: Classical music recordings in public domain
+    - **Sample Focus**: Free samples and loops for music production
+    - **NASA Audio Collection**: Space-related sounds and recordings (public domain)
+    - **BBC Sound Effects**: 33,000+ sound effects under RemArc license

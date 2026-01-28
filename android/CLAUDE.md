@@ -191,12 +191,14 @@ graph TD
 ## Component Responsibilities
 
 ### Nitro Bridge Layer
+
 - **AudioBrowser.kt**: Main Nitro module for browser functionality, delegates to BrowserManager
 - **AudioPlayer.kt**: Main Nitro module for audio playback, manages Player lifecycle
 - **AudioBrowserPackage.kt**: React Native package registration
 - **Callbacks.kt**: Interface defining all player event callbacks for JS communication
 
 ### Browser System
+
 - **BrowserManager.kt**: Core navigation logic with LRU cache system
   - Route resolution and path matching
   - HTTP API execution and response processing
@@ -207,7 +209,7 @@ graph TD
   - Queue expansion from contextual URLs for Android Auto
 - **BrowserConfig**: Data class holding all browser settings
   - Flattened structure matching NativeBrowserConfiguration from JS
-  - Contains routes array with special routes (__tabs__, __search__, __default__)
+  - Contains routes array with special routes (**tabs**, **search**, **default**)
   - Behavior flags: singleTrack, androidControllerOfflineError
 - **SimpleRouter.kt**: Client-side route matching with parameter extraction
 - **JsonModels.kt**: JSON serialization models for API responses
@@ -222,10 +224,12 @@ graph TD
   - `NetworkException`: Network request failed (connection error, timeout)
 
 ### HTTP Layer
+
 - **HttpClient.kt**: OkHttp wrapper for API requests
 - **RequestConfigBuilder.kt**: Transforms Nitro configs to HTTP requests with merging logic
 
 ### Player System
+
 - **Player.kt**: Core audio player implementation wrapping Media3 ExoPlayer
   - Integrates sleep timer, equalizer, and network monitoring
   - Now playing metadata override support
@@ -249,6 +253,7 @@ graph TD
   - Live stream position handling (uses C.TIME_UNSET for live edge)
 
 ### Buffer Management
+
 - **DynamicLoadControl.kt**: Custom LoadControl with runtime-configurable buffer thresholds
   - Mutable buffer parameters (min, max, play, rebuffer, back)
   - Startup timing logging
@@ -265,6 +270,7 @@ graph TD
   - Respects playWhenReady state (no retry when paused)
 
 ### Audio Features
+
 - **SleepTimer.kt**: Sleep timer with two modes
   - Time-based: stops after specified duration
   - End of track: stops when current track finishes
@@ -278,6 +284,7 @@ graph TD
   - Validates internet capability
 
 ### Android Service Layer
+
 - **Service.kt**: MediaLibraryService implementation for background playback and Android Auto
   - Voice search intent parsing (MEDIA_PLAY_FROM_SEARCH)
   - App killed playback behavior handling
@@ -285,6 +292,7 @@ graph TD
 - **HeadlessTaskService.kt**: Handles headless tasks when app is backgrounded
 
 ### Data Models
+
 - **PlaybackMetadata.kt**: Extracts metadata from various formats (ID3, ICY, Vorbis, QuickTime)
 - **PlayerSetupOptions.kt**: Configuration options for initial player setup
 - **PlayerUpdateOptions.kt**: Configuration options for runtime player updates
@@ -292,6 +300,7 @@ graph TD
 - **BufferConfig**: Data class for buffer configuration (min, max, play, rebuffer, back)
 
 ### Utility Layer
+
 - **TrackFactory.kt**: Converts Nitro Track objects to/from Media3 MediaItems
 - **ResolvedTrackFactory.kt**: Converts ResolvedTrack objects to Media3 MediaItems
 - **MetadataAdapter.kt**: Handles metadata extraction and conversion
@@ -310,6 +319,7 @@ graph TD
   - Returns ImageSource with uri, headers, method, body for React Native
 
 ### Extensions
+
 - **NumberExt.kt**: Numeric conversion extensions
   - `toSeconds()`: Convert milliseconds to seconds
   - `toMilliseconds()`: Convert seconds to milliseconds
@@ -319,6 +329,7 @@ graph TD
 ## Data Flow
 
 ### Browser Navigation Flow
+
 1. **JS** calls `audioBrowser.navigate(path)`
 2. **AudioBrowser.kt** receives call via Nitro bridge
 3. **BrowserManager.kt** performs route resolution using **SimpleRouter.kt**
@@ -333,6 +344,7 @@ graph TD
 8. Result flows back through Nitro bridge to **JS**
 
 ### Audio Playback Flow (JS-initiated)
+
 1. **JS** calls `audioPlayer.play(tracks)`
 2. **AudioPlayer.kt** receives call and forwards to **Player.kt**
 3. **TrackFactory.kt** converts tracks to Media3 MediaItems
@@ -344,6 +356,7 @@ graph TD
 9. Playback events flow back through **PlayerListener.kt** to **Callbacks.kt** to **JS**
 
 ### Media3 Integration Flow (Android Auto / External Controllers)
+
 1. **Media3** calls `MediaSessionCallback.onGetChildren(parentId)`
 2. **BrowserManager** resolves path and returns children with contextual URLs
 3. User selects track → **Media3** calls `MediaSessionCallback.onSetMediaItems(mediaItems)`
@@ -358,6 +371,7 @@ graph TD
 8. **Player.kt** loads MediaItems into **Media3 ExoPlayer**
 
 ### Voice Search Flow
+
 1. **Service.kt** receives `MEDIA_PLAY_FROM_SEARCH` intent
 2. Parses intent into **SearchParams** (mode, query, artist, album, etc.)
 3. **Player.playFromSearch()** calls **BrowserManager.searchPlayable()**
@@ -367,6 +381,7 @@ graph TD
 7. **Player.kt** sets queue and starts playback
 
 ### Contextual URL System
+
 - **Purpose**: Provide stable identifiers for playable-only tracks (tracks with `src` but no `url`)
 - **Format**: `{parentPath}?__trackId={trackSrc}` (e.g., `/library/radio?__trackId=song.mp3`)
 - **Handled by**: **BrowserPathHelper.kt**
@@ -380,6 +395,7 @@ graph TD
   - Cache lookup works consistently via src extraction
 
 ### Buffer Management Flow
+
 1. **Player.setup()** creates **DynamicLoadControl** with initial config
 2. If `automaticBuffer=true`, creates **AutomaticBufferManager**
 3. During playback, **AutomaticBufferManager** monitors:
@@ -391,6 +407,7 @@ graph TD
 6. Resets to defaults on media item transition
 
 ### State Persistence Flow
+
 1. **PlaybackStateStore** observes player state
 2. On track change: saves track, position, repeat mode, shuffle, speed
 3. During playback: periodic position save every 5 seconds
@@ -400,6 +417,7 @@ graph TD
 7. Track and position returned for queue setup by caller
 
 ### Media URL Transformation
+
 1. **AudioBrowser.kt** provides media configuration via `getMediaRequestConfig()`
 2. **Player.kt** registers AudioBrowser reference
 3. During playback, **MediaFactory.kt** calls `getRequestConfig(originalUrl)`
@@ -408,6 +426,7 @@ graph TD
 6. Optional disk caching via **SimpleCache**
 
 ### Artwork URL Transformation
+
 1. **Service.kt** creates **CoilBitmapLoader** with artwork config callback
 2. **CoilBitmapLoader** receives artwork URLs from Media3 notifications
 3. For each URL, calls `getArtworkConfig()` to get current configuration
@@ -440,16 +459,19 @@ graph TD
 ## Code Style Guidelines
 
 ### Imports
+
 - **Always add proper imports** instead of using fully-qualified names inline
 - **Avoid inline package references** like `com.margelo.nitro.audiobrowser.SearchMode.UNSTRUCTURED`
 - Add import at the top of the file and use the short name
 
 **Bad:**
+
 ```kotlin
 val mode = com.margelo.nitro.audiobrowser.SearchMode.UNSTRUCTURED
 ```
 
 **Good:**
+
 ```kotlin
 import com.margelo.nitro.audiobrowser.SearchMode
 
