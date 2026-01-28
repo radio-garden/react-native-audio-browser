@@ -13,7 +13,8 @@
   "repository": "https://github.com/puckey/react-native-audio-browser.git",
   "source": "src/index",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "docs"
   ],
   "files": [
     "src",

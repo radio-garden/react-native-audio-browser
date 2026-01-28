@@ -27,7 +27,6 @@ jobs:
         run: corepack enable
       - name: Install dependencies
         run: yarn install
-        working-directory: docs
       - name: Build docs
         run: yarn build
         working-directory: docs
