@@ -10,7 +10,10 @@ export function getBaseName(name: string): string {
   // For event types ending in Event, strip Event suffix variants and module prefix
   if (name.endsWith('Event')) {
     base = base.replace(/(Changed|Updated|Ended)?Event$/, '')
-    base = base.replace(/^(Playback|Navigation|Remote|Audio|Battery|Equalizer|Favorite|Metadata|Network|NowPlaying|Rating|Sleep)/, '')
+    base = base.replace(
+      /^(Playback|Navigation|Remote|Audio|Battery|Equalizer|Favorite|Metadata|Network|NowPlaying|Rating|Sleep)/,
+      ''
+    )
   }
 
   // For functions: strip common prefixes when followed by uppercase
@@ -26,7 +29,16 @@ export function getBaseName(name: string): string {
  * Prefix order for sorting and anchor selection.
  * Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > (no prefix, uppercase)
  */
-export const prefixOrder = ['use', 'get', 'set', 'update', 'toggle', 'handle', 'on', 'has'] as const
+export const prefixOrder = [
+  'use',
+  'get',
+  'set',
+  'update',
+  'toggle',
+  'handle',
+  'on',
+  'has'
+] as const
 
 /**
  * Get prefix priority index for sorting.

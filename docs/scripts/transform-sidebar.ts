@@ -27,11 +27,18 @@ const collapsedByDefault = new Set([
   'favorites',
   'network',
   'battery',
-  'remoteControls',
+  'remoteControls'
 ])
 
 // Priority modules shown first (in this order), rest alphabetical
-const priorityModules = ['player', 'browser', 'playback', 'errors', 'queue', 'nowPlaying']
+const priorityModules = [
+  'player',
+  'browser',
+  'playback',
+  'errors',
+  'queue',
+  'nowPlaying'
+]
 
 interface ParsedFunction {
   name: string
@@ -39,13 +46,17 @@ interface ParsedFunction {
 }
 
 // Parse TypeScript source - extract all exported function/const names (raw, no sorting)
-function parseSourceForNames(content: string, subpath?: string): ParsedFunction[] {
+function parseSourceForNames(
+  content: string,
+  subpath?: string
+): ParsedFunction[] {
   const funcs: ParsedFunction[] = []
   const seen = new Set<string>()
 
   // Match exported functions with their preceding JSDoc (if any)
   // Only match implementations (with { or =), not overload signatures
-  const regex = /(\/\*\*[\s\S]*?\*\/\s*)?export\s+(?:(?:async\s+)?function\s+(\w+)[^{]*\{|const\s+(\w+)\s*=)/g
+  const regex =
+    /(\/\*\*[\s\S]*?\*\/\s*)?export\s+(?:(?:async\s+)?function\s+(\w+)[^{]*\{|const\s+(\w+)\s*=)/g
   let match
 
   while ((match = regex.exec(content)) !== null) {
@@ -85,26 +96,35 @@ function getBaseName(name: string): string {
 
 // Get the best function for a base name
 // Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > (no prefix, uppercase)
-function getBestFunction(baseName: string, allFuncs: ParsedFunction[]): ParsedFunction | undefined {
+function getBestFunction(
+  baseName: string,
+  allFuncs: ParsedFunction[]
+): ParsedFunction | undefined {
   const normalized = baseName.replace(/ /g, '').toLowerCase()
 
   // First: exact lowercase match (method with no prefix)
-  const exactMatch = allFuncs.find(f => f.name.toLowerCase() === normalized && /^[a-z]/.test(f.name))
+  const exactMatch = allFuncs.find(
+    (f) => f.name.toLowerCase() === normalized && /^[a-z]/.test(f.name)
+  )
   if (exactMatch) return exactMatch
 
   // Then: prefixed lowercase matches (methods)
   for (const prefix of prefixOrder) {
     const candidate = prefix + normalized
-    const match = allFuncs.find(f => f.name.toLowerCase() === candidate && /^[a-z]/.test(f.name))
+    const match = allFuncs.find(
+      (f) => f.name.toLowerCase() === candidate && /^[a-z]/.test(f.name)
+    )
     if (match) return match
   }
 
   // Last: uppercase matches (types)
-  const typeMatch = allFuncs.find(f => f.name.toLowerCase() === normalized && /^[A-Z]/.test(f.name))
+  const typeMatch = allFuncs.find(
+    (f) => f.name.toLowerCase() === normalized && /^[A-Z]/.test(f.name)
+  )
   if (typeMatch) return typeMatch
 
   // Fallback: find any name containing this base
-  return allFuncs.find(f => f.name.toLowerCase().includes(normalized))
+  return allFuncs.find((f) => f.name.toLowerCase().includes(normalized))
 }
 
 // Convert raw functions to deduplicated sidebar entries
@@ -182,7 +202,7 @@ function buildSidebar(modules: Map<string, SidebarEntry[]>): SidebarItem[] {
     result.push({
       text: formatModuleName(moduleName),
       collapsed: collapsedByDefault.has(moduleName),
-      items: entries.map(entry => {
+      items: entries.map((entry) => {
         if (entry.name === '---') {
           return { text: '', link: '' } // separator
         }
@@ -191,7 +211,7 @@ function buildSidebar(modules: Map<string, SidebarEntry[]>): SidebarItem[] {
           ? `/api/features/${moduleName}/${entry.subpath}/#${entry.anchor}`
           : `/api/features/${moduleName}/#${entry.anchor}`
         return { text: entry.name, link: path }
-      }),
+      })
     })
   }
 

@@ -22,17 +22,21 @@ export function load(app: Application) {
     const project = event.project
 
     // Sort children of each module by base name and merge groups
-    for (const reflection of project.getReflectionsByKind(ReflectionKind.Module)) {
+    for (const reflection of project.getReflectionsByKind(
+      ReflectionKind.Module
+    )) {
       if (reflection.children) {
         sortByBaseName(reflection.children as DeclarationReflection[])
 
         // Merge all groups into a single group to maintain sort order
         if (reflection.groups && reflection.groups.length > 1) {
           const sortedChildren = [...reflection.children]
-          reflection.groups = [{
-            title: '',
-            children: sortedChildren
-          }]
+          reflection.groups = [
+            {
+              title: '',
+              children: sortedChildren
+            }
+          ]
         } else if (reflection.groups && reflection.groups.length === 1) {
           reflection.groups[0].children = [...reflection.children]
         }

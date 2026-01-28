@@ -1,10 +1,18 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["../src/features/*.ts", "../src/features/*/index.ts", "../src/types/*.ts"],
+  "entryPoints": [
+    "../src/features/*.ts",
+    "../src/features/*/index.ts",
+    "../src/types/*.ts"
+  ],
   "entryPointStrategy": "expand",
   "exclude": ["**/features/index.ts"],
   "out": "./api",
-  "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme", "./plugins/sort-by-base-name.ts"],
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "typedoc-vitepress-theme",
+    "./plugins/sort-by-base-name.ts"
+  ],
   "outputFileStrategy": "members",
   "membersWithOwnFile": [],
   "hidePageHeader": true,
