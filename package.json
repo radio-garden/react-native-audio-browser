@@ -1,37 +1,19 @@
 {
   "name": "react-native-audio-browser",
   "version": "0.1.0",
-  "type": "module",
   "description": "react-native-audio-browser is a react native package built with Nitro",
-  "main": "./lib/commonjs/index.js",
-  "module": "./lib/module/index.js",
-  "types": "./lib/typescript/src/index.d.ts",
-  "react-native": "src/index",
-  "source": "src/index",
-  "scripts": {
-    "android:format": "yarn workspace example-native android:format",
-    "android:ide": "yarn workspace example-native android:ide",
-    "android:logs": "react-native log-android",
-    "android:test": "yarn workspace example-native android:test",
-    "build": "yarn prepare",
-    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && yarn build",
-    "prepare": "bob build",
-    "example": "yarn workspace example-native",
-    "ci:format": "prettier --check src",
-    "ci:lint": "oxlint src",
-    "format": "prettier --write src",
-    "ios:format": "swiftformat ios",
-    "ios:ide": "yarn workspace example-native ios:ide",
-    "ios:rebuild": "yarn workspace example-native ios:rebuild",
-    "lint": "oxlint --fix",
-    "release": "semantic-release",
-    "test": "jest",
-    "types": "tsc --noEmit"
-  },
   "keywords": [
     "react-native",
     "react-native-audio-browser"
+  ],
+  "homepage": "https://github.com/puckey/react-native-audio-browser#readme",
+  "bugs": "https://github.com/puckey/react-native-audio-browser/issues",
+  "license": "MIT",
+  "author": "puckey",
+  "repository": "https://github.com/puckey/react-native-audio-browser.git",
+  "source": "src/index",
+  "workspaces": [
+    "apps/*"
   ],
   "files": [
     "src",
@@ -54,17 +36,35 @@
     "*.podspec",
     "README.md"
   ],
-  "workspaces": [
-    "apps/*"
-  ],
-  "repository": "https://github.com/puckey/react-native-audio-browser.git",
-  "author": "puckey",
-  "license": "MIT",
-  "bugs": "https://github.com/puckey/react-native-audio-browser/issues",
-  "homepage": "https://github.com/puckey/react-native-audio-browser#readme",
+  "type": "module",
+  "main": "./lib/commonjs/index.js",
+  "module": "./lib/module/index.js",
+  "types": "./lib/typescript/src/index.d.ts",
+  "react-native": "src/index",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "android:format": "yarn workspace example-native android:format",
+    "android:ide": "yarn workspace example-native android:ide",
+    "android:logs": "react-native log-android",
+    "android:test": "yarn workspace example-native android:test",
+    "build": "yarn prepare",
+    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
+    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && yarn build",
+    "prepare": "bob build",
+    "example": "yarn workspace example-native",
+    "ci:format": "prettier --check src",
+    "ci:lint": "oxlint src",
+    "format": "oxfmt --write",
+    "ios:format": "swiftformat ios",
+    "ios:ide": "yarn workspace example-native ios:ide",
+    "ios:rebuild": "yarn workspace example-native ios:rebuild",
+    "lint": "oxlint --fix",
+    "release": "semantic-release",
+    "test": "jest",
+    "types": "tsc --noEmit"
   },
   "devDependencies": {
     "@react-native-community/cli": "15.0.0-alpha.2",
@@ -92,6 +92,7 @@
     "react-native": "*",
     "react-native-nitro-modules": "*"
   },
+  "packageManager": "yarn@4.12.0",
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
@@ -105,6 +106,5 @@
         }
       ]
     ]
-  },
-  "packageManager": "yarn@4.12.0"
+  }
 }

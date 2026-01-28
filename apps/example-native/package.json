@@ -18,7 +18,7 @@
     "android:uninstall": "adb uninstall com.audiobrowserexample",
     "android": "react-native run-android",
     "api-server": "node example-api-server.mts",
-    "format": "prettier --write src App.tsx",
+    "format": "oxfmt --write",
     "ios:build": "react-native build-ios --mode Debug",
     "ios:ide": "open ios/*.xcworkspace",
     "ios:rebuild": "cd ios && pod install && cd .. && yarn ios",
