@@ -4,7 +4,7 @@ const rules = [
   { type: 'perf', release: 'patch', title: '💨 Performance Improvements' },
   { type: 'refactor', release: 'patch', title: '🔄 Code Refactors' },
   { type: 'docs', release: 'patch', title: '📚 Documentation' },
-  { type: 'chore', release: 'patch', title: '🛠️ Other changes' },
+  { type: 'chore', release: 'patch', title: '🛠️ Other changes' }
 ]
 
 const sortMap = Object.fromEntries(
@@ -23,9 +23,9 @@ module.exports = {
         preset: 'conventionalcommits',
         releaseRules: [
           { breaking: true, release: 'major' },
-          { revert: true, release: 'patch' },
-        ].concat(rules.map(({ type, release }) => ({ type, release }))),
-      },
+          { revert: true, release: 'patch' }
+        ].concat(rules.map(({ type, release }) => ({ type, release })))
+      }
     ],
     [
       '@semantic-release/release-notes-generator',
@@ -34,27 +34,27 @@ module.exports = {
         presetConfig: {
           types: rules.map(({ type, title }) => ({
             type,
-            section: title,
-          })),
+            section: title
+          }))
         },
         writerOpts: {
-          commitGroupsSort: (a, z) => sortMap[a.title] - sortMap[z.title],
-        },
-      },
+          commitGroupsSort: (a, z) => sortMap[a.title] - sortMap[z.title]
+        }
+      }
     ],
     [
       '@semantic-release/changelog',
       {
-        changelogFile: 'CHANGELOG.md',
-      },
+        changelogFile: 'CHANGELOG.md'
+      }
     ],
     '@semantic-release/npm',
     '@semantic-release/github',
     [
       '@semantic-release/git',
       {
-        assets: ['package.json', 'CHANGELOG.md', 'example/package.json'],
-      },
-    ],
-  ],
+        assets: ['package.json', 'CHANGELOG.md', 'example/package.json']
+      }
+    ]
+  ]
 }

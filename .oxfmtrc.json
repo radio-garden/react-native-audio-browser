@@ -8,6 +8,7 @@
   "semi": false,
   "printWidth": 80,
   "ignorePatterns": [
+    "apps/example-native/ios/",
     ".claude/**/*",
     "codegen/**/*",
     "post-script.cjs",
