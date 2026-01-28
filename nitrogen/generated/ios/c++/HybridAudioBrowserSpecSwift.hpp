@@ -687,6 +687,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) noexcept override {
       _swiftPart.setOnSystemVolumeChanged(onSystemVolumeChanged);
     }
+    inline std::function<void(bool /* active */)> getOnIosOutputExternalChanged() noexcept override {
+      auto __result = _swiftPart.getOnIosOutputExternalChanged();
+      return __result;
+    }
+    inline void setOnIosOutputExternalChanged(const std::function<void(bool /* active */)>& onIosOutputExternalChanged) noexcept override {
+      _swiftPart.setOnIosOutputExternalChanged(onIosOutputExternalChanged);
+    }
     inline std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() noexcept override {
       auto __result = _swiftPart.getOnEqualizerChanged();
       return __result;
@@ -1097,6 +1104,20 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setSystemVolume(double volume) override {
       auto __result = _swiftPart.setSystemVolume(std::forward<decltype(volume)>(volume));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline bool isIosOutputExternal() override {
+      auto __result = _swiftPart.isIosOutputExternal();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void openIosOutputPicker() override {
+      auto __result = _swiftPart.openIosOutputPicker();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

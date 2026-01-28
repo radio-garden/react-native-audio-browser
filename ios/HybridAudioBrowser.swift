@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import Foundation
 import MediaPlayer
 import NitroModules
@@ -25,6 +26,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
   private var volumeObservation: NSKeyValueObservation?
+  private var routeChangeObserver: NSObjectProtocol?
   private var nowPlayingOverride: NowPlayingUpdate?
   private let playerOptions = PlayerUpdateOptions()
 
@@ -222,6 +224,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onSystemVolumeChanged: (Double) -> Void = { _ in } {
     didSet {
       setupVolumeObserver()
+    }
+  }
+  public var onIosOutputExternalChanged: (Bool) -> Void = { _ in } {
+    didSet {
+      setupRouteChangeObserver()
     }
   }
 
@@ -932,6 +939,70 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // iOS doesn't provide a public API to set system volume programmatically.
     // Users must adjust volume via hardware buttons or Control Center.
     logger.debug("setSystemVolume is not supported on iOS - volume must be adjusted via hardware buttons or Control Center")
+  }
+
+  // MARK: - External Audio Output
+
+  /// Sets up observer for audio route changes
+  private func setupRouteChangeObserver() {
+    if let observer = routeChangeObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
+    routeChangeObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.routeChangeNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      guard let self else { return }
+      self.onIosOutputExternalChanged(self.isOutputExternal())
+    }
+  }
+
+  /// Checks if the current audio output is external (not built-in speaker/receiver)
+  private func isOutputExternal() -> Bool {
+    let session = AVAudioSession.sharedInstance()
+    guard let output = session.currentRoute.outputs.first else { return false }
+    switch output.portType {
+    case .builtInSpeaker, .builtInReceiver:
+      return false
+    default:
+      return true
+    }
+  }
+
+  public func isIosOutputExternal() throws -> Bool {
+    isOutputExternal()
+  }
+
+  public func openIosOutputPicker() throws {
+    DispatchQueue.main.async { [weak self] in
+      guard let windowScene = UIApplication.shared.connectedScenes
+        .compactMap({ $0 as? UIWindowScene })
+        .first(where: { $0.activationState == .foregroundActive }),
+        let window = windowScene.windows.first(where: { $0.isKeyWindow })
+      else {
+        self?.logger.debug("openIosOutputPicker: Could not find active window scene")
+        return
+      }
+
+      let routePicker = AVRoutePickerView(frame: .zero)
+      routePicker.isHidden = true
+      window.addSubview(routePicker)
+
+      // Find the button inside AVRoutePickerView and trigger it
+      for subview in routePicker.subviews {
+        if let button = subview as? UIButton {
+          button.sendActions(for: .touchUpInside)
+          break
+        }
+      }
+
+      // Remove after a delay to ensure picker has opened
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        routePicker.removeFromSuperview()
+      }
+    }
   }
 
   // MARK: - Equalizer (unsupported on iOS)

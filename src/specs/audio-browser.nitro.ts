@@ -228,6 +228,25 @@ export interface AudioBrowser extends HybridObject<{
    */
   onSystemVolumeChanged: (volume: number) => void
 
+  // MARK: external audio output (iOS only)
+  /**
+   * Returns whether an external audio output is active (iOS only).
+   * Returns true for AirPlay, Bluetooth, headphones, CarPlay, etc.
+   * Always returns false on Android.
+   */
+  isIosOutputExternal(): boolean
+  /**
+   * Called when external output state changes (iOS only).
+   * Never fires on Android.
+   */
+  onIosOutputExternalChanged: (active: boolean) => void
+  /**
+   * Opens the system output picker (iOS only).
+   * Allows users to select output device (speaker, AirPlay, Bluetooth, etc.).
+   * No-op on Android.
+   */
+  openIosOutputPicker(): void
+
   // MARK: equalizer (Android only)
   getEqualizerSettings(): EqualizerSettings | undefined
   setEqualizerEnabled(enabled: boolean): void

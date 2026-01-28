@@ -1356,6 +1356,23 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_double::javaobject> /* onSystemVolumeChanged */)>("setOnSystemVolumeChanged_cxx");
     method(_javaPart, JFunc_void_double_cxx::fromCpp(onSystemVolumeChanged));
   }
+  std::function<void(bool /* active */)> JHybridAudioBrowserSpec::getOnIosOutputExternalChanged() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnIosOutputExternalChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(bool /* active */)> {
+      if (__result->isInstanceOf(JFunc_void_bool_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_bool_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_bool, void(bool)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnIosOutputExternalChanged(const std::function<void(bool /* active */)>& onIosOutputExternalChanged) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onIosOutputExternalChanged */)>("setOnIosOutputExternalChanged_cxx");
+    method(_javaPart, JFunc_void_bool_cxx::fromCpp(onIosOutputExternalChanged));
+  }
   std::function<void(const EqualizerSettings& /* settings */)> JHybridAudioBrowserSpec::getOnEqualizerChanged() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_EqualizerSettings::javaobject>()>("getOnEqualizerChanged_cxx");
     auto __result = method(_javaPart);
@@ -1731,6 +1748,15 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setSystemVolume(double volume) {
     static const auto method = javaClassStatic()->getMethod<void(double /* volume */)>("setSystemVolume");
     method(_javaPart, volume);
+  }
+  bool JHybridAudioBrowserSpec::isIosOutputExternal() {
+    static const auto method = javaClassStatic()->getMethod<jboolean()>("isIosOutputExternal");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
+  void JHybridAudioBrowserSpec::openIosOutputPicker() {
+    static const auto method = javaClassStatic()->getMethod<void()>("openIosOutputPicker");
+    method(_javaPart);
   }
   std::optional<EqualizerSettings> JHybridAudioBrowserSpec::getEqualizerSettings() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JEqualizerSettings>()>("getEqualizerSettings");

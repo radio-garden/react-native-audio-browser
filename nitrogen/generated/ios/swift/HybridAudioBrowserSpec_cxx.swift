@@ -1413,6 +1413,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onIosOutputExternalChanged: bridge.Func_void_bool {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_bool in
+        let __closureWrapper = Func_void_bool(self.__implementation.onIosOutputExternalChanged)
+        return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onIosOutputExternalChanged = { () -> (Bool) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
+        return { (__active: Bool) -> Void in
+          __wrappedFunction.call(__active)
+        }
+      }()
+    }
+  }
+  
   public final var onEqualizerChanged: bridge.Func_void_EqualizerSettings {
     @inline(__always)
     get {
@@ -2198,6 +2217,29 @@ open class HybridAudioBrowserSpec_cxx {
   public final func setSystemVolume(volume: Double) -> bridge.Result_void_ {
     do {
       try self.__implementation.setSystemVolume(volume: volume)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func isIosOutputExternal() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.isIosOutputExternal()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func openIosOutputPicker() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.openIosOutputPicker()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

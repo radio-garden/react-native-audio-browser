@@ -181,6 +181,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Unit =
     {}
   override var onSystemVolumeChanged: (Double) -> Unit = {}
+  override var onIosOutputExternalChanged: (Boolean) -> Unit = {}
 
   // MARK: Remote handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -814,6 +815,16 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun getSystemVolume(): Double = systemVolumeMonitor.getVolume()
 
   override fun setSystemVolume(volume: Double) = systemVolumeMonitor.setVolume(volume)
+
+  // ============================================================================
+  // MARK: External Audio Output (iOS only, stub on Android)
+  // ============================================================================
+
+  override fun isIosOutputExternal(): Boolean = false
+
+  override fun openIosOutputPicker() {
+    // No-op on Android
+  }
 
   // ============================================================================
   // MARK: Equalizer (Android only)

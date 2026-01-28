@@ -3,6 +3,7 @@ import React from 'react'
 import {
   ActivityIndicator,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,6 +12,7 @@ import {
 import type { RepeatMode } from 'react-native-audio-browser'
 import {
   getRepeatMode,
+  openIosOutputPicker,
   setRepeatMode,
   skipToNext,
   skipToPrevious,
@@ -19,6 +21,7 @@ import {
   toggleShuffle,
   useActiveTrack,
   useEqualizerSettings,
+  useIosOutputExternal,
   useNowPlaying,
   usePlaybackError,
   usePlayingState,
@@ -51,6 +54,7 @@ export function MiniPlayer({
   const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
+  const iosExternalOutput = useIosOutputExternal()
 
   if (!nowPlaying || !track) return null
 
@@ -178,6 +182,19 @@ export function MiniPlayer({
               iconStyle="solid"
             />
           </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={openIosOutputPicker}
+            >
+              <Icon
+                name="headphones"
+                size={20}
+                color={iosExternalOutput ? '#007AFF' : 'white'}
+                iconStyle="solid"
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
