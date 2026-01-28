@@ -36,8 +36,5 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": [
-    "codegen/*",
-    "post-script.cjs"
-  ]
+  "ignorePatterns": ["codegen/*", "post-script.cjs"]
 }
