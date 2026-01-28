@@ -40,7 +40,6 @@ graph TD
 
 - **Browsable items** have a `url` that resolves to more children
 - **Playable items** have a `src` (the audio stream URL)
-- Items can be both browsable _and_ playable (e.g., an album you can play or explore)
 
 ## Player & Queue
 
