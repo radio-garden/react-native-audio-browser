@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import { prefixOrder } from './base-name.ts'
+import { prefixOrder, prefixRegex } from './base-name.ts'
 
 interface SidebarItem {
   text: string
@@ -83,7 +83,7 @@ function getBaseName(name: string): string {
   // Remove prefixes only when followed by uppercase (e.g., setVolume -> Volume, but not setupPlayer)
   let base = name
   const startsWithOn = /^on[A-Z]/.test(name)
-  base = base.replace(/^(get|set|use|on|handle|toggle|has|update)(?=[A-Z])/, '')
+  base = base.replace(prefixRegex, '')
 
   // Only strip Changed/Updated/Received suffix for on* callbacks
   if (startsWithOn) {
@@ -94,8 +94,7 @@ function getBaseName(name: string): string {
   return base.charAt(0).toUpperCase() + base.slice(1).replace(/([A-Z])/g, ' $1')
 }
 
-// Get the best function for a base name
-// Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > (no prefix, uppercase)
+// Get the best function for a base name (see prefixOrder in base-name.ts)
 function getBestFunction(
   baseName: string,
   allFuncs: ParsedFunction[]

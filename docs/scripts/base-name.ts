@@ -17,7 +17,7 @@ export function getBaseName(name: string): string {
   }
 
   // For functions: strip common prefixes when followed by uppercase
-  base = base.replace(/^(get|set|use|on|handle|toggle|has|update)(?=[A-Z])/, '')
+  base = base.replace(prefixRegex, '')
 
   // Strip common suffixes (for on* callbacks)
   base = base.replace(/Changed$|Updated$|Received$|Ended$/, '')
@@ -27,7 +27,7 @@ export function getBaseName(name: string): string {
 
 /**
  * Prefix order for sorting and anchor selection.
- * Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > (no prefix, uppercase)
+ * Priority: (no prefix, lowercase) > use > get > set > update > toggle > handle > on > has > is > (no prefix, uppercase)
  */
 export const prefixOrder = [
   'use',
@@ -37,8 +37,14 @@ export const prefixOrder = [
   'toggle',
   'handle',
   'on',
-  'has'
+  'has',
+  'is'
 ] as const
+
+/** Regex to strip common prefixes when followed by uppercase */
+export const prefixRegex = new RegExp(
+  `^(${prefixOrder.join('|')})(?=[A-Z])`
+)
 
 /**
  * Get prefix priority index for sorting.
