@@ -2,10 +2,9 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useContent, usePath } from '../features/browser'
 import { useNavigationError, usePlaybackError } from '../features/errors'
 import {
-  onMetadataChapterReceived,
-  onMetadataCommonReceived,
-  onMetadataTimedReceived,
-  onPlaybackMetadata,
+  onChapterMetadata,
+  onTimedMetadata,
+  onTrackMetadata
 } from '../features/metadata'
 import { useOnline } from '../features/network'
 import { useNowPlaying } from '../features/nowPlaying'
@@ -120,7 +119,7 @@ function useDebugState(): DebugState {
     playbackError: playbackError?.message ?? null,
     navigationError: navigationError?.message ?? null,
     path: path ?? null,
-    content: content?.title ?? null,
+    content: content?.title ?? null
   }
 }
 
@@ -151,7 +150,11 @@ export function useDebug(options: DebugOptions = {}) {
   const { enabled = __DEV__, metadata = false } = options
 
   const state = useDebugState()
-  const logs = useSyncExternalStore(subscribeToDebugLogs, getDebugLogs, getDebugLogs)
+  const logs = useSyncExternalStore(
+    subscribeToDebugLogs,
+    getDebugLogs,
+    getDebugLogs
+  )
 
   const prevRef = useRef<DebugState | null>(null)
   const lastChangeRef = useRef(Date.now())
@@ -186,13 +189,17 @@ export function useDebug(options: DebugOptions = {}) {
       const message = Object.entries(state)
         .map(([k, v]) => `${k}: ${format(v)}`)
         .join('\n')
-      console.log(`[useDebug] initial state:\n  ${message.split('\n').join('\n  ')}`)
+      console.log(
+        `[useDebug] initial state:\n  ${message.split('\n').join('\n  ')}`
+      )
       addDebugLog({ timestamp: now, elapsed: null, type: 'initial', message })
       isFirstRender.current = false
       lastChangeRef.current = now
     } else if (changes.length > 0) {
       const message = changes.join('\n')
-      console.log(`[useDebug] (+${elapsed}ms)\n  ${message.split('\n').join('\n  ')}`)
+      console.log(
+        `[useDebug] (+${elapsed}ms)\n  ${message.split('\n').join('\n  ')}`
+      )
       addDebugLog({ timestamp: now, elapsed, type: 'change', message })
       lastChangeRef.current = now
     }
@@ -207,37 +214,38 @@ export function useDebug(options: DebugOptions = {}) {
     const logMetadata = (type: string, message: string) => {
       const now = Date.now()
       const elapsed = now - lastChangeRef.current
-      console.log(`[useDebug:metadata] ${type} (+${elapsed}ms)\n  ${message.split('\n').join('\n  ')}`)
-      addDebugLog({ timestamp: now, elapsed, type: 'metadata', message: `[${type}] ${message}` })
+      console.log(
+        `[useDebug:metadata] ${type} (+${elapsed}ms)\n  ${message.split('\n').join('\n  ')}`
+      )
+      addDebugLog({
+        timestamp: now,
+        elapsed,
+        type: 'metadata',
+        message: `[${type}] ${message}`
+      })
       lastChangeRef.current = now
     }
 
-    const unsubscribeCommon = onMetadataCommonReceived.addListener((event) => {
-      const { metadata } = event
+    const unsubscribeTrack = onTrackMetadata.addListener((metadata) => {
       const fields = Object.entries(metadata)
         .filter(([, v]) => v != null)
         .map(([k, v]) => `${k}: "${v}"`)
-      logMetadata('common', fields.join('\n'))
+      logMetadata('track', fields.join('\n'))
     })
 
-    const unsubscribePlayback = onPlaybackMetadata.addListener((metadata) => {
+    const unsubscribeTimed = onTimedMetadata.addListener((metadata) => {
       const fields = Object.entries(metadata)
         .filter(([, v]) => v != null)
         .map(([k, v]) => `${k}: "${v}"`)
-      logMetadata('playback', fields.join('\n'))
+      logMetadata('timed', fields.join('\n'))
     })
 
-    const unsubscribeTimed = onMetadataTimedReceived.addListener((event) => {
-      logMetadata('timed', `${event.metadata.length} entries`)
-    })
-
-    const unsubscribeChapter = onMetadataChapterReceived.addListener((event) => {
-      logMetadata('chapter', `${event.metadata.length} entries`)
+    const unsubscribeChapter = onChapterMetadata.addListener((chapters) => {
+      logMetadata('chapter', `${chapters.length} chapters`)
     })
 
     return () => {
-      unsubscribeCommon()
-      unsubscribePlayback()
+      unsubscribeTrack()
       unsubscribeTimed()
       unsubscribeChapter()
     }
@@ -246,7 +254,7 @@ export function useDebug(options: DebugOptions = {}) {
   return {
     state,
     logs,
-    clear: clearDebugLogs,
+    clear: clearDebugLogs
   }
 }
 
