@@ -21,7 +21,7 @@ import {
   toggleShuffle,
   useActiveTrack,
   useEqualizerSettings,
-  useIosOutputExternal,
+  useIosOutput,
   useNowPlaying,
   usePlaybackError,
   usePlayingState,
@@ -54,7 +54,7 @@ export function MiniPlayer({
   const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
-  const iosExternalOutput = useIosOutputExternal()
+  const iosOutput = useIosOutput()
 
   if (!nowPlaying || !track) return null
 
@@ -190,7 +190,7 @@ export function MiniPlayer({
               <Icon
                 name="headphones"
                 size={20}
-                color={iosExternalOutput ? '#007AFF' : 'white'}
+                color={iosOutput?.external ? '#007AFF' : 'white'}
                 iconStyle="solid"
               />
             </TouchableOpacity>

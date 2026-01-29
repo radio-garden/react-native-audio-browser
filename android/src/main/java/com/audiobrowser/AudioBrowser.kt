@@ -43,6 +43,7 @@ import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
+import com.margelo.nitro.audiobrowser.IosOutput
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
@@ -181,7 +182,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Unit =
     {}
   override var onSystemVolumeChanged: (Double) -> Unit = {}
-  override var onIosOutputExternalChanged: (Boolean) -> Unit = {}
+  override var onIosOutputChanged: (IosOutput) -> Unit = {}
 
   // MARK: Remote handlers
   override var handleRemoteBookmark: (() -> Unit)? = null
@@ -820,7 +821,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: External Audio Output (iOS only, stub on Android)
   // ============================================================================
 
-  override fun isIosOutputExternal(): Boolean = false
+  override fun getIosOutput(): IosOutput? = null
 
   override fun openIosOutputPicker() {
     // No-op on Android

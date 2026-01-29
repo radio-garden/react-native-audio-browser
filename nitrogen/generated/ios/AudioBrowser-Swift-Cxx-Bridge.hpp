@@ -62,6 +62,10 @@ namespace margelo::nitro::audiobrowser { struct ImageContext; }
 namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
+// Forward declaration of `IosOutputType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
+// Forward declaration of `IosOutput` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IosOutput; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `MediaTransformParams` to properly resolve imports.
@@ -189,6 +193,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
 #include "ImageSource.hpp"
+#include "IosOutput.hpp"
+#include "IosOutputType.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeRouteEntry.hpp"
@@ -2485,6 +2491,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_double_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<IosOutput>
+  /**
+   * Specialized version of `std::optional<IosOutput>`.
+   */
+  using std__optional_IosOutput_ = std::optional<IosOutput>;
+  inline std::optional<IosOutput> create_std__optional_IosOutput_(const IosOutput& value) noexcept {
+    return std::optional<IosOutput>(value);
+  }
+  inline bool has_value_std__optional_IosOutput_(const std::optional<IosOutput>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IosOutput get_std__optional_IosOutput_(const std::optional<IosOutput>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::function<void(const IosOutput& /* output */)>
+  /**
+   * Specialized version of `std::function<void(const IosOutput&)>`.
+   */
+  using Func_void_IosOutput = std::function<void(const IosOutput& /* output */)>;
+  /**
+   * Wrapper class for a `std::function<void(const IosOutput& / * output * /)>`, this can be used from Swift.
+   */
+  class Func_void_IosOutput_Wrapper final {
+  public:
+    explicit Func_void_IosOutput_Wrapper(std::function<void(const IosOutput& /* output */)>&& func): _function(std::make_unique<std::function<void(const IosOutput& /* output */)>>(std::move(func))) {}
+    inline void call(IosOutput output) const noexcept {
+      _function->operator()(output);
+    }
+  private:
+    std::unique_ptr<std::function<void(const IosOutput& /* output */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_IosOutput create_Func_void_IosOutput(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_IosOutput_Wrapper wrap_Func_void_IosOutput(Func_void_IosOutput value) noexcept {
+    return Func_void_IosOutput_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<EqualizerSettings>
   /**
    * Specialized version of `std::optional<EqualizerSettings>`.
@@ -2747,6 +2790,15 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_NowPlayingMetadata__ create_Result_std__optional_NowPlayingMetadata__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<NowPlayingMetadata>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<IosOutput>>
+  using Result_std__optional_IosOutput__ = Result<std::optional<IosOutput>>;
+  inline Result_std__optional_IosOutput__ create_Result_std__optional_IosOutput__(const std::optional<IosOutput>& value) noexcept {
+    return Result<std::optional<IosOutput>>::withValue(value);
+  }
+  inline Result_std__optional_IosOutput__ create_Result_std__optional_IosOutput__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<IosOutput>>::withError(error);
   }
   
   // pragma MARK: Result<std::optional<EqualizerSettings>>

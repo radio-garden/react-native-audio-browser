@@ -804,18 +804,18 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onSystemVolumeChanged = value
     }
   
-  abstract var onIosOutputExternalChanged: (active: Boolean) -> Unit
+  abstract var onIosOutputChanged: (output: IosOutput) -> Unit
   
-  private var onIosOutputExternalChanged_cxx: Func_void_bool
+  private var onIosOutputChanged_cxx: Func_void_IosOutput
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_bool_java(onIosOutputExternalChanged)
+      return Func_void_IosOutput_java(onIosOutputChanged)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onIosOutputExternalChanged = value
+      onIosOutputChanged = value
     }
   
   abstract var onEqualizerChanged: (settings: EqualizerSettings) -> Unit
@@ -1091,7 +1091,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun isIosOutputExternal(): Boolean
+  abstract fun getIosOutput(): IosOutput?
   
   @DoNotStrip
   @Keep

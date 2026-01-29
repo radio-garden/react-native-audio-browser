@@ -63,6 +63,31 @@ export type EqualizerSettings = {
   upperBandLevelLimit: number
 }
 
+export type IosOutputType =
+  | 'built-in-speaker'
+  | 'built-in-receiver'
+  | 'airplay'
+  | 'bluetooth-a2dp'
+  | 'bluetooth-hfp'
+  | 'bluetooth-le'
+  | 'headphones'
+  | 'car-audio'
+  | 'hdmi'
+  | 'usb-audio'
+  | 'other'
+
+/**
+ * Audio output information (iOS only).
+ */
+export type IosOutput = {
+  /** The output port type */
+  type: IosOutputType
+  /** Human-readable device name (e.g., "AirPods Pro", "iPhone Speaker") */
+  name: string
+  /** Whether this is an external output (false for built-in speaker/receiver) */
+  external: boolean
+}
+
 export interface AudioBrowser extends HybridObject<{
   ios: 'swift'
   android: 'kotlin'
@@ -230,16 +255,15 @@ export interface AudioBrowser extends HybridObject<{
 
   // MARK: external audio output (iOS only)
   /**
-   * Returns whether an external audio output is active (iOS only).
-   * Returns true for AirPlay, Bluetooth, headphones, CarPlay, etc.
-   * Always returns false on Android.
+   * Gets the current audio output info.
+   * Always returns a value on iOS, undefined on Android.
    */
-  isIosOutputExternal(): boolean
+  getIosOutput(): IosOutput | undefined
   /**
-   * Called when external output state changes (iOS only).
+   * Called when audio output changes (iOS only).
    * Never fires on Android.
    */
-  onIosOutputExternalChanged: (active: boolean) => void
+  onIosOutputChanged: (output: IosOutput) => void
   /**
    * Opens the system output picker (iOS only).
    * Allows users to select output device (speaker, AirPlay, Bluetooth, etc.).

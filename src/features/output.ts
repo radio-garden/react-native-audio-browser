@@ -1,6 +1,9 @@
 import { nativeBrowser } from '../native'
+import type { IosOutput, IosOutputType } from '../specs/audio-browser.nitro'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
+
+export type { IosOutput, IosOutputType }
 
 // MARK: - Actions
 
@@ -16,35 +19,32 @@ export function openIosOutputPicker(): void {
 // MARK: - Getters
 
 /**
- * Returns whether the active output is external (iOS only).
- * Returns true for AirPlay, Bluetooth, headphones, CarPlay, etc.
- * Returns false when using the device's built-in speaker.
- * Always returns false on Android.
+ * Gets the current audio output info.
+ * Always returns a value on iOS, undefined on Android.
  */
-export function isIosOutputExternal(): boolean {
-  return nativeBrowser.isIosOutputExternal()
+export function getIosOutput(): IosOutput | undefined {
+  return nativeBrowser.getIosOutput()
 }
 
 // MARK: - Event Callbacks
 
 /**
  * Subscribes to output state changes (iOS only).
- * Fires when switching between built-in speaker and external outputs.
  * Never fires on Android.
- * @param callback - Called with true when active output is external, false otherwise
+ * @param callback - Called with output info when output changes
  * @returns Cleanup function to unsubscribe
  */
-export const onIosOutputExternalChanged = NativeUpdatedValue.emitterize<boolean>(
-  (cb) => (nativeBrowser.onIosOutputExternalChanged = cb)
+export const onIosOutputChanged = NativeUpdatedValue.emitterize<IosOutput>(
+  (cb) => (nativeBrowser.onIosOutputChanged = cb)
 )
 
 // MARK: - Hooks
 
 /**
- * Hook that returns whether the active output is external (iOS only).
+ * Hook that returns the current audio output info.
  * Updates when the output changes (e.g., AirPods connected/disconnected).
- * Always returns false on Android.
+ * Always returns a value on iOS, undefined on Android.
  */
-export function useIosOutputExternal(): boolean {
-  return useNativeUpdatedValue(isIosOutputExternal, onIosOutputExternalChanged)
+export function useIosOutput(): IosOutput | undefined {
+  return useNativeUpdatedValue(getIosOutput, onIosOutputChanged)
 }

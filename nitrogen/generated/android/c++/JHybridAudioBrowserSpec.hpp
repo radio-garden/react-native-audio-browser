@@ -162,8 +162,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) override;
     std::function<void(double /* volume */)> getOnSystemVolumeChanged() override;
     void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) override;
-    std::function<void(bool /* active */)> getOnIosOutputExternalChanged() override;
-    void setOnIosOutputExternalChanged(const std::function<void(bool /* active */)>& onIosOutputExternalChanged) override;
+    std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() override;
+    void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) override;
     std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() override;
     void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) override;
     std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() override;
@@ -230,7 +230,7 @@ namespace margelo::nitro::audiobrowser {
     bool getOnline() override;
     double getSystemVolume() override;
     void setSystemVolume(double volume) override;
-    bool isIosOutputExternal() override;
+    std::optional<IosOutput> getIosOutput() override;
     void openIosOutputPicker() override;
     std::optional<EqualizerSettings> getEqualizerSettings() override;
     void setEqualizerEnabled(bool enabled) override;

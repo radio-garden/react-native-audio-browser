@@ -69,6 +69,8 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
+// Forward declaration of `IosOutput` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IosOutput; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -128,6 +130,7 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "Options.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
+#include "IosOutput.hpp"
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
@@ -281,8 +284,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) = 0;
       virtual std::function<void(double /* volume */)> getOnSystemVolumeChanged() = 0;
       virtual void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) = 0;
-      virtual std::function<void(bool /* active */)> getOnIosOutputExternalChanged() = 0;
-      virtual void setOnIosOutputExternalChanged(const std::function<void(bool /* active */)>& onIosOutputExternalChanged) = 0;
+      virtual std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() = 0;
+      virtual void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) = 0;
       virtual std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() = 0;
       virtual void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) = 0;
       virtual std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() = 0;
@@ -349,7 +352,7 @@ namespace margelo::nitro::audiobrowser {
       virtual bool getOnline() = 0;
       virtual double getSystemVolume() = 0;
       virtual void setSystemVolume(double volume) = 0;
-      virtual bool isIosOutputExternal() = 0;
+      virtual std::optional<IosOutput> getIosOutput() = 0;
       virtual void openIosOutputPicker() = 0;
       virtual std::optional<EqualizerSettings> getEqualizerSettings() = 0;
       virtual void setEqualizerEnabled(bool enabled) = 0;

@@ -1413,20 +1413,20 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onIosOutputExternalChanged: bridge.Func_void_bool {
+  public final var onIosOutputChanged: bridge.Func_void_IosOutput {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_bool in
-        let __closureWrapper = Func_void_bool(self.__implementation.onIosOutputExternalChanged)
-        return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_IosOutput in
+        let __closureWrapper = Func_void_IosOutput(self.__implementation.onIosOutputChanged)
+        return bridge.create_Func_void_IosOutput(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onIosOutputExternalChanged = { () -> (Bool) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
-        return { (__active: Bool) -> Void in
-          __wrappedFunction.call(__active)
+      self.__implementation.onIosOutputChanged = { () -> (IosOutput) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_IosOutput(newValue)
+        return { (__output: IosOutput) -> Void in
+          __wrappedFunction.call(__output)
         }
       }()
     }
@@ -2225,14 +2225,20 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func isIosOutputExternal() -> bridge.Result_bool_ {
+  public final func getIosOutput() -> bridge.Result_std__optional_IosOutput__ {
     do {
-      let __result = try self.__implementation.isIosOutputExternal()
-      let __resultCpp = __result
-      return bridge.create_Result_bool_(__resultCpp)
+      let __result = try self.__implementation.getIosOutput()
+      let __resultCpp = { () -> bridge.std__optional_IosOutput_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_IosOutput_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_IosOutput__(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_bool_(__exceptionPtr)
+      return bridge.create_Result_std__optional_IosOutput__(__exceptionPtr)
     }
   }
   

@@ -226,7 +226,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       setupVolumeObserver()
     }
   }
-  public var onIosOutputExternalChanged: (Bool) -> Void = { _ in } {
+  public var onIosOutputChanged: (IosOutput) -> Void = { _ in } {
     didSet {
       setupRouteChangeObserver()
     }
@@ -954,25 +954,46 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       object: nil,
       queue: .main
     ) { [weak self] _ in
-      guard let self else { return }
-      self.onIosOutputExternalChanged(self.isOutputExternal())
+      guard let self, let output = self.getCurrentOutput() else { return }
+      self.onIosOutputChanged(output)
     }
   }
 
-  /// Checks if the current audio output is external (not built-in speaker/receiver)
-  private func isOutputExternal() -> Bool {
+  /// Gets the current audio output info
+  private func getCurrentOutput() -> IosOutput? {
     let session = AVAudioSession.sharedInstance()
-    guard let output = session.currentRoute.outputs.first else { return false }
-    switch output.portType {
-    case .builtInSpeaker, .builtInReceiver:
-      return false
+    guard let output = session.currentRoute.outputs.first else { return nil }
+
+    let (outputType, external): (IosOutputType, Bool) = switch output.portType {
+    case .builtInSpeaker:
+      (.builtInSpeaker, false)
+    case .builtInReceiver:
+      (.builtInReceiver, false)
+    case .airPlay:
+      (.airplay, true)
+    case .bluetoothA2DP:
+      (.bluetoothA2dp, true)
+    case .bluetoothHFP:
+      (.bluetoothHfp, true)
+    case .bluetoothLE:
+      (.bluetoothLe, true)
+    case .headphones:
+      (.headphones, true)
+    case .carAudio:
+      (.carAudio, true)
+    case .HDMI:
+      (.hdmi, true)
+    case .usbAudio:
+      (.usbAudio, true)
     default:
-      return true
+      (.other, true)
     }
+
+    return IosOutput(type: outputType, name: output.portName, external: external)
   }
 
-  public func isIosOutputExternal() throws -> Bool {
-    isOutputExternal()
+  public func getIosOutput() throws -> IosOutput? {
+    getCurrentOutput()
   }
 
   public func openIosOutputPicker() throws {
