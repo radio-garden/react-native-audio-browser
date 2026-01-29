@@ -19,7 +19,7 @@ features:
   - title: Android Auto
     details: First-class support for Android Auto with native MediaBrowserService integration.
   - title: CarPlay
-    details: Native Apple CarPlay integration for iOS. (Coming soon)
+    details: Native Apple CarPlay integration for iOS.
   - title: Built with Nitro
     details: High-performance native modules with synchronous calls and zero bridge overhead.
 ---
