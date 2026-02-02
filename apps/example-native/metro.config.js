@@ -7,7 +7,13 @@ const defaultConfig = getDefaultConfig(__dirname);
 // Filter React and React Native to prevent duplicates
 // Also filter react-native-safe-area-context to prevent context issues
 // Also filter react-native-mmkv to prevent duplicate instances
-const modulesToFilter = ['react', 'react-native', 'react-native-safe-area-context', 'react-native-nitro-modules'];
+const modulesToFilter = [
+  'react',
+  'react-native',
+  'react-native-mmkv',
+  'react-native-nitro-modules',
+  'react-native-safe-area-context',
+];
 const { blockList, extraNodeModules } = getMonorepoMetroOptions(
   modulesToFilter,
   __dirname,

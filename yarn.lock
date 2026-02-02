@@ -10013,7 +10013,7 @@ __metadata:
     react-native-audio-browser: "workspace:*"
     react-native-mmkv: "npm:^4.1.0"
     react-native-monorepo-config: "npm:^0.3.0"
-    react-native-nitro-modules: "npm:0.31.10"
+    react-native-nitro-modules: "npm:0.33.3"
     react-native-safe-area-context: "npm:^5.6.2"
     typescript: "npm:^5.9.3"
   languageName: unknown
@@ -14886,18 +14886,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nitrogen@npm:^0.31.10":
-  version: 0.31.10
-  resolution: "nitrogen@npm:0.31.10"
+"nitrogen@npm:^0.33.3":
+  version: 0.33.3
+  resolution: "nitrogen@npm:0.33.3"
   dependencies:
     chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.31.10"
+    react-native-nitro-modules: "npm:^0.33.3"
     ts-morph: "npm:^27.0.0"
     yargs: "npm:^18.0.0"
     zod: "npm:^4.0.5"
   bin:
     nitrogen: lib/index.js
-  checksum: 10/a75fc9619df65c6ec7d2ce982d015ec47b81862a42ced16f9b6bba8192f17ecb0c5fa497a5e809e64cbcfd1f498d4c764bdf3a58c4e172d59f8d64da70af831a
+  checksum: 10/db947d97454a91e9b75a0dfb8edc44a369df14fa3f6d5a443dafccd4cc6b6aa8c0ae21e48730c96ba77e905c616629b418e4f14b090f7746992914ee5aee400d
   languageName: node
   linkType: hard
 
@@ -16649,7 +16649,7 @@ __metadata:
     conventional-changelog-conventionalcommits: "npm:^9.1.0"
     del-cli: "npm:^5.1.0"
     jest: "npm:^29.7.0"
-    nitrogen: "npm:^0.31.10"
+    nitrogen: "npm:^0.33.3"
     oxfmt: "npm:^0.27.0"
     oxlint: "npm:^1.42.0"
     oxlint-tsgolint: "npm:^0.11.2"
@@ -16658,7 +16658,7 @@ __metadata:
     react-native: "npm:0.83.0"
     react-native-builder-bob: "npm:^0.37.0"
     react-native-monorepo-config: "npm:^0.3.1"
-    react-native-nitro-modules: "npm:0.31.10"
+    react-native-nitro-modules: "npm:0.33.3"
     semantic-release: "npm:^24.2.9"
     shaka-player: "npm:^4.15.4"
     typescript: "npm:^5.8.3"
@@ -16727,13 +16727,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.31.10, react-native-nitro-modules@npm:^0.31.10":
-  version: 0.31.10
-  resolution: "react-native-nitro-modules@npm:0.31.10"
+"react-native-nitro-modules@npm:0.33.3, react-native-nitro-modules@npm:^0.33.3":
+  version: 0.33.3
+  resolution: "react-native-nitro-modules@npm:0.33.3"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10/b0dabcc7c251660d39c712898a2147fcb14bf99cbf2a1a4ff0bc2c8798e4d72b4d3a2ee03e684a1454aaee6a17d665ab38c3f445234a2e17aced32b776ecac38
+  checksum: 10/e041d715f3dec41f7307c8507c06908fadac2bca58abc45932ce5659326d0ad47ea38ed9bf2c4abbf9465c8bef83a84d382fcb38b5f5aef4509b501918da71f2
   languageName: node
   linkType: hard
 
