@@ -402,6 +402,11 @@ export class BrowserManager {
       const result = await route.browseCallback({ path, routeParams })
       if ('error' in result) {
         console.error(`${errorContext} browse error:`, result.error)
+        this.navigationErrorManager.setNavigationError(
+          'callback-error',
+          result.error,
+          path
+        )
         return undefined
       }
       return result

@@ -141,7 +141,10 @@ export class Player {
     })
 
     // Attach player to the window to make it easy to access in the JS console.
-    window.rnab = this.player
+    if (__DEV__) {
+      window.rnab = this.player
+    }
+
     this.hasInitialized = true
   }
 
@@ -150,6 +153,21 @@ export class Player {
    */
   protected onStateUpdate(state: Exclude<StateType, typeof State.Error>): void {
     this.state = { state }
+  }
+
+  private toNormalizedError(err: unknown): { code: number; message: string } {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'code' in err &&
+      typeof (err as Record<string, unknown>).code === 'number'
+    ) {
+      const e = err as { code: number; message?: string }
+      return { code: e.code, message: e.message ?? 'Unknown error' }
+    }
+
+    const message = err instanceof Error ? err.message : String(err)
+    return { code: -1, message }
   }
 
   protected onError(shakaError: { code: number; message: string }): void {
@@ -204,8 +222,7 @@ export class Player {
         }
       })
       .catch((err: unknown) => {
-        const shakaError = err as { code: number; message: string }
-        this.onError(shakaError)
+        this.onError(this.toNormalizedError(err))
       })
   }
 
@@ -235,6 +252,12 @@ export class Player {
   public play(): void {
     const element = this.requireElement()
     this.playWhenReady = true
+
+    if (this.state.state === State.Error && this.current) {
+      this.load(this.current)
+      return
+    }
+
     element.play().catch((err: unknown) => console.error(err))
   }
 

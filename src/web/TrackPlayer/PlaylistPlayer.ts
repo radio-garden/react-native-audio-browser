@@ -32,19 +32,12 @@ export class PlaylistPlayer extends Player {
         }
         break
       case RepeatMode.Playlist:
-        if (this.currentIndex === this.playlist.length - 1) {
-          this.goToIndex(0)
-        } else {
-          this.skipToNext()
-        }
+        this.skipToNext()
         break
       default:
-        try {
+        if (this.getNextIndex() !== undefined) {
           this.skipToNext()
-        } catch (err) {
-          if ((err as Error).message !== 'playlist_exhausted') {
-            throw err
-          }
+        } else {
           this.onPlaylistEnded()
         }
         break
@@ -67,9 +60,7 @@ export class PlaylistPlayer extends Player {
   protected goToIndex(index: number, initialPosition?: number) {
     const track = this.playlist[index]
 
-    if (!track) {
-      throw new Error('playlist_exhausted')
-    }
+    if (!track) return
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const onCompletedLoading = (_track: Track) => {
@@ -124,61 +115,77 @@ export class PlaylistPlayer extends Player {
   public skipToNext(initialPosition?: number): void {
     if (this.currentIndex === undefined) return
 
-    const nextIndex = this.getNextIndex()
-    if (nextIndex !== undefined) {
-      this.goToIndex(nextIndex, initialPosition)
-    }
+    const nextIndex = this.getNextIndex() ?? this.getWrapAroundFirstIndex()
+    if (nextIndex === undefined) return
+
+    this.goToIndex(nextIndex, initialPosition)
   }
 
   public skipToPrevious(initialPosition?: number): void {
     if (this.currentIndex === undefined) return
 
-    const previousIndex = this.getPreviousIndex()
-    if (previousIndex !== undefined) {
-      this.goToIndex(previousIndex, initialPosition)
-    }
+    const previousIndex = this.getPreviousIndex() ?? this.getWrapAroundLastIndex()
+    if (previousIndex === undefined) return
+
+    this.goToIndex(previousIndex, initialPosition)
   }
 
   protected getNextIndex(): number | undefined {
     if (this.currentIndex === undefined) return undefined
 
-    if (this.shuffleEnabled) {
-      // Find current position in shuffle order
-      const currentShufflePos = this.shuffleOrder.indexOf(this.currentIndex)
-      if (currentShufflePos === -1) return undefined
-
-      // Get next position in shuffle order
-      const nextShufflePos = currentShufflePos + 1
-      if (nextShufflePos >= this.shuffleOrder.length) {
-        throw new Error('playlist_exhausted')
-      }
-
-      return this.shuffleOrder[nextShufflePos]
-    } else {
+    if (!this.shuffleEnabled) {
       // Normal sequential order
-      return this.currentIndex + 1
+      const nextIndex = this.currentIndex + 1
+      if (nextIndex >= this.playlist.length) return undefined
+      return nextIndex
     }
+
+    // Find current position in shuffle order
+    const currentShufflePos = this.shuffleOrder.indexOf(this.currentIndex)
+    if (currentShufflePos === -1) return undefined
+
+    // Get next position in shuffle order
+    const nextShufflePos = currentShufflePos + 1
+    if (nextShufflePos >= this.shuffleOrder.length) {
+      return undefined
+    }
+
+    return this.shuffleOrder[nextShufflePos]
   }
 
   protected getPreviousIndex(): number | undefined {
     if (this.currentIndex === undefined) return undefined
 
-    if (this.shuffleEnabled) {
-      // Find current position in shuffle order
-      const currentShufflePos = this.shuffleOrder.indexOf(this.currentIndex)
-      if (currentShufflePos === -1) return undefined
-
-      // Get previous position in shuffle order
-      const previousShufflePos = currentShufflePos - 1
-      if (previousShufflePos < 0) {
-        throw new Error('playlist_exhausted')
-      }
-
-      return this.shuffleOrder[previousShufflePos]
-    } else {
+    if (!this.shuffleEnabled) {
       // Normal sequential order
-      return this.currentIndex - 1
+      const prevIndex = this.currentIndex - 1
+      if (prevIndex < 0) return undefined
+      return prevIndex
     }
+
+    // Find current position in shuffle order
+    const currentShufflePos = this.shuffleOrder.indexOf(this.currentIndex)
+    if (currentShufflePos === -1) return undefined
+
+    // Get previous position in shuffle order
+    const previousShufflePos = currentShufflePos - 1
+    if (previousShufflePos < 0) {
+      return undefined
+    }
+
+    return this.shuffleOrder[previousShufflePos]
+  }
+
+  protected getWrapAroundFirstIndex(): number | undefined {
+    if (this.repeatMode !== RepeatMode.Playlist) return undefined
+    if (this.shuffleEnabled) return this.shuffleOrder[0]
+    return 0
+  }
+
+  protected getWrapAroundLastIndex(): number | undefined {
+    if (this.repeatMode !== RepeatMode.Playlist) return undefined
+    if (this.shuffleEnabled) return this.shuffleOrder[this.shuffleOrder.length - 1]
+    return this.playlist.length - 1
   }
 
   protected generateShuffleOrder(): void {
@@ -188,14 +195,17 @@ export class PlaylistPlayer extends Player {
     // Shuffle the indices
     fisherYatesShuffle(this.shuffleOrder)
 
-    // If there's a current track, move it to the beginning of the shuffle order
-    if (this.currentIndex !== undefined) {
-      const currentPos = this.shuffleOrder.indexOf(this.currentIndex)
-      if (currentPos > 0) {
-        const temp = this.shuffleOrder[0]!
-        this.shuffleOrder[0] = this.shuffleOrder[currentPos]!
-        this.shuffleOrder[currentPos] = temp
-      }
+    // If there is NOT a current track, exit
+    if (this.currentIndex === undefined) {
+      return
+    }
+
+    // If there is a current track, move it to the beginning of the shuffle order
+    const currentPos = this.shuffleOrder.indexOf(this.currentIndex)
+    if (currentPos > 0) {
+      const temp = this.shuffleOrder[0]!
+      this.shuffleOrder[0] = this.shuffleOrder[currentPos]!
+      this.shuffleOrder[currentPos] = temp
     }
   }
 

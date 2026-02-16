@@ -60,11 +60,11 @@ export class OptionsManager {
 
     // Call callback with full Options type (including repeatMode)
     const fullOptions: Options = {
-      forwardJumpInterval: mergedOptions.forwardJumpInterval || 15,
-      backwardJumpInterval: mergedOptions.backwardJumpInterval || 15,
+      forwardJumpInterval: mergedOptions.forwardJumpInterval ?? 15,
+      backwardJumpInterval: mergedOptions.backwardJumpInterval ?? 15,
       progressUpdateEventInterval:
-        mergedOptions.progressUpdateEventInterval || 15,
-      capabilities: mergedOptions.capabilities || {},
+        mergedOptions.progressUpdateEventInterval ?? 15,
+      capabilities: mergedOptions.capabilities ?? {},
       repeatMode: mergedOptions.repeatMode,
     }
     this.onOptionsChanged(fullOptions)
