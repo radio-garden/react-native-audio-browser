@@ -5,7 +5,7 @@ import AudioBrowser, {
   getActiveTrack,
   notifyContentChanged,
   onFavoriteChanged,
-  onPlaybackMetadata,
+  onTimedMetadata,
   setFavorites,
   setPlayWhenReady,
   Track,
@@ -77,7 +77,7 @@ void AudioBrowser.setupPlayer().then(() => {
     trailing: true
   })
 
-  onPlaybackMetadata.addListener((metadata) => {
+  onTimedMetadata.addListener((metadata) => {
     const track = getActiveTrack()
 
     // Build artist line from stream metadata (e.g., "Song Title - Artist Name")

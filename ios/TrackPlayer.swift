@@ -821,6 +821,9 @@ class TrackPlayer {
   /// Starts playback at the configured rate
   private func startPlayback() {
     avPlayer.play()
+    if rate != 1.0 {
+      avPlayer.rate = rate
+    }
   }
 
   /// Pauses playback
