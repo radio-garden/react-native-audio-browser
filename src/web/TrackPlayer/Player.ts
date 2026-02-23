@@ -190,11 +190,6 @@ export class Player {
     console.debug('Error code', shakaError.code, 'object', shakaError)
   }
 
-  /**
-   * NOTE: this method is sync despite the actual load being async. This
-   * behavior is intentional as it mirrors what happens in Android. State
-   * changes should be captured by event listeners.
-   */
   public load(track: Track, onLoaded?: (track: Track) => void): void {
     const player = this.requirePlayer()
 
@@ -226,11 +221,6 @@ export class Player {
       })
   }
 
-  /**
-   * NOTE: this method is sync despite the actual load being async. This
-   * behavior is intentional as it mirrors what happens in Android. State
-   * changes should be captured by event listeners.
-   */
   public stop(onComplete?: () => void): void {
     const player = this.requirePlayer()
 
@@ -244,11 +234,6 @@ export class Player {
       })
   }
 
-  /**
-   * NOTE: this method is sync despite the actual load being async. This
-   * behavior is intentional as it mirrors what happens in Android. State
-   * changes should be captured by event listeners.
-   */
   public play(): void {
     const element = this.requireElement()
     this.playWhenReady = true
