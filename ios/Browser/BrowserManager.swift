@@ -744,11 +744,26 @@ final class BrowserManager: @unchecked Sendable {
 
         logger.debug("resolveMediaUrl: calling transform callback...")
         // MediaRequestConfig.transform takes (request, routeParams) - pass nil for routeParams
+        // Call the JS transform outside the task group to avoid sending-parameter
+        // data-race warnings (transform and baseRequest aren't Sendable).
         let outerPromise = transform(baseRequest, nil)
-        logger.debug("resolveMediaUrl: awaiting outer promise...")
         let innerPromise = try await outerPromise.await()
         logger.debug("resolveMediaUrl: awaiting inner promise...")
-        let transformedConfig = try await innerPromise.await()
+        let transformedConfig = try await withThrowingTaskGroup(of: RequestConfig.self) { group in
+          group.addTask { [innerPromise] in
+            return try await innerPromise.await()
+          }
+          group.addTask {
+            // Safety-net timeout: if the JS transform Promise doesn't resolve
+            // within 10s, bail out. This guards against Nitro bridge hangs when
+            // concurrent callbacks race.
+            try await Task.sleep(nanoseconds: 10_000_000_000)
+            throw CancellationError()
+          }
+          let result = try await group.next()!
+          group.cancelAll()
+          return result
+        }
         logger.debug("resolveMediaUrl: transform complete")
 
         // Extract values immediately to Swift native types to avoid

@@ -31,7 +31,7 @@ export function add(tracks: Track[], insertBeforeIndex?: number): void
  * By default the track will be added to the end of the queue.
  */
 export function add(track: Track, insertBeforeIndex?: number): void
-export function add(tracks: Track | Track[], insertBeforeIndex = -1): void {
+export function add(tracks: Track | Track[], insertBeforeIndex?: number): void {
   const addTracks = Array.isArray(tracks) ? tracks : [tracks]
   if (addTracks.length > 0) {
     nativeBrowser.add(addTracks, insertBeforeIndex)
