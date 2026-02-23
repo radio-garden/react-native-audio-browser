@@ -17,7 +17,7 @@ const config = {
     'react-native-web',
     'react-native'
   ],
-  webpack(webpackConfig, { isServer, webpack }) {
+  webpack(webpackConfig, { webpack }) {
     if (disableMinification) {
       webpackConfig.optimization.minimizer = []
     }
