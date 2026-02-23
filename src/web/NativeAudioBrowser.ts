@@ -86,6 +86,7 @@ export class NativeAudioBrowser
   private nowPlayingManager: NowPlayingManager
 
   // Player state
+  private currentLoadId = 0
   private progressUpdateEventInterval: NodeJS.Timeout | undefined
   private _online: boolean =
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -286,10 +287,18 @@ export class NativeAudioBrowser
     }
   }
 
+  /**
+   * Derives PlayingState from playback state and playWhenReady.
+   * Matches Android's PlayingStateFactory.derive() logic.
+   */
   private getPlayingStateFromPlayback(playback: Playback): PlayingState {
+    const state = playback.state
+    const pwr = this._playWhenReady
     return {
-      playing: playback.state === 'playing',
-      buffering: playback.state === 'buffering'
+      playing:
+        pwr && state !== 'error' && state !== 'ended' && state !== 'none',
+      buffering:
+        pwr && (state === 'loading' || state === 'buffering')
     }
   }
 
@@ -297,7 +306,13 @@ export class NativeAudioBrowser
     this.clearUpdateEventInterval()
     if (interval) {
       this.progressUpdateEventInterval = setInterval(() => {
-        if (this.state.state === 'playing') {
+        const state = this.state.state
+        // Match Android: emit progress during loading, buffering, and playing
+        if (
+          state === 'playing' ||
+          state === 'loading' ||
+          state === 'buffering'
+        ) {
           const progress = this.getProgress()
           const event: PlaybackProgressUpdatedEvent = {
             ...progress,
@@ -500,16 +515,36 @@ export class NativeAudioBrowser
     // Clear now playing override when track changes (matches Android's PlayerListener.onMediaItemTransition)
     this.nowPlayingManager.clearNowPlayingOverride()
 
+    // Match Android: load() modifies the queue.
+    // If queue is empty, add the track. If queue has items, replace at currentIndex.
+    if (this.playlist.length === 0) {
+      this.playlist = [track]
+      this._currentIndex = 0
+      this.onPlaybackQueueChanged(this.playlist)
+    } else if (
+      this.currentIndex !== undefined &&
+      this.playlist[this.currentIndex] !== track
+    ) {
+      this.playlist[this.currentIndex] = track
+      this.onPlaybackQueueChanged(this.playlist)
+    }
+
     const lastTrack = this.current
     const lastPosition = element.currentTime
     const lastIndex = this.lastIndex
     const currentIndex = this.currentIndex
 
     // Resolve the media URL before loading (async but we don't await)
+    const loadId = ++this.currentLoadId
     const doLoad = async () => {
       const resolvedTrack: Track = track.src
         ? { ...track, src: await this.resolveMediaUrl(track.src) }
         : track
+
+      // A newer load() was called while resolving — discard this stale result
+      if (loadId !== this.currentLoadId) {
+        return
+      }
 
       super.load(resolvedTrack, (loadedTrack) => {
         this.onPlaybackActiveTrackChanged({
@@ -653,6 +688,9 @@ export class NativeAudioBrowser
     startPositionMs?: number
   ): void {
     this.stop()
+    // Clear stale references from previous queue
+    this.current = undefined
+    this._currentIndex = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
     const artworkConfig = this.browserManager.configuration.artwork
     this.playlist = tracks.map((track) => {
