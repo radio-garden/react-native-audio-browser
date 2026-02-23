@@ -1,7 +1,7 @@
+import type { PlaybackError } from '../errors'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
-import type { PlaybackError } from '../errors'
 
 // MARK: - Types
 

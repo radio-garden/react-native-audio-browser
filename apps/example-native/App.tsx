@@ -5,7 +5,7 @@ import AudioBrowser, {
   getActiveTrack,
   notifyContentChanged,
   onFavoriteChanged,
-  onPlaybackMetadata,
+  onTimedMetadata,
   setFavorites,
   setPlayWhenReady,
   Track,
@@ -77,7 +77,7 @@ void AudioBrowser.setupPlayer().then(() => {
     trailing: true
   })
 
-  onPlaybackMetadata.addListener((metadata) => {
+  onTimedMetadata.addListener((metadata) => {
     const track = getActiveTrack()
 
     // Build artist line from stream metadata (e.g., "Song Title - Artist Name")
@@ -117,7 +117,7 @@ const configuration: BrowserConfiguration = {
       url: '/favorites',
       artwork: Platform.select({
         ios: 'sf:heart.fill'
-      }),
+      })
     }
   ],
   media: {
@@ -162,7 +162,11 @@ const configuration: BrowserConfiguration = {
           title: 'Independent Sounds',
           url: '/api/playlist/independent-sounds',
           children: [
-            { title: 'Radio is a Foreign Country', src: 'b35yEqjv', live: true },
+            {
+              title: 'Radio is a Foreign Country',
+              src: 'b35yEqjv',
+              live: true
+            },
             { title: 'NTS 1', src: 'wT9JJD4j', live: true },
             { title: 'Worldwide FM', src: '/rg/vfm-z7pR', live: true },
             { title: 'Kiosk Radio', src: '/rg/rTzlLOJp', live: true },

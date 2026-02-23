@@ -1,5 +1,6 @@
+import type { RepeatMode } from 'react-native-audio-browser'
 import Icon from '@react-native-vector-icons/fontawesome6'
-import React from 'react'
+import React, { useState } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -9,10 +10,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
-import type { RepeatMode } from 'react-native-audio-browser'
 import {
+  getRate,
   getRepeatMode,
   openIosOutputPicker,
+  setRate,
   setRepeatMode,
   skipToNext,
   skipToPrevious,
@@ -35,6 +37,8 @@ type MiniPlayerProps = {
   onSleepTimerPress: () => void
 }
 
+const RATE_OPTIONS = [0.5, 1, 1.5, 2]
+
 function cycleRepeatMode() {
   const modes: RepeatMode[] = ['off', 'track', 'queue']
   const currentIndex = modes.indexOf(getRepeatMode())
@@ -55,6 +59,15 @@ export function MiniPlayer({
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
   const iosOutput = useIosOutput()
+  const [rateState, setRateState] = useState(() => getRate())
+
+  function cycleRate() {
+    const currentIndex = RATE_OPTIONS.indexOf(rateState)
+    const nextIndex = (currentIndex + 1) % RATE_OPTIONS.length
+    const nextRate = RATE_OPTIONS[nextIndex]
+    setRate(nextRate)
+    setRateState(nextRate)
+  }
 
   if (!nowPlaying || !track) return null
 
@@ -155,6 +168,16 @@ export function MiniPlayer({
               color={repeatMode === 'off' ? 'white' : '#007AFF'}
               iconStyle="solid"
             />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.controlButton} onPress={cycleRate}>
+            <Text
+              style={[
+                styles.rateLabel,
+                rateState !== 1 && styles.rateLabelActive
+              ]}
+            >
+              {rateState}x
+            </Text>
           </TouchableOpacity>
           {equalizerSettings != null && (
             <TouchableOpacity
@@ -263,5 +286,13 @@ const styles = StyleSheet.create({
   playPauseButton: {
     width: 36,
     alignItems: 'center'
+  },
+  rateLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'white'
+  },
+  rateLabelActive: {
+    color: '#007AFF'
   }
 })

@@ -1,4 +1,10 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
+import type { NowPlayingMetadata } from '../features/metadata'
+import type { PlayingState } from '../features/playback/playing'
+import type { PlaybackState } from '../features/playback/state'
+import type { Options } from '../features/player/options'
+import type { RepeatMode } from '../features/queue/repeatMode'
+import type { Track } from '../types'
 import { useContent, usePath } from '../features/browser'
 import { useNavigationError, usePlaybackError } from '../features/errors'
 import {
@@ -8,21 +14,15 @@ import {
 } from '../features/metadata'
 import { useOnline } from '../features/network'
 import { useNowPlaying } from '../features/nowPlaying'
-import type { PlayingState } from '../features/playback/playing'
 import { usePlayingState } from '../features/playback/playing'
 import { usePlayWhenReady } from '../features/playback/playWhenReady'
 import { useProgress } from '../features/playback/progress'
-import type { PlaybackState } from '../features/playback/state'
 import { usePlayback } from '../features/playback/state'
-import type { Options } from '../features/player/options'
 import { useOptions } from '../features/player/options'
 import { useActiveTrack } from '../features/queue/activeTrack'
 import { useQueue } from '../features/queue/queue'
-import type { RepeatMode } from '../features/queue/repeatMode'
 import { useRepeatMode } from '../features/queue/repeatMode'
 import { useShuffle } from '../features/queue/shuffle'
-import type { NowPlayingMetadata } from '../features/metadata'
-import type { Track } from '../types'
 
 // MARK: - Types
 

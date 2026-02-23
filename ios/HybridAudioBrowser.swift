@@ -545,11 +545,18 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func updateOptions(options: NativeUpdateOptions) {
     onMainActor {
+      let previousInterval = playerOptions.progressUpdateEventInterval
+
       // Update stored options
       playerOptions.update(from: options)
 
       // Apply remote commands to player
       applyRemoteCommands()
+
+      // Apply progress update interval if changed
+      if playerOptions.progressUpdateEventInterval != previousInterval {
+        player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
+      }
     }
   }
 

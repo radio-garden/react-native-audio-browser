@@ -167,14 +167,18 @@ dependencies {
   implementation("androidx.compose.ui:ui")
   implementation("androidx.compose.ui:ui-graphics")
 
-  // Media3 dependencies for audio playback
-  implementation("androidx.media3:media3-exoplayer:1.9.0-beta01")
-  implementation("androidx.media3:media3-session:1.9.0-beta01")
-  implementation("androidx.media3:media3-ui:1.9.0-beta01")
-  implementation("androidx.media3:media3-exoplayer-hls:1.9.0-beta01")
-  implementation("androidx.media3:media3-exoplayer-dash:1.9.0-beta01")
-  implementation("androidx.media3:media3-exoplayer-smoothstreaming:1.9.0-beta01")
-  implementation("androidx.media3:media3-common:1.9.0-beta01")
+  // Media3 dependencies for audio playback.
+  // Version is configurable via rootProject.ext.media3Version or AudioBrowser_media3Version
+  // in gradle.properties, allowing consuming apps to align with other media3 consumers
+  // (e.g. react-native-video).
+  def media3Version = getExtOrDefault("media3Version")
+  implementation("androidx.media3:media3-exoplayer:${media3Version}")
+  implementation("androidx.media3:media3-session:${media3Version}")
+  implementation("androidx.media3:media3-ui:${media3Version}")
+  implementation("androidx.media3:media3-exoplayer-hls:${media3Version}")
+  implementation("androidx.media3:media3-exoplayer-dash:${media3Version}")
+  implementation("androidx.media3:media3-exoplayer-smoothstreaming:${media3Version}")
+  implementation("androidx.media3:media3-common:${media3Version}")
 
   implementation "com.google.guava:guava:33.0.0-android"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0"

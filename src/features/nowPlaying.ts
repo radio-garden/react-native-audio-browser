@@ -1,7 +1,7 @@
+import type { NowPlayingMetadata, NowPlayingUpdate } from './metadata'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
-import type { NowPlayingMetadata, NowPlayingUpdate } from './metadata'
 
 // MARK: - Functions
 

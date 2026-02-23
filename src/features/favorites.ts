@@ -1,5 +1,5 @@
-import { nativeBrowser } from '../native'
 import type { Track } from '../types'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Setters

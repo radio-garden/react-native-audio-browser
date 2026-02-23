@@ -521,20 +521,14 @@ class MediaSessionCallback(private val player: Player) :
   override fun onPlaybackResumption(
     mediaSession: MediaSession,
     controller: MediaSession.ControllerInfo,
-    playback: Boolean,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-    Timber.d("${controller.packageName}, playback=$playback")
+    Timber.d("${controller.packageName}")
 
     return scope.future {
-      // Get persisted state - only restore player settings if we're actually going to play
-      // When playback=false, system is just gathering info for UI (e.g., boot-time notification)
+      // Restore player settings and persisted state
       val state =
-        if (playback) {
-          // restore() sets player properties which must happen on main thread
-          withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
-        } else {
-          player.playbackStateStore.get()
-        }
+        // restore() sets player properties which must happen on main thread
+        withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
           ?: run {
             Timber.w("No persisted playback state found")
             throw IllegalStateException("No playback state to resume")
