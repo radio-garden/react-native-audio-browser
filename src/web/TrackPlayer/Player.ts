@@ -314,10 +314,14 @@ export class Player {
 
   public getProgress(): Progress {
     const element = this.requireElement()
+    let buffered = 0
+    if (element.buffered.length > 0) {
+      buffered = element.buffered.end(element.buffered.length - 1)
+    }
     return {
       position: element.currentTime,
       duration: element.duration || 0,
-      buffered: 0 // TODO: element.buffered.end,
+      buffered
     }
   }
 }
