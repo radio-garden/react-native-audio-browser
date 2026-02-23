@@ -270,6 +270,8 @@ export class PlaylistPlayer extends Player {
         this._currentIndex = undefined
         this.goToIndex(Math.min(adjustedIndex, this.playlist.length - 1))
       } else {
+        this.current = undefined
+        this._currentIndex = undefined
         this.stop()
       }
     } else {
@@ -284,15 +286,14 @@ export class PlaylistPlayer extends Player {
   }
 
   public stop(onComplete?: () => void): void {
-    super.stop(() => {
-      this.currentIndex = undefined
-      onComplete?.()
-    })
+    super.stop(onComplete)
   }
 
   public reset(): void {
     this.stop(() => {
       this.playlist = []
+      this.current = undefined
+      this._currentIndex = undefined
     })
   }
 
@@ -311,37 +312,28 @@ export class PlaylistPlayer extends Player {
       throw new Error('index out of bounds')
     }
 
-    if (this.currentIndex === fromIndex) {
-      throw new Error('you cannot move the currently playing track')
-    }
-
-    if (this.currentIndex === toIndex) {
-      throw new Error('you cannot replace the currently playing track')
-    }
-
-    // calculate `currentIndex` after move
-    let shift: number | undefined
-    if (
-      this.currentIndex !== undefined &&
-      fromIndex < this.currentIndex &&
-      toIndex > this.currentIndex
-    ) {
-      shift = -1
-    } else if (
-      this.currentIndex !== undefined &&
-      fromIndex > this.currentIndex &&
-      toIndex < this.currentIndex
-    ) {
-      shift = 1
-    }
-
-    // move the track
+    // Move the track in the playlist
     const fromItem = this.playlist[fromIndex]
     this.playlist.splice(fromIndex, 1)
     this.playlist.splice(toIndex, 0, fromItem)
 
-    if (this.currentIndex !== undefined && shift) {
-      this.currentIndex = this.currentIndex + shift
+    // Update currentIndex to track the currently playing item's new position.
+    // Matches Android's exoPlayer.moveMediaItem() which has no restrictions.
+    if (this.currentIndex !== undefined) {
+      if (fromIndex === this.currentIndex) {
+        // Moving the current track — follow it to its new position
+        this._currentIndex = toIndex
+      } else if (
+        fromIndex < this.currentIndex &&
+        toIndex >= this.currentIndex
+      ) {
+        this._currentIndex = this.currentIndex - 1
+      } else if (
+        fromIndex > this.currentIndex &&
+        toIndex <= this.currentIndex
+      ) {
+        this._currentIndex = this.currentIndex + 1
+      }
     }
 
     // Regenerate shuffle order when tracks are moved
