@@ -18,6 +18,8 @@ function isHttpError(error: unknown): error is HttpError {
   )
 }
 
+const TIMEOUT_MS = 30_000
+
 /**
  * HTTP client for making browser API requests.
  * Mirrors Android's HttpClient.kt
@@ -67,10 +69,14 @@ export class HttpClient {
     const headers = config.headers ?? {}
     const method = config.method ?? 'GET'
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+
     try {
       const response = await fetch(url, {
         method,
-        headers
+        headers,
+        signal: controller.signal
       })
 
       if (!response.ok) {
@@ -85,6 +91,13 @@ export class HttpClient {
 
       return response.json()
     } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        const navError = new Error(
+          `Request timed out after ${TIMEOUT_MS}ms`
+        ) as Error & { code: NavigationErrorType }
+        navError.code = 'network-error'
+        throw navError
+      }
       // Distinguish between network errors and HTTP errors
       if (isHttpError(error)) {
         const navError = new Error(error.message) as Error & {
@@ -104,6 +117,8 @@ export class HttpClient {
       }
       navError.code = 'network-error'
       throw navError
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 }
