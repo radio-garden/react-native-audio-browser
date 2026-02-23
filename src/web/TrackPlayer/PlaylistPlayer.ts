@@ -19,6 +19,8 @@ export class PlaylistPlayer extends Player {
   protected onStateUpdate(state: Exclude<StateType, typeof State.Error>) {
     super.onStateUpdate(state)
 
+    if (this._isStopped) return
+
     if (state === State.Ended) {
       this.onTrackEnded()
     }

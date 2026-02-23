@@ -38,6 +38,7 @@ export class Player {
   protected _current?: Track = undefined
   protected _playWhenReady = false
   protected _state: Playback = { state: State.None }
+  protected _isStopped = false
 
   // current getter/setter
   public get current(): Track | undefined {
@@ -152,6 +153,8 @@ export class Player {
    * event handlers
    */
   protected onStateUpdate(state: Exclude<StateType, typeof State.Error>): void {
+    // Ignore Shaka/element events while stopped (e.g., from unload)
+    if (this._isStopped) return
     this.state = { state }
   }
 
@@ -192,6 +195,7 @@ export class Player {
 
   public load(track: Track, onLoaded?: (track: Track) => void): void {
     const player = this.requirePlayer()
+    this._isStopped = false
 
     if (!track.src) {
       const error: PlaybackError = {
@@ -224,7 +228,12 @@ export class Player {
   public stop(onComplete?: () => void): void {
     const player = this.requirePlayer()
 
-    this.current = undefined
+    // Match Android: stop sets playWhenReady=false and state=stopped,
+    // but keeps the current track so play() can resume.
+    this._isStopped = true
+    this.playWhenReady = false
+    this.state = { state: State.Stopped }
+
     player
       .unload()
       .then(() => onComplete?.())
@@ -239,6 +248,12 @@ export class Player {
     this.playWhenReady = true
 
     if (this.state.state === State.Error && this.current) {
+      this.load(this.current)
+      return
+    }
+
+    // Match Android: play() after stop() re-prepares the current track
+    if (this._isStopped && this.current) {
       this.load(this.current)
       return
     }
