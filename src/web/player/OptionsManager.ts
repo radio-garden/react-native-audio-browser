@@ -38,7 +38,7 @@ export class OptionsManager {
       options.progressUpdateEventInterval !== undefined &&
       typeof options.progressUpdateEventInterval !== 'number'
     ) {
-      throw new Error('NullSentinal type is not valid on web.')
+      throw new Error('NullSentinel type is not valid on web.')
     }
 
     // Merge platform-agnostic options
