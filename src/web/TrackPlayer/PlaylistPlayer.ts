@@ -242,16 +242,22 @@ export class PlaylistPlayer extends Player {
   }
 
   public remove(indexes: number[]): void {
-    const idxMap = indexes.reduce<Record<number, boolean>>((acc, elem) => {
-      acc[elem] = true
-      return acc
-    }, {})
+    const idxSet = new Set(indexes)
     let isCurrentRemoved = false
-    this.playlist = this.playlist.filter((_track, idx) => {
-      const keep = !idxMap[idx]
+    let removedBeforeCurrent = 0
 
-      if (!keep && idx === this.currentIndex) {
-        isCurrentRemoved = true
+    this.playlist = this.playlist.filter((_track, idx) => {
+      const keep = !idxSet.has(idx)
+
+      if (!keep) {
+        if (idx === this.currentIndex) {
+          isCurrentRemoved = true
+        } else if (
+          this.currentIndex !== undefined &&
+          idx < this.currentIndex
+        ) {
+          removedBeforeCurrent++
+        }
       }
 
       return keep
@@ -261,11 +267,20 @@ export class PlaylistPlayer extends Player {
       return
     }
 
-    const hasItems = this.playlist.length > 0
-    if (isCurrentRemoved && hasItems) {
-      this.goToIndex(this.currentIndex % this.playlist.length)
-    } else if (isCurrentRemoved) {
-      this.stop()
+    if (isCurrentRemoved) {
+      const hasItems = this.playlist.length > 0
+      if (hasItems) {
+        // Adjust for removed items before current, then clamp to valid range
+        const adjustedIndex = this.currentIndex - removedBeforeCurrent
+        // Reset so goToIndex always loads the new track at this position
+        this._currentIndex = undefined
+        this.goToIndex(Math.min(adjustedIndex, this.playlist.length - 1))
+      } else {
+        this.stop()
+      }
+    } else {
+      // Adjust currentIndex to account for removed items before it
+      this._currentIndex = this.currentIndex - removedBeforeCurrent
     }
 
     // Regenerate shuffle order when tracks are removed
