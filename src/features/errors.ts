@@ -1,5 +1,5 @@
-import { nativeBrowser } from '../native'
 import type { FormattedNavigationError } from '../types/browser'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 

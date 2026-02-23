@@ -1,5 +1,4 @@
-import { State } from './State'
-import type { State as StateType } from './State'
+import type shaka from 'shaka-player/dist/shaka-player.ui'
 import type {
   Progress,
   PartialSetupPlayerOptions,
@@ -7,8 +6,9 @@ import type {
   PlaybackError
 } from '../../features'
 import type { Track } from '../../types'
+import type { State as StateType } from './State'
 import { SetupNotCalledError } from './SetupNotCalledError'
-import type shaka from 'shaka-player/dist/shaka-player.ui'
+import { State } from './State'
 
 // Extend Window interface for debug purposes
 declare global {

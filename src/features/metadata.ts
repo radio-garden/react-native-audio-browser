@@ -1,6 +1,6 @@
+import type { Rating } from './rating'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
-import type { Rating } from './rating'
 
 // MARK: - Types
 

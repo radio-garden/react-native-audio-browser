@@ -1,10 +1,4 @@
 import type {
-  AudioBrowser as AudioBrowserSpec,
-  IosOutput
-} from '../specs/audio-browser.nitro'
-import type { ResolvedTrack, Track } from '../types'
-import type { NativeBrowserConfiguration } from '../types/browser-native'
-import type {
   PlaybackErrorEvent,
   PlaybackError,
   RepeatMode as RepeatModeType,
@@ -42,15 +36,21 @@ import type {
   BatteryWarningPendingChangedEvent,
   PartialSetupPlayerOptions
 } from '../features'
-import { PlaylistPlayer, SleepTimerManager } from './TrackPlayer'
-import { HttpClient } from './http/HttpClient'
+import type {
+  AudioBrowser as AudioBrowserSpec,
+  IosOutput
+} from '../specs/audio-browser.nitro'
+import type { ResolvedTrack, Track } from '../types'
+import type { NativeBrowserConfiguration } from '../types/browser-native'
 import { BrowserManager } from './browser/BrowserManager'
 import { FavoriteManager } from './browser/FavoriteManager'
 import { NavigationErrorManager } from './browser/NavigationErrorManager'
 import { SearchManager } from './browser/SearchManager'
-import { OptionsManager } from './player/OptionsManager'
-import { NowPlayingManager } from './player/NowPlayingManager'
+import { HttpClient } from './http/HttpClient'
 import { RequestConfigBuilder } from './http/RequestConfigBuilder'
+import { NowPlayingManager } from './player/NowPlayingManager'
+import { OptionsManager } from './player/OptionsManager'
+import { PlaylistPlayer, SleepTimerManager } from './TrackPlayer'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
 /**

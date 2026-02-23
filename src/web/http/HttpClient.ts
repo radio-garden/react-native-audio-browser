@@ -1,5 +1,5 @@
-import type { RequestConfig, TransformableRequestConfig } from '../../types'
 import type { NavigationErrorType } from '../../features'
+import type { RequestConfig, TransformableRequestConfig } from '../../types'
 import { RequestConfigBuilder } from './RequestConfigBuilder'
 
 type HttpError = Error & {

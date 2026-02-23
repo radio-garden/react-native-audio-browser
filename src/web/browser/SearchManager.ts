@@ -1,6 +1,6 @@
 import type { Track, SearchParams } from '../../types'
-import type { BrowserManager } from './BrowserManager'
 import type { HttpClient } from '../http/HttpClient'
+import type { BrowserManager } from './BrowserManager'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 
 /**

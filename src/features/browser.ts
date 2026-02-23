@@ -1,4 +1,3 @@
-import { nativeBrowser } from '../native'
 import type {
   BrowserConfiguration,
   BrowserSource,
@@ -15,6 +14,7 @@ import type {
   NativeBrowserConfiguration,
   NativeRouteEntry
 } from '../types/browser-native'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 

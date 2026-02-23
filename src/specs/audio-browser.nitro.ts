@@ -1,5 +1,4 @@
 import { type HybridObject } from 'react-native-nitro-modules'
-
 import type {
   BatteryOptimizationStatus,
   BatteryOptimizationStatusChangedEvent,

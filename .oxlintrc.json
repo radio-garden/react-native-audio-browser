@@ -36,5 +36,10 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": ["codegen/*", "post-script.cjs", "apps/example-nextjs/next-env.d.ts", "apps/example-nextjs/.next"]
+  "ignorePatterns": [
+    "codegen/*",
+    "post-script.cjs",
+    "apps/example-nextjs/next-env.d.ts",
+    "apps/example-nextjs/.next"
+  ]
 }

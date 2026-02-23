@@ -1,11 +1,11 @@
-import { nativeBrowser } from '../native'
-import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 import type {
   HeartRating,
   PercentageRating,
   StarRating,
   ThumbsRating
 } from './rating'
+import { nativeBrowser } from '../native'
+import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 
 // MARK: - Event Interfaces
 

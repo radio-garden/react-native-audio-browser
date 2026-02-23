@@ -10,7 +10,6 @@ import AudioBrowser, {
   type BrowserConfiguration
 } from 'react-native-audio-browser'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-
 import { BrowserScreen } from '../screens'
 
 const styles = StyleSheet.create({

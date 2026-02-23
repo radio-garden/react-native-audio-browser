@@ -1,5 +1,5 @@
-import { nativeBrowser } from '../native'
 import type { IosOutput, IosOutputType } from '../specs/audio-browser.nitro'
+import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 

@@ -1,6 +1,6 @@
+import type { FormattedNavigationError } from 'react-native-audio-browser'
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import type { FormattedNavigationError } from 'react-native-audio-browser'
 
 type NavigationErrorViewProps = {
   error: FormattedNavigationError

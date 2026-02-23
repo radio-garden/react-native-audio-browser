@@ -1,12 +1,12 @@
-import { assertedNotNullish } from '../../utils/validation'
+import type { NavigationErrorType } from '../../features'
 import type { Track, ResolvedTrack } from '../../types'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
-import type { NavigationErrorType } from '../../features'
-import { SimpleRouter } from '../SimpleRouter'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
+import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
+import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
 
 /**

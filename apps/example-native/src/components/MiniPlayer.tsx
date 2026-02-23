@@ -1,3 +1,4 @@
+import type { RepeatMode } from 'react-native-audio-browser'
 import Icon from '@react-native-vector-icons/fontawesome6'
 import React, { useState } from 'react'
 import {
@@ -9,7 +10,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
-import type { RepeatMode } from 'react-native-audio-browser'
 import {
   getRate,
   getRepeatMode,

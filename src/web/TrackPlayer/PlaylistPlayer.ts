@@ -1,12 +1,11 @@
-import { assertedNotNullish } from '../../utils/validation'
-import { Player } from './Player'
-import { State } from './State'
-import type { State as StateType } from './State'
-
-import type { Track } from '../../types'
 import type { RepeatMode as RepeatModeType } from '../../features'
-import { RepeatMode } from './RepeatMode'
+import type { Track } from '../../types'
+import type { State as StateType } from './State'
+import { assertedNotNullish } from '../../utils/validation'
 import { fisherYatesShuffle } from '../util/shuffle'
+import { Player } from './Player'
+import { RepeatMode } from './RepeatMode'
+import { State } from './State'
 
 export class PlaylistPlayer extends Player {
   // TODO: use immer to make the `playlist` immutable
@@ -252,10 +251,7 @@ export class PlaylistPlayer extends Player {
       if (!keep) {
         if (idx === this.currentIndex) {
           isCurrentRemoved = true
-        } else if (
-          this.currentIndex !== undefined &&
-          idx < this.currentIndex
-        ) {
+        } else if (this.currentIndex !== undefined && idx < this.currentIndex) {
           removedBeforeCurrent++
         }
       }
