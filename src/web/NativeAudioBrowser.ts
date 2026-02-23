@@ -538,12 +538,8 @@ export class NativeAudioBrowser
       console.error('Error loading track:', error)
       const message =
         error instanceof Error ? error.message : 'Failed to load track'
-      this.onPlaybackError({
-        error: {
-          code: 'load-error',
-          message
-        }
-      })
+      const playbackError = { code: 'load-error', message }
+      this.state = { state: 'error', error: playbackError }
     })
   }
 
