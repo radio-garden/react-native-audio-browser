@@ -267,7 +267,8 @@ export class NativeAudioBrowser
     const didStateChange = newState.state !== oldState.state
     const didErrorChange =
       newState.state === 'error' && oldState.state === 'error'
-        ? newState.error !== oldState.error
+        ? newState.error?.code !== oldState.error?.code ||
+          newState.error?.message !== oldState.error?.message
         : false
 
     super.state = newState
