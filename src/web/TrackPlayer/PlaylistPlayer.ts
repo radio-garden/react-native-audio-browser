@@ -63,19 +63,15 @@ export class PlaylistPlayer extends Player {
     if (!track) return
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const onCompletedLoading = (_track: Track) => {
+    const onLoaded = (_track: Track) => {
       if (initialPosition !== undefined) {
         this.seekTo(initialPosition)
-      }
-
-      if (this.playWhenReady) {
-        this.play()
       }
     }
 
     if (this.currentIndex !== index) {
       this.currentIndex = index
-      this.load(track, onCompletedLoading)
+      this.load(track, onLoaded)
     } else {
       // Replay the same track - seek to start (or initialPosition if specified)
       this.seekTo(initialPosition ?? 0)

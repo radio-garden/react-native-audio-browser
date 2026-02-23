@@ -195,7 +195,7 @@ export class Player {
    * behavior is intentional as it mirrors what happens in Android. State
    * changes should be captured by event listeners.
    */
-  public load(track: Track, onComplete?: (track: Track) => void): void {
+  public load(track: Track, onLoaded?: (track: Track) => void): void {
     const player = this.requirePlayer()
 
     if (!track.src) {
@@ -214,7 +214,7 @@ export class Player {
       .load(track.src)
       .then(() => {
         this.current = track
-        onComplete?.(track)
+        onLoaded?.(track)
 
         // Auto-play if playWhenReady is true
         if (this.playWhenReady) {
