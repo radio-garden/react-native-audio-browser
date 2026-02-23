@@ -20,7 +20,6 @@ import {
   togglePlayback,
   toggleShuffle,
   useActiveTrack,
-  useEqualizerSettings,
   useIosOutput,
   useNowPlaying,
   usePlaybackError,
@@ -31,7 +30,6 @@ import {
 } from 'react-native-audio-browser'
 
 type MiniPlayerProps = {
-  onEqualizerPress: () => void
   onSleepTimerPress: () => void
 }
 
@@ -42,10 +40,7 @@ function cycleRepeatMode() {
   setRepeatMode(modes[nextIndex])
 }
 
-export function MiniPlayer({
-  onEqualizerPress,
-  onSleepTimerPress
-}: MiniPlayerProps) {
+export function MiniPlayer({ onSleepTimerPress }: MiniPlayerProps) {
   const track = useActiveTrack()
   const nowPlaying = useNowPlaying()
   const playingState = usePlayingState()
@@ -53,7 +48,6 @@ export function MiniPlayer({
   const shuffleEnabled = useShuffle()
   const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
-  const equalizerSettings = useEqualizerSettings()
   const iosOutput = useIosOutput()
 
   if (!nowPlaying || !track) return null
@@ -156,21 +150,6 @@ export function MiniPlayer({
               iconStyle="solid"
             />
           </TouchableOpacity>
-          {equalizerSettings != null && (
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={onEqualizerPress}
-            >
-              <View style={{ transform: [{ rotate: '90deg' }] }}>
-                <Icon
-                  name="sliders"
-                  size={20}
-                  color={equalizerSettings.enabled ? '#007AFF' : 'white'}
-                  iconStyle="solid"
-                />
-              </View>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             style={styles.controlButton}
             onPress={onSleepTimerPress}

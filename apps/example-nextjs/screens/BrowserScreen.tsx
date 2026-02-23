@@ -38,7 +38,6 @@ export function BrowserScreen() {
   const tabs = useTabs()
   const navigationError = useFormattedNavigationError()
   const handleBrowserBack = useBrowserHistory()
-  const [showEqualizer, setShowEqualizer] = useState(false)
   const [showSleepTimer, setShowSleepTimer] = useState(false)
   const [screenStack, setScreenStack] = useState<Screen[]>(['browser'])
   const [searchQuery, setSearchQuery] = useState('')
@@ -165,10 +164,7 @@ export function BrowserScreen() {
         ) : null}
       </View>
 
-      <MiniPlayer
-        onEqualizerPress={() => setShowEqualizer(true)}
-        onSleepTimerPress={() => setShowSleepTimer(true)}
-      />
+      <MiniPlayer onSleepTimerPress={() => setShowSleepTimer(true)} />
 
       {/* Tab Bar */}
       {tabs && tabs.length > 0 && (
