@@ -1,8 +1,6 @@
 package com.audiobrowser.player
 
 import android.content.Context
-import android.net.Uri
-import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
@@ -87,91 +85,33 @@ class MediaFactory(
     return mediaFactory.supportedTypes
   }
 
-  /**
-   * Get the final request configuration for a media URL. Returns the URL, headers, and user-agent
-   * to use for streaming.
-   */
-  private fun getMediaRequestConfig(
-    originalUrl: String
-  ): Triple<String, Map<String, String>, String> {
-    return try {
-      val requestConfig = getRequestConfig(originalUrl)
-      Timber.d(
-        "Got media request config for URL '$originalUrl': path=${requestConfig?.path}, baseUrl=${requestConfig?.baseUrl}, headers=${requestConfig?.headers}, userAgent=${requestConfig?.userAgent}"
-      )
-      if (requestConfig != null) {
-        val path = requestConfig.path ?: ""
-        val baseUrl = requestConfig.baseUrl
-
-        // Build URL using the helper to ensure proper slash handling
-        val url = com.audiobrowser.util.BrowserPathHelper.buildUrl(baseUrl, path)
-
-        // Add query parameters if any
-        val finalUrl =
-          if (requestConfig.query?.isNotEmpty() == true) {
-            val uri = Uri.parse(url).buildUpon()
-            requestConfig.query.forEach { (key, value) -> uri.appendQueryParameter(key, value) }
-            uri.build().toString()
-          } else {
-            url
-          }
-
-        val headers = requestConfig.headers ?: emptyMap()
-        val userAgent = requestConfig.userAgent ?: DEFAULT_USER_AGENT
-
-        Triple(finalUrl, headers, userAgent)
-      } else {
-        Triple(originalUrl, emptyMap(), DEFAULT_USER_AGENT)
-      }
-    } catch (e: Exception) {
-      Timber.e(e, "Error getting media request config for URL: $originalUrl")
-      Triple(originalUrl, emptyMap(), DEFAULT_USER_AGENT)
-    }
-  }
-
   override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-    val originalUri = mediaItem.localConfiguration?.uri
-    val (finalUrl, headers, userAgent) = getMediaRequestConfig(originalUri!!.toString())
-
-    Timber.d("Media URL: $originalUri -> $finalUrl")
-    Timber.d("Media headers: $headers")
-    Timber.d("Media user-agent: $userAgent")
-
-    // DefaultDataSource.Factory handles all URI schemes (file://, content://, http://, https://,
-    // etc.)
-    // by routing to the appropriate implementation. We provide a configured HTTP factory for remote
-    // URLs.
+    // URL transformation is deferred to TransformingDataSource.open() which runs on
+    // ExoPlayer's IO thread. This prevents deadlocks when the JS thread is blocked by
+    // synchronous Nitro calls (e.g., seekTo) while a media transform callback needs the
+    // JS thread to resolve.
     val httpFactory =
       DefaultHttpDataSource.Factory().apply {
-        setUserAgent(userAgent)
+        setUserAgent(DEFAULT_USER_AGENT)
         setAllowCrossProtocolRedirects(true)
-        if (headers.isNotEmpty()) {
-          setDefaultRequestProperties(headers)
-        }
         // Connect transfer listener for bandwidth measurement
         transferListener?.let { setTransferListener(it) }
       }
-    val factory: DataSource.Factory = DefaultDataSource.Factory(context, httpFactory)
+    val baseFactory: DataSource.Factory = DefaultDataSource.Factory(context, httpFactory)
 
-    // Create a new MediaItem with the transformed URL if it changed
-    val finalMediaItem =
-      if (finalUrl != originalUri.toString()) {
-        Timber.d("Creating new MediaItem with transformed URL: $finalUrl")
-        mediaItem.buildUpon().setUri(finalUrl.toUri()).build()
-      } else {
-        mediaItem
-      }
+    // Wrap with TransformingDataSource to resolve URLs on the IO thread
+    val transformingFactory = TransformingDataSource.Factory(baseFactory, getRequestConfig)
 
     // Configure data source factory with optional caching
     val dataSourceFactory =
       cache?.let {
         CacheDataSource.Factory()
           .setCache(it)
-          .setUpstreamDataSourceFactory(factory)
+          .setUpstreamDataSourceFactory(transformingFactory)
           .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-      } ?: factory
+      } ?: transformingFactory
 
     // Use DefaultMediaSourceFactory which supports HLS, DASH, and progressive media
-    return mediaFactory.setDataSourceFactory(dataSourceFactory).createMediaSource(finalMediaItem)
+    return mediaFactory.setDataSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
   }
 }
