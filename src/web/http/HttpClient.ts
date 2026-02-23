@@ -89,7 +89,8 @@ export class HttpClient {
         throw error
       }
 
-      return response.json()
+      // await so JSON parse errors are caught by the surrounding try/catch
+      return await response.json()
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         const navError = new Error(
