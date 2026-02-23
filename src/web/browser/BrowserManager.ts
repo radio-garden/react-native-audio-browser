@@ -220,15 +220,10 @@ export class BrowserManager {
         return
       }
 
-      // Transform tracks with src to add contextual URLs (matches Android behavior)
-      // Android ALWAYS regenerates contextual URLs for tracks with src to reflect
-      // current browsing context, enabling proper queue expansion.
-      // Note: Search content is resolved via resolveSearchContent() which doesn't
-      // reach this block because it returns directly above. This matches Android's
-      // architecture where search() bypasses the resolve() contextual URL logic.
-      // IMPORTANT: Create a shallow copy to avoid mutating the original config object
-      // (e.g., browseStatic from routes). Without this, static route children would
-      // accumulate contextual URLs, breaking search which reads from the same source.
+      // Add contextual URLs to non-search content (matches Android behavior where
+      // search() bypasses the resolve() contextual URL logic).
+      // Shallow copy to avoid mutating the original config object (e.g., browseStatic
+      // from routes), which would break search that reads from the same source.
       if (content?.children && !isSearchPath) {
         content = {
           ...content,
@@ -646,7 +641,7 @@ export class BrowserManager {
       // If search query present, expand search results
       if (searchQuery) {
         // Execute search (will hit cache if already performed)
-        const searchResults = await this.resolveContent(
+        const searchResults = await this.resolveSearchContent(
           BrowserPathHelper.createSearchPath(searchQuery)
         )
         const searchTracks = searchResults?.children
