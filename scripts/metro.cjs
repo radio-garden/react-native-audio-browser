@@ -10,10 +10,8 @@ function getModuleBlocklist(modulesToFilter, defaultConfig, appDir) {
 
   // Get absolute paths to directories to block
   const monorepoRoot = path.resolve(appDir, '..', '..')
-  const commonAppPath = path.resolve(monorepoRoot, 'apps', 'common-app')
-  const libraryPath = monorepoRoot // Block from root node_modules
 
-  const blockedDirs = [monorepoRoot, commonAppPath, libraryPath]
+  const blockedDirs = [monorepoRoot]
 
   // Block specified modules from being resolved in blocked directories
   const modulePatterns = modulesToFilter.flatMap((moduleName) =>
