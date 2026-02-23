@@ -1,3 +1,4 @@
+import { assertedNotNullish } from '../../utils/validation'
 import { Player } from './Player'
 import { State } from './State'
 import type { State as StateType } from './State'
@@ -124,7 +125,8 @@ export class PlaylistPlayer extends Player {
   public skipToPrevious(initialPosition?: number): void {
     if (this.currentIndex === undefined) return
 
-    const previousIndex = this.getPreviousIndex() ?? this.getWrapAroundLastIndex()
+    const previousIndex =
+      this.getPreviousIndex() ?? this.getWrapAroundLastIndex()
     if (previousIndex === undefined) return
 
     this.goToIndex(previousIndex, initialPosition)
@@ -184,13 +186,17 @@ export class PlaylistPlayer extends Player {
 
   protected getWrapAroundLastIndex(): number | undefined {
     if (this.repeatMode !== RepeatMode.Playlist) return undefined
-    if (this.shuffleEnabled) return this.shuffleOrder[this.shuffleOrder.length - 1]
+    if (this.shuffleEnabled)
+      return this.shuffleOrder[this.shuffleOrder.length - 1]
     return this.playlist.length - 1
   }
 
   protected generateShuffleOrder(): void {
     // Create array of indices [0, 1, 2, ..., n-1]
-    this.shuffleOrder = Array.from({ length: this.playlist.length }, (_, i) => i)
+    this.shuffleOrder = Array.from(
+      { length: this.playlist.length },
+      (_, i) => i
+    )
 
     // Shuffle the indices
     fisherYatesShuffle(this.shuffleOrder)
@@ -203,8 +209,8 @@ export class PlaylistPlayer extends Player {
     // If there is a current track, move it to the beginning of the shuffle order
     const currentPos = this.shuffleOrder.indexOf(this.currentIndex)
     if (currentPos > 0) {
-      const temp = this.shuffleOrder[0]!
-      this.shuffleOrder[0] = this.shuffleOrder[currentPos]!
+      const temp = assertedNotNullish(this.shuffleOrder[0])
+      this.shuffleOrder[0] = assertedNotNullish(this.shuffleOrder[currentPos])
       this.shuffleOrder[currentPos] = temp
     }
   }

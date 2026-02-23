@@ -1,3 +1,4 @@
+import { assertedNotNullish } from '../../utils/validation'
 import type { Track, ResolvedTrack } from '../../types'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { NavigationErrorType } from '../../features'
@@ -49,10 +50,23 @@ export class BrowserManager {
       'message' in error &&
       typeof error.message === 'string'
     ) {
-      const navError = error as { code: NavigationErrorType; message: string; statusCode?: number }
-      this.navigationErrorManager.setNavigationError(navError.code, navError.message, path, navError.statusCode)
+      const navError = error as {
+        code: NavigationErrorType
+        message: string
+        statusCode?: number
+      }
+      this.navigationErrorManager.setNavigationError(
+        navError.code,
+        navError.message,
+        path,
+        navError.statusCode
+      )
     } else {
-      this.navigationErrorManager.setNavigationError('network-error', 'Failed to load content', path)
+      this.navigationErrorManager.setNavigationError(
+        'network-error',
+        'Failed to load content',
+        path
+      )
     }
   }
 
@@ -69,7 +83,8 @@ export class BrowserManager {
   set path(value: string | undefined) {
     if (this.hasValidConfiguration()) {
       this.navigationErrorManager.clearNavigationError()
-      const pathToNavigate = value ?? this._configuration.path ?? this.getDefaultPath()
+      const pathToNavigate =
+        value ?? this._configuration.path ?? this.getDefaultPath()
       if (pathToNavigate) {
         void this.navigate(pathToNavigate)
       }
@@ -130,7 +145,7 @@ export class BrowserManager {
 
     // If no path specified, try to get first tab URL
     if (!initialPath) {
-      const tabsRoute = value.routes?.find(r => r.path === '__tabs__')
+      const tabsRoute = value.routes?.find((r) => r.path === '__tabs__')
       if (tabsRoute?.browseStatic?.children?.[0]?.url) {
         initialPath = tabsRoute.browseStatic.children[0].url
       } else {
@@ -217,7 +232,7 @@ export class BrowserManager {
       if (content?.children && !isSearchPath) {
         content = {
           ...content,
-          children: content.children.map(track => {
+          children: content.children.map((track) => {
             // If track has src, always add/update contextual URL with current path context
             // This matches Android's BrowserManager.kt:436-441
             if (track.src) {
@@ -249,7 +264,9 @@ export class BrowserManager {
       this.onContentChanged(content)
 
       // Query and update tabs if configuration has __tabs__ route
-      const tabsRoute = this._configuration.routes?.find(r => r.path === '__tabs__')
+      const tabsRoute = this._configuration.routes?.find(
+        (r) => r.path === '__tabs__'
+      )
       if (tabsRoute) {
         const tabs = await this.queryTabs()
 
@@ -285,7 +302,9 @@ export class BrowserManager {
    * @param searchPath The search path (format: /__search?q=query)
    * @returns ResolvedTrack containing search results as children
    */
-  private async resolveSearchContent(searchPath: string): Promise<ResolvedTrack | undefined> {
+  private async resolveSearchContent(
+    searchPath: string
+  ): Promise<ResolvedTrack | undefined> {
     // Extract query from search path
     const queryMatch = searchPath.match(/[?&]q=([^&]*)/)
     if (!queryMatch) {
@@ -295,7 +314,9 @@ export class BrowserManager {
     const query = decodeURIComponent(queryMatch[1] ?? '')
 
     // Find __search__ route entry
-    const searchRoute = this._configuration.routes?.find(r => r.path === '__search__')
+    const searchRoute = this._configuration.routes?.find(
+      (r) => r.path === '__search__'
+    )
     if (!searchRoute) {
       console.warn('No __search__ route configured')
       return undefined
@@ -310,9 +331,12 @@ export class BrowserManager {
     // Handle request config-based search
     else if (searchRoute.searchConfig) {
       const searchQueryParams: Record<string, string> = { q: query }
-      const requestConfig = this.httpClient.mergeRequestConfig(searchRoute.searchConfig, {
-        query: searchQueryParams
-      })
+      const requestConfig = this.httpClient.mergeRequestConfig(
+        searchRoute.searchConfig,
+        {
+          query: searchQueryParams
+        }
+      )
 
       try {
         const response = await this.httpClient.executeRequest(requestConfig)
@@ -328,7 +352,7 @@ export class BrowserManager {
     return {
       url: searchPath,
       title: `Search: ${query}`,
-      children: searchResults,
+      children: searchResults
     }
   }
 
@@ -337,27 +361,31 @@ export class BrowserManager {
    * Supports both static config and resolve/transform callbacks.
    * Matches Android's artwork URL transformation with full Track access.
    */
-  private async transformArtworkForContent(content: ResolvedTrack): Promise<ResolvedTrack> {
+  private async transformArtworkForContent(
+    content: ResolvedTrack
+  ): Promise<ResolvedTrack> {
     const artworkConfig = this._configuration.artwork
     if (!artworkConfig) {
       return content
     }
 
     // Transform parent artwork
-    const parentArtworkSource = await RequestConfigBuilder.resolveArtworkSourceAsync(
-      content,
-      artworkConfig
-    )
+    const parentArtworkSource =
+      await RequestConfigBuilder.resolveArtworkSourceAsync(
+        content,
+        artworkConfig
+      )
 
     // Transform children artwork
     let transformedChildren: Track[] | undefined
     if (content.children) {
       transformedChildren = await Promise.all(
-        content.children.map(async track => {
-          const artworkSource = await RequestConfigBuilder.resolveArtworkSourceAsync(
-            track,
-            artworkConfig
-          )
+        content.children.map(async (track) => {
+          const artworkSource =
+            await RequestConfigBuilder.resolveArtworkSourceAsync(
+              track,
+              artworkConfig
+            )
           if (artworkSource && !track.artworkSource) {
             return { ...track, artworkSource }
           }
@@ -369,7 +397,7 @@ export class BrowserManager {
     return {
       ...content,
       artworkSource: parentArtworkSource ?? content.artworkSource,
-      children: transformedChildren ?? content.children,
+      children: transformedChildren ?? content.children
     }
   }
 
@@ -385,12 +413,20 @@ export class BrowserManager {
    */
   private async resolveRouteContent(
     route: {
-      browseCallback?: NativeBrowserConfiguration['routes'] extends (infer R)[] | undefined
-        ? R extends { browseCallback?: infer C } ? C : never
+      browseCallback?: NativeBrowserConfiguration['routes'] extends
+        | (infer R)[]
+        | undefined
+        ? R extends { browseCallback?: infer C }
+          ? C
+          : never
         : never
       browseStatic?: ResolvedTrack
-      browseConfig?: NativeBrowserConfiguration['routes'] extends (infer R)[] | undefined
-        ? R extends { browseConfig?: infer C } ? C : never
+      browseConfig?: NativeBrowserConfiguration['routes'] extends
+        | (infer R)[]
+        | undefined
+        ? R extends { browseConfig?: infer C }
+          ? C
+          : never
         : never
     },
     path: string,
@@ -419,7 +455,10 @@ export class BrowserManager {
 
     // Handle request config-based route
     if (route.browseConfig) {
-      const requestConfig = this.httpClient.mergeRequestConfig(route.browseConfig, { path })
+      const requestConfig = this.httpClient.mergeRequestConfig(
+        route.browseConfig,
+        { path }
+      )
       try {
         const response = await this.httpClient.executeRequest(requestConfig)
         return response as ResolvedTrack
@@ -436,18 +475,23 @@ export class BrowserManager {
   /**
    * Resolves content for a specific path using configured routes.
    */
-  private async resolveContent(path: string): Promise<ResolvedTrack | undefined> {
+  private async resolveContent(
+    path: string
+  ): Promise<ResolvedTrack | undefined> {
     const routes = this._configuration.routes
     if (!routes || routes.length === 0) {
       return undefined
     }
 
     // Convert routes array to record for SimpleRouter
-    const routePatterns: Record<string, {
-      browseCallback?: typeof routes[0]['browseCallback']
-      browseConfig?: typeof routes[0]['browseConfig']
-      browseStatic?: typeof routes[0]['browseStatic']
-    }> = {}
+    const routePatterns: Record<
+      string,
+      {
+        browseCallback?: (typeof routes)[0]['browseCallback']
+        browseConfig?: (typeof routes)[0]['browseConfig']
+        browseStatic?: (typeof routes)[0]['browseStatic']
+      }
+    > = {}
 
     for (const route of routes) {
       // Skip special routes
@@ -456,7 +500,7 @@ export class BrowserManager {
       routePatterns[route.path] = {
         browseCallback: route.browseCallback,
         browseConfig: route.browseConfig,
-        browseStatic: route.browseStatic,
+        browseStatic: route.browseStatic
       }
     }
 
@@ -464,14 +508,19 @@ export class BrowserManager {
     const match = this.router.findBestMatch(path, routePatterns)
     if (match) {
       const [matchedPattern, routeMatch] = match
-      const matchedRoute = routes.find(r => r.path === matchedPattern)
+      const matchedRoute = routes.find((r) => r.path === matchedPattern)
       if (matchedRoute) {
-        return this.resolveRouteContent(matchedRoute, path, routeMatch.params, 'Route')
+        return this.resolveRouteContent(
+          matchedRoute,
+          path,
+          routeMatch.params,
+          'Route'
+        )
       }
     }
 
     // Fall back to __default__ route
-    const defaultRoute = routes.find(r => r.path === '__default__')
+    const defaultRoute = routes.find((r) => r.path === '__default__')
     if (defaultRoute) {
       return this.resolveRouteContent(defaultRoute, path, {}, 'Default route')
     }
@@ -483,7 +532,9 @@ export class BrowserManager {
    * Queries tabs from the __tabs__ route.
    */
   private async queryTabs(): Promise<Track[]> {
-    const tabsRoute = this._configuration.routes?.find(r => r.path === '__tabs__')
+    const tabsRoute = this._configuration.routes?.find(
+      (r) => r.path === '__tabs__'
+    )
     if (!tabsRoute) {
       return []
     }
@@ -492,14 +543,20 @@ export class BrowserManager {
     const tabs = result?.children ?? []
 
     // Transform artwork URLs on tabs
-    return RequestConfigBuilder.transformTracksArtwork(tabs, this._configuration.artwork)
+    return RequestConfigBuilder.transformTracksArtwork(
+      tabs,
+      this._configuration.artwork
+    )
   }
 
   /**
    * Checks if the configuration has valid routes.
    */
   private hasValidConfiguration(): boolean {
-    return this._configuration.routes !== undefined && this._configuration.routes.length > 0
+    return (
+      this._configuration.routes !== undefined &&
+      this._configuration.routes.length > 0
+    )
   }
 
   /**
@@ -528,7 +585,7 @@ export class BrowserManager {
       }
 
       // Filter to only playable tracks (tracks with src)
-      const playableTracks = children.filter(track => track.src != null)
+      const playableTracks = children.filter((track) => track.src != null)
 
       if (playableTracks.length === 0) {
         console.warn('Parent has no playable tracks, cannot expand queue')
@@ -536,23 +593,30 @@ export class BrowserManager {
       }
 
       // Find the index of the selected track in the playable tracks array
-      const selectedIndex = playableTracks.findIndex(track => track.src === trackId)
+      const selectedIndex = playableTracks.findIndex(
+        (track) => track.src === trackId
+      )
 
       if (selectedIndex < 0) {
-        console.warn(`Track with src='${trackId}' not found in playable children`)
+        console.warn(
+          `Track with src='${trackId}' not found in playable children`
+        )
         return undefined
       }
 
       // Check singleTrack setting - if true, return only the selected track
       if (this._configuration.singleTrack) {
         return {
-          tracks: [playableTracks[selectedIndex]!],
-          selectedIndex: 0,
+          tracks: [assertedNotNullish(playableTracks[selectedIndex])],
+          selectedIndex: 0
         }
       }
       return { tracks: playableTracks, selectedIndex }
     } catch (error) {
-      console.error(`Error expanding queue from contextual URL: ${contextualUrl}`, error)
+      console.error(
+        `Error expanding queue from contextual URL: ${contextualUrl}`,
+        error
+      )
       return undefined
     }
   }
@@ -576,7 +640,7 @@ export class BrowserManager {
   ): Promise<{ tracks: Track[]; startIndex: number; startPositionMs: number }> {
     // Single track: check for search context or contextual URL
     if (tracks.length === 1) {
-      const track = tracks[0]!
+      const track = assertedNotNullish(tracks[0])
       const trackUrl = track.url
 
       // If search query present, expand search results
@@ -590,14 +654,14 @@ export class BrowserManager {
         if (searchTracks && searchTracks.length > 0) {
           // Find the selected track in search results
           const selectedIdx = searchTracks.findIndex(
-            t => t.url === trackUrl || t.src === track.src
+            (t) => t.url === trackUrl || t.src === track.src
           )
 
           if (selectedIdx >= 0) {
             return {
               tracks: searchTracks,
               startIndex: selectedIdx,
-              startPositionMs,
+              startPositionMs
             }
           }
         }
@@ -618,7 +682,7 @@ export class BrowserManager {
           return {
             tracks: expanded.tracks,
             startIndex: expanded.selectedIndex,
-            startPositionMs,
+            startPositionMs
           }
         }
       }

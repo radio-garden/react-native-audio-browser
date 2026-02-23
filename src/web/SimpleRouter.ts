@@ -14,6 +14,8 @@
  * - Most specific route wins
  */
 
+import { assertedNotNullish } from '../utils/validation'
+
 export interface RouteMatch {
   params: Record<string, string>
   specificity: number
@@ -81,13 +83,19 @@ export class SimpleRouter {
 
       // Match all segments except the tail wildcard
       for (let i = 0; i < patternSegments.length - 1; i++) {
-        if (!this.matchSingleSegment(patternSegments[i]!, pathSegments[i]!, params)) {
+        if (
+          !this.matchSingleSegment(
+            assertedNotNullish(patternSegments[i]),
+            assertedNotNullish(pathSegments[i]),
+            params
+          )
+        ) {
           return null
         }
         // Note: The Kotlin implementation doesn't update counts here (appears to be a bug)
         // but we'll match it exactly for consistency
         this.updateSegmentCounts(
-          patternSegments[i]!,
+          assertedNotNullish(patternSegments[i]),
           constantSegments,
           parameterSegments,
           wildcardSegments
@@ -106,15 +114,22 @@ export class SimpleRouter {
       }
 
       for (let i = 0; i < patternSegments.length; i++) {
-        if (!this.matchSingleSegment(patternSegments[i]!, pathSegments[i]!, params)) {
+        if (
+          !this.matchSingleSegment(
+            assertedNotNullish(patternSegments[i]),
+            assertedNotNullish(pathSegments[i]),
+            params
+          )
+        ) {
           return null
         }
-        const [constCount, paramCount, wildcardCount] = this.updateSegmentCounts(
-          patternSegments[i]!,
-          constantSegments,
-          parameterSegments,
-          wildcardSegments
-        )
+        const [constCount, paramCount, wildcardCount] =
+          this.updateSegmentCounts(
+            assertedNotNullish(patternSegments[i]),
+            constantSegments,
+            parameterSegments,
+            wildcardSegments
+          )
         constantSegments = constCount
         parameterSegments = paramCount
         wildcardSegments = wildcardCount
