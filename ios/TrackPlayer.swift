@@ -165,25 +165,87 @@ class TrackPlayer {
 
   // MARK: - AVPlayer Properties (from AVPlayerWrapper)
 
-  /// Represents a seek operation that's pending while a track loads
-  private struct PendingSeek: Sendable {
-    let time: TimeInterval
-    let completion: (@Sendable (Bool) -> Void)?
+  /// Manages seeks that arrive while a track is loading.
+  /// Owns the full lifecycle: capture → execute → coordinate state transitions.
+  ///
+  /// AVPlayer's `seek(to:)` is a no-op when there's no loaded `currentItem`,
+  /// so we must manually defer seeks that arrive during loading and execute them
+  /// once the AVPlayerItem is ready. This coordinator encapsulates the three
+  /// sub-problems (capture, execute, coordinate) that were previously spread
+  /// across `pendingSeek`, `loadSeekInFlight`, and guards in multiple callbacks.
+  final class LoadSeekCoordinator {
+    enum State {
+      case idle
+      case pendingSeek(time: TimeInterval, completion: (@Sendable (Bool) -> Void)?)
+      case seekInFlight
+    }
 
-    func execute(on player: AVPlayer, delegate: TrackPlayer?) {
+    private let logger = Logger(subsystem: "com.audiobrowser", category: "LoadSeekCoordinator")
+    private(set) var state: State = .idle
+
+    /// The pending seek time, if any. Used by `seekBy()` to offset from the deferred position.
+    var pendingTime: TimeInterval? {
+      if case let .pendingSeek(time, _) = state { return time }
+      return nil
+    }
+
+    /// Whether to suppress state transitions to `.ready`.
+    /// True when a seek is pending or in-flight during the loading phase.
+    var shouldDeferReadyTransition: Bool {
+      switch state {
+      case .idle: return false
+      case .pendingSeek, .seekInFlight: return true
+      }
+    }
+
+    /// Called from `seekTo()` when `TrackPlayer.state == .loading`.
+    /// Cancels any previous pending seek before storing the new one.
+    func capture(position: Double, completion: (@Sendable (Bool) -> Void)?) {
+      // Cancel previous pending seek if any
+      if case let .pendingSeek(_, oldCompletion) = state {
+        oldCompletion?(false)
+      }
+      state = .pendingSeek(time: position, completion: completion)
+      logger.debug("captured pending seek to \(position)s")
+    }
+
+    /// Called when AVPlayerItem is ready to accept a seek
+    /// (from `playableLoadTask` or `avItemDidUpdatePlaybackLikelyToKeepUp`).
+    ///
+    /// Returns `true` if a seek was initiated — caller should NOT transition to `.ready` yet.
+    func executeIfPending(on player: AVPlayer, delegate: TrackPlayer?) -> Bool {
+      guard case let .pendingSeek(time, completion) = state else { return false }
+
+      logger.debug("executing deferred seek to \(time)s")
+      state = .seekInFlight
+
       let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
-      let seekTime = time
       player
         .seek(to: cmTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
           Task { @MainActor in
-            delegate?.handleSeekCompleted(to: Double(seekTime), didFinish: finished)
+            delegate?.handleSeekCompleted(to: time, didFinish: finished)
           }
           completion?(finished)
         }
+
+      return true
     }
 
-    func cancel() {
-      completion?(false)
+    /// Called from `handleSeekCompleted`.
+    /// Returns `true` if this was a load-seek (caller should transition `.loading` → `.ready`).
+    func seekDidComplete() -> Bool {
+      guard case .seekInFlight = state else { return false }
+      logger.debug("seek landed, clearing coordinator")
+      state = .idle
+      return true
+    }
+
+    /// Reset when track changes or item is cleared.
+    func reset() {
+      if case let .pendingSeek(_, completion) = state {
+        completion?(false)
+      }
+      state = .idle
     }
   }
 
@@ -248,7 +310,8 @@ class TrackPlayer {
     self?.callbacks?.playerDidChangePlayingState(state)
   }
 
-  private var pendingSeek: PendingSeek?
+  private let loadSeekCoordinator = LoadSeekCoordinator()
+  private var mediaResolverTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
   private var asset: AVAsset?
@@ -627,11 +690,9 @@ class TrackPlayer {
    - parameter completion: Called when the seek operation completes. The Bool parameter indicates whether the seek finished successfully (true) or was interrupted/deferred (false).
    */
   func seekTo(_ seconds: TimeInterval, completion: @escaping @Sendable (Bool) -> Void) {
-    // If an track is currently being loaded asynchronously, defer the seek until it's ready.
+    // If a track is currently being loaded asynchronously, defer the seek until it's ready.
     if state == .loading {
-      // Cancel any previous pending seek before creating a new one
-      pendingSeek?.cancel()
-      pendingSeek = PendingSeek(time: seconds, completion: completion)
+      loadSeekCoordinator.capture(position: seconds, completion: completion)
     } else if avPlayer.currentItem != nil {
       let time = CMTime(seconds: seconds, preferredTimescale: 1000)
       let seekSeconds = seconds
@@ -656,7 +717,7 @@ class TrackPlayer {
     let targetTime: TimeInterval
     if state == .loading {
       // If loading, offset from pending seek (or 0 if no pending seek)
-      targetTime = (pendingSeek?.time ?? 0) + offset
+      targetTime = (loadSeekCoordinator.pendingTime ?? 0) + offset
     } else if let currentItem = avPlayer.currentItem {
       // If playing, offset from current position
       targetTime = currentItem.currentTime().seconds + offset
@@ -846,8 +907,7 @@ class TrackPlayer {
     }
 
     asset = nil
-    pendingSeek?.cancel()
-    pendingSeek = nil
+    loadSeekCoordinator.reset()
 
     avPlayer.replaceCurrentItem(with: nil)
   }
@@ -915,8 +975,6 @@ class TrackPlayer {
         oldAsset.cancelLoading()
       }
       asset = nil
-      pendingSeek?.cancel()
-      pendingSeek = nil
     }
     if let url {
       let pendingAsset = AVURLAsset(url: url, options: urlOptions)
@@ -994,10 +1052,14 @@ class TrackPlayer {
               self.startPlayback()
             }
 
-            // Execute any pending seek operation
-            if let pending = self.pendingSeek {
-              self.pendingSeek = nil
-              pending.execute(on: self.avPlayer, delegate: self)
+            // Execute any pending seek, or transition state if already buffered
+            if !self.loadSeekCoordinator.executeIfPending(on: self.avPlayer, delegate: self) {
+              // No pending seek — if the item is already buffered (e.g., cached
+              // HTTP response), KVO with [.new] won't fire because
+              // isPlaybackLikelyToKeepUp never changed. Transition explicitly.
+              if avItem.isPlaybackLikelyToKeepUp {
+                self.avItemDidUpdatePlaybackLikelyToKeepUp(true)
+              }
             }
           }
         } catch {
@@ -1036,6 +1098,11 @@ class TrackPlayer {
   }
 
   private func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
+    // If this was a deferred load-seek, transition out of .loading state
+    if loadSeekCoordinator.seekDidComplete(), state == .loading {
+      logger.debug("[loadSeek] seek landed at \(seconds)s (finished=\(didFinish)) → .ready")
+      state = .ready
+    }
     setNowPlayingCurrentTime(seconds: seconds)
     callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
   }
@@ -1056,6 +1123,11 @@ class TrackPlayer {
   // MARK: - Observer Callbacks
 
   func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
+    // During loading, ignore stale timeControlStatus changes from old items.
+    // State transitions during loading are managed by playableLoadTask
+    // and avItemDidUpdatePlaybackLikelyToKeepUp.
+    if state == .loading { return }
+
     switch status {
     case .paused:
       let currentState = state
@@ -1145,13 +1217,28 @@ class TrackPlayer {
   }
 
   func audioDidStart() {
+    // Don't override loading state - playableLoadTask manages that transition
+    if state == .loading { return }
     state = .playing
   }
 
   func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
-    logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp: \(playbackLikelyToKeepUp), state=\(self.state.rawValue)")
-    if playbackLikelyToKeepUp, state != .playing {
-      logger.debug("setting state = .ready")
+    guard playbackLikelyToKeepUp else { return }
+
+    // KVO callbacks are dispatched via Task { @MainActor }, so a stale callback
+    // from a previous AVPlayerItem can arrive after the item was replaced/cleared.
+    // Ignore these — there's nothing meaningful to do without a loaded item.
+    guard avPlayer.currentItem != nil else { return }
+
+    // Execute any pending seek that arrived after playableLoadTask completed
+    if loadSeekCoordinator.executeIfPending(on: avPlayer, delegate: self) {
+      return
+    }
+
+    // Only transition to .ready if no seek is in-flight — otherwise
+    // handleSeekCompleted will handle the transition once the seek lands.
+    if !loadSeekCoordinator.shouldDeferReadyTransition, state != .playing {
+      logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp → .ready")
       state = .ready
     }
   }
@@ -1464,6 +1551,13 @@ class TrackPlayer {
     // Reset end-of-track sleep timer when track changes
     sleepTimerManager.onTrackChanged()
 
+    // Cancel any in-flight media URL resolution from a previous track
+    mediaResolverTask?.cancel()
+    mediaResolverTask = nil
+
+    // Cancel any pending seek from a previous track
+    loadSeekCoordinator.reset()
+
     // Cancel any pending retry and reset count when track changes
     pendingRetryTask?.cancel()
     pendingRetryTask = nil
@@ -1503,6 +1597,10 @@ class TrackPlayer {
       logger.debug("  track.url: \(currentTrack.url ?? "nil")")
       logger.debug("  track.src: \(src)")
 
+      // Set loading state early so seekTo calls during async URL resolution
+      // are captured as pending seeks rather than silently dropped
+      state = .loading
+
       // Check if it's already a full URL (http/https) or local file
       if src.hasPrefix("http://") || src.hasPrefix("https://") || src.hasPrefix("file://") {
         // Already a full URL, use directly (may still need transform for headers)
@@ -1535,18 +1633,23 @@ class TrackPlayer {
       // Don't use @MainActor for the entire Task - this can cause deadlocks
       // when the JS callback needs to schedule work back on the main thread.
       // Instead, only hop to main thread when we need to access/modify state.
-      Task {
+      mediaResolverTask?.cancel()
+      mediaResolverTask = Task {
         self.logger.debug("resolveAndLoadMedia: starting resolution for \(src)")
 
-        // Check on main thread that this track is still the current one
-        let isCurrentTrack = await MainActor.run { self.currentTrack?.src == track.src }
-        guard isCurrentTrack else {
-          self.logger.debug("Track changed during media resolution, skipping load")
+        guard !Task.isCancelled else {
+          self.logger.debug("resolveAndLoadMedia: cancelled before start")
           return
         }
 
         self.logger.debug("resolveAndLoadMedia: calling resolver...")
         let resolved = await resolver(src)
+
+        guard !Task.isCancelled else {
+          self.logger.debug("resolveAndLoadMedia: cancelled after resolver returned")
+          return
+        }
+
         self.logger.debug("resolveAndLoadMedia: resolver returned, resolved URL: \(resolved.url)")
         if let headers = resolved.headers {
           self.logger.debug("  headers: \(headers)")
@@ -1557,6 +1660,10 @@ class TrackPlayer {
 
         // Load on main thread
         await MainActor.run {
+          guard !Task.isCancelled else {
+            self.logger.debug("resolveAndLoadMedia: cancelled before loadMediaWithResolvedUrl")
+            return
+          }
           self.loadMediaWithResolvedUrl(resolved, track: track)
         }
       }
