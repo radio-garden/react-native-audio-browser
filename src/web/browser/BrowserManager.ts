@@ -283,9 +283,7 @@ export class BrowserManager {
       this._content = undefined
       this.onContentChanged(undefined)
 
-      // Set navigation error using helper
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      this.navigationErrorManager.setNavigationError('unknown-error', message)
+      this.handleNavigationError(error, path)
     }
   }
 
