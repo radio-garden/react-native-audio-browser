@@ -1,9 +1,9 @@
-import dynamic from 'next/dynamic';
+import dynamic from 'next/dynamic'
 
 const TrackPlayerApp = dynamic(() => import('../components/TrackPlayerApp'), {
-  ssr: false,
-});
+  ssr: false
+})
 
 export default function App() {
-  return <TrackPlayerApp />;
+  return <TrackPlayerApp />
 }

@@ -1,8 +1,8 @@
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const { getMonorepoMetroOptions } = require('../../scripts/metro.cjs');
-const path = require('path');
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config')
+const { getMonorepoMetroOptions } = require('../../scripts/metro.cjs')
+const path = require('path')
 
-const defaultConfig = getDefaultConfig(__dirname);
+const defaultConfig = getDefaultConfig(__dirname)
 
 // Filter React and React Native to prevent duplicates
 // Also filter react-native-safe-area-context to prevent context issues
@@ -12,16 +12,16 @@ const modulesToFilter = [
   'react-native',
   'react-native-mmkv',
   'react-native-nitro-modules',
-  'react-native-safe-area-context',
-];
+  'react-native-safe-area-context'
+]
 const { blockList, extraNodeModules } = getMonorepoMetroOptions(
   modulesToFilter,
   __dirname,
   defaultConfig
-);
+)
 
-const monorepoRoot = path.resolve(__dirname, '..', '..');
-const appsRoot = path.resolve(monorepoRoot, 'apps');
+const monorepoRoot = path.resolve(__dirname, '..', '..')
+const appsRoot = path.resolve(monorepoRoot, 'apps')
 
 /**
  * Metro configuration for monorepo
@@ -35,7 +35,7 @@ const config = {
 
   resolver: {
     blockList,
-    extraNodeModules,
+    extraNodeModules
   },
 
   transformer: {
@@ -48,4 +48,4 @@ const config = {
   }
 }
 
-module.exports = mergeConfig(defaultConfig, config);
+module.exports = mergeConfig(defaultConfig, config)

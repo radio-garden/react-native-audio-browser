@@ -1,7 +1,7 @@
-import { fixupPluginRules } from '@eslint/compat';
-import js from '@eslint/js';
-import eslintReactNative from 'eslint-plugin-react-native';
-import typescriptEslint from 'typescript-eslint';
+import { fixupPluginRules } from '@eslint/compat'
+import js from '@eslint/js'
+import eslintReactNative from 'eslint-plugin-react-native'
+import typescriptEslint from 'typescript-eslint'
 
 export default typescriptEslint.config(
   {
@@ -17,7 +17,7 @@ export default typescriptEslint.config(
       '**/.prettierrc.js',
       '**/react-native.config.js',
       '**/release.config.cjs'
-    ],
+    ]
   },
   js.configs.recommended,
   {
@@ -26,12 +26,12 @@ export default typescriptEslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+        tsconfigRootDir: import.meta.dirname
+      }
     },
     rules: {
-      '@typescript-eslint/require-await': 'off',
-    },
+      '@typescript-eslint/require-await': 'off'
+    }
   },
   // react-native
   {
@@ -39,15 +39,15 @@ export default typescriptEslint.config(
     files: ['**/*.{js,jsx,ts,tsx,d.ts}'],
     plugins: {
       'react-native': fixupPluginRules({
-        rules: eslintReactNative.rules,
-      }),
+        rules: eslintReactNative.rules
+      })
     },
     rules: {
       ...eslintReactNative.configs.all.rules,
       'react-native/sort-styles': 'off',
       'react-native/no-inline-styles': 'warn',
       'react-native/no-color-literals': 'off',
-      'react-native/no-unused-styles': 'off',
-    },
+      'react-native/no-unused-styles': 'off'
+    }
   }
-);
+)

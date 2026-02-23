@@ -1,9 +1,9 @@
-const defineConfig = require('cypress').defineConfig;
+const defineConfig = require('cypress').defineConfig
 
 module.exports = {
   default: defineConfig({
     e2e: {
-      supportFile: false,
-    },
-  }),
-};
+      supportFile: false
+    }
+  })
+}

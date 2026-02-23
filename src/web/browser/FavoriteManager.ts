@@ -53,7 +53,7 @@ export class FavoriteManager {
 
     return {
       ...track,
-      favorited: true,
+      favorited: true
     }
   }
 
@@ -68,10 +68,12 @@ export class FavoriteManager {
     const children = resolvedTrack.children
     if (!children) return resolvedTrack
 
-    const hydratedChildren = children.map(track => this.hydrateFavorite(track))
+    const hydratedChildren = children.map((track) =>
+      this.hydrateFavorite(track)
+    )
     return {
       ...resolvedTrack,
-      children: hydratedChildren,
+      children: hydratedChildren
     }
   }
 }

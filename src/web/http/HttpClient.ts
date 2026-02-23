@@ -1,7 +1,4 @@
-import type {
-  RequestConfig,
-  TransformableRequestConfig,
-} from '../../types'
+import type { RequestConfig, TransformableRequestConfig } from '../../types'
 import type { NavigationErrorType } from '../../features'
 import { RequestConfigBuilder } from './RequestConfigBuilder'
 
@@ -54,7 +51,10 @@ export class HttpClient {
       base as RequestConfig
     )
     // Then merge with overrides
-    return RequestConfigBuilder.mergeConfig(withBase, overrides as RequestConfig)
+    return RequestConfigBuilder.mergeConfig(
+      withBase,
+      overrides as RequestConfig
+    )
   }
 
   /**
@@ -70,11 +70,13 @@ export class HttpClient {
     try {
       const response = await fetch(url, {
         method,
-        headers,
+        headers
       })
 
       if (!response.ok) {
-        const error = new Error(`HTTP ${response.status}: ${response.statusText}`) as HttpError
+        const error = new Error(
+          `HTTP ${response.status}: ${response.statusText}`
+        ) as HttpError
         error.isHttpError = true
         error.status = response.status
         error.statusText = response.statusText

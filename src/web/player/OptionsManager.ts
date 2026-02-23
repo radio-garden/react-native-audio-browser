@@ -2,7 +2,7 @@ import type {
   NativeUpdateOptions,
   UpdateOptions,
   Options,
-  RepeatMode as RepeatModeType,
+  RepeatMode as RepeatModeType
 } from '../../features'
 import { RepeatMode } from '../TrackPlayer'
 
@@ -20,7 +20,7 @@ export class OptionsManager {
     backwardJumpInterval: 15,
     progressUpdateEventInterval: null,
     repeatMode: RepeatMode.Off,
-    capabilities: {},
+    capabilities: {}
   }
 
   // Event callback
@@ -52,7 +52,8 @@ export class OptionsManager {
       progressUpdateEventInterval:
         options.progressUpdateEventInterval === null
           ? null
-          : (options.progressUpdateEventInterval ?? this.options.progressUpdateEventInterval),
+          : (options.progressUpdateEventInterval ??
+            this.options.progressUpdateEventInterval)
     }
 
     // Store merged options
@@ -65,7 +66,7 @@ export class OptionsManager {
       progressUpdateEventInterval:
         mergedOptions.progressUpdateEventInterval ?? 15,
       capabilities: mergedOptions.capabilities ?? {},
-      repeatMode: mergedOptions.repeatMode,
+      repeatMode: mergedOptions.repeatMode
     }
     this.onOptionsChanged(fullOptions)
   }
@@ -78,7 +79,7 @@ export class OptionsManager {
       forwardJumpInterval: this.options.forwardJumpInterval,
       backwardJumpInterval: this.options.backwardJumpInterval,
       progressUpdateEventInterval: this.options.progressUpdateEventInterval,
-      capabilities: this.options.capabilities,
+      capabilities: this.options.capabilities
     }
   }
 

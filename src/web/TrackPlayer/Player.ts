@@ -4,7 +4,7 @@ import type {
   Progress,
   PartialSetupPlayerOptions,
   Playback,
-  PlaybackError,
+  PlaybackError
 } from '../../features'
 import type { Track } from '../../types'
 import { SetupNotCalledError } from './SetupNotCalledError'
@@ -86,7 +86,7 @@ export class Player {
     if (this.hasInitialized === true) {
       const error: PlaybackError = {
         code: 'player_already_initialized',
-        message: 'The player has already been initialized via setupPlayer.',
+        message: 'The player has already been initialized via setupPlayer.'
       }
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw error
@@ -102,8 +102,8 @@ export class Player {
         state: State.Error,
         error: {
           code: 'not_supported',
-          message: 'Browser not supported...',
-        },
+          message: 'Browser not supported...'
+        }
       }
       throw new Error('Browser not supported.')
     }
@@ -178,12 +178,12 @@ export class Player {
 
     const error: PlaybackError = {
       code: shakaError.code.toString(),
-      message: shakaError.message,
+      message: shakaError.message
     }
 
     this.state = {
       state: State.Error,
-      error,
+      error
     }
 
     // Log the error.
@@ -201,11 +201,11 @@ export class Player {
     if (!track.src) {
       const error: PlaybackError = {
         code: 'invalid_track',
-        message: 'Track does not have a valid src URL',
+        message: 'Track does not have a valid src URL'
       }
       this.state = {
         state: State.Error,
-        error,
+        error
       }
       return
     }
@@ -317,7 +317,7 @@ export class Player {
     return {
       position: element.currentTime,
       duration: element.duration || 0,
-      buffered: 0, // TODO: element.buffered.end,
+      buffered: 0 // TODO: element.buffered.end,
     }
   }
 }

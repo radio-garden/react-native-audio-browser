@@ -2,7 +2,7 @@ import type {
   NavigationError,
   NavigationErrorType,
   FormattedNavigationError,
-  NavigationErrorEvent,
+  NavigationErrorEvent
 } from '../../features'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
 
@@ -11,7 +11,7 @@ const ERROR_TITLES: Record<NavigationErrorType, string> = {
   'http-error': 'Server Error',
   'content-not-found': 'Content Not Found',
   'callback-error': 'Error',
-  'unknown-error': 'Error',
+  'unknown-error': 'Error'
 }
 
 /**
@@ -25,12 +25,16 @@ export class NavigationErrorManager {
 
   // Event callbacks
   onNavigationError: (data: NavigationErrorEvent) => void = () => {}
-  onFormattedNavigationError: (formattedError: FormattedNavigationError | undefined) => void = () => {}
+  onFormattedNavigationError: (
+    formattedError: FormattedNavigationError | undefined
+  ) => void = () => {}
 
   /**
    * Sets the custom error formatter callback from configuration.
    */
-  setFormatCallback(callback: NativeBrowserConfiguration['formatNavigationError']): void {
+  setFormatCallback(
+    callback: NativeBrowserConfiguration['formatNavigationError']
+  ): void {
     this.formatCallback = callback
   }
 
@@ -38,7 +42,10 @@ export class NavigationErrorManager {
    * Clears the current navigation error and emits clear events.
    */
   clearNavigationError(): void {
-    if (this._navigationError !== undefined || this._formattedNavigationError !== undefined) {
+    if (
+      this._navigationError !== undefined ||
+      this._formattedNavigationError !== undefined
+    ) {
       this._navigationError = undefined
       this._formattedNavigationError = undefined
       this.onNavigationError({ error: undefined })
@@ -65,7 +72,7 @@ export class NavigationErrorManager {
       code,
       message,
       statusCode,
-      statusCodeSuccess: undefined,
+      statusCodeSuccess: undefined
     }
     this._navigationError = navError
     this.onNavigationError({ error: navError })
@@ -73,7 +80,7 @@ export class NavigationErrorManager {
     // Default formatted error
     const defaultFormatted: FormattedNavigationError = {
       title: ERROR_TITLES[code],
-      message,
+      message
     }
 
     // Call custom formatter if available
@@ -82,7 +89,7 @@ export class NavigationErrorManager {
         const customFormatted = this.formatCallback({
           error: navError,
           defaultFormatted,
-          path,
+          path
         })
         this._formattedNavigationError = customFormatted || defaultFormatted
       } catch (error) {

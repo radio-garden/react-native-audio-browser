@@ -1,7 +1,7 @@
 /* eslint-disable react-native/no-inline-styles */
-import { Children } from 'react';
-import Document, { Html, Head, Main, NextScript } from 'next/document';
-import { AppRegistry } from 'react-native';
+import { Children } from 'react'
+import Document, { Html, Head, Main, NextScript } from 'next/document'
+import { AppRegistry } from 'react-native'
 
 // Follows the setup for react-native-web:
 // https://necolas.github.io/react-native-web/docs/setup/#root-element
@@ -30,22 +30,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -ms-overflow-style: scrollbar;
 }
-`;
+`
 
 export default class MyDocument extends Document {
   static async getInitialProps({ renderPage }) {
-    AppRegistry.registerComponent('main', () => Main);
+    AppRegistry.registerComponent('main', () => Main)
     // @ts-expect-error
-    const { getStyleElement } = AppRegistry.getApplication('main');
-    const page = await renderPage();
+    const { getStyleElement } = AppRegistry.getApplication('main')
+    const page = await renderPage()
     const styles = [
       <style
         key="react-native-style"
         dangerouslySetInnerHTML={{ __html: style }}
       />,
-      getStyleElement(),
-    ];
-    return { ...page, styles: Children.toArray(styles) };
+      getStyleElement()
+    ]
+    return { ...page, styles: Children.toArray(styles) }
   }
 
   render() {
@@ -57,6 +57,6 @@ export default class MyDocument extends Document {
           <NextScript />
         </body>
       </Html>
-    );
+    )
   }
 }

@@ -6,7 +6,7 @@ import type {
   ImageSource,
   Track,
   ImageContext,
-  ImageQueryParams,
+  ImageQueryParams
 } from '../../types'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
 
@@ -88,7 +88,7 @@ export const RequestConfigBuilder = {
       query: this.mergeQuery(base.query, override.query),
       body: override.body ?? base.body,
       contentType: override.contentType ?? base.contentType,
-      userAgent: override.userAgent ?? base.userAgent,
+      userAgent: override.userAgent ?? base.userAgent
     }
   },
 
@@ -111,7 +111,10 @@ export const RequestConfigBuilder = {
         const transformed = await override.transform(base)
         return transformed
       } catch (e) {
-        console.error('Failed to apply media transform function, using base config', e)
+        console.error(
+          'Failed to apply media transform function, using base config',
+          e
+        )
         return base
       }
     }
@@ -135,7 +138,12 @@ export const RequestConfigBuilder = {
   /**
    * Converts a TransformableRequestConfig to a plain RequestConfig.
    */
-  toRequestConfig(config: TransformableRequestConfig | MediaRequestConfig | ArtworkRequestConfig): RequestConfig {
+  toRequestConfig(
+    config:
+      | TransformableRequestConfig
+      | MediaRequestConfig
+      | ArtworkRequestConfig
+  ): RequestConfig {
     return {
       path: config.path,
       method: config.method,
@@ -144,7 +152,7 @@ export const RequestConfigBuilder = {
       query: config.query,
       body: config.body,
       contentType: config.contentType,
-      userAgent: config.userAgent,
+      userAgent: config.userAgent
     }
   },
 
@@ -187,12 +195,15 @@ export const RequestConfigBuilder = {
       ? this.mergeArtworkConfig({ path: artworkUrl }, artworkConfig)
       : { path: artworkUrl }
 
-    const resolvedUri = BrowserPathHelper.buildUrl(config.baseUrl, config.path ?? artworkUrl)
+    const resolvedUri = BrowserPathHelper.buildUrl(
+      config.baseUrl,
+      config.path ?? artworkUrl
+    )
 
     return {
       uri: resolvedUri,
       method: config.method ?? 'GET',
-      headers: config.headers,
+      headers: config.headers
     }
   },
 
@@ -258,7 +269,7 @@ export const RequestConfigBuilder = {
       if (artworkConfig.transform) {
         mergedConfig = await artworkConfig.transform({
           request: mergedConfig,
-          context: imageContext,
+          context: imageContext
         })
       }
 
@@ -273,7 +284,7 @@ export const RequestConfigBuilder = {
         uri: finalUri,
         method: mergedConfig.method ?? 'GET',
         headers: mergedConfig.headers,
-        body: mergedConfig.body,
+        body: mergedConfig.body
       }
     } catch (error) {
       // resolve/transform threw - log error, return undefined to avoid broken images
@@ -298,12 +309,15 @@ export const RequestConfigBuilder = {
     // If artworkSource is already set, don't override it
     if (track.artworkSource) return track
 
-    const artworkSource = this.resolveArtworkSource(track.artwork, artworkConfig)
+    const artworkSource = this.resolveArtworkSource(
+      track.artwork,
+      artworkConfig
+    )
     if (!artworkSource) return track
 
     return {
       ...track,
-      artworkSource,
+      artworkSource
     }
   },
 
@@ -318,7 +332,9 @@ export const RequestConfigBuilder = {
     tracks: Track[],
     artworkConfig: ArtworkRequestConfig | undefined
   ): Track[] {
-    return tracks.map(track => this.transformTrackArtwork(track, artworkConfig))
+    return tracks.map((track) =>
+      this.transformTrackArtwork(track, artworkConfig)
+    )
   },
 
   /**
@@ -343,5 +359,5 @@ export const RequestConfigBuilder = {
     if (!base) return override
     if (!override) return base
     return { ...base, ...override }
-  },
+  }
 } as const

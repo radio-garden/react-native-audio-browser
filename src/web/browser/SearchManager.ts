@@ -23,7 +23,9 @@ export class SearchManager {
    */
   async search(params: SearchParams): Promise<Track[]> {
     // Find __search__ route entry
-    const searchRoute = this.browserManager.configuration.routes?.find(r => r.path === '__search__')
+    const searchRoute = this.browserManager.configuration.routes?.find(
+      (r) => r.path === '__search__'
+    )
     if (!searchRoute) {
       return []
     }
@@ -38,7 +40,7 @@ export class SearchManager {
     else if (searchRoute.searchConfig) {
       // Build query parameters from SearchParams (matches Android's executeSearchApiRequest)
       const searchQueryParams: Record<string, string> = {
-        q: params.query,
+        q: params.query
       }
       if (params.mode) searchQueryParams.mode = params.mode
       if (params.genre) searchQueryParams.genre = params.genre
@@ -47,9 +49,12 @@ export class SearchManager {
       if (params.title) searchQueryParams.title = params.title
       if (params.playlist) searchQueryParams.playlist = params.playlist
 
-      const requestConfig = this.httpClient.mergeRequestConfig(searchRoute.searchConfig, {
-        query: searchQueryParams
-      })
+      const requestConfig = this.httpClient.mergeRequestConfig(
+        searchRoute.searchConfig,
+        {
+          query: searchQueryParams
+        }
+      )
 
       try {
         const response = await this.httpClient.executeRequest(requestConfig)
@@ -64,11 +69,12 @@ export class SearchManager {
     const artworkConfig = this.browserManager.configuration.artwork
     if (artworkConfig) {
       results = await Promise.all(
-        results.map(async track => {
-          const artworkSource = await RequestConfigBuilder.resolveArtworkSourceAsync(
-            track,
-            artworkConfig
-          )
+        results.map(async (track) => {
+          const artworkSource =
+            await RequestConfigBuilder.resolveArtworkSourceAsync(
+              track,
+              artworkConfig
+            )
           if (artworkSource && !track.artworkSource) {
             return { ...track, artworkSource }
           }

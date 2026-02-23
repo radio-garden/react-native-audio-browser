@@ -1,8 +1,8 @@
-import type { AudioBrowser as AudioBrowserSpec, IosOutput } from '../specs/audio-browser.nitro'
 import type {
-  ResolvedTrack,
-  Track,
-} from '../types'
+  AudioBrowser as AudioBrowserSpec,
+  IosOutput
+} from '../specs/audio-browser.nitro'
+import type { ResolvedTrack, Track } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
 import type {
   PlaybackErrorEvent,
@@ -40,7 +40,7 @@ import type {
   BatteryOptimizationStatus,
   BatteryOptimizationStatusChangedEvent,
   BatteryWarningPendingChangedEvent,
-  PartialSetupPlayerOptions,
+  PartialSetupPlayerOptions
 } from '../features'
 import { PlaylistPlayer, SleepTimerManager } from './TrackPlayer'
 import { HttpClient } from './http/HttpClient'
@@ -56,7 +56,10 @@ import { BrowserPathHelper } from './util/BrowserPathHelper'
 /**
  * Web implementation of AudioBrowser (unified browser + player)
  */
-export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSpec {
+export class NativeAudioBrowser
+  extends PlaylistPlayer
+  implements AudioBrowserSpec
+{
   // HybridObject stuff
   readonly name = 'WebAudioBrowser'
   equals() {
@@ -84,7 +87,8 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
 
   // Player state
   private progressUpdateEventInterval: NodeJS.Timeout | undefined
-  private _online: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true
+  private _online: boolean =
+    typeof navigator !== 'undefined' ? navigator.onLine : true
   private onlineHandler: (() => void) | undefined
   private offlineHandler: (() => void) | undefined
   private sleepTimer = new (class extends SleepTimerManager {
@@ -128,17 +132,24 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
   onContentChanged: (content: ResolvedTrack | undefined) => void = () => {}
   onTabsChanged: (tabs: Track[]) => void = () => {}
   onNavigationError: (data: NavigationErrorEvent) => void = () => {}
-  onFormattedNavigationError: (formattedError: FormattedNavigationError | undefined) => void = () => {}
+  onFormattedNavigationError: (
+    formattedError: FormattedNavigationError | undefined
+  ) => void = () => {}
 
   // MARK: Player event callbacks
   onChapterMetadata: (chapters: ChapterMetadata[]) => void = () => {}
   onTrackMetadata: (metadata: TrackMetadata) => void = () => {}
   onTimedMetadata: (metadata: TimedMetadata) => void = () => {}
-  onPlaybackActiveTrackChanged: (data: PlaybackActiveTrackChangedEvent) => void = () => {}
+  onPlaybackActiveTrackChanged: (
+    data: PlaybackActiveTrackChangedEvent
+  ) => void = () => {}
   onPlaybackError: (data: PlaybackErrorEvent) => void = () => {}
-  onPlaybackPlayWhenReadyChanged: (data: PlaybackPlayWhenReadyChangedEvent) => void = () => {}
+  onPlaybackPlayWhenReadyChanged: (
+    data: PlaybackPlayWhenReadyChangedEvent
+  ) => void = () => {}
   onPlaybackPlayingState: (data: PlayingState) => void = () => {}
-  onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void = () => {}
+  onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void =
+    () => {}
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void = () => {}
   onPlaybackQueueChanged: (queue: Track[]) => void = () => {}
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void = () => {}
@@ -165,25 +176,36 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
   onNowPlayingChanged: (metadata: NowPlayingMetadata) => void = () => {}
   onOnlineChanged: (online: boolean) => void = () => {}
   onEqualizerChanged: (settings: EqualizerSettings) => void = () => {}
-  onBatteryWarningPendingChanged: (event: BatteryWarningPendingChangedEvent) => void = () => {}
-  onBatteryOptimizationStatusChanged: (event: BatteryOptimizationStatusChangedEvent) => void = () => {}
+  onBatteryWarningPendingChanged: (
+    event: BatteryWarningPendingChangedEvent
+  ) => void = () => {}
+  onBatteryOptimizationStatusChanged: (
+    event: BatteryOptimizationStatusChangedEvent
+  ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
   onIosOutputChanged: (output: IosOutput) => void = () => {}
 
   // MARK: Remote handlers
   handleRemoteBookmark: (() => void) | undefined = undefined
   handleRemoteDislike: (() => void) | undefined = undefined
-  handleRemoteJumpBackward: ((event: RemoteJumpBackwardEvent) => void) | undefined = undefined
-  handleRemoteJumpForward: ((event: RemoteJumpForwardEvent) => void) | undefined = undefined
+  handleRemoteJumpBackward:
+    | ((event: RemoteJumpBackwardEvent) => void)
+    | undefined = undefined
+  handleRemoteJumpForward:
+    | ((event: RemoteJumpForwardEvent) => void)
+    | undefined = undefined
   handleRemoteLike: (() => void) | undefined = undefined
   handleRemoteNext: (() => void) | undefined = undefined
   handleRemotePause: (() => void) | undefined = undefined
   handleRemotePlay: (() => void) | undefined = undefined
-  handleRemotePlayId: ((event: RemotePlayIdEvent) => void) | undefined = undefined
-  handleRemotePlaySearch: ((event: RemotePlaySearchEvent) => void) | undefined = undefined
+  handleRemotePlayId: ((event: RemotePlayIdEvent) => void) | undefined =
+    undefined
+  handleRemotePlaySearch: ((event: RemotePlaySearchEvent) => void) | undefined =
+    undefined
   handleRemotePrevious: (() => void) | undefined = undefined
   handleRemoteSeek: ((event: RemoteSeekEvent) => void) | undefined = undefined
-  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined = undefined
+  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined =
+    undefined
   handleRemoteSkip: (() => void) | undefined = undefined
   handleRemoteStop: (() => void) | undefined = undefined
 
@@ -204,19 +226,21 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
       this.navigationErrorManager
     )
 
-    this.searchManager = new SearchManager(
-      this.browserManager,
-      this.httpClient
-    )
+    this.searchManager = new SearchManager(this.browserManager, this.httpClient)
 
     // Wire up event callbacks from managers to class callbacks
     this.browserManager.onPathChanged = (path) => this.onPathChanged(path)
-    this.browserManager.onContentChanged = (content) => this.onContentChanged(content)
+    this.browserManager.onContentChanged = (content) =>
+      this.onContentChanged(content)
     this.browserManager.onTabsChanged = (tabs) => this.onTabsChanged(tabs)
-    this.navigationErrorManager.onNavigationError = (data) => this.onNavigationError(data)
-    this.navigationErrorManager.onFormattedNavigationError = (error) => this.onFormattedNavigationError(error)
-    this.optionsManager.onOptionsChanged = (options) => this.onOptionsChanged(options)
-    this.nowPlayingManager.onNowPlayingChanged = (metadata) => this.onNowPlayingChanged(metadata)
+    this.navigationErrorManager.onNavigationError = (data) =>
+      this.onNavigationError(data)
+    this.navigationErrorManager.onFormattedNavigationError = (error) =>
+      this.onFormattedNavigationError(error)
+    this.optionsManager.onOptionsChanged = (options) =>
+      this.onOptionsChanged(options)
+    this.nowPlayingManager.onNowPlayingChanged = (metadata) =>
+      this.onNowPlayingChanged(metadata)
 
     // Setup online/offline listeners
     if (typeof window !== 'undefined') {
@@ -264,7 +288,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
   private getPlayingStateFromPlayback(playback: Playback): PlayingState {
     return {
       playing: playback.state === 'playing',
-      buffering: playback.state === 'buffering',
+      buffering: playback.state === 'buffering'
     }
   }
 
@@ -276,7 +300,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
           const progress = this.getProgress()
           const event: PlaybackProgressUpdatedEvent = {
             ...progress,
-            track: this.currentIndex || 0,
+            track: this.currentIndex || 0
           }
           this.onPlaybackProgressUpdated(event)
         }
@@ -294,7 +318,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
     super.onPlaylistEnded()
     this.onPlaybackQueueEnded({
       track: this.currentIndex ?? 0,
-      position: this.element?.currentTime ?? 0,
+      position: this.element?.currentTime ?? 0
     })
   }
 
@@ -317,13 +341,16 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
    * @param parentPath The parent path to check against queueSourcePath
    * @returns true if successfully skipped to existing track, false otherwise
    */
-  private trySkipToExistingQueueTrack(trackId: string, parentPath: string): boolean {
+  private trySkipToExistingQueueTrack(
+    trackId: string,
+    parentPath: string
+  ): boolean {
     if (parentPath !== this.browserManager.queueSourcePath) {
       return false
     }
 
     const queue = this.getQueue()
-    const index = queue.findIndex(t => t.src === trackId)
+    const index = queue.findIndex((t) => t.src === trackId)
 
     if (index < 0) {
       return false
@@ -359,7 +386,10 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
-  private async navigateTrackAsync(track: Track, url: string | undefined): Promise<void> {
+  private async navigateTrackAsync(
+    track: Track,
+    url: string | undefined
+  ): Promise<void> {
     try {
       // Handle contextual URL (playable track with queue context)
       if (url && BrowserPathHelper.isContextual(url)) {
@@ -486,7 +516,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
           lastPosition,
           lastIndex,
           index: currentIndex,
-          track,
+          track
         })
 
         // Update now playing metadata
@@ -505,12 +535,13 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
     // Execute async load without blocking, with error handling
     doLoad().catch((error: unknown) => {
       console.error('Error loading track:', error)
-      const message = error instanceof Error ? error.message : 'Failed to load track'
+      const message =
+        error instanceof Error ? error.message : 'Failed to load track'
       this.onPlaybackError({
         error: {
           code: 'load-error',
-          message,
-        },
+          message
+        }
       })
     })
   }
@@ -525,7 +556,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
 
     if (didChange) {
       this.onPlaybackPlayWhenReadyChanged({
-        playWhenReady: this._playWhenReady,
+        playWhenReady: this._playWhenReady
       })
     }
   }
@@ -553,7 +584,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
 
     if (didChange) {
       this.onPlaybackRepeatModeChanged({
-        repeatMode: mode,
+        repeatMode: mode
       })
     }
   }
@@ -619,14 +650,21 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
   }
 
   // MARK: Queue management
-  setQueue(tracks: Track[], startIndex?: number, startPositionMs?: number): void {
+  setQueue(
+    tracks: Track[],
+    startIndex?: number,
+    startPositionMs?: number
+  ): void {
     this.stop()
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
     const artworkConfig = this.browserManager.configuration.artwork
-    this.playlist = tracks.map(track => {
+    this.playlist = tracks.map((track) => {
       try {
         const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
-        return RequestConfigBuilder.transformTrackArtwork(hydratedTrack, artworkConfig)
+        return RequestConfigBuilder.transformTrackArtwork(
+          hydratedTrack,
+          artworkConfig
+        )
       } catch (error) {
         console.error('Failed to transform track:', error)
         return track // Use original track as fallback
@@ -673,7 +711,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
     // Create updated track with new favorited state
     const updatedTrack: Track = {
       ...track,
-      favorited,
+      favorited
     }
 
     // Replace the track in the playlist
@@ -688,7 +726,7 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
       lastTrack: track,
       lastPosition: this.element?.currentTime ?? 0,
       index,
-      track: updatedTrack,
+      track: updatedTrack
     })
 
     // Emit queue changed so useQueue() hook updates
@@ -777,5 +815,4 @@ export class NativeAudioBrowser extends PlaylistPlayer implements AudioBrowserSp
   openIosOutputPicker(): void {
     // No-op on web
   }
-
 }

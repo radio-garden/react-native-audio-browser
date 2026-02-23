@@ -103,7 +103,8 @@ export const BrowserPathHelper = {
 
     try {
       // Parse the URL - handle both full URLs and paths
-      const isFullUrl = path.startsWith('http://') || path.startsWith('https://')
+      const isFullUrl =
+        path.startsWith('http://') || path.startsWith('https://')
       const urlObj = new URL(path, isFullUrl ? undefined : 'http://placeholder')
       return urlObj.searchParams.get(this.CONTEXTUAL_TRACK_PARAM) ?? undefined
     } catch {
@@ -143,5 +144,5 @@ export const BrowserPathHelper = {
     const normalizedBase = baseUrl.replace(/\/+$/, '') + '/'
     const normalizedPath = path.replace(/^\/+/, '')
     return `${normalizedBase}${normalizedPath}`
-  },
+  }
 } as const

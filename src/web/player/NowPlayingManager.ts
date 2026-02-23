@@ -1,7 +1,4 @@
-import type {
-  NowPlayingUpdate,
-  NowPlayingMetadata,
-} from '../../features'
+import type { NowPlayingUpdate, NowPlayingMetadata } from '../../features'
 import type { Track } from '../../types'
 
 /**
@@ -38,14 +35,14 @@ export class NowPlayingManager {
           artist: update.artist ?? currentTrack.artist,
           album: currentTrack.album,
           artwork: currentTrack.artwork,
-          duration,
+          duration
         }
       : {
           title: currentTrack.title,
           artist: currentTrack.artist,
           album: currentTrack.album,
           artwork: currentTrack.artwork,
-          duration,
+          duration
         }
 
     this.onNowPlayingChanged(metadata)
@@ -69,7 +66,7 @@ export class NowPlayingManager {
       artist: this.override?.artist ?? currentTrack.artist,
       album: currentTrack.album,
       artwork: currentTrack.artwork,
-      duration,
+      duration
     }
   }
 

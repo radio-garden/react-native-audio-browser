@@ -1,17 +1,17 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native'
 import AudioBrowser, {
   onFavoriteChanged,
   notifyContentChanged,
   setFavorites,
   Track,
-  type BrowserConfiguration,
-} from 'react-native-audio-browser';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+  type BrowserConfiguration
+} from 'react-native-audio-browser'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 
-import { BrowserScreen } from '../screens';
+import { BrowserScreen } from '../screens'
 
 const styles = StyleSheet.create({
   container: {
@@ -19,22 +19,21 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     backgroundColor: '#1a1a1a',
-    padding: 20,
-  },
-});
+    padding: 20
+  }
+})
 
-let favorites: Track[] = [];
+let favorites: Track[] = []
 
 // Load persisted favorites from localStorage on startup (browser-only)
 if (typeof window !== 'undefined') {
-  const persistedFavorites = localStorage.getItem('favorites');
+  const persistedFavorites = localStorage.getItem('favorites')
   if (persistedFavorites) {
-    favorites = JSON.parse(persistedFavorites) as Track[];
+    favorites = JSON.parse(persistedFavorites) as Track[]
     // Sync with native favorites cache so heart buttons show correct state
-    setFavorites(favorites.map((t) => t.src).filter(Boolean) as string[]);
+    setFavorites(favorites.map((t) => t.src).filter(Boolean) as string[])
   }
 }
-
 
 const configuration: BrowserConfiguration = {
   tabs: [
@@ -57,7 +56,7 @@ const configuration: BrowserConfiguration = {
       url: '/favorites',
       artwork: Platform.select({
         ios: 'sf:heart.fill'
-      }),
+      })
     }
   ],
   media: {
@@ -102,7 +101,11 @@ const configuration: BrowserConfiguration = {
           title: 'Independent Sounds',
           url: '/api/playlist/independent-sounds',
           children: [
-            { title: 'Radio is a Foreign Country', src: 'b35yEqjv', live: true },
+            {
+              title: 'Radio is a Foreign Country',
+              src: 'b35yEqjv',
+              live: true
+            },
             { title: 'NTS 1', src: 'wT9JJD4j', live: true },
             { title: 'Worldwide FM', src: '/rg/vfm-z7pR', live: true },
             { title: 'Kiosk Radio', src: '/rg/rTzlLOJp', live: true },
@@ -236,14 +239,13 @@ const configuration: BrowserConfiguration = {
 }
 
 export default function TrackPlayerApp() {
-
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     const setup = async () => {
-      await AudioBrowser.setupPlayer({});
-      AudioBrowser.setPlayWhenReady(true);
-      AudioBrowser.configureBrowser(configuration);
+      await AudioBrowser.setupPlayer({})
+      AudioBrowser.setPlayWhenReady(true)
+      AudioBrowser.configureBrowser(configuration)
 
       // Handle favorite changes (heart button taps from app)
       onFavoriteChanged.addListener(({ track, favorited }) => {
@@ -253,45 +255,45 @@ export default function TrackPlayerApp() {
             // Strip url - it contains the original context (e.g., /library/radio?__trackId=...)
             // The library will regenerate the correct contextual URL when browsing favorites
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { url, groupTitle, ...trackWithoutUrl } = track;
-            favorites.push(trackWithoutUrl as Track);
+            const { url, groupTitle, ...trackWithoutUrl } = track
+            favorites.push(trackWithoutUrl as Track)
           }
         } else {
-          favorites = favorites.filter((t) => t.src !== track.src);
+          favorites = favorites.filter((t) => t.src !== track.src)
         }
-        favorites.sort((a, b) => a.title.localeCompare(b.title));
+        favorites.sort((a, b) => a.title.localeCompare(b.title))
 
         // Persist to localStorage (browser-only)
         if (typeof window !== 'undefined') {
-          localStorage.setItem('favorites', JSON.stringify(favorites));
+          localStorage.setItem('favorites', JSON.stringify(favorites))
         }
 
         // Notify browser that favorites content has changed
-        notifyContentChanged('/favorites');
-      });
+        notifyContentChanged('/favorites')
+      })
 
-      setIsMounted(true);
-    };
+      setIsMounted(true)
+    }
 
-    void setup();
-  }, []);
+    void setup()
+  }, [])
 
   if (!isMounted) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#1DB954" />
       </View>
-    );
+    )
   }
 
   return (
     <SafeAreaProvider
       initialMetrics={{
         frame: { x: 0, y: 0, width: 0, height: 0 },
-        insets: { top: 0, left: 0, right: 0, bottom: 0 },
+        insets: { top: 0, left: 0, right: 0, bottom: 0 }
       }}
     >
       <BrowserScreen />
     </SafeAreaProvider>
-  );
+  )
 }

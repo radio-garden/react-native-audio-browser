@@ -42,9 +42,7 @@ export const prefixOrder = [
 ] as const
 
 /** Regex to strip common prefixes when followed by uppercase */
-export const prefixRegex = new RegExp(
-  `^(${prefixOrder.join('|')})(?=[A-Z])`
-)
+export const prefixRegex = new RegExp(`^(${prefixOrder.join('|')})(?=[A-Z])`)
 
 /**
  * Get prefix priority index for sorting.
