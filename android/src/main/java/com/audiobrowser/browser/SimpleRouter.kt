@@ -61,12 +61,16 @@ class SimpleRouter {
         if (!matchSingleSegment(patternSegments[i], pathSegments[i], params)) {
           return null
         }
-        updateSegmentCounts(
-          patternSegments[i],
-          constantSegments,
-          parameterSegments,
-          wildcardSegments,
-        )
+        val (constCount, paramCount, wildcardCount) =
+          updateSegmentCounts(
+            patternSegments[i],
+            constantSegments,
+            parameterSegments,
+            wildcardSegments,
+          )
+        constantSegments = constCount
+        parameterSegments = paramCount
+        wildcardSegments = wildcardCount
       }
 
       // Capture remaining path segments as "tail" parameter

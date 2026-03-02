@@ -7,150 +7,159 @@ class SimpleRouterTest {
 
   private val router = SimpleRouter()
 
-  @Test
-  fun `exact match works`() {
-    val routes = mapOf("/artists" to "config1")
-    val result = router.findBestMatch("/artists", routes)
+  // -- exact matches --
 
+  @Test
+  fun `matches a simple path`() {
+    val result = router.findBestMatch("/artists", mapOf("/artists" to true))
     assertNotNull(result)
     assertEquals("/artists", result!!.first)
     assertTrue(result.second.params.isEmpty())
   }
 
   @Test
-  fun `parameter extraction works`() {
-    val routes = mapOf("/artists/{id}" to "config1")
-    val result = router.findBestMatch("/artists/123", routes)
-
+  fun `matches multi-segment paths`() {
+    val result = router.findBestMatch("/artists/top/rated", mapOf("/artists/top/rated" to true))
     assertNotNull(result)
-    assertEquals("/artists/{id}", result!!.first)
-    assertEquals("123", result.second.params["id"])
+    assertEquals("/artists/top/rated", result!!.first)
   }
 
   @Test
-  fun `multiple parameters work`() {
-    val routes = mapOf("/artists/{artistId}/albums/{albumId}" to "config1")
-    val result = router.findBestMatch("/artists/123/albums/456", routes)
+  fun `returns null when no route matches`() {
+    assertNull(router.findBestMatch("/unknown", mapOf("/artists" to true)))
+  }
 
+  @Test
+  fun `returns null when segment count differs`() {
+    assertNull(router.findBestMatch("/artists/123", mapOf("/artists" to true)))
+  }
+
+  @Test
+  fun `returns null when routes are empty`() {
+    assertNull(router.findBestMatch("/artists", emptyMap<String, Boolean>()))
+  }
+
+  @Test
+  fun `treats trailing slashes the same as without`() {
+    val result = router.findBestMatch("/artists/", mapOf("/artists" to true))
     assertNotNull(result)
-    assertEquals("123", result!!.second.params["artistId"])
-    assertEquals("456", result.second.params["albumId"])
+    assertEquals("/artists", result!!.first)
   }
 
-  @Test
-  fun `specificity works - constants win over parameters`() {
-    val routes = mapOf("/artists/{id}" to "generic", "/artists/popular" to "specific")
-    val result = router.findBestMatch("/artists/popular", routes)
-
-    assertEquals("/artists/popular", result!!.first)
-  }
+  // -- parameter extraction --
 
   @Test
-  fun `specificity works - more segments win`() {
-    val routes = mapOf("/artists" to "short", "/artists/premium" to "longer")
-
-    val result1 = router.findBestMatch("/artists", routes)
-    assertEquals("/artists", result1!!.first)
-
-    val result2 = router.findBestMatch("/artists/premium", routes)
-    assertEquals("/artists/premium", result2!!.first)
-  }
-
-  @Test
-  fun `no match returns null`() {
-    val routes = mapOf("/artists" to "config1")
-    val result = router.findBestMatch("/songs", routes)
-
-    assertNull(result)
-  }
-
-  @Test
-  fun `different segment count returns null`() {
-    val routes = mapOf("/artists/{id}" to "config1")
-    val result = router.findBestMatch("/artists/123/extra", routes)
-
-    assertNull(result)
-  }
-
-  @Test
-  fun `single wildcard matching works`() {
-    val routes = mapOf("/artists/*" to "wildcard")
-    val result = router.findBestMatch("/artists/anything", routes)
-
+  fun `extracts a single parameter`() {
+    val result = router.findBestMatch("/artists/123", mapOf("/artists/{id}" to true))
     assertNotNull(result)
-    assertEquals("/artists/*", result!!.first)
-    assertTrue(result.second.params.isEmpty()) // Wildcards don't capture
+    assertEquals(mapOf("id" to "123"), result!!.second.params)
   }
 
   @Test
-  fun `tail wildcard matching works`() {
-    val routes = mapOf("/files/**" to "allFiles")
-
-    val result1 = router.findBestMatch("/files/docs/readme.md", routes)
-    assertNotNull(result1)
-    assertEquals("docs/readme.md", result1!!.second.params["tail"])
-
-    val result2 = router.findBestMatch("/files/images/2023/vacation.jpg", routes)
-    assertNotNull(result2)
-    assertEquals("images/2023/vacation.jpg", result2!!.second.params["tail"])
-
-    // Also matches shorter paths
-    val result3 = router.findBestMatch("/files", routes)
-    assertNotNull(result3)
-    assertFalse(result3!!.second.params.containsKey("tail")) // No tail captured
-  }
-
-  @Test
-  fun `wildcard specificity works correctly`() {
-    val routes =
-      mapOf(
-        "/artists/*" to "wildcard",
-        "/artists/{id}" to "parameter",
-        "/artists/popular" to "constant",
+  fun `extracts multiple parameters`() {
+    val result =
+      router.findBestMatch(
+        "/artists/123/albums/456",
+        mapOf("/artists/{artistId}/albums/{albumId}" to true),
       )
+    assertNotNull(result)
+    assertEquals(mapOf("artistId" to "123", "albumId" to "456"), result!!.second.params)
+  }
 
-    // Constant wins
-    val result1 = router.findBestMatch("/artists/popular", routes)
-    assertEquals("/artists/popular", result1!!.first)
+  // -- single wildcard --
 
-    // Parameter wins over wildcard for non-constant values
-    val result2 = router.findBestMatch("/artists/123", routes)
-    assertEquals("/artists/{id}", result2!!.first)
-    assertEquals("123", result2.second.params["id"])
+  @Test
+  fun `matches any single segment`() {
+    assertNotNull(router.findBestMatch("/artists/anything", mapOf("/artists/*" to true)))
   }
 
   @Test
-  fun `tail wildcard specificity works`() {
-    val routes =
-      mapOf("/api/**" to "catchAll", "/api/users" to "specific", "/api/users/{id}" to "userById")
+  fun `does not extract wildcard value into params`() {
+    val result = router.findBestMatch("/artists/anything", mapOf("/artists/*" to true))
+    assertTrue(result!!.second.params.isEmpty())
+  }
 
-    // Specific routes win over tail wildcard
-    val result1 = router.findBestMatch("/api/users", routes)
-    assertEquals("/api/users", result1!!.first)
+  // -- tail wildcard --
 
-    val result2 = router.findBestMatch("/api/users/123", routes)
-    assertEquals("/api/users/{id}", result2!!.first)
-
-    // Tail wildcard catches unmatched paths
-    val result3 = router.findBestMatch("/api/posts/recent", routes)
-    assertEquals("/api/**", result3!!.first)
-    assertEquals("posts/recent", result3.second.params["tail"])
+  @Test
+  fun `matches with no remaining segments and has no tail param`() {
+    val result = router.findBestMatch("/files", mapOf("/files/**" to true))
+    assertNotNull(result)
+    assertTrue(result!!.second.params.isEmpty())
   }
 
   @Test
-  fun `example from plan works`() {
-    val routes =
-      mapOf("/artists" to "generic", "/artists/{id}" to "byId", "/artists/premium" to "premium")
+  fun `matches with remaining segments and captures tail`() {
+    val result = router.findBestMatch("/files/a/b/c", mapOf("/files/**" to true))
+    assertNotNull(result)
+    assertEquals(mapOf("tail" to "a/b/c"), result!!.second.params)
+  }
 
-    // Test each case
-    val result1 = router.findBestMatch("/artists", routes)
-    assertEquals("/artists", result1!!.first)
+  @Test
+  fun `matches with a single remaining segment`() {
+    val result = router.findBestMatch("/files/readme.txt", mapOf("/files/**" to true))
+    assertNotNull(result)
+    assertEquals(mapOf("tail" to "readme.txt"), result!!.second.params)
+  }
 
-    val result2 = router.findBestMatch("/artists/123", routes)
-    assertEquals("/artists/{id}", result2!!.first)
-    assertEquals("123", result2.second.params["id"])
+  @Test
+  fun `returns null when prefix segments do not match`() {
+    assertNull(router.findBestMatch("/other/a/b", mapOf("/files/**" to true)))
+  }
 
-    val result3 = router.findBestMatch("/artists/premium", routes)
-    assertEquals("/artists/premium", result3!!.first) // More specific than {id}
+  @Test
+  fun `works with parameters before tail wildcard`() {
+    val result =
+      router.findBestMatch("/api/v1/users/list", mapOf("/api/{version}/**" to true))
+    assertNotNull(result)
+    assertEquals(mapOf("version" to "v1", "tail" to "users/list"), result!!.second.params)
+  }
+
+  @Test
+  fun `matches any path with bare tail wildcard pattern`() {
+    val result = router.findBestMatch("/any/path/here", mapOf("/**" to true))
+    assertNotNull(result)
+    assertEquals(mapOf("tail" to "any/path/here"), result!!.second.params)
+  }
+
+  // -- specificity --
+
+  @Test
+  fun `prefers constant segments over parameters`() {
+    val routes = mapOf("/artists/{id}" to true, "/artists/top" to true)
+    val result = router.findBestMatch("/artists/top", routes)
+    assertEquals("/artists/top", result!!.first)
+  }
+
+  @Test
+  fun `prefers parameters over wildcards`() {
+    val routes = mapOf("/artists/*" to true, "/artists/{id}" to true)
+    val result = router.findBestMatch("/artists/123", routes)
+    assertEquals("/artists/{id}", result!!.first)
+  }
+
+  @Test
+  fun `prefers exact match over tail wildcard`() {
+    val routes = mapOf("/api/**" to true, "/api/{version}" to true)
+    val result = router.findBestMatch("/api/v1", routes)
+    assertEquals("/api/{version}", result!!.first)
+  }
+
+  @Test
+  fun `computes correct specificity for tail wildcard patterns`() {
+    // Regression test for issue #27: specificity must account for
+    // segment types before the ** wildcard.
+    val result = router.findBestMatch("/api/v1/users", mapOf("/api/v1/**" to true))
+    // constant "api" (1000) + constant "v1" (1000) + tail(1) + 3 segments = 2004
+    assertEquals(2004, result!!.second.specificity)
+  }
+
+  @Test
+  fun `prefers constant prefix over parameter prefix in tail wildcards`() {
+    // Second part of issue #27: with correct specificity, the constant
+    // prefix should beat the parameter prefix.
+    val routes = mapOf("/api/{version}/**" to true, "/api/v1/**" to true)
+    val result = router.findBestMatch("/api/v1/users", routes)
+    assertEquals("/api/v1/**", result!!.first)
   }
 }

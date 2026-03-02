@@ -92,14 +92,16 @@ export class SimpleRouter {
         ) {
           return null
         }
-        // Note: The Kotlin implementation doesn't update counts here (appears to be a bug)
-        // but we'll match it exactly for consistency
-        this.updateSegmentCounts(
-          assertedNotNullish(patternSegments[i]),
-          constantSegments,
-          parameterSegments,
-          wildcardSegments
-        )
+        const [constCount, paramCount, wildcardCount] =
+          this.updateSegmentCounts(
+            assertedNotNullish(patternSegments[i]),
+            constantSegments,
+            parameterSegments,
+            wildcardSegments
+          )
+        constantSegments = constCount
+        parameterSegments = paramCount
+        wildcardSegments = wildcardCount
       }
 
       // Capture remaining path segments as "tail" parameter
