@@ -12,42 +12,31 @@ import os.log
 class RetryManager {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RetryManager")
 
-  /// Retry policy configuration
   enum Policy {
     case disabled
     case infinite
     case limited(maxRetries: Int)
   }
 
-  /// Default maximum duration to keep retrying before giving up (in milliseconds).
   private static let defaultMaxRetryDurationMs: Double = 120_000 // 2 minutes
 
-  /// Maximum duration to keep retrying before giving up (in seconds).
-  /// This prevents surprising playback resumption after long periods offline.
+  /// Prevents surprising playback resumption after long periods offline.
   private var maxRetryDuration: TimeInterval = defaultMaxRetryDurationMs / 1000
 
   private var policy: Policy = .disabled
   private var attemptCount = 0
   private var firstRetryTime: Date?
 
-  /// Network monitor for accelerating retries when connectivity is restored
   weak var networkMonitor: NetworkMonitor?
-
-  /// Flag to track if we're waiting for network (for cleanup on reset)
   private var isWaitingForNetwork = false
-
-  /// Generation counter incremented on reset to invalidate in-flight retries
+  /// Invalidates in-flight retries when reset() is called (e.g. track change)
   private var generation: Int = 0
 
-  /// Callback to check if we should retry (typically checks playWhenReady)
   var shouldRetry: () -> Bool = { true }
-
-  /// Callback to trigger reload
   var onRetry: ((Bool) -> Void)?
 
   // MARK: - Configuration
 
-  /// Updates the retry policy from the Nitro config type
   func updatePolicy(from config: Variant_Bool_RetryConfig?) {
     guard let config else {
       policy = .disabled
@@ -64,7 +53,6 @@ class RetryManager {
     case let .second(retryConfig):
       let maxRetries = Int(retryConfig.maxRetries)
       policy = .limited(maxRetries: maxRetries)
-      // Use configured duration or default
       let durationMs = retryConfig.maxRetryDurationMs ?? Self.defaultMaxRetryDurationMs
       maxRetryDuration = durationMs / 1000
       logger.debug("Retry policy: limited to \(maxRetries) retries, max duration \(self.maxRetryDuration)s")
@@ -73,9 +61,7 @@ class RetryManager {
 
   // MARK: - Exponential Backoff
 
-  /// Calculates delay for current attempt using exponential backoff.
   /// Delays: 1s -> 1.5s -> 2.3s -> 3.4s -> 5s (capped)
-  /// Returns delay in seconds.
   private func calculateDelaySeconds() -> Double {
     let baseDelay = 1.0
     let multiplier = 1.5
@@ -86,8 +72,6 @@ class RetryManager {
 
   // MARK: - Error Classification
 
-  /// Classifies whether an error is retryable or permanent.
-  /// Only clearly transient network errors are retried.
   func isRetryable(_ error: Error?) -> Bool {
     guard let error else { return false }
 
@@ -116,7 +100,6 @@ class RetryManager {
 
   // MARK: - Retry Management
 
-  /// Resets retry count. Call when track changes.
   func reset() {
     attemptCount = 0
     firstRetryTime = nil
@@ -125,26 +108,17 @@ class RetryManager {
     logger.debug("Retry count reset (generation \(self.generation))")
   }
 
-  /// Attempts a retry if policy allows.
-  /// Returns true if retry was scheduled, false if max retries exceeded or disabled.
-  ///
-  /// If a network monitor is configured and the device is offline, the retry will
-  /// trigger immediately when connectivity is restored instead of waiting for the
-  /// full backoff delay.
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool {
-    // Check if retry is disabled
     if case .disabled = policy {
       logger.debug("Retry disabled, not retrying")
       return false
     }
 
-    // Check if we should retry (e.g., playWhenReady is true)
     guard shouldRetry() else {
       logger.debug("shouldRetry returned false, not retrying")
       return false
     }
 
-    // Check max retries for limited policy
     if case let .limited(maxRetries) = policy {
       if attemptCount >= maxRetries {
         logger.info("Max retries (\(maxRetries)) exceeded, giving up")
@@ -152,7 +126,6 @@ class RetryManager {
       }
     }
 
-    // Track when we started retrying
     if firstRetryTime == nil {
       firstRetryTime = Date()
     }
@@ -166,7 +139,6 @@ class RetryManager {
       }
     }
 
-    // Schedule retry with exponential backoff
     let delaySeconds = calculateDelaySeconds()
     let currentGeneration = generation
     attemptCount += 1
@@ -186,13 +158,12 @@ class RetryManager {
       return false
     }
 
-    // Double-check we should still retry after the delay
     guard shouldRetry() else {
       logger.debug("shouldRetry returned false after delay, cancelling retry")
       return false
     }
 
-    // Check duration again after waiting (in case we waited a long time for network)
+    // Re-check duration — we may have waited a long time for network restoration
     if let startTime = firstRetryTime {
       let elapsed = Date().timeIntervalSince(startTime)
       if elapsed >= maxRetryDuration {
@@ -201,7 +172,6 @@ class RetryManager {
       }
     }
 
-    // Trigger the retry
     logger.info("Executing retry #\(self.attemptCount)")
     onRetry?(startFromCurrentTime)
     return true
@@ -209,12 +179,10 @@ class RetryManager {
 
   // MARK: - Network-Aware Waiting
 
-  /// Waits for either the backoff delay to elapse OR network to be restored (if offline).
   /// Returns true if cancelled, false if ready to retry.
   private func waitForDelayOrNetworkRestored(delaySeconds: Double) async -> Bool {
     let isOffline = !(networkMonitor?.isOnline ?? true)
 
-    // If online or no monitor, just do a simple sleep
     guard isOffline, let monitor = networkMonitor else {
       do {
         let nanoseconds = UInt64(delaySeconds * 1_000_000_000)
@@ -227,32 +195,27 @@ class RetryManager {
 
     logger.debug("Device is offline, will retry immediately when connectivity is restored")
 
-    // Race between sleep and network restoration
     return await withTaskGroup(of: Bool.self, returning: Bool.self) { group in
-      // Task 1: Sleep for backoff delay
       group.addTask {
         do {
           let nanoseconds = UInt64(delaySeconds * 1_000_000_000)
           try await Task.sleep(nanoseconds: nanoseconds)
-          return false // Sleep completed, ready to retry
+          return false
         } catch {
-          return true // Sleep cancelled
+          return true
         }
       }
 
-      // Task 2: Wait for network restoration
       group.addTask { [weak self] in
         await self?.waitForNetworkRestored(monitor: monitor) ?? true
       }
 
-      // Return when either completes
       let result = await group.next() ?? true
       group.cancelAll()
       return result
     }
   }
 
-  /// Waits until network connectivity is restored.
   /// Returns false when network is restored, true if cancelled.
   @MainActor
   private func waitForNetworkRestored(monitor: NetworkMonitor) async -> Bool {
