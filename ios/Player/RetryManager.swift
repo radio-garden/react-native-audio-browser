@@ -36,6 +36,9 @@ class RetryManager {
   /// Flag to track if we're waiting for network (for cleanup on reset)
   private var isWaitingForNetwork = false
 
+  /// Generation counter incremented on reset to invalidate in-flight retries
+  private var generation: Int = 0
+
   /// Callback to check if we should retry (typically checks playWhenReady)
   var shouldRetry: () -> Bool = { true }
 
@@ -118,7 +121,8 @@ class RetryManager {
     attemptCount = 0
     firstRetryTime = nil
     isWaitingForNetwork = false
-    logger.debug("Retry count reset")
+    generation += 1
+    logger.debug("Retry count reset (generation \(self.generation))")
   }
 
   /// Attempts a retry if policy allows.
@@ -164,6 +168,7 @@ class RetryManager {
 
     // Schedule retry with exponential backoff
     let delaySeconds = calculateDelaySeconds()
+    let currentGeneration = generation
     attemptCount += 1
     logger.info("Scheduling retry #\(self.attemptCount) after \(delaySeconds)s")
 
@@ -172,6 +177,12 @@ class RetryManager {
 
     if waitCancelled {
       logger.debug("Retry wait cancelled")
+      return false
+    }
+
+    // Check if reset() was called while we were waiting
+    guard generation == currentGeneration else {
+      logger.debug("Retry invalidated by reset (generation changed)")
       return false
     }
 
