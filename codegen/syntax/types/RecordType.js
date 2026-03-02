@@ -13,6 +13,9 @@ export class RecordType {
     get kind() {
         return 'record';
     }
+    get isEquatable() {
+        return this.keyType.isEquatable && this.valueType.isEquatable;
+    }
     getCode(language, options) {
         const keyCode = this.keyType.getCode(language, options);
         const valueCode = this.valueType.getCode(language, options);
@@ -27,13 +30,13 @@ export class RecordType {
                 throw new Error(`Language ${language} is not yet supported for RecordType!`);
         }
     }
-    getExtraFiles(visited) {
-        return [...this.keyType.getExtraFiles(visited), ...this.valueType.getExtraFiles(visited)];
+    getExtraFiles() {
+        return [...this.keyType.getExtraFiles(), ...this.valueType.getExtraFiles()];
     }
-    getRequiredImports(language, visited) {
+    getRequiredImports(language) {
         const imports = [
-            ...this.keyType.getRequiredImports(language, visited),
-            ...this.valueType.getRequiredImports(language, visited),
+            ...this.keyType.getRequiredImports(language),
+            ...this.valueType.getRequiredImports(language),
         ];
         if (language === 'c++') {
             imports.push({

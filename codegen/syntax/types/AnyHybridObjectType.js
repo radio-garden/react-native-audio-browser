@@ -8,6 +8,9 @@ export class AnyHybridObjectType {
     get kind() {
         return 'hybrid-object-base';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

@@ -6,6 +6,9 @@ export class BooleanType {
     get kind() {
         return 'boolean';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

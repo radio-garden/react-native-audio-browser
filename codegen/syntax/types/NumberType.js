@@ -6,6 +6,9 @@ export class NumberType {
     get kind() {
         return 'number';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

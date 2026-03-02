@@ -45,3 +45,23 @@ export function isSyncFunction(type) {
     const syncTag = type.getProperty('__syncTag');
     return syncTag != null;
 }
+export function isInt64(type) {
+    // Int64 is an intersection: `bigint & {...}`
+    const isBigInt = type.getIntersectionTypes().some((i) => i.isBigInt());
+    if (!isBigInt) {
+        // not a bigint
+        return false;
+    }
+    const signedTag = type.getProperty('__signedTag');
+    return signedTag != null;
+}
+export function isUInt64(type) {
+    // UInt64 is an intersection: `bigint & {...}`
+    const isBigInt = type.getIntersectionTypes().some((i) => i.isBigInt());
+    if (!isBigInt) {
+        // not a bigint
+        return false;
+    }
+    const unsignedTag = type.getProperty('__unsignedTag');
+    return unsignedTag != null;
+}

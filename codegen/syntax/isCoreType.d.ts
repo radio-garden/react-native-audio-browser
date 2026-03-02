@@ -1,0 +1,11 @@
+import { Type as TSMorphType } from 'ts-morph';
+export declare function isPromise(type: TSMorphType): boolean;
+export declare function isRecord(type: TSMorphType): boolean;
+export declare function isArrayBuffer(type: TSMorphType): boolean;
+export declare function isDate(type: TSMorphType): boolean;
+export declare function isMap(type: TSMorphType): boolean;
+export declare function isError(type: TSMorphType): boolean;
+export declare function isCustomType(type: TSMorphType): boolean;
+export declare function isSyncFunction(type: TSMorphType): boolean;
+export declare function isInt64(type: TSMorphType): boolean;
+export declare function isUInt64(type: TSMorphType): boolean;

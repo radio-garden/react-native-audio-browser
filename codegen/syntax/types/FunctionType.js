@@ -40,6 +40,9 @@ export class FunctionType {
     get kind() {
         return 'function';
     }
+    get isEquatable() {
+        return false;
+    }
     /**
      * For a function, get the forward recreation of it:
      * If variable is called `func`, this would return:
@@ -124,16 +127,16 @@ export class FunctionType {
                 throw new Error(`Language ${language} is not yet supported for FunctionType!`);
         }
     }
-    getExtraFiles(visited) {
+    getExtraFiles() {
         return [
-            ...this.returnType.getExtraFiles(visited),
-            ...this.parameters.flatMap((p) => p.getExtraFiles(visited)),
+            ...this.returnType.getExtraFiles(),
+            ...this.parameters.flatMap((p) => p.getExtraFiles()),
         ];
     }
-    getRequiredImports(language, visited) {
+    getRequiredImports(language) {
         const imports = [
-            ...this.returnType.getRequiredImports(language, visited),
-            ...this.parameters.flatMap((p) => p.getRequiredImports(language, visited)),
+            ...this.returnType.getRequiredImports(language),
+            ...this.parameters.flatMap((p) => p.getRequiredImports(language)),
         ];
         if (language === 'c++') {
             imports.push({

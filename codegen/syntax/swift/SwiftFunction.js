@@ -34,7 +34,6 @@ return ${returnType.parseFromSwiftToCpp('__result', 'swift')}
     const code = `
 ${createFileMetadataString(`${swiftClassName}.swift`)}
 
-import Foundation
 ${imports.join('\n')}
 
 /**

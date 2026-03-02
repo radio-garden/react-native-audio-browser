@@ -209,7 +209,7 @@ inline bool has_value_${name}(const ${actualType}& optional) noexcept {
   return optional.has_value();
 }
 inline ${wrappedBridge.getTypeCode('c++')} get_${name}(const ${actualType}& optional) noexcept {
-  return *optional;
+  return optional.value();
 }
     `.trim(),
             requiredIncludes: [
@@ -462,7 +462,7 @@ inline ${t.getCode('c++')} get_${i}() const noexcept {
  * std::variant cannot be used in Swift because of a Swift bug.
  * Not even specializing it works. So we create a wrapper struct.
  */
-struct ${name} {
+struct ${name} final {
   ${actualType} variant;
   ${name}(${actualType} variant): variant(variant) { }
   operator ${actualType}() const noexcept {

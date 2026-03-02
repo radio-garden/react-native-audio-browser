@@ -1,10 +1,52 @@
 import { NitroConfig } from '../../config/NitroConfig.js';
 import { indent } from '../../utils.js';
+import { getForwardDeclaration } from '../c++/getForwardDeclaration.js';
 import { includeHeader } from '../c++/includeNitroHeader.js';
+import { getReferencedTypes } from '../getReferencedTypes.js';
 import { createFileMetadataString, isNotDuplicate } from '../helpers.js';
+import { FunctionType } from '../types/FunctionType.js';
+import { getTypeAs } from '../types/getTypeAs.js';
+import { StructType } from '../types/StructType.js';
 import { addJNINativeRegistration } from './JNINativeRegistrations.js';
-import { detectCyclicStructDependencies, partitionAndTransformImports, } from './detectCyclicDependencies.js';
 import { KotlinCxxBridgedType } from './KotlinCxxBridgedType.js';
+function detectCyclicStructDependencies(functionType) {
+    const cyclicNames = new Set();
+    const funcName = functionType.specializationName;
+    // Check referenced types for structs that reference back to this function
+    const referencedTypes = getReferencedTypes(functionType);
+    for (const refType of referencedTypes) {
+        if (refType.kind === 'struct') {
+            const structType = getTypeAs(refType, StructType);
+            // Check if this struct references our function type
+            const structRefs = getReferencedTypes(structType);
+            for (const structRef of structRefs) {
+                if (structRef.kind === 'function' && getTypeAs(structRef, FunctionType).specializationName === funcName) {
+                    cyclicNames.add(structType.structName);
+                    break;
+                }
+            }
+        }
+    }
+    return { cyclicNames, hasCyclicDeps: cyclicNames.size > 0 };
+}
+function partitionImports(imports, cyclicNames) {
+    const regularIncludes = [];
+    const cyclicIncludes = [];
+    for (const imp of imports) {
+        const header = includeHeader(imp);
+        const isCyclic = Array.from(cyclicNames).some(name => imp.name === `J${name}.hpp`);
+        if (isCyclic) {
+            cyclicIncludes.push(header);
+        }
+        else {
+            regularIncludes.push(header);
+        }
+    }
+    return {
+        regularIncludes: regularIncludes.filter(isNotDuplicate).sort(),
+        cyclicIncludes: cyclicIncludes.filter(isNotDuplicate).sort()
+    };
+}
 export function createKotlinFunction(functionType) {
     const name = functionType.specializationName;
     const packageName = NitroConfig.current.getAndroidPackage('java/kotlin');
@@ -160,15 +202,8 @@ return ${bridgedReturn.parseFromKotlinToCpp('__result', 'c++', false)};
     const imports = bridged
         .getRequiredImports('c++')
         .filter((i) => i.name !== `J${name}.hpp`);
-    // Detect cyclic struct references: structs that contain this function type
-    // These structs' JNI headers (J<StructName>.hpp) would create circular includes
-    const { cyclicNames: cyclicStructNames, hasCyclicDeps } = detectCyclicStructDependencies(functionType);
-    // Partition imports into regular and cyclic includes in a single pass
-    const { regularIncludes, cyclicIncludes } = partitionAndTransformImports(imports, cyclicStructNames, includeHeader);
-    // Generate forward declarations for cyclic struct types
-    const forwardDeclarations = Array.from(cyclicStructNames)
-        .map((structName) => `struct J${structName};`)
-        .join('\n  ');
+    // Detect cyclic struct dependencies
+    const { cyclicNames, hasCyclicDeps } = detectCyclicStructDependencies(functionType);
     // Make sure we register all native JNI methods on app startup
     addJNINativeRegistration({
         namespace: cxxNamespace,
@@ -188,7 +223,13 @@ return ${bridgedReturn.parseFromKotlinToCpp('__result', 'c++', false)};
         platform: 'android',
     });
     if (hasCyclicDeps) {
-        // For cyclic dependencies: header with declarations only, cpp with implementations
+        // Split into separate .hpp header and .cpp implementation
+        const { regularIncludes, cyclicIncludes } = partitionImports(imports, cyclicNames);
+        // Forward declarations for cyclic struct types
+        const forwardDeclarations = Array.from(cyclicNames)
+            .map((n) => getForwardDeclaration('struct', `J${n}`, cxxNamespace))
+            .sort()
+            .join('\n');
         const fbjniHeader = `
 ${createFileMetadataString(`J${name}.hpp`)}
 
@@ -199,12 +240,11 @@ ${createFileMetadataString(`J${name}.hpp`)}
 
 ${regularIncludes.join('\n')}
 
+${forwardDeclarations}
+
 namespace ${cxxNamespace} {
 
   using namespace facebook;
-
-  // Forward declarations for cyclic dependencies
-  ${forwardDeclarations}
 
   /**
    * Represents the Java/Kotlin callback \`${functionType.getCode('kotlin')}\`.
@@ -253,13 +293,12 @@ namespace ${cxxNamespace} {
   };
 
 } // namespace ${cxxNamespace}
-    `.trim();
-        const fbjniCpp = `
+  `.trim();
+        const fbjniImpl = `
 ${createFileMetadataString(`J${name}.cpp`)}
 
 #include "J${name}.hpp"
 
-// Include cyclic dependencies in the .cpp file where all types are complete
 ${cyclicIncludes.join('\n')}
 
 namespace ${cxxNamespace} {
@@ -281,7 +320,7 @@ namespace ${cxxNamespace} {
   }
 
 } // namespace ${cxxNamespace}
-    `.trim();
+  `.trim();
         files.push({
             content: fbjniHeader,
             language: 'c++',
@@ -290,7 +329,7 @@ namespace ${cxxNamespace} {
             platform: 'android',
         });
         files.push({
-            content: fbjniCpp,
+            content: fbjniImpl,
             language: 'c++',
             name: `J${name}.cpp`,
             subdirectory: [],
@@ -298,8 +337,8 @@ namespace ${cxxNamespace} {
         });
     }
     else {
-        // No cyclic dependencies - use the original inline header-only code
-        const allIncludes = imports.map((i) => includeHeader(i)).filter(isNotDuplicate);
+        // No cyclic dependencies - generate single inline .hpp file (original behavior)
+        const includes = imports.map((i) => includeHeader(i)).filter(isNotDuplicate);
         const fbjniCode = `
 ${createFileMetadataString(`J${name}.hpp`)}
 
@@ -308,7 +347,7 @@ ${createFileMetadataString(`J${name}.hpp`)}
 #include <fbjni/fbjni.h>
 #include <functional>
 
-${allIncludes.join('\n')}
+${includes.join('\n')}
 
 namespace ${cxxNamespace} {
 
@@ -369,7 +408,7 @@ namespace ${cxxNamespace} {
   };
 
 } // namespace ${cxxNamespace}
-    `.trim();
+  `.trim();
         files.push({
             content: fbjniCode,
             language: 'c++',

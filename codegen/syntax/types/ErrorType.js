@@ -2,11 +2,14 @@ import {} from '../SourceFile.js';
 export class ErrorType {
     constructor() { }
     get canBePassedByReference() {
-        // It's a exception<..>, pass by reference.
+        // It's an exception<..>, pass by reference.
         return true;
     }
     get kind() {
         return 'error';
+    }
+    get isEquatable() {
+        return true;
     }
     getCode(language) {
         switch (language) {

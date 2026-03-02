@@ -21,18 +21,29 @@ export function createCppStruct(typename, properties) {
         includeNameInfo: false,
     };
     const cppFromJsiParams = properties
-        .map((p) => `JSIConverter<${p.getCode('c++', codeOptions)}>::fromJSI(runtime, obj.getProperty(runtime, "${p.name}"))`)
+        .map((p) => `JSIConverter<${p.getCode('c++', codeOptions)}>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "${p.name}")))`)
         .join(',\n');
     // Get C++ code for converting each member to a jsi::Value
     const cppToJsiCalls = properties
-        .map((p) => `obj.setProperty(runtime, "${p.name}", JSIConverter<${p.getCode('c++', codeOptions)}>::toJSI(runtime, arg.${p.escapedName}));`)
+        .map((p) => `obj.setProperty(runtime, PropNameIDCache::get(runtime, "${p.name}"), JSIConverter<${p.getCode('c++', codeOptions)}>::toJSI(runtime, arg.${p.escapedName}));`)
         .join('\n');
     // Get C++ code for verifying if jsi::Value can be converted to type
     const cppCanConvertCalls = properties
-        .map((p) => `if (!JSIConverter<${p.getCode('c++', codeOptions)}>::canConvert(runtime, obj.getProperty(runtime, "${p.name}"))) return false;`)
+        .map((p) => `if (!JSIConverter<${p.getCode('c++', codeOptions)}>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "${p.name}")))) return false;`)
         .join('\n');
+    // Only equatable types have an operator== overload
+    let equatableFunc;
+    const isEquatable = properties.every((p) => p.isEquatable);
+    if (isEquatable) {
+        equatableFunc = `friend bool operator==(const ${typename}& lhs, const ${typename}& rhs) = default;`;
+    }
+    else {
+        const nonEquatableTypes = properties
+            .filter((p) => !p.isEquatable)
+            .map((p) => p.name);
+        equatableFunc = `// ${typename} is not equatable because these properties are not equatable: ${nonEquatableTypes.join(', ')}`;
+    }
     // Get C++ includes for each extra-file we need to include
-    // Filter out self-references to avoid including ourselves (e.g., cyclic types like `Node { node?: Node }`)
     const includedTypes = properties
         .flatMap((r) => r.getRequiredImports('c++'))
         .filter((i) => i.name !== `${typename}.hpp`);
@@ -52,6 +63,7 @@ ${createFileMetadataString(`${typename}.hpp`)}
 ${includeNitroHeader('JSIConverter.hpp')}
 ${includeNitroHeader('NitroDefines.hpp')}
 ${includeNitroHeader('JSIHelpers.hpp')}
+${includeNitroHeader('PropNameIDCache.hpp')}
 
 ${cppForwardDeclarations.join('\n')}
 
@@ -62,13 +74,16 @@ namespace ${cxxNamespace} {
   /**
    * A struct which can be represented as a JavaScript object (${typename}).
    */
-  struct ${typename} {
+  struct ${typename} final {
   public:
     ${indent(cppStructProps, '    ')}
 
   public:
     ${typename}() = default;
     explicit ${typename}(${cppConstructorParams}): ${cppInitializerParams} {}
+
+  public:
+    ${indent(equatableFunc, '    ')}
   };
 
 } // namespace ${cxxNamespace}

@@ -17,6 +17,9 @@ export class PromiseType {
     get kind() {
         return 'promise';
     }
+    get isEquatable() {
+        return false;
+    }
     get resolverFunction() {
         if (this.resultingType.kind === 'void') {
             return new FunctionType(new VoidType(), []);
@@ -45,11 +48,11 @@ export class PromiseType {
                 throw new Error(`Language ${language} is not yet supported for PromiseType!`);
         }
     }
-    getExtraFiles(visited) {
-        return this.resultingType.getExtraFiles(visited);
+    getExtraFiles() {
+        return this.resultingType.getExtraFiles();
     }
-    getRequiredImports(language, visited) {
-        const imports = this.resultingType.getRequiredImports(language, visited);
+    getRequiredImports(language) {
+        const imports = this.resultingType.getRequiredImports(language);
         switch (language) {
             case 'c++':
                 imports.push({

@@ -32,6 +32,9 @@ export class HybridObjectType {
     get kind() {
         return 'hybrid-object';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language, options = {}) {
         const name = getHybridObjectName(this.hybridObjectName);
         const mode = options.mode ?? 'strong';

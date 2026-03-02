@@ -47,6 +47,9 @@ export class KotlinCxxBridgedType {
                 const keyType = new KotlinCxxBridgedType(record.keyType);
                 const valueType = new KotlinCxxBridgedType(record.valueType);
                 return keyType.needsSpecialHandling || valueType.needsSpecialHandling;
+            case 'uint64':
+                // ULong == Long, we need to cast
+                return true;
             default:
                 break;
         }
@@ -54,9 +57,10 @@ export class KotlinCxxBridgedType {
         return false;
     }
     getRequiredImports(language, visited = new Set()) {
-        const alreadyVisited = visited.has(this.type);
+        if (visited.has(this.type))
+            return [];
         visited.add(this.type);
-        const imports = alreadyVisited ? [] : this.type.getRequiredImports(language, visited);
+        const imports = this.type.getRequiredImports(language);
         if (language === 'c++') {
             // All C++ imports we need for the JNI bridge
             switch (this.type.kind) {
@@ -102,11 +106,6 @@ export class KotlinCxxBridgedType {
                         name: 'NitroModules/JArrayBuffer.hpp',
                         space: 'system',
                     });
-                    imports.push({
-                        language: 'c++',
-                        name: 'NitroModules/JUnit.hpp',
-                        space: 'system',
-                    });
                     break;
                 case 'promise':
                     imports.push({
@@ -114,6 +113,15 @@ export class KotlinCxxBridgedType {
                         name: 'NitroModules/JPromise.hpp',
                         space: 'system',
                     });
+                    const promiseType = getTypeAs(this.type, PromiseType);
+                    if (promiseType.resultingType.kind === 'void') {
+                        // Promise<void> uses JUnit
+                        imports.push({
+                            language: 'c++',
+                            name: 'NitroModules/JUnit.hpp',
+                            space: 'system',
+                        });
+                    }
                     break;
                 case 'date':
                     imports.push({
@@ -162,24 +170,20 @@ export class KotlinCxxBridgedType {
             }
         }
         // Recursively look into referenced types (e.g. the `T` of a `optional<T>`, or `T` of a `T[]`)
-        // Skip if we've already visited this type to avoid infinite recursion
-        if (!alreadyVisited) {
-            const referencedTypes = getReferencedTypes(this.type);
-            referencedTypes.forEach((t) => {
-                if (t === this.type) {
-                    // break a recursion - we already know this type
-                    return;
-                }
-                const bridged = new KotlinCxxBridgedType(t);
-                imports.push(...bridged.getRequiredImports(language, visited));
-            });
-        }
+        const referencedTypes = getReferencedTypes(this.type);
+        referencedTypes.forEach((t) => {
+            if (t === this.type) {
+                // break a recursion - we already know this type
+                return;
+            }
+            const bridged = new KotlinCxxBridgedType(t);
+            imports.push(...bridged.getRequiredImports(language, visited));
+        });
         return imports;
     }
     getExtraFiles(visited = new Set()) {
-        if (visited.has(this.type)) {
+        if (visited.has(this.type))
             return [];
-        }
         visited.add(this.type);
         const files = [];
         switch (this.type.kind) {
@@ -221,9 +225,12 @@ export class KotlinCxxBridgedType {
             case 'void':
             case 'number':
             case 'boolean':
-            case 'bigint':
+            case 'int64':
                 // primitives are not references
                 return this.getTypeCode('c++');
+            case 'uint64':
+                // ULong is unfortunately not representable in JNI. It's long + cast
+                return 'jlong';
             default:
                 return `jni::${referenceType}_ref<${this.getTypeCode('c++')}>`;
         }
@@ -231,8 +238,8 @@ export class KotlinCxxBridgedType {
     getTypeCode(language, isBoxed = false) {
         switch (this.type.kind) {
             case 'number':
-            case 'bigint':
             case 'boolean':
+            case 'int64':
                 if (isBoxed) {
                     return getKotlinBoxedPrimitiveType(this.type);
                 }
@@ -242,6 +249,21 @@ export class KotlinCxxBridgedType {
                         return 'jboolean';
                     }
                     return this.type.getCode(language);
+                }
+            case 'uint64':
+                // ULong is unfortunately not representable in JNI. It's long + cast
+                switch (language) {
+                    case 'c++':
+                        if (isBoxed) {
+                            return 'jni::JLong';
+                        }
+                        else {
+                            return 'jlong';
+                        }
+                    case 'kotlin':
+                        return 'Long';
+                    default:
+                        return this.type.getCode(language);
                 }
             case 'array':
                 const array = getTypeAs(this.type, ArrayType);
@@ -253,7 +275,10 @@ export class KotlinCxxBridgedType {
                                 return 'jni::JArrayDouble';
                             case 'boolean':
                                 return 'jni::JArrayBoolean';
-                            case 'bigint':
+                            case 'int64':
+                                return 'jni::JArrayLong';
+                            case 'uint64':
+                                // ULong is Long, we have to reinterpret cast it
                                 return 'jni::JArrayLong';
                             default:
                                 return `jni::JArrayClass<${bridgedItem.getTypeCode(language)}>`;
@@ -264,7 +289,10 @@ export class KotlinCxxBridgedType {
                                 return 'DoubleArray';
                             case 'boolean':
                                 return 'BooleanArray';
-                            case 'bigint':
+                            case 'int64':
+                                return 'LongArray';
+                            case 'uint64':
+                                // ULong is Long, we have to reinterpret cast it
                                 return 'LongArray';
                             default:
                                 return `Array<${bridgedItem.getTypeCode(language)}>`;
@@ -283,8 +311,8 @@ export class KotlinCxxBridgedType {
                 switch (language) {
                     case 'c++':
                         const recordType = getTypeAs(this.type, RecordType);
-                        const keyType = new KotlinCxxBridgedType(recordType.keyType).getTypeCode(language);
-                        const valueType = new KotlinCxxBridgedType(recordType.valueType).getTypeCode(language);
+                        const keyType = new KotlinCxxBridgedType(recordType.keyType).getTypeCode(language, true);
+                        const valueType = new KotlinCxxBridgedType(recordType.valueType).getTypeCode(language, true);
                         return `jni::JMap<${keyType}, ${valueType}>`;
                     default:
                         return this.type.getCode(language);
@@ -382,7 +410,8 @@ export class KotlinCxxBridgedType {
                             // primitives need to be boxed to make them nullable
                             case 'number':
                             case 'boolean':
-                            case 'bigint':
+                            case 'int64':
+                            case 'uint64':
                                 const boxed = getKotlinBoxedPrimitiveType(optional.wrappingType);
                                 return boxed;
                             default:
@@ -436,7 +465,8 @@ export class KotlinCxxBridgedType {
         switch (this.type.kind) {
             case 'number':
             case 'boolean':
-            case 'bigint':
+            case 'int64':
+            case 'uint64':
                 switch (language) {
                     case 'c++':
                         if (isBoxed) {
@@ -446,6 +476,14 @@ export class KotlinCxxBridgedType {
                         }
                         else {
                             return parameterName;
+                        }
+                    case 'kotlin':
+                        switch (this.type.kind) {
+                            case 'uint64':
+                                // Long -> ULong
+                                return `${parameterName}.toULong()`;
+                            default:
+                                return parameterName;
                         }
                     default:
                         return parameterName;
@@ -561,10 +599,12 @@ export class KotlinCxxBridgedType {
                         const record = getTypeAs(this.type, RecordType);
                         const key = new KotlinCxxBridgedType(record.keyType);
                         const value = new KotlinCxxBridgedType(record.valueType);
-                        const parseKey = key.parseFromCppToKotlin('__entry.first', 'c++');
-                        const parseValue = value.parseFromCppToKotlin('__entry.second', 'c++');
-                        const javaMapType = `jni::JMap<${key.getTypeCode('c++')}, ${value.getTypeCode('c++')}>`;
-                        const javaHashMapType = `jni::JHashMap<${key.getTypeCode('c++')}, ${value.getTypeCode('c++')}>`;
+                        const parseKey = key.parseFromCppToKotlin('__entry.first', 'c++', true);
+                        const parseValue = value.parseFromCppToKotlin('__entry.second', 'c++', true);
+                        const keyType = key.getTypeCode('c++', true);
+                        const valueType = value.getTypeCode('c++', true);
+                        const javaMapType = `jni::JMap<${keyType}, ${valueType}>`;
+                        const javaHashMapType = `jni::JHashMap<${keyType}, ${valueType}>`;
                         return `
 [&]() -> jni::local_ref<${javaMapType}> {
   auto __map = ${javaHashMapType}::create(${parameterName}.size());
@@ -587,7 +627,8 @@ export class KotlinCxxBridgedType {
                         switch (array.itemType.kind) {
                             case 'number':
                             case 'boolean':
-                            case 'bigint': {
+                            case 'int64':
+                            case 'uint64': {
                                 // primitive arrays can be constructed more efficiently with region/batch access.
                                 // no need to iterate through the entire array.
                                 return `
@@ -688,9 +729,10 @@ export class KotlinCxxBridgedType {
     }
     parseFromKotlinToCpp(parameterName, language, isBoxed = false) {
         switch (this.type.kind) {
-            case 'number':
             case 'boolean':
-            case 'bigint':
+            case 'number':
+            case 'int64':
+            case 'uint64':
                 switch (language) {
                     case 'c++':
                         let code;
@@ -702,11 +744,27 @@ export class KotlinCxxBridgedType {
                             // it's just the primitive type directly
                             code = parameterName;
                         }
-                        if (this.type.kind === 'boolean') {
-                            // jboolean =/= bool (it's a char in Java)
-                            code = `static_cast<bool>(${code})`;
+                        switch (this.type.kind) {
+                            case 'boolean':
+                                // jboolean =/= bool (it's a char in Java)
+                                code = `static_cast<bool>(${code})`;
+                                break;
+                            case 'uint64':
+                                // jlong =/= uint64 (it's signed in Java)
+                                code = `static_cast<uint64_t>(${code})`;
+                                break;
+                            default:
+                                break;
                         }
                         return code;
+                    case 'kotlin':
+                        switch (this.type.kind) {
+                            case 'uint64':
+                                // ULong -> Long
+                                return `${parameterName}.toLong()`;
+                            default:
+                                return parameterName;
+                        }
                     default:
                         return parameterName;
                 }
@@ -826,8 +884,8 @@ export class KotlinCxxBridgedType {
                         const record = getTypeAs(this.type, RecordType);
                         const key = new KotlinCxxBridgedType(record.keyType);
                         const value = new KotlinCxxBridgedType(record.valueType);
-                        const parseKey = key.parseFromKotlinToCpp('__entry.first', 'c++');
-                        const parseValue = value.parseFromKotlinToCpp('__entry.second', 'c++');
+                        const parseKey = key.parseFromKotlinToCpp('__entry.first', 'c++', true);
+                        const parseValue = value.parseFromKotlinToCpp('__entry.second', 'c++', true);
                         const cxxType = this.type.getCode('c++');
                         return `
 [&]() {
@@ -852,7 +910,8 @@ export class KotlinCxxBridgedType {
                         switch (array.itemType.kind) {
                             case 'number':
                             case 'boolean':
-                            case 'bigint': {
+                            case 'int64':
+                            case 'uint64': {
                                 // primitive arrays can use region/batch access,
                                 // which we can use to construct the vector directly instead of looping through it.
                                 return `

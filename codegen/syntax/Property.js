@@ -3,7 +3,6 @@ import {} from './SourceFile.js';
 import { Method } from './Method.js';
 import { VoidType } from './types/VoidType.js';
 import { Parameter } from './Parameter.js';
-import { isBooleanPropertyPrefix } from './helpers.js';
 export class Property {
     name;
     type;
@@ -19,20 +18,36 @@ export class Property {
     get jsSignature() {
         return `${this.name}: ${this.type.kind}`;
     }
-    getExtraFiles(visited) {
-        return this.type.getExtraFiles(visited);
+    getExtraFiles() {
+        return this.type.getExtraFiles();
     }
-    getRequiredImports(language, visited) {
-        return this.type.getRequiredImports(language, visited);
+    getRequiredImports(language) {
+        return this.type.getRequiredImports(language);
     }
     getGetterName(environment) {
-        if (this.type.kind === 'boolean' && isBooleanPropertyPrefix(this.name)) {
+        if (this.type.kind === 'boolean') {
             // Boolean accessors where the property starts with "is" or "has" are renamed in JVM and Swift
             switch (environment) {
                 case 'jvm':
+                    if (this.name.startsWith('is')) {
+                        // isSomething -> isSomething()
+                        return this.name;
+                    }
+                    else {
+                        break;
+                    }
                 case 'swift':
-                    // isSomething -> isSomething()
-                    return this.name;
+                    if (this.name.startsWith('is')) {
+                        // isSomething -> isSomething()
+                        return this.name;
+                    }
+                    else if (this.name.startsWith('has')) {
+                        // hasSomething -> hasSomething()
+                        return this.name;
+                    }
+                    else {
+                        break;
+                    }
                 default:
                     break;
             }
@@ -41,12 +56,20 @@ export class Property {
         return `get${capitalizeName(this.name)}`;
     }
     getSetterName(environment) {
-        if (this.type.kind === 'boolean' && this.name.startsWith('is')) {
+        if (this.type.kind === 'boolean') {
             // Boolean accessors where the property starts with "is" are renamed in JVM
-            if (environment === 'jvm') {
-                // isSomething -> setSomething()
-                const cleanName = this.name.replace('is', '');
-                return `set${capitalizeName(cleanName)}`;
+            switch (environment) {
+                case 'jvm':
+                    if (this.name.startsWith('is')) {
+                        // isSomething -> setSomething()
+                        const cleanName = this.name.replace('is', '');
+                        return `set${capitalizeName(cleanName)}`;
+                    }
+                    else {
+                        break;
+                    }
+                default:
+                    break;
             }
         }
         // isSomething -> setIsSomething()

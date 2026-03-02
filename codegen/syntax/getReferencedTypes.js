@@ -8,9 +8,8 @@ import { StructType } from './types/StructType.js';
 import { TupleType } from './types/TupleType.js';
 import { VariantType } from './types/VariantType.js';
 export function getReferencedTypes(type, visited = new Set()) {
-    if (visited.has(type)) {
+    if (visited.has(type))
         return [];
-    }
     visited.add(type);
     switch (type.kind) {
         case 'array':
@@ -38,22 +37,13 @@ export function getReferencedTypes(type, visited = new Set()) {
             ];
         case 'struct':
             const struct = getTypeAs(type, StructType);
-            return [
-                type,
-                ...struct.properties.flatMap((p) => getReferencedTypes(p, visited)),
-            ];
+            return [type, ...struct.properties.flatMap((p) => getReferencedTypes(p, visited))];
         case 'tuple':
             const tuple = getTypeAs(type, TupleType);
-            return [
-                type,
-                ...tuple.itemTypes.flatMap((t) => getReferencedTypes(t, visited)),
-            ];
+            return [type, ...tuple.itemTypes.flatMap((t) => getReferencedTypes(t, visited))];
         case 'variant':
             const variant = getTypeAs(type, VariantType);
-            return [
-                type,
-                ...variant.variants.flatMap((t) => getReferencedTypes(t, visited)),
-            ];
+            return [type, ...variant.variants.flatMap((t) => getReferencedTypes(t, visited))];
         default:
             return [type];
     }

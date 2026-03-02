@@ -108,9 +108,10 @@ export class SwiftCxxBridgedType {
         return bridge;
     }
     getRequiredImports(language, visited = new Set()) {
-        const alreadyVisited = visited.has(this.type);
+        if (visited.has(this.type))
+            return [];
         visited.add(this.type);
-        const imports = alreadyVisited ? [] : this.type.getRequiredImports(language, visited);
+        const imports = this.type.getRequiredImports(language);
         if (language === 'c++') {
             if (this.type.kind === 'array-buffer') {
                 imports.push({
@@ -122,24 +123,20 @@ export class SwiftCxxBridgedType {
             }
         }
         // Recursively look into referenced types (e.g. the `T` of a `optional<T>`, or `T` of a `T[]`)
-        // Skip if we've already visited this type to avoid infinite recursion
-        if (!alreadyVisited) {
-            const referencedTypes = getReferencedTypes(this.type);
-            referencedTypes.forEach((t) => {
-                if (t === this.type) {
-                    // break a recursion - we already know this type
-                    return;
-                }
-                const bridged = new SwiftCxxBridgedType(t);
-                imports.push(...bridged.getRequiredImports(language, visited));
-            });
-        }
+        const referencedTypes = getReferencedTypes(this.type);
+        referencedTypes.forEach((t) => {
+            if (t === this.type) {
+                // break a recursion - we already know this type
+                return;
+            }
+            const bridged = new SwiftCxxBridgedType(t);
+            imports.push(...bridged.getRequiredImports(language, visited));
+        });
         return imports;
     }
     getExtraFiles(visited = new Set()) {
-        if (visited.has(this.type)) {
+        if (visited.has(this.type))
             return [];
-        }
         visited.add(this.type);
         const files = [];
         switch (this.type.kind) {
@@ -319,7 +316,7 @@ export class SwiftCxxBridgedType {
                 switch (language) {
                     case 'swift':
                         return `
-{ () -> ${name.HybridTSpec} in
+{ () -> any ${name.HybridTSpec} in
   let __unsafePointer = ${getFunc}(${cppParameterName})
   let __instance = ${name.HybridTSpecCxx}.fromUnsafe(__unsafePointer)
   return __instance.get${name.HybridTSpec}()
@@ -434,10 +431,14 @@ export class SwiftCxxBridgedType {
                                 return `${cppParameterName}.has_value() ? ${cppParameterName}.pointee : nil`;
                             }
                         }
-                        // TODO: Remove this check for booleans once https://github.com/swiftlang/swift/issues/84848 is fixed.
-                        const swiftBug84848Workaround = optional.wrappingType.kind === 'boolean';
-                        if (!wrapping.needsSpecialHandling && !swiftBug84848Workaround) {
-                            return `${cppParameterName}.value`;
+                        // TODO: Remove this check for booleans/doubles once https://github.com/swiftlang/swift/issues/84848 is fixed.
+                        //       Right now, optionals of doubles or booleans (and who knows what else?) fail to compile when `.value` is used.
+                        const swiftBug84848Workaround = optional.wrappingType.kind === 'boolean' ||
+                            optional.wrappingType.kind === 'number';
+                        if (!swiftBug84848Workaround) {
+                            if (!wrapping.needsSpecialHandling) {
+                                return `${cppParameterName}.value`;
+                            }
                         }
                         return `
 { () -> ${optional.getCode('swift')} in

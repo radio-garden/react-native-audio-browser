@@ -11,6 +11,9 @@ export class OptionalType {
     get kind() {
         return 'optional';
     }
+    get isEquatable() {
+        return this.wrappingType.isEquatable;
+    }
     get needsBraces() {
         switch (this.wrappingType.kind) {
             case 'function':
@@ -42,11 +45,11 @@ export class OptionalType {
                 throw new Error(`Language ${language} is not yet supported for OptionalType!`);
         }
     }
-    getExtraFiles(visited) {
-        return this.wrappingType.getExtraFiles(visited);
+    getExtraFiles() {
+        return this.wrappingType.getExtraFiles();
     }
-    getRequiredImports(language, visited) {
-        const imports = this.wrappingType.getRequiredImports(language, visited);
+    getRequiredImports(language) {
+        const imports = this.wrappingType.getRequiredImports(language);
         if (language === 'c++') {
             imports.push({
                 language: 'c++',

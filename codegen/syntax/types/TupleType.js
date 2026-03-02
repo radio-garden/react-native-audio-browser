@@ -11,6 +11,9 @@ export class TupleType {
     get kind() {
         return 'tuple';
     }
+    get isEquatable() {
+        return this.itemTypes.every((t) => t.isEquatable);
+    }
     getCode(language, options) {
         const types = this.itemTypes.map((t) => t.getCode(language, options));
         switch (language) {
@@ -22,11 +25,11 @@ export class TupleType {
                 throw new Error(`Language ${language} is not yet supported for TupleType!`);
         }
     }
-    getExtraFiles(visited) {
-        return this.itemTypes.flatMap((t) => t.getExtraFiles(visited));
+    getExtraFiles() {
+        return this.itemTypes.flatMap((t) => t.getExtraFiles());
     }
-    getRequiredImports(language, visited) {
-        const imports = this.itemTypes.flatMap((t) => t.getRequiredImports(language, visited));
+    getRequiredImports(language) {
+        const imports = this.itemTypes.flatMap((t) => t.getRequiredImports(language));
         if (language === 'c++') {
             imports.push({
                 language: 'c++',

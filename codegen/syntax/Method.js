@@ -99,14 +99,14 @@ ${signature} {
                 throw new Error(`Language ${language} is not yet supported for property getters!`);
         }
     }
-    getExtraFiles(visited) {
-        const returnTypeExtraFiles = this.returnType.getExtraFiles(visited);
-        const paramsExtraFiles = this.parameters.flatMap((p) => p.getExtraFiles(visited));
+    getExtraFiles() {
+        const returnTypeExtraFiles = this.returnType.getExtraFiles();
+        const paramsExtraFiles = this.parameters.flatMap((p) => p.getExtraFiles());
         return [...returnTypeExtraFiles, ...paramsExtraFiles];
     }
-    getRequiredImports(language, visited) {
-        const returnTypeFiles = this.returnType.getRequiredImports(language, visited);
-        const paramsImports = this.parameters.flatMap((p) => p.getRequiredImports(language, visited));
+    getRequiredImports(language) {
+        const returnTypeFiles = this.returnType.getRequiredImports(language);
+        const paramsImports = this.parameters.flatMap((p) => p.getRequiredImports(language));
         return [...returnTypeFiles, ...paramsImports];
     }
 }

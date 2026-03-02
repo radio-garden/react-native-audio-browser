@@ -6,6 +6,9 @@ export class DateType {
     get kind() {
         return 'date';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

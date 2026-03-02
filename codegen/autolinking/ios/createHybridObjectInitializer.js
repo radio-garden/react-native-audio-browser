@@ -10,7 +10,7 @@ export function createHybridObjectIntializer() {
     const umbrellaHeaderName = getUmbrellaHeaderName();
     const bridgeNamespace = NitroConfig.current.getSwiftBridgeNamespace('swift');
     const autolinkedHybridObjects = NitroConfig.current.getAutolinkedHybridObjects();
-    const swiftFunctions = [];
+    const swiftRegistrations = [];
     const cppRegistrations = [];
     const cppImports = [];
     let containsSwiftObjects = false;
@@ -28,13 +28,13 @@ export function createHybridObjectIntializer() {
         if (config?.swift != null) {
             // Autolink a Swift HybridObject!
             containsSwiftObjects = true;
-            const { cppCode, requiredImports, swiftFunction } = createSwiftHybridObjectRegistration({
+            const { cppCode, requiredImports, swiftRegistrationMethods } = createSwiftHybridObjectRegistration({
                 hybridObjectName: hybridObjectName,
                 swiftClassName: config.swift,
             });
             cppImports.push(...requiredImports);
             cppRegistrations.push(cppCode);
-            swiftFunctions.push(swiftFunction);
+            swiftRegistrations.push(swiftRegistrationMethods);
         }
     }
     if (cppRegistrations.length === 0) {
@@ -72,10 +72,14 @@ ${imports}
     const swiftCode = `
 ${createFileMetadataString(`${autolinkingClassName}.swift`)}
 
+import NitroModules
+
+// TODO: Use empty enums once Swift supports exporting them as namespaces
+//       See: https://github.com/swiftlang/swift/pull/83616
 public final class ${autolinkingClassName} {
   public typealias bridge = ${bridgeNamespace}
 
-  ${indent(swiftFunctions.join('\n\n'), '  ')}
+  ${indent(swiftRegistrations.join('\n\n'), '  ')}
 }
   `.trim();
     return [

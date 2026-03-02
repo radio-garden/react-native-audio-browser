@@ -6,6 +6,9 @@ export class NullType {
     get kind() {
         return 'null';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

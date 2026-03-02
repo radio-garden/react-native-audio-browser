@@ -26,6 +26,9 @@ export class VariantType {
     get kind() {
         return 'variant';
     }
+    get isEquatable() {
+        return this.variants.every((v) => v.isEquatable);
+    }
     get jsType() {
         return this.variants.map((v) => v.kind).join(' | ');
     }
@@ -58,11 +61,11 @@ export class VariantType {
                 throw new Error(`Language ${language} is not yet supported for VariantType!`);
         }
     }
-    getExtraFiles(visited) {
-        return this.variants.flatMap((v) => v.getExtraFiles(visited));
+    getExtraFiles() {
+        return this.variants.flatMap((v) => v.getExtraFiles());
     }
-    getRequiredImports(language, visited) {
-        const imports = this.variants.flatMap((v) => v.getRequiredImports(language, visited));
+    getRequiredImports(language) {
+        const imports = this.variants.flatMap((v) => v.getRequiredImports(language));
         if (language === 'c++') {
             imports.push({
                 language: 'c++',

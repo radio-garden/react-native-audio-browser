@@ -2,47 +2,54 @@ import { NitroConfig } from '../../config/NitroConfig.js';
 import { createCppStruct } from '../c++/CppStruct.js';
 import { getForwardDeclaration } from '../c++/getForwardDeclaration.js';
 import {} from '../SourceFile.js';
+// Module-level re-entrancy guards for cyclic struct types.
+// Node.js is single-threaded so these are safe.
+const isEquatableVisited = new Set();
+const extraFilesVisited = new Set();
+const requiredImportsVisited = new Set();
 export class StructType {
     structName;
+    _propertiesInput;
     _properties = null;
-    _propertiesGetter = null;
     _declarationFile = null;
     _isInitializing = false;
     constructor(structName, properties) {
         this.structName = structName;
-        if (typeof properties === 'function') {
-            // Lazy initialization for cyclic types
-            this._propertiesGetter = properties;
-        }
-        else {
-            this._properties = properties;
-            this._declarationFile = createCppStruct(structName, properties);
-        }
+        this._propertiesInput = properties;
         if (this.structName.startsWith('__')) {
             throw new Error(`Struct name cannot start with two underscores (__) as this is reserved syntax for Nitrogen! (In ${this.structName})`);
+        }
+        // If properties were provided directly (not lazy), initialize eagerly.
+        if (Array.isArray(properties)) {
+            this._properties = properties;
+            this._declarationFile = createCppStruct(structName, properties);
+            if (this._properties.length === 0) {
+                throw new Error(`Empty structs are not supported in Nitrogen! Add at least one property to ${this.structName}.`);
+            }
+        }
+    }
+    ensureInitialized() {
+        if (this._properties !== null)
+            return;
+        if (this._isInitializing)
+            return; // Re-entrancy guard for cyclic types
+        this._isInitializing = true;
+        try {
+            const props = typeof this._propertiesInput === 'function'
+                ? this._propertiesInput()
+                : this._propertiesInput;
+            this._properties = props;
+            this._declarationFile = createCppStruct(this.structName, props);
+            if (this._properties.length === 0) {
+                throw new Error(`Empty structs are not supported in Nitrogen! Add at least one property to ${this.structName}.`);
+            }
+        }
+        finally {
+            this._isInitializing = false;
         }
     }
     get initialized() {
         return this._declarationFile !== null;
-    }
-    ensureInitialized() {
-        if (this._isInitializing) {
-            throw new Error(`StructType "${this.structName}" accessed during cyclic initialization`);
-        }
-        if (this._properties === null && this._propertiesGetter !== null) {
-            this._isInitializing = true;
-            try {
-                this._properties = this._propertiesGetter();
-                this._propertiesGetter = null;
-                if (this._properties.length === 0) {
-                    throw new Error(`Empty structs are not supported in Nitrogen! Add at least one property to ${this.structName}.`);
-                }
-                this._declarationFile = createCppStruct(this.structName, this._properties);
-            }
-            finally {
-                this._isInitializing = false;
-            }
-        }
     }
     get properties() {
         this.ensureInitialized();
@@ -58,6 +65,20 @@ export class StructType {
     }
     get kind() {
         return 'struct';
+    }
+    get isEquatable() {
+        // Re-entrancy guard: if we are already checking isEquatable for this
+        // struct (cyclic reference), return true as an optimistic default.
+        if (isEquatableVisited.has(this)) {
+            return true;
+        }
+        isEquatableVisited.add(this);
+        try {
+            return this.properties.every((p) => p.isEquatable);
+        }
+        finally {
+            isEquatableVisited.delete(this);
+        }
     }
     getCode(language, { fullyQualified } = {}) {
         switch (language) {
@@ -76,40 +97,51 @@ export class StructType {
                 throw new Error(`Language ${language} is not yet supported for StructType!`);
         }
     }
-    getExtraFiles(visited = new Set()) {
-        if (visited.has(this)) {
+    getExtraFiles() {
+        if (extraFilesVisited.has(this))
             return [];
-        }
-        visited.add(this);
-        // If still initializing (cyclic reference), return empty for now
-        // The parent struct will include all necessary files once fully initialized
-        if (!this.initialized) {
+        // If not yet initialized (partially constructed during a cycle), skip.
+        if (!this.initialized)
             return [];
+        extraFilesVisited.add(this);
+        try {
+            const referencedTypes = this.declarationFile.referencedTypes.flatMap((r) => r.getExtraFiles());
+            return [this.declarationFile, ...referencedTypes];
         }
-        const declFile = this.declarationFile;
-        const referencedTypes = declFile.referencedTypes.flatMap((r) => r.getExtraFiles(visited));
-        return [declFile, ...referencedTypes];
+        finally {
+            extraFilesVisited.delete(this);
+        }
     }
-    getRequiredImports(language, visited = new Set()) {
-        if (visited.has(this)) {
+    getRequiredImports(language) {
+        if (requiredImportsVisited.has(this))
             return [];
-        }
-        visited.add(this);
         const imports = [];
         if (language === 'c++') {
             const cxxNamespace = NitroConfig.current.getCxxNamespace('c++');
-            // If still initializing (cyclic reference), use structName directly
-            // The forward declaration is still valid even during initialization
-            const name = this.initialized
-                ? this.declarationFile.name
-                : `${this.structName}.hpp`;
-            const lang = this.initialized ? this.declarationFile.language : 'c++';
-            imports.push({
-                name: name,
-                language: lang,
-                forwardDeclaration: getForwardDeclaration('struct', this.structName, cxxNamespace),
-                space: 'user',
-            });
+            if (!this.initialized) {
+                // During cyclic initialization, declarationFile isn't available yet.
+                // Use the structName directly to construct the import.
+                imports.push({
+                    name: `${this.structName}.hpp`,
+                    language: 'c++',
+                    forwardDeclaration: getForwardDeclaration('struct', this.structName, cxxNamespace),
+                    space: 'user',
+                });
+            }
+            else {
+                requiredImportsVisited.add(this);
+                try {
+                    imports.push({
+                        name: this.declarationFile.name,
+                        language: this.declarationFile.language,
+                        forwardDeclaration: getForwardDeclaration('struct', this.structName, cxxNamespace),
+                        space: 'user',
+                    });
+                }
+                finally {
+                    requiredImportsVisited.delete(this);
+                }
+            }
         }
         return imports;
     }

@@ -4,7 +4,8 @@ import { getTypeAs } from '../types/getTypeAs.js';
 import { OptionalType } from '../types/OptionalType.js';
 function isPrimitive(type) {
     switch (type.kind) {
-        case 'bigint':
+        case 'int64':
+        case 'uint64':
         case 'boolean':
         case 'number':
         case 'string':

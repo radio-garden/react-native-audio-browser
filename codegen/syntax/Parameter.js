@@ -56,10 +56,10 @@ export class Parameter {
                 throw new Error(`Language ${language} is not yet supported for parameters!`);
         }
     }
-    getExtraFiles(visited) {
-        return this.type.getExtraFiles(visited);
+    getExtraFiles() {
+        return this.type.getExtraFiles();
     }
-    getRequiredImports(language, visited) {
-        return this.type.getRequiredImports(language, visited);
+    getRequiredImports(language) {
+        return this.type.getRequiredImports(language);
     }
 }

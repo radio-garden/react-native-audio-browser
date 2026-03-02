@@ -6,6 +6,9 @@ export class VoidType {
     get kind() {
         return 'void';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

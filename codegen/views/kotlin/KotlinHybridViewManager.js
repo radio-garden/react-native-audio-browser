@@ -26,13 +26,20 @@ import com.facebook.react.uimanager.ReactStylesDiffMap
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.StateWrapper
 import com.facebook.react.uimanager.ThemedReactContext
+import com.margelo.nitro.R.id.associated_hybrid_view_tag
+import com.margelo.nitro.views.RecyclableView
 import ${javaNamespace}.*
 
 /**
  * Represents the React Native \`ViewManager\` for the "${spec.name}" Nitro HybridView.
  */
-open class ${manager}: SimpleViewManager<View>() {
-  private val views = hashMapOf<View, ${viewImplementation}>()
+public class ${manager}: SimpleViewManager<View>() {
+  init {
+    if (RecyclableView::class.java.isAssignableFrom(${viewImplementation}::class.java)) {
+      // Enable view recycling
+      super.setupViewRecycling()
+    }
+  }
 
   override fun getName(): String {
     return "${spec.name}"
@@ -41,17 +48,13 @@ open class ${manager}: SimpleViewManager<View>() {
   override fun createViewInstance(reactContext: ThemedReactContext): View {
     val hybridView = ${viewImplementation}(reactContext)
     val view = hybridView.view
-    views[view] = hybridView
+    view.setTag(associated_hybrid_view_tag, hybridView)
     return view
   }
 
-  override fun onDropViewInstance(view: View) {
-    super.onDropViewInstance(view)
-    views.remove(view)
-  }
-
   override fun updateState(view: View, props: ReactStylesDiffMap, stateWrapper: StateWrapper): Any? {
-    val hybridView = views[view] ?: throw Error("Couldn't find view $view in local views table!")
+    val hybridView = view.getTag(associated_hybrid_view_tag) as? ${viewImplementation}
+      ?: throw Error("Couldn't find view $view in local views table!")
 
     // 1. Update each prop individually
     hybridView.beforeUpdate()
@@ -60,6 +63,23 @@ open class ${manager}: SimpleViewManager<View>() {
 
     // 2. Continue in base View props
     return super.updateState(view, props, stateWrapper)
+  }
+
+  protected override fun prepareToRecycleView(reactContext: ThemedReactContext, view: View): View? {
+    super.prepareToRecycleView(reactContext, view)
+    val hybridView = view.getTag(associated_hybrid_view_tag) as? ${viewImplementation}
+      ?: return null
+
+    @Suppress("USELESS_IS_CHECK")
+    if (hybridView is RecyclableView) {
+      // Recycle in it's implementation
+      hybridView.prepareForRecycle()
+
+      // Maybe update the view if it changed
+      return hybridView.view
+    } else {
+      return null
+    }
   }
 }
   `.trim();
@@ -94,8 +114,8 @@ ${createFileMetadataString(`J${stateUpdaterName}.hpp`)}
 #endif
 
 #include <fbjni/fbjni.h>
-#include <react/fabric/StateWrapperImpl.h>
 #include <react/fabric/CoreComponentsRegistry.h>
+#include <react/fabric/StateWrapperImpl.h>
 #include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <NitroModules/NitroDefines.hpp>
 #include <NitroModules/JStateWrapper.hpp>
@@ -106,7 +126,7 @@ namespace ${cxxNamespace} {
 
 using namespace facebook;
 
-class J${stateUpdaterName}: public jni::JavaClass<J${stateUpdaterName}> {
+class J${stateUpdaterName} final: public jni::JavaClass<J${stateUpdaterName}> {
 public:
   static constexpr auto kJavaDescriptor = "L${updaterJniDescriptor};";
 
@@ -134,9 +154,9 @@ public:
         const name = escapeCppName(p.name);
         const setter = p.getSetterName('other');
         return `
-if (props.${name}.isDirty) {
-  view->${setter}(props.${name}.value);
-  // TODO: Set isDirty = false
+if (props->${name}.isDirty) {
+  view->${setter}(props->${name}.value);
+  props->${name}.isDirty = false;
 }
     `.trim();
     });
@@ -146,6 +166,7 @@ ${createFileMetadataString(`J${stateUpdaterName}.cpp`)}
 #include "J${stateUpdaterName}.hpp"
 #include "views/${component}.hpp"
 #include <NitroModules/NitroDefines.hpp>
+#include <react/fabric/StateWrapperImpl.h>
 
 namespace ${cxxNamespace} {
 
@@ -159,32 +180,32 @@ void J${stateUpdaterName}::updateViewProps(jni::alias_ref<jni::JClass> /* class 
 
   // Get concrete StateWrapperImpl from passed StateWrapper interface object
   jobject rawStateWrapper = stateWrapperInterface.get();
-  if (!stateWrapperInterface->isInstanceOf(react::StateWrapperImpl::javaClassStatic())) {
+  if (!stateWrapperInterface->isInstanceOf(react::StateWrapperImpl::javaClassStatic())) [[unlikely]] {
       throw std::runtime_error("StateWrapper is not a StateWrapperImpl");
   }
   auto stateWrapper = jni::alias_ref<react::StateWrapperImpl::javaobject>{
             static_cast<react::StateWrapperImpl::javaobject>(rawStateWrapper)};
-
   std::shared_ptr<const react::State> state = stateWrapper->cthis()->getState();
-  auto concreteState = std::dynamic_pointer_cast<const ConcreteStateData>(state);
+  auto concreteState = std::static_pointer_cast<const ConcreteStateData>(state);
   const ${stateClassName}& data = concreteState->getData();
-  const std::optional<${propsClassName}>& maybeProps = data.getProps();
-  if (!maybeProps.has_value()) {
+  const std::shared_ptr<${propsClassName}>& props = data.getProps();
+  if (props == nullptr) [[unlikely]] {
     // Props aren't set yet!
     throw std::runtime_error("${stateClassName}'s data doesn't contain any props!");
   }
-  const ${propsClassName}& props = maybeProps.value();
+
+  // Update all props if they are dirty
   ${indent(propsUpdaterCalls.join('\n'), '  ')}
 
   // Update hybridRef if it changed
-  if (props.hybridRef.isDirty) {
+  if (props->hybridRef.isDirty) {
     // hybridRef changed - call it with new this
-    const auto& maybeFunc = props.hybridRef.value;
+    const auto& maybeFunc = props->hybridRef.value;
     if (maybeFunc.has_value()) {
       std::shared_ptr<${JHybridTSpec}> shared = javaView->cthis()->shared_cast<${JHybridTSpec}>();
       maybeFunc.value()(shared);
     }
-    // TODO: Set isDirty = false
+    props->hybridRef.isDirty = false;
   }
 }
 

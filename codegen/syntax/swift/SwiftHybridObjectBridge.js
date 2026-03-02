@@ -41,6 +41,11 @@ public final func beforeUpdate() {
 public final func afterUpdate() {
   __implementation.afterUpdate()
 }
+`.trim(), `
+public final func maybePrepareForRecycle() {
+  guard let recyclable = __implementation as? any RecyclableView else { return }
+  recyclable.prepareForRecycle()
+}
 `.trim());
     }
     const hybridObject = new HybridObjectType(spec);
@@ -77,7 +82,6 @@ public override func getCxxPart() -> bridge.${baseBridge.specializationName} {
     const swiftCxxWrapperCode = `
 ${createFileMetadataString(`${name.HybridTSpecCxx}.swift`)}
 
-import Foundation
 ${imports.join('\n')}
 
 /**
@@ -166,6 +170,14 @@ ${hasBase ? `open class ${name.HybridTSpecCxx} : ${baseClasses.join(', ')}` : `o
   @inline(__always)
   public ${hasBase ? 'override var' : 'var'} memorySize: Int {
     return MemoryHelper.getSizeOf(self.__implementation) + self.__implementation.memorySize
+  }
+
+  /**
+   * Compares this object with the given [other] object for reference equality.
+   */
+  @inline(__always)
+  public func equals(other: ${name.HybridTSpecCxx}) -> Bool {
+    return self.__implementation === other.__implementation
   }
 
   /**
@@ -334,6 +346,12 @@ namespace ${cxxNamespace} {
   public:
     inline size_t getExternalMemorySize() noexcept override {
       return _swiftPart.getMemorySize();
+    }
+    bool equals(const std::shared_ptr<HybridObject>& other) override {
+      if (auto otherCast = std::dynamic_pointer_cast<${name.HybridTSpecSwift}>(other)) {
+        return _swiftPart.equals(otherCast->_swiftPart);
+      }
+      return false;
     }
     void dispose() noexcept override {
       _swiftPart.dispose();

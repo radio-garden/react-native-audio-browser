@@ -11,6 +11,9 @@ export class CustomType {
     get kind() {
         return 'custom-type';
     }
+    get isEquatable() {
+        return false;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

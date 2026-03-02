@@ -134,7 +134,7 @@ if (isInstanceOf(${namespace}::${innerName}::javaClassStatic())) {
         const innerName = capitalizeName(label);
         const descriptor = NitroConfig.current.getAndroidPackage('c++/jni', `${kotlinName}$${innerName}`);
         return `
-class ${innerName}: public jni::JavaClass<${innerName}, J${kotlinName}> {
+class ${innerName} final: public jni::JavaClass<${innerName}, J${kotlinName}> {
 public:
   static auto constexpr kJavaDescriptor = "L${descriptor};";
 

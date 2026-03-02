@@ -1,10 +1,55 @@
 import { NitroConfig } from '../../config/NitroConfig.js';
 import { capitalizeName, indent } from '../../utils.js';
+import { getForwardDeclaration } from '../c++/getForwardDeclaration.js';
 import { includeHeader } from '../c++/includeNitroHeader.js';
 import { getReferencedTypes } from '../getReferencedTypes.js';
 import { createFileMetadataString, isNotDuplicate } from '../helpers.js';
-import { detectCyclicFunctionDependencies, partitionAndTransformImports, } from './detectCyclicDependencies.js';
+import { FunctionType } from '../types/FunctionType.js';
+import { getTypeAs } from '../types/getTypeAs.js';
+import { StructType } from '../types/StructType.js';
 import { KotlinCxxBridgedType } from './KotlinCxxBridgedType.js';
+function detectCyclicFunctionDependencies(structType) {
+    const cyclicNames = new Set();
+    const structName = structType.structName;
+    // Check each property's referenced types for functions that reference back to this struct
+    for (const prop of structType.properties) {
+        const referencedTypes = getReferencedTypes(prop);
+        for (const refType of referencedTypes) {
+            if (refType.kind === 'function') {
+                const funcType = getTypeAs(refType, FunctionType);
+                // Check if this function references our struct
+                const funcRefs = getReferencedTypes(funcType);
+                for (const funcRef of funcRefs) {
+                    if (funcRef.kind === 'struct' &&
+                        getTypeAs(funcRef, StructType).structName === structName) {
+                        cyclicNames.add(funcType.specializationName);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return { cyclicNames, hasCyclicDeps: cyclicNames.size > 0 };
+}
+function partitionImports(imports, cyclicNames) {
+    const regularIncludes = [];
+    const cyclicIncludes = [];
+    for (const imp of imports) {
+        const header = includeHeader(imp);
+        // Check if this import is for a cyclic function type
+        const isCyclic = Array.from(cyclicNames).some((name) => imp.name === `J${name}.hpp`);
+        if (isCyclic) {
+            cyclicIncludes.push(header);
+        }
+        else {
+            regularIncludes.push(header);
+        }
+    }
+    return {
+        regularIncludes: regularIncludes.filter(isNotDuplicate).sort(),
+        cyclicIncludes: cyclicIncludes.filter(isNotDuplicate).sort(),
+    };
+}
 export function createKotlinStruct(structType) {
     const packageName = NitroConfig.current.getAndroidPackage('java/kotlin');
     const bridgedProperties = structType.properties.map((p) => ({
@@ -52,7 +97,7 @@ data class ${structType.structName}(
 ) {
   ${indent(secondaryConstructor, '  ')}
 
-  private companion object {
+  companion object {
     /**
      * Constructor called from C++
      */
@@ -74,17 +119,8 @@ data class ${structType.structName}(
         .flatMap((p) => getReferencedTypes(p))
         .map((t) => new KotlinCxxBridgedType(t))
         .flatMap((t) => t.getRequiredImports('c++'))
-        // Filter out self-includes
         .filter((i) => i.name !== `J${structType.structName}.hpp`);
-    // Detect cyclic function references: function types that reference this struct
-    // These function JNI headers (J<FuncName>.hpp) would create circular includes
-    const { cyclicNames: cyclicFunctionNames, hasCyclicDeps } = detectCyclicFunctionDependencies(structType);
-    // Partition imports into regular and cyclic includes in a single pass
-    const { regularIncludes, cyclicIncludes } = partitionAndTransformImports(imports, cyclicFunctionNames, includeHeader);
-    // Generate forward declarations for cyclic function types
-    const forwardDeclarations = Array.from(cyclicFunctionNames)
-        .map((funcName) => `struct J${funcName};`)
-        .join('\n  ');
+    const { cyclicNames, hasCyclicDeps } = detectCyclicFunctionDependencies(structType);
     const files = [];
     files.push({
         content: code,
@@ -94,8 +130,14 @@ data class ${structType.structName}(
         platform: 'android',
     });
     if (hasCyclicDeps) {
-        // For cyclic dependencies: header with declarations only, cpp with implementations
-        const fbjniHeader = `
+        // Split into .hpp (declarations) and .cpp (implementations)
+        const { regularIncludes, cyclicIncludes } = partitionImports(imports, cyclicNames);
+        // Forward declarations for cyclic function types
+        const forwardDeclarations = Array.from(cyclicNames)
+            .map((name) => getForwardDeclaration('struct', `J${name}`, cxxNamespace))
+            .sort()
+            .join('\n');
+        const hppCode = `
 ${createFileMetadataString(`J${structType.structName}.hpp`)}
 
 #pragma once
@@ -105,12 +147,11 @@ ${createFileMetadataString(`J${structType.structName}.hpp`)}
 
 ${regularIncludes.join('\n')}
 
+${forwardDeclarations}
+
 namespace ${cxxNamespace} {
 
   using namespace facebook;
-
-  // Forward declarations for cyclic dependencies
-  ${forwardDeclarations}
 
   /**
    * The C++ JNI bridge between the C++ struct "${structType.structName}" and the the Kotlin data class "${structType.structName}".
@@ -137,12 +178,11 @@ namespace ${cxxNamespace} {
 
 } // namespace ${cxxNamespace}
     `.trim();
-        const fbjniCpp = `
+        const cppCode = `
 ${createFileMetadataString(`J${structType.structName}.cpp`)}
 
 #include "J${structType.structName}.hpp"
 
-// Include cyclic dependencies in the .cpp file where all types are complete
 ${cyclicIncludes.join('\n')}
 
 namespace ${cxxNamespace} {
@@ -158,14 +198,14 @@ namespace ${cxxNamespace} {
 } // namespace ${cxxNamespace}
     `.trim();
         files.push({
-            content: fbjniHeader,
+            content: hppCode,
             language: 'c++',
             name: `J${structType.structName}.hpp`,
             subdirectory: [],
             platform: 'android',
         });
         files.push({
-            content: fbjniCpp,
+            content: cppCode,
             language: 'c++',
             name: `J${structType.structName}.cpp`,
             subdirectory: [],
@@ -173,8 +213,8 @@ namespace ${cxxNamespace} {
         });
     }
     else {
-        // No cyclic dependencies - use the original inline header-only code
-        const allIncludes = imports
+        // No cyclic dependencies - generate single inline .hpp (original behavior)
+        const includes = imports
             .map((i) => includeHeader(i))
             .filter(isNotDuplicate)
             .sort();
@@ -186,7 +226,7 @@ ${createFileMetadataString(`J${structType.structName}.hpp`)}
 #include <fbjni/fbjni.h>
 #include "${structType.declarationFile.name}"
 
-${allIncludes.join('\n')}
+${includes.join('\n')}
 
 namespace ${cxxNamespace} {
 
@@ -220,7 +260,7 @@ namespace ${cxxNamespace} {
   };
 
 } // namespace ${cxxNamespace}
-    `.trim();
+  `.trim();
         files.push({
             content: fbjniCode,
             language: 'c++',

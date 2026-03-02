@@ -65,6 +65,9 @@ export class EnumType {
     get kind() {
         return 'enum';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language, { fullyQualified } = {}) {
         switch (language) {
             case 'c++':

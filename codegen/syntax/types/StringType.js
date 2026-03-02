@@ -6,6 +6,9 @@ export class StringType {
     get kind() {
         return 'string';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

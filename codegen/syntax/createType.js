@@ -2,7 +2,7 @@ import { ts, Type as TSMorphType } from 'ts-morph';
 import { BooleanType } from './types/BooleanType.js';
 import { NumberType } from './types/NumberType.js';
 import { StringType } from './types/StringType.js';
-import { BigIntType } from './types/BigIntType.js';
+import { Int64Type } from './types/Int64Type.js';
 import { VoidType } from './types/VoidType.js';
 import { ArrayType } from './types/ArrayType.js';
 import { FunctionType } from './types/FunctionType.js';
@@ -25,10 +25,11 @@ import { getBaseTypes, getHybridObjectNitroModuleConfig } from '../utils.js';
 import { DateType } from './types/DateType.js';
 import { NitroConfig } from '../config/NitroConfig.js';
 import { CustomType } from './types/CustomType.js';
-import { isSyncFunction, isArrayBuffer, isCustomType, isDate, isError, isMap, isPromise, isRecord, } from './isCoreType.js';
+import { isSyncFunction, isArrayBuffer, isCustomType, isDate, isError, isMap, isPromise, isRecord, isInt64, isUInt64, } from './isCoreType.js';
 import { getCustomTypeConfig } from './getCustomTypeConfig.js';
 import { compareLooselyness } from './helpers.js';
 import { NullType } from './types/NullType.js';
+import { UInt64Type } from './types/UInt64Type.js';
 function getHybridObjectName(type) {
     const symbol = isHybridView(type) ? type.getAliasSymbol() : type.getSymbol();
     if (symbol == null) {
@@ -81,13 +82,13 @@ const processingStructs = {
     'swift': new Set(),
     'kotlin': new Set(),
 };
-// Tracks whether we're inside a reference type (function, promise, array) where
-// struct references are allowed because they become pointers/references in C++
+// Tracks whether we're inside a reference type (function, promise, array, record)
+// where struct references are allowed because they become pointers/references in C++
 let insideReferenceType = false;
 /**
  * Creates a struct type with cycle detection.
  * Throws an error if a direct cyclic struct property reference is detected.
- * References through functions/promises/arrays are allowed (they're reference types).
+ * References through functions/promises/arrays/records are allowed (they're reference types).
  */
 function createStructWithCycleDetection(language, key, typename, type) {
     if (processingStructs[language].has(key) && !insideReferenceType) {
@@ -121,7 +122,7 @@ function createStructWithCycleDetection(language, key, typename, type) {
     return struct;
 }
 /**
- * Wraps createType calls that are inside reference types (functions, promises, arrays).
+ * Wraps createType calls that are inside reference types (functions, promises, arrays, records).
  * Struct references inside these are allowed because they become pointers in C++.
  */
 function createTypeInsideReference(language, type, isOptional) {
@@ -208,8 +209,11 @@ export function createType(language, type, isOptional) {
         else if (type.isString()) {
             return new StringType();
         }
-        else if (type.isBigInt() || type.isBigIntLiteral()) {
-            return new BigIntType();
+        else if (isInt64(type)) {
+            return new Int64Type();
+        }
+        else if (isUInt64(type)) {
+            return new UInt64Type();
         }
         else if (type.isVoid()) {
             return new VoidType();
@@ -373,12 +377,18 @@ export function createType(language, type, isOptional) {
         }
         else if (type.isUndefined()) {
             throw new Error(`The TypeScript type "undefined" cannot be represented in Nitro.\n` +
-                `- If you want to make a type optional, add \`?\` to it's name, or make it an union with \`undefined\`.\n` +
+                `- If you want to make a type optional, add \`?\` to its name, or make it an union with \`undefined\`.\n` +
                 `- If you want a method that returns nothing, use \`void\` instead.\n` +
                 `- If you want to represent an explicit absence of a value, use \`null\` instead.`);
         }
         else if (type.isAny()) {
             throw new Error(`The TypeScript type "${type.getText()}" resolved to any - any is not supported in Nitro.`);
+        }
+        else if (type.isBigInt()) {
+            throw new Error(`Using a bigint without specifying signedness is deprecated! Use \`Int64\` or \`UInt64\` instead.`);
+        }
+        else if (type.isLiteral()) {
+            throw new Error(`The literal "${type.getLiteralValue()}" cannot be used as a type!`);
         }
         else {
             if (type.getSymbol() == null) {

@@ -4,7 +4,7 @@ import { capitalizeName } from './utils.js';
 import chalk from 'chalk';
 import { Logger } from './Logger.js';
 /**
- * Writes the given file to disk and returns it's actual path.
+ * Writes the given file to disk and returns its actual path.
  */
 export async function writeFile(basePath, file) {
     const filepath = path.join(basePath, ...file.subdirectory, file.name);

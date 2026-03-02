@@ -13,6 +13,9 @@ export class ResultWrappingType {
     get kind() {
         return 'result-wrapper';
     }
+    get isEquatable() {
+        return this.result.isEquatable && this.error.isEquatable;
+    }
     getCode(language, options) {
         const type = this.result.getCode(language, options);
         switch (language) {
@@ -24,13 +27,13 @@ export class ResultWrappingType {
                 throw new Error(`Language ${language} is not yet supported for VariantType!`);
         }
     }
-    getExtraFiles(visited) {
-        return [...this.result.getExtraFiles(visited), ...this.error.getExtraFiles(visited)];
+    getExtraFiles() {
+        return [...this.result.getExtraFiles(), ...this.error.getExtraFiles()];
     }
-    getRequiredImports(language, visited) {
+    getRequiredImports(language) {
         const imports = [
-            ...this.result.getRequiredImports(language, visited),
-            ...this.error.getRequiredImports(language, visited),
+            ...this.result.getRequiredImports(language),
+            ...this.error.getRequiredImports(language),
         ];
         if (language === 'c++') {
             imports.push({

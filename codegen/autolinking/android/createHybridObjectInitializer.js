@@ -49,21 +49,30 @@ export function createHybridObjectIntializer() {
 ${createFileMetadataString(`${autolinkingClassName}.hpp`)}
 
 #include <jni.h>
+#include <functional>
 #include <NitroModules/NitroDefines.hpp>
 
 namespace ${cxxNamespace} {
 
+  [[deprecated("Use registerNatives() instead.")]]
+  int initialize(JavaVM* vm);
+
   /**
-   * Initializes the native (C++) part of ${cppLibName}, and autolinks all Hybrid Objects.
-   * Call this in your \`JNI_OnLoad\` function (probably inside \`cpp-adapter.cpp\`).
+   * Register the native (C++) part of ${cppLibName}, and autolinks all Hybrid Objects.
+   * Call this in your \`JNI_OnLoad\` function (probably inside \`cpp-adapter.cpp\`),
+   * inside a \`facebook::jni::initialize(vm, ...)\` call.
    * Example:
    * \`\`\`cpp (cpp-adapter.cpp)
    * JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
-   *   return ${cxxNamespace}::initialize(vm);
+   *   return facebook::jni::initialize(vm, []() {
+   *     // register all ${cppLibName} HybridObjects
+   *     ${cxxNamespace}::registerNatives();
+   *     // any other custom registrations go here.
+   *   });
    * }
    * \`\`\`
    */
-  int initialize(JavaVM* vm);
+  void registerAllNatives();
 
 } // namespace ${cxxNamespace}
 
@@ -86,17 +95,20 @@ ${includes}
 namespace ${cxxNamespace} {
 
 int initialize(JavaVM* vm) {
+  return facebook::jni::initialize(vm, []() {
+    ::${cxxNamespace}::registerAllNatives();
+  });
+}
+
+void registerAllNatives() {
   using namespace margelo::nitro;
   using namespace ${cxxNamespace};
-  using namespace facebook;
 
-  return facebook::jni::initialize(vm, [] {
-    // Register native JNI methods
-    ${indent(jniRegistrations.join('\n'), '    ')}
+  // Register native JNI methods
+  ${indent(jniRegistrations.join('\n'), '  ')}
 
-    // Register Nitro Hybrid Objects
-    ${indent(cppRegistrations.join('\n'), '    ')}
-  });
+  // Register Nitro Hybrid Objects
+  ${indent(cppRegistrations.join('\n'), '  ')}
 }
 
 } // namespace ${cxxNamespace}

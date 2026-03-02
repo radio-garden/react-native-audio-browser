@@ -11,6 +11,9 @@ export class ArrayType {
     get kind() {
         return 'array';
     }
+    get isEquatable() {
+        return this.itemType.isEquatable;
+    }
     getCode(language, options) {
         const itemCode = this.itemType.getCode(language, options);
         switch (language) {
@@ -24,7 +27,10 @@ export class ArrayType {
                         return 'DoubleArray';
                     case 'boolean':
                         return 'BooleanArray';
-                    case 'bigint':
+                    case 'int64':
+                        return 'LongArray';
+                    case 'uint64':
+                        // ULong is just interpret as LongArray in Java.
                         return 'LongArray';
                     default:
                         return `Array<${itemCode}>`;
@@ -33,12 +39,12 @@ export class ArrayType {
                 throw new Error(`Language ${language} is not yet supported for ArrayType!`);
         }
     }
-    getExtraFiles(visited) {
-        return this.itemType.getExtraFiles(visited);
+    getExtraFiles() {
+        return this.itemType.getExtraFiles();
     }
-    getRequiredImports(language, visited) {
+    getRequiredImports(language) {
         const imports = [
-            ...this.itemType.getRequiredImports(language, visited),
+            ...this.itemType.getRequiredImports(language),
         ];
         if (language === 'c++') {
             imports.push({

@@ -6,6 +6,9 @@ export class ArrayBufferType {
     get kind() {
         return 'array-buffer';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':

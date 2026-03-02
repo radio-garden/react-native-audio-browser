@@ -6,6 +6,9 @@ export class MapType {
     get kind() {
         return 'map';
     }
+    get isEquatable() {
+        return true;
+    }
     getCode(language) {
         switch (language) {
             case 'c++':
