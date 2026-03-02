@@ -245,37 +245,24 @@ class RetryManager {
   /// Returns false when network is restored, true if cancelled.
   @MainActor
   private func waitForNetworkRestored(monitor: NetworkMonitor) async -> Bool {
-    // If already online, return immediately
     if monitor.isOnline {
       return false
     }
 
     isWaitingForNetwork = true
+    defer { isWaitingForNetwork = false }
 
-    // Set up listener for network restoration
-    let previousHandler = monitor.onChanged
+    logger.debug("Device is offline, polling for network restoration")
 
-    // Use withCheckedContinuation to wait for network
-    let result: Bool = await withCheckedContinuation { continuation in
-      var hasResumed = false
-
-      monitor.onChanged = { [weak self] isOnline in
-        // Always call previous handler to maintain JS callback
-        previousHandler?(isOnline)
-
-        guard !hasResumed else { return }
-
-        if isOnline {
-          hasResumed = true
-          self?.logger.info("Network restored, accelerating retry")
-          // Restore original handler
-          monitor.onChanged = previousHandler
-          continuation.resume(returning: false) // Network restored, ready to retry
-        }
+    while !monitor.isOnline {
+      do {
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5s poll
+      } catch {
+        return true // Task cancelled
       }
     }
 
-    isWaitingForNetwork = false
-    return result
+    logger.info("Network restored, accelerating retry")
+    return false
   }
 }
