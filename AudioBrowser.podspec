@@ -26,6 +26,8 @@ Pod::Spec.new do |s|
     "cpp/**/*.{hpp,cpp}",
   ]
 
+  s.exclude_files = ["ios/Tests/**/*"]
+
   # Public headers for CarPlay scene delegate
   s.public_header_files = ["ios/CarPlay/*.h"]
 
