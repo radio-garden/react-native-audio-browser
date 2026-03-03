@@ -132,6 +132,8 @@ namespace margelo::nitro::audiobrowser { enum class RatingType; }
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemoteLoadEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteLoadEvent; }
 // Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 // Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
@@ -240,6 +242,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "RatingType.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
+#include "RemoteLoadEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"

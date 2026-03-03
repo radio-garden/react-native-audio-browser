@@ -4,6 +4,7 @@ import type {
   StarRating,
   ThumbsRating
 } from './rating'
+import type { Track } from '../types'
 import { nativeBrowser } from '../native'
 import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 
@@ -64,6 +65,18 @@ export interface RemoteSetRatingEvent {
 export interface RemoteSkipEvent {
   /** The index to skip to */
   index: number
+}
+
+/**
+ * Remote load event, fired when a track is about to be loaded via navigateTrack.
+ */
+export interface RemoteLoadEvent {
+  /** The track that will be loaded */
+  track: Track
+  /** The resolved queue of tracks */
+  queue: Track[]
+  /** The index of the track in the queue */
+  startIndex: number
 }
 
 // MARK: - Default Handlers
@@ -221,6 +234,17 @@ export function handleRemoteJumpBackward(
   nativeBrowser.handleRemoteJumpBackward = callback
 }
 
+/**
+ * Sets a custom handler for remote load events, overriding the default track loading behavior.
+ * When set, navigateTrack() will call this handler instead of auto-loading/playing the track.
+ * @param callback - Called with the track, queue, and startIndex. Pass undefined to restore default behavior.
+ */
+export function handleRemoteLoad(
+  callback: ((event: RemoteLoadEvent) => void) | undefined
+) {
+  nativeBrowser.handleRemoteLoad = callback
+}
+
 // MARK: - Event Callbacks (for listening/debugging only)
 //
 // Use these functions when you want to LISTEN to remote control events without overriding
@@ -247,6 +271,17 @@ export const onRemoteJumpForward =
   LazyNativeEmitter.emitterize<RemoteJumpForwardEvent>(
     (cb) => (nativeBrowser.onRemoteJumpForward = cb)
   )
+
+/**
+ * Subscribes to remote load events.
+ * Fires whenever a track is about to be loaded via navigateTrack(),
+ * regardless of whether handleRemoteLoad is set.
+ * @param callback - Called with the track, queue, and startIndex
+ * @returns Cleanup function to unsubscribe
+ */
+export const onRemoteLoad = LazyNativeEmitter.emitterize<RemoteLoadEvent>(
+  (cb) => (nativeBrowser.onRemoteLoad = cb)
+)
 
 /**
  * Subscribes to remote next events.

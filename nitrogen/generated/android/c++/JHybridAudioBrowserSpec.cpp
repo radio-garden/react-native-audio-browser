@@ -89,6 +89,8 @@ namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemoteLoadEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteLoadEvent; }
 // Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 // Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
@@ -291,6 +293,9 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "RemoteJumpForwardEvent.hpp"
 #include "JFunc_void_RemoteJumpForwardEvent.hpp"
 #include "JRemoteJumpForwardEvent.hpp"
+#include "RemoteLoadEvent.hpp"
+#include "JFunc_void_RemoteLoadEvent.hpp"
+#include "JRemoteLoadEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "JFunc_void_RemotePlayIdEvent.hpp"
 #include "JRemotePlayIdEvent.hpp"
@@ -872,6 +877,23 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteLike */)>("setOnRemoteLike_cxx");
     method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteLike));
   }
+  std::function<void(const RemoteLoadEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteLoad() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteLoadEvent::javaobject>()>("getOnRemoteLoad_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const RemoteLoadEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_RemoteLoadEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_RemoteLoadEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_RemoteLoadEvent, void(RemoteLoadEvent)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnRemoteLoad(const std::function<void(const RemoteLoadEvent& /* event */)>& onRemoteLoad) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteLoadEvent::javaobject> /* onRemoteLoad */)>("setOnRemoteLoad_cxx");
+    method(_javaPart, JFunc_void_RemoteLoadEvent_cxx::fromCpp(onRemoteLoad));
+  }
   std::function<void()> JHybridAudioBrowserSpec::getOnRemoteNext() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteNext_cxx");
     auto __result = method(_javaPart);
@@ -1177,6 +1199,23 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) {
     static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteLike */)>("setHandleRemoteLike_cxx");
     method(_javaPart, handleRemoteLike.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteLike.value()) : nullptr);
+  }
+  std::optional<std::function<void(const RemoteLoadEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemoteLoad() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteLoadEvent::javaobject>()>("getHandleRemoteLoad_cxx");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const RemoteLoadEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_RemoteLoadEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_RemoteLoadEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_RemoteLoadEvent, void(RemoteLoadEvent)>(std::move(__resultRef));
+      }
+    }()) : std::nullopt;
+  }
+  void JHybridAudioBrowserSpec::setHandleRemoteLoad(const std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>& handleRemoteLoad) {
+    static const auto method = javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteLoadEvent::javaobject> /* handleRemoteLoad */)>("setHandleRemoteLoad_cxx");
+    method(_javaPart, handleRemoteLoad.has_value() ? JFunc_void_RemoteLoadEvent_cxx::fromCpp(handleRemoteLoad.value()) : nullptr);
   }
   std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteNext() {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteNext_cxx");

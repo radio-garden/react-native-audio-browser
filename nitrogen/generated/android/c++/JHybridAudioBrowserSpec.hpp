@@ -104,6 +104,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) override;
     std::function<void()> getOnRemoteLike() override;
     void setOnRemoteLike(const std::function<void()>& onRemoteLike) override;
+    std::function<void(const RemoteLoadEvent& /* event */)> getOnRemoteLoad() override;
+    void setOnRemoteLoad(const std::function<void(const RemoteLoadEvent& /* event */)>& onRemoteLoad) override;
     std::function<void()> getOnRemoteNext() override;
     void setOnRemoteNext(const std::function<void()>& onRemoteNext) override;
     std::function<void()> getOnRemotePause() override;
@@ -140,6 +142,8 @@ namespace margelo::nitro::audiobrowser {
     void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) override;
     std::optional<std::function<void()>> getHandleRemoteLike() override;
     void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) override;
+    std::optional<std::function<void(const RemoteLoadEvent& /* event */)>> getHandleRemoteLoad() override;
+    void setHandleRemoteLoad(const std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>& handleRemoteLoad) override;
     std::optional<std::function<void()>> getHandleRemoteNext() override;
     void setHandleRemoteNext(const std::optional<std::function<void()>>& handleRemoteNext) override;
     std::optional<std::function<void()>> getHandleRemotePause() override;

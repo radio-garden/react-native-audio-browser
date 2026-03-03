@@ -43,6 +43,7 @@
 #include "JFunc_void.hpp"
 #include "JFunc_void_RemoteJumpBackwardEvent.hpp"
 #include "JFunc_void_RemoteJumpForwardEvent.hpp"
+#include "JFunc_void_RemoteLoadEvent.hpp"
 #include "JFunc_void_RemotePlayIdEvent.hpp"
 #include "JFunc_void_RemotePlaySearchEvent.hpp"
 #include "JFunc_void_RemoteSeekEvent.hpp"
@@ -95,6 +96,7 @@ int initialize(JavaVM* vm) {
     margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RemoteJumpBackwardEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RemoteJumpForwardEvent_cxx::registerNatives();
+    margelo::nitro::audiobrowser::JFunc_void_RemoteLoadEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RemotePlayIdEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RemotePlaySearchEvent_cxx::registerNatives();
     margelo::nitro::audiobrowser::JFunc_void_RemoteSeekEvent_cxx::registerNatives();

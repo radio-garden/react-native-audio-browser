@@ -17,6 +17,7 @@ import type {
   PlaybackPlayWhenReadyChangedEvent,
   RemoteJumpBackwardEvent,
   RemoteJumpForwardEvent,
+  RemoteLoadEvent,
   RemotePlayIdEvent,
   RemotePlaySearchEvent,
   RemoteSeekEvent,
@@ -162,6 +163,7 @@ export class NativeAudioBrowser
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void = () => {}
   onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void = () => {}
   onRemoteLike: () => void = () => {}
+  onRemoteLoad: (event: RemoteLoadEvent) => void = () => {}
   onRemoteNext: () => void = () => {}
   onRemotePause: () => void = () => {}
   onRemotePlay: () => void = () => {}
@@ -196,6 +198,7 @@ export class NativeAudioBrowser
     | ((event: RemoteJumpForwardEvent) => void)
     | undefined = undefined
   handleRemoteLike: (() => void) | undefined = undefined
+  handleRemoteLoad: ((event: RemoteLoadEvent) => void) | undefined = undefined
   handleRemoteNext: (() => void) | undefined = undefined
   handleRemotePause: (() => void) | undefined = undefined
   handleRemotePlay: (() => void) | undefined = undefined
@@ -350,6 +353,28 @@ export class NativeAudioBrowser
   }
 
   /**
+   * Centralizes handleRemoteLoad interception logic.
+   * If handleRemoteLoad is set, calls it (intercepted). Otherwise runs defaultBehavior.
+   * Always fires onRemoteLoad afterward.
+   *
+   * @returns true if the handler intercepted, false if defaultBehavior ran
+   */
+  private handleLoad(
+    track: Track, queue: Track[], startIndex: number,
+    defaultBehavior: () => void
+  ): boolean {
+    const event: RemoteLoadEvent = { track, queue, startIndex }
+    const handled = !!this.handleRemoteLoad
+    if (this.handleRemoteLoad) {
+      this.handleRemoteLoad(event)
+    } else {
+      defaultBehavior()
+    }
+    this.onRemoteLoad(event)
+    return handled
+  }
+
+  /**
    * Attempts to skip to a track already in the current queue.
    * Used as an optimization to avoid re-expanding the queue.
    *
@@ -372,8 +397,10 @@ export class NativeAudioBrowser
       return false
     }
 
-    this.skip(index)
-    this.play()
+    this.handleLoad(queue[index]!, queue, index, () => {
+      this.skip(index)
+      this.play()
+    })
     return true
   }
 
@@ -394,7 +421,9 @@ export class NativeAudioBrowser
       return false
     }
 
-    this.setQueue(result.tracks, result.startIndex)
+    this.handleLoad(track, result.tracks, result.startIndex, () => {
+      this.setQueue(result.tracks, result.startIndex)
+    })
     return true
   }
 
@@ -423,7 +452,7 @@ export class NativeAudioBrowser
         }
 
         // Fallback: load single track if expansion fails
-        this.load(track)
+        this.handleLoad(track, [track], 0, () => this.load(track))
         return
       }
 
@@ -437,7 +466,7 @@ export class NativeAudioBrowser
 
       // Handle playable track (has src but no URL)
       if (track.src) {
-        this.load(track)
+        this.handleLoad(track, [track], 0, () => this.load(track))
         return
       }
 

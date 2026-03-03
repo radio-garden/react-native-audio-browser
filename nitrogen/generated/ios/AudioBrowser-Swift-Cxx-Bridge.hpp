@@ -116,6 +116,8 @@ namespace margelo::nitro::audiobrowser { enum class RatingType; }
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemoteLoadEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteLoadEvent; }
 // Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 // Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
@@ -220,6 +222,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "RatingType.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
+#include "RemoteLoadEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
@@ -2102,6 +2105,28 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RemoteJumpForwardEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::function<void(const RemoteLoadEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const RemoteLoadEvent&)>`.
+   */
+  using Func_void_RemoteLoadEvent = std::function<void(const RemoteLoadEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const RemoteLoadEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_RemoteLoadEvent_Wrapper final {
+  public:
+    explicit Func_void_RemoteLoadEvent_Wrapper(std::function<void(const RemoteLoadEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const RemoteLoadEvent& /* event */)>>(std::move(func))) {}
+    inline void call(RemoteLoadEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const RemoteLoadEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_RemoteLoadEvent create_Func_void_RemoteLoadEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_RemoteLoadEvent_Wrapper wrap_Func_void_RemoteLoadEvent(Func_void_RemoteLoadEvent value) noexcept {
+    return Func_void_RemoteLoadEvent_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::function<void(const RemotePlayIdEvent& /* event */)>
   /**
    * Specialized version of `std::function<void(const RemotePlayIdEvent&)>`.
@@ -2391,6 +2416,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline std::function<void(const RemoteJumpForwardEvent& /* event */)> get_std__optional_std__function_void_const_RemoteJumpForwardEvent_____event______(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const RemoteLoadEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_RemoteLoadEvent_____event______ = std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>;
+  inline std::optional<std::function<void(const RemoteLoadEvent& /* event */)>> create_std__optional_std__function_void_const_RemoteLoadEvent_____event______(const std::function<void(const RemoteLoadEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_RemoteLoadEvent_____event______(const std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const RemoteLoadEvent& /* event */)> get_std__optional_std__function_void_const_RemoteLoadEvent_____event______(const std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>& optional) noexcept {
     return *optional;
   }
   

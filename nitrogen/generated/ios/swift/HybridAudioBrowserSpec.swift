@@ -38,6 +38,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onRemoteJumpBackward: (_ event: RemoteJumpBackwardEvent) -> Void { get set }
   var onRemoteJumpForward: (_ event: RemoteJumpForwardEvent) -> Void { get set }
   var onRemoteLike: () -> Void { get set }
+  var onRemoteLoad: (_ event: RemoteLoadEvent) -> Void { get set }
   var onRemoteNext: () -> Void { get set }
   var onRemotePause: () -> Void { get set }
   var onRemotePlay: () -> Void { get set }
@@ -56,6 +57,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var handleRemoteJumpBackward: ((_ event: RemoteJumpBackwardEvent) -> Void)? { get set }
   var handleRemoteJumpForward: ((_ event: RemoteJumpForwardEvent) -> Void)? { get set }
   var handleRemoteLike: (() -> Void)? { get set }
+  var handleRemoteLoad: ((_ event: RemoteLoadEvent) -> Void)? { get set }
   var handleRemoteNext: (() -> Void)? { get set }
   var handleRemotePause: (() -> Void)? { get set }
   var handleRemotePlay: (() -> Void)? { get set }

@@ -65,6 +65,7 @@ import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.Progress
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
+import com.margelo.nitro.audiobrowser.RemoteLoadEvent
 import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
 import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
@@ -149,6 +150,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onRemoteJumpBackward: (RemoteJumpBackwardEvent) -> Unit = {}
   override var onRemoteJumpForward: (RemoteJumpForwardEvent) -> Unit = {}
   override var onRemoteLike: () -> Unit = {}
+  override var onRemoteLoad: (RemoteLoadEvent) -> Unit = {}
   override var onRemoteNext: () -> Unit = {}
   override var onRemotePause: () -> Unit = {}
   override var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit = {}
@@ -190,6 +192,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Unit)? = null
   override var handleRemoteJumpForward: ((RemoteJumpForwardEvent) -> Unit)? = null
   override var handleRemoteLike: (() -> Unit)? = null
+  override var handleRemoteLoad: ((RemoteLoadEvent) -> Unit)? = null
   override var handleRemoteNext: (() -> Unit)? = null
   override var handleRemotePause: (() -> Unit)? = null
   override var handleRemotePlay: (() -> Unit)? = null
@@ -504,6 +507,24 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       }
   }
 
+  /**
+   * Centralizes handleRemoteLoad interception logic.
+   * If handleRemoteLoad is set, calls it (intercepted). Otherwise runs defaultBehavior.
+   * Always fires onRemoteLoad afterward.
+   *
+   * @return true if the handler intercepted, false if defaultBehavior ran
+   */
+  private fun handleLoad(
+    track: Track, queue: Array<Track>, startIndex: Double,
+    defaultBehavior: () -> Unit,
+  ): Boolean {
+    val event = RemoteLoadEvent(track, queue, startIndex)
+    val handled = handleRemoteLoad?.let { it.invoke(event); true } ?: false
+    if (!handled) defaultBehavior()
+    onRemoteLoad(event)
+    return handled
+  }
+
   override fun navigateTrack(track: Track) {
     clearNavigationError()
 
@@ -527,8 +548,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 val index = player.tracks.indexOfFirst { it.src == trackId }
                 if (index >= 0) {
                   Timber.d("Queue already from $parentPath, skipping to index $index")
-                  player.skipTo(index)
-                  player.play()
+                  handleLoad(track, player.tracks, index.toDouble()) {
+                    player.skipTo(index)
+                    player.play()
+                  }
                   return@launch
                 }
               }
@@ -541,15 +564,17 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 Timber.d(
                   "Loading expanded queue: ${tracks.size} tracks, starting at index $startIndex"
                 )
-
-                // Replace queue and seek to selected track
-                // Use internal player methods directly to avoid blocking on main thread
-                player.setQueue(tracks, startIndex, sourcePath = parentPath)
-                player.play()
+                handleLoad(track, tracks, startIndex.toDouble()) {
+                  // Replace queue and seek to selected track
+                  // Use internal player methods directly to avoid blocking on main thread
+                  player.setQueue(tracks, startIndex, sourcePath = parentPath)
+                  player.play()
+                }
+                return@launch
               } else {
                 // Fallback: just load the single track
                 Timber.w("Queue expansion failed, loading single track")
-                player.load(track)
+                handleLoad(track, arrayOf(track), 0.0) { player.load(track) }
               }
             }
             // Navigate to browsable track to show browsing UI
@@ -560,7 +585,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             // If track is playable (has src), load it into player
             track.src != null -> {
               Timber.d("Loading playable track into player: ${track.title}")
-              player.load(track)
+              handleLoad(track, arrayOf(track), 0.0) { player.load(track) }
             }
             else -> {
               throw IllegalArgumentException("Track must have either an 'url' or an 'src' property")

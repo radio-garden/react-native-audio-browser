@@ -53,6 +53,8 @@ namespace margelo::nitro::audiobrowser { struct Playback; }
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemoteLoadEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteLoadEvent; }
 // Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 // Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
@@ -122,6 +124,7 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "Playback.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
+#include "RemoteLoadEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
@@ -226,6 +229,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) = 0;
       virtual std::function<void()> getOnRemoteLike() = 0;
       virtual void setOnRemoteLike(const std::function<void()>& onRemoteLike) = 0;
+      virtual std::function<void(const RemoteLoadEvent& /* event */)> getOnRemoteLoad() = 0;
+      virtual void setOnRemoteLoad(const std::function<void(const RemoteLoadEvent& /* event */)>& onRemoteLoad) = 0;
       virtual std::function<void()> getOnRemoteNext() = 0;
       virtual void setOnRemoteNext(const std::function<void()>& onRemoteNext) = 0;
       virtual std::function<void()> getOnRemotePause() = 0;
@@ -262,6 +267,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteLike() = 0;
       virtual void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) = 0;
+      virtual std::optional<std::function<void(const RemoteLoadEvent& /* event */)>> getHandleRemoteLoad() = 0;
+      virtual void setHandleRemoteLoad(const std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>& handleRemoteLoad) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteNext() = 0;
       virtual void setHandleRemoteNext(const std::optional<std::function<void()>>& handleRemoteNext) = 0;
       virtual std::optional<std::function<void()>> getHandleRemotePause() = 0;

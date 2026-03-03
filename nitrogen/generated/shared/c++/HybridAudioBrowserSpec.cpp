@@ -68,6 +68,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onRemoteJumpForward", &HybridAudioBrowserSpec::setOnRemoteJumpForward);
       prototype.registerHybridGetter("onRemoteLike", &HybridAudioBrowserSpec::getOnRemoteLike);
       prototype.registerHybridSetter("onRemoteLike", &HybridAudioBrowserSpec::setOnRemoteLike);
+      prototype.registerHybridGetter("onRemoteLoad", &HybridAudioBrowserSpec::getOnRemoteLoad);
+      prototype.registerHybridSetter("onRemoteLoad", &HybridAudioBrowserSpec::setOnRemoteLoad);
       prototype.registerHybridGetter("onRemoteNext", &HybridAudioBrowserSpec::getOnRemoteNext);
       prototype.registerHybridSetter("onRemoteNext", &HybridAudioBrowserSpec::setOnRemoteNext);
       prototype.registerHybridGetter("onRemotePause", &HybridAudioBrowserSpec::getOnRemotePause);
@@ -104,6 +106,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("handleRemoteJumpForward", &HybridAudioBrowserSpec::setHandleRemoteJumpForward);
       prototype.registerHybridGetter("handleRemoteLike", &HybridAudioBrowserSpec::getHandleRemoteLike);
       prototype.registerHybridSetter("handleRemoteLike", &HybridAudioBrowserSpec::setHandleRemoteLike);
+      prototype.registerHybridGetter("handleRemoteLoad", &HybridAudioBrowserSpec::getHandleRemoteLoad);
+      prototype.registerHybridSetter("handleRemoteLoad", &HybridAudioBrowserSpec::setHandleRemoteLoad);
       prototype.registerHybridGetter("handleRemoteNext", &HybridAudioBrowserSpec::getHandleRemoteNext);
       prototype.registerHybridSetter("handleRemoteNext", &HybridAudioBrowserSpec::setHandleRemoteNext);
       prototype.registerHybridGetter("handleRemotePause", &HybridAudioBrowserSpec::getHandleRemotePause);

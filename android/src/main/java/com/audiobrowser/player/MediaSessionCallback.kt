@@ -12,10 +12,13 @@ import androidx.media3.session.MediaConstants
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.audiobrowser.AudioBrowser
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
+import com.margelo.nitro.audiobrowser.RemoteLoadEvent
+import com.margelo.nitro.audiobrowser.Track
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -451,6 +454,24 @@ class MediaSessionCallback(private val player: Player) :
     }
   }
 
+  /**
+   * Centralizes handleRemoteLoad interception logic for onSetMediaItems.
+   * If handleRemoteLoad is set, calls it and returns interceptedResult().
+   * Otherwise runs defaultBehavior(). Always fires onRemoteLoad afterward.
+   */
+  private suspend fun handleLoad(
+    audioBrowser: AudioBrowser,
+    track: Track, queue: Array<Track>, startIndex: Double,
+    interceptedResult: () -> MediaSession.MediaItemsWithStartPosition,
+    defaultBehavior: suspend () -> MediaSession.MediaItemsWithStartPosition,
+  ): MediaSession.MediaItemsWithStartPosition {
+    val event = RemoteLoadEvent(track, queue, startIndex)
+    val handler = audioBrowser.handleRemoteLoad
+    val result = if (handler != null) { handler(event); interceptedResult() } else defaultBehavior()
+    audioBrowser.onRemoteLoad(event)
+    return result
+  }
+
   override fun onSetMediaItems(
     mediaSession: MediaSession,
     controller: MediaSession.ControllerInfo,
@@ -463,6 +484,19 @@ class MediaSessionCallback(private val player: Player) :
     )
 
     return scope.future {
+      val audioBrowser = player.awaitBrowser()
+
+      // Helper: returns the current player state unchanged so Media3 doesn't modify playback
+      fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition {
+        val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
+        val currentIndex = player.currentIndex ?: 0
+        return MediaSession.MediaItemsWithStartPosition(
+          currentItems,
+          currentIndex,
+          startPositionMs,
+        )
+      }
+
       // Check if this is a single contextual URL that matches the current queue source
       if (mediaItems.size == 1) {
         val mediaId = mediaItems[0].mediaId
@@ -475,33 +509,39 @@ class MediaSessionCallback(private val player: Player) :
             val index = player.tracks.indexOfFirst { it.src == trackId }
             if (index >= 0) {
               Timber.d("Queue already from $parentPath, skipping to index $index")
-              // Return the existing queue items with the new start index
-              val existingItems = player.tracks.map { TrackFactory.toMedia3(it) }
-              return@future MediaSession.MediaItemsWithStartPosition(
-                existingItems,
-                index,
-                startPositionMs,
-              )
+              val track = player.tracks[index]
+              return@future handleLoad(audioBrowser, track, player.tracks, index.toDouble(), ::currentPlayerState) {
+                // Return the existing queue items with the new start index
+                val existingItems = player.tracks.map { TrackFactory.toMedia3(it) }
+                MediaSession.MediaItemsWithStartPosition(
+                  existingItems,
+                  index,
+                  startPositionMs,
+                )
+              }
             }
           }
         }
       }
 
-      // Wait for browser to be registered if it's not available yet
-      val browserManager = player.awaitBrowser().browserManager
+      val browserManager = audioBrowser.browserManager
       val result =
         browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
 
-      // If this was a contextual URL expansion, track the source path
-      if (mediaItems.size == 1) {
-        val mediaId = mediaItems[0].mediaId
-        if (BrowserPathHelper.isContextual(mediaId)) {
-          val parentPath = BrowserPathHelper.stripTrackId(mediaId)
-          withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
-        }
-      }
+      val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
+      val selectedTrack = tracks.getOrElse(result.startIndex) { tracks.first() }
 
-      result
+      handleLoad(audioBrowser, selectedTrack, tracks, result.startIndex.toDouble(), ::currentPlayerState) {
+        // If this was a contextual URL expansion, track the source path (only for default behavior)
+        if (mediaItems.size == 1) {
+          val mediaId = mediaItems[0].mediaId
+          if (BrowserPathHelper.isContextual(mediaId)) {
+            val parentPath = BrowserPathHelper.stripTrackId(mediaId)
+            withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
+          }
+        }
+        result
+      }
     }
   }
 

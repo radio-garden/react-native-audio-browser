@@ -398,6 +398,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onRemoteLike = value
     }
   
+  abstract var onRemoteLoad: (event: RemoteLoadEvent) -> Unit
+  
+  private var onRemoteLoad_cxx: Func_void_RemoteLoadEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_RemoteLoadEvent_java(onRemoteLoad)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onRemoteLoad = value
+    }
+  
   abstract var onRemoteNext: () -> Unit
   
   private var onRemoteNext_cxx: Func_void
@@ -648,6 +662,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
     @DoNotStrip
     set(value) {
       handleRemoteLike = value?.let { it }
+    }
+  
+  abstract var handleRemoteLoad: ((event: RemoteLoadEvent) -> Unit)?
+  
+  private var handleRemoteLoad_cxx: Func_void_RemoteLoadEvent?
+    @Keep
+    @DoNotStrip
+    get() {
+      return handleRemoteLoad?.let { Func_void_RemoteLoadEvent_java(it) }
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      handleRemoteLoad = value?.let { it }
     }
   
   abstract var handleRemoteNext: (() -> Unit)?

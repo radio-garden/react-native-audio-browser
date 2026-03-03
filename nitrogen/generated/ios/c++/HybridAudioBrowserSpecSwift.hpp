@@ -94,6 +94,8 @@ namespace margelo::nitro::audiobrowser { enum class PlaybackState; }
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpForwardEvent; }
+// Forward declaration of `RemoteLoadEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteLoadEvent; }
 // Forward declaration of `RemotePlayIdEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 // Forward declaration of `RemotePlaySearchEvent` to properly resolve imports.
@@ -222,6 +224,7 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "PlaybackState.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
+#include "RemoteLoadEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
@@ -490,6 +493,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnRemoteLike(const std::function<void()>& onRemoteLike) noexcept override {
       _swiftPart.setOnRemoteLike(onRemoteLike);
     }
+    inline std::function<void(const RemoteLoadEvent& /* event */)> getOnRemoteLoad() noexcept override {
+      auto __result = _swiftPart.getOnRemoteLoad();
+      return __result;
+    }
+    inline void setOnRemoteLoad(const std::function<void(const RemoteLoadEvent& /* event */)>& onRemoteLoad) noexcept override {
+      _swiftPart.setOnRemoteLoad(onRemoteLoad);
+    }
     inline std::function<void()> getOnRemoteNext() noexcept override {
       auto __result = _swiftPart.getOnRemoteNext();
       return __result;
@@ -615,6 +625,13 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) noexcept override {
       _swiftPart.setHandleRemoteLike(handleRemoteLike);
+    }
+    inline std::optional<std::function<void(const RemoteLoadEvent& /* event */)>> getHandleRemoteLoad() noexcept override {
+      auto __result = _swiftPart.getHandleRemoteLoad();
+      return __result;
+    }
+    inline void setHandleRemoteLoad(const std::optional<std::function<void(const RemoteLoadEvent& /* event */)>>& handleRemoteLoad) noexcept override {
+      _swiftPart.setHandleRemoteLoad(handleRemoteLoad);
     }
     inline std::optional<std::function<void()>> getHandleRemoteNext() noexcept override {
       auto __result = _swiftPart.getHandleRemoteNext();

@@ -43,6 +43,7 @@ import type {
   RemoteJumpForwardEvent,
   RemotePlayIdEvent,
   RemotePlaySearchEvent,
+  RemoteLoadEvent,
   RemoteSeekEvent,
   RemoteSetRatingEvent,
   RemoteSkipEvent
@@ -138,6 +139,7 @@ export interface AudioBrowser extends HybridObject<{
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void
   onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void
   onRemoteLike: () => void
+  onRemoteLoad: (event: RemoteLoadEvent) => void
   onRemoteNext: () => void
   onRemotePause: () => void
   onRemotePlay: () => void
@@ -160,6 +162,7 @@ export interface AudioBrowser extends HybridObject<{
     | undefined
   handleRemoteJumpForward: ((event: RemoteJumpForwardEvent) => void) | undefined
   handleRemoteLike: (() => void) | undefined
+  handleRemoteLoad: ((event: RemoteLoadEvent) => void) | undefined
   handleRemoteNext: (() => void) | undefined
   handleRemotePause: (() => void) | undefined
   handleRemotePlay: (() => void) | undefined

@@ -680,6 +680,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onRemoteLoad: bridge.Func_void_RemoteLoadEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_RemoteLoadEvent in
+        let __closureWrapper = Func_void_RemoteLoadEvent(self.__implementation.onRemoteLoad)
+        return bridge.create_Func_void_RemoteLoadEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onRemoteLoad = { () -> (RemoteLoadEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_RemoteLoadEvent(newValue)
+        return { (__event: RemoteLoadEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
+  
   public final var onRemoteNext: bridge.Func_void {
     @inline(__always)
     get {
@@ -1078,6 +1097,38 @@ open class HybridAudioBrowserSpec_cxx {
             let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
             return { () -> Void in
               __wrappedFunction.call()
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
+  public final var handleRemoteLoad: bridge.std__optional_std__function_void_const_RemoteLoadEvent_____event______ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__function_void_const_RemoteLoadEvent_____event______ in
+        if let __unwrappedValue = self.__implementation.handleRemoteLoad {
+          return bridge.create_std__optional_std__function_void_const_RemoteLoadEvent_____event______({ () -> bridge.Func_void_RemoteLoadEvent in
+            let __closureWrapper = Func_void_RemoteLoadEvent(__unwrappedValue)
+            return bridge.create_Func_void_RemoteLoadEvent(__closureWrapper.toUnsafe())
+          }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.handleRemoteLoad = { () -> ((_ event: RemoteLoadEvent) -> Void)? in
+        if bridge.has_value_std__optional_std__function_void_const_RemoteLoadEvent_____event______(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__function_void_const_RemoteLoadEvent_____event______(newValue)
+          return { () -> (RemoteLoadEvent) -> Void in
+            let __wrappedFunction = bridge.wrap_Func_void_RemoteLoadEvent(__unwrapped)
+            return { (__event: RemoteLoadEvent) -> Void in
+              __wrappedFunction.call(__event)
             }
           }()
         } else {

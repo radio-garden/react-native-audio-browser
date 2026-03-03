@@ -175,6 +175,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onRemoteJumpBackward: (RemoteJumpBackwardEvent) -> Void = { _ in }
   public var onRemoteJumpForward: (RemoteJumpForwardEvent) -> Void = { _ in }
   public var onRemoteLike: () -> Void = {}
+  public var onRemoteLoad: (RemoteLoadEvent) -> Void = { _ in }
   public var onRemoteNext: () -> Void = {}
   public var onRemotePause: () -> Void = {}
   public var onRemotePlay: () -> Void = {}
@@ -193,6 +194,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Void)?
   public var handleRemoteJumpForward: ((RemoteJumpForwardEvent) -> Void)?
   public var handleRemoteLike: (() -> Void)?
+  public var handleRemoteLoad: ((RemoteLoadEvent) -> Void)?
   public var handleRemoteNext: (() -> Void)?
   public var handleRemotePause: (() -> Void)?
   public var handleRemotePlay: (() -> Void)?
@@ -373,6 +375,24 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
+  /// Centralizes handleRemoteLoad interception logic.
+  /// If handleRemoteLoad is set, calls it (intercepted). Otherwise runs defaultBehavior.
+  /// Always fires onRemoteLoad afterward.
+  ///
+  /// - Returns: true if the handler intercepted, false if defaultBehavior ran
+  @discardableResult
+  private func handleLoad(track: Track, queue: [Track], startIndex: Double, defaultBehavior: () -> Void) -> Bool {
+    let event = RemoteLoadEvent(track: track, queue: queue, startIndex: startIndex)
+    if let handler = handleRemoteLoad {
+      handler(event)
+      onRemoteLoad(event)
+      return true
+    }
+    defaultBehavior()
+    onRemoteLoad(event)
+    return false
+  }
+
   public func navigateTrack(track: Track) throws {
     let url = track.url
 
@@ -391,8 +411,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       }
       if let index = existingIndex {
         logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-        onMainActor {
-          try? player?.skipTo(index, playWhenReady: true)
+        let queue: [Track] = onMainActor { player?.tracks ?? [] }
+        handleLoad(track: track, queue: queue, startIndex: Double(index)) {
+          onMainActor {
+            try? player?.skipTo(index, playWhenReady: true)
+          }
         }
         return
       }
@@ -402,30 +425,37 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           // Expand the queue from the contextual URL
           if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
             let (tracks, startIndex) = expanded
-
-            // Replace queue and start at the selected track (auto-play)
-            await MainActor.run {
-              player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: parentPath)
+            handleLoad(track: track, queue: tracks, startIndex: Double(startIndex)) {
+              // Replace queue and start at the selected track (auto-play)
+              onMainActor {
+                player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: parentPath)
+              }
             }
           } else {
             // Fallback: just load the single track (auto-play)
-            await MainActor.run {
-              player?.load(track, playWhenReady: true)
+            handleLoad(track: track, queue: [track], startIndex: 0) {
+              onMainActor {
+                player?.load(track, playWhenReady: true)
+              }
             }
           }
         } catch {
           logger.error("Error expanding queue: \(error.localizedDescription)")
           // Fallback to single track (auto-play) - playback errors reported via TrackPlayer callbacks
-          await MainActor.run {
-            player?.load(track, playWhenReady: true)
+          handleLoad(track: track, queue: [track], startIndex: 0) {
+            onMainActor {
+              player?.load(track, playWhenReady: true)
+            }
           }
         }
       }
     }
     // If track has src, it's playable - load and auto-play
     else if track.src != nil {
-      onMainActor {
-        player?.load(track, playWhenReady: true)
+      handleLoad(track: track, queue: [track], startIndex: 0) {
+        onMainActor {
+          player?.load(track, playWhenReady: true)
+        }
       }
     }
     // If track has url, it's browsable - navigate to it
