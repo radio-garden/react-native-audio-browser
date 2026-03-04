@@ -41,11 +41,6 @@ extension Track {
       return nil
     }
 
-    if url.isFileURL {
-      return UIImage(contentsOfFile: url.path)
-    }
-
-    // Build Kingfisher options with headers if provided
     var options: KingfisherOptionsInfo = []
     if let headers = artworkHeaders, !headers.isEmpty {
       let modifier = AnyModifier { request in

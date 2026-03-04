@@ -859,11 +859,6 @@ class TrackPlayer {
   private func loadImage(from imageSource: ImageSource) async -> UIImage? {
     guard let url = URL(string: imageSource.uri) else { return nil }
 
-    if url.isFileURL {
-      return UIImage(contentsOfFile: url.path)
-    }
-
-    // Build Kingfisher options with headers if provided
     var options: KingfisherOptionsInfo = []
     if let headers = imageSource.headers, !headers.isEmpty {
       let modifier = AnyModifier { request in
