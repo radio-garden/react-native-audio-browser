@@ -39,6 +39,8 @@ export class Player {
   protected _playWhenReady = false
   protected _state: Playback = { state: State.None }
   protected _isStopped = false
+  protected _loadInProgress = false
+  protected _pendingSeek: number | undefined
 
   // current getter/setter
   public get current(): Track | undefined {
@@ -196,8 +198,11 @@ export class Player {
   public load(track: Track, onLoaded?: (track: Track) => void): void {
     const player = this.requirePlayer()
     this._isStopped = false
+    this._loadInProgress = true
 
     if (!track.src) {
+      this._loadInProgress = false
+      this._pendingSeek = undefined
       const error: PlaybackError = {
         code: 'invalid_track',
         message: 'Track does not have a valid src URL'
@@ -212,8 +217,15 @@ export class Player {
     player
       .load(track.src)
       .then(() => {
+        this._loadInProgress = false
         this.current = track
         onLoaded?.(track)
+
+        // Execute any pending seek that arrived during loading
+        if (this._pendingSeek !== undefined) {
+          this.requireElement().currentTime = this._pendingSeek
+          this._pendingSeek = undefined
+        }
 
         // Auto-play if playWhenReady is true
         if (this.playWhenReady) {
@@ -221,6 +233,8 @@ export class Player {
         }
       })
       .catch((err: unknown) => {
+        this._loadInProgress = false
+        this._pendingSeek = undefined
         this.onError(this.toNormalizedError(err))
       })
   }
@@ -231,6 +245,8 @@ export class Player {
     // Match Android: stop sets playWhenReady=false and state=stopped,
     // but keeps the current track so play() can resume.
     this._isStopped = true
+    this._loadInProgress = false
+    this._pendingSeek = undefined
     this.playWhenReady = false
     this.state = { state: State.Stopped }
 
@@ -293,11 +309,19 @@ export class Player {
   }
 
   public seekBy(offset: number): void {
+    if (this._loadInProgress) {
+      this._pendingSeek = (this._pendingSeek ?? 0) + offset
+      return
+    }
     const element = this.requireElement()
     element.currentTime += offset
   }
 
   public seekTo(seconds: number): void {
+    if (this._loadInProgress) {
+      this._pendingSeek = seconds
+      return
+    }
     const element = this.requireElement()
     element.currentTime = seconds
   }

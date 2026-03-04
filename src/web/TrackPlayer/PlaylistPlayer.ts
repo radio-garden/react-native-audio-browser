@@ -290,11 +290,13 @@ export class PlaylistPlayer extends Player {
   }
 
   public reset(): void {
-    this.stop(() => {
-      this.playlist = []
-      this.current = undefined
-      this._currentIndex = undefined
-    })
+    // Clear queue state synchronously so subsequent add()/load() calls
+    // see a clean slate. The async player.unload() in stop() can finish
+    // in the background — it only releases the Shaka source.
+    this.playlist = []
+    this.current = undefined
+    this._currentIndex = undefined
+    this.stop()
   }
 
   public removeUpcomingTracks(): void {

@@ -534,6 +534,11 @@ export class NativeAudioBrowser
     const lastIndex = this.lastIndex
     const currentIndex = this.currentIndex
 
+    // Set loading flag early so seekTo() calls during async URL resolution
+    // are captured as pending seeks rather than silently dropped
+    this._loadInProgress = true
+    this._pendingSeek = undefined
+
     // Resolve the media URL before loading (async but we don't await)
     const loadId = ++this.currentLoadId
     const doLoad = async () => {
@@ -570,6 +575,8 @@ export class NativeAudioBrowser
 
     // Execute async load without blocking, with error handling
     doLoad().catch((error: unknown) => {
+      this._loadInProgress = false
+      this._pendingSeek = undefined
       console.error('Error loading track:', error)
       const message =
         error instanceof Error ? error.message : 'Failed to load track'
