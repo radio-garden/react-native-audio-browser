@@ -10224,7 +10224,7 @@ __metadata:
     react-native-audio-browser: "workspace:*"
     react-native-mmkv: "npm:^4.1.0"
     react-native-monorepo-config: "npm:^0.3.0"
-    react-native-nitro-modules: "npm:0.33.3"
+    react-native-nitro-modules: "npm:0.34.1"
     react-native-safe-area-context: "npm:^5.6.2"
     typescript: "npm:^5.9.3"
   languageName: unknown
@@ -14728,18 +14728,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nitrogen@npm:^0.33.3":
-  version: 0.33.3
-  resolution: "nitrogen@npm:0.33.3"
+"nitrogen@npm:0.34.1":
+  version: 0.34.1
+  resolution: "nitrogen@npm:0.34.1"
   dependencies:
     chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.33.3"
+    react-native-nitro-modules: "npm:^0.34.1"
     ts-morph: "npm:^27.0.0"
     yargs: "npm:^18.0.0"
     zod: "npm:^4.0.5"
   bin:
     nitrogen: lib/index.js
-  checksum: 10/db947d97454a91e9b75a0dfb8edc44a369df14fa3f6d5a443dafccd4cc6b6aa8c0ae21e48730c96ba77e905c616629b418e4f14b090f7746992914ee5aee400d
+  checksum: 10/116e582d13dd99e40d6620c15224ae9bd3f9f8185db2574e2524c2f6d11a72b3ee914e1fa69f5a71012221355f6d787bbd6aaf24681127bf9a8a9890446a78d0
   languageName: node
   linkType: hard
 
@@ -16480,7 +16480,7 @@ __metadata:
     "@types/react": "npm:19.1.1"
     conventional-changelog-conventionalcommits: "npm:^9.1.0"
     del-cli: "npm:^5.1.0"
-    nitrogen: "npm:^0.33.3"
+    nitrogen: "npm:0.34.1"
     oxfmt: "npm:^0.27.0"
     oxlint: "npm:^1.42.0"
     oxlint-tsgolint: "npm:^0.11.2"
@@ -16559,17 +16559,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-nitro-modules@npm:0.33.3, react-native-nitro-modules@npm:^0.33.3":
-  version: 0.33.3
-  resolution: "react-native-nitro-modules@npm:0.33.3"
-  peerDependencies:
-    react: "*"
-    react-native: "*"
-  checksum: 10/e041d715f3dec41f7307c8507c06908fadac2bca58abc45932ce5659326d0ad47ea38ed9bf2c4abbf9465c8bef83a84d382fcb38b5f5aef4509b501918da71f2
-  languageName: node
-  linkType: hard
-
-"react-native-nitro-modules@npm:0.34.1":
+"react-native-nitro-modules@npm:0.34.1, react-native-nitro-modules@npm:^0.34.1":
   version: 0.34.1
   resolution: "react-native-nitro-modules@npm:0.34.1"
   peerDependencies:
