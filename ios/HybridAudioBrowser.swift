@@ -48,12 +48,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  // MARK: - Internal Callbacks (for CarPlay/external controllers)
-
-  /// Called when notifyContentChanged is invoked, allowing CarPlay to refresh its templates.
-  /// Set by CarPlayController during setup.
-  var onExternalContentChanged: ((String) -> Void)?
-
   // MARK: - Multi-Listener Emitters
 
   /// Emitters allow multiple listeners for each event type, avoiding callback hijacking
@@ -467,7 +461,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     browserManager.invalidateContentCache(path)
 
     // Notify external controllers (CarPlay) that content changed
-    onExternalContentChanged?(path)
     externalContentChangedEmitter.emit(path)
 
     // Re-resolve the path if it's the current browser path
