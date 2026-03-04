@@ -2,6 +2,7 @@ import Foundation
 import NitroModules
 
 /// Manages the playing state (playing and buffering flags) and notifies when they change.
+@MainActor
 class PlayingStateManager {
   private(set) var playing: Bool = false
   private(set) var buffering: Bool = false
