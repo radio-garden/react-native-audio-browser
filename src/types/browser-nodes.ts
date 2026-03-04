@@ -66,6 +66,13 @@ export interface Track {
    * The artwork URL is also returned by native in the `artworkSource` property
    * for use in an `<Image>` component, which will contain the transformed version
    * if `artwork` configuration is set in `BrowserConfiguration` or a route.
+   *
+   * **iOS:** supports {@link https://developer.apple.com/sf-symbols/ | SF Symbols}
+   * with the `sf:` prefix and optional color params:
+   * `sf:heart.fill?bg=#FF0090&fg=#fff`. `bg` sets the background color
+   * (transparent if omitted), `fg` sets the symbol color (black if omitted).
+   * On CarPlay, SF Symbols without explicit colors automatically adapt to
+   * light/dark mode.
    */
   artwork?: string
 
