@@ -203,12 +203,12 @@ const configuration: BrowserConfiguration = {
             {
               title: 'Independent Sounds',
               url: '/playlist/independent-sounds',
-              artwork: Platform.select({ ios: 'sf:radio' })
+              artwork: Platform.select({ ios: 'sf:radio?bg=#FF0090&fg=#fff' })
             },
             {
               title: 'Energetic Rhythms',
               url: '/playlist/energetic-rhythms',
-              artwork: Platform.select({ ios: 'sf:bolt.fill' })
+              artwork: Platform.select({ ios: 'sf:bolt.fill?bg=#8AC926&fg=#fff' })
             }
           ]
         },

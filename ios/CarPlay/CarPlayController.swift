@@ -268,9 +268,8 @@ public final class RNABCarPlayController: NSObject {
     // https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
     template.tabImage = defaultTabImage()
 
-    // Support SF Symbols via "sf:" prefix (e.g., "sf:heart.fill")
-    if let artwork = track.artwork, artwork.hasPrefix("sf:") {
-      let symbolName = String(artwork.dropFirst(3))
+    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
+      let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
       if let image = sfSymbolImage(symbolName) {
         template.tabImage = image
       }
@@ -1107,17 +1106,30 @@ public final class RNABCarPlayController: NSObject {
     UIImage(systemName: symbolName)
   }
 
-  /// Creates an SF Symbol image rendered at the given canvas size with light/dark support.
-  /// The symbol is centered within the canvas with a subtle background fill.
-  private func sfSymbolImageForSize(_ symbolName: String, canvasSize: CGSize) -> UIImage? {
+  /// Renders an SF Symbol from an artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff").
+  private func sfSymbolImage(forArtwork artwork: String, canvasSize: CGSize) -> UIImage? {
+    let (symbolName, bg, fg) = SFSymbolRenderer.parseArtwork(artwork)
+    return sfSymbolImageForSize(symbolName, canvasSize: canvasSize, backgroundColor: bg, symbolColor: fg)
+  }
+
+  /// Creates an SF Symbol image rendered at the given canvas size.
+  /// When explicit colors are provided, uses them directly.
+  /// Otherwise falls back to automatic light/dark variants.
+  private func sfSymbolImageForSize(_ symbolName: String, canvasSize: CGSize, backgroundColor: UIColor? = nil, symbolColor: UIColor? = nil) -> UIImage? {
     let scale = interfaceController.carTraitCollection.displayScale
     let symbolPointSize = min(canvasSize.width, canvasSize.height) * 0.45
 
     let config = UIImage.SymbolConfiguration(pointSize: symbolPointSize, weight: .medium)
     guard let symbol = UIImage(systemName: symbolName, withConfiguration: config) else { return nil }
 
-    let lightImage = renderSymbolInCanvas(symbol, tintColor: .black, canvasSize: canvasSize, scale: scale)
-    let darkImage = renderSymbolInCanvas(symbol, tintColor: .white, canvasSize: canvasSize, scale: scale)
+    // Explicit colors: single image, no light/dark variants needed
+    if let symbolColor {
+      return renderSymbolInCanvas(symbol, tintColor: symbolColor, backgroundColor: backgroundColor, canvasSize: canvasSize, scale: scale)
+    }
+
+    // Auto light/dark variants
+    let lightImage = renderSymbolInCanvas(symbol, tintColor: .black, backgroundColor: nil, canvasSize: canvasSize, scale: scale)
+    let darkImage = renderSymbolInCanvas(symbol, tintColor: .white, backgroundColor: nil, canvasSize: canvasSize, scale: scale)
 
     let asset = UIImageAsset()
     asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
@@ -1126,26 +1138,27 @@ public final class RNABCarPlayController: NSObject {
     return asset.image(with: interfaceController.carTraitCollection)
   }
 
-  /// Renders an SF Symbol centered in a canvas with a subtle background fill.
-  private nonisolated func renderSymbolInCanvas(_ symbol: UIImage, tintColor: UIColor, canvasSize: CGSize, scale: CGFloat) -> UIImage {
-    UIGraphicsBeginImageContextWithOptions(canvasSize, false, scale)
-    defer { UIGraphicsEndImageContext() }
+  /// Renders an SF Symbol centered in a canvas with a background fill.
+  /// When `backgroundColor` is nil, derives a default from the tint color (light/dark).
+  private nonisolated func renderSymbolInCanvas(_ symbol: UIImage, tintColor: UIColor, backgroundColor: UIColor?, canvasSize: CGSize, scale: CGFloat) -> UIImage {
+    let renderer = UIGraphicsImageRenderer(size: canvasSize, format: {
+      let fmt = UIGraphicsImageRendererFormat()
+      fmt.scale = scale
+      return fmt
+    }())
 
-    let bgColor: UIColor = tintColor == .white ? UIColor(white: 0.15, alpha: 1) : UIColor(white: 0.92, alpha: 1)
-    bgColor.setFill()
-    UIRectFill(CGRect(origin: .zero, size: canvasSize))
+    return renderer.image { context in
+      let bgColor = backgroundColor ?? (tintColor == .white ? UIColor(white: 0.15, alpha: 1) : UIColor(white: 0.92, alpha: 1))
+      bgColor.setFill()
+      UIRectFill(CGRect(origin: .zero, size: canvasSize))
 
-    let symbolSize = symbol.size
-    let x = (canvasSize.width - symbolSize.width) / 2
-    let y = (canvasSize.height - symbolSize.height) / 2
+      let symbolSize = symbol.size
+      let x = (canvasSize.width - symbolSize.width) / 2
+      let y = (canvasSize.height - symbolSize.height) / 2
 
-    tintColor.set()
-    symbol.withRenderingMode(.alwaysTemplate).draw(in: CGRect(x: x, y: y, width: symbolSize.width, height: symbolSize.height))
-
-    guard let rendered = UIGraphicsGetImageFromCurrentImageContext() else {
-      return symbol
-    }
-    return rendered.withRenderingMode(.alwaysOriginal)
+      tintColor.set()
+      symbol.withRenderingMode(.alwaysTemplate).draw(in: CGRect(x: x, y: y, width: symbolSize.width, height: symbolSize.height))
+    }.withRenderingMode(.alwaysOriginal)
   }
 
   private func defaultTabImage() -> UIImage? {
@@ -1167,10 +1180,8 @@ public final class RNABCarPlayController: NSObject {
   ///   - size: The target size in points (will be multiplied by CarPlay display scale)
   ///   - completion: Called with the loaded image, or nil on failure
   private func loadArtwork(for track: Track, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
-    // Handle SF Symbols directly — no need to go through the artwork pipeline
-    if let artwork = track.artwork, artwork.hasPrefix("sf:") {
-      let symbolName = String(artwork.dropFirst(3))
-      completion(sfSymbolImageForSize(symbolName, canvasSize: size))
+    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
+      completion(sfSymbolImage(forArtwork: artwork, canvasSize: size))
       return
     }
 
@@ -1195,13 +1206,6 @@ public final class RNABCarPlayController: NSObject {
 
       await MainActor.run {
         if let imageSource {
-          // Check for SF Symbol URI (e.g., "sf:heart.fill")
-          if imageSource.uri.hasPrefix("sf:") {
-            let symbolName = String(imageSource.uri.dropFirst(3))
-            completion(self.sfSymbolImageForSize(symbolName, canvasSize: size))
-            return
-          }
-
           // Parse URL - skip if invalid
           guard let url = URL(string: imageSource.uri) else {
             self.loadArtworkDirect(track: track, size: size, completion: completion)
@@ -1262,10 +1266,8 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
-    // Check for SF Symbol URI (e.g., "sf:heart.fill")
-    if artworkUrl.hasPrefix("sf:") {
-      let symbolName = String(artworkUrl.dropFirst(3))
-      completion(sfSymbolImageForSize(symbolName, canvasSize: size))
+    if SFSymbolRenderer.isSFSymbol(artworkUrl) {
+      completion(sfSymbolImage(forArtwork: artworkUrl, canvasSize: size))
       return
     }
 
