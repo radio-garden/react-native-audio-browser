@@ -801,7 +801,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         imageRow: track.imageRow,
       )
       // Update the track in the player's queue so getActiveTrack() returns correct state
-      player?.setTrack(at: index, updatedTrack)
+      player?.replace(index, updatedTrack)
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
       // Fire active track changed so useActiveTrack() hook updates UI
       let position = player?.currentTime ?? 0

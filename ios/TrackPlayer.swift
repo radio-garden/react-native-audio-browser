@@ -616,7 +616,7 @@ class TrackPlayer {
         tracks.append(track)
         currentIndex = 0
       } else {
-        setTrack(at: currentIndex, track)
+        replace(currentIndex, track)
       }
       handleCurrentTrackChanged()
     }
@@ -1282,13 +1282,12 @@ class TrackPlayer {
   // MARK: - Queue Methods
 
   /**
-   Set the track at a specific index.
+   Replace the track at a specific index.
 
-   - parameter index: The index of the track to set.
-   - parameter track: The track to set.
+   - parameter index: The index of the track to replace.
+   - parameter track: The replacement track.
    */
-  func setTrack(at index: Int, _ track: Track) {
-    guard index >= 0, index < tracks.count else { return }
+  func replace(_ index: Int, _ track: Track) {
     tracks[index] = track
   }
 
