@@ -11,15 +11,12 @@ final class NetworkMonitor: @unchecked Sendable {
   private let monitor: NWPathMonitor
   private let queue = DispatchQueue(label: "com.audiobrowser.networkmonitor")
 
-  /// Current network connectivity state
+  /// Current network connectivity state. Must only be set on main thread.
   private(set) var isOnline: Bool = false {
     didSet {
       if oldValue != isOnline {
         logger.info("Network status changed: \(oldValue) -> \(self.isOnline)")
-        DispatchQueue.main.async { [weak self] in
-          guard let self else { return }
-          onChanged?(isOnline)
-        }
+        onChanged?(isOnline)
       }
     }
   }
@@ -35,7 +32,7 @@ final class NetworkMonitor: @unchecked Sendable {
     // Set up handler before starting
     monitor.pathUpdateHandler = { [weak self] path in
       let newStatus = path.status == .satisfied
-      DispatchQueue.main.async {
+      DispatchQueue.main.async { [weak self] in
         self?.isOnline = newStatus
       }
     }
