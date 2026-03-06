@@ -31,14 +31,19 @@ export function TrackListItem({
     <TouchableOpacity
       style={[styles.item, isActive && styles.activeItem]}
       onPress={onPress}
+      activeOpacity={0.7}
     >
+      {!track.src && track.artworkSource && (
+        <Image source={track.artworkSource} style={styles.itemArtworkLeft} />
+      )}
       <View style={styles.itemContent}>
-        <Text style={[styles.itemTitle, isActive && styles.activeItemTitle]}>
+        <Text style={[styles.itemTitle, isActive && styles.activeItemTitle]} numberOfLines={2}>
           {track.title}
         </Text>
         {track.subtitle && (
           <Text
             style={[styles.itemSubtitle, isActive && styles.activeItemSubtitle]}
+            numberOfLines={1}
           >
             {track.subtitle}
           </Text>
@@ -46,6 +51,7 @@ export function TrackListItem({
         {track.artist && (
           <Text
             style={[styles.itemArtist, isActive && styles.activeItemArtist]}
+            numberOfLines={1}
           >
             {track.artist}
           </Text>
@@ -84,8 +90,14 @@ function ImageRowListItem({
 
   return (
     <View style={styles.imageRowContainer}>
-      <TouchableOpacity onPress={onPress}>
+      <TouchableOpacity style={styles.imageRowHeader} onPress={onPress}>
         <Text style={styles.imageRowTitle}>{track.title}</Text>
+        <Icon
+          name="chevron-right"
+          size={14}
+          color="#ffffff"
+          iconStyle="solid"
+        />
       </TouchableOpacity>
       <ScrollView
         horizontal
@@ -157,6 +169,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginLeft: 12
   },
+  itemArtworkLeft: {
+    width: 48,
+    height: 48,
+    borderRadius: 4,
+    marginRight: 12
+  },
   activeItem: {
     backgroundColor: '#1a1a1a'
   },
@@ -174,12 +192,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#222222'
   },
+  imageRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 12
+  },
   imageRowTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ffffff',
-    paddingHorizontal: 16,
-    marginBottom: 12
+    color: '#ffffff'
   },
   imageRowScroll: {
     paddingHorizontal: 16,

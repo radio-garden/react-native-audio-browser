@@ -103,8 +103,8 @@ export function DebugPanel() {
 const styles = StyleSheet.create({
   collapsedButton: {
     position: 'absolute',
-    bottom: 140,
-    right: 16,
+    bottom: 16,
+    left: 16,
     backgroundColor: '#333',
     paddingHorizontal: 12,
     paddingVertical: 8,

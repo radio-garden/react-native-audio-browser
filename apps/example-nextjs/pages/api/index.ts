@@ -5,6 +5,11 @@ const root = {
   title: 'Example JSON Api',
   children: [
     {
+      title: 'Archive.org',
+      subtitle: 'Browse free audio from the Internet Archive',
+      url: '/api/archive'
+    },
+    {
       title: 'Errors',
       subtitle: 'Various example error responses',
       url: '/api/errors'

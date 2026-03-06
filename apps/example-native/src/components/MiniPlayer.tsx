@@ -1,73 +1,32 @@
-import type { RepeatMode } from 'react-native-audio-browser'
 import Icon from '@react-native-vector-icons/fontawesome6'
-import React, { useState } from 'react'
+import React from 'react'
 import {
   ActivityIndicator,
   Image,
-  Platform,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View
 } from 'react-native'
 import {
-  getRate,
-  getRepeatMode,
-  openIosOutputPicker,
-  setRate,
-  setRepeatMode,
   skipToNext,
   skipToPrevious,
-  toggleActiveTrackFavorited,
   togglePlayback,
-  toggleShuffle,
   useActiveTrack,
-  useEqualizerSettings,
-  useIosOutput,
   useNowPlaying,
   usePlaybackError,
-  usePlayingState,
-  useRepeatMode,
-  useShuffle,
-  useSleepTimerActive
+  usePlayingState
 } from 'react-native-audio-browser'
 
 type MiniPlayerProps = {
-  onEqualizerPress: () => void
-  onSleepTimerPress: () => void
+  onPress: () => void
 }
 
-const RATE_OPTIONS = [0.5, 1, 1.5, 2]
-
-function cycleRepeatMode() {
-  const modes: RepeatMode[] = ['off', 'track', 'queue']
-  const currentIndex = modes.indexOf(getRepeatMode())
-  const nextIndex = (currentIndex + 1) % modes.length
-  setRepeatMode(modes[nextIndex])
-}
-
-export function MiniPlayer({
-  onEqualizerPress,
-  onSleepTimerPress
-}: MiniPlayerProps) {
+export function MiniPlayer({ onPress }: MiniPlayerProps) {
   const track = useActiveTrack()
   const nowPlaying = useNowPlaying()
   const playingState = usePlayingState()
   const playbackError = usePlaybackError()
-  const shuffleEnabled = useShuffle()
-  const repeatMode = useRepeatMode()
-  const sleepTimerActive = useSleepTimerActive()
-  const equalizerSettings = useEqualizerSettings()
-  const iosOutput = useIosOutput()
-  const [rateState, setRateState] = useState(() => getRate())
-
-  function cycleRate() {
-    const currentIndex = RATE_OPTIONS.indexOf(rateState)
-    const nextIndex = (currentIndex + 1) % RATE_OPTIONS.length
-    const nextRate = RATE_OPTIONS[nextIndex]
-    setRate(nextRate)
-    setRateState(nextRate)
-  }
 
   if (!nowPlaying || !track) return null
 
@@ -75,7 +34,7 @@ export function MiniPlayer({
 
   return (
     <View style={styles.container}>
-      <View style={styles.info}>
+      <Pressable style={({ pressed }) => [styles.info, { opacity: pressed ? 0.5 : 1 }]} onPress={onPress}>
         {artwork ? (
           <Image source={{ uri: artwork }} style={styles.artwork} />
         ) : (
@@ -94,131 +53,45 @@ export function MiniPlayer({
             {playbackError?.message ?? artist}
           </Text>
         </View>
-      </View>
+      </Pressable>
       <View style={styles.controls}>
-        <View style={styles.controlRow}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => skipToPrevious()}
-          >
+        <Pressable
+          style={({ pressed }) => [styles.controlButton, { opacity: pressed ? 0.5 : 1 }]}
+          onPress={() => skipToPrevious()}
+        >
+          <Icon
+            name="backward-step"
+            size={20}
+            color="white"
+            iconStyle="solid"
+          />
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.controlButton, styles.playPauseButton, { opacity: pressed ? 0.5 : 1 }]}
+          onPress={togglePlayback}
+        >
+          {playingState.buffering ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
             <Icon
-              name="backward-step"
+              name={playingState.playing ? 'pause' : 'play'}
               size={20}
               color="white"
               iconStyle="solid"
             />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.playPauseButton]}
-            onPress={togglePlayback}
-          >
-            {playingState.buffering ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Icon
-                name={playingState.playing ? 'pause' : 'play'}
-                size={20}
-                color="white"
-                iconStyle="solid"
-              />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => skipToNext()}
-          >
-            <Icon
-              name="forward-step"
-              size={20}
-              color="white"
-              iconStyle="solid"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={toggleActiveTrackFavorited}
-          >
-            <Icon
-              name="heart"
-              size={20}
-              color="white"
-              iconStyle={track.favorited ? 'solid' : 'regular'}
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.controlRow}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={toggleShuffle}
-          >
-            <Icon
-              name="shuffle"
-              size={20}
-              color={shuffleEnabled ? '#007AFF' : 'white'}
-              iconStyle="solid"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={cycleRepeatMode}
-          >
-            <Icon
-              name={repeatMode === 'track' ? '1' : 'repeat'}
-              size={20}
-              color={repeatMode === 'off' ? 'white' : '#007AFF'}
-              iconStyle="solid"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton} onPress={cycleRate}>
-            <Text
-              style={[
-                styles.rateLabel,
-                rateState !== 1 && styles.rateLabelActive
-              ]}
-            >
-              {rateState}x
-            </Text>
-          </TouchableOpacity>
-          {equalizerSettings != null && (
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={onEqualizerPress}
-            >
-              <View style={{ transform: [{ rotate: '90deg' }] }}>
-                <Icon
-                  name="sliders"
-                  size={20}
-                  color={equalizerSettings.enabled ? '#007AFF' : 'white'}
-                  iconStyle="solid"
-                />
-              </View>
-            </TouchableOpacity>
           )}
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={onSleepTimerPress}
-          >
-            <Icon
-              name="moon"
-              size={20}
-              color={sleepTimerActive ? '#007AFF' : 'white'}
-              iconStyle="solid"
-            />
-          </TouchableOpacity>
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={openIosOutputPicker}
-            >
-              <Icon
-                name="headphones"
-                size={20}
-                color={iosOutput?.external ? '#007AFF' : 'white'}
-                iconStyle="solid"
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.controlButton, { opacity: pressed ? 0.5 : 1 }]}
+          onPress={() => skipToNext()}
+        >
+          <Icon
+            name="forward-step"
+            size={20}
+            color="white"
+            iconStyle="solid"
+          />
+        </Pressable>
       </View>
     </View>
   )
@@ -273,9 +146,6 @@ const styles = StyleSheet.create({
     color: '#ff6b6b'
   },
   controls: {
-    alignItems: 'flex-end'
-  },
-  controlRow: {
     flexDirection: 'row',
     alignItems: 'center'
   },
@@ -286,13 +156,5 @@ const styles = StyleSheet.create({
   playPauseButton: {
     width: 36,
     alignItems: 'center'
-  },
-  rateLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'white'
-  },
-  rateLabelActive: {
-    color: '#007AFF'
   }
 })

@@ -19,11 +19,9 @@ import {
   useTabs
 } from 'react-native-audio-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { DebugPanel } from '../components/DebugPanel'
-import { EqualizerModal } from '../components/EqualizerModal'
+import { FullScreenPlayer } from '../components/FullScreenPlayer'
 import { MiniPlayer } from '../components/MiniPlayer'
 import { NavigationErrorView } from '../components/NavigationErrorView'
-import { SleepTimerModal } from '../components/SleepTimerModal'
 import { TrackListItem } from '../components/TrackListItem'
 import { useBrowserHistory } from '../hooks/useBrowserHistory'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
@@ -39,8 +37,7 @@ export function BrowserScreen() {
   const tabs = useTabs()
   const navigationError = useFormattedNavigationError()
   const handleBrowserBack = useBrowserHistory()
-  const [showEqualizer, setShowEqualizer] = useState(false)
-  const [showSleepTimer, setShowSleepTimer] = useState(false)
+  const [showPlayer, setShowPlayer] = useState(false)
   const [screenStack, setScreenStack] = useState<Screen[]>(['browser'])
   const [searchQuery, setSearchQuery] = useState('')
   const showLoading = useDebouncedValue(!content, true)
@@ -102,7 +99,9 @@ export function BrowserScreen() {
             />
           </TouchableOpacity>
         )}
-        <Text style={styles.pathText}>{showSearch ? '' : path}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {showSearch ? 'Search' : content?.title ?? ''}
+        </Text>
         {hasSearch() && (
           <TouchableOpacity
             style={styles.searchButton}
@@ -145,16 +144,9 @@ export function BrowserScreen() {
         ) : showLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>
-              Loading {path ? path : ''}...
-            </Text>
           </View>
         ) : content ? (
           <>
-            <Text style={styles.title}>
-              {content.title ?? path ?? 'Music Browser'}
-            </Text>
-
             <FlatList
               data={content.children || []}
               renderItem={renderItem}
@@ -166,10 +158,7 @@ export function BrowserScreen() {
         ) : null}
       </View>
 
-      <MiniPlayer
-        onEqualizerPress={() => setShowEqualizer(true)}
-        onSleepTimerPress={() => setShowSleepTimer(true)}
-      />
+      <MiniPlayer onPress={() => setShowPlayer(true)} />
 
       {/* Tab Bar */}
       {tabs && tabs.length > 0 && (
@@ -200,17 +189,11 @@ export function BrowserScreen() {
         </View>
       )}
 
-      <EqualizerModal
-        visible={showEqualizer}
-        onClose={() => setShowEqualizer(false)}
+      <FullScreenPlayer
+        visible={showPlayer}
+        onClose={() => setShowPlayer(false)}
       />
 
-      <SleepTimerModal
-        visible={showSleepTimer}
-        onClose={() => setShowSleepTimer(false)}
-      />
-
-      {__DEV__ && <DebugPanel />}
     </View>
   )
 }
@@ -227,32 +210,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a'
   },
   backButton: {
+    flexShrink: 0,
     padding: 8,
     marginLeft: -8,
     marginRight: 4
   },
   searchButton: {
+    flexShrink: 0,
     padding: 8,
     marginRight: -8,
     marginLeft: 4
   },
-  pathText: {
+  headerTitle: {
     flex: 1,
-    color: '#888888',
-    fontSize: 14,
-    textAlign: 'right'
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
-    paddingTop: 16
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingTop: 16
   },
   list: {
     flex: 1
@@ -262,11 +238,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000000'
-  },
-  loadingText: {
-    color: '#888888',
-    marginTop: 12,
-    fontSize: 16
   },
   tabBar: {
     flexDirection: 'row',
