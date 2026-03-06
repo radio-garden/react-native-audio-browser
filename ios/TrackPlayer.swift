@@ -322,6 +322,7 @@ class TrackPlayer {
 
   private let loadSeekCoordinator = LoadSeekCoordinator()
   private var mediaResolverTask: Task<Void, Never>?
+  private var artworkLoadTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
   private var asset: AVAsset?
@@ -832,19 +833,24 @@ class TrackPlayer {
     let artworkSize = min(screenWidth, 1200)
     let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
 
-    Task {
+    artworkLoadTask?.cancel()
+    artworkLoadTask = Task {
       let image: UIImage?
 
       // Try to resolve artwork URL with size context for CDN optimization
       if let resolver = artworkUrlResolver,
          let imageSource = await resolver(track, nowPlayingSize)
       {
+        guard !Task.isCancelled else { return }
         logger.debug("loadArtworkForTrack: using resolved URL: \(imageSource.uri)")
         image = await loadImage(from: imageSource)
       } else {
+        guard !Task.isCancelled else { return }
         // Fall back to loading from track's existing artwork URL
         image = await track.loadArtwork()
       }
+
+      guard !Task.isCancelled else { return }
 
       // Verify we're still on the same track after async load
       guard currentTrack?.src == track.src else { return }
