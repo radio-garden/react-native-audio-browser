@@ -231,9 +231,28 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   override public init() {
     super.init()
-    HybridAudioBrowser.shared = self
+
+    // Clean up the previous instance (e.g., on JS runtime reload).
+    // The old HybridAudioBrowser may still be retained by the global
+    // playerAndConfiguredBrowser OnceValue, so we must explicitly stop
+    // its player to prevent two audio streams running simultaneously.
+    onMainActor {
+      HybridAudioBrowser.shared?.player?.destroy()
+      playerAndConfiguredBrowser.reset()
+      HybridAudioBrowser.shared = self
+    }
     setupEmitterToNitroForwarding()
     setupBrowserCallbacks()
+  }
+
+  deinit {
+    // Safety net: ensure the AVPlayer is stopped if this instance is deallocated.
+    let player = self.player
+    if Thread.isMainThread {
+      MainActor.assumeIsolated { player?.destroy() }
+    } else {
+      DispatchQueue.main.async { MainActor.assumeIsolated { player?.destroy() } }
+    }
   }
 
   /// Returns the TrackPlayer instance, if setup has been called.

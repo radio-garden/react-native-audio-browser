@@ -107,6 +107,12 @@ class RemoteCommandController {
     commands.forEach { self.disable(command: $0) }
   }
 
+  /// Disables all currently enabled remote commands and removes their targets.
+  func disableAll() {
+    disable(commands: enabledCommands)
+    enabledCommands.removeAll()
+  }
+
   /**
    Enables a remote command by setting it up with the provided handler.
    Removes any existing target before adding the new one to prevent duplicate handlers.

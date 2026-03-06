@@ -805,6 +805,13 @@ class TrackPlayer {
     nowPlayingInfoController.clear()
   }
 
+  /// Tears down the player completely, stopping audio and removing all remote command targets.
+  /// Called when the HybridAudioBrowser is being replaced (e.g., JS runtime reload).
+  func destroy() {
+    clear()
+    remoteCommandController.disableAll()
+  }
+
   // MARK: - Private
 
   private func setNowPlayingCurrentTime(seconds: Double) {
