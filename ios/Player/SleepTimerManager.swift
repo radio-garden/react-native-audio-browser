@@ -39,7 +39,7 @@ class SleepTimerManager {
   var onComplete: (() -> Void)?
 
   /// Callback invoked when the sleep timer state changes
-  var onChanged: ((SleepTimerState?) -> Void)?
+  var onChanged: ((SleepTimerState) -> Void)?
 
   // MARK: - Public Methods
 
@@ -52,7 +52,7 @@ class SleepTimerManager {
     if !hasSleepTimer { return false }
     sleepTimerTime = -1
     willSleepWhenCurrentItemReachesEnd = false
-    onChanged?(nil)
+    onChanged?(.first(NullType.null))
     return true
   }
 
@@ -88,7 +88,7 @@ class SleepTimerManager {
     sleepTimerJob = job
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
     DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: job)
-    onChanged?(get())
+    if let state = get() { onChanged?(state) }
   }
 
   /// Sets the timer to stop playback when the current track ends.
@@ -96,16 +96,14 @@ class SleepTimerManager {
     assertMainThread()
     let changed = !willSleepWhenCurrentItemReachesEnd
     willSleepWhenCurrentItemReachesEnd = true
-    if changed {
-      onChanged?(get())
-    }
+    if changed, let state = get() { onChanged?(state) }
   }
 
   /// Called when the current track changes. Resets end-of-track timer.
   func onTrackChanged() {
     if willSleepWhenCurrentItemReachesEnd {
       willSleepWhenCurrentItemReachesEnd = false
-      onChanged?(nil)
+      onChanged?(.first(NullType.null))
     }
   }
 
@@ -127,7 +125,7 @@ class SleepTimerManager {
   private func complete() {
     sleepTimerTime = -1
     willSleepWhenCurrentItemReachesEnd = false
-    onChanged?(nil)
+    onChanged?(.first(NullType.null))
     onComplete?()
   }
 
