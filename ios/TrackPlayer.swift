@@ -186,9 +186,9 @@ class TrackPlayer {
     /// The deferred seek time, if any. Used by `seekBy()` to offset from the deferred position.
     var pendingTime: TimeInterval? {
       switch state {
-      case let .pendingSeek(time): return time
-      case let .seekInFlight(time): return time
-      case .idle: return nil
+      case let .pendingSeek(time): time
+      case let .seekInFlight(time): time
+      case .idle: nil
       }
     }
 
@@ -196,8 +196,8 @@ class TrackPlayer {
     /// True when a seek is pending or in-flight during the loading phase.
     var shouldDeferReadyTransition: Bool {
       switch state {
-      case .idle: return false
-      case .pendingSeek, .seekInFlight: return true
+      case .idle: false
+      case .pendingSeek, .seekInFlight: true
       }
     }
 
@@ -512,10 +512,12 @@ class TrackPlayer {
       if playWhenReady == true, state == .error || state == .stopped {
         reload(startFromCurrentTime: state == .error)
       }
-      if playWhenReady {
-        startPlayback()
-      } else {
-        pausePlayback()
+      if state != .loading {
+        if playWhenReady {
+          startPlayback()
+        } else {
+          pausePlayback()
+        }
       }
 
       if oldValue != playWhenReady {
@@ -1579,6 +1581,18 @@ class TrackPlayer {
     let lastPosition = currentTime
     let shouldContinuePlayback = playWhenReady
     if let currentTrack {
+      // Cancel in-flight loading from previous track and clear old item
+      // to prevent stale audio during async URL resolution.
+      metadataLoadTask?.cancel()
+      playableLoadTask?.cancel()
+      pausePlayback()
+      stopObservingAVPlayerItem()
+      avPlayer.replaceCurrentItem(with: nil)
+
+      // Set loading state before playWhenReady so the setter's guard
+      // prevents a no-op startPlayback() on the now-nil item.
+      state = .loading
+
       // Ensure playWhenReady is set before loading to preserve playback state
       playWhenReady = shouldContinuePlayback
 
@@ -1604,10 +1618,6 @@ class TrackPlayer {
       logger.debug("Loading track: \(currentTrack.title)")
       logger.debug("  track.url: \(currentTrack.url ?? "nil")")
       logger.debug("  track.src: \(src)")
-
-      // Set loading state early so seekTo calls during async URL resolution
-      // are captured as pending seeks rather than silently dropped
-      state = .loading
 
       // Check if it's already a full URL (http/https) or local file
       if src.hasPrefix("http://") || src.hasPrefix("https://") || src.hasPrefix("file://") {
