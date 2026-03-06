@@ -93,7 +93,10 @@ struct BrowserConfig {
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
     guard let handler = handleTrackLoad else { return false }
     do {
-      let outerPromise = handler(event)
+      // MainActor: Nitro bridge call must be on main thread (C++ noexcept)
+      nonisolated(unsafe) let _handler = handler
+      nonisolated(unsafe) let _event = event
+      let outerPromise = await MainActor.run { _handler(_event) }
       let innerPromise = try await outerPromise.await()
       try await innerPromise.await()
     } catch {

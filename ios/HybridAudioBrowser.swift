@@ -339,13 +339,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     let defaultFormatted = defaultFormattedError(navError)
     if let formatter = browserManager.config.formatNavigationError {
       let params = FormatNavigationErrorParams(error: navError, defaultFormatted: defaultFormatted, path: path)
-      formatter(params)
-        .then { [weak self] customDisplay in
-          self?.lastFormattedNavigationError = customDisplay ?? defaultFormatted
-        }
-        .catch { [weak self] _ in
-          self?.lastFormattedNavigationError = defaultFormatted
-        }
+      // Dispatch to main thread for the Nitro bridge call to avoid C++ noexcept crashes
+      DispatchQueue.main.async { [weak self] in
+        formatter(params)
+          .then { customDisplay in
+            self?.lastFormattedNavigationError = customDisplay ?? defaultFormatted
+          }
+          .catch { _ in
+            self?.lastFormattedNavigationError = defaultFormatted
+          }
+      }
     } else {
       lastFormattedNavigationError = defaultFormatted
     }

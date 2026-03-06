@@ -398,7 +398,8 @@ final class BrowserManager: @unchecked Sendable {
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
       // Callback returns Promise<Promise<BrowseResult>> - await both layers
-      let outerPromise = callback(callbackParam)
+      // MainActor: Nitro bridge call must be on main thread (C++ noexcept)
+      let outerPromise = await MainActor.run { callback(callbackParam) }
       let innerPromise = try await outerPromise.await()
       let result = try await innerPromise.await()
 
@@ -679,7 +680,8 @@ final class BrowserManager: @unchecked Sendable {
 
     if let callback = searchEntry.searchCallback {
       // Callback returns Promise<Promise<[Track]>> - await both layers
-      let outerPromise = callback(searchParams)
+      // MainActor: Nitro bridge call must be on main thread (C++ noexcept)
+      let outerPromise = await MainActor.run { callback(searchParams) }
       let innerPromise = try await outerPromise.await()
       results = try await innerPromise.await()
     } else if let searchConfig = searchEntry.searchConfig {
@@ -810,8 +812,13 @@ final class BrowserManager: @unchecked Sendable {
         )
 
         logger.debug("resolveMediaUrl: calling transform callback...")
-        // MediaRequestConfig.transform takes (request, routeParams) - pass nil for routeParams
-        let outerPromise = transform(baseRequest, nil)
+        // Dispatch the Nitro bridge call to MainActor to avoid C++ noexcept crashes.
+        // The generated C++ call() wrapper is noexcept, so any exception from JSI
+        // causes std::terminate. Calling from the main thread is safer for JS callbacks.
+        // Only the initial call is dispatched; awaiting happens on the background thread.
+        let outerPromise = await MainActor.run {
+          transform(baseRequest, nil)
+        }
         logger.debug("resolveMediaUrl: awaiting outer promise...")
         let innerPromise = try await outerPromise.await()
         logger.debug("resolveMediaUrl: awaiting inner promise...")
@@ -927,7 +934,8 @@ final class BrowserManager: @unchecked Sendable {
 
       // If there's a resolve callback, call it for per-track config
       if let resolve = artworkConfig.resolve {
-        let outerPromise = resolve(track)
+        // MainActor: Nitro bridge call must be on main thread (C++ noexcept)
+        let outerPromise = await MainActor.run { resolve(track) }
         let innerPromise = try await outerPromise.await()
         let resolvedConfig = try await innerPromise.await()
 
@@ -983,7 +991,10 @@ final class BrowserManager: @unchecked Sendable {
       // Transform will be called at load-time when actual display size is known
       let hasSize = imageContext?.width != nil || imageContext?.height != nil
       if let transform = artworkConfig.transform, hasSize {
-        let outerPromise = transform(MediaTransformParams(request: mergedConfig, context: imageContext))
+        // MainActor: Nitro bridge call must be on main thread (C++ noexcept)
+        let outerPromise = await MainActor.run {
+          transform(MediaTransformParams(request: mergedConfig, context: imageContext))
+        }
         let innerPromise = try await outerPromise.await()
         let transformedConfig = try await innerPromise.await()
 
