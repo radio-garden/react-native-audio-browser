@@ -5,8 +5,11 @@ import NitroModules
  Manages periodic progress updates during playback.
  Emits progress events at configurable intervals based on playback state.
  */
-class PlaybackProgressUpdateManager: @unchecked Sendable {
-  private var timer: Timer?
+@MainActor
+class PlaybackProgressUpdateManager {
+  // nonisolated(unsafe) for deinit cleanup — Timer must be invalidated to
+  // break RunLoop retain, and deinit is always nonisolated in Swift 6.
+  nonisolated(unsafe) private var timer: Timer?
   private var updateInterval: TimeInterval?
   private let onProgressUpdate: () -> Void
 
@@ -15,7 +18,7 @@ class PlaybackProgressUpdateManager: @unchecked Sendable {
   }
 
   deinit {
-    stop()
+    timer?.invalidate()
   }
 
   func setUpdateInterval(_ interval: TimeInterval?) {
@@ -34,7 +37,9 @@ class PlaybackProgressUpdateManager: @unchecked Sendable {
       withTimeInterval: interval,
       repeats: true,
     ) { [weak self] _ in
-      self?.onProgressUpdate()
+      MainActor.assumeIsolated {
+        self?.onProgressUpdate()
+      }
     }
   }
 

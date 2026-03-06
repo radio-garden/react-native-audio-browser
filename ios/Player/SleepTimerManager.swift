@@ -6,14 +6,12 @@ typealias SleepTimerState = SleepTimer
 
 /// Manages sleep timer functionality for the audio player.
 /// Supports both time-based timers and end-of-track timers.
+@MainActor
 class SleepTimerManager {
   // MARK: - Properties
 
-  private var sleepTimerJob: DispatchWorkItem?
-
-  private func assertMainThread() {
-    assert(Thread.isMainThread, "SleepTimerManager must be accessed from the main thread")
-  }
+  // nonisolated(unsafe) for deinit cleanup — deinit is always nonisolated in Swift 6.
+  nonisolated(unsafe) private var sleepTimerJob: DispatchWorkItem?
 
   /// The time when playback should stop (seconds since epoch), or -1 if inactive
   private(set) var sleepTimerTime: TimeInterval = -1 {
@@ -47,7 +45,6 @@ class SleepTimerManager {
   /// - Returns: true if a timer was cleared, false if no timer was active
   @discardableResult
   func clear() -> Bool {
-    assertMainThread()
     let hasSleepTimer = sleepTimerTime > -1 || willSleepWhenCurrentItemReachesEnd
     if !hasSleepTimer { return false }
     sleepTimerTime = -1
@@ -59,7 +56,6 @@ class SleepTimerManager {
   /// Gets the current sleep timer state.
   /// - Returns: The current timer state, or nil if no timer is active
   func get() -> SleepTimerState? {
-    assertMainThread()
     let sleepOnEnd = willSleepWhenCurrentItemReachesEnd
     let hasSleepTimerTime = sleepTimerTime > -1
 
@@ -80,10 +76,11 @@ class SleepTimerManager {
   /// Sets a time-based sleep timer.
   /// - Parameter seconds: Number of seconds until playback stops
   func set(seconds: TimeInterval) {
-    assertMainThread()
     cancelSleepTimerJob()
     let job = DispatchWorkItem { [weak self] in
-      self?.complete()
+      MainActor.assumeIsolated {
+        self?.complete()
+      }
     }
     sleepTimerJob = job
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
@@ -93,7 +90,6 @@ class SleepTimerManager {
 
   /// Sets the timer to stop playback when the current track ends.
   func setToEndOfTrack() {
-    assertMainThread()
     let changed = !willSleepWhenCurrentItemReachesEnd
     willSleepWhenCurrentItemReachesEnd = true
     if changed, let state = get() { onChanged?(state) }
@@ -130,6 +126,6 @@ class SleepTimerManager {
   }
 
   deinit {
-    cancelSleepTimerJob()
+    sleepTimerJob?.cancel()
   }
 }
