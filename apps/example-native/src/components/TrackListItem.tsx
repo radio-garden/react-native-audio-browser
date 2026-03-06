@@ -33,8 +33,12 @@ export function TrackListItem({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {!track.src && track.artworkSource && (
+      {track.artworkSource ? (
         <Image source={track.artworkSource} style={styles.itemArtworkLeft} />
+      ) : (
+        <View style={[styles.itemArtworkLeft, styles.itemArtworkPlaceholder]}>
+          <Icon name="music" size={16} color="#555555" iconStyle="solid" />
+        </View>
       )}
       <View style={styles.itemContent}>
         <Text style={[styles.itemTitle, isActive && styles.activeItemTitle]} numberOfLines={2}>
@@ -57,13 +61,7 @@ export function TrackListItem({
           </Text>
         )}
       </View>
-      {track.src ? (
-        track.artworkSource ? (
-          <Image source={track.artworkSource} style={styles.itemArtwork} />
-        ) : (
-          <Icon name="music" size={16} color="#ffffff" iconStyle="solid" />
-        )
-      ) : (
+      {!track.src && (
         <Icon
           name="chevron-right"
           size={14}
@@ -163,17 +161,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666'
   },
-  itemArtwork: {
-    width: 48,
-    height: 48,
-    borderRadius: 4,
-    marginLeft: 12
-  },
   itemArtworkLeft: {
     width: 48,
     height: 48,
     borderRadius: 4,
     marginRight: 12
+  },
+  itemArtworkPlaceholder: {
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   activeItem: {
     backgroundColor: '#1a1a1a'
