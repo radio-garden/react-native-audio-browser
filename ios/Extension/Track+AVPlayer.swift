@@ -26,14 +26,18 @@ extension Track {
   /// Uses Kingfisher for caching and efficient image loading
   func loadArtwork() async -> UIImage? {
     // Try artworkSource first (has more detailed config), then fall back to artwork string
+    // Skip SF Symbol strings - those require SFSymbolRenderer and can't be loaded as URLs
     let artworkUrlString: String?
     let artworkHeaders: [String: String]?
 
     if let source = artworkSource {
       artworkUrlString = source.uri
       artworkHeaders = source.headers
-    } else {
+    } else if let artwork, !SFSymbolRenderer.isSFSymbol(artwork) {
       artworkUrlString = artwork
+      artworkHeaders = nil
+    } else {
+      artworkUrlString = nil
       artworkHeaders = nil
     }
 

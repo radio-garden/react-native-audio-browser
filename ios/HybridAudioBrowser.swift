@@ -930,13 +930,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         album: track.album,
         artist: override?.artist ?? track.artist,
         duration: track.duration,
-        artwork: track.artwork,
+        artwork: nowPlayingArtwork(for: track),
         description: track.description,
         mediaId: track.src ?? track.url,
         genre: track.genre,
         rating: nil,
       )
     }
+  }
+
+  /// Returns the artwork URI suitable for JS consumption.
+  /// Prefers the resolved artworkSource URI (e.g. file:// for rendered SF Symbols).
+  /// Falls back to the raw artwork string only if it's not an SF Symbol (which JS can't load).
+  private func nowPlayingArtwork(for track: Track) -> String? {
+    if let uri = track.artworkSource?.uri { return uri }
+    guard let artwork = track.artwork else { return nil }
+    return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
   }
 
   /// Applies the current now playing metadata (with override if set) to NowPlayingInfoCenter and notifies JS.
@@ -951,7 +960,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       album: track.album,
       artist: override?.artist ?? track.artist,
       duration: track.duration,
-      artwork: track.artwork,
+      artwork: nowPlayingArtwork(for: track),
       description: track.description,
       mediaId: track.src ?? track.url,
       genre: track.genre,
