@@ -62,6 +62,7 @@
     "ios:format": "swiftformat ios",
     "ios:ide": "yarn workspace example-native ios:ide",
     "ios:rebuild": "yarn workspace example-native ios:rebuild",
+    "ios:test": "swift test",
     "lint": "oxlint --fix",
     "release": "semantic-release",
     "test": "vitest run",
