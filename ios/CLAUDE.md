@@ -15,10 +15,10 @@ subgraph Nitro["Nitro Hybrid Object"]
   HAB["HybridAudioBrowser<br/>Implements HybridAudioBrowserSpec<br/>~50 callback properties"]
 end
 
-TP["TrackPlayer<br/>Core AVPlayer Logic<br/>Queue Management<br/>~1280 lines"]
+TP["TrackPlayer<br/>Core AVPlayer Logic<br/>Queue Management<br/>LoadSeekCoordinator"]
 
 subgraph Browser["Browser System"]
-  BM["BrowserManager<br/>Navigation, Routing, Caching<br/>URL Resolution ~870 lines"]
+  BM["BrowserManager<br/>@MainActor<br/>Navigation, Routing, Caching<br/>URL Resolution"]
   SR["SimpleRouter<br/>Route Pattern Matching<br/>Parameter Extraction"]
   BPH["BrowserPathHelper<br/>Contextual URLs<br/>Path Utilities"]
   BC["BrowserConfig<br/>Configuration Wrapper"]
@@ -31,6 +31,7 @@ subgraph Platform["Apple Platform APIs"]
   MPRC["MPRemoteCommandCenter<br/>Lock Screen, CarPlay"]
   AS["AVAudioSession<br/>Audio Session"]
   MPNP["MPNowPlayingInfoCenter<br/>Now Playing Info"]
+  CPT["CPTemplateApplicationScene<br/>CarPlay Templates"]
 end
 
 subgraph Observers["Observer Layer"]
@@ -44,21 +45,33 @@ subgraph StateManagers["State Managers"]
   PSM["PlayingStateManager<br/>playing, buffering flags"]
   PPUM["PlaybackProgressUpdateManager<br/>Timer-based Progress"]
   STM["SleepTimerManager<br/>Time and End-of-Track"]
+  RM["RetryManager<br/>Exponential Backoff<br/>Network-aware Acceleration"]
 end
 
 subgraph Controllers["Controllers"]
   RCC["RemoteCommandController<br/>MPRemoteCommand Handlers<br/>Lazy Handler Overrides"]
-  NPIC["NowPlayingInfoController<br/>Thread-safe Queue<br/>Batched Updates"]
+  NPIC["NowPlayingInfoController<br/>@MainActor<br/>iOS 16+ Auto Publishing"]
 end
 
-NM["NetworkMonitor<br/>NWPathMonitor<br/>Online, Offline"]
+subgraph CarPlay["CarPlay"]
+  CPC["CarPlayController<br/>@MainActor @objc<br/>Tab Bar, List, Now Playing"]
+  MIH["RNABMediaIntentHandler<br/>Siri Intent Handling"]
+end
 
-TPC["TrackPlayerCallbacks<br/>Protocol ~30 methods"]
+subgraph Utilities["Utilities"]
+  NM["NetworkMonitor<br/>NWPathMonitor"]
+  EM["Emitter<br/>Multi-listener Events"]
+  OV["OnceValue<br/>Async Init Gate"]
+  SFR["SFSymbolRenderer<br/>SF Symbol to Image"]
+end
+
+TPC["TrackPlayerCallbacks<br/>@MainActor Protocol<br/>~30 methods"]
 
 JS -->|"Direct sync/async calls"| HAB
 HAB -->|Owns| TP
 HAB -->|Owns| BM
 HAB -->|Uses| NM
+HAB -->|Uses| EM
 HAB -.->|Implements| TPC
 
 BM --> SR
@@ -66,6 +79,7 @@ BM --> BPH
 BM --> BC
 BM --> HC
 BM -->|"trackCache 3000, contentCache 20"| LRU
+BM --> SFR
 
 TP -->|Controls| AVP
 TP -->|Owns| PSO
@@ -75,6 +89,7 @@ TP -->|Owns| PIPO
 TP -->|Owns| PSM
 TP -->|Owns| PPUM
 TP -->|Owns| STM
+TP -->|Owns| RM
 TP -->|Owns| RCC
 TP -->|Owns| NPIC
 
@@ -86,6 +101,13 @@ PIPO -->|KVO| AVP
 RCC -->|addTarget| MPRC
 NPIC -->|nowPlayingInfo| MPNP
 TP -->|setCategory| AS
+RM -->|Monitors| NM
+
+CPC -->|"via HAB.browserManager"| BM
+CPC -->|"via HAB.getPlayer()"| TP
+CPC -->|Templates| CPT
+MIH -->|Search & Play| HAB
+OV -->|"Gates CarPlay cold start"| HAB
 
 TPC -.->|Events| HAB
 HAB -.->|"~50 callbacks to JS"| JS
@@ -99,16 +121,18 @@ classDef platform fill:#f0f0f0,stroke:#333,stroke-width:2px
 classDef state fill:#e8f5e9,stroke:#333,stroke-width:2px
 classDef util fill:#fafafa,stroke:#333,stroke-width:2px
 classDef protocol fill:#fff8e1,stroke:#333,stroke-width:1px,stroke-dasharray:5 5
+classDef carplay fill:#e1f0ff,stroke:#333,stroke-width:2px
 
 class HAB nitro
 class TP core
 class BM,SR,BPH,BC,HC,LRU browser
 class PSO,PTO,PINO,PIPO observer
 class RCC,NPIC controller
-class AVP,MPRC,AS,MPNP,JS platform
-class PSM,PPUM,STM state
-class NM util
+class AVP,MPRC,AS,MPNP,CPT,JS platform
+class PSM,PPUM,STM,RM state
+class NM,EM,OV,SFR util
 class TPC protocol
+class CPC,MIH carplay
 ```
 
 ## Key Architecture Points
@@ -136,10 +160,10 @@ class TPC protocol
 
 ### Thread Safety
 
-- `HybridAudioBrowser.onMainThread()` ensures player operations run on main thread
-- `NowPlayingInfoController` uses serial dispatch queue
+- `HybridAudioBrowser.onMainActor()` ensures player operations run on main thread
+- `TrackPlayer`, `BrowserManager`, all observers, controllers, and state managers are `@MainActor`
 - `LRUCache` uses NSLock for thread-safe access
-- `BrowserManager` asserts main thread for state modifications
+- `UncheckedSendableBox` wrapper for non-Sendable return types from `onMainActor()` calls
 
 ### Relationship to RNTP
 
@@ -155,19 +179,20 @@ This codebase is adapted from react-native-track-player. Key differences:
 
 ```
 ios/
-├── HybridAudioBrowser.swift          # Main Nitro entry point (~910 lines)
+├── HybridAudioBrowser.swift          # Main Nitro entry point
 │                                     # Implements HybridAudioBrowserSpec & TrackPlayerCallbacks
 │                                     # ~50 callback properties (browser, player, remote)
-├── TrackPlayer.swift                 # Core AVPlayer logic (~1280 lines)
+├── TrackPlayer.swift                 # Core AVPlayer logic
 │                                     # Queue management, media URL resolution
 │                                     # Owns all observers, state managers, controllers
-├── TrackPlayerCallbacks.swift        # Internal callback protocol (~30 methods)
+│                                     # Nested LoadSeekCoordinator for deferred seeks
+├── TrackPlayerCallbacks.swift        # @MainActor callback protocol (~30 methods)
 │                                     # Bridge between TrackPlayer events and HybridAudioBrowser
 ├── Browser/
-│   ├── BrowserManager.swift          # Navigation, routing, caching (~870 lines)
+│   ├── BrowserManager.swift          # @MainActor navigation, routing, caching
 │   │                                 # URL resolution (media, artwork)
 │   │                                 # Favorites hydration, queue expansion
-│   ├── SimpleRouter.swift            # Route pattern matching (~185 lines)
+│   ├── SimpleRouter.swift            # Route pattern matching
 │   │                                 # Supports {param}, *, ** wildcards
 │   │                                 # Specificity-based best match
 │   ├── BrowserConfig.swift           # Configuration wrapper
@@ -175,27 +200,34 @@ ios/
 │   │                                 # __trackId encoding for playable-only tracks
 │   └── JsonModels.swift              # JSON Codable models for API responses
 ├── Observer/
-│   ├── PlayerStateObserver.swift     # KVO: AVPlayer.status, timeControlStatus
+│   ├── PlayerStateObserver.swift     # @MainActor KVO: AVPlayer.status, timeControlStatus
 │   ├── PlayerTimeObserver.swift      # Periodic & boundary time events
 │   ├── PlayerItemNotificationObserver.swift  # Track end/fail notifications
 │   └── PlayerItemPropertyObserver.swift      # Duration, metadata, buffering
 ├── Player/
 │   ├── PlayingStateManager.swift     # Computes playing/buffering state
-│   ├── SleepTimerManager.swift       # Sleep timer (time & end-of-track)
-│   │                                 # Supports both countdown and track-end modes
-│   └── PlaybackProgressUpdateManager.swift   # Timer-based periodic progress
+│   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track)
+│   ├── PlaybackProgressUpdateManager.swift   # Timer-based periodic progress
+│   └── RetryManager.swift            # Exponential backoff with network-aware acceleration
 ├── NowPlayingInfo/
-│   ├── NowPlayingInfoController.swift # Thread-safe MPNowPlayingInfoCenter
-│   │                                 # Serial dispatch queue
+│   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingInfoCenter
+│   │                                 # iOS 16+ auto publishing via MPNowPlayingSession
+│   │                                 # iOS 15.x manual fallback
 │   ├── NowPlayingInfoCenter.swift    # Protocol for testability
 │   ├── NowPlayingInfoKeyValue.swift  # Key-value protocol
 │   ├── MediaItemProperty.swift       # Track metadata properties
 │   └── NowPlayingInfoProperty.swift  # Playback state properties
 ├── RemoteCommand/
-│   └── RemoteCommandController.swift # MPRemoteCommandCenter handlers (~285 lines)
+│   └── RemoteCommandController.swift # @MainActor MPRemoteCommandCenter handlers
 │                                     # Lazy handler properties for customization
+│                                     # iOS 16+ session command center switching
+├── CarPlay/
+│   ├── CarPlayController.swift       # @MainActor @objc CarPlay scene delegate
+│   │                                 # CPTabBarTemplate, CPListTemplate, Now Playing
+│   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent handling
+│   └── Track+CarPlay.swift           # CarPlay-specific Track extensions
 ├── Http/
-│   └── HttpClient.swift              # URLSession wrapper (~230 lines)
+│   └── HttpClient.swift              # URLSession wrapper
 │                                     # JSON decoding with detailed errors
 ├── Model/
 │   ├── TrackPlayerError.swift        # PlaybackError, QueueError
@@ -205,16 +237,27 @@ ios/
 │   └── PlayerUpdateOptions.swift     # Update options struct
 ├── Extension/
 │   ├── Track+AVPlayer.swift          # Track artwork loading
-│   └── Capability+RemoteCommand.swift # Capability to RemoteCommand conversion
+│   ├── Track+Copying.swift           # Track.copying() for selective field updates
+│   ├── Capability+RemoteCommand.swift # Capability to RemoteCommand conversion
+│   ├── ChapterMetadata+AVFoundation.swift  # AVTimedMetadataGroup → ChapterMetadata
+│   ├── TimedMetadata+AVFoundation.swift    # AVTimedMetadataGroup → TimedMetadata
+│   ├── TrackMetadata+AVFoundation.swift    # AVMetadataItem → TrackMetadata
+│   └── CxxVectorConformances.swift   # Nitro C++ vector type conformances
 ├── Option/
 │   ├── PitchAlgorithms.swift         # AVAudioTimePitchAlgorithm mapping
 │   ├── TimeEventFrequency.swift      # Event frequency enum
 │   └── SessionCategories.swift       # Audio session categories
 ├── Util/
-│   ├── LRUCache.swift                # Thread-safe LRU cache (~183 lines)
+│   ├── LRUCache.swift                # Thread-safe LRU cache
 │   │                                 # O(1) get/set with doubly-linked list
 │   ├── MetadataAdapter.swift         # AVMetadataItem parsing
-│   └── NetworkMonitor.swift          # NWPathMonitor wrapper
+│   ├── Emitter.swift                 # Generic multi-listener event emitter
+│   ├── OnceValue.swift               # One-time async initialization gate
+│   ├── NetworkMonitor.swift          # NWPathMonitor wrapper
+│   ├── SFSymbolRenderer.swift        # SF Symbol → file:// image rendering
+│   └── SVGProcessor.swift            # SVG processing
+├── Tests/
+│   └── SimpleRouterTests.swift       # Unit tests for route matching
 └── Support/
     └── Bridge.h                       # Objective-C bridge header
 ```
