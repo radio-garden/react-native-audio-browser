@@ -70,7 +70,10 @@ subgraph Loaders["Media Loading"]
 end
 
 subgraph CarPlay["CarPlay"]
-  CPC["CarPlayController<br/>@MainActor @objc<br/>Tab Bar, List, Now Playing"]
+  CPC["CarPlayController<br/>@MainActor @objc<br/>Tab Bar, List, Navigation"]
+  CPIL["CarPlayImageLoader<br/>@MainActor<br/>SF Symbols, Artwork, Tinting"]
+  CPAR["CarPlayArtworkResolver<br/>Artwork Load Strategy"]
+  CPNPM["CarPlayNowPlayingManager<br/>@MainActor<br/>Now Playing, Buttons, Up Next"]
   MIH["RNABMediaIntentHandler<br/>Siri Intent Handling"]
 end
 
@@ -137,9 +140,15 @@ NPIC -->|nowPlayingInfo| MPNP
 TP -->|setCategory| AS
 RM -->|Monitors| NM
 
+CPC -->|Owns| CPIL
+CPC -->|Owns| CPNPM
 CPC -->|"via HAB.browserManager"| BM
 CPC -->|"via HAB.getPlayer()"| TP
 CPC -->|Templates| CPT
+CPIL -->|Uses| CPAR
+CPIL -->|"resolveArtworkUrl"| BM
+CPNPM -->|"via HAB.getPlayer()"| TP
+CPNPM -->|Templates| CPT
 MIH -->|Search & Play| HAB
 OV -->|"Gates CarPlay cold start"| HAB
 
@@ -170,7 +179,7 @@ class AVP,MPRC,AS,MPNP,CPT,JS platform
 class PSM,PPUM,STM,RM state
 class NM,EM,OV,SFR util
 class TPC,MLD,SCH protocol
-class CPC,MIH carplay
+class CPC,CPIL,CPAR,CPNPM,MIH carplay
 class QM,SO queue
 class ML,NPU,LSC loader
 ```
@@ -289,7 +298,14 @@ ios/
 │                                     # iOS 16+ session command center switching
 ├── CarPlay/
 │   ├── CarPlayController.swift       # @MainActor @objc CarPlay scene delegate
-│   │                                 # CPTabBarTemplate, CPListTemplate, Now Playing
+│   │                                 # CPTabBarTemplate, CPListTemplate, Navigation
+│   │                                 # Owns CarPlayImageLoader, CarPlayNowPlayingManager
+│   ├── CarPlayArtworkResolver.swift   # Platform-independent artwork load strategy
+│   │                                 # SF symbol detection, URL resolution, tinting/SVG decisions
+│   ├── CarPlayImageLoader.swift      # @MainActor image loading service
+│   │                                 # SF Symbols, artwork loading, adaptive tinting
+│   ├── CarPlayNowPlayingManager.swift # @MainActor Now Playing management
+│   │                                 # Buttons, Up Next, NowPlayingObserver
 │   ├── RNABMediaIntentHandler.swift  # Siri INPlayMediaIntent handling
 │   └── Track+CarPlay.swift           # CarPlay-specific Track extensions
 ├── Http/

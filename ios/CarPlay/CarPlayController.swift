@@ -1,6 +1,5 @@
 import CarPlay
 import Foundation
-import Kingfisher
 import NitroModules
 import os.log
 
@@ -10,8 +9,8 @@ import os.log
 /// - Creates and manages CPTabBarTemplate from browser tabs
 /// - Converts browser content to CPListTemplate for navigation
 /// - Handles item selection for playback and navigation
-/// - Loads artwork for list items
-/// - Integrates with CPNowPlayingTemplate
+/// - Delegates image loading to CarPlayImageLoader
+/// - Delegates Now Playing management to CarPlayNowPlayingManager
 ///
 /// This class is exposed to Objective-C for use by RNABCarPlaySceneDelegate.
 @MainActor
@@ -32,24 +31,18 @@ public final class RNABCarPlayController: NSObject {
   /// Current navigation stack paths (for back navigation context)
   private var navigationStack: [String] = []
 
-  /// Helper object for CPNowPlayingTemplateObserver conformance
-  /// (kept separate to avoid exposing CarPlay protocols to Obj-C header)
-  private var nowPlayingObserver: NowPlayingObserver?
-
   /// Helper object for CPInterfaceControllerDelegate conformance
   private var interfaceDelegate: InterfaceControllerDelegate?
 
-  /// Reference to the Up Next template for updating when queue changes
-  private weak var upNextTemplate: CPListTemplate?
+  /// Image loading service for CarPlay artwork
+  private var imageLoader: CarPlayImageLoader?
+
+  /// Now Playing template and button management
+  private let nowPlayingManager: CarPlayNowPlayingManager
 
   /// Convenience accessor for browser config
   private var config: BrowserConfig {
     audioBrowser?.browserManager.config ?? BrowserConfig()
-  }
-
-  /// Gets the current active track's favorited state
-  private var isActiveTrackFavorited: Bool {
-    (try? audioBrowser?.getActiveTrack())?.favorited ?? false
   }
 
   /// Checks if the given src matches the currently active (loaded) track
@@ -63,7 +56,11 @@ public final class RNABCarPlayController: NSObject {
   public init(interfaceController: CPInterfaceController) {
     self.interfaceController = interfaceController
     audioBrowser = HybridAudioBrowser.shared
+    nowPlayingManager = CarPlayNowPlayingManager(interfaceController: interfaceController)
     super.init()
+    nowPlayingManager.listItemFactory = { [weak self] track, handler in
+      self?.createListItem(for: track, handler: handler) ?? CPListItem(text: track.title, detailText: nil)
+    }
   }
 
   // MARK: - Lifecycle
@@ -90,8 +87,18 @@ public final class RNABCarPlayController: NSObject {
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
       self.trackSelector = TrackSelector(browserManager: browser.browserManager)
+
+      // Create image loader with CarPlay display traits
+      self.imageLoader = CarPlayImageLoader(
+        carTraitCollection: self.interfaceController.carTraitCollection,
+        browserManager: browser.browserManager
+      )
+
       self.setupContentSubscriptions()
-      self.setupNowPlayingTemplate()
+
+      // Wire up now playing manager
+      self.nowPlayingManager.setup(audioBrowser: browser)
+
       await self.buildInitialInterface()
     }
   }
@@ -103,11 +110,7 @@ public final class RNABCarPlayController: NSObject {
 
     logger.info("Stopping CarPlay controller")
 
-    // Remove Now Playing observer
-    if let observer = nowPlayingObserver {
-      CPNowPlayingTemplate.shared.remove(observer)
-      nowPlayingObserver = nil
-    }
+    nowPlayingManager.teardown()
 
     navigationStack.removeAll()
   }
@@ -137,14 +140,14 @@ public final class RNABCarPlayController: NSObject {
     // Subscribe to config changes (for Now Playing buttons)
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
       Task { @MainActor in
-        self?.setupNowPlayingButtons()
+        self?.nowPlayingManager.setupNowPlayingButtons()
       }
     }
 
     // Subscribe to favorite changes (for Now Playing button)
     audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in
       Task { @MainActor in
-        self?.updateFavoriteButtonState()
+        self?.nowPlayingManager.updateFavoriteButtonState()
       }
     }
 
@@ -163,7 +166,7 @@ public final class RNABCarPlayController: NSObject {
     // Subscribe to queue changes (for Up Next list updates)
     audioBrowser.queueChangedEmitter.addListener { [weak self] tracks in
       Task { @MainActor in
-        self?.handleQueueChanged(tracks)
+        self?.nowPlayingManager.handleQueueChanged(tracks)
       }
     }
 
@@ -268,17 +271,17 @@ public final class RNABCarPlayController: NSObject {
     // Set tab image - CarPlay requires an image for proper tab display
     // Tab bar icons are 24pt x 24pt per CarPlay Developer Guide
     // https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
-    template.tabImage = defaultTabImage()
+    template.tabImage = imageLoader?.defaultTabImage()
 
     if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
       let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
-      if let image = sfSymbolImage(symbolName) {
+      if let image = imageLoader?.sfSymbolImage(symbolName) {
         template.tabImage = image
       }
     } else if track.artwork != nil || track.artworkSource != nil {
       // loadArtwork handles both artwork and artworkSource
       let tabImageSize = CGSize(width: 24, height: 24)
-      loadArtwork(for: track, size: tabImageSize) { [weak template] image in
+      imageLoader?.loadArtwork(for: track, size: tabImageSize) { [weak template] image in
         Task { @MainActor in
           if let image {
             template?.tabImage = image
@@ -395,7 +398,7 @@ public final class RNABCarPlayController: NSObject {
   /// - Parameters:
   ///   - track: The track to create the item for
   ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
-  private func createListItem(
+  fileprivate func createListItem(
     for track: Track,
     handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil,
   ) -> CPListItem {
@@ -428,8 +431,8 @@ public final class RNABCarPlayController: NSObject {
     // Load artwork with size context for proper CDN optimization
     if track.artwork != nil || track.artworkSource != nil {
       // Set empty placeholder to reserve space while loading
-      item.setImage(placeholderImage)
-      loadArtwork(for: track, size: CPListItem.maximumImageSize) { [weak item] image in
+      item.setImage(imageLoader?.placeholderImage)
+      imageLoader?.loadArtwork(for: track, size: CPListItem.maximumImageSize) { [weak item] image in
         Task { @MainActor in
           item?.setImage(image)
         }
@@ -458,7 +461,7 @@ public final class RNABCarPlayController: NSObject {
     // CPListImageRowItem requires images at init — start with placeholders
     let maxImages = CPMaximumNumberOfGridImages
     let visibleItems = Array(imageRowItems.prefix(maxImages))
-    let placeholders = visibleItems.map { _ in placeholderImage ?? UIImage() }
+    let placeholders = visibleItems.map { _ in imageLoader?.placeholderImage ?? UIImage() }
     let titles = visibleItems.map(\.title)
 
     // Use imageTitles variant on iOS 17.4+ to show titles below each thumbnail
@@ -538,7 +541,7 @@ public final class RNABCarPlayController: NSObject {
         imageRow: nil,
       )
 
-      loadArtwork(for: itemTrack, size: CPListImageRowItem.maximumImageSize) { [weak item] image in
+      imageLoader?.loadArtwork(for: itemTrack, size: CPListImageRowItem.maximumImageSize) { [weak item] image in
         Task { @MainActor in
           guard let item, let image else { return }
           var images = item.gridImages
@@ -580,7 +583,7 @@ public final class RNABCarPlayController: NSObject {
     // If this track is already loaded, resume playback and show Now Playing
     if let src = track.src, isActiveTrack(src: src) {
       try? audioBrowser.play()
-      showNowPlaying()
+      nowPlayingManager.showNowPlaying()
       completion()
       return
     }
@@ -596,9 +599,9 @@ public final class RNABCarPlayController: NSObject {
         switch result {
         case .play(let intent):
           self.executePlayback(intent, player: player)
-          self.showNowPlaying()
+          self.nowPlayingManager.showNowPlaying()
         case .intercepted:
-          self.showNowPlaying()
+          self.nowPlayingManager.showNowPlaying()
         case .browse(let url):
           self.navigateToUrl(url, completion: completion)
           return // navigateToUrl handles its own completion
@@ -649,179 +652,6 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  // MARK: - Now Playing
-
-  private func setupNowPlayingTemplate() {
-    let template = CPNowPlayingTemplate.shared
-
-    // Create and register observer for Up Next button
-    let observer = NowPlayingObserver(controller: self)
-    nowPlayingObserver = observer
-    template.add(observer)
-
-    // Setup custom Now Playing buttons from config
-    setupNowPlayingButtons()
-
-    // Update button states based on config
-    updateNowPlayingButtonStates()
-  }
-
-  /// Sets up custom Now Playing buttons based on configuration
-  private func setupNowPlayingButtons() {
-    let buttons = config.carPlayNowPlayingButtons
-    logger.info("Setting up Now Playing buttons: \(buttons.map(\.stringValue))")
-
-    guard !buttons.isEmpty else {
-      CPNowPlayingTemplate.shared.updateNowPlayingButtons([])
-      return
-    }
-
-    var nowPlayingButtons: [CPNowPlayingButton] = []
-
-    for buttonType in buttons {
-      switch buttonType {
-      case .shuffle:
-        let shuffleButton = CPNowPlayingShuffleButton { [weak self] _ in
-          self?.handleShuffleButtonTapped()
-        }
-        nowPlayingButtons.append(shuffleButton)
-
-      case .repeat:
-        let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
-          self?.handleRepeatButtonTapped()
-        }
-        nowPlayingButtons.append(repeatButton)
-
-      case .favorite:
-        let favoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: isActiveTrackFavorited),
-        ) { [weak self] _ in
-          self?.handleFavoriteButtonTapped()
-        }
-        nowPlayingButtons.append(favoriteButton)
-
-      case .playbackRate:
-        let rateButton = CPNowPlayingPlaybackRateButton { [weak self] _ in
-          self?.handlePlaybackRateButtonTapped()
-        }
-        nowPlayingButtons.append(rateButton)
-      }
-    }
-
-    CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
-    logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
-  }
-
-  /// Returns the appropriate image for the favorite button based on state
-  /// Sized to CPNowPlayingButtonMaximumImageSize per Apple docs
-  private func favoriteButtonImage(isFavorited: Bool) -> UIImage {
-    let symbolName = isFavorited ? "heart.fill" : "heart"
-    guard let image = UIImage(systemName: symbolName)?.resized(to: CPNowPlayingButtonMaximumImageSize) else {
-      return UIImage()
-    }
-    return image
-  }
-
-  /// Handles shuffle button tap - toggles shuffle mode
-  private func handleShuffleButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else { return }
-
-    let newEnabled = !player.shuffleEnabled
-    player.shuffleEnabled = newEnabled
-    logger.info("CarPlay shuffle mode changed: \(newEnabled)")
-  }
-
-  /// Handles repeat button tap - cycles through repeat modes
-  private func handleRepeatButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else { return }
-
-    let currentMode = player.getRepeatMode()
-    let newMode: RepeatMode = switch currentMode {
-    case .off:
-      .track
-    case .track:
-      .queue
-    case .queue:
-      .off
-    }
-
-    player.setRepeatMode(newMode)
-    logger.info("CarPlay repeat mode changed: \(currentMode.stringValue) → \(newMode.stringValue)")
-  }
-
-  /// Handles favorite button tap - toggles favorite state of current track
-  private func handleFavoriteButtonTapped() {
-    try? audioBrowser?.toggleActiveTrackFavorited()
-    logger.info("CarPlay favorite toggled")
-    // Button appearance is updated via onFavoriteChanged subscription
-  }
-
-  /// Handles playback rate button tap - cycles through available rates
-  private func handlePlaybackRateButtonTapped() {
-    guard let audioBrowser, let player = audioBrowser.getPlayer() else { return }
-
-    let rates = audioBrowser.playbackRates
-    guard !rates.isEmpty else { return }
-
-    let currentRate = Double(player.rate)
-    let nextRate: Double
-
-    // Find current rate index and cycle to next
-    if let currentIndex = rates.firstIndex(where: { (currentRate - $0).magnitude < 0.01 }) {
-      // Current rate is in the list - cycle to next
-      let nextIndex = (currentIndex + 1) % rates.count
-      nextRate = rates[nextIndex]
-    } else {
-      // Current rate not in list - find first rate greater than current, or wrap to first
-      nextRate = rates.first { $0 > currentRate } ?? rates[0]
-    }
-
-    player.rate = Float(nextRate)
-    logger.info("CarPlay playback rate changed: \(currentRate) → \(nextRate)")
-  }
-
-  /// Updates the favorite button appearance based on current track's favorite state
-  private func updateFavoriteButtonState() {
-    guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
-    let favorited = isActiveTrackFavorited
-    let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
-
-    // Find and update the favorite button (it's a CPNowPlayingImageButton)
-    for (index, button) in buttons.enumerated() {
-      if button is CPNowPlayingImageButton {
-        // Recreate the button with updated image
-        let newFavoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: favorited),
-        ) { [weak self] _ in
-          self?.handleFavoriteButtonTapped()
-        }
-
-        var updatedButtons = buttons
-        updatedButtons[index] = newFavoriteButton
-        CPNowPlayingTemplate.shared.updateNowPlayingButtons(updatedButtons)
-        break
-      }
-    }
-  }
-
-  /// Updates Now Playing button states based on config and current queue
-  private func updateNowPlayingButtonStates() {
-    updateNowPlayingUpNextButton()
-    updateFavoriteButtonState()
-  }
-
-  /// Updates the Up Next button enabled state based on config and queue size
-  private func updateNowPlayingUpNextButton() {
-    let template = CPNowPlayingTemplate.shared
-    template.isUpNextButtonEnabled = config.carPlayUpNextButton && (audioBrowser?.getPlayer()?.tracks.count ?? 0) > 1
-  }
-
-  private func showNowPlaying() {
-    updateNowPlayingButtonStates()
-    let nowPlayingTemplate = CPNowPlayingTemplate.shared
-    interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
-  }
-
   // MARK: - Content Change Handlers
 
   @MainActor
@@ -846,7 +676,7 @@ public final class RNABCarPlayController: NSObject {
     logger.debug("handleActiveTrackChanged: \(event.lastTrack?.src ?? "nil") → \(event.track?.src ?? "nil")")
     updatePlayingIndicators()
     // Update favorite button to reflect the new track's favorite state
-    updateFavoriteButtonState()
+    nowPlayingManager.updateFavoriteButtonState()
   }
 
   /// Updates the isPlaying state on all list items based on the current active track.
@@ -1017,328 +847,6 @@ public final class RNABCarPlayController: NSObject {
     )
     interfaceController.setRootTemplate(template, animated: true, completion: nil)
   }
-
-  // MARK: - Image Loading
-
-  /// Creates an SF Symbol image for tabs - plain systemName, CarPlay handles tinting
-  private func sfSymbolImage(_ symbolName: String) -> UIImage? {
-    UIImage(systemName: symbolName)
-  }
-
-  /// Renders an SF Symbol from an artwork string (e.g. "sf:heart.fill?bg=#000&fg=#fff").
-  private func sfSymbolImage(forArtwork artwork: String, canvasSize: CGSize) -> UIImage? {
-    let (symbolName, bg, fg) = SFSymbolRenderer.parseArtwork(artwork)
-    return sfSymbolImageForSize(symbolName, canvasSize: canvasSize, backgroundColor: bg, symbolColor: fg)
-  }
-
-  /// Creates an SF Symbol image rendered at the given canvas size.
-  /// When explicit colors are provided, uses them directly.
-  /// Otherwise falls back to automatic light/dark variants.
-  private func sfSymbolImageForSize(_ symbolName: String, canvasSize: CGSize, backgroundColor: UIColor? = nil, symbolColor: UIColor? = nil) -> UIImage? {
-    let scale = interfaceController.carTraitCollection.displayScale
-    let symbolPointSize = min(canvasSize.width, canvasSize.height) * 0.45
-
-    let config = UIImage.SymbolConfiguration(pointSize: symbolPointSize, weight: .medium)
-    guard let symbol = UIImage(systemName: symbolName, withConfiguration: config) else { return nil }
-
-    // Explicit colors: single image, no light/dark variants needed
-    if let symbolColor {
-      return renderSymbolInCanvas(symbol, tintColor: symbolColor, backgroundColor: backgroundColor, canvasSize: canvasSize, scale: scale)
-    }
-
-    // Auto light/dark variants
-    let lightImage = renderSymbolInCanvas(symbol, tintColor: .black, backgroundColor: nil, canvasSize: canvasSize, scale: scale)
-    let darkImage = renderSymbolInCanvas(symbol, tintColor: .white, backgroundColor: nil, canvasSize: canvasSize, scale: scale)
-
-    let asset = UIImageAsset()
-    asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
-    asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
-
-    return asset.image(with: interfaceController.carTraitCollection)
-  }
-
-  /// Renders an SF Symbol centered in a canvas with a background fill.
-  /// When `backgroundColor` is nil, derives a default from the tint color (light/dark).
-  private nonisolated func renderSymbolInCanvas(_ symbol: UIImage, tintColor: UIColor, backgroundColor: UIColor?, canvasSize: CGSize, scale: CGFloat) -> UIImage {
-    let renderer = UIGraphicsImageRenderer(size: canvasSize, format: {
-      let fmt = UIGraphicsImageRendererFormat()
-      fmt.scale = scale
-      return fmt
-    }())
-
-    return renderer.image { _ in
-      let bgColor = backgroundColor ?? (tintColor == .white ? UIColor(white: 0.15, alpha: 1) : UIColor(white: 0.92, alpha: 1))
-      bgColor.setFill()
-      UIRectFill(CGRect(origin: .zero, size: canvasSize))
-
-      let symbolSize = symbol.size
-      let x = (canvasSize.width - symbolSize.width) / 2
-      let y = (canvasSize.height - symbolSize.height) / 2
-
-      tintColor.set()
-      symbol.withRenderingMode(.alwaysTemplate).draw(in: CGRect(x: x, y: y, width: symbolSize.width, height: symbolSize.height))
-    }.withRenderingMode(.alwaysOriginal)
-  }
-
-  private func defaultTabImage() -> UIImage? {
-    sfSymbolImage("music.note.list")
-  }
-
-  /// Cached empty placeholder image to reserve space while artwork loads
-  private lazy var placeholderImage: UIImage? = {
-    let size = CPListItem.maximumImageSize
-    let scale = interfaceController.carTraitCollection.displayScale
-    UIGraphicsBeginImageContextWithOptions(size, false, scale)
-    defer { UIGraphicsEndImageContext() }
-    return UIGraphicsGetImageFromCurrentImageContext()
-  }()
-
-  /// Loads artwork for a track with size context, using the artwork transform if configured.
-  /// - Parameters:
-  ///   - track: The track to load artwork for
-  ///   - size: The target size in points (will be multiplied by CarPlay display scale)
-  ///   - completion: Called with the loaded image, or nil on failure
-  private func loadArtwork(for track: Track, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
-    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
-      completion(sfSymbolImage(forArtwork: artwork, canvasSize: size))
-      return
-    }
-
-    guard let browserManager = audioBrowser?.browserManager else {
-      // Fall back to direct URL loading
-      loadArtworkDirect(track: track, size: size, completion: completion)
-      return
-    }
-
-    // Convert points to pixels using CarPlay display scale (not iPhone screen scale)
-    let carTraits = interfaceController.carTraitCollection
-    let scale = carTraits.displayScale
-    let imageContext = ImageContext(width: size.width * scale, height: size.height * scale)
-
-    Task {
-      // Resolve artwork URL with size context
-      let imageSource = await browserManager.resolveArtworkUrl(
-        track: track,
-        perRouteConfig: nil,
-        imageContext: imageContext,
-      )
-
-      await MainActor.run {
-        if let imageSource {
-          // Parse URL - skip if invalid
-          guard let url = URL(string: imageSource.uri) else {
-            self.loadArtworkDirect(track: track, size: size, completion: completion)
-            return
-          }
-
-          // Capture trait collection before async call
-          let carTraitCollection = self.interfaceController.carTraitCollection
-
-          // Load from resolved URL with any custom headers
-          var options: KingfisherOptionsInfo = []
-          if let headers = imageSource.headers, !headers.isEmpty {
-            let modifier = AnyModifier { request in
-              var request = request
-              for (key, value) in headers {
-                request.setValue(value, forHTTPHeaderField: key)
-              }
-              return request
-            }
-            options.append(.requestModifier(modifier))
-          }
-
-          // Add SVG processor if URL is an SVG
-          if url.pathExtension.lowercased() == "svg" {
-            options.append(.processor(SVGProcessor(size: nil, scale: carTraitCollection.displayScale)))
-          }
-
-          // Capture tinting preference before async call
-          let shouldTint = track.artworkCarPlayTinted ?? false
-
-          KingfisherManager.shared.retrieveImage(with: url, options: options) { result in
-            if case let .success(imageResult) = result {
-              let image = imageResult.image
-
-              if shouldTint {
-                // Apply light/dark tinting for monochrome icons
-                completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
-              } else {
-                // Regular images (photos, album art) - show as-is
-                completion(image)
-              }
-            } else {
-              completion(nil)
-            }
-          }
-        } else {
-          // No resolved URL - try direct loading as fallback
-          self.loadArtworkDirect(track: track, size: size, completion: completion)
-        }
-      }
-    }
-  }
-
-  /// Loads artwork directly from track's artwork URL without transform.
-  private func loadArtworkDirect(track: Track, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
-    guard let artworkUrl = track.artwork ?? track.artworkSource?.uri else {
-      completion(nil)
-      return
-    }
-
-    if SFSymbolRenderer.isSFSymbol(artworkUrl) {
-      completion(sfSymbolImage(forArtwork: artworkUrl, canvasSize: size))
-      return
-    }
-
-    guard let url = URL(string: artworkUrl) else {
-      completion(nil)
-      return
-    }
-
-    // Capture trait collection before async call
-    let carTraitCollection = interfaceController.carTraitCollection
-    let isSvg = url.pathExtension.lowercased() == "svg"
-    let shouldTint = track.artworkCarPlayTinted ?? false
-
-    // Add SVG processor if URL is an SVG
-    var options: KingfisherOptionsInfo = []
-    if isSvg {
-      options.append(.processor(SVGProcessor(size: nil, scale: carTraitCollection.displayScale)))
-    }
-
-    KingfisherManager.shared.retrieveImage(with: url, options: options) { result in
-      if case let .success(imageResult) = result {
-        let image = imageResult.image
-
-        if shouldTint {
-          // Apply light/dark tinting for monochrome icons
-          completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
-        } else {
-          // Regular images (photos, album art) - show as-is
-          completion(image)
-        }
-      } else {
-        completion(nil)
-      }
-    }
-  }
-
-  /// Renders an image to a bitmap with the specified tint color (for monochrome icons).
-  /// Thread-safe: UIGraphicsBeginImageContextWithOptions is safe to call from any thread (iOS 4+).
-  private nonisolated func renderImageToBitmap(_ image: UIImage, tintColor: UIColor) -> UIImage {
-    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-    defer { UIGraphicsEndImageContext() }
-
-    tintColor.set()
-    image.withRenderingMode(.alwaysTemplate).draw(in: CGRect(origin: .zero, size: image.size))
-
-    guard let rendered = UIGraphicsGetImageFromCurrentImageContext() else {
-      return image // Fallback to original if rendering fails
-    }
-    return rendered.withRenderingMode(.alwaysOriginal)
-  }
-
-  /// Creates light/dark tinted variants of an image and returns the appropriate one for current appearance
-  private nonisolated func createAdaptiveImage(_ image: UIImage, carTraitCollection: UITraitCollection) -> UIImage {
-    let lightImage = renderImageToBitmap(image, tintColor: .black)
-    let darkImage = renderImageToBitmap(image, tintColor: .white)
-
-    let asset = UIImageAsset()
-    asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
-    asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
-
-    return asset.image(with: carTraitCollection)
-  }
-}
-
-// MARK: - Now Playing Observer
-
-/// Private helper class for CPNowPlayingTemplateObserver conformance.
-/// Kept separate from RNABCarPlayController to avoid exposing CarPlay protocols to Obj-C header.
-private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver, @unchecked Sendable {
-  private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingObserver")
-  private weak var controller: RNABCarPlayController?
-
-  @MainActor
-  init(controller: RNABCarPlayController) {
-    self.controller = controller
-    super.init()
-  }
-
-  func nowPlayingTemplateUpNextButtonTapped(_: CPNowPlayingTemplate) {
-    Task { @MainActor in
-      controller?.handleUpNextButtonTapped()
-    }
-  }
-
-  func nowPlayingTemplateAlbumArtistButtonTapped(_: CPNowPlayingTemplate) {
-    // Album/Artist button functionality - can be implemented later
-    logger.debug("Album/Artist button tapped (not implemented)")
-  }
-}
-
-// MARK: - Up Next Handler
-
-private extension RNABCarPlayController {
-  /// Handles the Up Next button tap from Now Playing screen
-  func handleUpNextButtonTapped() {
-    guard let player = audioBrowser?.getPlayer() else {
-      logger.warning("Player not available for Up Next")
-      return
-    }
-
-    let tracks = player.tracks
-
-    guard !tracks.isEmpty else {
-      logger.debug("No tracks in queue for Up Next")
-      return
-    }
-
-    logger.info("Showing Up Next queue with \(tracks.count) tracks")
-
-    let template = CPListTemplate(
-      title: "Up Next",
-      sections: [createUpNextSections(tracks: tracks, player: player)],
-    )
-
-    // Store reference for queue change updates
-    upNextTemplate = template
-
-    interfaceController.pushTemplate(template, animated: true, completion: nil)
-  }
-
-  /// Creates list items for the Up Next queue
-  func createUpNextSections(tracks: [Track], player: TrackPlayer) -> CPListSection {
-    let items = tracks.enumerated().map { index, track -> CPListItem in
-      createListItem(for: track) { [weak self] _, completion in
-        self?.logger.info("Skipping to track at index \(index): \(track.title)")
-        do {
-          try player.skipTo(index, playWhenReady: true)
-        } catch {
-          self?.logger.error("Failed to skip to track: \(error.localizedDescription)")
-        }
-        completion()
-      }
-    }
-    return CPListSection(items: items)
-  }
-
-  /// Handles queue changes - updates Up Next list if visible
-  @MainActor
-  func handleQueueChanged(_ tracks: [Track]) {
-    // Update the Up Next button enabled state
-    updateNowPlayingUpNextButton()
-
-    // Update the Up Next template if it's currently visible
-    guard let template = upNextTemplate,
-          let player = audioBrowser?.getPlayer()
-    else {
-      return
-    }
-
-    logger.debug("Queue changed, updating Up Next list with \(tracks.count) tracks")
-    template.updateSections([createUpNextSections(tracks: tracks, player: player)])
-  }
 }
 
 // MARK: - CPInterfaceControllerDelegate
@@ -1384,7 +892,7 @@ private extension RNABCarPlayController {
 
 // MARK: - UIImage Resize
 
-private extension UIImage {
+extension UIImage {
   /// Draws the image centered within the target size, maintaining aspect ratio
   func resized(to targetSize: CGSize) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)

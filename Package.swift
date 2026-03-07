@@ -20,6 +20,7 @@ let package = Package(
         "Model/TrackPlayerError.swift",
         "Model/NitroTypeStubs.swift",
         "TrackSelector.swift",
+        "CarPlay/CarPlayArtworkResolver.swift",
       ]
     ),
     .testTarget(
