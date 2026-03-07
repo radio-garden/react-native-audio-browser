@@ -328,18 +328,7 @@ class TrackPlayer {
   private var asset: AVAsset?
   private var url: URL?
   private var urlOptions: [String: Any]?
-  private(set) var playbackError: TrackPlayerError.PlaybackError? {
-    didSet {
-      guard oldValue != playbackError else { return }
-
-      // Setting an error should set state to .error
-      if let _ = playbackError, state != .error {
-        state = .error
-      }
-
-      callbacks?.playerDidError(PlaybackErrorEvent(error: playbackError?.toNitroError()))
-    }
-  }
+  private(set) var playbackError: TrackPlayerError.PlaybackError?
 
   private(set) var lastPlayerTimeControlStatus: AVPlayer.TimeControlStatus = .paused
 
@@ -400,50 +389,115 @@ class TrackPlayer {
 
   // MARK: - AVPlayer State and Computed Properties
 
-  private(set) var state: PlaybackState = .none {
-    didSet {
-      guard oldValue != state else { return }
+  private(set) var state: PlaybackState = .none
 
-      // Clear error when transitioning away from error state
-      if oldValue == .error, state != .error {
-        playbackError = nil
-      }
+  // MARK: - Playback State Machine
 
-      switch state {
-      case .ready:
-        setTimePitchingAlgorithmForCurrentItem()
-        // When item becomes ready and playWhenReady is true, start playback
-        if playWhenReady {
-          startPlayback()
-        }
-      case .loading:
-        setTimePitchingAlgorithmForCurrentItem()
-      default: break
-      }
+  private func transition(_ event: PlaybackEvent) {
+    guard let newState = nextState(from: state, on: event) else { return }
 
-      switch state {
-      case .ready, .loading, .playing, .paused:
-        updateNowPlayingPlaybackValues()
-        // Update playback state for CarPlay Now Playing
-        updateNowPlayingPlaybackState()
-      default: break
-      }
+    // Allow error-to-error transitions to update the error and emit callbacks,
+    // even though the state enum value doesn't change.
+    if newState == state, case .errorOccurred(let error) = event {
+      playbackError = error
+      callbacks?.playerDidChangePlayback(
+        Playback(state: state, error: playbackError?.toNitroError()),
+      )
+      callbacks?.playerDidError(
+        PlaybackErrorEvent(error: playbackError?.toNitroError()),
+      )
+      return
+    }
 
-      let playback = Playback(state: state, error: playbackError?.toNitroError())
-      callbacks?.playerDidChangePlayback(playback)
+    guard newState != state else { return }
+    let oldState = state
+    state = newState
+    applySideEffects(old: oldState, new: newState, event: event)
+    emitStateChange(old: oldState, new: newState)
+  }
 
-      // Emit queue ended event when playback ends on the last track
-      // This matches Android's behavior (TrackPlayer.kt:642-646)
-      if state == .ended, isLastInPlaybackOrder {
-        let event = PlaybackQueueEndedEvent(
-          track: Double(currentIndex),
-          position: currentTime,
-        )
-        callbacks?.playerDidEndQueue(event)
-      }
+  /// Determines the next state for a given event, or `nil` to suppress the transition.
+  ///
+  /// Guards here are **state-related** (e.g., "only from .loading"). Context-related
+  /// guards (e.g., `asset != nil`, `nearTrackEnd`, `!playWhenReady`) live at the call
+  /// site and decide whether to fire the event at all.
+  private func nextState(from current: PlaybackState, on event: PlaybackEvent) -> PlaybackState? {
+    switch event {
+    case .stopped:             return .stopped
+    case .trackLoading:        return .loading
+    case .trackUnloaded:       return .none
+    case .trackEndedNaturally: return .ended
+    case .avPlayerWaiting:     return .buffering
+    case .avPlayerPlaying:     return .playing
+    case .audioFrameDecoded:   return .playing
+    case .errorOccurred:       return .error
 
-      progressUpdateManager.onPlaybackStateChanged(state)
-      playingStateManager.update(playWhenReady: playWhenReady, state: state)
+    case .loadSeekCompleted:
+      guard current == .loading else { return nil }
+      return .ready
+
+    case .avPlayerPaused(let hasAsset):
+      guard current != .stopped else { return nil }
+      if !hasAsset { return .none }
+      guard current != .error else { return nil }
+      return .paused
+
+    case .bufferingSufficient:
+      guard current != .playing else { return nil }
+      return .ready
+    }
+  }
+
+  private func applySideEffects(old: PlaybackState, new: PlaybackState, event: PlaybackEvent) {
+    // Error lifecycle
+    if old == .error, new != .error {
+      playbackError = nil
+    }
+    if case .errorOccurred(let error) = event {
+      playbackError = error
+    }
+
+    // State-specific effects
+    switch new {
+    case .ready:
+      setTimePitchingAlgorithmForCurrentItem()
+      if playWhenReady { startPlayback() }
+    case .loading:
+      setTimePitchingAlgorithmForCurrentItem()
+    default: break
+    }
+
+    // Now Playing updates for active states
+    switch new {
+    case .ready, .loading, .playing, .paused:
+      updateNowPlayingPlaybackValues()
+      updateNowPlayingPlaybackState()
+    default: break
+    }
+
+    progressUpdateManager.onPlaybackStateChanged(new)
+    playingStateManager.update(playWhenReady: playWhenReady, state: new)
+  }
+
+  private func emitStateChange(old: PlaybackState, new: PlaybackState) {
+    // Playback state change — always emitted
+    callbacks?.playerDidChangePlayback(
+      Playback(state: new, error: playbackError?.toNitroError()),
+    )
+
+    // Error callback — emitted when entering or leaving error state
+    // (preserves current ordering: playerDidChangePlayback fires first)
+    if new == .error || (old == .error && new != .error) {
+      callbacks?.playerDidError(
+        PlaybackErrorEvent(error: playbackError?.toNitroError()),
+      )
+    }
+
+    // Queue ended — when playback ends on the last track
+    if new == .ended, isLastInPlaybackOrder {
+      callbacks?.playerDidEndQueue(
+        PlaybackQueueEndedEvent(track: Double(currentIndex), position: currentTime),
+      )
     }
   }
 
@@ -664,7 +718,7 @@ class TrackPlayer {
    Stop playback
    */
   func stop() {
-    state = .stopped
+    transition(.stopped)
     if currentTrack?.live != true {
       seekTo(0)
     }
@@ -946,6 +1000,9 @@ class TrackPlayer {
   }
 
   private func recreateAVPlayer() {
+    // Clear directly rather than via transition() — the caller (loadAVPlayer)
+    // immediately follows with transition(.trackLoading) which handles the
+    // .error → .loading transition and its side effects.
     playbackError = nil
     playerTimeObserver.unregisterForBoundaryTimeEvents()
     playerTimeObserver.unregisterForPeriodicEvents()
@@ -1002,7 +1059,7 @@ class TrackPlayer {
     if let url {
       let pendingAsset = AVURLAsset(url: url, options: urlOptions)
       asset = pendingAsset
-      state = .loading
+      transition(.trackLoading)
 
       // Load metadata asynchronously, separate from playable to allow playback to start faster
       metadataLoadTask = Task { [weak self] in
@@ -1059,7 +1116,7 @@ class TrackPlayer {
             guard pendingAsset == self.asset else { return }
 
             if !isPlayable {
-              self.playbackError = TrackPlayerError.PlaybackError.trackWasUnplayable
+              self.transition(.errorOccurred(.trackWasUnplayable))
               return
             }
 
@@ -1098,7 +1155,7 @@ class TrackPlayer {
 
           await MainActor.run {
             guard pendingAsset == self.asset else { return }
-            self.playbackError = TrackPlayerError.PlaybackError.failedToLoadKeyValue
+            self.transition(.errorOccurred(.failedToLoadKeyValue))
           }
         }
       }
@@ -1107,7 +1164,7 @@ class TrackPlayer {
 
   func unloadAVPlayer() {
     clearCurrentAVItem()
-    state = .none
+    transition(.trackUnloaded)
   }
 
   // MARK: - Internal Event Handlers
@@ -1125,7 +1182,7 @@ class TrackPlayer {
     // (unless a new seek was queued while this one was in-flight)
     if loadSeekCoordinator.seekDidComplete(on: avPlayer, delegate: self), state == .loading {
       logger.debug("[loadSeek] seek landed at \(seconds)s (finished=\(didFinish)) → .ready")
-      state = .ready
+      transition(.loadSeekCompleted)
     }
     setNowPlayingCurrentTime(seconds: seconds)
     callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
@@ -1140,7 +1197,7 @@ class TrackPlayer {
     } else if repeatMode == .queue || !isLastInPlaybackOrder {
       next()
     } else {
-      state = .ended
+      transition(.trackEndedNaturally)
     }
   }
 
@@ -1166,21 +1223,21 @@ class TrackPlayer {
       if nearTrackEnd {
         // Ignore - track completion will be handled by handleTrackDidPlayToEndTime
       } else if asset == nil, currentState != .stopped {
-        state = .none
+        transition(.avPlayerPaused(hasAsset: false))
       } else if currentState != .error, currentState != .stopped {
         // Only update state, never modify playWhenReady
         // playWhenReady represents user intent and should only change via explicit user actions
         if !playWhenReady {
-          state = .paused
+          transition(.avPlayerPaused(hasAsset: true))
         }
         // If playWhenReady is true, this is likely buffering/seeking - don't change state
       }
     case .waitingToPlayAtSpecifiedRate:
       if asset != nil {
-        state = .buffering
+        transition(.avPlayerWaiting)
       }
     case .playing:
-      state = .playing
+      transition(.avPlayerPlaying)
     @unknown default:
       break
     }
@@ -1229,9 +1286,11 @@ class TrackPlayer {
   /// Sets the playback error from an Error, with appropriate classification
   private func setPlaybackError(from error: Error?) {
     let nsError = error as NSError?
-    playbackError = nsError?.code == URLError.notConnectedToInternet.rawValue
-      ? TrackPlayerError.PlaybackError.notConnectedToInternet
-      : TrackPlayerError.PlaybackError.playbackFailed
+    let playbackError: TrackPlayerError.PlaybackError =
+      nsError?.code == URLError.notConnectedToInternet.rawValue
+        ? .notConnectedToInternet
+        : .playbackFailed
+    transition(.errorOccurred(playbackError))
   }
 
   /// Handles AVPlayerItemFailedToPlayToEndTime notification with retry logic
@@ -1243,7 +1302,7 @@ class TrackPlayer {
   func audioDidStart() {
     // Don't override loading state - playableLoadTask manages that transition
     if state == .loading { return }
-    state = .playing
+    transition(.audioFrameDecoded)
   }
 
   func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
@@ -1263,7 +1322,7 @@ class TrackPlayer {
     // handleSeekCompleted will handle the transition once the seek lands.
     if !loadSeekCoordinator.shouldDeferReadyTransition, state != .playing {
       logger.debug("avItemDidUpdatePlaybackLikelyToKeepUp → .ready")
-      state = .ready
+      transition(.bufferingSufficient)
     }
   }
 
@@ -1582,7 +1641,9 @@ class TrackPlayer {
     pendingRetryTask = nil
     retryManager.reset()
 
-    // Clear any previous playback error when switching tracks
+    // Clear directly rather than via transition() — the code below immediately
+    // follows with transition(.trackLoading) which handles the .error → .loading
+    // transition and its side effects.
     if playbackError != nil {
       playbackError = nil
     }
@@ -1600,7 +1661,7 @@ class TrackPlayer {
 
       // Set loading state before playWhenReady so the setter's guard
       // prevents a no-op startPlayback() on the now-nil item.
-      state = .loading
+      transition(.trackLoading)
 
       // Ensure playWhenReady is set before loading to preserve playback state
       playWhenReady = shouldContinuePlayback
@@ -1620,7 +1681,7 @@ class TrackPlayer {
         logger.error("  track.title: \(currentTrack.title)")
         logger.error("  track.url: \(currentTrack.url ?? "nil")")
         clearCurrentAVItem()
-        playbackError = TrackPlayerError.PlaybackError.invalidSourceUrl("nil")
+        transition(.errorOccurred(.invalidSourceUrl("nil")))
         return
       }
 
@@ -1705,7 +1766,7 @@ class TrackPlayer {
   private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track _: Track) {
     guard let mediaUrl = URL(string: resolved.url) else {
       logger.error("Invalid media URL: \(resolved.url)")
-      playbackError = TrackPlayerError.PlaybackError.invalidSourceUrl(resolved.url)
+      transition(.errorOccurred(.invalidSourceUrl(resolved.url)))
       return
     }
 
