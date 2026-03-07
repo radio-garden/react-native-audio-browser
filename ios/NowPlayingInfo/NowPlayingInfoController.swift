@@ -157,11 +157,6 @@ class NowPlayingInfoController {
   /// On iOS 15.x or without automatic publishing:
   /// - Sets all info on `MPNowPlayingInfoCenter.default().nowPlayingInfo`
   private func performUpdate() {
-    let keys = _info.keys.sorted().joined(separator: ", ")
-    let hasArtwork = _info[MPMediaItemPropertyArtwork] != nil
-    let playbackRate = _info[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber
-    logger.debug("performUpdate: setting nowPlayingInfo with \(self._info.count) keys (hasArtwork=\(hasArtwork), playbackRate=\(playbackRate?.doubleValue ?? -1), autoPublishing=\(self.isAutomaticPublishingEnabled)): \(keys)")
-
     if #available(iOS 16.0, *), isAutomaticPublishingEnabled {
       _linkedPlayer?.currentItem?.nowPlayingInfo = _info
     } else {
