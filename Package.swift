@@ -10,6 +10,10 @@ let package = Package(
       path: "ios",
       sources: [
         "Browser/SimpleRouter.swift",
+        "Player/QueueManager.swift",
+        "Player/ShuffleOrder.swift",
+        "Model/TrackPlayerError.swift",
+        "Model/NitroTypeStubs.swift",
       ]
     ),
     .testTarget(

@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(NitroModules)
 import NitroModules
+#endif
 
 public enum TrackPlayerError: Error {
   public enum PlaybackError: Error, Equatable {
@@ -47,6 +49,7 @@ extension TrackPlayerError.QueueError: LocalizedError {
   }
 }
 
+#if canImport(NitroModules)
 // MARK: - Nitro PlaybackError Conversion
 
 public extension TrackPlayerError.PlaybackError {
@@ -67,3 +70,4 @@ public extension TrackPlayerError.PlaybackError {
     return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
   }
 }
+#endif

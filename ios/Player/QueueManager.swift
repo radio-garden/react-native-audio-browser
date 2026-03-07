@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(NitroModules)
 import NitroModules
+#endif
 
 /// Notifies the owner when the track list changes.
 @MainActor protocol QueueManagerDelegate: AnyObject {
