@@ -161,26 +161,7 @@ final class BrowserManager {
     // Only create a new track if the favorited state differs
     if track.favorited == isFavorited { return track }
 
-    return Track(
-      url: track.url,
-      src: track.src,
-      artwork: track.artwork,
-      artworkSource: track.artworkSource,
-      artworkCarPlayTinted: track.artworkCarPlayTinted,
-      title: track.title,
-      subtitle: track.subtitle,
-      artist: track.artist,
-      album: track.album,
-      description: track.description,
-      genre: track.genre,
-      duration: track.duration,
-      style: track.style,
-      childrenStyle: track.childrenStyle,
-      favorited: isFavorited,
-      groupTitle: track.groupTitle,
-      live: track.live,
-      imageRow: track.imageRow,
-    )
+    return track.copying(favorited: isFavorited)
   }
 
   /// Hydrates favorites on all children of a ResolvedTrack.
@@ -505,51 +486,13 @@ final class BrowserManager {
 
       if track.src != nil, track.url == nil {
         let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: track.src!)
-        transformedTrack = Track(
-          url: contextualUrl,
-          src: track.src,
-          artwork: track.artwork,
-          artworkSource: track.artworkSource,
-          artworkCarPlayTinted: track.artworkCarPlayTinted,
-          title: track.title,
-          subtitle: track.subtitle,
-          artist: track.artist,
-          album: track.album,
-          description: track.description,
-          genre: track.genre,
-          duration: track.duration,
-          style: track.style,
-          childrenStyle: track.childrenStyle,
-          favorited: track.favorited,
-          groupTitle: track.groupTitle,
-          live: track.live,
-          imageRow: track.imageRow,
-        )
+        transformedTrack = track.copying(url: contextualUrl)
       }
 
       // Resolve artwork URL at browse-time (no size context)
       let artworkConfig = routeEntry.artwork ?? config.artwork
       if let imageSource = await resolveArtworkUrl(track: transformedTrack, perRouteConfig: artworkConfig) {
-        transformedTrack = Track(
-          url: transformedTrack.url,
-          src: transformedTrack.src,
-          artwork: transformedTrack.artwork,
-          artworkSource: imageSource,
-          artworkCarPlayTinted: transformedTrack.artworkCarPlayTinted,
-          title: transformedTrack.title,
-          subtitle: transformedTrack.subtitle,
-          artist: transformedTrack.artist,
-          album: transformedTrack.album,
-          description: transformedTrack.description,
-          genre: transformedTrack.genre,
-          duration: transformedTrack.duration,
-          style: transformedTrack.style,
-          childrenStyle: transformedTrack.childrenStyle,
-          favorited: transformedTrack.favorited,
-          groupTitle: transformedTrack.groupTitle,
-          live: transformedTrack.live,
-          imageRow: transformedTrack.imageRow,
-        )
+        transformedTrack = transformedTrack.copying(artworkSource: imageSource)
       }
 
       // Resolve artwork for image row items
@@ -584,26 +527,7 @@ final class BrowserManager {
             title: item.title,
           ))
         }
-        transformedTrack = Track(
-          url: transformedTrack.url,
-          src: transformedTrack.src,
-          artwork: transformedTrack.artwork,
-          artworkSource: transformedTrack.artworkSource,
-          artworkCarPlayTinted: transformedTrack.artworkCarPlayTinted,
-          title: transformedTrack.title,
-          subtitle: transformedTrack.subtitle,
-          artist: transformedTrack.artist,
-          album: transformedTrack.album,
-          description: transformedTrack.description,
-          genre: transformedTrack.genre,
-          duration: transformedTrack.duration,
-          style: transformedTrack.style,
-          childrenStyle: transformedTrack.childrenStyle,
-          favorited: transformedTrack.favorited,
-          groupTitle: transformedTrack.groupTitle,
-          live: transformedTrack.live,
-          imageRow: resolvedItems,
-        )
+        transformedTrack = transformedTrack.copying(imageRow: resolvedItems)
       }
 
       transformed.append(transformedTrack)

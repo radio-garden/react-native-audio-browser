@@ -827,26 +827,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       guard let index = player?.currentIndex, index >= 0 else { return }
       browserManager.updateFavorite(id: src, favorited: favorited)
       // Create updated track with new favorited state
-      let updatedTrack = Track(
-        url: track.url,
-        src: track.src,
-        artwork: track.artwork,
-        artworkSource: track.artworkSource,
-        artworkCarPlayTinted: track.artworkCarPlayTinted,
-        title: track.title,
-        subtitle: track.subtitle,
-        artist: track.artist,
-        album: track.album,
-        description: track.description,
-        genre: track.genre,
-        duration: track.duration,
-        style: track.style,
-        childrenStyle: track.childrenStyle,
-        favorited: favorited,
-        groupTitle: track.groupTitle,
-        live: track.live,
-        imageRow: track.imageRow,
-      )
+      let updatedTrack = track.copying(favorited: favorited)
       // Update the track in the player's queue so getActiveTrack() returns correct state
       player?.replace(index, updatedTrack)
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
