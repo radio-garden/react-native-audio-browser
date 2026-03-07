@@ -1,16 +1,8 @@
 @preconcurrency import AVFoundation
 import Foundation
-import Kingfisher
 import MediaPlayer
 import NitroModules
 import os.log
-
-/// Result of media URL resolution
-struct MediaResolvedUrl {
-  let url: String
-  let headers: [String: String]?
-  let userAgent: String?
-}
 
 @MainActor
 class TrackPlayer {
@@ -41,12 +33,11 @@ class TrackPlayer {
     }
   }
 
-  /// Callback to resolve media URLs with optional transform
-  var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
+  /// Handles media URL resolution, asset creation, and async loading.
+  let mediaLoader = MediaLoader()
 
-  /// Callback to resolve artwork URLs with size context for Now Playing.
-  /// Returns an ImageSource with potentially size-optimized URL.
-  var artworkUrlResolver: ((Track, ImageContext?) async -> ImageSource?)?
+  /// Handles Now Playing metadata and artwork updates.
+  let nowPlayingUpdater: NowPlayingUpdater
 
   // MARK: - Queue Manager
 
@@ -89,100 +80,6 @@ class TrackPlayer {
 
   // MARK: - AVPlayer Properties (from AVPlayerWrapper)
 
-  /// Manages seeks that arrive while a track is loading.
-  /// Owns the full lifecycle: capture → execute → coordinate state transitions.
-  ///
-  /// AVPlayer's `seek(to:)` is a no-op when there's no loaded `currentItem`,
-  /// so we must manually defer seeks that arrive during loading and execute them
-  /// once the AVPlayerItem is ready. This coordinator encapsulates the three
-  /// sub-problems (capture, execute, coordinate) that were previously spread
-  /// across `pendingSeek`, `loadSeekInFlight`, and guards in multiple callbacks.
-  final class LoadSeekCoordinator {
-    enum State {
-      case idle
-      case pendingSeek(time: TimeInterval)
-      case seekInFlight(time: TimeInterval)
-    }
-
-    private let logger = Logger(subsystem: "com.audiobrowser", category: "LoadSeekCoordinator")
-    private(set) var state: State = .idle
-
-    /// The deferred seek time, if any. Used by `seekBy()` to offset from the deferred position.
-    var pendingTime: TimeInterval? {
-      switch state {
-      case let .pendingSeek(time): time
-      case let .seekInFlight(time): time
-      case .idle: nil
-      }
-    }
-
-    /// Whether to suppress state transitions to `.ready`.
-    /// True when a seek is pending or in-flight during the loading phase.
-    var shouldDeferReadyTransition: Bool {
-      switch state {
-      case .idle: false
-      case .pendingSeek, .seekInFlight: true
-      }
-    }
-
-    /// Called from `seekTo()` when `TrackPlayer.state == .loading`.
-    /// Supersedes any previous pending or in-flight seek.
-    func capture(position: Double) {
-      if case .seekInFlight = state {
-        logger.debug("overriding in-flight seek with new target \(position)s")
-      }
-      state = .pendingSeek(time: position)
-      logger.debug("captured pending seek to \(position)s")
-    }
-
-    /// Called when AVPlayerItem is ready to accept a seek
-    /// (from `playableLoadTask` or `avItemDidUpdatePlaybackLikelyToKeepUp`).
-    ///
-    /// Returns `true` if a seek was initiated — caller should NOT transition to `.ready` yet.
-    func executeIfPending(on player: AVPlayer, delegate: TrackPlayer?) -> Bool {
-      guard case let .pendingSeek(time) = state else { return false }
-
-      logger.debug("executing deferred seek to \(time)s")
-      state = .seekInFlight(time: time)
-
-      let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
-      player
-        .seek(to: cmTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
-          Task { @MainActor in
-            delegate?.handleSeekCompleted(to: time, didFinish: finished)
-          }
-        }
-
-      return true
-    }
-
-    /// Called from `handleSeekCompleted`.
-    /// Returns `true` if the coordinator is done and the caller should transition
-    /// `.loading` → `.ready`. Returns `false` if a new seek was queued while the
-    /// previous one was in-flight (caller should NOT transition yet).
-    func seekDidComplete(on player: AVPlayer, delegate: TrackPlayer?) -> Bool {
-      switch state {
-      case .seekInFlight:
-        logger.debug("seek landed, clearing coordinator")
-        state = .idle
-        return true
-      case .pendingSeek:
-        // A new seek arrived while the previous one was in-flight.
-        // Execute it now — don't transition to .ready yet.
-        logger.debug("seek landed, but a new seek is pending — re-executing")
-        _ = executeIfPending(on: player, delegate: delegate)
-        return false
-      case .idle:
-        return false
-      }
-    }
-
-    /// Reset when track changes or item is cleared.
-    func reset() {
-      state = .idle
-    }
-  }
-
   private var avPlayer = AVPlayer()
 
   private lazy var playerObserver: PlayerStateObserver = .init(
@@ -200,7 +97,7 @@ class TrackPlayer {
       self?.audioDidStart()
     },
     onSecondElapsed: { [weak self] seconds in
-      self?.setNowPlayingCurrentTime(seconds: seconds)
+      self?.nowPlayingUpdater.setCurrentTime(seconds: seconds)
     },
   )
 
@@ -245,13 +142,6 @@ class TrackPlayer {
   }
 
   private let loadSeekCoordinator = LoadSeekCoordinator()
-  private var mediaResolverTask: Task<Void, Never>?
-  private var artworkLoadTask: Task<Void, Never>?
-  private var metadataLoadTask: Task<Void, Never>?
-  private var playableLoadTask: Task<Void, Never>?
-  private var asset: AVAsset?
-  private var url: URL?
-  private var urlOptions: [String: Any]?
   private(set) var playbackError: TrackPlayerError.PlaybackError?
 
   private(set) var lastPlayerTimeControlStatus: AVPlayer.TimeControlStatus = .paused
@@ -394,8 +284,8 @@ class TrackPlayer {
     // Now Playing updates for active states
     switch new {
     case .ready, .loading, .playing, .paused:
-      updateNowPlayingPlaybackValues()
-      updateNowPlayingPlaybackState()
+      nowPlayingUpdater.updatePlaybackValues(duration: duration, rate: rate, currentTime: currentTime)
+      nowPlayingUpdater.updatePlaybackState(playWhenReady: playWhenReady)
     default: break
     }
 
@@ -514,6 +404,7 @@ class TrackPlayer {
   var bufferDuration: Double = 0 {
     didSet {
       avPlayer.automaticallyWaitsToMinimizeStalling = bufferDuration == 0
+      mediaLoader.bufferDuration = bufferDuration
     }
   }
 
@@ -545,7 +436,7 @@ class TrackPlayer {
   var rate: Float = 1.0 {
     didSet {
       avPlayer.rate = rate
-      updateNowPlayingPlaybackValues()
+      nowPlayingUpdater.updatePlaybackValues(duration: duration, rate: rate, currentTime: currentTime)
     }
   }
 
@@ -556,9 +447,11 @@ class TrackPlayer {
     callbacks: TrackPlayerCallbacks? = nil,
   ) {
     self.nowPlayingInfoController = nowPlayingInfoController
+    nowPlayingUpdater = NowPlayingUpdater(nowPlayingInfoController: nowPlayingInfoController)
     remoteCommandController = RemoteCommandController(callbacks: callbacks)
     self.callbacks = callbacks
     queue.delegate = self
+    mediaLoader.delegate = self
 
     // Configure sleep timer
     sleepTimerManager.onComplete = { [weak self] in
@@ -731,55 +624,6 @@ class TrackPlayer {
     remoteCommandController.enable(commands: commands)
   }
 
-  // MARK: - NowPlayingInfo
-
-  /**
-   Loads NowPlayingInfo-meta values with the values found in the current track. Use this if a change to the track is made and you want to update the `NowPlayingInfoController`s values.
-
-   Reloads:
-   - Artist
-   - Title
-   - Album title
-   - Album artwork
-   */
-  func loadNowPlayingMetaValues() {
-    guard let track = currentTrack else { return }
-
-    nowPlayingInfoController.set(keyValues: [
-      MediaItemProperty.artist(track.artist),
-      MediaItemProperty.title(track.title),
-      MediaItemProperty.albumTitle(track.album),
-      NowPlayingInfoProperty.playbackRate(Double(rate)),
-      NowPlayingInfoProperty.isLiveStream(track.live),
-    ])
-    loadArtworkForTrack(track)
-  }
-
-  /**
-   Resyncs the playbackvalues of the currently playing track.
-
-   Will resync:
-   - Current time
-   - Duration
-   - Playback rate
-   */
-  func updateNowPlayingPlaybackValues() {
-    logger.debug("updateNowPlayingPlaybackValues: duration=\(self.duration), rate=\(self.rate), currentTime=\(self.currentTime), playWhenReady=\(self.playWhenReady)")
-    nowPlayingInfoController.set(keyValues: [
-      MediaItemProperty.duration(duration),
-      NowPlayingInfoProperty.playbackRate(Double(rate)),
-      NowPlayingInfoProperty.elapsedPlaybackTime(currentTime),
-    ])
-  }
-
-  /// Updates the Now Playing playback state for CarPlay.
-  /// This is separate from playbackRate and required for CarPlay to show correct play/pause button.
-  private func updateNowPlayingPlaybackState() {
-    let state: MPNowPlayingPlaybackState = playWhenReady ? .playing : .paused
-    logger.debug("updateNowPlayingPlaybackState: \(state.rawValue) (playWhenReady=\(self.playWhenReady))")
-    nowPlayingInfoController.setPlaybackState(state)
-  }
-
   func clear() {
     let changed = queue.clear()
     if changed { handleCurrentTrackChanged() }
@@ -796,84 +640,6 @@ class TrackPlayer {
   }
 
   // MARK: - Private
-
-  private func setNowPlayingCurrentTime(seconds: Double) {
-    nowPlayingInfoController.set(
-      keyValue: NowPlayingInfoProperty.elapsedPlaybackTime(seconds),
-    )
-  }
-
-  private func loadArtworkForTrack(_ track: Track) {
-    let artworkUrl = track.artworkSource?.uri ?? track.artwork
-    logger.debug("loadArtworkForTrack: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
-
-    // Now Playing artwork: use screen width in pixels, capped at 1200px
-    let screenScale = UIScreen.main.scale
-    let screenWidth = UIScreen.main.bounds.width * screenScale
-    let artworkSize = min(screenWidth, 1200)
-    let nowPlayingSize = ImageContext(width: artworkSize, height: artworkSize)
-
-    artworkLoadTask?.cancel()
-    artworkLoadTask = Task {
-      let image: UIImage?
-
-      // Try to resolve artwork URL with size context for CDN optimization
-      if let resolver = artworkUrlResolver,
-         let imageSource = await resolver(track, nowPlayingSize)
-      {
-        guard !Task.isCancelled else { return }
-        logger.debug("loadArtworkForTrack: using resolved URL: \(imageSource.uri)")
-        image = await loadImage(from: imageSource)
-      } else {
-        guard !Task.isCancelled else { return }
-        // Fall back to loading from track's existing artwork URL
-        image = await track.loadArtwork()
-      }
-
-      guard !Task.isCancelled else { return }
-
-      // Verify we're still on the same track after async load
-      guard currentTrack?.src == track.src else { return }
-
-      if let image {
-        logger.debug("loadArtworkForTrack: loaded image \(image.size.width)x\(image.size.height)")
-        // Note: The requestHandler closure is called from MediaPlayer's background queue,
-        // so we must mark it @Sendable to break @MainActor isolation inheritance.
-        let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable requestedSize in
-          return image
-        }
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
-      } else {
-        logger.debug("loadArtworkForTrack: no image loaded")
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
-      }
-    }
-  }
-
-  /// Loads an image from an ImageSource using Kingfisher.
-  private func loadImage(from imageSource: ImageSource) async -> UIImage? {
-    guard let url = URL(string: imageSource.uri) else { return nil }
-
-    var options: KingfisherOptionsInfo = []
-    if let headers = imageSource.headers, !headers.isEmpty {
-      let modifier = AnyModifier { request in
-        var mutableRequest = request
-        for (key, value) in headers {
-          mutableRequest.setValue(value, forHTTPHeaderField: key)
-        }
-        return mutableRequest
-      }
-      options.append(.requestModifier(modifier))
-    }
-
-    do {
-      let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
-      return result.image
-    } catch {
-      logger.error("Failed to load artwork from \(imageSource.uri): \(error.localizedDescription)")
-      return nil
-    }
-  }
 
   private func setTimePitchingAlgorithmForCurrentItem() {
     // Use player's default pitch algorithm (per-track pitch control not in Nitro API)
@@ -896,22 +662,9 @@ class TrackPlayer {
   }
 
   private func clearCurrentAVItem() {
-    guard let currentAsset = asset else {
-      avPlayer.replaceCurrentItem(with: nil)
-      return
-    }
-
     stopObservingAVPlayerItem()
-
-    // Don't call currentAsset.cancelLoading() - it blocks the main thread for 500ms+
-    // Instead, cancel on a background queue
-    DispatchQueue.global(qos: .utility).async {
-      currentAsset.cancelLoading()
-    }
-
-    asset = nil
+    mediaLoader.clearAsset()
     loadSeekCoordinator.reset()
-
     avPlayer.replaceCurrentItem(with: nil)
   }
 
@@ -971,121 +724,14 @@ class TrackPlayer {
   func loadAVPlayer() {
     if state == .error {
       recreateAVPlayer()
-    } else if let oldAsset = asset {
-      // Prepare for new item: cancel in-flight tasks, stop observing, cancel asset loading
-      metadataLoadTask?.cancel()
-      playableLoadTask?.cancel()
+    } else {
+      mediaLoader.cancelAll()
       stopObservingAVPlayerItem()
       pausePlayback()
-      DispatchQueue.global(qos: .utility).async {
-        oldAsset.cancelLoading()
-      }
-      asset = nil
+      mediaLoader.clearAsset()
     }
-    if let url {
-      let pendingAsset = AVURLAsset(url: url, options: urlOptions)
-      asset = pendingAsset
-      transition(.trackLoading)
-
-      // Load metadata asynchronously, separate from playable to allow playback to start faster
-      metadataLoadTask = Task { [weak self] in
-        guard let self else { return }
-
-        guard let (commonMetadata, chapterLocales, metadataFormats) = try? await pendingAsset.load(
-          .commonMetadata,
-          .availableChapterLocales,
-          .availableMetadataFormats,
-        ) else { return }
-
-        guard !Task.isCancelled, pendingAsset == asset else { return }
-
-        if !commonMetadata.isEmpty {
-          callbacks?.playerDidReceiveCommonMetadata(commonMetadata)
-        }
-
-        if !chapterLocales.isEmpty {
-          for locale in chapterLocales {
-            guard !Task.isCancelled else { return }
-            if let chapters = try? await pendingAsset.loadChapterMetadataGroups(
-              withTitleLocale: locale,
-              containingItemsWithCommonKeys: [],
-            ) {
-              callbacks?.playerDidReceiveChapterMetadata(chapters)
-            }
-          }
-        } else {
-          let duration = await (try? pendingAsset.load(.duration)) ?? .zero
-          for format in metadataFormats {
-            guard !Task.isCancelled else { return }
-            if let metadata = try? await pendingAsset.loadMetadata(for: format) {
-              let timeRange = CMTimeRange(
-                start: CMTime(seconds: 0, preferredTimescale: 1000),
-                end: duration,
-              )
-              let group = AVTimedMetadataGroup(items: metadata, timeRange: timeRange)
-              callbacks?.playerDidReceiveTimedMetadata([group])
-            }
-          }
-        }
-      }
-
-      // Load playable and start playback when ready
-      playableLoadTask = Task { [weak self] in
-        guard let self else { return }
-
-        do {
-          let isPlayable = try await pendingAsset.load(.isPlayable)
-
-          guard !Task.isCancelled else { return }
-
-          await MainActor.run {
-            guard pendingAsset == self.asset else { return }
-
-            if !isPlayable {
-              self.transition(.errorOccurred(.trackWasUnplayable))
-              return
-            }
-
-            let avItem = AVPlayerItem(asset: pendingAsset)
-            avItem.preferredForwardBufferDuration = self.bufferDuration / 1000.0
-            // Set metadata on item before it becomes current, so there's no gap
-            self.nowPlayingInfoController.prepareItem(avItem)
-            self.logger.debug("AVPlayerItem created, calling replaceCurrentItem")
-            self.avPlayer.replaceCurrentItem(with: avItem)
-            self.startObservingAVPlayerItem(avItem)
-            self.logger.debug("AVPlayerItem loaded, currentItem: \(String(describing: self.avPlayer.currentItem)), playWhenReady: \(self.playWhenReady), avPlayer.status=\(self.avPlayer.status.rawValue)")
-            if self.playWhenReady {
-              self.startPlayback()
-            }
-
-            // Execute any pending seek, or transition state if already buffered
-            if !self.loadSeekCoordinator.executeIfPending(on: self.avPlayer, delegate: self) {
-              // No pending seek — if the item is already buffered (e.g., cached
-              // HTTP response), KVO with [.new] won't fire because
-              // isPlaybackLikelyToKeepUp never changed. Transition explicitly.
-              if avItem.isPlaybackLikelyToKeepUp {
-                self.avItemDidUpdatePlaybackLikelyToKeepUp(true)
-              }
-            }
-          }
-        } catch {
-          guard !Task.isCancelled else { return }
-
-          // Try retry before setting error
-          if self.retryManager.isRetryable(error) {
-            let retried = await self.retryManager.attemptRetry(startFromCurrentTime: false)
-            if retried {
-              return // Retry was triggered, don't set error
-            }
-          }
-
-          await MainActor.run {
-            guard pendingAsset == self.asset else { return }
-            self.transition(.errorOccurred(.failedToLoadKeyValue))
-          }
-        }
-      }
-    }
+    transition(.trackLoading)
+    mediaLoader.loadAsset()
   }
 
   func unloadAVPlayer() {
@@ -1103,14 +749,14 @@ class TrackPlayer {
     progressUpdateManager.setUpdateInterval(interval)
   }
 
-  private func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
+  func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
     // If this was a deferred load-seek, transition out of .loading state
     // (unless a new seek was queued while this one was in-flight)
     if loadSeekCoordinator.seekDidComplete(on: avPlayer, delegate: self), state == .loading {
       logger.debug("[loadSeek] seek landed at \(seconds)s (finished=\(didFinish)) → .ready")
       transition(.loadSeekCompleted)
     }
-    setNowPlayingCurrentTime(seconds: seconds)
+    nowPlayingUpdater.setCurrentTime(seconds: seconds)
     callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
   }
 
@@ -1131,7 +777,7 @@ class TrackPlayer {
 
   func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
     // During loading, ignore stale timeControlStatus changes from old items.
-    // State transitions during loading are managed by playableLoadTask
+    // State transitions during loading are managed by MediaLoader
     // and avItemDidUpdatePlaybackLikelyToKeepUp.
     if state == .loading { return }
 
@@ -1148,7 +794,7 @@ class TrackPlayer {
       // handleTrackDidPlayToEndTime
       if nearTrackEnd {
         // Ignore - track completion will be handled by handleTrackDidPlayToEndTime
-      } else if asset == nil, currentState != .stopped {
+      } else if mediaLoader.asset == nil, currentState != .stopped {
         transition(.avPlayerPaused(hasAsset: false))
       } else if currentState != .error, currentState != .stopped {
         // Only update state, never modify playWhenReady
@@ -1159,7 +805,7 @@ class TrackPlayer {
         // If playWhenReady is true, this is likely buffering/seeking - don't change state
       }
     case .waitingToPlayAtSpecifiedRate:
-      if asset != nil {
+      if mediaLoader.asset != nil {
         transition(.avPlayerWaiting)
       }
     case .playing:
@@ -1226,7 +872,7 @@ class TrackPlayer {
   }
 
   func audioDidStart() {
-    // Don't override loading state - playableLoadTask manages that transition
+    // Don't override loading state - MediaLoader manages that transition
     if state == .loading { return }
     transition(.audioFrameDecoded)
   }
@@ -1239,7 +885,7 @@ class TrackPlayer {
     // Ignore these — there's nothing meaningful to do without a loaded item.
     guard avPlayer.currentItem != nil else { return }
 
-    // Execute any pending seek that arrived after playableLoadTask completed
+    // Execute any pending seek that arrived after MediaLoader completed
     if loadSeekCoordinator.executeIfPending(on: avPlayer, delegate: self) {
       return
     }
@@ -1336,11 +982,7 @@ class TrackPlayer {
     // Reset end-of-track sleep timer when track changes
     sleepTimerManager.onTrackChanged()
 
-    // Cancel any in-flight media URL resolution from a previous track
-    mediaResolverTask?.cancel()
-    mediaResolverTask = nil
-
-    // Cancel any pending seek from a previous track
+    mediaLoader.cancelAll()
     loadSeekCoordinator.reset()
 
     // Cancel any pending retry and reset count when track changes
@@ -1360,10 +1002,8 @@ class TrackPlayer {
     if let currentTrack {
       // Cancel in-flight loading from previous track and clear old item
       // to prevent stale audio during async URL resolution.
-      metadataLoadTask?.cancel()
-      playableLoadTask?.cancel()
-      pausePlayback()
       stopObservingAVPlayerItem()
+      pausePlayback()
       avPlayer.replaceCurrentItem(with: nil)
 
       // Set loading state before playWhenReady so the setter's guard
@@ -1374,15 +1014,15 @@ class TrackPlayer {
       playWhenReady = shouldContinuePlayback
 
       // Reset playback values without updating, because that will happen in
-      // the loadNowPlayingMetaValues call straight after:
+      // the nowPlayingUpdater.loadMetaValues call straight after:
       nowPlayingInfoController.setWithoutUpdate(keyValues: [
         MediaItemProperty.duration(nil),
         NowPlayingInfoProperty.playbackRate(nil),
         NowPlayingInfoProperty.elapsedPlaybackTime(nil),
       ])
-      loadNowPlayingMetaValues()
+      nowPlayingUpdater.loadMetaValues(for: currentTrack, rate: rate)
 
-      // Load the track - resolve media URL first if resolver is configured
+      // Validate source URL before handing off to MediaLoader
       guard let src = currentTrack.src else {
         logger.error("Failed to load track - no src")
         logger.error("  track.title: \(currentTrack.title)")
@@ -1396,14 +1036,7 @@ class TrackPlayer {
       logger.debug("  track.url: \(currentTrack.url ?? "nil")")
       logger.debug("  track.src: \(src)")
 
-      // Check if it's already a full URL (http/https) or local file
-      if src.hasPrefix("http://") || src.hasPrefix("https://") || src.hasPrefix("file://") {
-        // Already a full URL, use directly (may still need transform for headers)
-        resolveAndLoadMedia(src: src, track: currentTrack)
-      } else {
-        // Relative path - needs media URL resolution
-        resolveAndLoadMedia(src: src, track: currentTrack)
-      }
+      mediaLoader.resolveAndLoad(src: src)
     } else {
       unloadAVPlayer()
       nowPlayingInfoController.clear()
@@ -1421,77 +1054,6 @@ class TrackPlayer {
     lastIndex = currentIndex
   }
 
-  /// Resolves the media URL (applying transform if configured) and loads the player
-  private func resolveAndLoadMedia(src: String, track: Track) {
-    // If we have a resolver, use it asynchronously
-    if let resolver = mediaUrlResolver {
-      // Don't use @MainActor for the entire Task - this can cause deadlocks
-      // when the JS callback needs to schedule work back on the main thread.
-      // Instead, only hop to main thread when we need to access/modify state.
-      mediaResolverTask?.cancel()
-      mediaResolverTask = Task {
-        self.logger.debug("resolveAndLoadMedia: starting resolution for \(src)")
-
-        guard !Task.isCancelled else {
-          self.logger.debug("resolveAndLoadMedia: cancelled before start")
-          return
-        }
-
-        self.logger.debug("resolveAndLoadMedia: calling resolver...")
-        let resolved = await resolver(src)
-
-        guard !Task.isCancelled else {
-          self.logger.debug("resolveAndLoadMedia: cancelled after resolver returned")
-          return
-        }
-
-        self.logger.debug("resolveAndLoadMedia: resolver returned, resolved URL: \(resolved.url)")
-        if let headers = resolved.headers {
-          self.logger.debug("  headers: \(headers)")
-        }
-        if let userAgent = resolved.userAgent {
-          self.logger.debug("  userAgent: \(userAgent)")
-        }
-
-        // Load on main thread
-        await MainActor.run {
-          guard !Task.isCancelled else {
-            self.logger.debug("resolveAndLoadMedia: cancelled before loadMediaWithResolvedUrl")
-            return
-          }
-          self.loadMediaWithResolvedUrl(resolved, track: track)
-        }
-      }
-    } else {
-      // No resolver, use src directly
-      let resolved = MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
-      loadMediaWithResolvedUrl(resolved, track: track)
-    }
-  }
-
-  /// Loads the AVPlayer with a resolved media URL
-  private func loadMediaWithResolvedUrl(_ resolved: MediaResolvedUrl, track _: Track) {
-    guard let mediaUrl = URL(string: resolved.url) else {
-      logger.error("Invalid media URL: \(resolved.url)")
-      transition(.errorOccurred(.invalidSourceUrl(resolved.url)))
-      return
-    }
-
-    // Build URL options with headers if provided
-    var options: [String: Any] = [:]
-    if let headers = resolved.headers, !headers.isEmpty {
-      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
-    }
-
-    let isLocalFile = mediaUrl.isFileURL
-    url = isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl
-    urlOptions = options.isEmpty ? nil : options
-
-    logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
-    logger.debug("  isLocalFile: \(isLocalFile)")
-
-    loadAVPlayer()
-  }
 }
 
 // MARK: - QueueManagerDelegate
@@ -1499,5 +1061,64 @@ class TrackPlayer {
 extension TrackPlayer: QueueManagerDelegate {
   func queueDidChangeTracks(_ tracks: [Track]) {
     callbacks?.playerDidChangeQueue(tracks)
+  }
+}
+
+// MARK: - SeekCompletionHandler
+
+extension TrackPlayer: SeekCompletionHandler {}
+
+// MARK: - MediaLoaderDelegate
+
+extension TrackPlayer: MediaLoaderDelegate {
+  func mediaLoaderDidPrepareItem(_ item: AVPlayerItem) {
+    nowPlayingInfoController.prepareItem(item)
+    avPlayer.replaceCurrentItem(with: item)
+    startObservingAVPlayerItem(item)
+    if playWhenReady { startPlayback() }
+
+    if !loadSeekCoordinator.executeIfPending(on: avPlayer, delegate: self) {
+      if item.isPlaybackLikelyToKeepUp {
+        avItemDidUpdatePlaybackLikelyToKeepUp(true)
+      }
+    }
+  }
+
+  func mediaLoaderDidFailWithRetryableError(_ error: Error) {
+    if retryManager.isRetryable(error) {
+      pendingRetryTask?.cancel()
+      pendingRetryTask = Task {
+        let retried = await retryManager.attemptRetry(startFromCurrentTime: false)
+        if !retried {
+          let nsError = error as NSError?
+          let playbackError: TrackPlayerError.PlaybackError =
+            nsError?.code == URLError.notConnectedToInternet.rawValue
+              ? .notConnectedToInternet : .failedToLoadKeyValue
+          self.transition(.errorOccurred(playbackError))
+        }
+      }
+      return
+    }
+    transition(.errorOccurred(.failedToLoadKeyValue))
+  }
+
+  func mediaLoaderDidFailWithUnplayableTrack() {
+    transition(.errorOccurred(.trackWasUnplayable))
+  }
+
+  func mediaLoaderDidFailWithError(_ error: TrackPlayerError.PlaybackError) {
+    transition(.errorOccurred(error))
+  }
+
+  func mediaLoaderDidReceiveCommonMetadata(_ items: [AVMetadataItem]) {
+    callbacks?.playerDidReceiveCommonMetadata(items)
+  }
+
+  func mediaLoaderDidReceiveChapterMetadata(_ groups: [AVTimedMetadataGroup]) {
+    callbacks?.playerDidReceiveChapterMetadata(groups)
+  }
+
+  func mediaLoaderDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
+    callbacks?.playerDidReceiveTimedMetadata(groups)
   }
 }

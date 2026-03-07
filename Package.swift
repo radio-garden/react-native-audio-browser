@@ -12,6 +12,10 @@ let package = Package(
         "Browser/SimpleRouter.swift",
         "Player/QueueManager.swift",
         "Player/ShuffleOrder.swift",
+        "Player/LoadSeekCoordinator.swift",
+        "Player/SeekCompletionHandler.swift",
+        "Player/MediaLoader.swift",
+        "Player/MediaLoaderDelegate.swift",
         "Model/TrackPlayerError.swift",
         "Model/NitroTypeStubs.swift",
       ]

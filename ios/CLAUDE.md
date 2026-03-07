@@ -15,7 +15,7 @@ subgraph Nitro["Nitro Hybrid Object"]
   HAB["HybridAudioBrowser<br/>Implements HybridAudioBrowserSpec<br/>~50 callback properties"]
 end
 
-TP["TrackPlayer<br/>Core AVPlayer Logic<br/>State Machine (PlaybackEvent)<br/>LoadSeekCoordinator"]
+TP["TrackPlayer<br/>Core AVPlayer Logic<br/>State Machine (PlaybackEvent)<br/>Owns: ML, NPU, LSC"]
 
 subgraph Queue["Queue Management"]
   QM["QueueManager<br/>Queue State, Navigation<br/>Repeat Mode, Shuffle"]
@@ -59,6 +59,14 @@ subgraph Controllers["Controllers"]
   NPIC["NowPlayingInfoController<br/>@MainActor<br/>iOS 16+ Auto Publishing"]
 end
 
+subgraph Loaders["Media Loading"]
+  ML["MediaLoader<br/>URL Resolution, AVURLAsset<br/>Metadata + Playable loading"]
+  MLD["MediaLoaderDelegate<br/>Protocol"]
+  NPU["NowPlayingUpdater<br/>Metadata + Artwork<br/>MPNowPlayingInfoCenter"]
+  LSC["LoadSeekCoordinator<br/>Deferred Seek State<br/>pendingSeek / seekInFlight"]
+  SCH["SeekCompletionHandler<br/>Protocol"]
+end
+
 subgraph CarPlay["CarPlay"]
   CPC["CarPlayController<br/>@MainActor @objc<br/>Tab Bar, List, Now Playing"]
   MIH["RNABMediaIntentHandler<br/>Siri Intent Handling"]
@@ -99,6 +107,16 @@ TP -->|Owns| STM
 TP -->|Owns| RM
 TP -->|Owns| RCC
 TP -->|Owns| NPIC
+TP -->|Owns| ML
+TP -->|Owns| NPU
+TP -->|Owns| LSC
+TP -.->|Implements| MLD
+TP -.->|Implements| SCH
+ML -.->|Delegate protocol| MLD
+ML -->|delegate: TrackPlayer| TP
+LSC -.->|delegate protocol| SCH
+LSC -->|delegate: TrackPlayer| TP
+NPU -->|Updates| NPIC
 
 QM --> SO
 
@@ -132,6 +150,7 @@ classDef util fill:#fafafa,stroke:#333,stroke-width:2px
 classDef protocol fill:#fff8e1,stroke:#333,stroke-width:1px,stroke-dasharray:5 5
 classDef carplay fill:#e1f0ff,stroke:#333,stroke-width:2px
 classDef queue fill:#fce4ec,stroke:#333,stroke-width:2px
+classDef loader fill:#fdf3e1,stroke:#333,stroke-width:2px
 
 class HAB nitro
 class TP core
@@ -142,9 +161,10 @@ class RCC,NPIC controller
 class AVP,MPRC,AS,MPNP,CPT,JS platform
 class PSM,PPUM,STM,RM state
 class NM,EM,OV,SFR util
-class TPC protocol
+class TPC,MLD,SCH protocol
 class CPC,MIH carplay
 class QM,SO queue
+class ML,NPU,LSC loader
 ```
 
 ## Key Architecture Points
@@ -169,8 +189,11 @@ class QM,SO queue
 3. **Browser → Player**: `navigateTrack()` can expand contextual URLs and load queue
 4. **Player → Queue**: TrackPlayer delegates queue operations to QueueManager (pure state, no AVPlayer knowledge)
 5. **Player → Controllers**: TrackPlayer owns RemoteCommandController and NowPlayingInfoController
-6. **Platform → Observers**: KVO and NotificationCenter feed back to TrackPlayer
-7. **State Machine**: PlaybackEvent triggers deterministic transitions in TrackPlayer via `transition(_ event)` with side effects
+6. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives results via MediaLoaderDelegate
+7. **Player → NowPlayingUpdater**: TrackPlayer calls NowPlayingUpdater for track metadata and playback state; NowPlayingUpdater updates NowPlayingInfoController
+8. **Player → LoadSeekCoordinator**: TrackPlayer uses LoadSeekCoordinator to capture and execute seeks that arrive before AVPlayerItem is ready; receives completion via SeekCompletionHandler
+9. **Platform → Observers**: KVO and NotificationCenter feed back to TrackPlayer
+10. **State Machine**: PlaybackEvent triggers deterministic transitions in TrackPlayer via `transition(_ event)` with side effects
 
 ### Thread Safety
 
@@ -196,10 +219,11 @@ ios/
 ├── HybridAudioBrowser.swift          # Main Nitro entry point
 │                                     # Implements HybridAudioBrowserSpec & TrackPlayerCallbacks
 │                                     # ~50 callback properties (browser, player, remote)
-├── TrackPlayer.swift                 # Core AVPlayer logic, media URL resolution
+├── TrackPlayer.swift                 # Core AVPlayer logic
 │                                     # State machine (PlaybackEvent → PlaybackState)
 │                                     # Owns all observers, state managers, controllers
-│                                     # Nested LoadSeekCoordinator for deferred seeks
+│                                     # Owns MediaLoader, NowPlayingUpdater, LoadSeekCoordinator
+│                                     # Conforms to MediaLoaderDelegate, SeekCompletionHandler
 ├── PlaybackEvent.swift              # PlaybackEvent enum and PlaybackState
 │                                     # State machine transition function nextState(from:on:)
 ├── TrackPlayerCallbacks.swift        # @MainActor callback protocol (~30 methods)
@@ -225,6 +249,16 @@ ios/
 │   │                                 # Delegate: QueueManagerDelegate
 │   │                                 # Returns QueueNavigationResult (.trackChanged, .sameTrackReplay, .noChange)
 │   ├── ShuffleOrder.swift            # Fisher-Yates shuffle ordering
+│   ├── MediaLoader.swift             # @MainActor URL resolution, AVURLAsset creation
+│   │                                 # Async metadata and playable loading
+│   │                                 # Notifies via MediaLoaderDelegate
+│   ├── MediaLoaderDelegate.swift     # @MainActor protocol: item ready, errors, metadata callbacks
+│   ├── NowPlayingUpdater.swift       # @MainActor MPNowPlayingInfoCenter updates
+│   │                                 # Track metadata, artwork loading (Kingfisher)
+│   │                                 # Playback values and playback state
+│   ├── LoadSeekCoordinator.swift     # Deferred seek state machine (idle/pendingSeek/seekInFlight)
+│   │                                 # Handles seeks arriving before AVPlayerItem is ready
+│   ├── SeekCompletionHandler.swift   # @MainActor protocol: handleSeekCompleted(to:didFinish:)
 │   ├── PlayingStateManager.swift     # Computes playing/buffering state
 │   ├── SleepTimerManager.swift       # @MainActor sleep timer (time & end-of-track)
 │   ├── PlaybackProgressUpdateManager.swift   # Timer-based periodic progress
@@ -280,6 +314,8 @@ ios/
 ├── Tests/
 │   ├── SimpleRouterTests.swift       # Unit tests for route matching
 │   ├── QueueManagerTests.swift       # Unit tests for queue management
+│   ├── LoadSeekCoordinatorTests.swift # Unit tests for deferred seek logic
+│   ├── MediaLoaderTests.swift        # Unit tests for media loading
 │   └── Support/
 │       └── TestTypes.swift           # Test support types
 └── Support/

@@ -563,7 +563,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         player?.networkMonitor = networkMonitor
 
         // Configure media URL resolver
-        player?.mediaUrlResolver = { [weak self] src in
+        player?.mediaLoader.mediaUrlResolver = { [weak self] src in
           guard let self else {
             return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
           }
@@ -571,7 +571,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         }
 
         // Configure artwork URL resolver for Now Playing (with size context)
-        player?.artworkUrlResolver = { [weak self] track, imageContext in
+        player?.nowPlayingUpdater.artworkUrlResolver = { [weak self] track, imageContext in
           guard let self else { return nil }
           return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext)
         }
