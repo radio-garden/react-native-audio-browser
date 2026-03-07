@@ -962,3 +962,7 @@ final class BrowserManager {
     tabs
   }
 }
+
+// MARK: - TrackSelectionBrowser
+
+extension BrowserManager: TrackSelectionBrowser {}

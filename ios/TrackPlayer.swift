@@ -1068,6 +1068,10 @@ extension TrackPlayer: QueueManagerDelegate {
 
 extension TrackPlayer: SeekCompletionHandler {}
 
+// MARK: - TrackSelectionPlayer
+
+extension TrackPlayer: TrackSelectionPlayer {}
+
 // MARK: - MediaLoaderDelegate
 
 extension TrackPlayer: MediaLoaderDelegate {

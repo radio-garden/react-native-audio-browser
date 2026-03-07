@@ -24,6 +24,7 @@ public final class RNABCarPlayController: NSObject {
 
   private let interfaceController: CPInterfaceController
   private weak var audioBrowser: HybridAudioBrowser?
+  private var trackSelector: TrackSelector?
 
   /// Track content subscriptions
   private var isStarted = false
@@ -88,6 +89,7 @@ public final class RNABCarPlayController: NSObject {
       guard self.isStarted else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
+      self.trackSelector = TrackSelector(browserManager: browser.browserManager)
       self.setupContentSubscriptions()
       self.setupNowPlayingTemplate()
       await self.buildInitialInterface()
@@ -567,28 +569,6 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Selection Handling
 
-  /// Centralizes handleTrackLoad interception for CarPlay selection paths.
-  /// If handleTrackLoad is set on config, awaits it (intercepted). Otherwise runs defaultBehavior.
-  /// Always fires showNowPlaying and completion afterward, even if the handler throws.
-  /// This is intentional: the completion handler must be called to dismiss the CarPlay list
-  /// item spinner, and transitioning to Now Playing avoids leaving the UI in a stuck state.
-  @discardableResult
-  private func handleLoadAsync(
-    track: Track, queue: [Track], startIndex: Double,
-    audioBrowser: HybridAudioBrowser,
-    completion: @escaping () -> Void,
-    defaultBehavior: () async -> Void
-  ) async -> Bool {
-    let event = TrackLoadEvent(track: track, queue: queue, startIndex: startIndex)
-    if await audioBrowser.browserManager.awaitTrackLoadHandler(event: event) {
-      await MainActor.run { self.showNowPlaying(); completion() }
-      return true
-    }
-    await defaultBehavior()
-    await MainActor.run { self.showNowPlaying(); completion() }
-    return false
-  }
-
   private func handleItemSelection(track: Track, completion: @escaping () -> Void) {
     logger.info("Selected track: \(track.title)")
 
@@ -605,73 +585,39 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
-    // Check if this is a contextual URL (playable-only track with queue context)
-    if let url = track.url, BrowserPathHelper.isContextual(url) {
-      let parentPath = BrowserPathHelper.stripTrackId(url)
-      let trackId = BrowserPathHelper.extractTrackId(url)
-      let player = audioBrowser.getPlayer()
-
-      // Check if queue already came from this parent path - just skip to the track
-      if let trackId,
-         parentPath == player?.queueSourcePath,
-         let index = player?.tracks.firstIndex(where: { $0.src == trackId })
-      {
-        let queue = player?.tracks ?? []
-        Task {
-          await handleLoadAsync(track: track, queue: queue, startIndex: Double(index), audioBrowser: audioBrowser, completion: completion) {
-            try? player?.skipTo(index, playWhenReady: true)
-          }
-        }
-        return
-      }
-
-      Task {
-        do {
-          // Expand the queue from the contextual URL
-          if let expanded = try await audioBrowser.browserManager.expandQueueFromContextualUrl(url) {
-            let (tracks, startIndex) = expanded
-            await handleLoadAsync(track: track, queue: tracks, startIndex: Double(startIndex), audioBrowser: audioBrowser, completion: completion) {
-              await MainActor.run {
-                // Replace queue and start at the selected track
-                audioBrowser.getPlayer()?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: parentPath)
-              }
-            }
-          } else {
-            // Fallback: just load the single track
-            await handleLoadAsync(track: track, queue: [track], startIndex: 0, audioBrowser: audioBrowser, completion: completion) {
-              await MainActor.run {
-                try? audioBrowser.load(track: track)
-                try? audioBrowser.play()
-              }
-            }
-          }
-        } catch {
-          logger.error("Error expanding queue: \(error.localizedDescription)")
-          await handleLoadAsync(track: track, queue: [track], startIndex: 0, audioBrowser: audioBrowser, completion: completion) {
-            await MainActor.run {
-              try? audioBrowser.load(track: track)
-              try? audioBrowser.play()
-            }
-          }
-        }
-      }
-    }
-    // If track has src, it's playable - load it
-    else if track.src != nil {
-      Task {
-        await handleLoadAsync(track: track, queue: [track], startIndex: 0, audioBrowser: audioBrowser, completion: completion) {
-          await MainActor.run {
-            try? audioBrowser.load(track: track)
-            try? audioBrowser.play()
-          }
-        }
-      }
-    }
-    // If track has url, it's browsable - navigate to it
-    else if let url = track.url {
-      navigateToUrl(url, completion: completion)
-    } else {
+    guard let player = audioBrowser.getPlayer(), let trackSelector else {
       completion()
+      return
+    }
+
+    Task {
+      let result = await trackSelector.select(track: track, player: player)
+      await MainActor.run {
+        switch result {
+        case .play(let intent):
+          self.executePlayback(intent, player: player)
+          self.showNowPlaying()
+        case .intercepted:
+          self.showNowPlaying()
+        case .browse(let url):
+          self.navigateToUrl(url, completion: completion)
+          return // navigateToUrl handles its own completion
+        case .none:
+          break
+        }
+        completion()
+      }
+    }
+  }
+
+  private func executePlayback(_ intent: TrackSelector.PlaybackIntent, player: TrackPlayer) {
+    switch intent {
+    case .skipTo(let index):
+      try? player.skipTo(index, playWhenReady: true)
+    case .setQueue(let tracks, let startIndex, let sourcePath):
+      player.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
+    case .loadTrack(let track):
+      player.load(track, playWhenReady: true)
     }
   }
 
@@ -695,7 +641,7 @@ public final class RNABCarPlayController: NSObject {
       } catch {
         logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
         await MainActor.run {
-          let navError = self.toNavigationError(error)
+          let navError = NavigationError.from(error)
           self.showNavigationError(navError, path: url)
           completion()
         }
@@ -1007,7 +953,7 @@ public final class RNABCarPlayController: NSObject {
   ///   - error: The NavigationError to display
   ///   - path: The path that was being navigated to when the error occurred
   private func showNavigationError(_ error: NavigationError, path: String) {
-    let defaultFormatted = defaultFormattedError(error)
+    let defaultFormatted = error.defaultFormatted()
 
     // Check if custom formatter is configured
     logger.debug("showNavigationError: formatNavigationError is \(self.config.formatNavigationError != nil ? "set" : "nil")")
@@ -1028,23 +974,6 @@ public final class RNABCarPlayController: NSObject {
     } else {
       presentErrorActionSheet(customDisplay: defaultFormatted)
     }
-  }
-
-  /// Returns the default formatted error for the given navigation error
-  private func defaultFormattedError(_ error: NavigationError) -> FormattedNavigationError {
-    let title = switch error.code {
-    case .contentNotFound:
-      "Content Not Found"
-    case .networkError:
-      "Network Error"
-    case .httpError:
-      httpErrorTitle(statusCode: error.statusCode.map { Int($0) })
-    case .callbackError:
-      "Error"
-    case .unknownError:
-      "Error"
-    }
-    return FormattedNavigationError(title: title, message: error.message)
   }
 
   /// Presents the error action sheet with the given display info.
@@ -1077,12 +1006,6 @@ public final class RNABCarPlayController: NSObject {
     interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
   }
 
-  /// Returns a localized title for HTTP errors based on status code
-  private func httpErrorTitle(statusCode: Int?) -> String {
-    guard let code = statusCode else { return "Server Error" }
-    return HTTPURLResponse.localizedString(forStatusCode: code).capitalized
-  }
-
   /// Shows a simple error template as root (for initialization errors when no other template exists)
   private func showErrorTemplate(message: String) {
     // CPAlertTemplate cannot be set as root - use a list template instead
@@ -1093,32 +1016,6 @@ public final class RNABCarPlayController: NSObject {
       sections: [CPListSection(items: [errorItem])],
     )
     interfaceController.setRootTemplate(template, animated: true, completion: nil)
-  }
-
-  /// Converts a generic Error (typically BrowserError) to a NavigationError
-  private func toNavigationError(_ error: Error) -> NavigationError {
-    if let browserError = error as? BrowserError {
-      switch browserError {
-      case .contentNotFound:
-        NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case let .httpError(code, _):
-        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
-      case .networkError:
-        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case .invalidConfiguration:
-        NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case .callbackError:
-        NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      }
-    } else if let httpError = error as? HttpClient.HttpException {
-      // HTTP error from HttpClient (non-2xx response)
-      NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
-    } else if error is URLError {
-      // Network error (connection failed, timeout, no internet, etc.)
-      NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-    } else {
-      NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-    }
   }
 
   // MARK: - Image Loading

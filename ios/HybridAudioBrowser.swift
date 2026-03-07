@@ -29,6 +29,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
   let browserManager = BrowserManager()
+  private let trackSelector: TrackSelector
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
   private var nowPlayingOverride: NowPlayingUpdate?
@@ -233,6 +234,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   // MARK: - Initialization
 
   override public init() {
+    trackSelector = TrackSelector(browserManager: browserManager)
     super.init()
 
     // Clean up the previous instance (e.g., on JS runtime reload).
@@ -309,33 +311,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   private func handleNavigationError(_ error: Error, path: String) {
-    let navError = if let browserError = error as? BrowserError {
-      switch browserError {
-      case .contentNotFound:
-        NavigationError(code: .contentNotFound, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case let .httpError(code, _):
-        NavigationError(code: .httpError, message: browserError.localizedDescription, statusCode: Double(code), statusCodeSuccess: (200 ... 299).contains(code))
-      case .networkError:
-        NavigationError(code: .networkError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case .invalidConfiguration:
-        NavigationError(code: .unknownError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      case .callbackError:
-        NavigationError(code: .callbackError, message: browserError.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-      }
-    } else if let httpError = error as? HttpClient.HttpException {
-      // HTTP error from HttpClient (non-2xx response)
-      NavigationError(code: .httpError, message: httpError.localizedDescription, statusCode: Double(httpError.code), statusCodeSuccess: (200 ... 299).contains(httpError.code))
-    } else if error is URLError {
-      // Network error (connection failed, timeout, no internet, etc.)
-      NavigationError(code: .networkError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-    } else {
-      NavigationError(code: .unknownError, message: error.localizedDescription, statusCode: nil, statusCodeSuccess: nil)
-    }
+    let navError = NavigationError.from(error)
 
     lastNavigationError = navError
 
     // Format the error (async if using JS callback, sync for defaults)
-    let defaultFormatted = defaultFormattedError(navError)
+    let defaultFormatted = navError.defaultFormatted()
     if let formatter = onMainActor({ browserManager.config.formatNavigationError }) {
       let params = FormatNavigationErrorParams(error: navError, defaultFormatted: defaultFormatted, path: path)
       // Dispatch to main thread for the Nitro bridge call to avoid C++ noexcept crashes
@@ -353,27 +334,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  private func defaultFormattedError(_ error: NavigationError) -> FormattedNavigationError {
-    let title: String = switch error.code {
-    case .contentNotFound:
-      "Content Not Found"
-    case .networkError:
-      "Network Error"
-    case .httpError:
-      if let statusCode = error.statusCode {
-        // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
-        HTTPURLResponse.localizedString(forStatusCode: Int(statusCode)).capitalized
-      } else {
-        "Server Error"
-      }
-    case .callbackError:
-      "Error"
-    case .unknownError:
-      "Error"
-    }
-    return FormattedNavigationError(title: title, message: error.message)
-  }
-
   // MARK: - Browser Methods
 
   public func navigatePath(path: String) throws {
@@ -389,104 +349,49 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  /// Centralizes handleTrackLoad interception logic.
-  /// If handleTrackLoad is set on config, awaits it (intercepted). Otherwise runs defaultBehavior.
-  ///
-  /// - Returns: true if the handler intercepted, false if defaultBehavior ran
-  @discardableResult
-  private func handleLoadAsync(track: Track, queue: [Track], startIndex: Double, defaultBehavior: () async -> Void) async -> Bool {
-    let event = TrackLoadEvent(track: track, queue: queue, startIndex: startIndex)
-    if await browserManager.awaitTrackLoadHandler(event: event) { return true }
-    await defaultBehavior()
-    return false
+  public func navigateTrack(track: Track) throws {
+    Task {
+      guard let player else { return }
+      let result = await trackSelector.select(track: track, player: player)
+      switch result {
+      case .play(let intent):
+        executePlayback(intent)
+      case .intercepted:
+        break
+      case .browse(let url):
+        navigateToBrowsableUrl(url)
+      case .none:
+        break
+      }
+    }
   }
 
-  public func navigateTrack(track: Track) throws {
-    let url = track.url
-
-    // Check if this is a contextual URL (playable-only track with queue context)
-    if let url, BrowserPathHelper.isContextual(url) {
-      let parentPath = BrowserPathHelper.stripTrackId(url)
-      let trackId = BrowserPathHelper.extractTrackId(url)
-
-      // Check if queue already came from this parent path - just skip to the track
-      let existingIndex: Int? = onMainActor {
-        guard let trackId,
-              parentPath == player?.queueSourcePath,
-              let index = player?.tracks.firstIndex(where: { $0.src == trackId })
-        else { return nil }
-        return index
-      }
-      if let index = existingIndex {
-        logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-        let queue: [Track] = onMainActor { player?.tracks ?? [] }
-        Task {
-          await handleLoadAsync(track: track, queue: queue, startIndex: Double(index)) {
-            do {
-              try onMainActor {
-                try player?.skipTo(index, playWhenReady: true)
-              }
-            } catch {
-              // NOTE: because we have a throwing closure here, the thrown error
-              // can't be propogated up. Log it out instead.
-              logger.error("Failed to skip to track at index \(index): \(error)")
-            }
-          }
-        }
-        return
-      }
-
-      Task {
+  private func executePlayback(_ intent: TrackSelector.PlaybackIntent) {
+    onMainActor {
+      switch intent {
+      case .skipTo(let index):
         do {
-          // Expand the queue from the contextual URL
-          if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
-            let (tracks, startIndex) = expanded
-            await handleLoadAsync(track: track, queue: tracks, startIndex: Double(startIndex)) {
-              // Replace queue and start at the selected track (auto-play)
-              onMainActor {
-                player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: parentPath)
-              }
-            }
-          } else {
-            // Fallback: just load the single track (auto-play)
-            await handleLoadAsync(track: track, queue: [track], startIndex: 0) {
-              onMainActor {
-                player?.load(track, playWhenReady: true)
-              }
-            }
-          }
+          try player?.skipTo(index, playWhenReady: true)
         } catch {
-          logger.error("Error expanding queue: \(error.localizedDescription)")
-          // Fallback to single track (auto-play) - playback errors reported via TrackPlayer callbacks
-          await handleLoadAsync(track: track, queue: [track], startIndex: 0) {
-            onMainActor {
-              player?.load(track, playWhenReady: true)
-            }
-          }
+          logger.error("Failed to skip to track at index \(index): \(error)")
         }
+      case .setQueue(let tracks, let startIndex, let sourcePath):
+        player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
+      case .loadTrack(let track):
+        player?.load(track, playWhenReady: true)
       }
     }
-    // If track has src, it's playable - load and auto-play
-    else if track.src != nil {
-      Task {
-        await handleLoadAsync(track: track, queue: [track], startIndex: 0) {
-          onMainActor {
-            player?.load(track, playWhenReady: true)
-          }
-        }
-      }
-    }
-    // If track has url, it's browsable - navigate to it
-    else if let url {
-      // Clear error synchronously before starting navigation (didSet notifies JS)
-      lastNavigationError = nil
-      lastFormattedNavigationError = nil
-      Task {
-        do {
-          try await browserManager.navigate(url)
-        } catch {
-          handleNavigationError(error, path: url)
-        }
+  }
+
+  private func navigateToBrowsableUrl(_ url: String) {
+    // Clear error synchronously before starting navigation (didSet notifies JS)
+    lastNavigationError = nil
+    lastFormattedNavigationError = nil
+    Task {
+      do {
+        try await browserManager.navigate(url)
+      } catch {
+        handleNavigationError(error, path: url)
       }
     }
   }

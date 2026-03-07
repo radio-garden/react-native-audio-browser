@@ -9,6 +9,7 @@ let package = Package(
       name: "AudioBrowserTestable",
       path: "ios",
       sources: [
+        "Browser/BrowserPathHelper.swift",
         "Browser/SimpleRouter.swift",
         "Player/QueueManager.swift",
         "Player/ShuffleOrder.swift",
@@ -18,6 +19,7 @@ let package = Package(
         "Player/MediaLoaderDelegate.swift",
         "Model/TrackPlayerError.swift",
         "Model/NitroTypeStubs.swift",
+        "TrackSelector.swift",
       ]
     ),
     .testTarget(

@@ -17,6 +17,8 @@ end
 
 TP["TrackPlayer<br/>Core AVPlayer Logic<br/>State Machine (PlaybackEvent)<br/>Owns: ML, NPU, LSC"]
 
+TS["TrackSelector<br/>@MainActor<br/>Shared Track Selection<br/>Decision Tree + Queue Expansion"]
+
 subgraph Queue["Queue Management"]
   QM["QueueManager<br/>Queue State, Navigation<br/>Repeat Mode, Shuffle"]
   SO["ShuffleOrder<br/>Fisher-Yates Shuffle"]
@@ -84,9 +86,14 @@ TPC["TrackPlayerCallbacks<br/>@MainActor Protocol<br/>~30 methods"]
 JS -->|"Direct sync/async calls"| HAB
 HAB -->|Owns| TP
 HAB -->|Owns| BM
+HAB -->|Owns| TS
 HAB -->|Uses| NM
 HAB -->|Uses| EM
 HAB -.->|Implements| TPC
+
+TS -->|"Queue reuse, expand, intercept"| BM
+TS -->|"Reads queue state"| TP
+CPC -->|Owns| TS
 
 BM --> SR
 BM --> BPH
@@ -154,6 +161,7 @@ classDef loader fill:#fdf3e1,stroke:#333,stroke-width:2px
 
 class HAB nitro
 class TP core
+class TS core
 class BM,SR,BPH,BC,LRU browser
 class HC browser
 class PSO,PTO,PINO,PIPO observer
@@ -186,7 +194,7 @@ class ML,NPU,LSC loader
 
 1. **JS → Native**: Direct sync/async method calls via Nitro
 2. **Native → JS**: Callback properties invoked from native code
-3. **Browser → Player**: `navigateTrack()` can expand contextual URLs and load queue
+3. **Browser → Player**: `navigateTrack()` uses TrackSelector to resolve track selection (contextual URL expansion, queue reuse, handler interception) and then executes the resulting PlaybackIntent
 4. **Player → Queue**: TrackPlayer delegates queue operations to QueueManager (pure state, no AVPlayer knowledge)
 5. **Player → Controllers**: TrackPlayer owns RemoteCommandController and NowPlayingInfoController
 6. **Player → MediaLoader**: TrackPlayer delegates URL resolution and asset loading to MediaLoader; receives results via MediaLoaderDelegate
@@ -226,6 +234,10 @@ ios/
 │                                     # Conforms to MediaLoaderDelegate, SeekCompletionHandler
 ├── PlaybackEvent.swift              # PlaybackEvent enum and PlaybackState
 │                                     # State machine transition function nextState(from:on:)
+├── TrackSelector.swift               # @MainActor shared track selection decision tree
+│                                     # Used by HybridAudioBrowser and CarPlayController
+│                                     # Returns SelectionResult enum (play/intercepted/browse/none)
+│                                     # Handles contextual URL expansion, queue reuse, handler interception
 ├── TrackPlayerCallbacks.swift        # @MainActor callback protocol (~30 methods)
 │                                     # Bridge between TrackPlayer events and HybridAudioBrowser
 ├── Browser/
@@ -297,6 +309,8 @@ ios/
 │   ├── ChapterMetadata+AVFoundation.swift  # AVTimedMetadataGroup → ChapterMetadata
 │   ├── TimedMetadata+AVFoundation.swift    # AVTimedMetadataGroup → TimedMetadata
 │   ├── TrackMetadata+AVFoundation.swift    # AVMetadataItem → TrackMetadata
+│   ├── NavigationError+Conversion.swift   # Error → NavigationError conversion
+│   │                                      # Shared by HybridAudioBrowser and CarPlayController
 │   └── CxxVectorConformances.swift   # Nitro C++ vector type conformances
 ├── Option/
 │   ├── PitchAlgorithms.swift         # AVAudioTimePitchAlgorithm mapping
