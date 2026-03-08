@@ -21,6 +21,7 @@ let package = Package(
         "Model/NitroTypeStubs.swift",
         "TrackSelector.swift",
         "CarPlay/CarPlayArtworkResolver.swift",
+        "Extension/ResolvedTrack+Copying.swift",
       ]
     ),
     .testTarget(

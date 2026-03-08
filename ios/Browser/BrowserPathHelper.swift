@@ -26,6 +26,15 @@ enum BrowserPathHelper {
   /// Offline error placeholder media ID
   static let offlinePath = "/__offline"
 
+  /// Character set for percent-encoding query parameter keys and values.
+  /// Starts from `.urlQueryAllowed` but removes characters that have special
+  /// meaning in query strings (`&`, `=`, `+`) to prevent value corruption.
+  private static let queryComponentAllowed: CharacterSet = {
+    var cs = CharacterSet.urlQueryAllowed
+    cs.remove(charactersIn: "&=+")
+    return cs
+  }()
+
   /// Query parameter name for contextual track identifiers
   private static let contextualTrackParam = "__trackId"
 
@@ -114,6 +123,31 @@ enum BrowserPathHelper {
     }
 
     return components.queryItems?.first { $0.name == contextualTrackParam }?.value
+  }
+
+  /// Appends query parameters to a URL, handling `?` vs `&` separator and percent-encoding.
+  ///
+  /// - Parameters:
+  ///   - query: Dictionary of query parameter key-value pairs
+  ///   - url: The URL to append parameters to
+  /// - Returns: The URL with query parameters appended
+  ///
+  /// Examples:
+  /// - appendQuery(["q": "jazz"], to: "/search") → "/search?q=jazz"
+  /// - appendQuery(["page": "2"], to: "/items?sort=new") → "/items?sort=new&page=2"
+  static func appendQuery(_ query: [String: String], to url: String) -> String {
+    guard !query.isEmpty else { return url }
+
+    let queryString = query.keys.sorted()
+      .map { key in
+        let value = query[key]!
+        let encodedKey = key.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? key
+        let encodedValue = value.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? value
+        return "\(encodedKey)=\(encodedValue)"
+      }
+      .joined(separator: "&")
+    let separator = url.contains("?") ? "&" : "?"
+    return "\(url)\(separator)\(queryString)"
   }
 
   /// Combines a base URL with a path, ensuring proper slash handling.
