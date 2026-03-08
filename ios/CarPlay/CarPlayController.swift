@@ -27,6 +27,7 @@ public final class RNABCarPlayController: NSObject {
 
   /// Track content subscriptions
   private var isStarted = false
+  private var listenerRemovals: [() -> Void] = []
 
   /// Current navigation stack paths (for back navigation context)
   private var navigationStack: [String] = []
@@ -36,6 +37,9 @@ public final class RNABCarPlayController: NSObject {
 
   /// Image loading service for CarPlay artwork
   private var imageLoader: CarPlayImageLoader?
+
+  /// List item and section factory
+  private var listItemFactory: CarPlayListItemFactory?
 
   /// Now Playing template and button management
   private let nowPlayingManager: CarPlayNowPlayingManager
@@ -59,7 +63,8 @@ public final class RNABCarPlayController: NSObject {
     nowPlayingManager = CarPlayNowPlayingManager(interfaceController: interfaceController)
     super.init()
     nowPlayingManager.listItemFactory = { [weak self] track, handler in
-      self?.createListItem(for: track, handler: handler) ?? CPListItem(text: track.title, detailText: nil)
+      self?.listItemFactory?.createListItem(for: track, handler: handler)
+        ?? CPListItem(text: track.title, detailText: nil)
     }
   }
 
@@ -94,6 +99,16 @@ public final class RNABCarPlayController: NSObject {
         browserManager: browser.browserManager
       )
 
+      // Create list item factory
+      let factory = CarPlayListItemFactory(
+        isActiveTrack: { [weak self] src in self?.isActiveTrack(src: src) ?? false },
+        onItemSelected: { [weak self] track, completion in
+          self?.handleItemSelection(track: track, completion: completion)
+        }
+      )
+      factory.imageLoader = self.imageLoader
+      self.listItemFactory = factory
+
       self.setupContentSubscriptions()
 
       // Wire up now playing manager
@@ -110,7 +125,15 @@ public final class RNABCarPlayController: NSObject {
 
     logger.info("Stopping CarPlay controller")
 
+    // Remove all emitter listeners
+    for removal in listenerRemovals { removal() }
+    listenerRemovals.removeAll()
+
+    // Clear config callback
+    audioBrowser?.browserManager.onConfigChanged = nil
+
     nowPlayingManager.teardown()
+    listItemFactory = nil
 
     navigationStack.removeAll()
   }
@@ -124,17 +147,23 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to tab changes
-    audioBrowser.tabsChangedEmitter.addListener { [weak self] tabs in
+    let tabsToken = audioBrowser.tabsChangedEmitter.addListener { [weak self] tabs in
       Task { @MainActor in
         self?.handleTabsChanged(tabs)
       }
     }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.tabsChangedEmitter.removeListener(tabsToken)
+    }
 
     // Subscribe to content changes
-    audioBrowser.contentChangedEmitter.addListener { [weak self] content in
+    let contentToken = audioBrowser.contentChangedEmitter.addListener { [weak self] content in
       Task { @MainActor in
         self?.handleContentChanged(content)
       }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.contentChangedEmitter.removeListener(contentToken)
     }
 
     // Subscribe to config changes (for Now Playing buttons)
@@ -145,36 +174,51 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to favorite changes (for Now Playing button)
-    audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in
+    let favoriteToken = audioBrowser.favoriteChangedEmitter.addListener { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.updateFavoriteButtonState()
       }
     }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.favoriteChangedEmitter.removeListener(favoriteToken)
+    }
 
     // Subscribe to external content changes (from notifyContentChanged)
-    audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
+    let externalContentToken = audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
       self?.notifyContentChanged(path: path)
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.externalContentChangedEmitter.removeListener(externalContentToken)
     }
 
     // Subscribe to active track changes (for playing indicator in lists)
-    audioBrowser.activeTrackChangedEmitter.addListener { [weak self] event in
+    let activeTrackToken = audioBrowser.activeTrackChangedEmitter.addListener { [weak self] event in
       Task { @MainActor in
         self?.handleActiveTrackChanged(event)
       }
     }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.activeTrackChangedEmitter.removeListener(activeTrackToken)
+    }
 
     // Subscribe to queue changes (for Up Next list updates)
-    audioBrowser.queueChangedEmitter.addListener { [weak self] tracks in
+    let queueToken = audioBrowser.queueChangedEmitter.addListener { [weak self] tracks in
       Task { @MainActor in
         self?.nowPlayingManager.handleQueueChanged(tracks)
       }
     }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.queueChangedEmitter.removeListener(queueToken)
+    }
 
     // Subscribe to navigation errors (from browser layer)
-    audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
+    let navErrorToken = audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
       Task { @MainActor in
         self?.handleNavigationError(event)
       }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.navigationErrorEmitter.removeListener(navErrorToken)
     }
   }
 
@@ -317,7 +361,7 @@ public final class RNABCarPlayController: NSObject {
 
   /// Updates a template's sections and assistant cell from resolved content.
   private func updateTemplate(_ template: CPListTemplate, with resolvedTrack: ResolvedTrack) {
-    let sections = createSections(from: resolvedTrack)
+    let sections = listItemFactory?.createSections(from: resolvedTrack) ?? []
     template.updateSections(sections)
     configureAssistantCell(on: template, from: resolvedTrack)
   }
@@ -336,224 +380,6 @@ public final class RNABCarPlayController: NSObject {
       visibility: .always,
       assistantAction: .playMedia,
     )
-  }
-
-  private func createSections(from resolvedTrack: ResolvedTrack) -> [CPListSection] {
-    guard let children = resolvedTrack.children else {
-      return []
-    }
-
-    let maxSections = CPListTemplate.maximumSectionCount
-    let maxTotalItems = CPListTemplate.maximumItemCount
-
-    // Group by groupTitle if present
-    var groups: [String?: [Track]] = [:]
-    for track in children {
-      let groupKey = track.groupTitle
-      groups[groupKey, default: []].append(track)
-    }
-
-    // Create sections (respecting both section and total item limits)
-    var sections: [CPListSection] = []
-    var totalItemCount = 0
-
-    // Ungrouped items first
-    if let ungrouped = groups[nil], !ungrouped.isEmpty {
-      let availableSlots = maxTotalItems - totalItemCount
-      let items: [CPListTemplateItem] = ungrouped.prefix(availableSlots).map { track in
-        if track.imageRow != nil {
-          return createImageRowItem(for: track)
-        }
-        return createListItem(for: track)
-      }
-      if !items.isEmpty {
-        sections.append(CPListSection(items: items))
-        totalItemCount += items.count
-      }
-    }
-
-    // Then grouped items (respecting section and item limits)
-    for (groupTitle, tracks) in groups.sorted(by: { ($0.key ?? "") < ($1.key ?? "") }) {
-      guard sections.count < maxSections else { break }
-      guard totalItemCount < maxTotalItems else { break }
-      guard groupTitle != nil else { continue }
-
-      let availableSlots = maxTotalItems - totalItemCount
-      let items: [CPListTemplateItem] = tracks.prefix(availableSlots).map { track in
-        if track.imageRow != nil {
-          return createImageRowItem(for: track)
-        }
-        return createListItem(for: track)
-      }
-      if !items.isEmpty {
-        sections.append(CPListSection(items: items, header: groupTitle, sectionIndexTitle: nil))
-        totalItemCount += items.count
-      }
-    }
-
-    return sections
-  }
-
-  /// Creates a CPListItem for a track with common setup (userInfo, artwork, isPlaying).
-  /// - Parameters:
-  ///   - track: The track to create the item for
-  ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
-  fileprivate func createListItem(
-    for track: Track,
-    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil,
-  ) -> CPListItem {
-    let item = CPListItem(
-      text: track.title,
-      detailText: track.subtitle ?? track.artist,
-    )
-
-    // Store track info for selection handling and updatePlayingIndicators()
-    item.userInfo = [
-      "url": track.url as Any,
-      "src": track.src as Any,
-      "hasSrc": track.src != nil,
-      "hasUrl": track.url != nil,
-    ]
-
-    // Set accessory type based on whether track is browsable or playable
-    if let src = track.src {
-      // Playable track - check if it's currently playing
-      item.accessoryType = .none
-      item.isPlaying = isActiveTrack(src: src)
-      if item.isPlaying {
-        logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
-      }
-    } else if track.url != nil {
-      // Browsable only - show disclosure indicator
-      item.accessoryType = .disclosureIndicator
-    }
-
-    // Load artwork with size context for proper CDN optimization
-    if track.artwork != nil || track.artworkSource != nil {
-      // Set empty placeholder to reserve space while loading
-      item.setImage(imageLoader?.placeholderImage)
-      imageLoader?.loadArtwork(for: track, size: CPListItem.maximumImageSize) { [weak item] image in
-        Task { @MainActor in
-          item?.setImage(image)
-        }
-      }
-    }
-
-    // Set selection handler
-    if let handler {
-      item.handler = handler
-    } else {
-      item.handler = { [weak self] _, completion in
-        self?.handleItemSelection(track: track, completion: completion)
-      }
-    }
-
-    return item
-  }
-
-  /// Creates a CPListImageRowItem for a track that has an imageRow.
-  /// Renders as a horizontal row of tappable artwork thumbnails with a header title.
-  private func createImageRowItem(for track: Track) -> CPListImageRowItem {
-    guard let imageRowItems = track.imageRow else {
-      fatalError("createImageRowItem called without imageRow")
-    }
-
-    // CPListImageRowItem requires images at init — start with placeholders
-    let maxImages = CPMaximumNumberOfGridImages
-    let visibleItems = Array(imageRowItems.prefix(maxImages))
-    let placeholders = visibleItems.map { _ in imageLoader?.placeholderImage ?? UIImage() }
-    let titles = visibleItems.map(\.title)
-
-    // Use imageTitles variant on iOS 17.4+ to show titles below each thumbnail
-    let item = if #available(iOS 17.4, *) {
-      CPListImageRowItem(text: track.title, images: placeholders, imageTitles: titles)
-    } else {
-      CPListImageRowItem(text: track.title, images: placeholders)
-    }
-
-    // Store track info for identification
-    item.userInfo = [
-      "url": track.url as Any,
-      "src": track.src as Any,
-      "hasSrc": track.src != nil,
-      "hasUrl": track.url != nil,
-    ]
-
-    // Handler for row header tap → navigate to track.url if present
-    item.handler = { [weak self] _, completion in
-      self?.handleItemSelection(track: track, completion: completion)
-    }
-
-    // Handler for individual image taps
-    item.listImageRowHandler = { [weak self] _, index, completion in
-      guard let self, index < visibleItems.count else {
-        completion()
-        return
-      }
-      let tappedItem = visibleItems[index]
-      // Create a minimal Track to reuse handleItemSelection
-      let itemTrack = Track(
-        url: tappedItem.url,
-        src: nil,
-        artwork: tappedItem.artwork,
-        artworkSource: tappedItem.artworkSource,
-        artworkCarPlayTinted: nil,
-        title: tappedItem.title,
-        subtitle: nil,
-        artist: nil,
-        album: nil,
-        description: nil,
-        genre: nil,
-        duration: nil,
-        style: nil,
-        childrenStyle: nil,
-        favorited: nil,
-        groupTitle: nil,
-        live: nil,
-        imageRow: nil,
-      )
-      self.handleItemSelection(track: itemTrack, completion: completion)
-    }
-
-    // Load artwork for each visible image row item asynchronously
-    for (index, imageRowItem) in visibleItems.enumerated() {
-      guard imageRowItem.artwork != nil || imageRowItem.artworkSource != nil else { continue }
-
-      // Create a minimal Track for the artwork loader
-      let itemTrack = Track(
-        url: imageRowItem.url,
-        src: nil,
-        artwork: imageRowItem.artwork,
-        artworkSource: imageRowItem.artworkSource,
-        artworkCarPlayTinted: nil,
-        title: imageRowItem.title,
-        subtitle: nil,
-        artist: nil,
-        album: nil,
-        description: nil,
-        genre: nil,
-        duration: nil,
-        style: nil,
-        childrenStyle: nil,
-        favorited: nil,
-        groupTitle: nil,
-        live: nil,
-        imageRow: nil,
-      )
-
-      imageLoader?.loadArtwork(for: itemTrack, size: CPListImageRowItem.maximumImageSize) { [weak item] image in
-        Task { @MainActor in
-          guard let item, let image else { return }
-          var images = item.gridImages
-          if index < images.count {
-            images[index] = image
-            item.update(images)
-          }
-        }
-      }
-    }
-
-    return item
   }
 
   // MARK: - Content Loading
@@ -702,8 +528,7 @@ public final class RNABCarPlayController: NSObject {
       for section in template.sections {
         for item in section.items {
           guard let listItem = item as? CPListItem,
-                let userInfo = listItem.userInfo as? [String: Any],
-                let itemSrc = userInfo["src"] as? String
+                let itemSrc = listItem.carPlayItemInfo?.src
           else { continue }
 
           let isPlaying = isActiveTrack(src: itemSrc)
