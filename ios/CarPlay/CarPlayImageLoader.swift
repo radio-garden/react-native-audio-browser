@@ -1,6 +1,6 @@
 import CarPlay
 import Foundation
-import Kingfisher
+import NitroModules
 import os.log
 
 /// Handles all image loading and rendering for CarPlay.
@@ -82,7 +82,12 @@ final class CarPlayImageLoader {
       case .sfSymbol(let artwork, let width, let height):
         completion(self.sfSymbolImage(forArtwork: artwork, canvasSize: CGSize(width: width, height: height)))
       case .fetch(let uri, let headers, let shouldTint, let isSvg):
-        self.fetchImage(uri: uri, headers: headers, shouldTint: shouldTint, isSvg: isSvg, completion: completion)
+        let image = await self.fetchImage(uri: uri, headers: headers, isSvg: isSvg)
+        if let image, shouldTint {
+          completion(self.createAdaptiveImage(image, carTraitCollection: self.carTraitCollection))
+        } else {
+          completion(image)
+        }
       case .none:
         completion(nil)
       }
@@ -91,44 +96,11 @@ final class CarPlayImageLoader {
 
   // MARK: - Private
 
-  /// Fetches an image from a URL with optional headers, SVG processing, and tinting.
-  private func fetchImage(uri: String, headers: [String: String]?, shouldTint: Bool, isSvg: Bool, completion: @escaping @Sendable (UIImage?) -> Void) {
-    guard let url = URL(string: uri) else {
-      completion(nil)
-      return
-    }
-
-    let carTraitCollection = carTraitCollection
-
-    var options: KingfisherOptionsInfo = []
-    if let headers, !headers.isEmpty {
-      let modifier = AnyModifier { request in
-        var request = request
-        for (key, value) in headers {
-          request.setValue(value, forHTTPHeaderField: key)
-        }
-        return request
-      }
-      options.append(.requestModifier(modifier))
-    }
-
-    if isSvg {
-      options.append(.processor(SVGProcessor(size: nil, scale: carTraitCollection.displayScale)))
-    }
-
-    KingfisherManager.shared.retrieveImage(with: url, options: options) { result in
-      if case let .success(imageResult) = result {
-        let image = imageResult.image
-
-        if shouldTint {
-          completion(self.createAdaptiveImage(image, carTraitCollection: carTraitCollection))
-        } else {
-          completion(image)
-        }
-      } else {
-        completion(nil)
-      }
-    }
+  /// Fetches an image from a URL with optional headers and SVG processing.
+  private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool) async -> UIImage? {
+    let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
+    let svgScale: CGFloat? = isSvg ? carTraitCollection.displayScale : nil
+    return await ArtworkImageFetcher.fetchImage(from: source, svgScale: svgScale)
   }
 
   /// Creates an SF Symbol image rendered at the given canvas size.

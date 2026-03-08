@@ -1,5 +1,4 @@
 import Foundation
-import Kingfisher
 import MediaPlayer
 import NitroModules
 import os.log
@@ -77,10 +76,14 @@ final class NowPlayingUpdater {
       {
         guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
         logger.debug("loadArtwork: using resolved URL: \(imageSource.uri)")
-        image = await loadImage(from: imageSource)
+        image = await ArtworkImageFetcher.fetchImage(from: imageSource)
       } else {
         guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
-        image = await track.loadArtwork()
+        if let source = track.artworkImageSource {
+          image = await ArtworkImageFetcher.fetchImage(from: source)
+        } else {
+          image = nil
+        }
       }
 
       guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
@@ -100,27 +103,4 @@ final class NowPlayingUpdater {
     }
   }
 
-  private func loadImage(from imageSource: ImageSource) async -> UIImage? {
-    guard let url = URL(string: imageSource.uri) else { return nil }
-
-    var options: KingfisherOptionsInfo = []
-    if let headers = imageSource.headers, !headers.isEmpty {
-      let modifier = AnyModifier { request in
-        var mutableRequest = request
-        for (key, value) in headers {
-          mutableRequest.setValue(value, forHTTPHeaderField: key)
-        }
-        return mutableRequest
-      }
-      options.append(.requestModifier(modifier))
-    }
-
-    do {
-      let result = try await KingfisherManager.shared.retrieveImage(with: url, options: options)
-      return result.image
-    } catch {
-      logger.error("Failed to load artwork from \(imageSource.uri): \(error.localizedDescription)")
-      return nil
-    }
-  }
 }
