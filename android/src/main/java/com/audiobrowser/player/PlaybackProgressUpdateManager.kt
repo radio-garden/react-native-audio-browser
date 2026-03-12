@@ -13,9 +13,10 @@ class PlaybackProgressUpdateManager(private val onProgressUpdate: () -> Unit) {
 
   fun setUpdateInterval(interval: Double?) {
     if (interval == updateInterval) return
+    val wasRunning = job != null
     updateInterval = if (interval != null && interval > 0) interval else null
     stop()
-    if (updateInterval != null) {
+    if (updateInterval != null && wasRunning) {
       start()
     }
   }

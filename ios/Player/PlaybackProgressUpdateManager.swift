@@ -20,9 +20,10 @@ class PlaybackProgressUpdateManager: @unchecked Sendable {
 
   func setUpdateInterval(_ interval: TimeInterval?) {
     if interval == updateInterval { return }
+    let wasRunning = timer != nil
     updateInterval = (interval != nil && interval! > 0) ? interval : nil
     stop()
-    if updateInterval != nil {
+    if updateInterval != nil, wasRunning {
       start()
     }
   }
