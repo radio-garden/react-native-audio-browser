@@ -41,6 +41,14 @@ public final class RNABCarPlayController: NSObject {
   /// Reference to the Up Next template for updating when queue changes
   private weak var upNextTemplate: CPListTemplate?
 
+  /// URLs currently being resolved for navigation 
+  /// (deduplicates rapid taps on same URL)
+  private var pendingNavigationUrls: Set<String> = []
+
+  /// The src or url key of the item currently being loaded 
+  /// (used to ignore duplicate taps on the same item).
+  private var currentSelectionKey: String? = nil
+
   /// Convenience accessor for browser config
   private var config: BrowserConfig {
     audioBrowser?.browserManager.config ?? BrowserConfig()
@@ -605,6 +613,17 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
+    // Compute a stable identity key for this selection 
+    // (prefer src for playable tracks)
+    let key = track.src ?? track.url
+
+    // Same track already loading → ignore the duplicate tap
+    if let key, key == currentSelectionKey {
+      completion()
+      return
+    }
+    currentSelectionKey = key
+
     // Check if this is a contextual URL (playable-only track with queue context)
     if let url = track.url, BrowserPathHelper.isContextual(url) {
       let parentPath = BrowserPathHelper.stripTrackId(url)
@@ -618,6 +637,7 @@ public final class RNABCarPlayController: NSObject {
       {
         let queue = player?.tracks ?? []
         Task {
+          defer { self.currentSelectionKey = nil }
           await handleLoadAsync(track: track, queue: queue, startIndex: Double(index), audioBrowser: audioBrowser, completion: completion) {
             try? player?.skipTo(index, playWhenReady: true)
           }
@@ -626,6 +646,7 @@ public final class RNABCarPlayController: NSObject {
       }
 
       Task {
+        defer { self.currentSelectionKey = nil }
         do {
           // Expand the queue from the contextual URL
           if let expanded = try await audioBrowser.browserManager.expandQueueFromContextualUrl(url) {
@@ -659,6 +680,7 @@ public final class RNABCarPlayController: NSObject {
     // If track has src, it's playable - load it
     else if track.src != nil {
       Task {
+        defer { self.currentSelectionKey = nil }
         await handleLoadAsync(track: track, queue: [track], startIndex: 0, audioBrowser: audioBrowser, completion: completion) {
           await MainActor.run {
             try? audioBrowser.load(track: track)
@@ -671,6 +693,7 @@ public final class RNABCarPlayController: NSObject {
     else if let url = track.url {
       navigateToUrl(url, completion: completion)
     } else {
+      currentSelectionKey = nil
       completion()
     }
   }
@@ -682,11 +705,26 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
+    // Deduplicate: ignore if already navigating to this exact URL
+    guard !pendingNavigationUrls.contains(url) else {
+      completion()
+      return
+    }
+    pendingNavigationUrls.insert(url)
+
     Task {
       do {
         let resolved = try await audioBrowser.browserManager.resolve(url, useCache: true)
 
         await MainActor.run {
+          self.pendingNavigationUrls.remove(url)
+          self.currentSelectionKey = nil
+          // Guard against duplicate push if top template already shows this path
+          if let top = self.interfaceController.topTemplate,
+             self.getPath(from: top) == url {
+            completion()
+            return
+          }
           let listTemplate = self.createListTemplate(for: resolved, path: url)
           self.navigationStack.append(url)
           self.interfaceController.pushTemplate(listTemplate, animated: true, completion: nil)
@@ -695,6 +733,8 @@ public final class RNABCarPlayController: NSObject {
       } catch {
         logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
         await MainActor.run {
+          self.pendingNavigationUrls.remove(url)
+          self.currentSelectionKey = nil
           let navError = self.toNavigationError(error)
           self.showNavigationError(navError, path: url)
           completion()
@@ -871,9 +911,16 @@ public final class RNABCarPlayController: NSObject {
   }
 
   private func showNowPlaying() {
-    updateNowPlayingButtonStates()
-    let nowPlayingTemplate = CPNowPlayingTemplate.shared
-    interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
+      updateNowPlayingButtonStates()
+
+      let nowPlayingTemplate = CPNowPlayingTemplate.shared
+
+      // Check if it's already on the stack
+      if interfaceController.templates.contains(where: { $0 === nowPlayingTemplate }) {
+          return
+      }
+
+      interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
   }
 
   // MARK: - Content Change Handlers
