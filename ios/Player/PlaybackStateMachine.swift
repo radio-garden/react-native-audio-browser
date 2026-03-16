@@ -7,7 +7,7 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   switch event {
   case .stopped:             return .stopped
   case .trackLoading:        return .loading
-  case .trackUnloaded:       return .none
+  case .trackUnloaded:       return PlaybackState.none
   case .trackEndedNaturally: return .ended
   case .avPlayerWaiting:     return .buffering
   case .avPlayerPlaying:     return .playing
@@ -20,7 +20,7 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
 
   case .avPlayerPaused(let hasAsset):
     guard current != .stopped else { return nil }
-    if !hasAsset { return .none }
+    if !hasAsset { return PlaybackState.none }
     guard current != .error else { return nil }
     return .paused
 
