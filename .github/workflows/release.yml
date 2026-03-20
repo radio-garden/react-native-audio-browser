@@ -1,6 +1,8 @@
 name: Release
 
 on:
+  schedule:
+    - cron: '0 3 * * *' # nightly at 3am UTC
   push:
     branches: [next]
   workflow_dispatch:
@@ -25,6 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
       - name: Enable Corepack
         run: corepack enable
