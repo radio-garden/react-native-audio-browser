@@ -48,7 +48,7 @@ concurrency:
 jobs:
   build:
     name: Build iOS Example App (${{ matrix.arch }})
-    runs-on: macOS-15
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -65,7 +65,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 16.4
+          xcode-version: 26.2
 
       - name: Install dependencies
         run: yarn install
@@ -108,6 +108,6 @@ jobs:
             -scheme AudioBrowserExample \
             -sdk iphonesimulator \
             -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'platform=iOS Simulator,OS=latest,arch=arm64' \
             build \
             CODE_SIGNING_ALLOWED=NO | xcpretty
