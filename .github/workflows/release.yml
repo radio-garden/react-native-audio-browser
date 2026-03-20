@@ -1,6 +1,10 @@
 name: Release
 
 on:
+  schedule:
+    - cron: '0 3 * * *' # nightly at 3am UTC
+  push:
+    branches: [next]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v6
