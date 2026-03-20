@@ -1,3 +1,9 @@
+## [0.1.0-next.2](https://github.com/radio-garden/react-native-audio-browser/compare/v0.1.0-next.1...v0.1.0-next.2) (2026-03-20)
+
+### 🐛 Bug Fixes
+
+* **ci:** bump prerelease after cleaning up stale v0.1.0-next.1 ([e6a7895](https://github.com/radio-garden/react-native-audio-browser/commit/e6a7895d9de781fbfc285fe722a490a46f360b6e))
+
 ## [0.1.0-next.1](https://github.com/radio-garden/react-native-audio-browser/compare/v0.0.0...v0.1.0-next.1) (2026-03-20)
 
 ### ⚠ BREAKING CHANGES
