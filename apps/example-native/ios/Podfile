@@ -30,5 +30,15 @@ target 'AudioBrowserExample' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Disable BUILD_LIBRARY_FOR_DISTRIBUTION for Kingfisher to fix
+    # SwiftVerifyEmittedModuleInterface failures on Xcode 16+
+    installer.pods_project.targets.each do |target|
+      if target.name == 'Kingfisher'
+        target.build_configurations.each do |config|
+          config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+        end
+      end
+    end
   end
 end
