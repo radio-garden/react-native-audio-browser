@@ -108,6 +108,6 @@ jobs:
             -scheme AudioBrowserExample \
             -sdk iphonesimulator \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,OS=latest,arch=arm64' \
+            -destination 'generic/platform=iOS Simulator' \
             build \
             CODE_SIGNING_ALLOWED=NO | xcpretty
