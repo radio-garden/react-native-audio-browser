@@ -1,3 +1,9 @@
+## [0.1.0-next.3](https://github.com/radio-garden/react-native-audio-browser/compare/v0.1.0-next.2...v0.1.0-next.3) (2026-03-20)
+
+### 🛠️ Other changes
+
+* **ci:** add nightly schedule for next prereleases ([9a2efb7](https://github.com/radio-garden/react-native-audio-browser/commit/9a2efb78c9d62198b724b9bd7031cb6a56259eac))
+
 ## [0.1.0-next.2](https://github.com/radio-garden/react-native-audio-browser/compare/v0.1.0-next.1...v0.1.0-next.2) (2026-03-20)
 
 ### 🐛 Bug Fixes
