@@ -1,5 +1,5 @@
 import Foundation
-import Intents
+@preconcurrency import Intents
 import os.log
 
 /// Handles INPlayMediaIntent for Siri voice search (e.g. from CarPlay).
