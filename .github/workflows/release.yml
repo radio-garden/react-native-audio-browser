@@ -29,6 +29,8 @@ jobs:
         with:
           ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
+      - name: Fetch all branch refs for semantic-release
+        run: git fetch origin +refs/heads/*:refs/heads/*
       - name: Enable Corepack
         run: corepack enable
       - name: Setup Node.js
