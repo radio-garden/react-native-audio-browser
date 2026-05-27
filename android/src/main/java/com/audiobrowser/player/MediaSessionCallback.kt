@@ -22,7 +22,6 @@ import com.margelo.nitro.audiobrowser.Track
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
@@ -113,18 +112,6 @@ class MediaSessionCallback(private val player: Player) :
     return commandManager.buildConnectionResult(session)
   }
 
-  /** Updates the favorite state of the current track and emits onFavoriteChanged. */
-  private fun setFavorited(favorited: Boolean) {
-    val currentTrack = player.currentTrack ?: return
-
-    // Update native favorites cache (only tracks with src can be favorited)
-    currentTrack.src?.let { src -> player.browser?.browserManager?.updateFavorite(src, favorited) }
-
-    player.setActiveTrackFavorited(favorited)
-    val event = FavoriteChangedEvent(player.currentTrack ?: currentTrack, favorited)
-    player.callbacks?.onFavoriteChanged(event)
-  }
-
   override fun onCustomCommand(
     session: MediaSession,
     controller: MediaSession.ControllerInfo,
@@ -135,7 +122,7 @@ class MediaSessionCallback(private val player: Player) :
     if (command.customAction == MediaSessionCommandManager.CUSTOM_ACTION_FAVORITE) {
       val currentFavorited = player.currentTrack?.favorited ?: false
       Timber.d("Favorite button tapped - toggling from $currentFavorited to ${!currentFavorited}")
-      setFavorited(!currentFavorited)
+      player.setActiveTrackFavorited(!currentFavorited)
       return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }
 
@@ -150,8 +137,8 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
-    if (rating is HeartRating) {
-      setFavorited(rating.isHeart)
+    if (rating is HeartRating && rating.isRated) {
+      player.setActiveTrackFavorited(rating.isHeart)
     }
 
     // Also emit onRemoteSetRating for listeners
