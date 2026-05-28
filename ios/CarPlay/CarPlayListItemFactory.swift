@@ -49,10 +49,14 @@ final class CarPlayListItemFactory {
     let maxSections = CPListTemplate.maximumSectionCount
     let maxTotalItems = CPListTemplate.maximumItemCount
 
-    // Group by groupTitle if present
+    // Group by groupTitle if present, remembering the order each groupTitle
+    // first appears so sections render in source (server) order rather than
+    // alphabetically.
     var groups: [String?: [Track]] = [:]
+    var orderedKeys: [String?] = []
     for track in children {
       let groupKey = track.groupTitle
+      if groups[groupKey] == nil { orderedKeys.append(groupKey) }
       groups[groupKey, default: []].append(track)
     }
 
@@ -75,12 +79,13 @@ final class CarPlayListItemFactory {
       }
     }
 
-    // Then grouped items (respecting section and item limits)
-    for (groupTitle, tracks) in groups.sorted(by: { ($0.key ?? "") < ($1.key ?? "") }) {
+    // Then grouped items, in source order (respecting section and item limits)
+    for groupTitle in orderedKeys {
+      guard groupTitle != nil else { continue }
       guard sections.count < maxSections else { break }
       guard totalItemCount < maxTotalItems else { break }
-      guard groupTitle != nil else { continue }
 
+      let tracks = groups[groupTitle] ?? []
       let availableSlots = maxTotalItems - totalItemCount
       let items: [CPListTemplateItem] = tracks.prefix(availableSlots).map { track in
         if track.imageRow != nil {
