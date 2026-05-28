@@ -522,6 +522,39 @@ export type TabsSource =
  */
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
+/**
+ * How ids passed to {@link AudioBrowser.setFavorites} are matched against a
+ * track's `src` to hydrate its `favorited` flag.
+ *
+ * - `'exact'`: the id must equal `src`.
+ * - `'partial'`: the id matches if it appears as a complete path segment within
+ *   `src` (delimited by `/`, `?`, `#`, or the string boundaries). Useful when
+ *   favorites are stored as a stable identifier that is embedded in — but not
+ *   equal to — the playable `src` URL.
+ *
+ * @example
+ * ```text
+ * setFavorites(['abc123'])  +  track.src = '/stream/jazz-fm/abc123'
+ *
+ *   'exact'    'abc123' === '/stream/jazz-fm/abc123'   → not favorited
+ *   'partial'  'abc123' is the last segment of the src → favorited
+ *
+ * setFavorites(['https://cdn.example.com/jazz-fm/abc123.mp3'])
+ *
+ *   'exact'    id === src                              → favorited
+ *   'partial'  id is a full segment of src             → favorited
+ * ```
+ */
+export type FavoritesMatchMode = 'exact' | 'partial'
+
+/**
+ * Object form of the `favorite` capability — enables favoriting with an explicit
+ * {@link FavoritesMatchMode}. (A bare `true` is shorthand for `{ match: 'exact' }`.)
+ */
+export interface FavoriteConfig {
+  match: FavoritesMatchMode
+}
+
 export type BrowserConfiguration = {
   /**
    * Initial navigation path. Setting this triggers initial navigation to the specified path.

@@ -9,6 +9,7 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
+import com.margelo.nitro.audiobrowser.FavoritesMatchMode
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -93,6 +94,10 @@ class BrowserManager {
   // Set of favorited track identifiers (src)
   private var favoriteIds = setOf<String>()
 
+  // Favorite match mode, propagated from the player's `favorite` capability.
+  // null = favoriting disabled (no row hearts). Set via setFavoriteMatch.
+  private var favoriteMatch: FavoritesMatchMode? = null
+
   // Navigation tracking to prevent race conditions
   @Volatile private var currentNavigationId = 0
 
@@ -119,6 +124,14 @@ class BrowserManager {
   }
 
   /**
+   * Sets the favorite match mode (propagated from the `favorite` capability).
+   * null disables row-heart hydration.
+   */
+  fun setFavoriteMatch(match: FavoritesMatchMode?) {
+    favoriteMatch = match
+  }
+
+  /**
    * Updates the favorite state for a single track identifier. Called when the heart button is
    * tapped in media controllers.
    */
@@ -133,17 +146,19 @@ class BrowserManager {
   }
 
   /**
-   * Hydrates the favorited field on a track based on the favoriteIds set. Only hydrates if
-   * track.favorited is null (doesn't overwrite API-provided values). Only tracks with src can be
-   * favorited.
+   * Hydrates the favorited field on a track based on the favoriteIds set. No-op unless favoriting
+   * is enabled (the `favorite` capability). Only playable (src-bearing) tracks are favoritable; the
+   * flag is set to true OR false so non-favorited tracks still show an (empty) heart. Doesn't
+   * overwrite API-provided values.
    */
   private fun hydrateFavorite(track: Track): Track {
+    val match = favoriteMatch ?: return track
     // Don't overwrite API-provided favorites
     if (track.favorited != null) return track
-    if (favoriteIds.isEmpty()) return track
+    // Only playable tracks are favoritable
+    val src = track.src ?: return track
 
-    val isFavorited = track.src?.let { favoriteIds.contains(it) } ?: false
-    if (!isFavorited) return track
+    val isFavorited = isFavorite(src, match)
 
     return Track(
       url = track.url,
@@ -160,12 +175,19 @@ class BrowserManager {
       duration = track.duration,
       style = track.style,
       childrenStyle = track.childrenStyle,
-      favorited = true,
+      favorited = isFavorited,
       groupTitle = track.groupTitle,
       live = track.live,
       imageRow = track.imageRow,
     )
   }
+
+  /** Whether [src] is favorited under the given match mode. */
+  private fun isFavorite(src: String, match: FavoritesMatchMode): Boolean =
+    when (match) {
+      FavoritesMatchMode.EXACT -> favoriteIds.contains(src)
+      FavoritesMatchMode.PARTIAL -> favoriteIds.any { BrowserPathHelper.containsSegment(src, it) }
+    }
 
   /** Hydrates favorites on all children of a ResolvedTrack. */
   private fun hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {

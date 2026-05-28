@@ -129,6 +129,10 @@ namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 // Forward declaration of `PlayerCapabilities` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
+// Forward declaration of `FavoriteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
+// Forward declaration of `FavoritesMatchMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
@@ -353,6 +357,11 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "JVariant_NullType_Double.hpp"
 #include "PlayerCapabilities.hpp"
 #include "JPlayerCapabilities.hpp"
+#include "FavoriteConfig.hpp"
+#include "JVariant_Boolean_FavoriteConfig.hpp"
+#include "JFavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
+#include "JFavoritesMatchMode.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFavoriteChangedEvent.hpp"

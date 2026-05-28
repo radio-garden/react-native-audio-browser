@@ -112,8 +112,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, media: nil, artwork: nil, routes: nil,
-    singleTrack: nil, handleTrackLoad: nil, androidControllerOfflineError: nil,
-    carPlayUpNextButton: nil, carPlayNowPlayingButtons: nil, formatNavigationError: nil,
+    singleTrack: nil, handleTrackLoad: nil,
+    androidControllerOfflineError: nil, carPlayUpNextButton: nil,
+    carPlayNowPlayingButtons: nil, formatNavigationError: nil,
   ) {
     didSet {
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }
@@ -501,6 +502,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
       // Update stored options
       playerOptions.update(from: options)
+
+      // Propagate the favorite match mode to the browser so it can hydrate
+      // row hearts (the `favorite` capability is the single favoriting switch).
+      browserManager.setFavoriteMatch(playerOptions.capabilities.favoriteMatch)
 
       // Apply remote commands to player
       applyRemoteCommands()

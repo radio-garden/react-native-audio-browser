@@ -16,8 +16,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
+import com.margelo.nitro.audiobrowser.AudioBrowser
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.audiobrowser.model.PlayerSetupOptions
@@ -804,13 +804,15 @@ class Player(internal val context: Context) {
    * controllers without interrupting playback.
    */
   fun setActiveTrackFavorited(favorited: Boolean) {
-    val index = exoPlayer.currentMediaItemIndex
-    if (index == C.INDEX_UNSET) return
-
     val currentTrack = this.currentTrack ?: return
 
-    // Update native favorites cache (only tracks with src can be favorited)
+    // Persist to the native favorites cache regardless of player state — the
+    // user's gesture is durable even when there's no active media item to
+    // update (queue tear-down, between-track gaps, etc.).
     currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
+
+    val index = exoPlayer.currentMediaItemIndex
+    if (index == C.INDEX_UNSET) return
 
     // Create updated Track with new favorited state
     val updatedTrack =
@@ -1185,6 +1187,12 @@ class Player(internal val context: Context) {
 
     if (shuffleChanged) {
       shuffleMode = options.shuffle
+    }
+
+    if (capabilitiesChanged) {
+      // The `favorite` capability is the single favoriting switch — propagate
+      // its match mode to the browser so it can hydrate row hearts.
+      browser?.browserManager?.setFavoriteMatch(options.capabilities.favoriteMatch)
     }
 
     if (progressUpdateEventIntervalChanged) {

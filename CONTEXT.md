@@ -13,7 +13,7 @@ The library, and the JS namespace through which its public API is reached. Owns 
 _Avoid_: Module, SDK, AudioModule.
 
 **Browser**:
-The navigation subsystem within AudioBrowser. Owns the **BrowseTree**, **Routes**, **Tabs**, and **Search**.
+The navigation subsystem within AudioBrowser, exposing a single tree that powers both in-app browsing and the browse views of External surfaces (Android Auto, CarPlay). Owns the **BrowseTree**, **Routes**, **Tabs**, and **Search**.
 _Avoid_: Navigation, MediaBrowser (the Android platform class).
 
 **Player**:
@@ -23,7 +23,7 @@ _Avoid_: Engine, AudioEngine.
 ### Navigation
 
 **Path**:
-A position in the **BrowseTree**, expressed as a slash-delimited string (e.g. `/albums/abbey-road`). The argument to `navigate(path)` and the key against which **Routes** are matched. See "Flagged ambiguities" — distinct from the HTTP `RequestConfig.path`.
+A position in the **BrowseTree**, expressed as a slash-delimited string (e.g. `/albums/abbey-road`). Passed to `navigate(path)`; **Routes** match against Paths to resolve content. See "Flagged ambiguities" — distinct from the HTTP `RequestConfig.path`.
 _Avoid_: URL, route, address (when referring to the tree position).
 
 **Route**:
@@ -39,7 +39,7 @@ The voice- and text-driven query subsystem. Receives structured `SearchParams` (
 _Avoid_: Query, lookup.
 
 **BrowserSource**:
-Anything that can produce children for a path — the value on the right-hand side of a **Route**, or of `browse:` / `tabs:` / `search:`. Comes in three shapes: a literal `ResolvedTrack` (static), a callback, or a `TransformableRequestConfig` (declarative HTTP endpoint).
+Anything that can produce children for a path — the value on the right-hand side of a **Route**, or of `browse:` / `tabs:` / `search:`. Comes in three shapes, all producing a `ResolvedTrack`: a static `ResolvedTrack` with its children declared inline, a callback that returns one, or a `TransformableRequestConfig` that points at a JSON `ResolvedTrack`-shaped endpoint.
 _Avoid_: Provider, handler.
 
 ### Tree
@@ -61,33 +61,17 @@ A Track that has a `src` and can be streamed by the player. A *shape* of Track, 
 _Avoid_: Leaf, Song, Media.
 
 **ResolvedTrack**:
-The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), a hydrated `favorited` flag, and — for Browsable Tracks — populated `children`. Media URLs are not part of resolution; they're transformed at playback time.
+The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `children`. Media URLs are not part of resolution; they're transformed at playback time.
 _Avoid_: ExpandedTrack, LoadedTrack.
 
 ### Requests
 
-**Content request**:
-An outbound request whose response describes tree items. The library decodes the response into Tracks. The two Content requests are **browse** and **search**.
-_Avoid_: Data request, API request.
-
-**Asset request**:
-An outbound request whose response is bytes consumed by a platform player. The library does not decode the response — the platform (AVPlayer / ExoPlayer / image loader) streams it. The two Asset requests are **media** and **artwork**.
-_Avoid_: Binary request, stream request.
-
-**media**:
-The Asset request for an audio stream. Sourced from a Track's `src`.
-_Avoid_: Audio, stream.
-
-**artwork**:
-The Asset request for an image. Sourced from a Track's `artwork`. May carry display-size hints from CarPlay / Android Auto.
-_Avoid_: Image, cover.
-
 **Resolve**:
-The per-Track step in an Asset request that turns a Track into a RequestConfig. Optional — used when the request needs Track metadata (artist, album, src) to be built.
+An optional per-Track callback that produces a RequestConfig from a Track's metadata. Used by the `media` and `artwork` request pipelines when the request needs Track fields (artist, album, src) to be built.
 _Avoid_: Build, generate.
 
 **Transform**:
-The final step in any request, applied to the merged RequestConfig just before it goes out. Used to sign URLs, attach auth tokens, or fold in size hints. Optional.
+The final step in any outbound request, applied to the merged RequestConfig just before it goes out. Used to sign URLs, attach auth tokens, or fold in size hints. Optional.
 _Avoid_: Finalize, sign, decorate.
 
 ### Playback
@@ -113,7 +97,7 @@ The player's state machine label. One of six values: `idle`, `stopped`, `loading
 _Avoid_: PlayerState, EngineState.
 
 **playWhenReady**:
-Whether the user wants playback to start automatically when possible. Calling `play()` sets it to `true`, `pause()` to `false`. Independent of `PlaybackState`.
+Whether the user wants playback to start automatically when the Active Track has loaded and buffered. Calling `play()` sets it to `true`, `pause()` to `false`. Independent of `PlaybackState`.
 _Avoid_: AutoPlay, ShouldPlay.
 
 **PlayingState**:
@@ -157,7 +141,7 @@ _Avoid_: Rating, hearted, liked, starred.
 - A **Queue** holds zero or more **Tracks** and has at most one **Active Track**.
 - **PlayingState** is derived from **PlaybackState** + **playWhenReady**.
 - A live stream emits **TimedMetadata**; the app may forward fields into the **Now Playing** override.
-- **Asset requests** (media, artwork) accept a per-Track **Resolve**; all requests accept a final **Transform**.
+- The `media` and `artwork` request pipelines accept a per-Track **Resolve**; all requests accept a final **Transform**.
 - **External surfaces** display **Now Playing**, may browse the **BrowseTree**, and emit **Remote commands**.
 - A **Capability** controls whether a matching **Remote command** can be invoked from an External surface.
 - A Track is **Favorited** independently of being the Active Track — favoriting is set on the Track, not on the Queue.
@@ -168,9 +152,9 @@ _Avoid_: Rating, hearted, liked, starred.
 >
 > **Maintainer:** "**Now Playing** snaps back to mirror the **Active Track**'s metadata whenever the Active Track changes. For a stream, the Active Track is the station — don't replace it when metadata arrives; just keep calling `updateNowPlaying`. The two diverge by design: the Active Track is *what's in the Queue*, Now Playing is *what's currently being heard*."
 >
-> **Contributor:** "Does the artwork in the override go through the **artwork** **Transform**?"
+> **Contributor:** "Does the artwork in the override go through the artwork **Transform**?"
 >
-> **Maintainer:** "No. A Now Playing override isn't an **Asset request** — the **External surface** fetches the URL directly. Bake the auth into the URL or use a signed CDN."
+> **Maintainer:** "No. The Now Playing override doesn't go through the artwork pipeline — the **External surface** fetches the URL directly. Bake the auth into the URL or use a signed CDN."
 
 ## Flagged ambiguities
 

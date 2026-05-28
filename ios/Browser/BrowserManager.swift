@@ -77,6 +77,10 @@ final class BrowserManager {
   // Set of favorited track identifiers (src)
   private var favoriteIds: Set<String> = []
 
+  // Favorite match mode, propagated from the player's `favorite` capability.
+  // nil = favoriting disabled (no row hearts). Set via setFavoriteMatch.
+  private var favoriteMatch: FavoritesMatchMode?
+
   // Navigation tracking to prevent race conditions
   private var currentNavigationId: Int = 0
 
@@ -141,6 +145,12 @@ final class BrowserManager {
     favoriteIds = Set(favorites)
   }
 
+  /// Sets the favorite match mode (propagated from the `favorite` capability).
+  /// nil disables row-heart hydration.
+  func setFavoriteMatch(_ match: FavoritesMatchMode?) {
+    favoriteMatch = match
+  }
+
   /// Updates the favorite state for a single track identifier.
   func updateFavorite(id: String, favorited: Bool) {
     if favorited {
@@ -151,17 +161,29 @@ final class BrowserManager {
   }
 
   /// Hydrates the favorited field on a track based on the favoriteIds set.
-  /// Local favoriteIds always take precedence over API-provided values.
+  /// No-op unless favoriting is enabled (the `favorite` capability). Only
+  /// playable (src-bearing) tracks are favoritable; the flag is set to true OR
+  /// false so non-favorited tracks still show an (empty) heart. Local
+  /// favoriteIds take precedence over API-provided values.
   private func hydrateFavorite(_ track: Track) -> Track {
-    guard let src = track.src else { return track }
+    guard let match = favoriteMatch, let src = track.src else { return track }
 
-    // Check if this track is in our local favorites set
-    let isFavorited = favoriteIds.contains(src)
+    let isFavorited = isFavorite(src: src, match: match)
 
     // Only create a new track if the favorited state differs
     if track.favorited == isFavorited { return track }
 
     return track.copying(favorited: isFavorited)
+  }
+
+  /// Whether `src` is favorited under the given match mode.
+  private func isFavorite(src: String, match: FavoritesMatchMode) -> Bool {
+    switch match {
+    case .exact:
+      return favoriteIds.contains(src)
+    case .partial:
+      return favoriteIds.contains { BrowserPathHelper.containsSegment(src, $0) }
+    }
   }
 
   /// Hydrates favorites on all children of a ResolvedTrack.

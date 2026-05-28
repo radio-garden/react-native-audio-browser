@@ -152,4 +152,22 @@ object BrowserPathHelper {
     val normalizedPath = path.trimStart('/')
     return "$normalizedBase$normalizedPath"
   }
+
+  /**
+   * True if [segment] appears in [path] as a complete path segment — bounded on the left by the
+   * string start or `/`, and on the right by the string end or one of `/`, `?`, `#`.
+   */
+  fun containsSegment(path: String, segment: String): Boolean {
+    if (segment.isEmpty()) return false
+    var from = 0
+    while (true) {
+      val idx = path.indexOf(segment, from)
+      if (idx < 0) return false
+      val beforeOk = idx == 0 || path[idx - 1] == '/'
+      val end = idx + segment.length
+      val afterOk = end == path.length || path[end] == '/' || path[end] == '?' || path[end] == '#'
+      if (beforeOk && afterOk) return true
+      from = idx + 1
+    }
+  }
 }

@@ -68,7 +68,7 @@ int initialize(JavaVM* vm) {
 }
 
 struct JHybridAudioBrowserSpecImpl: public jni::JavaClass<JHybridAudioBrowserSpecImpl, JHybridAudioBrowserSpec::JavaPart> {
-  static auto constexpr kJavaDescriptor = "Lcom/audiobrowser/AudioBrowser;";
+  static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/audiobrowser/AudioBrowser;";
   static std::shared_ptr<JHybridAudioBrowserSpec> create() {
     static auto constructorFn = javaClassStatic()->getConstructor<JHybridAudioBrowserSpecImpl::javaobject()>();
     jni::local_ref<JHybridAudioBrowserSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);

@@ -42,6 +42,10 @@ namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
+// Forward declaration of `FavoriteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
+// Forward declaration of `FavoritesMatchMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
@@ -199,6 +203,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
+#include "FavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
@@ -1775,6 +1781,50 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline PlayerCapabilities get_std__optional_PlayerCapabilities_(const std::optional<PlayerCapabilities>& optional) noexcept {
     return optional.value();
+  }
+  
+  // pragma MARK: std::optional<std::variant<bool, FavoriteConfig>>
+  /**
+   * Specialized version of `std::optional<std::variant<bool, FavoriteConfig>>`.
+   */
+  using std__optional_std__variant_bool__FavoriteConfig__ = std::optional<std::variant<bool, FavoriteConfig>>;
+  inline std::optional<std::variant<bool, FavoriteConfig>> create_std__optional_std__variant_bool__FavoriteConfig__(const std::variant<bool, FavoriteConfig>& value) noexcept {
+    return std::optional<std::variant<bool, FavoriteConfig>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_bool__FavoriteConfig__(const std::optional<std::variant<bool, FavoriteConfig>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<bool, FavoriteConfig> get_std__optional_std__variant_bool__FavoriteConfig__(const std::optional<std::variant<bool, FavoriteConfig>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::variant<bool, FavoriteConfig>
+  /**
+   * Wrapper struct for `std::variant<bool, FavoriteConfig>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_bool__FavoriteConfig_ final {
+    std::variant<bool, FavoriteConfig> variant;
+    std__variant_bool__FavoriteConfig_(std::variant<bool, FavoriteConfig> variant): variant(variant) { }
+    operator std::variant<bool, FavoriteConfig>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline bool get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline FavoriteConfig get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_bool__FavoriteConfig_ create_std__variant_bool__FavoriteConfig_(bool value) noexcept {
+    return std__variant_bool__FavoriteConfig_(value);
+  }
+  inline std__variant_bool__FavoriteConfig_ create_std__variant_bool__FavoriteConfig_(const FavoriteConfig& value) noexcept {
+    return std__variant_bool__FavoriteConfig_(value);
   }
   
   // pragma MARK: std::optional<std::vector<double>>

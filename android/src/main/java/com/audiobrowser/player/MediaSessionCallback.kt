@@ -12,7 +12,6 @@ import androidx.media3.session.MediaConstants
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
-import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFactory

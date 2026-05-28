@@ -1,3 +1,4 @@
+import type { FavoriteConfig } from '../../types'
 import type { RatingType } from '../metadata'
 import type { RepeatMode } from '../queue/repeatMode'
 import { nativeBrowser } from '../../native'
@@ -65,12 +66,38 @@ export interface PlayerCapabilities {
    */
   jumpBackward?: boolean
   /**
-   * Enable favorite/like control.
-   * On iOS: appears in Control Center.
-   * On Android: can be assigned to notification button slots.
-   * @default true
+   * Enable track favoriting.
+   *
+   * Turns on the favorite/like heart across all surfaces:
+   * - iOS: Control Center + CarPlay now-playing.
+   * - Android: notification button slot + Android Auto now-playing, and an
+   *   (empty or filled) heart on playable browse rows.
+   *
+   * `match` controls how the ids from {@link AudioBrowser.setFavorites} are
+   * compared against a track's `src` to decide its `favorited` state
+   * (see {@link FavoritesMatchMode}); `true` is shorthand for `'exact'`.
+   *
+   * - `false` / omitted: favoriting off everywhere.
+   * - `true`: on, with `'exact'` id matching.
+   * - `{ match }`: on, with the given match mode.
+   *
+   * @example
+   * ```ts
+   * // 'exact': a favorite id must equal the track's src.
+   * favorite: { match: 'exact' }
+   * setFavorites(['https://cdn.example.com/audio/track-42.mp3'])
+   * // → favorited when src === 'https://cdn.example.com/audio/track-42.mp3'
+   *
+   * // 'partial': a favorite id matches when it is a full path segment of src.
+   * favorite: { match: 'partial' }
+   * setFavorites(['track-42'])
+   * // → favorited when src is '/library/track-42' or '/stream/track-42?hq=1',
+   * //   but NOT '/library/track-420'
+   * ```
+   *
+   * @default false
    */
-  favorite?: boolean
+  favorite?: boolean | FavoriteConfig
   /**
    * Enable shuffle mode toggle.
    * @default true

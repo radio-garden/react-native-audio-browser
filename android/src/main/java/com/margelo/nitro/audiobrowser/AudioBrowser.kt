@@ -1,4 +1,4 @@
-package com.audiobrowser
+package com.margelo.nitro.audiobrowser
 
 import android.content.ComponentName
 import android.content.Context
@@ -13,6 +13,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
+import com.audiobrowser.Callbacks
+import com.audiobrowser.Service
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
 import com.audiobrowser.browser.handleTrackLoad

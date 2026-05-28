@@ -26,15 +26,10 @@ real double-emit bug; these are the loose ends.
 
 ## Library bugs
 
-- [ ] **`INDEX_UNSET` race drops the cache write.**
-  `Player.setActiveTrackFavorited` returns at `Player.kt:807-808` when
-  `exoPlayer.currentMediaItemIndex == C.INDEX_UNSET`, *before* the
-  `browserManager.updateFavorite` write at line 813. The deleted
-  `MediaSessionCallback.setFavorited` wrapper persisted to the favorites cache
-  regardless of exoPlayer index state. Worse, in the `onSetRating` path
-  (`MediaSessionCallback.kt:141-148`) `onRemoteSetRating` still fires after the
-  no-op `setActiveTrackFavorited`, so JS observes a rating event without the
-  corresponding favorite mutation.
+- [x] **`INDEX_UNSET` race drops the cache write.** ~~Fixed in `Player.kt:806-814`:
+  cache write now happens before the `INDEX_UNSET` early return. The
+  `onRemoteSetRating`-without-`onFavoriteChanged` asymmetry in the
+  `onSetRating` path is now subsumed by the event-asymmetry item below.~~
 
 - [x] **`onSetRating` doesn't guard on `HeartRating.isRated`.** ~~Fixed in
   `MediaSessionCallback.kt:140` — now `if (rating is HeartRating && rating.isRated)`.~~

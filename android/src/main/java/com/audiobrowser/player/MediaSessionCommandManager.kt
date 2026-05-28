@@ -329,7 +329,7 @@ class MediaSessionCommandManager {
     }
 
     // Add favorite button when FAVORITE capability is not disabled
-    if (capabilities.favorite != false) {
+    if (capabilities.favoriteEnabled) {
       val heartIcon =
         if (favorited == true) {
           CommandButton.ICON_HEART_FILLED
@@ -419,7 +419,7 @@ class MediaSessionCommandManager {
           } else null
         }
         NotificationButton.FAVORITE -> {
-          if (capabilities.favorite != false) {
+          if (capabilities.favoriteEnabled) {
             val heartIcon =
               if (favorited == true) CommandButton.ICON_HEART_FILLED
               else CommandButton.ICON_HEART_UNFILLED
@@ -494,7 +494,7 @@ class MediaSessionCommandManager {
       }
 
       // Overflow: favorite
-      if (capabilities.favorite != false) {
+      if (capabilities.favoriteEnabled) {
         createButton(NotificationButton.FAVORITE, CommandButton.SLOT_OVERFLOW)?.let {
           buttons.add(it)
         }

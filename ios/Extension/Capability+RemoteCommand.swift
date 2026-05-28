@@ -50,7 +50,7 @@ extension PlayerCapabilities {
 
     // TODO: Investigate where localizedTitle/localizedShortTitle are displayed
     // (possibly only for accessibility/VoiceOver). See TODO.md for details.
-    if favorite != false {
+    if favoriteEnabled {
       commands.append(.like(
         isActive: false,
         localizedTitle: "Favorite",

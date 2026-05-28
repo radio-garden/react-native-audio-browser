@@ -82,6 +82,9 @@ export const setupBrowser = async () => {
   setPlayWhenReady(true)
 
   AudioBrowser.updateOptions({
+    // Enable favoriting (now-playing heart + browse-row hearts). Favorites are
+    // stored as full `src` strings here, so 'exact' matching (`true`) fits.
+    capabilities: { favorite: true },
     android: {
       notificationButtons: {
         back: 'skip-to-previous',

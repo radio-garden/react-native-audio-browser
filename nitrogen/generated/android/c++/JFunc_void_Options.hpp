@@ -33,6 +33,11 @@
 #include "JVariant_NullType_Double.hpp"
 #include "PlayerCapabilities.hpp"
 #include "JPlayerCapabilities.hpp"
+#include "FavoriteConfig.hpp"
+#include "JVariant_Boolean_FavoriteConfig.hpp"
+#include "JFavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
+#include "JFavoritesMatchMode.hpp"
 #include "RepeatMode.hpp"
 #include "JRepeatMode.hpp"
 

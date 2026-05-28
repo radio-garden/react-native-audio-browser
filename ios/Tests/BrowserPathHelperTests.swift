@@ -108,3 +108,23 @@ import Testing
 @Test func isContextualReturnsTrueWithAmpersandSeparator() {
   #expect(BrowserPathHelper.isContextual("/lib?q=1&__trackId=x") == true)
 }
+
+// MARK: - containsSegment
+
+@Test func containsSegmentMatchesFullSegments() {
+  let path = "/listen/amsterdam-funk-channel/Gw0LGB8j"
+  #expect(BrowserPathHelper.containsSegment(path, "Gw0LGB8j"))
+  #expect(BrowserPathHelper.containsSegment(path, "amsterdam-funk-channel"))
+  #expect(BrowserPathHelper.containsSegment(path, "listen"))
+  #expect(BrowserPathHelper.containsSegment("/listen/x/Gw0LGB8j?hl=en", "Gw0LGB8j"))
+  #expect(BrowserPathHelper.containsSegment("/listen/x/Gw0LGB8j#frag", "Gw0LGB8j"))
+}
+
+@Test func containsSegmentRejectsPartialAndMissing() {
+  let path = "/listen/amsterdam-funk-channel/Gw0LGB8j"
+  #expect(!BrowserPathHelper.containsSegment(path, "Gw0LGB8"))
+  #expect(!BrowserPathHelper.containsSegment(path, "funk"))
+  #expect(!BrowserPathHelper.containsSegment(path, "msterdam-funk-channe"))
+  #expect(!BrowserPathHelper.containsSegment(path, "NopeNope"))
+  #expect(!BrowserPathHelper.containsSegment(path, ""))
+}
