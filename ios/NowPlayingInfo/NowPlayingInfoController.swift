@@ -67,6 +67,14 @@ class NowPlayingInfoController {
 
       remoteCommandCenter = session.remoteCommandCenter
 
+      // Route all info-center access (notably `playbackState`, which CarPlay /
+      // Control Center read for the play-pause button) to the SESSION's own
+      // center. `MPNowPlayingInfoCenter.default()` is a different instance the
+      // session doesn't publish from — writing playback state there is silently
+      // ignored (and iOS logs "using MPNowPlayingInfoCenter is unsupported when
+      // using automatic publishing").
+      infoCenter = session.nowPlayingInfoCenter
+
       session.automaticallyPublishesNowPlayingInfo = true
 
       session.becomeActiveIfPossible { success in
@@ -92,6 +100,9 @@ class NowPlayingInfoController {
       }
       _nowPlayingSession = nil
       isAutomaticPublishingEnabled = false
+
+      // Restore the shared center now that the session (and its own center) is gone.
+      infoCenter = MPNowPlayingInfoCenter.default()
 
       remoteCommandCenter = MPRemoteCommandCenter.shared()
       onRemoteCommandCenterChanged?(remoteCommandCenter)

@@ -106,6 +106,13 @@ class PlaybackCoordinator {
       if oldValue != playWhenReady {
         callbacks?.playerDidChangePlayWhenReady(playWhenReady)
         playingStateManager.update(playWhenReady: playWhenReady, state: state)
+        // Reflect the user's play/pause intent in the now-playing info center
+        // immediately. While loading, start/pause is deferred (above), and the
+        // state machine won't re-stamp the playback state until a later .ready/
+        // .playing transition — whose timing is flaky for live streams. Without
+        // this, selecting a track while paused leaves the lock-screen / CarPlay
+        // button stuck on "play" even though audio is playing.
+        effectHandler?.updateNowPlayingState(playWhenReady: playWhenReady)
       }
     }
   }

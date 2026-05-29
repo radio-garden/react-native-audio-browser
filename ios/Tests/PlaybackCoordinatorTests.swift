@@ -382,6 +382,20 @@ struct PlayWhenReadyTests {
     #expect(cb.playWhenReadyChanges.count == 1)
     #expect(cb.playWhenReadyChanges.first == true)
   }
+
+  @Test @MainActor
+  func change_updatesNowPlayingState_evenDuringLoading() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.transition(.trackLoading) // mid track-load; start/pause is deferred
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.playWhenReady = true
+
+    // The lock-screen / CarPlay play-pause button reflects the user's play
+    // *intent* immediately, even while the new item is still loading — otherwise
+    // it stays stuck showing "paused" until a later state transition repairs it.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
 }
 
 // MARK: - handleCurrentTrackChanged
@@ -435,6 +449,25 @@ struct HandleCurrentTrackChangedTests {
     #expect(event.lastIndex == nil) // first track, no previous
     #expect(event.index == 0)
     #expect(event.track?.id == "t1")
+  }
+
+  @Test @MainActor
+  func selectingNewTrack_whileStopped_showsPlayingInNowPlaying() {
+    let (c, eh, _, _) = makeCoordinator()
+    let tracks = [
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
+    ]
+    c.setQueue(tracks) // loads t1 (playWhenReady defaults to false)
+    c.transition(.stopped) // user had paused/stopped
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    // User selects another track, intending to play it.
+    try? c.skipTo(1, playWhenReady: true)
+
+    // Audio will play, so the now-playing button must end up "playing" — not the
+    // stale "paused" captured before playWhenReady flipped true during loading.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
   }
 }
 
