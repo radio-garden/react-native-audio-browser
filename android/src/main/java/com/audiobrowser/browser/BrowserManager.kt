@@ -416,27 +416,22 @@ class BrowserManager {
   }
 
   private suspend fun resolveUncached(path: String): ResolvedTrack {
-    val routes = config.routes
-    if (routes.isNullOrEmpty()) {
-      Timber.e("No routes configured for path: $path")
-      throw ContentNotFoundException(path)
+    // Match an explicit route (or the '*' default). With no match, fall back to
+    // the implicit default: fetch the path via the request + browse config.
+    val match = config.routes?.let { findBestRouteMatch(path, it) }
+
+    val resolvedTrack: ResolvedTrack
+    val effectiveArtworkConfig: ArtworkRequestConfig?
+    if (match != null) {
+      val (routeEntry, routeParams) = match
+      Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
+      resolvedTrack = resolveRouteEntry(routeEntry, path, routeParams)
+      effectiveArtworkConfig = routeEntry.artwork ?: config.artwork
+    } else {
+      Timber.d("No route matched for path: $path — using implicit default")
+      resolvedTrack = executeApiRequest(null, path, mapOf("path" to path))
+      effectiveArtworkConfig = config.artwork
     }
-
-    // Find best matching route
-    val (routeEntry, routeParams) =
-      findBestRouteMatch(path, routes)
-        ?: run {
-          Timber.e("No route matched for path: $path")
-          throw ContentNotFoundException(path)
-        }
-
-    Timber.d("Matched route: ${routeEntry.path} with params: $routeParams")
-
-    // Resolve the track from the route
-    val resolvedTrack = resolveRouteEntry(routeEntry, path, routeParams)
-
-    // Get effective artwork config: per-route overrides global
-    val effectiveArtworkConfig = routeEntry.artwork ?: config.artwork
 
     // Transform children: generate contextual URLs and transform artwork URLs
     val transformedChildren =
@@ -1025,43 +1020,37 @@ class BrowserManager {
    * and transforms.
    */
   private suspend fun executeApiRequest(
-    apiConfig: TransformableRequestConfig,
+    apiConfig: TransformableRequestConfig?,
     path: String,
     routeParams: Map<String, String>,
   ): ResolvedTrack {
     return withContext(Dispatchers.IO) {
-      // 1. Start with base config, using the navigation path as default
-      val baseConfig =
-        config.request?.let { req ->
-          RequestConfigBuilder.toRequestConfig(req).copy(path = req.path ?: path)
-        }
-          ?: RequestConfig(
-            path = path,
-            method = null,
-            baseUrl = null,
-            headers = null,
-            query = null,
-            body = null,
-            contentType = null,
-            userAgent = null,
-          )
+      // Layered request: request (shared) → browse (kind) → route. Each layer's
+      // transform receives the previous layer's output; a layer with no
+      // transform merges its static fields. apiConfig is null for the implicit
+      // default (an unmatched browse path → fetch via request + browse + path).
+      var mergedConfig =
+        RequestConfig(
+          path = path,
+          method = null,
+          baseUrl = null,
+          headers = null,
+          query = null,
+          body = null,
+          contentType = null,
+          userAgent = null,
+        )
+      config.request?.let {
+        mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
+      }
+      config.browse?.let {
+        mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
+      }
+      apiConfig?.let {
+        mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
+      }
 
-      // 1b. Apply the global request transform first, chained before the
-      //     route's (its output becomes the route transform's input).
-      val transformedBase =
-        config.request?.transform?.let { transformFn ->
-          try {
-            transformFn.invoke(baseConfig, routeParams).await().await()
-          } catch (e: Exception) {
-            Timber.e(e, "Failed to apply global request transform, using base config")
-            baseConfig
-          }
-        } ?: baseConfig
-
-      val mergedConfig =
-        RequestConfigBuilder.mergeConfig(transformedBase, apiConfig, routeParams)
-
-      // 2. Build and execute HTTP request
+      // Build and execute HTTP request
       val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
       val response = httpClient.request(httpRequest)
 
@@ -1102,19 +1091,22 @@ class BrowserManager {
   ): Array<Track> {
     return withContext(Dispatchers.IO) {
       try {
-        // 1. Start with base config
-        val baseConfig =
-          config.request?.let { RequestConfigBuilder.toRequestConfig(it) }
-            ?: RequestConfig(
-              method = null,
-              path = null,
-              baseUrl = null,
-              headers = null,
-              query = null,
-              body = null,
-              contentType = null,
-              userAgent = null,
-            )
+        // 1. Base via the shared request layer (request → search route; no
+        //    browse layer — search is its own kind). Includes request.transform.
+        var baseConfig =
+          RequestConfig(
+            method = null,
+            path = null,
+            baseUrl = null,
+            headers = null,
+            query = null,
+            body = null,
+            contentType = null,
+            userAgent = null,
+          )
+        config.request?.let {
+          baseConfig = RequestConfigBuilder.mergeConfig(baseConfig, it, emptyMap())
+        }
 
         // 2. Build query parameters from SearchParams
         val searchQueryParams = buildMap {
@@ -1192,6 +1184,7 @@ class CallbackException(message: String) : Exception(message)
  */
 data class BrowserConfig(
   val request: TransformableRequestConfig? = null,
+  val browse: TransformableRequestConfig? = null,
   val media: MediaRequestConfig? = null,
   val artwork: ArtworkRequestConfig? = null,
   // Routes as array with flattened entries (includes __tabs__, __search__, and __default__ special

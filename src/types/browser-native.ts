@@ -42,18 +42,20 @@ export interface NativeRouteEntry {
 export interface NativeBrowserConfiguration {
   path?: string
 
-  // Request defaults
+  // Request defaults (applied to every request: browse, search, media, artwork)
   request?: TransformableRequestConfig
 
-  // Global media/artwork config (applied when route doesn't override)
+  // Per-kind request config, layered request → <kind> → route.
+  browse?: TransformableRequestConfig
   media?: MediaRequestConfig
   artwork?: ArtworkRequestConfig
 
   // Routes as array - includes:
   // - Explicit routes from config.routes
-  // - Root browse as __default__ entry
+  // - The '*' route (if any) as the __default__ entry (custom default override)
   // - Tabs as __tabs__ entry (returns ResolvedTrack with children for navigation tabs)
   // - Search as __search__ entry (has searchCallback or searchConfig)
+  // A browse path matching none of these is fetched via request + browse + path.
   routes?: NativeRouteEntry[]
 
   // Behavior

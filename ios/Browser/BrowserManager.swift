@@ -298,21 +298,25 @@ final class BrowserManager {
   }
 
   private func resolveUncached(_ path: String) async throws -> ResolvedTrack {
-    guard let routes = config.routes, !routes.isEmpty else {
-      throw BrowserError.contentNotFound(path: path)
-    }
+    // Match an explicit route (or the '*' default). With no match, fall back to
+    // the implicit default: fetch the path via the request + browse config.
+    let routeEntry = (config.routes).flatMap { findBestRouteMatch(path: path, routes: $0) }
 
-    // Find best matching route
-    guard let (routeEntry, routeMatch) = findBestRouteMatch(path: path, routes: routes) else {
-      throw BrowserError.contentNotFound(path: path)
+    let resolvedTrack: ResolvedTrack
+    if let (entry, routeMatch) = routeEntry {
+      resolvedTrack = try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
+    } else {
+      // Implicit default — no route config, just request → browse → fetch path.
+      resolvedTrack = try await resolveFromConfig(
+        kind: config.browse, nil, path: path, params: ["path": path]
+      )
     }
-
-    // Resolve the track from the route
-    let resolvedTrack = try await resolveRouteEntry(routeEntry, path: path, params: routeMatch.params)
 
     // Validate and transform children
     if let children = resolvedTrack.children {
-      let transformed = try await transformChildren(children, parentPath: path, routeEntry: routeEntry)
+      let transformed = try await transformChildren(
+        children, parentPath: path, routeEntry: routeEntry?.0
+      )
       return resolvedTrack.copying(children: transformed)
     }
 
@@ -367,7 +371,9 @@ final class BrowserManager {
     }
 
     if let browseConfig = entry.browseConfig {
-      return try await resolveFromConfig(browseConfig, path: path, params: params)
+      return try await resolveFromConfig(
+        kind: config.browse, browseConfig, path: path, params: params
+      )
     }
 
     if let staticContent = entry.browseStatic {
@@ -378,48 +384,24 @@ final class BrowserManager {
   }
 
   private func resolveFromConfig(
-    _ routeConfig: TransformableRequestConfig,
+    kind kindConfig: TransformableRequestConfig?,
+    _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
   ) async throws -> ResolvedTrack {
-    // 1. Base request from the global `request` config, defaulting path to the
-    //    navigation path.
-    var base = RequestConfig(
-      method: config.request?.method,
-      path: config.request?.path ?? path,
-      baseUrl: config.request?.baseUrl,
-      headers: config.request?.headers,
-      query: config.request?.query,
-      body: config.request?.body,
-      contentType: config.request?.contentType,
-      userAgent: config.request?.userAgent,
+    // Layered request: request (shared) → kind (browse/search/…) → route. Each
+    // layer's transform receives the previous layer's output; a layer with no
+    // transform merges its static fields. `routeConfig` is nil for the implicit
+    // browse default; `kindConfig` is nil for kinds with no per-kind config.
+    var merged = RequestConfig(
+      method: nil, path: path, baseUrl: nil, headers: nil,
+      query: nil, body: nil, contentType: nil, userAgent: nil,
     )
+    merged = try await applyLayer(config.request, to: merged, params: params)
+    merged = try await applyLayer(kindConfig, to: merged, params: params)
+    merged = try await applyLayer(routeConfig, to: merged, params: params)
 
-    // 2. Apply the global request transform first (chained before the route's).
-    if let globalTransform = config.request?.transform {
-      base = try await applyTransform(globalTransform, request: base, params: params)
-    }
-
-    // 3. Apply the route: a route transform wins completely (it receives the
-    //    globally-transformed base and returns the final config); otherwise the
-    //    route's static fields are merged over the base.
-    let merged: RequestConfig
-    if let routeTransform = routeConfig.transform {
-      merged = try await applyTransform(routeTransform, request: base, params: params)
-    } else {
-      merged = RequestConfig(
-        method: routeConfig.method ?? base.method,
-        path: base.path,
-        baseUrl: routeConfig.baseUrl ?? base.baseUrl,
-        headers: mergeDicts(base.headers, routeConfig.headers),
-        query: mergeDicts(base.query, routeConfig.query),
-        body: routeConfig.body ?? base.body,
-        contentType: routeConfig.contentType ?? base.contentType,
-        userAgent: routeConfig.userAgent ?? base.userAgent,
-      )
-    }
-
-    // 4. Build the URL and execute.
+    // Build the URL and execute.
     guard let baseUrl = merged.baseUrl else {
       throw BrowserError.invalidConfiguration("No URL configured for route")
     }
@@ -453,10 +435,35 @@ final class BrowserManager {
     return nitroResult
   }
 
+  /// Applies one request-config layer (request / browse / route) onto a base.
+  /// A layer with a transform wins completely (it receives the base and returns
+  /// the result); otherwise the layer's static fields merge over the base.
+  /// `path` is carried from the base (only a transform may change it).
+  func applyLayer(
+    _ layer: TransformableRequestConfig?,
+    to base: RequestConfig,
+    params: [String: String],
+  ) async throws -> RequestConfig {
+    guard let layer else { return base }
+    if let transform = layer.transform {
+      return try await applyTransform(transform, request: base, params: params)
+    }
+    return RequestConfig(
+      method: layer.method ?? base.method,
+      path: base.path,
+      baseUrl: layer.baseUrl ?? base.baseUrl,
+      headers: mergeDicts(base.headers, layer.headers),
+      query: mergeDicts(base.query, layer.query),
+      body: layer.body ?? base.body,
+      contentType: layer.contentType ?? base.contentType,
+      userAgent: layer.userAgent ?? base.userAgent,
+    )
+  }
+
   /// Invokes a request `transform` (global or per-route) and copies the result
   /// out of the Nitro bridge immediately to avoid use-after-free when the
   /// `Promise<RequestConfig>` is deallocated.
-  private func applyTransform(
+  func applyTransform(
     _ transform: @escaping (RequestConfig, [String: String]?) -> Promise<Promise<RequestConfig>>,
     request: RequestConfig,
     params: [String: String],
@@ -491,7 +498,7 @@ final class BrowserManager {
   private func transformChildren(
     _ children: [Track],
     parentPath: String,
-    routeEntry: NativeRouteEntry,
+    routeEntry: NativeRouteEntry?,
   ) async throws -> [Track] {
     var transformed: [Track] = []
 
@@ -511,7 +518,7 @@ final class BrowserManager {
       }
 
       // Resolve artwork URL at browse-time (no size context)
-      let artworkConfig = routeEntry.artwork ?? config.artwork
+      let artworkConfig = routeEntry?.artwork ?? config.artwork
       if let imageSource = await resolveArtworkUrl(track: transformedTrack, perRouteConfig: artworkConfig) {
         transformedTrack = transformedTrack.copying(artworkSource: imageSource)
       }
@@ -592,7 +599,10 @@ final class BrowserManager {
       let innerPromise = try await outerPromise.await()
       results = try await innerPromise.await()
     } else if let searchConfig = searchEntry.searchConfig {
-      let resolved = try await resolveFromConfig(searchConfig, path: "/__search", params: ["q": query])
+      // Search is its own kind — request → search route (no browse layer).
+      let resolved = try await resolveFromConfig(
+        kind: nil, searchConfig, path: "/__search", params: ["q": query]
+      )
       results = resolved.children ?? []
     } else {
       throw BrowserError.contentNotFound(path: Self.searchRoutePath)

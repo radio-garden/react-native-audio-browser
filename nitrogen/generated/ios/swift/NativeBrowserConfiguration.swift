@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -27,6 +27,12 @@ public extension NativeBrowserConfiguration {
       }
     }(), { () -> bridge.std__optional_TransformableRequestConfig_ in
       if let __unwrappedValue = request {
+        return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_TransformableRequestConfig_ in
+      if let __unwrappedValue = browse {
         return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
       } else {
         return .init()
@@ -121,6 +127,11 @@ public extension NativeBrowserConfiguration {
   @inline(__always)
   var request: TransformableRequestConfig? {
     return self.__request.value
+  }
+  
+  @inline(__always)
+  var browse: TransformableRequestConfig? {
+    return self.__browse.value
   }
   
   @inline(__always)

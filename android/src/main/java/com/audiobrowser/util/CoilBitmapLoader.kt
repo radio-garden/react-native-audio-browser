@@ -21,6 +21,7 @@ import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +62,10 @@ class CoilBitmapLoader(
   private val defaultArtworkSizePixels = 512
 
   /** Configuration for artwork requests including headers and URL transformation. */
-  data class ArtworkConfig(val baseConfig: RequestConfig?, val artworkConfig: ArtworkRequestConfig?)
+  data class ArtworkConfig(
+    val requestConfig: TransformableRequestConfig?,
+    val artworkConfig: ArtworkRequestConfig?,
+  )
 
   override fun supportsMimeType(mimeType: String): Boolean {
     return mimeType.startsWith("image/") ||
@@ -165,12 +169,13 @@ class CoilBitmapLoader(
     return try {
       val artworkConfig = config.artworkConfig
 
-      // Create base config with original URL as path
-      val baseConfig =
-        config.baseConfig ?: RequestConfig(null, null, null, null, null, null, null, null)
-
-      val urlRequestConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
-      var mergedBaseConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
+      // Base via the shared request layer (its transform runs for artwork too),
+      // with the original URL as path.
+      var mergedBaseConfig =
+        RequestConfig(null, originalUrl, null, null, null, null, null, null)
+      config.requestConfig?.let {
+        mergedBaseConfig = RequestConfigBuilder.mergeConfig(mergedBaseConfig, it, emptyMap())
+      }
 
       // Create ImageContext from size hint if available
       val imageContext = sizeHintPixels?.takeIf { it > 0 }?.let {

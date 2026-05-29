@@ -9,28 +9,41 @@ extension BrowserManager {
   /// Resolves a media URL using the configured media transform.
   /// Returns the transformed URL, headers, and user-agent for playback.
   func resolveMediaUrl(_ originalUrl: String) async -> MediaResolvedUrl {
-    guard let mediaConfig = config.media else {
-      logger.debug("No media config, using original URL: \(originalUrl)")
+    logger.debug("Resolving media URL: \(originalUrl)")
+
+    // Apply the shared `request` layer first (its transform runs for media too,
+    // per the documented contract — e.g. a dynamic baseUrl), then the media
+    // transform / static fields on top. The request layer applies even when no
+    // `media` config is present, so a relative src still gets baseUrl.
+    let baseRequest: RequestConfig
+    do {
+      baseRequest = try await applyLayer(
+        config.request,
+        to: RequestConfig(
+          method: nil, path: originalUrl, baseUrl: nil, headers: nil,
+          query: nil, body: nil, contentType: nil, userAgent: nil,
+        ),
+        params: [:],
+      )
+    } catch {
+      logger.error("Media request layer failed: \(error.localizedDescription)")
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
 
-    logger.debug("Resolving media URL: \(originalUrl)")
+    // No media-specific config: build the URL from the request-layered base.
+    guard let mediaConfig = config.media else {
+      let finalUrl = buildUrl(from: baseRequest)
+      logger.debug("No media config; request-layered URL: \(originalUrl) -> \(finalUrl)")
+      return MediaResolvedUrl(
+        url: finalUrl,
+        headers: baseRequest.headers,
+        userAgent: baseRequest.userAgent,
+      )
+    }
 
     // If there's a transform function, call it
     if let transform = mediaConfig.transform {
       do {
-        // Create base request config with original URL as path
-        let baseRequest = RequestConfig(
-          method: config.request?.method,
-          path: originalUrl,
-          baseUrl: config.request?.baseUrl,
-          headers: config.request?.headers,
-          query: config.request?.query,
-          body: config.request?.body,
-          contentType: config.request?.contentType,
-          userAgent: config.request?.userAgent,
-        )
-
         logger.debug("resolveMediaUrl: calling transform callback...")
         let outerPromise = transform(baseRequest, nil)
         logger.debug("resolveMediaUrl: awaiting outer promise...")
@@ -59,15 +72,15 @@ extension BrowserManager {
       }
     }
 
-    // No transform, just apply baseUrl if configured
-    let baseUrl = mediaConfig.baseUrl ?? config.request?.baseUrl
+    // No media transform: apply media static fields over the request-layered base.
+    let baseUrl = mediaConfig.baseUrl ?? baseRequest.baseUrl
     if let baseUrl {
       let finalUrl = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: originalUrl)
       logger.debug("Media URL with baseUrl: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
         url: finalUrl,
-        headers: mediaConfig.headers ?? config.request?.headers,
-        userAgent: mediaConfig.userAgent ?? config.request?.userAgent,
+        headers: mediaConfig.headers ?? baseRequest.headers,
+        userAgent: mediaConfig.userAgent ?? baseRequest.userAgent,
       )
     }
 
@@ -112,16 +125,16 @@ extension BrowserManager {
     }
 
     do {
-      // Create base config from global request config
-      var mergedConfig = RequestConfig(
-        method: config.request?.method,
-        path: track.artwork, // Use track.artwork as default path
-        baseUrl: config.request?.baseUrl,
-        headers: config.request?.headers,
-        query: config.request?.query,
-        body: config.request?.body,
-        contentType: config.request?.contentType,
-        userAgent: config.request?.userAgent,
+      // Base config via the shared `request` layer (its transform runs for
+      // artwork too), with track.artwork as the default path. Artwork then
+      // shapes further via its own resolve / static fields / transform.
+      var mergedConfig = try await applyLayer(
+        config.request,
+        to: RequestConfig(
+          method: nil, path: track.artwork, baseUrl: nil, headers: nil,
+          query: nil, body: nil, contentType: nil, userAgent: nil,
+        ),
+        params: [:],
       )
 
       if let resolve = artworkConfig.resolve {

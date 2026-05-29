@@ -564,15 +564,28 @@ export type BrowserConfiguration = {
   // ─── Request Defaults (applied to all requests) ────────────────────────────
 
   /**
-   * Shared request settings applied to all HTTP requests (browse, search, media, artwork).
-   * Specific configs override these defaults.
+   * Shared request settings applied to every HTTP request (browse, search,
+   * media, artwork). The `transform` runs first for all of them, layered before
+   * the per-kind config and (for browse) the route — so request → `<kind>` →
+   * route. Specific configs override these defaults.
    */
   request?: TransformableRequestConfig
 
-  // ─── Content Configuration ─────────────────────────────────────────────────
+  // ─── Per-kind request configuration ─────────────────────────────────────────
 
-  /** Default browse source when no matching route is found. */
-  browse?: BrowserSource
+  /**
+   * Request shaping applied to every browse request (all routes, including the
+   * implicit default), layered between `request` and the matched route:
+   * `request` → `browse` → route. This is the browse-kind analogue of `media`
+   * and `artwork` — the place for browse-only concerns (e.g. a content-type
+   * marker query, or a locale param) that should not leak onto media/artwork.
+   *
+   * A browse path with no matching `routes` entry is fetched using
+   * `request` + `browse` applied to the path, so this also defines the default
+   * browse behaviour. Register a `routes['*']` entry only to override that
+   * default with a callback / static / bespoke config.
+   */
+  browse?: TransformableRequestConfig
 
   /** Media/audio stream request configuration. */
   media?: MediaRequestConfig

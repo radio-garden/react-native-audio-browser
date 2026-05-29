@@ -102,6 +102,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
       static const auto fieldRequest = clazz->getField<JTransformableRequestConfig>("request");
       jni::local_ref<JTransformableRequestConfig> request = this->getFieldValue(fieldRequest);
+      static const auto fieldBrowse = clazz->getField<JTransformableRequestConfig>("browse");
+      jni::local_ref<JTransformableRequestConfig> browse = this->getFieldValue(fieldBrowse);
       static const auto fieldMedia = clazz->getField<JMediaRequestConfig>("media");
       jni::local_ref<JMediaRequestConfig> media = this->getFieldValue(fieldMedia);
       static const auto fieldArtwork = clazz->getField<JArtworkRequestConfig>("artwork");
@@ -123,6 +125,7 @@ namespace margelo::nitro::audiobrowser {
       return NativeBrowserConfiguration(
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         request != nullptr ? std::make_optional(request->toCpp()) : std::nullopt,
+        browse != nullptr ? std::make_optional(browse->toCpp()) : std::nullopt,
         media != nullptr ? std::make_optional(media->toCpp()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toCpp()) : std::nullopt,
         routes != nullptr ? std::make_optional([&]() {
@@ -175,13 +178,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeBrowserConfiguration::javaobject> fromCpp(const NativeBrowserConfiguration& value) {
-      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
+      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.request.has_value() ? JTransformableRequestConfig::fromCpp(value.request.value()) : nullptr,
+        value.browse.has_value() ? JTransformableRequestConfig::fromCpp(value.browse.value()) : nullptr,
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
         value.artwork.has_value() ? JArtworkRequestConfig::fromCpp(value.artwork.value()) : nullptr,
         value.routes.has_value() ? [&]() {

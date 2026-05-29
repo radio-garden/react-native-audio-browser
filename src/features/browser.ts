@@ -149,22 +149,21 @@ const SEARCH_ROUTE_PATH = '__search__'
 
 function flattenRoutes(
   routes: Record<string, BrowserSource | RouteConfig> | undefined,
-  rootBrowse: BrowserSource | undefined,
   tabs: TabsSource | undefined,
   search: SearchSource | undefined
 ): NativeRouteEntry[] | undefined {
   const entries: NativeRouteEntry[] = []
 
-  // Add explicit routes
+  // Add explicit routes. The '*' key is the optional custom default — it maps to
+  // the __default__ entry (used when no other route matches). Without it, an
+  // unmatched browse path is fetched via request + browse config applied to the
+  // path (handled natively), so no __default__ entry is needed.
   if (routes) {
     for (const [path, source] of Object.entries(routes)) {
-      entries.push(flattenRouteEntry(path, source))
+      entries.push(
+        flattenRouteEntry(path === '*' ? DEFAULT_ROUTE_PATH : path, source)
+      )
     }
-  }
-
-  // Add root browse as default fallback
-  if (rootBrowse) {
-    entries.push(flattenRouteEntry(DEFAULT_ROUTE_PATH, rootBrowse))
   }
 
   // Add tabs as special route
@@ -186,14 +185,10 @@ function toNativeConfig(
   return {
     path: config.path,
     request: config.request,
+    browse: config.browse,
     media: config.media,
     artwork: config.artwork,
-    routes: flattenRoutes(
-      config.routes,
-      config.browse,
-      config.tabs,
-      config.search
-    ),
+    routes: flattenRoutes(config.routes, config.tabs, config.search),
     singleTrack: config.singleTrack,
     handleTrackLoad: config.handleTrackLoad,
     androidControllerOfflineError: config.androidControllerOfflineError,

@@ -7,8 +7,12 @@ import os.log
 /// This is a convenience wrapper around NativeBrowserConfiguration that
 /// provides easier access to configuration properties.
 struct BrowserConfig {
-  /// Base HTTP request configuration
+  /// Base HTTP request configuration (applied to every request kind)
   let request: TransformableRequestConfig?
+
+  /// Browse-kind request configuration (applied to every browse request,
+  /// layered request → browse → route)
+  let browse: TransformableRequestConfig?
 
   /// Media URL transformation configuration
   let media: MediaRequestConfig?
@@ -43,6 +47,7 @@ struct BrowserConfig {
 
   init(
     request: TransformableRequestConfig? = nil,
+    browse: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
     artwork: ArtworkRequestConfig? = nil,
     routes: [NativeRouteEntry]? = nil,
@@ -54,6 +59,7 @@ struct BrowserConfig {
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
+    self.browse = browse
     self.media = media
     self.artwork = artwork
     self.routes = routes
@@ -68,6 +74,7 @@ struct BrowserConfig {
   /// Create from NativeBrowserConfiguration
   init(from config: NativeBrowserConfiguration) {
     request = config.request
+    browse = config.browse
     media = config.media
     artwork = config.artwork
     routes = config.routes

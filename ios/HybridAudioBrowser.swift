@@ -111,7 +111,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public var configuration: NativeBrowserConfiguration = .init(
-    path: nil, request: nil, media: nil, artwork: nil, routes: nil,
+    path: nil, request: nil, browse: nil, media: nil, artwork: nil, routes: nil,
     singleTrack: nil, handleTrackLoad: nil,
     androidControllerOfflineError: nil, carPlayUpNextButton: nil,
     carPlayNowPlayingButtons: nil, formatNavigationError: nil,

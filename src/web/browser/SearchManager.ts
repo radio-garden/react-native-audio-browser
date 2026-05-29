@@ -1,5 +1,4 @@
 import type { Track, SearchParams } from '../../types'
-import type { HttpClient } from '../http/HttpClient'
 import type { BrowserManager } from './BrowserManager'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 
@@ -9,10 +8,7 @@ import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
  * Matches Android's search architecture.
  */
 export class SearchManager {
-  constructor(
-    private browserManager: BrowserManager,
-    private httpClient: HttpClient
-  ) {}
+  constructor(private browserManager: BrowserManager) {}
 
   /**
    * Executes a search query using the __search__ route configuration.
@@ -49,16 +45,13 @@ export class SearchManager {
       if (params.title) searchQueryParams.title = params.title
       if (params.playlist) searchQueryParams.playlist = params.playlist
 
-      const requestConfig = this.httpClient.mergeRequestConfig(
-        searchRoute.searchConfig,
-        {
-          query: searchQueryParams
-        }
-      )
-
+      // Delegate to the shared layered fetch (request → search) on BrowserManager
+      // so the ladder lives in one place.
       try {
-        const response = await this.httpClient.executeRequest(requestConfig)
-        results = Array.isArray(response) ? (response as Track[]) : []
+        results = await this.browserManager.fetchSearchResults(
+          searchRoute.searchConfig,
+          searchQueryParams
+        )
       } catch (error) {
         console.error('Search failed:', error)
         return []
@@ -66,13 +59,15 @@ export class SearchManager {
     }
 
     // Transform artwork URLs on search results using async method with full Track access
-    const artworkConfig = this.browserManager.configuration.artwork
+    const { request: requestConfig, artwork: artworkConfig } =
+      this.browserManager.configuration
     if (artworkConfig) {
       results = await Promise.all(
         results.map(async (track) => {
           const artworkSource =
             await RequestConfigBuilder.resolveArtworkSourceAsync(
               track,
+              requestConfig,
               artworkConfig
             )
           if (artworkSource && !track.artworkSource) {

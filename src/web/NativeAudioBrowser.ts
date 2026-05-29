@@ -227,7 +227,7 @@ export class NativeAudioBrowser
       this.navigationErrorManager
     )
 
-    this.searchManager = new SearchManager(this.browserManager, this.httpClient)
+    this.searchManager = new SearchManager(this.browserManager)
 
     // Wire up event callbacks from managers to class callbacks
     this.browserManager.onPathChanged = (path) => this.onPathChanged(path)
@@ -533,8 +533,8 @@ export class NativeAudioBrowser
    * Mirrors Android's MediaFactory.getMediaRequestConfig behavior.
    */
   private async resolveMediaUrl(src: string): Promise<string> {
-    const mediaConfig = this.browserManager.configuration.media
-    return RequestConfigBuilder.resolveMediaUrl(src, mediaConfig)
+    const { request, media } = this.browserManager.configuration
+    return RequestConfigBuilder.resolveMediaUrl(src, request, media)
   }
 
   load(track: Track, callback?: (track: Track) => void): void {
@@ -727,13 +727,14 @@ export class NativeAudioBrowser
     this.current = undefined
     this._currentIndex = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
-    const artworkConfig = this.browserManager.configuration.artwork
+    const { request, artwork } = this.browserManager.configuration
     this.playlist = tracks.map((track) => {
       try {
         const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
         return RequestConfigBuilder.transformTrackArtwork(
           hydratedTrack,
-          artworkConfig
+          request,
+          artwork
         )
       } catch (error) {
         console.error('Failed to transform track:', error)

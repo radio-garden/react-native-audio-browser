@@ -246,6 +246,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   internal fun buildConfig(): BrowserConfig {
     return BrowserConfig(
       request = _configuration.request,
+      browse = _configuration.browse,
       media = _configuration.media,
       artwork = _configuration.artwork,
       routes = _configuration.routes,
@@ -260,29 +261,46 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    */
   fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
     val artworkConfig = _configuration.artwork ?: return null
-    val baseConfig =
-      _configuration.request?.let { RequestConfigBuilder.toRequestConfig(it) }
-        ?: RequestConfig(null, null, null, null, null, null, null, null)
-    return CoilBitmapLoader.ArtworkConfig(baseConfig, artworkConfig)
+    // Pass the request config (not a flattened static copy) so its transform
+    // runs for artwork too, applied as the shared layer in CoilBitmapLoader.
+    return CoilBitmapLoader.ArtworkConfig(_configuration.request, artworkConfig)
   }
 
   /**
-   * Creates a request config for media URL transformation by merging base and media configs.
-   * Returns null if no media configuration is set.
+   * Creates a request config for media URL transformation by applying the shared
+   * request layer and any media config. Returns null only when neither a request
+   * nor a media config is set (the caller then uses the original URL as-is).
    */
   fun getMediaRequestConfig(originalUrl: String): MediaRequestConfig? {
-    val mediaConfig = _configuration.media ?: return null
+    val mediaConfig = _configuration.media
+    val requestConfig = _configuration.request
+    if (mediaConfig == null && requestConfig == null) return null
 
     return try {
-      // Create base request config with the original URL as path
-      val baseConfig =
-        _configuration.request?.let { RequestConfigBuilder.toRequestConfig(it) }
-          ?: RequestConfig(null, null, null, null, null, null, null, null)
-      val urlRequestConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
-      val mergedBaseConfig = RequestConfigBuilder.mergeConfig(baseConfig, urlRequestConfig)
-
-      // Apply media transformation
-      runBlocking { RequestConfigBuilder.mergeConfig(mergedBaseConfig, mediaConfig) }
+      runBlocking {
+        // Layered: request (shared, incl. its transform) → media. The request
+        // layer runs for media too, per the documented contract, even when no
+        // media-specific config is present (so a relative src still gets baseUrl).
+        var base = RequestConfig(null, originalUrl, null, null, null, null, null, null)
+        requestConfig?.let { base = RequestConfigBuilder.mergeConfig(base, it) }
+        if (mediaConfig != null) {
+          RequestConfigBuilder.mergeConfig(base, mediaConfig)
+        } else {
+          // No media config: wrap the request-layered base as a MediaRequestConfig.
+          MediaRequestConfig(
+            resolve = null,
+            transform = null,
+            method = base.method,
+            path = base.path,
+            baseUrl = base.baseUrl,
+            headers = base.headers,
+            query = base.query,
+            body = base.body,
+            contentType = base.contentType,
+            userAgent = base.userAgent,
+          )
+        }
+      }
     } catch (e: Exception) {
       Timber.e(e, "Failed to transform media URL: $originalUrl")
       null
