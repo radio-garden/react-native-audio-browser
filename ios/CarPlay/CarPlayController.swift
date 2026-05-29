@@ -139,6 +139,7 @@ public final class RNABCarPlayController: NSObject {
 
     // Clear config callback
     audioBrowser?.browserManager.onConfigChanged = nil
+    audioBrowser?.browserManager.onFavoritesChanged = nil
 
     nowPlayingManager.teardown()
     listItemFactory = nil
@@ -180,6 +181,16 @@ public final class RNABCarPlayController: NSObject {
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.setupNowPlayingButtons()
+      }
+    }
+
+    // Refresh the Now Playing heart when favorites change externally (app /
+    // webview). The favorite/active-track emitters only fire for the player's
+    // own toggles, so without this an in-app favorite leaves the CarPlay heart
+    // stale.
+    audioBrowser.browserManager.onFavoritesChanged = { [weak self] in
+      Task { @MainActor in
+        self?.nowPlayingManager.updateFavoriteButtonState()
       }
     }
 

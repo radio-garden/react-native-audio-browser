@@ -775,14 +775,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  public func toggleActiveTrackFavorited() throws {
+  /// Whether the active (now-playing) track is favorited, per the authoritative
+  /// favorite set. The now-playing track is loaded outside the browse cache, so
+  /// its own `Track.favorited` flag isn't re-hydrated as favorites change — read
+  /// this rather than `getActiveTrack()?.favorited` (which can be stale).
+  func isActiveTrackFavorited() -> Bool {
     onMainActor {
-      guard let track = player?.currentTrack, let src = track.src else { return }
-      // Check current favorited state from cache
-      let currentTrack = browserManager.getCachedTrack(src)
-      let isFavorited = currentTrack?.favorited ?? track.favorited ?? false
-      try? setActiveTrackFavorited(favorited: !isFavorited)
+      guard let src = player?.currentTrack?.src else { return false }
+      return browserManager.isFavorited(src: src)
     }
+  }
+
+  public func toggleActiveTrackFavorited() throws {
+    try? setActiveTrackFavorited(favorited: !isActiveTrackFavorited())
   }
 
   public func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws {

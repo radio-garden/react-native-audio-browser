@@ -26,9 +26,10 @@ final class CarPlayNowPlayingManager {
     audioBrowser?.browserManager.config ?? BrowserConfig()
   }
 
-  /// Gets the current active track's favorited state
+  /// The active track's favorited state, from the authoritative favorite set
+  /// (see `HybridAudioBrowser.isActiveTrackFavorited`).
   private var isActiveTrackFavorited: Bool {
-    (try? audioBrowser?.getActiveTrack())?.favorited ?? false
+    audioBrowser?.isActiveTrackFavorited() ?? false
   }
 
   init(interfaceController: CPInterfaceController) {

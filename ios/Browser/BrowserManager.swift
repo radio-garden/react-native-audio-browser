@@ -128,6 +128,11 @@ final class BrowserManager {
   var onContentChanged: ((ResolvedTrack?) -> Void)?
   var onTabsChanged: (([Track]) -> Void)?
   var onConfigChanged: ((BrowserConfig) -> Void)?
+  /// Fired when the favorite id set changes (e.g. an app/webview-originated
+  /// favorite). Lets surfaces like the CarPlay now-playing heart re-render —
+  /// they otherwise only learn of their own toggles via favorite/active-track
+  /// events, never an external change routed through `setFavorites`.
+  var onFavoritesChanged: (() -> Void)?
 
   /// Forwards to config.awaitTrackLoadHandler so callers don't need to
   /// cross the MainActor boundary to access `config`.
@@ -142,7 +147,10 @@ final class BrowserManager {
 
   /// Sets the favorited track identifiers.
   func setFavorites(_ favorites: [String]) {
-    favoriteIds = Set(favorites)
+    let newIds = Set(favorites)
+    guard newIds != favoriteIds else { return }
+    favoriteIds = newIds
+    onFavoritesChanged?()
   }
 
   /// Sets the favorite match mode (propagated from the `favorite` capability).
@@ -174,6 +182,16 @@ final class BrowserManager {
     if track.favorited == isFavorited { return track }
 
     return track.copying(favorited: isFavorited)
+  }
+
+  /// Authoritative favorited check for a playable `src`, using the configured
+  /// match mode against the current favorite ids. Returns false when favoriting
+  /// is disabled. Prefer this over a (possibly stale) cached `Track.favorited`
+  /// when deciding a toggle's direction — the now-playing track is loaded
+  /// outside the browse cache and its flag isn't re-hydrated as favorites change.
+  func isFavorited(src: String) -> Bool {
+    guard let match = favoriteMatch else { return false }
+    return isFavorite(src: src, match: match)
   }
 
   /// Whether `src` is favorited under the given match mode.
