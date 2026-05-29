@@ -106,13 +106,17 @@
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
+    "exclude": [
+      "**/{__tests__,__fixtures__,__mocks__}/**",
+      "**/*.{spec,test}.{js,jsx,ts,tsx}"
+    ],
     "targets": [
       "commonjs",
       "module",
       [
         "typescript",
         {
-          "project": "tsconfig.json"
+          "project": "tsconfig.build.json"
         }
       ]
     ]
