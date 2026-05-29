@@ -129,17 +129,14 @@ A flag controlling whether a specific control is *available* on External surface
 _Avoid_: Permission, Feature flag, Control.
 
 **Favorited**:
-A boolean on a Track marking it as a user favorite. Toggled programmatically or via the heart button on an External surface. Persistence is the app's responsibility. The library's domain vocabulary has no Rating concept.
+A boolean on a Track marking it as a user favorite. Toggled programmatically or via the heart button on an External surface. The library's domain vocabulary has no Rating concept.
 _Avoid_: Rating, hearted, liked, starred.
 
 ## Relationships
 
 - A **Browser** holds zero or more **Routes**, up to four **Tabs**, and optionally one **Search**.
-- **Routes** compete to match a **Path**; the most specific pattern wins.
-- A **Path** addresses a node in the **BrowseTree**; **Routes** match against Paths.
-- The **Browser** produces **Tracks**; the **Player** consumes them via the **Queue**.
+- The **Browser** produces **ResolvedTracks**; the **Player** consumes their Playable **Tracks** via the **Queue**.
 - A **Queue** holds zero or more **Tracks** and has at most one **Active Track**.
-- **PlayingState** is derived from **PlaybackState** + **playWhenReady**.
 - A live stream emits **TimedMetadata**; the app may forward fields into the **Now Playing** override.
 - The `media` and `artwork` request pipelines accept a per-Track **Resolve**; all requests accept a final **Transform**.
 - **External surfaces** display **Now Playing**, may browse the **BrowseTree**, and emit **Remote commands**.
@@ -152,9 +149,9 @@ _Avoid_: Rating, hearted, liked, starred.
 >
 > **Maintainer:** "**Now Playing** snaps back to mirror the **Active Track**'s metadata whenever the Active Track changes. For a stream, the Active Track is the station — don't replace it when metadata arrives; just keep calling `updateNowPlaying`. The two diverge by design: the Active Track is *what's in the Queue*, Now Playing is *what's currently being heard*."
 >
-> **Contributor:** "Does the artwork in the override go through the artwork **Transform**?"
+> **Contributor:** "If I put a remote artwork URL in the override, does my **Transform** still sign it?"
 >
-> **Maintainer:** "No. The Now Playing override doesn't go through the artwork pipeline — the **External surface** fetches the URL directly. Bake the auth into the URL or use a signed CDN."
+> **Maintainer:** "No — a Now Playing override bypasses the request pipeline entirely. The **External surface** fetches the URL directly, so bake any auth into the URL or use a signed CDN."
 
 ## Flagged ambiguities
 
