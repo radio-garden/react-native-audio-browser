@@ -21,6 +21,10 @@ final class NowPlayingUpdater {
 
   func loadMetaValues(for track: Track, rate: Float) {
     nowPlayingInfoController.set(keyValues: [
+      // `artist` is the now-playing secondary line (maps to the platform artist
+      // slot). For channels the server sets it to the canonical "{place},
+      // {country}"; the stream's song (ICY metadata) replaces it when present.
+      // The free browse-list `subtitle` is deliberately NOT used here.
       MediaItemProperty.artist(track.artist),
       MediaItemProperty.title(track.title),
       MediaItemProperty.albumTitle(track.album),
@@ -102,5 +106,4 @@ final class NowPlayingUpdater {
       }
     }
   }
-
 }

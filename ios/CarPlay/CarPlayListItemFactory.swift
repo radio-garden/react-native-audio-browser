@@ -33,7 +33,7 @@ final class CarPlayListItemFactory {
 
   init(
     isActiveTrack: @escaping (String) -> Bool,
-    onItemSelected: @escaping (Track, @escaping () -> Void) -> Void
+    onItemSelected: @escaping (Track, @escaping () -> Void) -> Void,
   ) {
     self.isActiveTrack = isActiveTrack
     self.onItemSelected = onItemSelected
@@ -110,11 +110,11 @@ final class CarPlayListItemFactory {
   ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
   func createListItem(
     for track: Track,
-    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil
+    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil,
   ) -> CPListItem {
     let item = CPListItem(
       text: track.title,
-      detailText: track.subtitle ?? track.artist
+      detailText: track.subtitle,
     )
 
     // Store typed info for updatePlayingIndicators()

@@ -26,12 +26,6 @@ extension Track {
   var isBrowsable: Bool {
     url != nil && src == nil
   }
-
-  /// Returns the display subtitle for CarPlay.
-  /// Uses subtitle if available, falls back to artist.
-  var carPlaySubtitle: String? {
-    subtitle ?? artist
-  }
 }
 
 // MARK: - ImageRowItem → Track Conversion

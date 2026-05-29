@@ -929,7 +929,7 @@ class Player(internal val context: Context) {
    * Applies the current now playing metadata to the media notification. Uses the override if set,
    * otherwise uses track metadata.
    */
-  private fun applyNowPlayingMetadata() {
+  internal fun applyNowPlayingMetadata() {
     val index = currentIndex ?: return
     val track = currentTrack ?: return
     val override = nowPlayingOverride

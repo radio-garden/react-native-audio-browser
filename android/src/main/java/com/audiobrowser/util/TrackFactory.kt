@@ -32,7 +32,7 @@ object TrackFactory {
     val mediaMetadata =
       MediaMetadata.Builder()
         .setTitle(track.title)
-        .setArtist(track.artist)
+        .setArtist(track.subtitle)
         .setAlbumTitle(track.album)
         .setDescription(track.description)
         .setGenre(track.genre)
@@ -83,7 +83,7 @@ object TrackFactory {
     // Build metadata with SVG support
     val metadataBuilder = MediaMetadata.Builder()
       .setTitle(track.title)
-      .setArtist(track.artist)
+      .setArtist(track.subtitle)
       .setAlbumTitle(track.album)
       .setDescription(track.description)
       .setGenre(track.genre)

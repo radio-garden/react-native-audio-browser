@@ -86,11 +86,17 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Clear now playing override when track changes (new track = clean slate)
     player.clearNowPlayingOverride()
 
+    // Re-stamp the now-playing metadata for the new track. The browse-list
+    // MediaItem carries `artist = subtitle` (the per-context list line), but the
+    // now-playing screen / lock screen / Bluetooth should show the canonical
+    // `artist` (location). Android Auto derives both from the same MediaItem's
+    // `artist`, so we overwrite the playing item's metadata here (the same
+    // mechanism ICY song updates already use) to diverge it from the list items.
+    // This also fires onNowPlayingChanged, so we don't emit it separately below.
+    player.applyNowPlayingMetadata()
+
     // Reset retry timer so new track gets fresh 2-minute window
     player.resetRetryTimer()
-
-    // Notify JS of the now playing metadata for the new track
-    player.getNowPlaying()?.let { player.callbacks?.onNowPlayingChanged(it) }
 
     player.playbackStateStore.save()
     player.playbackStateStore.resetPeriodicSave()
