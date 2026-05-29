@@ -141,6 +141,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getNavigationError", &HybridAudioBrowserSpec::getNavigationError);
       prototype.registerHybridMethod("getFormattedNavigationError", &HybridAudioBrowserSpec::getFormattedNavigationError);
       prototype.registerHybridMethod("notifyContentChanged", &HybridAudioBrowserSpec::notifyContentChanged);
+      prototype.registerHybridMethod("invalidateAllContent", &HybridAudioBrowserSpec::invalidateAllContent);
       prototype.registerHybridMethod("setFavorites", &HybridAudioBrowserSpec::setFavorites);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioBrowserSpec::setupPlayer);
       prototype.registerHybridMethod("updateOptions", &HybridAudioBrowserSpec::updateOptions);

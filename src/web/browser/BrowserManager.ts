@@ -190,6 +190,17 @@ export class BrowserManager {
   }
 
   /**
+   * Invalidates all browse content. Web shows a single path at a time and
+   * doesn't keep a content cache, so this just re-navigates the current path
+   * to re-resolve it.
+   */
+  invalidateAllContent(): void {
+    if (this._path) {
+      void this.navigate(this._path)
+    }
+  }
+
+  /**
    * Main navigation logic.
    * Resolves content for the given path and updates state.
    * Uses navigation ID to prevent race conditions (matches Android's BrowserManager.kt:586-607).

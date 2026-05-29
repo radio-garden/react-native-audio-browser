@@ -1477,6 +1477,10 @@ class Player(internal val context: Context) {
     mediaSessionCallback.notifyContentChanged(path)
   }
 
+  fun invalidateAllContent() {
+    mediaSessionCallback.invalidateAllContent()
+  }
+
   /**
    * Returns the recommended artwork size in pixels from the connected media browser (e.g., Android
    * Auto), or null if not provided.

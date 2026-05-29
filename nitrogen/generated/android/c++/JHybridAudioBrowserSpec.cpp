@@ -1520,6 +1520,10 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* path */)>("notifyContentChanged");
     method(_javaPart, jni::make_jstring(path));
   }
+  void JHybridAudioBrowserSpec::invalidateAllContent() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("invalidateAllContent");
+    method(_javaPart);
+  }
   void JHybridAudioBrowserSpec::setFavorites(const std::vector<std::string>& favorites) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<jni::JString>> /* favorites */)>("setFavorites");
     method(_javaPart, [&]() {

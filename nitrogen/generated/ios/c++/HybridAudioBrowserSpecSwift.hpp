@@ -804,6 +804,12 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void invalidateAllContent() override {
+      auto __result = _swiftPart.invalidateAllContent();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline void setFavorites(const std::vector<std::string>& favorites) override {
       auto __result = _swiftPart.setFavorites(favorites);
       if (__result.hasError()) [[unlikely]] {

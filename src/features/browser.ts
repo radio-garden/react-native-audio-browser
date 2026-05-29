@@ -289,6 +289,22 @@ export const notifyContentChanged = (path: string): void => {
 }
 
 /**
+ * Invalidates all cached browse content and refreshes every currently-displayed
+ * browse surface. Use when something app-wide changed (locale switch, sign-out,
+ * etc.) and every browse path should re-fetch from its route handler — unlike
+ * {@link notifyContentChanged}, which targets a single path.
+ *
+ * @example
+ * ```ts
+ * // After the user changes the app language
+ * invalidateAllContent()
+ * ```
+ */
+export const invalidateAllContent = (): void => {
+  nativeBrowser.invalidateAllContent()
+}
+
+/**
  * Returns whether search functionality is configured via `configureBrowser({ search: ... })`.
  */
 export function hasSearch(): boolean {

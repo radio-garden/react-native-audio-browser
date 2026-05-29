@@ -274,6 +274,11 @@ final class BrowserManager {
     contentCache.remove(path)
   }
 
+  /// Clears the entire content cache (e.g. on a locale change).
+  func clearContentCache() {
+    contentCache.clear()
+  }
+
   /// Refreshes the current path by invalidating cache and re-resolving.
   ///
   /// Uses navigation ID tracking to prevent race conditions.
@@ -375,27 +380,61 @@ final class BrowserManager {
   private func resolveFromConfig(
     _ routeConfig: TransformableRequestConfig,
     path: String,
-    params _: [String: String],
+    params: [String: String],
   ) async throws -> ResolvedTrack {
-    // Build the request URL - route config takes precedence over global config
-    let baseUrl = routeConfig.baseUrl ?? config.request?.baseUrl
-    guard let baseUrl else {
+    // 1. Base request from the global `request` config, defaulting path to the
+    //    navigation path.
+    var base = RequestConfig(
+      method: config.request?.method,
+      path: config.request?.path ?? path,
+      baseUrl: config.request?.baseUrl,
+      headers: config.request?.headers,
+      query: config.request?.query,
+      body: config.request?.body,
+      contentType: config.request?.contentType,
+      userAgent: config.request?.userAgent,
+    )
+
+    // 2. Apply the global request transform first (chained before the route's).
+    if let globalTransform = config.request?.transform {
+      base = try await applyTransform(globalTransform, request: base, params: params)
+    }
+
+    // 3. Apply the route: a route transform wins completely (it receives the
+    //    globally-transformed base and returns the final config); otherwise the
+    //    route's static fields are merged over the base.
+    let merged: RequestConfig
+    if let routeTransform = routeConfig.transform {
+      merged = try await applyTransform(routeTransform, request: base, params: params)
+    } else {
+      merged = RequestConfig(
+        method: routeConfig.method ?? base.method,
+        path: base.path,
+        baseUrl: routeConfig.baseUrl ?? base.baseUrl,
+        headers: mergeDicts(base.headers, routeConfig.headers),
+        query: mergeDicts(base.query, routeConfig.query),
+        body: routeConfig.body ?? base.body,
+        contentType: routeConfig.contentType ?? base.contentType,
+        userAgent: routeConfig.userAgent ?? base.userAgent,
+      )
+    }
+
+    // 4. Build the URL and execute.
+    guard let baseUrl = merged.baseUrl else {
       throw BrowserError.invalidConfiguration("No URL configured for route")
     }
-
-    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: path)
-
-    // Add query parameters from config - route config values override global config
-    if let queryParams = mergeDicts(config.request?.query, routeConfig.query) {
-      url = BrowserPathHelper.appendQuery(queryParams, to: url)
+    var url = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: merged.path ?? path)
+    if let query = merged.query, !query.isEmpty {
+      url = BrowserPathHelper.appendQuery(query, to: url)
     }
 
-    // Build HTTP request - route config takes precedence
-    let method = (routeConfig.method ?? config.request?.method)?.stringValue ?? "GET"
     let request = HttpClient.HttpRequest(
       url: url,
-      method: method,
-      headers: mergeDicts(config.request?.headers, routeConfig.headers),
+      method: merged.method?.stringValue ?? "GET",
+      headers: merged.headers,
+      body: merged.body,
+      contentType: merged.contentType ?? HttpClient.defaultContentType,
+      userAgent: merged.userAgent ?? HttpClient.defaultUserAgent,
     )
 
     logger.debug("Resolving content from API")
@@ -412,6 +451,29 @@ final class BrowserManager {
     }
 
     return nitroResult
+  }
+
+  /// Invokes a request `transform` (global or per-route) and copies the result
+  /// out of the Nitro bridge immediately to avoid use-after-free when the
+  /// `Promise<RequestConfig>` is deallocated.
+  private func applyTransform(
+    _ transform: @escaping (RequestConfig, [String: String]?) -> Promise<Promise<RequestConfig>>,
+    request: RequestConfig,
+    params: [String: String],
+  ) async throws -> RequestConfig {
+    let outerPromise = transform(request, params)
+    let innerPromise = try await outerPromise.await()
+    let result = try await innerPromise.await()
+    return RequestConfig(
+      method: result.method,
+      path: result.path,
+      baseUrl: result.baseUrl,
+      headers: result.headers,
+      query: result.query,
+      body: result.body,
+      contentType: result.contentType,
+      userAgent: result.userAgent,
+    )
   }
 
   /// Merges two optional dictionaries, with override values taking precedence.

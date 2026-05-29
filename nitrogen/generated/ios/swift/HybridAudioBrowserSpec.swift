@@ -79,6 +79,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getNavigationError() throws -> NavigationError?
   func getFormattedNavigationError() throws -> FormattedNavigationError?
   func notifyContentChanged(path: String) throws -> Void
+  func invalidateAllContent() throws -> Void
   func setFavorites(favorites: [String]) throws -> Void
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
   func updateOptions(options: NativeUpdateOptions) throws -> Void

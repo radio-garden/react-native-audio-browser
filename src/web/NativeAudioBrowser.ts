@@ -493,6 +493,10 @@ export class NativeAudioBrowser
     this.browserManager.notifyContentChanged(path)
   }
 
+  invalidateAllContent(): void {
+    this.browserManager.invalidateAllContent()
+  }
+
   setFavorites(favorites: string[]): void {
     this.favoriteManager.setFavorites(favorites)
   }

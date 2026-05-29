@@ -180,6 +180,7 @@ namespace margelo::nitro::audiobrowser {
     std::optional<NavigationError> getNavigationError() override;
     std::optional<FormattedNavigationError> getFormattedNavigationError() override;
     void notifyContentChanged(const std::string& path) override;
+    void invalidateAllContent() override;
     void setFavorites(const std::vector<std::string>& favorites) override;
     std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override;
     void updateOptions(const NativeUpdateOptions& options) override;

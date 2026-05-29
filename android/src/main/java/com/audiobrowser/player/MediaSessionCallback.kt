@@ -349,6 +349,18 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
+   * Notifies all subscribed controllers that content everywhere has changed
+   * (e.g. on a locale switch) so they re-query their children. Pairs with
+   * AudioBrowser.invalidateAllContent(), which clears the content cache first.
+   */
+  fun invalidateAllContent() {
+    Timber.d(
+      "Invalidating all content - notifying ${parentIdSubscriptions.size} subscribed paths"
+    )
+    notifySubscribedChildrenChanged()
+  }
+
+  /**
    * Called when the browser becomes available after a cold start. Notifies all subscribed
    * controllers to refresh their content.
    */

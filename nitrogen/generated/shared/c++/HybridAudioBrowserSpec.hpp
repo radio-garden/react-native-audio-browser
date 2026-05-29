@@ -302,6 +302,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<NavigationError> getNavigationError() = 0;
       virtual std::optional<FormattedNavigationError> getFormattedNavigationError() = 0;
       virtual void notifyContentChanged(const std::string& path) = 0;
+      virtual void invalidateAllContent() = 0;
       virtual void setFavorites(const std::vector<std::string>& favorites) = 0;
       virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;

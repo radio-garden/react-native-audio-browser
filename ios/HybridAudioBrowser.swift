@@ -417,6 +417,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     lastFormattedNavigationError
   }
 
+  /// Internal signal sent on `externalContentChangedEmitter` to tell CarPlay to
+  /// refresh every displayed template. Not a real path (paths are always
+  /// `/…`), so it can't collide with one; kept internal — the public API is
+  /// `invalidateAllContent()`.
+  static let invalidateAllSentinel = "__rnab_invalidate_all__"
+
   public func notifyContentChanged(path: String) throws {
     onMainActor { browserManager.invalidateContentCache(path) }
 
@@ -431,6 +437,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         } catch {
           handleNavigationError(error, path: path)
         }
+      }
+    }
+  }
+
+  public func invalidateAllContent() throws {
+    onMainActor { browserManager.clearContentCache() }
+
+    // Tell external controllers (CarPlay) to refresh every displayed template.
+    externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
+
+    // Re-resolve the JS-facing current path with the cache cleared.
+    Task {
+      do {
+        try await browserManager.refresh()
+      } catch {
+        handleNavigationError(error, path: onMainActor { browserManager.getPath() })
       }
     }
   }

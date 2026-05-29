@@ -1045,7 +1045,21 @@ class BrowserManager {
             contentType = null,
             userAgent = null,
           )
-      val mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, apiConfig, routeParams)
+
+      // 1b. Apply the global request transform first, chained before the
+      //     route's (its output becomes the route transform's input).
+      val transformedBase =
+        config.request?.transform?.let { transformFn ->
+          try {
+            transformFn.invoke(baseConfig, routeParams).await().await()
+          } catch (e: Exception) {
+            Timber.e(e, "Failed to apply global request transform, using base config")
+            baseConfig
+          }
+        } ?: baseConfig
+
+      val mergedConfig =
+        RequestConfigBuilder.mergeConfig(transformedBase, apiConfig, routeParams)
 
       // 2. Build and execute HTTP request
       val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)

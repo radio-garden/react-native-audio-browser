@@ -193,9 +193,14 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.favoriteChangedEmitter.removeListener(favoriteToken)
     }
 
-    // Subscribe to external content changes (from notifyContentChanged)
+    // Subscribe to external content changes (notifyContentChanged /
+    // invalidateAllContent).
     let externalContentToken = audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
-      self?.notifyContentChanged(path: path)
+      if path == HybridAudioBrowser.invalidateAllSentinel {
+        self?.invalidateAllContent()
+      } else {
+        self?.notifyContentChanged(path: path)
+      }
     }
     listenerRemovals.append { [weak audioBrowser] in
       audioBrowser?.externalContentChangedEmitter.removeListener(externalContentToken)
@@ -629,6 +634,46 @@ public final class RNABCarPlayController: NSObject {
     {
       logger.info("Refreshing top template for path: \(path)")
       updateTemplate(topTemplate, with: content)
+    }
+  }
+
+  /// Refreshes every currently-displayed template (tabs + navigation stack) by
+  /// re-fetching each path with the cache bypassed. Called when all content was
+  /// invalidated app-wide (e.g. a locale change).
+  @MainActor
+  public func invalidateAllContent() {
+    guard isStarted else { return }
+    Task { @MainActor in await refreshAllDisplayedTemplates() }
+  }
+
+  @MainActor
+  private func refreshAllDisplayedTemplates() async {
+    guard let audioBrowser else { return }
+
+    var templates: [CPListTemplate] = []
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
+      for template in tabBar.templates {
+        if let listTemplate = template as? CPListTemplate {
+          templates.append(listTemplate)
+        }
+      }
+    }
+    for template in interfaceController.templates {
+      if let listTemplate = template as? CPListTemplate,
+         !templates.contains(where: { $0 === listTemplate })
+      {
+        templates.append(listTemplate)
+      }
+    }
+
+    for template in templates {
+      guard let path = getPath(from: template) else { continue }
+      do {
+        let resolved = try await audioBrowser.browserManager.resolve(path, useCache: false)
+        updateTemplate(template, with: resolved)
+      } catch {
+        logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
+      }
     }
   }
 

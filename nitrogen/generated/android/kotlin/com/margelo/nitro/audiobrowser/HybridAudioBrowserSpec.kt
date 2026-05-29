@@ -874,6 +874,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun invalidateAllContent(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun setFavorites(favorites: Array<String>): Unit
   
   @DoNotStrip
