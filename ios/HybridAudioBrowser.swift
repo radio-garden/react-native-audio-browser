@@ -757,13 +757,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onMainActor {
       guard let track = player?.currentTrack, let src = track.src else { return }
       guard let index = player?.currentIndex, index >= 0 else { return }
-      browserManager.updateFavorite(id: src, favorited: favorited)
-      // Create updated track with new favorited state
+      // Optimistically reflect in the authoritative match set so the now-playing
+      // heart (hydrated from it in getActiveTrack) flips immediately; native
+      // reconciles to its canonical ids on the next setFavorites.
+      browserManager.setFavorited(src: src, favorited: favorited)
       let updatedTrack = track.copying(favorited: favorited)
-      // Update the track in the player's queue so getActiveTrack() returns correct state
-      player?.replace(index, updatedTrack)
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
-      // Fire active track changed so useActiveTrack() hook updates UI
+      // Fire active track changed so the now-playing heart + useActiveTrack() refresh.
       let position = player?.currentTime ?? 0
       activeTrackChangedEmitter.emit(PlaybackActiveTrackChangedEvent(
         lastIndex: Double(index),
@@ -776,14 +776,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   /// Whether the active (now-playing) track is favorited, per the authoritative
-  /// favorite set. The now-playing track is loaded outside the browse cache, so
-  /// its own `Track.favorited` flag isn't re-hydrated as favorites change — read
-  /// this rather than `getActiveTrack()?.favorited` (which can be stale).
+  /// favorite set (via `getActiveTrack`'s hydration).
   func isActiveTrackFavorited() -> Bool {
-    onMainActor {
-      guard let src = player?.currentTrack?.src else { return false }
-      return browserManager.isFavorited(src: src)
-    }
+    (try? getActiveTrack())?.favorited ?? false
   }
 
   public func toggleActiveTrackFavorited() throws {
@@ -825,7 +820,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getActiveTrack() throws -> Track? {
-    onMainActor { player?.currentTrack }
+    // Hydrate `favorited` from the authoritative favorite set — the now-playing
+    // track is loaded outside the browse cache, so its own flag isn't otherwise
+    // kept in sync as favorites change. This is the single source of truth for
+    // "is the active track favorited" (now-playing heart, toggle direction, JS).
+    onMainActor { player?.currentTrack.map(browserManager.hydrateFavorite) }
   }
 
   // MARK: - Now Playing
@@ -1063,7 +1062,17 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
     // Clear now playing override when track changes (matches Kotlin behavior)
     nowPlayingOverride = nil
-    activeTrackChangedEmitter.emit(event)
+    // Hydrate the active track's `favorited` from the authoritative set so JS
+    // consumers (useActiveTrack) match getActiveTrack()'s hydrated value — the
+    // coordinator emits the raw queue track, whose flag isn't kept in sync.
+    let hydrated = PlaybackActiveTrackChangedEvent(
+      lastIndex: event.lastIndex,
+      lastTrack: event.lastTrack,
+      lastPosition: event.lastPosition,
+      index: event.index,
+      track: event.track.map(browserManager.hydrateFavorite),
+    )
+    activeTrackChangedEmitter.emit(hydrated)
     // Also notify now playing changed when track changes
     applyNowPlayingMetadata()
   }

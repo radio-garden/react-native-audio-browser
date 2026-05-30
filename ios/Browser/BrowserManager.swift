@@ -159,12 +159,22 @@ final class BrowserManager {
     favoriteMatch = match
   }
 
-  /// Updates the favorite state for a single track identifier.
-  func updateFavorite(id: String, favorited: Bool) {
+  /// Optimistically reflects a local favorite toggle for `src` in the match set,
+  /// needing no consumer-specific id extraction: favoriting inserts `src` (which
+  /// matches itself under either mode). Removal mirrors `isFavorite`'s match
+  /// semantics — partial drops every id that is a path segment of `src` (the
+  /// channel uid, and self-heals stray ids); exact (or disabled) drops only
+  /// `src`, so unrelated exact favorites that happen to be a segment of `src`
+  /// aren't collaterally lost. The consumer reconciles `favoriteIds` to its
+  /// canonical ids on the next `setFavorites`; `isFavorite(src:)` gives the same
+  /// answer before and after, so the now-playing heart stays responsive.
+  func setFavorited(src: String, favorited: Bool) {
     if favorited {
-      favoriteIds.insert(id)
+      favoriteIds.insert(src)
+    } else if favoriteMatch == .partial {
+      favoriteIds = favoriteIds.filter { !BrowserPathHelper.containsSegment(src, $0) }
     } else {
-      favoriteIds.remove(id)
+      favoriteIds.remove(src)
     }
   }
 
@@ -173,7 +183,7 @@ final class BrowserManager {
   /// playable (src-bearing) tracks are favoritable; the flag is set to true OR
   /// false so non-favorited tracks still show an (empty) heart. Local
   /// favoriteIds take precedence over API-provided values.
-  private func hydrateFavorite(_ track: Track) -> Track {
+  func hydrateFavorite(_ track: Track) -> Track {
     guard let match = favoriteMatch, let src = track.src else { return track }
 
     let isFavorited = isFavorite(src: src, match: match)
@@ -182,16 +192,6 @@ final class BrowserManager {
     if track.favorited == isFavorited { return track }
 
     return track.copying(favorited: isFavorited)
-  }
-
-  /// Authoritative favorited check for a playable `src`, using the configured
-  /// match mode against the current favorite ids. Returns false when favoriting
-  /// is disabled. Prefer this over a (possibly stale) cached `Track.favorited`
-  /// when deciding a toggle's direction — the now-playing track is loaded
-  /// outside the browse cache and its flag isn't re-hydrated as favorites change.
-  func isFavorited(src: String) -> Bool {
-    guard let match = favoriteMatch else { return false }
-    return isFavorite(src: src, match: match)
   }
 
   /// Whether `src` is favorited under the given match mode.
@@ -225,23 +225,6 @@ final class BrowserManager {
 
   private func cacheChildren(_ resolvedTrack: ResolvedTrack) {
     resolvedTrack.children?.forEach { cacheTrack($0) }
-  }
-
-  /// Get a cached Track by mediaId (url or src), or nil if not cached.
-  func getCachedTrack(_ mediaId: String) -> Track? {
-    // Try direct lookup first (matches url or src)
-    if let track = trackCache.get(mediaId) {
-      return hydrateFavorite(track)
-    }
-
-    // Try extracting src from contextual URL
-    if let trackId = BrowserPathHelper.extractTrackId(mediaId) {
-      if let track = trackCache.get(trackId) {
-        return hydrateFavorite(track)
-      }
-    }
-
-    return nil
   }
 
   // MARK: - Navigation
