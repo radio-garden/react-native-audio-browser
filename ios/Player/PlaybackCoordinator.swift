@@ -112,7 +112,15 @@ class PlaybackCoordinator {
         // .playing transition — whose timing is flaky for live streams. Without
         // this, selecting a track while paused leaves the lock-screen / CarPlay
         // button stuck on "play" even though audio is playing.
-        effectHandler?.updateNowPlayingState(playWhenReady: playWhenReady)
+        //
+        // Only when the player is in an active state: stamping .playing from a
+        // terminal state (a play() from .error/.stopped whose reload may fail)
+        // would leave a phantom "playing" button, since terminal transitions
+        // don't re-stamp now-playing state. The reload's own .loading/.ready
+        // transition handles the now-playing update once it actually starts.
+        if playbackActive {
+          effectHandler?.updateNowPlayingState(playWhenReady: playWhenReady)
+        }
       }
     }
   }

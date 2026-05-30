@@ -396,6 +396,20 @@ struct PlayWhenReadyTests {
     // it stays stuck showing "paused" until a later state transition repairs it.
     #expect(eh.updateNowPlayingStateCalls.last == true)
   }
+
+  @Test @MainActor
+  func change_doesNotStampNowPlayingState_fromTerminalState() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.transition(.errorOccurred(.playbackFailed)) // terminal, not playbackActive
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.playWhenReady = true
+
+    // Must NOT stamp .playing from a terminal state: the reload may fail and no
+    // active transition would repair a premature "playing", leaving a phantom
+    // playing button. The reload's own .loading/.ready transition stamps it.
+    #expect(eh.updateNowPlayingStateCalls.isEmpty)
+  }
 }
 
 // MARK: - handleCurrentTrackChanged
