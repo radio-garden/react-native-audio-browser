@@ -101,18 +101,13 @@ class QueueManager {
     return currentIndex == tracks.count - 1
   }
 
-  /// Whether a `next()` would move to a distinct track — drives remote/CarPlay
-  /// next-button enablement. True mid-queue (in shuffle order), or at the end
-  /// only when repeat-all wraps to another track; false for an empty or
-  /// single-track queue, or a real end with no wrap.
-  var canNext: Bool {
-    !nextTracks.isEmpty || (repeatMode == .queue && tracks.count > 1)
-  }
+  /// Whether `next()` would move to a distinct track — drives remote/CarPlay
+  /// next-button enablement. Shares `nextIndex` with `next()` so the button
+  /// state and the actual navigation can't diverge (shuffle/repeat-wrap aware).
+  var canNext: Bool { nextIndex != nil }
 
-  /// Whether a `previous()` would move to a distinct track. Symmetric to `canNext`.
-  var canPrevious: Bool {
-    !previousTracks.isEmpty || (repeatMode == .queue && tracks.count > 1)
-  }
+  /// Whether `previous()` would move to a distinct track. Symmetric to `canNext`.
+  var canPrevious: Bool { previousIndex != nil }
 
   // MARK: - Validation
 
@@ -138,70 +133,59 @@ class QueueManager {
 
   // MARK: - Navigation (returns QueueNavigationResult)
 
+  /// The index `next()` will move to — a distinct track in playback order, or
+  /// nil when there's nowhere to go (empty/single-track queue, or a real end
+  /// with no wrap). Single source of truth shared by `next()` and `canNext`, so
+  /// the button state and the actual navigation can't disagree. Shuffle wraps
+  /// the order unconditionally (like Media3); sequential wraps only on repeat-all.
+  private var nextIndex: Int? {
+    guard currentTrack != nil, tracks.count > 1 else { return nil }
+    let candidate: Int?
+    if shuffleEnabled {
+      candidate = shuffleOrder.getNextIndex(after: currentIndex) ?? shuffleOrder.firstIndex
+    } else if currentIndex + 1 < tracks.count {
+      candidate = currentIndex + 1
+    } else {
+      candidate = repeatMode == .queue ? 0 : nil
+    }
+    guard let candidate, candidate != currentIndex else { return nil }
+    return candidate
+  }
+
+  /// The index `previous()` will move to. Symmetric to `nextIndex`.
+  private var previousIndex: Int? {
+    guard currentTrack != nil, tracks.count > 1 else { return nil }
+    let candidate: Int?
+    if shuffleEnabled {
+      candidate = shuffleOrder.getPreviousIndex(before: currentIndex) ?? shuffleOrder.lastIndex
+    } else if currentIndex - 1 >= 0 {
+      candidate = currentIndex - 1
+    } else {
+      candidate = repeatMode == .queue ? tracks.count - 1 : nil
+    }
+    guard let candidate, candidate != currentIndex else { return nil }
+    return candidate
+  }
+
   /// Step to the next track in the queue.
   func next() -> QueueNavigationResult {
     guard currentTrack != nil, !tracks.isEmpty else { return .noChange }
-
-    if tracks.count == 1 {
-      return repeatMode == .queue ? .sameTrackReplay : .noChange
-    }
-
-    var newIndex: Int?
-    if shuffleEnabled {
-      // Use shuffle order for navigation
-      newIndex = shuffleOrder.getNextIndex(after: currentIndex)
-      if newIndex == nil {
-        // Wrap to start of shuffle order unconditionally (same order, like Media3)
-        newIndex = shuffleOrder.firstIndex
-      }
-    } else {
-      // Sequential navigation
-      let nextIdx = currentIndex + 1
-      if nextIdx < tracks.count {
-        newIndex = nextIdx
-      } else if repeatMode == .queue {
-        newIndex = 0
-      }
-    }
-
-    if let newIndex, newIndex != currentIndex {
-      currentIndex = newIndex
+    if let nextIndex {
+      currentIndex = nextIndex
       return .trackChanged
     }
-    return .noChange
+    // No distinct next: single-track + repeat-all replays; otherwise a real end.
+    return tracks.count == 1 && repeatMode == .queue ? .sameTrackReplay : .noChange
   }
 
   /// Step to the previous track in the queue.
   func previous() -> QueueNavigationResult {
     guard currentTrack != nil, !tracks.isEmpty else { return .noChange }
-
-    if tracks.count == 1 {
-      return repeatMode == .queue ? .sameTrackReplay : .noChange
-    }
-
-    var newIndex: Int?
-    if shuffleEnabled {
-      // Use shuffle order for navigation
-      newIndex = shuffleOrder.getPreviousIndex(before: currentIndex)
-      if newIndex == nil {
-        // Wrap to end of shuffle order unconditionally (same order, like Media3)
-        newIndex = shuffleOrder.lastIndex
-      }
-    } else {
-      // Sequential navigation
-      let prevIdx = currentIndex - 1
-      if prevIdx >= 0 {
-        newIndex = prevIdx
-      } else if repeatMode == .queue {
-        newIndex = tracks.count - 1
-      }
-    }
-
-    if let newIndex, newIndex != currentIndex {
-      currentIndex = newIndex
+    if let previousIndex {
+      currentIndex = previousIndex
       return .trackChanged
     }
-    return .noChange
+    return tracks.count == 1 && repeatMode == .queue ? .sameTrackReplay : .noChange
   }
 
   /// Skip to a specific track in the queue.

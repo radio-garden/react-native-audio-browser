@@ -941,4 +941,25 @@ struct SkipAvailabilityTests {
     #expect(q.canNext == true)
     #expect(q.canPrevious == true) // wraps to last
   }
+
+  // Shuffle wraps the playback order unconditionally (even with repeat off), so
+  // next()/previous() always move when count > 1 — canNext/canPrevious must
+  // agree at the shuffle-order boundaries, not grey out.
+  @Test func shuffleEnd_repeatOff_canNextTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"))
+    q.shuffleEnabled = true
+    q.repeatMode = .off
+    while !q.isLastInPlaybackOrder { _ = q.next() } // advance to last in shuffle order
+    #expect(q.canNext == true) // next() wraps to the first shuffle position
+  }
+
+  @Test func shuffleStart_repeatOff_canPreviousTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"))
+    q.shuffleEnabled = true
+    q.repeatMode = .off
+    while !q.previousTracks.isEmpty { _ = q.previous() } // back to first in shuffle order
+    #expect(q.canPrevious == true) // previous() wraps to the last shuffle position
+  }
 }
