@@ -412,6 +412,60 @@ struct PlayWhenReadyTests {
   }
 }
 
+// MARK: - Skip availability (next/previous greying)
+
+@Suite("PlaybackCoordinator - skip availability")
+struct SkipAvailabilityCoordinatorTests {
+  private static func multiTrack() -> [Track] {
+    [
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
+    ]
+  }
+
+  @Test @MainActor
+  func singleTrack_disablesBoth() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue([Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1")])
+
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == false)
+  }
+
+  @Test @MainActor
+  func firstOfMany_nextOnly() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(Self.multiTrack())
+
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == true)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == false)
+  }
+
+  @Test @MainActor
+  func lastOfMany_previousOnly() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(Self.multiTrack())
+    try? c.skipTo(1)
+
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+
+  @Test @MainActor
+  func repeatAll_repushesAvailability_atEnd() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(Self.multiTrack())
+    try? c.skipTo(1) // last track
+    eh.updateSkipAvailabilityCalls.removeAll()
+
+    c.repeatMode = .queue
+
+    // repeat-all wraps, so Next becomes available again at the last track.
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == true)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+}
+
 // MARK: - handleCurrentTrackChanged
 
 @Suite("PlaybackCoordinator - handleCurrentTrackChanged")

@@ -51,6 +51,12 @@ class RemoteCommandController {
   var commandTargetPointers: [String: Any] = [:]
   private var enabledCommands: [RemoteCommand] = []
 
+  /// Whether there's a next/previous track to skip to. Stored so it survives
+  /// command (re)enable and iOS-16 command-center switches; the next/previous
+  /// commands are enabled in this state rather than unconditionally.
+  private var canNext = true
+  private var canPrevious = true
+
   /**
    Create a new RemoteCommandController.
 
@@ -156,12 +162,14 @@ class RemoteCommandController {
         key: command.key,
         handler: handleNextTrackCommand,
       )
+      center.nextTrackCommand.isEnabled = canNext
     case .previous:
       enableRemoteCommand(
         center.previousTrackCommand,
         key: command.key,
         handler: handlePreviousTrackCommand,
       )
+      center.previousTrackCommand.isEnabled = canPrevious
     case .changePlaybackPosition:
       enableRemoteCommand(
         center.changePlaybackPositionCommand,
@@ -250,6 +258,15 @@ class RemoteCommandController {
   /// Updates the shuffle mode state shown on CarPlay and lock screen
   func updateShuffleMode(_ enabled: Bool) {
     center.changeShuffleModeCommand.currentShuffleType = enabled.mpShuffleType
+  }
+
+  /// Greys out next/previous (lock screen / Control Center / CarPlay) when the
+  /// queue has nowhere to skip. Applied live when those commands are configured.
+  func setSkipAvailability(canNext: Bool, canPrevious: Bool) {
+    self.canNext = canNext
+    self.canPrevious = canPrevious
+    if enabledCommands.contains(.next) { center.nextTrackCommand.isEnabled = canNext }
+    if enabledCommands.contains(.previous) { center.previousTrackCommand.isEnabled = canPrevious }
   }
 
   // MARK: - Handlers

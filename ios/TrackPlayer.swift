@@ -354,6 +354,11 @@ class TrackPlayer {
 
   func enableRemoteCommands(_ commands: [RemoteCommand]) {
     remoteCommandController.enable(commands: commands)
+    // Apply current next/previous availability so re-/late-configured commands
+    // start in the correct enabled state (not unconditionally enabled).
+    remoteCommandController.setSkipAvailability(
+      canNext: coordinator.canNext, canPrevious: coordinator.canPrevious
+    )
   }
 
   func clear() {
@@ -590,6 +595,10 @@ extension TrackPlayer: PlaybackEffectHandler {
 
   func updateRemoteShuffleMode(_ enabled: Bool) {
     remoteCommandController.updateShuffleMode(enabled)
+  }
+
+  func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
+    remoteCommandController.setSkipAvailability(canNext: canNext, canPrevious: canPrevious)
   }
 }
 

@@ -878,3 +878,67 @@ struct DelegateTests {
     #expect(spy.calls.isEmpty)
   }
 }
+
+// MARK: - canNext / canPrevious
+
+@Suite("canNext / canPrevious")
+@MainActor
+struct SkipAvailabilityTests {
+  @Test func emptyQueue_bothFalse() {
+    let q = QueueManager()
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func singleTrack_repeatOff_bothFalse() {
+    let q = QueueManager()
+    q.setQueue(tracks("a"))
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func singleTrack_repeatQueue_bothFalse() {
+    let q = QueueManager()
+    q.setQueue(tracks("a"))
+    q.repeatMode = .queue
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func firstOfMany_nextOnly() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func middleOfMany_both() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func lastOfMany_repeatOff_previousOnly() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func lastOfMany_repeatQueue_bothTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
+    q.repeatMode = .queue
+    #expect(q.canNext == true) // wraps to first
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func firstOfMany_repeatQueue_bothTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
+    q.repeatMode = .queue
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == true) // wraps to last
+  }
+}

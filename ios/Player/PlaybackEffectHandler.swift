@@ -41,4 +41,7 @@ import NitroModules
   // Remote commands (behind protocol to avoid MediaPlayer import)
   func updateRemoteRepeatMode(_ mode: RepeatMode)
   func updateRemoteShuffleMode(_ enabled: Bool)
+  /// Greys out the remote/CarPlay next/previous buttons when the queue has no
+  /// next/previous track to skip to.
+  func updateSkipAvailability(canNext: Bool, canPrevious: Bool)
 }

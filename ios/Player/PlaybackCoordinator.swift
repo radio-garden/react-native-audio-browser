@@ -63,6 +63,8 @@ class PlaybackCoordinator {
   var nextTracks: [Track] { queue.nextTracks }
   var previousTracks: [Track] { queue.previousTracks }
   var isLastInPlaybackOrder: Bool { queue.isLastInPlaybackOrder }
+  var canNext: Bool { queue.canNext }
+  var canPrevious: Bool { queue.canPrevious }
 
   /// The repeat mode for the queue player.
   var repeatMode: RepeatMode {
@@ -71,6 +73,7 @@ class PlaybackCoordinator {
       guard queue.repeatMode != newValue else { return }
       queue.repeatMode = newValue
       effectHandler?.updateRemoteRepeatMode(newValue)
+      pushSkipAvailability() // repeat-all wrap changes next/previous availability
       callbacks?.playerDidChangeRepeatMode(
         RepeatModeChangedEvent(repeatMode: newValue)
       )
@@ -84,8 +87,15 @@ class PlaybackCoordinator {
       guard queue.shuffleEnabled != newValue else { return }
       queue.shuffleEnabled = newValue
       effectHandler?.updateRemoteShuffleMode(newValue)
+      pushSkipAvailability() // shuffle reorders playback → boundary changes
       callbacks?.playerDidChangeShuffleEnabled(newValue)
     }
+  }
+
+  /// Pushes current next/previous availability to the remote command center so
+  /// CarPlay / lock-screen grey out the buttons when there's nowhere to skip.
+  private func pushSkipAvailability() {
+    effectHandler?.updateSkipAvailability(canNext: queue.canNext, canPrevious: queue.canPrevious)
   }
 
   // MARK: - playWhenReady
@@ -503,6 +513,7 @@ class PlaybackCoordinator {
     callbacks?.playerDidChangeActiveTrack(eventData)
     lastTrack = currentTrack
     lastIndex = currentIndex
+    pushSkipAvailability() // position moved → next/previous availability may change
   }
 
   // MARK: - Seek Completion (called by TrackPlayer after AVPlayer seek lands)
@@ -527,6 +538,7 @@ class PlaybackCoordinator {
 extension PlaybackCoordinator: QueueManagerDelegate {
   func queueDidChangeTracks(_ tracks: [Track]) {
     callbacks?.playerDidChangeQueue(tracks)
+    pushSkipAvailability() // queue contents changed → boundaries moved
   }
 }
 

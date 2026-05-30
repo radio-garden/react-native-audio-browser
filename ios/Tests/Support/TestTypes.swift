@@ -105,6 +105,11 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
   func updateRemoteShuffleMode(_ enabled: Bool) {
     updateRemoteShuffleModeCalls.append(enabled)
   }
+
+  var updateSkipAvailabilityCalls: [(canNext: Bool, canPrevious: Bool)] = []
+  func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
+    updateSkipAvailabilityCalls.append((canNext, canPrevious))
+  }
 }
 
 // MARK: - Mock PlaybackCoordinatorCallbacks

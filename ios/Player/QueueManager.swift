@@ -101,6 +101,19 @@ class QueueManager {
     return currentIndex == tracks.count - 1
   }
 
+  /// Whether a `next()` would move to a distinct track — drives remote/CarPlay
+  /// next-button enablement. True mid-queue (in shuffle order), or at the end
+  /// only when repeat-all wraps to another track; false for an empty or
+  /// single-track queue, or a real end with no wrap.
+  var canNext: Bool {
+    !nextTracks.isEmpty || (repeatMode == .queue && tracks.count > 1)
+  }
+
+  /// Whether a `previous()` would move to a distinct track. Symmetric to `canNext`.
+  var canPrevious: Bool {
+    !previousTracks.isEmpty || (repeatMode == .queue && tracks.count > 1)
+  }
+
   // MARK: - Validation
 
   private func throwIfQueueEmpty() throws {
