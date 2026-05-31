@@ -31,11 +31,7 @@ enum SessionCategoryPolicy: String {
     case .longFormAudio:
       .longFormAudio
     case .longFormVideo:
-      if #available(iOS 13.0, *) {
-        .longFormVideo
-      } else {
-        .longFormAudio
-      }
+      .longFormVideo
     }
   }
 }
@@ -63,12 +59,7 @@ enum SessionCategoryMode: String {
     case .voiceChat:
       .voiceChat
     case .voicePrompt:
-      if #available(iOS 12.0, *) {
-        .voicePrompt
-      } else {
-        // Do Nothing
-        .default
-      }
+      .voicePrompt
     }
   }
 }

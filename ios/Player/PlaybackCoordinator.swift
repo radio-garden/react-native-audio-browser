@@ -116,18 +116,11 @@ class PlaybackCoordinator {
       if oldValue != playWhenReady {
         callbacks?.playerDidChangePlayWhenReady(playWhenReady)
         playingStateManager.update(playWhenReady: playWhenReady, state: state)
-        // Reflect the user's play/pause intent in the now-playing info center
-        // immediately. While loading, start/pause is deferred (above), and the
-        // state machine won't re-stamp the playback state until a later .ready/
-        // .playing transition — whose timing is flaky for live streams. Without
-        // this, selecting a track while paused leaves the lock-screen / CarPlay
-        // button stuck on "play" even though audio is playing.
-        //
-        // Only when the player is in an active state: stamping .playing from a
-        // terminal state (a play() from .error/.stopped whose reload may fail)
-        // would leave a phantom "playing" button, since terminal transitions
-        // don't re-stamp now-playing state. The reload's own .loading/.ready
-        // transition handles the now-playing update once it actually starts.
+        // Reflect play/pause intent immediately — even while the new item is
+        // still loading. Auto-publishing doesn't set the explicit now-playing
+        // playback state, and the player's timeControlStatus can't report
+        // "playing" yet during loading. Guarded to active states so a play()
+        // from a terminal state doesn't leave a phantom "playing" button.
         if playbackActive {
           effectHandler?.updateNowPlayingState(playWhenReady: playWhenReady)
         }
@@ -206,17 +199,12 @@ class PlaybackCoordinator {
     default: break
     }
 
-    // Now Playing updates for active states
-    if let effectHandler {
-      switch new {
-      case .ready, .loading, .playing, .paused:
-        effectHandler.updateNowPlayingValues(
-          duration: effectHandler.duration, rate: rate, currentTime: effectHandler.currentTime
-        )
-        effectHandler.updateNowPlayingState(playWhenReady: playWhenReady)
-      default: break
-      }
-    }
+    // Reflect play/pause (auto-publishing doesn't set the explicit now-playing
+    // playback state). Active states show the user's intent — incl. .loading, so
+    // the button flips to "playing" the moment a play-intent load begins; terminal
+    // states (error/stopped/ended) resolve to paused so the button never sticks on
+    // "playing" after playback fails or stops.
+    effectHandler?.updateNowPlayingState(playWhenReady: playbackActive && playWhenReady)
 
     progressUpdateManager.onPlaybackStateChanged(new)
     playingStateManager.update(playWhenReady: playWhenReady, state: new)
@@ -480,8 +468,7 @@ class PlaybackCoordinator {
       // Ensure playWhenReady is set before loading to preserve playback state
       playWhenReady = shouldContinuePlayback
 
-      effectHandler?.resetNowPlayingValues()
-      effectHandler?.loadNowPlayingMetadata(for: currentTrack, rate: rate)
+      effectHandler?.loadNowPlayingMetadata(for: currentTrack)
 
       // Validate source URL before handing off to MediaLoader
       guard let src = currentTrack.src else {
@@ -523,7 +510,6 @@ class PlaybackCoordinator {
       logger.debug("[loadSeek] seek landed at \(seconds)s (finished=\(didFinish)) → .ready")
       transition(.loadSeekCompleted)
     }
-    effectHandler?.setNowPlayingCurrentTime(seconds: seconds)
   }
 
   // MARK: - Progress Updates

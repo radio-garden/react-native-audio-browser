@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
   name: "AudioBrowser",
-  platforms: [.iOS(.v15), .macOS(.v13)],
+  platforms: [.iOS(.v16), .macOS(.v13)],
   targets: [
     .target(
       name: "AudioBrowserTestable",

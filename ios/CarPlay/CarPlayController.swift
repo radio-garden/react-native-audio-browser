@@ -395,7 +395,6 @@ public final class RNABCarPlayController: NSObject {
   /// Configures the assistant cell ("Ask Siri to Play Audio") on a template
   /// based on the `carPlaySiriListButton` property of the resolved content.
   private func configureAssistantCell(on template: CPListTemplate, from resolvedTrack: ResolvedTrack) {
-    guard #available(iOS 15.4, *) else { return }
     guard let position = resolvedTrack.carPlaySiriListButton else {
       template.assistantCellConfiguration = nil
       return

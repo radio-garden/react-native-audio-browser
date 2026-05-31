@@ -30,13 +30,14 @@ import NitroModules
   func seekToStart()
   func replayCurrentTrack()
 
-  // Now Playing (behind protocol to avoid MediaPlayer import)
-  func updateNowPlayingValues(duration: Double, rate: Float, currentTime: Double)
-  func updateNowPlayingState(playWhenReady: Bool)
-  func loadNowPlayingMetadata(for track: Track, rate: Float)
-  func resetNowPlayingValues()
+  // Now Playing (behind protocol to avoid MediaPlayer import).
+  // Elapsed/rate/duration are published automatically by MPNowPlayingSession;
+  // only metadata and the explicit play/pause state flow through here.
+  func loadNowPlayingMetadata(for track: Track)
   func clearNowPlaying()
-  func setNowPlayingCurrentTime(seconds: Double)
+  /// Reflects play/pause intent in the now-playing center. Auto-publishing fills
+  /// the info dict but not the explicit playback state CarPlay reads for its button.
+  func updateNowPlayingState(playWhenReady: Bool)
 
   // Remote commands (behind protocol to avoid MediaPlayer import)
   func updateRemoteRepeatMode(_ mode: RepeatMode)

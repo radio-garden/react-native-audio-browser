@@ -87,7 +87,7 @@ ios/
 │   └── JsonModels.swift              # JSON Codable models for API responses
 ├── Observer/
 │   ├── PlayerStateObserver.swift     # @MainActor KVO: AVPlayer.status, timeControlStatus
-│   ├── PlayerTimeObserver.swift      # Periodic & boundary time events
+│   ├── PlayerTimeObserver.swift      # Audio-start boundary observer
 │   ├── PlayerItemNotificationObserver.swift  # Track end/fail notifications
 │   └── PlayerItemPropertyObserver.swift      # Duration, metadata, buffering
 ├── Player/
@@ -99,9 +99,9 @@ ios/
 │   │                                 # Async metadata and playable loading
 │   │                                 # Notifies via MediaLoaderDelegate
 │   ├── MediaLoaderDelegate.swift     # @MainActor protocol: item ready, errors, metadata callbacks
-│   ├── NowPlayingUpdater.swift       # @MainActor MPNowPlayingInfoCenter updates
+│   ├── NowPlayingUpdater.swift       # @MainActor now-playing metadata updates
 │   │                                 # Track metadata, artwork loading (Kingfisher)
-│   │                                 # Playback values and playback state
+│   │                                 # (playback dynamics are auto-published by the session)
 │   ├── LoadSeekCoordinator.swift     # Deferred seek state machine (idle/pendingSeek/seekInFlight)
 │   │                                 # Handles seeks arriving before AVPlayerItem is ready
 │   ├── SeekCompletionHandler.swift   # @MainActor protocol: handleSeekCompleted(to:didFinish:)
@@ -110,10 +110,9 @@ ios/
 │   ├── PlaybackProgressUpdateManager.swift   # Timer-based periodic progress
 │   └── RetryManager.swift            # Exponential backoff with network-aware acceleration
 ├── NowPlayingInfo/
-│   ├── NowPlayingInfoController.swift # @MainActor MPNowPlayingInfoCenter
-│   │                                 # iOS 16+ auto publishing via MPNowPlayingSession
-│   │                                 # iOS 15.x manual fallback
-│   ├── NowPlayingInfoCenter.swift    # Protocol for testability
+│   ├── NowPlayingInfoController.swift # @MainActor now-playing metadata
+│   │                                 # auto publishing via MPNowPlayingSession;
+│   │                                 # metadata attached to AVPlayerItem.nowPlayingInfo
 │   ├── NowPlayingInfoKeyValue.swift  # Key-value protocol
 │   ├── MediaItemProperty.swift       # Track metadata properties
 │   └── NowPlayingInfoProperty.swift  # Playback state properties

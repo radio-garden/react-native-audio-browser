@@ -106,20 +106,6 @@ struct TransitionTests {
     #expect(cb.playbackChanges.count == 1)
     #expect(cb.errorEvents.count == 1)
   }
-
-  @Test @MainActor
-  func activeStates_updateNowPlayingValues() {
-    let (c, eh, _, _) = makeCoordinator()
-    eh.hasLoadedAsset = true
-    eh.duration = 120
-    eh.currentTime = 30
-
-    c.transition(.trackLoading)
-    #expect(eh.updateNowPlayingValuesCalls.count == 1)
-
-    c.transition(.bufferingSufficient)
-    #expect(eh.updateNowPlayingValuesCalls.count == 2)
-  }
 }
 
 // MARK: - emitStateChange
@@ -382,34 +368,6 @@ struct PlayWhenReadyTests {
     #expect(cb.playWhenReadyChanges.count == 1)
     #expect(cb.playWhenReadyChanges.first == true)
   }
-
-  @Test @MainActor
-  func change_updatesNowPlayingState_evenDuringLoading() {
-    let (c, eh, _, _) = makeCoordinator()
-    c.transition(.trackLoading) // mid track-load; start/pause is deferred
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    c.playWhenReady = true
-
-    // The lock-screen / CarPlay play-pause button reflects the user's play
-    // *intent* immediately, even while the new item is still loading — otherwise
-    // it stays stuck showing "paused" until a later state transition repairs it.
-    #expect(eh.updateNowPlayingStateCalls.last == true)
-  }
-
-  @Test @MainActor
-  func change_doesNotStampNowPlayingState_fromTerminalState() {
-    let (c, eh, _, _) = makeCoordinator()
-    c.transition(.errorOccurred(.playbackFailed)) // terminal, not playbackActive
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    c.playWhenReady = true
-
-    // Must NOT stamp .playing from a terminal state: the reload may fail and no
-    // active transition would repair a premature "playing", leaving a phantom
-    // playing button. The reload's own .loading/.ready transition stamps it.
-    #expect(eh.updateNowPlayingStateCalls.isEmpty)
-  }
 }
 
 // MARK: - Skip availability (next/previous greying)
@@ -518,25 +476,6 @@ struct HandleCurrentTrackChangedTests {
     #expect(event.index == 0)
     #expect(event.track?.id == "t1")
   }
-
-  @Test @MainActor
-  func selectingNewTrack_whileStopped_showsPlayingInNowPlaying() {
-    let (c, eh, _, _) = makeCoordinator()
-    let tracks = [
-      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
-      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
-    ]
-    c.setQueue(tracks) // loads t1 (playWhenReady defaults to false)
-    c.transition(.stopped) // user had paused/stopped
-    eh.updateNowPlayingStateCalls.removeAll()
-
-    // User selects another track, intending to play it.
-    try? c.skipTo(1, playWhenReady: true)
-
-    // Audio will play, so the now-playing button must end up "playing" — not the
-    // stale "paused" captured before playWhenReady flipped true during loading.
-    #expect(eh.updateNowPlayingStateCalls.last == true)
-  }
 }
 
 // MARK: - handleTrackDidPlayToEndTime
@@ -583,5 +522,83 @@ struct HandleTrackDidPlayToEndTimeTests {
     #expect(c.currentIndex == 1)
     #expect(cb.activeTrackChanges.count == 1)
     #expect(cb.activeTrackChanges.first?.track?.id == "t2")
+  }
+}
+
+@Suite("PlaybackCoordinator - now playing state")
+struct PlaybackCoordinatorNowPlayingStateTests {
+  @Test @MainActor
+  func change_updatesNowPlayingState_evenDuringLoading() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.transition(.trackLoading) // mid track-load; start/pause is deferred
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.playWhenReady = true
+
+    // The lock-screen / CarPlay play-pause button reflects the user's play
+    // *intent* immediately, even while the new item is still loading — otherwise
+    // it stays stuck showing "paused" until a later state transition repairs it.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
+
+  @Test @MainActor
+  func staysPlaying_whenBufferRunsDry() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.playWhenReady = true
+    c.transition(.avPlayerPlaying)
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.transition(.avPlayerWaiting) // buffer ran dry → .buffering
+
+    // A buffer underrun doesn't change play intent, so the button stays "playing"
+    // (the system shows buffering) — it must NOT flip to paused like a user pause.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
+
+  @Test @MainActor
+  func fallsBackToPaused_onError() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.playWhenReady = true
+    c.transition(.trackLoading) // active + intent → playing
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.transition(.errorOccurred(.playbackFailed))
+
+    // On a terminal error the button must fall back to paused — never stick on
+    // "playing" — even though playWhenReady is still true.
+    #expect(eh.updateNowPlayingStateCalls.last == false)
+  }
+
+  @Test @MainActor
+  func change_doesNotStampNowPlayingState_fromTerminalState() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.transition(.errorOccurred(.playbackFailed)) // terminal, not playbackActive
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.playWhenReady = true
+
+    // Must NOT stamp .playing from a terminal state: the reload may fail and no
+    // active transition would repair a premature "playing", leaving a phantom
+    // playing button. The reload's own .loading/.ready transition stamps it.
+    #expect(eh.updateNowPlayingStateCalls.isEmpty)
+  }
+
+  @Test @MainActor
+  func selectingNewTrack_whileStopped_showsPlayingInNowPlaying() {
+    let (c, eh, _, _) = makeCoordinator()
+    let tracks = [
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
+    ]
+    c.setQueue(tracks) // loads t1 (playWhenReady defaults to false)
+    c.transition(.stopped) // user had paused/stopped
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    // User selects another track, intending to play it.
+    try? c.skipTo(1, playWhenReady: true)
+
+    // Audio will play, so the now-playing button must end up "playing" — not the
+    // stale "paused" captured before playWhenReady flipped true during loading.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
   }
 }

@@ -73,26 +73,16 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
   func replayCurrentTrack() { replayCurrentTrackCallCount += 1 }
 
   // Now Playing
-  var updateNowPlayingValuesCalls: [(duration: Double, rate: Float, currentTime: Double)] = []
-  var updateNowPlayingStateCalls: [Bool] = []
-  var loadNowPlayingMetadataCalls: [(track: Track, rate: Float)] = []
-  var resetNowPlayingValuesCallCount = 0
+  var loadNowPlayingMetadataCalls: [Track] = []
   var clearNowPlayingCallCount = 0
-  var setNowPlayingCurrentTimeCalls: [Double] = []
+  var updateNowPlayingStateCalls: [Bool] = []
 
-  func updateNowPlayingValues(duration: Double, rate: Float, currentTime: Double) {
-    updateNowPlayingValuesCalls.append((duration, rate, currentTime))
+  func loadNowPlayingMetadata(for track: Track) {
+    loadNowPlayingMetadataCalls.append(track)
   }
+  func clearNowPlaying() { clearNowPlayingCallCount += 1 }
   func updateNowPlayingState(playWhenReady: Bool) {
     updateNowPlayingStateCalls.append(playWhenReady)
-  }
-  func loadNowPlayingMetadata(for track: Track, rate: Float) {
-    loadNowPlayingMetadataCalls.append((track, rate))
-  }
-  func resetNowPlayingValues() { resetNowPlayingValuesCallCount += 1 }
-  func clearNowPlaying() { clearNowPlayingCallCount += 1 }
-  func setNowPlayingCurrentTime(seconds: Double) {
-    setNowPlayingCurrentTimeCalls.append(seconds)
   }
 
   // Remote commands

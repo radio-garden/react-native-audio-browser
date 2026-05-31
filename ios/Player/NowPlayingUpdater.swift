@@ -19,7 +19,7 @@ final class NowPlayingUpdater {
     self.nowPlayingInfoController = nowPlayingInfoController
   }
 
-  func loadMetaValues(for track: Track, rate: Float) {
+  func loadMetaValues(for track: Track) {
     nowPlayingInfoController.set(keyValues: [
       // `artist` is the now-playing secondary line (maps to the platform artist
       // slot). For channels the server sets it to the canonical "{place},
@@ -28,32 +28,9 @@ final class NowPlayingUpdater {
       MediaItemProperty.artist(track.artist),
       MediaItemProperty.title(track.title),
       MediaItemProperty.albumTitle(track.album),
-      NowPlayingInfoProperty.playbackRate(Double(rate)),
       NowPlayingInfoProperty.isLiveStream(track.live),
     ])
     loadArtwork(for: track)
-  }
-
-  func updatePlaybackValues(duration: Double, rate: Float, currentTime: Double) {
-    logger.debug("updatePlaybackValues: duration=\(duration), rate=\(rate), currentTime=\(currentTime)")
-    nowPlayingInfoController.set(keyValues: [
-      MediaItemProperty.duration(duration),
-      NowPlayingInfoProperty.playbackRate(Double(rate)),
-      NowPlayingInfoProperty.elapsedPlaybackTime(currentTime),
-    ])
-  }
-
-  /// Separate from playbackRate — required for CarPlay to show correct play/pause button.
-  func updatePlaybackState(playWhenReady: Bool) {
-    let state: MPNowPlayingPlaybackState = playWhenReady ? .playing : .paused
-    logger.debug("updatePlaybackState: \(state.rawValue) (playWhenReady=\(playWhenReady))")
-    nowPlayingInfoController.setPlaybackState(state)
-  }
-
-  func setCurrentTime(seconds: Double) {
-    nowPlayingInfoController.set(
-      keyValue: NowPlayingInfoProperty.elapsedPlaybackTime(seconds),
-    )
   }
 
   // MARK: - Private

@@ -52,12 +52,8 @@ class TrackPlayer {
   )
 
   private lazy var playerTimeObserver: PlayerTimeObserver = .init(
-    periodicObserverTimeInterval: CMTime(seconds: 1, preferredTimescale: 1000),
     onAudioDidStart: { [weak self] in
       self?.coordinator.audioDidStart()
-    },
-    onSecondElapsed: { [weak self] seconds in
-      self?.nowPlayingUpdater.setCurrentTime(seconds: seconds)
     },
   )
 
@@ -222,7 +218,6 @@ class TrackPlayer {
     set {
       coordinator.rate = newValue
       avPlayer.rate = newValue
-      nowPlayingUpdater.updatePlaybackValues(duration: duration, rate: newValue, currentTime: currentTime)
     }
   }
 
@@ -414,7 +409,6 @@ class TrackPlayer {
   private func recreateAVPlayer() {
     coordinator.playbackError = nil
     playerTimeObserver.unregisterForBoundaryTimeEvents()
-    playerTimeObserver.unregisterForPeriodicEvents()
     playerObserver.stopObserving()
     stopObservingAVPlayerItem()
     clearCurrentAVItem()
@@ -433,16 +427,13 @@ class TrackPlayer {
 
     playerTimeObserver.avPlayer = avPlayer
     playerTimeObserver.registerForBoundaryTimeEvents()
-    playerTimeObserver.registerForPeriodicTimeEvents()
 
     nowPlayingInfoController.linkPlayer(avPlayer)
 
     if playWhenReady {
       startPlayback()
     } else {
-      if #available(iOS 16.0, *) {
-        avPlayer.defaultRate = rate
-      }
+      avPlayer.defaultRate = rate
     }
   }
 
@@ -509,9 +500,6 @@ class TrackPlayer {
   func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
     if loadSeekCoordinator.seekDidComplete(on: avPlayer, delegate: self), state == .loading {
       coordinator.handleSeekCompleted(to: seconds, didFinish: didFinish)
-    } else {
-      // Not a load-seek, just update now playing
-      nowPlayingUpdater.setCurrentTime(seconds: seconds)
     }
     callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
   }
@@ -558,35 +546,16 @@ extension TrackPlayer: PlaybackEffectHandler {
     }
   }
 
-  func updateNowPlayingValues(duration: Double, rate: Float, currentTime: Double) {
-    nowPlayingUpdater.updatePlaybackValues(duration: duration, rate: rate, currentTime: currentTime)
-  }
-
   func updateNowPlayingState(playWhenReady: Bool) {
-    nowPlayingUpdater.updatePlaybackState(playWhenReady: playWhenReady)
+    nowPlayingInfoController.setPlaybackState(playing: playWhenReady)
   }
 
-  func loadNowPlayingMetadata(for track: Track, rate: Float) {
-    // Reset playback values without updating, because that will happen in
-    // the nowPlayingUpdater.loadMetaValues call straight after:
-    nowPlayingInfoController.setWithoutUpdate(keyValues: [
-      MediaItemProperty.duration(nil),
-      NowPlayingInfoProperty.playbackRate(nil),
-      NowPlayingInfoProperty.elapsedPlaybackTime(nil),
-    ])
-    nowPlayingUpdater.loadMetaValues(for: track, rate: rate)
-  }
-
-  func resetNowPlayingValues() {
-    // Intentionally empty — loadNowPlayingMetadata handles the reset
+  func loadNowPlayingMetadata(for track: Track) {
+    nowPlayingUpdater.loadMetaValues(for: track)
   }
 
   func clearNowPlaying() {
     nowPlayingInfoController.clear()
-  }
-
-  func setNowPlayingCurrentTime(seconds: Double) {
-    nowPlayingUpdater.setCurrentTime(seconds: seconds)
   }
 
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
