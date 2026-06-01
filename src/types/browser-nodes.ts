@@ -110,8 +110,26 @@ export interface Track {
   artworkCarPlayTinted?: boolean
 
   // type?: TrackType
+  /** Primary line shown for this item, in both browse lists and now-playing. */
   title: string
+
+  /**
+   * Secondary line shown for this item in **browse lists** (CarPlay list detail
+   * text, Android Auto list subtitle). Free-form, per-context display text — set
+   * it to whatever the row should show, or leave it unset for a blank line. It is
+   * *not* shown on the now-playing screen; use {@link artist} for that.
+   */
   subtitle?: string
+
+  /**
+   * Secondary line shown on the **now-playing / lock-screen** UI, and the value
+   * sent to Bluetooth / car head units — it maps to the platform's "artist"
+   * metadata slot.
+   *
+   * Distinct from {@link subtitle}: `artist` drives the now-playing line,
+   * `subtitle` drives browse-list rows. Neither falls back to the other — set
+   * each for the surface you want it on.
+   */
   artist?: string
   album?: string
   description?: string
