@@ -979,6 +979,10 @@ class Player(internal val context: Context) {
   fun play() {
     exoPlayer.play()
     if (currentTrack != null) {
+      // No-op unless the player is STATE_IDLE (ExoPlayer.prepare early-returns
+      // otherwise), so this only reconnects after a stop() or error and never
+      // re-buffers a healthy stream. Reconnecting is also how live streams
+      // rejoin the live edge on resume.
       exoPlayer.prepare()
     }
   }
