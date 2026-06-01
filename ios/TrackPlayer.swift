@@ -586,8 +586,20 @@ extension TrackPlayer {
     coordinator.replace(index, track)
   }
 
-  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil, sourcePath: String? = nil) {
-    coordinator.setQueue(newTracks, initialIndex: initialIndex, playWhenReady: playWhenReady, sourcePath: sourcePath)
+  func setQueue(
+    _ newTracks: [Track],
+    initialIndex: Int = 0,
+    startPositionMs: Double? = nil,
+    playWhenReady: Bool? = nil,
+    sourcePath: String? = nil
+  ) {
+    coordinator.setQueue(
+      newTracks,
+      initialIndex: initialIndex,
+      startPositionMs: startPositionMs,
+      playWhenReady: playWhenReady,
+      sourcePath: sourcePath
+    )
   }
 
   func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {

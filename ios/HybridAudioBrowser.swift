@@ -786,16 +786,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws {
-    try onMainActor {
+    onMainActor {
       guard let player else { return }
-      player.clear()
-      player.add(tracks)
-      if let index = startIndex, index >= 0 {
-        try player.skipTo(Int(index))
-      }
-      if let position = startPositionMs {
-        player.seekTo(position / 1000.0)
-      }
+      player.setQueue(
+        tracks,
+        initialIndex: startIndex.map { Int($0) } ?? 0,
+        startPositionMs: startPositionMs
+      )
     }
   }
 

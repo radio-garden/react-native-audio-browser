@@ -352,7 +352,13 @@ class PlaybackCoordinator {
     queue.replace(index, track)
   }
 
-  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil, sourcePath: String? = nil) {
+  func setQueue(
+    _ newTracks: [Track],
+    initialIndex: Int = 0,
+    startPositionMs: Double? = nil,
+    playWhenReady: Bool? = nil,
+    sourcePath: String? = nil
+  ) {
     guard !newTracks.isEmpty else {
       clear()
       return
@@ -360,6 +366,12 @@ class PlaybackCoordinator {
     handlePlayWhenReady(playWhenReady) {
       queue.setQueue(newTracks, initialIndex: initialIndex, sourcePath: sourcePath)
       handleCurrentTrackChanged()
+      // Start position is applied as part of the load: captured as a pending
+      // seek that runs once the item is ready, deferring the ready/play
+      // transition until it lands (no start-at-0 flash).
+      if let ms = startPositionMs, ms > 0 {
+        loadSeekCoordinator.capture(position: ms / 1000)
+      }
     }
   }
 
