@@ -115,11 +115,18 @@ export function skipToPrevious(initialPosition?: number): void {
 }
 
 /**
- * Sets the queue.
+ * Sets the queue and starts playback.
  * @param tracks - The tracks to set as the queue.
+ * @param startIndex - (Optional) The index of the track to start playback from.
+ * @param startPositionMs - (Optional) The position in milliseconds to start playback from.
  */
-export function setQueue(tracks: Track[]): void {
-  nativeBrowser.setQueue(tracks)
+export function setQueue(
+  tracks: Track[],
+  startIndex?: number,
+  startPositionMs?: number
+): void {
+  nativeBrowser.setQueue(tracks, startIndex, startPositionMs)
+  nativeBrowser.play()
 }
 
 // MARK: - Getters
