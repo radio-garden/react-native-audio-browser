@@ -883,10 +883,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       rating: nil,
     )
 
-    // Update NowPlayingInfoCenter with override values
+    // Update NowPlayingInfoCenter with override values (one publish, not two).
     if let override {
-      player?.nowPlayingInfoController.set(keyValue: MediaItemProperty.title(override.title ?? track.title))
-      player?.nowPlayingInfoController.set(keyValue: MediaItemProperty.artist(override.artist ?? track.artist))
+      player?.nowPlayingInfoController.set(keyValues: [
+        MediaItemProperty.title(override.title ?? track.title),
+        MediaItemProperty.artist(override.artist ?? track.artist),
+      ])
     }
 
     onNowPlayingChanged(nowPlaying)

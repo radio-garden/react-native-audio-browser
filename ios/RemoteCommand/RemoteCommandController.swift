@@ -57,6 +57,13 @@ class RemoteCommandController {
   private var canNext = true
   private var canPrevious = true
 
+  /// Shuffle/repeat display state, stored so it survives a command-center switch
+  /// (iOS-16 MPNowPlayingSession re-creation). A new center defaults these to
+  /// off; without re-applying, the CarPlay/lock-screen shuffle & repeat buttons
+  /// flash off on every switch.
+  private var shuffleEnabled = false
+  private var repeatMode: RepeatMode = .off
+
   /**
    Create a new RemoteCommandController.
 
@@ -95,6 +102,11 @@ class RemoteCommandController {
 
     // Re-enable commands on the new center
     enable(commands: commandsToReEnable)
+
+    // Restore shuffle/repeat display state — the new center defaults them to off,
+    // so without this the shuffle & repeat buttons flash off on every switch.
+    center.changeShuffleModeCommand.currentShuffleType = shuffleEnabled.mpShuffleType
+    center.changeRepeatModeCommand.currentRepeatType = repeatMode.mpRepeatType
 
     logger.info("Switched command center, re-enabled \(commandsToReEnable.count) commands")
   }
@@ -252,11 +264,13 @@ class RemoteCommandController {
 
   /// Updates the repeat mode state shown on CarPlay and lock screen
   func updateRepeatMode(_ mode: RepeatMode) {
+    repeatMode = mode
     center.changeRepeatModeCommand.currentRepeatType = mode.mpRepeatType
   }
 
   /// Updates the shuffle mode state shown on CarPlay and lock screen
   func updateShuffleMode(_ enabled: Bool) {
+    shuffleEnabled = enabled
     center.changeShuffleModeCommand.currentShuffleType = enabled.mpShuffleType
   }
 

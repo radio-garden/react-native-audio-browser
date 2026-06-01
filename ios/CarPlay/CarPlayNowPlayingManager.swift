@@ -20,6 +20,16 @@ final class CarPlayNowPlayingManager {
   private weak var audioBrowser: HybridAudioBrowser?
   private var nowPlayingObserver: NowPlayingObserver?
   private weak var upNextTemplate: CPListTemplate?
+  /// The favorited state currently reflected in the now-playing heart, so we can
+  /// skip rebuilding the buttons array when it hasn't changed — every
+  /// `updateNowPlayingButtons` call re-renders ALL buttons (flashing e.g. the
+  /// shuffle button), and the favorite is otherwise rebuilt on every track change.
+  private var displayedFavorited: Bool?
+  /// The button *types* currently built into the template, so setupNowPlayingButtons
+  /// can skip a full rebuild when the set is unchanged — `onConfigChanged` fires on
+  /// unrelated config churn (queue/content changes) and a rebuild recreates every
+  /// button, flashing e.g. the shuffle button.
+  private var builtButtonTypes: [CarPlayNowPlayingButton]?
 
   /// Convenience accessor for browser config
   private var config: BrowserConfig {
@@ -68,10 +78,16 @@ final class CarPlayNowPlayingManager {
   /// Sets up custom Now Playing buttons based on configuration
   func setupNowPlayingButtons() {
     let buttons = config.carPlayNowPlayingButtons
+    // Skip a full rebuild when the button set is unchanged (it recreates every
+    // button and flashes e.g. the shuffle button); onConfigChanged fires on
+    // unrelated config churn with the same buttons.
+    guard buttons != builtButtonTypes else { return }
+    builtButtonTypes = buttons
     logger.info("Setting up Now Playing buttons: \(buttons.map(\.stringValue))")
 
     guard !buttons.isEmpty else {
       CPNowPlayingTemplate.shared.updateNowPlayingButtons([])
+      displayedFavorited = nil
       return
     }
 
@@ -108,6 +124,9 @@ final class CarPlayNowPlayingManager {
     }
 
     CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
+    // The favorite button (if any) was just built from the current state; record
+    // it so updateFavoriteButtonState only rebuilds on an actual change.
+    displayedFavorited = buttons.contains(.favorite) ? isActiveTrackFavorited : nil
     logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
   }
 
@@ -129,6 +148,9 @@ final class CarPlayNowPlayingManager {
   func updateFavoriteButtonState() {
     guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
     let favorited = isActiveTrackFavorited
+    // Skip the rebuild when the heart wouldn't change — replacing the buttons
+    // array re-renders every button (the shuffle button flashes otherwise).
+    guard favorited != displayedFavorited else { return }
     let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
 
     for (index, button) in buttons.enumerated() {
@@ -142,6 +164,7 @@ final class CarPlayNowPlayingManager {
         var updatedButtons = buttons
         updatedButtons[index] = newFavoriteButton
         CPNowPlayingTemplate.shared.updateNowPlayingButtons(updatedButtons)
+        displayedFavorited = favorited
         break
       }
     }
