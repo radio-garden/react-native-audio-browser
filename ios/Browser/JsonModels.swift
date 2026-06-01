@@ -23,6 +23,7 @@ struct JsonImageRowItem: Codable {
 
 /// JSON model for resolved track (container with children).
 struct JsonResolvedTrack: Codable {
+  let id: String?
   let url: String
   let title: String
   let subtitle: String?
@@ -41,6 +42,7 @@ struct JsonResolvedTrack: Codable {
   let carPlaySiriListButton: String?
 
   init(
+    id: String? = nil,
     url: String,
     title: String,
     subtitle: String? = nil,
@@ -74,11 +76,13 @@ struct JsonResolvedTrack: Codable {
     self.groupTitle = groupTitle
     self.live = live
     self.carPlaySiriListButton = carPlaySiriListButton
+    self.id = id
   }
 }
 
 /// JSON model for individual tracks.
 struct JsonTrack: Codable {
+  let id: String?
   let url: String?
   let title: String
   let subtitle: String?
@@ -96,6 +100,7 @@ struct JsonTrack: Codable {
   let imageRow: [JsonImageRowItem]?
 
   init(
+    id: String? = nil,
     url: String? = nil,
     title: String,
     subtitle: String? = nil,
@@ -127,6 +132,7 @@ struct JsonTrack: Codable {
     self.groupTitle = groupTitle
     self.live = live
     self.imageRow = imageRow
+    self.id = id
   }
 }
 
@@ -152,6 +158,7 @@ extension JsonImageRowItem {
 extension JsonResolvedTrack {
   func toNitro() -> ResolvedTrack {
     ResolvedTrack(
+      id: id,
       url: url,
       children: children?.map { $0.toNitro() },
       carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
@@ -179,6 +186,7 @@ extension JsonResolvedTrack {
 extension JsonTrack {
   func toNitro() -> Track {
     Track(
+      id: id,
       url: url,
       src: src,
       artwork: artwork,

@@ -372,7 +372,7 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    *
    * Called for each track to generate the final request configuration.
    * Receives the full Track object, allowing URL generation based on
-   * track metadata (artist, album, src, etc.).
+   * track metadata (id, artist, album, src, etc.).
    *
    * The returned config is merged with base configs, then passed to
    * `transform` if provided.
@@ -396,7 +396,7 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * Per-track request resolution callback.
    *
    * Called for each track to generate the request configuration based on
-   * track metadata (artist, album, src, etc.).
+   * track metadata (id, artist, album, src, etc.).
    *
    * The returned config is merged with base configs, then passed to
    * `transform` if provided.

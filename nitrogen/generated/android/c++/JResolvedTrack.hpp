@@ -52,6 +52,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> children = this->getFieldValue(fieldChildren);
       static const auto fieldCarPlaySiriListButton = clazz->getField<JCarPlaySiriListButtonPosition>("carPlaySiriListButton");
       jni::local_ref<JCarPlaySiriListButtonPosition> carPlaySiriListButton = this->getFieldValue(fieldCarPlaySiriListButton);
+      static const auto fieldId = clazz->getField<jni::JString>("id");
+      jni::local_ref<jni::JString> id = this->getFieldValue(fieldId);
       static const auto fieldSrc = clazz->getField<jni::JString>("src");
       jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
       static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
@@ -99,6 +101,7 @@ namespace margelo::nitro::audiobrowser {
           return __vector;
         }()) : std::nullopt,
         carPlaySiriListButton != nullptr ? std::make_optional(carPlaySiriListButton->toCpp()) : std::nullopt,
+        id != nullptr ? std::make_optional(id->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
         artworkSource != nullptr ? std::make_optional(artworkSource->toCpp()) : std::nullopt,
@@ -134,7 +137,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JResolvedTrack::javaobject> fromCpp(const ResolvedTrack& value) {
-      using JSignature = JResolvedTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>, jni::alias_ref<JCarPlaySiriListButtonPosition>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JImageSource>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JImageRowItem>>);
+      using JSignature = JResolvedTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>, jni::alias_ref<JCarPlaySiriListButtonPosition>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JImageSource>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JImageRowItem>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -151,6 +154,7 @@ namespace margelo::nitro::audiobrowser {
           return __array;
         }() : nullptr,
         value.carPlaySiriListButton.has_value() ? JCarPlaySiriListButtonPosition::fromCpp(value.carPlaySiriListButton.value()) : nullptr,
+        value.id.has_value() ? jni::make_jstring(value.id.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
         value.artworkSource.has_value() ? JImageSource::fromCpp(value.artworkSource.value()) : nullptr,

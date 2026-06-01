@@ -42,6 +42,8 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     Track toCpp() const {
       static const auto clazz = javaClassStatic();
+      static const auto fieldId = clazz->getField<jni::JString>("id");
+      jni::local_ref<jni::JString> id = this->getFieldValue(fieldId);
       static const auto fieldUrl = clazz->getField<jni::JString>("url");
       jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
       static const auto fieldSrc = clazz->getField<jni::JString>("src");
@@ -79,6 +81,7 @@ namespace margelo::nitro::audiobrowser {
       static const auto fieldImageRow = clazz->getField<jni::JArrayClass<JImageRowItem>>("imageRow");
       jni::local_ref<jni::JArrayClass<JImageRowItem>> imageRow = this->getFieldValue(fieldImageRow);
       return Track(
+        id != nullptr ? std::make_optional(id->toStdString()) : std::nullopt,
         url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
@@ -115,11 +118,12 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JTrack::javaobject> fromCpp(const Track& value) {
-      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JImageSource>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JImageRowItem>>);
+      using JSignature = JTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JImageSource>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JImageRowItem>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
+        value.id.has_value() ? jni::make_jstring(value.id.value()) : nullptr,
         value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,

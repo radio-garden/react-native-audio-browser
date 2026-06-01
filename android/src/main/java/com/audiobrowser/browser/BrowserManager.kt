@@ -160,26 +160,7 @@ class BrowserManager {
 
     val isFavorited = isFavorite(src, match)
 
-    return Track(
-      url = track.url,
-      src = track.src,
-      artwork = track.artwork,
-      artworkSource = track.artworkSource,
-      artworkCarPlayTinted = track.artworkCarPlayTinted,
-      title = track.title,
-      subtitle = track.subtitle,
-      artist = track.artist,
-      album = track.album,
-      description = track.description,
-      genre = track.genre,
-      duration = track.duration,
-      style = track.style,
-      childrenStyle = track.childrenStyle,
-      favorited = isFavorited,
-      groupTitle = track.groupTitle,
-      live = track.live,
-      imageRow = track.imageRow,
-    )
+    return track.copy(favorited = isFavorited)
   }
 
   /** Whether [src] is favorited under the given match mode. */

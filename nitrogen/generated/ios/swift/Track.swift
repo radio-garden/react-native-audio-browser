@@ -18,8 +18,14 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
+  init(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
     self.init({ () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = id {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
@@ -130,6 +136,18 @@ public extension Track {
     }())
   }
 
+  @inline(__always)
+  var id: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__id) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__id)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
   @inline(__always)
   var url: String? {
     return { () -> String? in

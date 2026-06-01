@@ -815,27 +815,7 @@ class Player(internal val context: Context) {
     if (index == C.INDEX_UNSET) return
 
     // Create updated Track with new favorited state
-    val updatedTrack =
-      Track(
-        url = currentTrack.url,
-        src = currentTrack.src,
-        artwork = currentTrack.artwork,
-        artworkSource = currentTrack.artworkSource,
-        artworkCarPlayTinted = currentTrack.artworkCarPlayTinted,
-        title = currentTrack.title,
-        subtitle = currentTrack.subtitle,
-        artist = currentTrack.artist,
-        album = currentTrack.album,
-        description = currentTrack.description,
-        genre = currentTrack.genre,
-        duration = currentTrack.duration,
-        style = currentTrack.style,
-        childrenStyle = currentTrack.childrenStyle,
-        favorited = favorited,
-        groupTitle = currentTrack.groupTitle,
-        live = currentTrack.live,
-        imageRow = currentTrack.imageRow,
-      )
+    val updatedTrack = currentTrack.copy(favorited = favorited)
 
     // Use buildUpon() on the existing MediaItem to update only the metadata
     // This preserves internal references and avoids playback interruption

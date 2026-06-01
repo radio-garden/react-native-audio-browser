@@ -20,6 +20,7 @@ data class JsonImageRowItem(
 
 @Serializable
 data class JsonResolvedTrack(
+  val id: String? = null,
   val url: String,
   val title: String,
   val subtitle: String? = null,
@@ -41,6 +42,7 @@ data class JsonResolvedTrack(
 
 @Serializable
 data class JsonTrack(
+  val id: String? = null,
   val url: String? = null,
   val title: String,
   val subtitle: String? = null,
@@ -87,6 +89,7 @@ private fun JsonImageRowItem.toNitro(): ImageRowItem {
 
 fun JsonResolvedTrack.toNitro(): ResolvedTrack {
   return ResolvedTrack(
+    id = id,
     url = url,
     children = children?.map { it.toNitro() }?.toTypedArray(),
     carPlaySiriListButton = carPlaySiriListButton.toCarPlaySiriListButtonPosition(),
@@ -112,6 +115,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
 
 fun JsonTrack.toNitro(): Track {
   return Track(
+    id = id,
     url = url,
     title = title,
     subtitle = subtitle,

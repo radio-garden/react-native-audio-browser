@@ -529,6 +529,7 @@ final class BrowserManager {
         var resolvedItems: [ImageRowItem] = []
         for item in imageRowItems {
           let itemTrack = Track(
+            id: nil,
             url: item.url,
             src: nil,
             artwork: item.artwork,

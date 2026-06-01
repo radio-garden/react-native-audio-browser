@@ -18,7 +18,7 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
+  init(url: String, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
     self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
@@ -34,6 +34,12 @@ public extension ResolvedTrack {
     }(), { () -> bridge.std__optional_CarPlaySiriListButtonPosition_ in
       if let __unwrappedValue = carPlaySiriListButton {
         return bridge.create_std__optional_CarPlaySiriListButtonPosition_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = id {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -162,6 +168,18 @@ public extension ResolvedTrack {
   @inline(__always)
   var carPlaySiriListButton: CarPlaySiriListButtonPosition? {
     return self.__carPlaySiriListButton.value
+  }
+  
+  @inline(__always)
+  var id: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__id) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__id)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)

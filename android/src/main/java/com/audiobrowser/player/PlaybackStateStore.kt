@@ -139,6 +139,7 @@ class PlaybackStateStore(private val player: Player) {
   private fun trackToJson(track: Track): String =
     JSONObject()
       .apply {
+        put("id", track.id)
         put("url", track.url)
         put("src", track.src)
         put("title", track.title)
@@ -161,6 +162,7 @@ class PlaybackStateStore(private val player: Player) {
     runCatching {
         val obj = JSONObject(json)
         Track(
+          id = obj.optString("id").takeIf { it.isNotEmpty() },
           url = obj.optString("url").takeIf { it.isNotEmpty() },
           src = obj.optString("src").takeIf { it.isNotEmpty() },
           title = obj.getString("title"),

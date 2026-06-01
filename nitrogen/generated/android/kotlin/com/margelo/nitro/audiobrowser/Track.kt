@@ -19,6 +19,9 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class Track(
   @DoNotStrip
   @Keep
+  val id: String?,
+  @DoNotStrip
+  @Keep
   val url: String?,
   @DoNotStrip
   @Keep
@@ -82,8 +85,8 @@ data class Track(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): Track {
-      return Track(url, src, artwork, artworkSource, artworkCarPlayTinted, title, subtitle, artist, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
+    private fun fromCpp(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): Track {
+      return Track(id, url, src, artwork, artworkSource, artworkCarPlayTinted, title, subtitle, artist, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
     }
   }
 }

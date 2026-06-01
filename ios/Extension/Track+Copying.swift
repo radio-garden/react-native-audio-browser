@@ -10,6 +10,7 @@ extension Track {
   ///
   /// `title` uses single-optional (`String?`) since it is non-optional on Track.
   func copying(
+    id: String?? = nil,
     url: String?? = nil,
     src: String?? = nil,
     artwork: String?? = nil,
@@ -30,6 +31,7 @@ extension Track {
     imageRow: [ImageRowItem]?? = nil
   ) -> Track {
     Track(
+      id: id ?? self.id,
       url: url ?? self.url,
       src: src ?? self.src,
       artwork: artwork ?? self.artwork,
