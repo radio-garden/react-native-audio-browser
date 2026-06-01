@@ -983,6 +983,13 @@ class Player(internal val context: Context) {
     }
   }
 
+  /** Jump to the live edge (default position) of a live item; no-op otherwise. */
+  fun seekToLiveEdge() {
+    if (exoPlayer.isCurrentMediaItemLive) {
+      exoPlayer.seekToDefaultPosition()
+    }
+  }
+
   /**
    * Executes a search and plays the results. Used for voice commands with structured search
    * parameters.

@@ -182,6 +182,12 @@ export interface AudioBrowser extends HybridObject<{
   getPlayWhenReady(): boolean
   seekTo(position: number): void
   seekBy(offset: number): void
+  /**
+   * Jump to the live edge of the current track. No-op for non-live tracks.
+   * Live with a seekable window (HLS): seeks to the window end. Live without a
+   * window (non-seekable, e.g. ICY): reconnects to rejoin live.
+   */
+  seekToLiveEdge(): void
   setVolume(level: number): void
   getVolume(): number
   setRate(rate: number): void

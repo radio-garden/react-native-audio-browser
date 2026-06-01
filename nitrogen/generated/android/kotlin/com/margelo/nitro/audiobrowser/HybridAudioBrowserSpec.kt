@@ -934,6 +934,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun seekToLiveEdge(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun setVolume(level: Double): Unit
   
   @DoNotStrip

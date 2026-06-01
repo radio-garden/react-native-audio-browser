@@ -1602,6 +1602,10 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* offset */)>("seekBy");
     method(_javaPart, offset);
   }
+  void JHybridAudioBrowserSpec::seekToLiveEdge() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("seekToLiveEdge");
+    method(_javaPart);
+  }
   void JHybridAudioBrowserSpec::setVolume(double level) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* level */)>("setVolume");
     method(_javaPart, level);

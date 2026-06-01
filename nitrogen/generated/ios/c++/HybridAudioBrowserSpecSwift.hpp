@@ -900,6 +900,12 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void seekToLiveEdge() override {
+      auto __result = _swiftPart.seekToLiveEdge();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline void setVolume(double level) override {
       auto __result = _swiftPart.setVolume(std::forward<decltype(level)>(level));
       if (__result.hasError()) [[unlikely]] {

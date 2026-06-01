@@ -195,6 +195,7 @@ namespace margelo::nitro::audiobrowser {
     bool getPlayWhenReady() override;
     void seekTo(double position) override;
     void seekBy(double offset) override;
+    void seekToLiveEdge() override;
     void setVolume(double level) override;
     double getVolume() override;
     void setRate(double rate) override;

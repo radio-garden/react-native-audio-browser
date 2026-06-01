@@ -156,6 +156,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getPlayWhenReady", &HybridAudioBrowserSpec::getPlayWhenReady);
       prototype.registerHybridMethod("seekTo", &HybridAudioBrowserSpec::seekTo);
       prototype.registerHybridMethod("seekBy", &HybridAudioBrowserSpec::seekBy);
+      prototype.registerHybridMethod("seekToLiveEdge", &HybridAudioBrowserSpec::seekToLiveEdge);
       prototype.registerHybridMethod("setVolume", &HybridAudioBrowserSpec::setVolume);
       prototype.registerHybridMethod("getVolume", &HybridAudioBrowserSpec::getVolume);
       prototype.registerHybridMethod("setRate", &HybridAudioBrowserSpec::setRate);

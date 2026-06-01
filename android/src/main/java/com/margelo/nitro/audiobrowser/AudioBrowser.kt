@@ -725,6 +725,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     player.seekBy((offset * 1000).toLong(), TimeUnit.MILLISECONDS)
   }
 
+  override fun seekToLiveEdge() = runBlockingOnMain { player.seekToLiveEdge() }
+
   override fun setVolume(level: Double) = runBlockingOnMain { player.volume = level.toFloat() }
 
   override fun getVolume(): Double = runBlockingOnMain { player.volume.toDouble() }

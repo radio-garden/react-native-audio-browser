@@ -94,6 +94,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getPlayWhenReady() throws -> Bool
   func seekTo(position: Double) throws -> Void
   func seekBy(offset: Double) throws -> Void
+  func seekToLiveEdge() throws -> Void
   func setVolume(level: Double) throws -> Void
   func getVolume() throws -> Double
   func setRate(rate: Double) throws -> Void

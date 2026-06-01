@@ -604,6 +604,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onMainActor { player?.seekBy(offset) }
   }
 
+  public func seekToLiveEdge() throws {
+    onMainActor { player?.seekToLiveEdge() }
+  }
+
   public func setVolume(level: Double) throws {
     onMainActor { player?.volume = Float(level) }
   }

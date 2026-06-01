@@ -310,6 +310,18 @@ class TrackPlayer {
     }
   }
 
+  /// Jump to the live edge. No-op for non-live tracks. Live with a seekable
+  /// window (HLS) seeks to the window end; live without one (non-seekable, e.g.
+  /// ICY) has no window to seek within, so reconnect to rejoin live.
+  func seekToLiveEdge() {
+    guard currentTrack?.live == true, let item = avPlayer.currentItem else { return }
+    if let range = item.seekableTimeRanges.last?.timeRangeValue, range.duration.seconds > 0 {
+      avPlayer.seek(to: range.end, toleranceBefore: .zero, toleranceAfter: .zero)
+    } else {
+      reload(startFromCurrentTime: false)
+    }
+  }
+
   func seekTo(_ seconds: TimeInterval) {
     seekTo(seconds, completion: { _ in })
   }

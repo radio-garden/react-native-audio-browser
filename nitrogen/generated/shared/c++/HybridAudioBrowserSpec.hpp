@@ -317,6 +317,7 @@ namespace margelo::nitro::audiobrowser {
       virtual bool getPlayWhenReady() = 0;
       virtual void seekTo(double position) = 0;
       virtual void seekBy(double offset) = 0;
+      virtual void seekToLiveEdge() = 0;
       virtual void setVolume(double level) = 0;
       virtual double getVolume() = 0;
       virtual void setRate(double rate) = 0;

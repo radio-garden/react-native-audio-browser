@@ -326,6 +326,20 @@ export class Player {
     element.currentTime = seconds
   }
 
+  public seekToLiveEdge(): void {
+    if (this.current?.live !== true) return
+    const element = this.requireElement()
+    // Live with a seekable window (HLS): jump to the window end. Without one
+    // (non-seekable stream): reload to reconnect at the live edge.
+    const { seekable } = element
+    const end = seekable.length > 0 ? seekable.end(seekable.length - 1) : 0
+    if (end > 0) {
+      element.currentTime = end
+    } else {
+      this.load(this.current)
+    }
+  }
+
   public setVolume(volume: number): void {
     const element = this.requireElement()
     element.volume = volume
