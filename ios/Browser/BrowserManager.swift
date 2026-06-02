@@ -384,25 +384,31 @@ final class BrowserManager {
     throw BrowserError.contentNotFound(path: path)
   }
 
-  private func resolveFromConfig(
+  /// Builds the HTTP request for an API-backed route by layering
+  /// request → kind → route configs. `initialQuery` seeds request-level query
+  /// params (e.g. search q/mode/…) onto the base before the route layer, so they
+  /// survive into `request.query` even when a layer's transform "wins
+  /// completely" (it is handed only the base, so the route config's own static
+  /// query would otherwise be dropped). `routeConfig` is nil for the implicit
+  /// browse default; `kindConfig` is nil for kinds with no per-kind config.
+  private func buildApiRequest(
     kind kindConfig: TransformableRequestConfig?,
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
-  ) async throws -> ResolvedTrack {
-    // Layered request: request (shared) → kind (browse/search/…) → route. Each
-    // layer's transform receives the previous layer's output; a layer with no
-    // transform merges its static fields. `routeConfig` is nil for the implicit
-    // browse default; `kindConfig` is nil for kinds with no per-kind config.
+    initialQuery: [String: String]? = nil,
+  ) async throws -> HttpClient.HttpRequest {
     var merged = RequestConfig(
       method: nil, path: path, baseUrl: nil, headers: nil,
       query: nil, body: nil, contentType: nil, userAgent: nil,
     )
     merged = try await applyLayer(config.request, to: merged, params: params)
+    if let initialQuery, !initialQuery.isEmpty {
+      merged.query = mergeDicts(merged.query, initialQuery)
+    }
     merged = try await applyLayer(kindConfig, to: merged, params: params)
     merged = try await applyLayer(routeConfig, to: merged, params: params)
 
-    // Build the URL and execute.
     guard let baseUrl = merged.baseUrl else {
       throw BrowserError.invalidConfiguration("No URL configured for route")
     }
@@ -411,7 +417,7 @@ final class BrowserManager {
       url = BrowserPathHelper.appendQuery(query, to: url)
     }
 
-    let request = HttpClient.HttpRequest(
+    return HttpClient.HttpRequest(
       url: url,
       method: merged.method?.stringValue ?? "GET",
       headers: merged.headers,
@@ -419,12 +425,23 @@ final class BrowserManager {
       contentType: merged.contentType ?? HttpClient.defaultContentType,
       userAgent: merged.userAgent ?? HttpClient.defaultUserAgent,
     )
+  }
+
+  /// Resolves a browse route: a page object (`{title,url,children:[…]}`).
+  private func resolveFromConfig(
+    kind kindConfig: TransformableRequestConfig?,
+    _ routeConfig: TransformableRequestConfig?,
+    path: String,
+    params: [String: String],
+  ) async throws -> ResolvedTrack {
+    let request = try await buildApiRequest(
+      kind: kindConfig, routeConfig, path: path, params: params,
+    )
 
     logger.debug("Resolving content from API")
     logger.debug("  path: \(path)")
-    logger.debug("  url: \(url)")
+    logger.debug("  url: \(request.url)")
 
-    // Execute request
     let result: JsonResolvedTrack = try await httpClient.requestJson(request, as: JsonResolvedTrack.self)
     let nitroResult = result.toNitro()
 
@@ -601,11 +618,17 @@ final class BrowserManager {
       let innerPromise = try await outerPromise.await()
       results = try await innerPromise.await()
     } else if let searchConfig = searchEntry.searchConfig {
-      // Search is its own kind — request → search route (no browse layer).
-      let resolved = try await resolveFromConfig(
-        kind: nil, searchConfig, path: "/__search", params: ["q": query]
+      // Search is its own kind — request → search route (no browse layer). The
+      // endpoint returns a bare Track array (unlike browse's page object). The
+      // search params go through `initialQuery` so they land in `request.query`
+      // (and the URL); a config with a transform only ever sees the base.
+      let request = try await buildApiRequest(
+        kind: nil, searchConfig, path: "/__search", params: ["q": query],
+        initialQuery: ["q": query],
       )
-      results = resolved.children ?? []
+      logger.debug("Searching via API: \(request.url)")
+      let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)
+      results = jsonTracks.map { $0.toNitro() }
     } else {
       throw BrowserError.contentNotFound(path: Self.searchRoutePath)
     }

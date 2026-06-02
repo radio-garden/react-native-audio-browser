@@ -1102,7 +1102,18 @@ class BrowserManager {
           params.playlist?.let { put("playlist", it) }
         }
 
-        // 3. Create a copy of API config with added search parameters
+        // 3. Seed the search params onto the BASE the search layer receives.
+        //    A search config with a transform "wins completely" and is handed
+        //    only the base (see mergeConfig), so placing q/mode/… on the
+        //    override's static query would be dropped before the transform runs
+        //    — the transform would see an empty `request.query`. Putting them on
+        //    the base means a transform sees them in `request.query` (and a
+        //    transform-less config still merges them into the URL as before).
+        baseConfig =
+          baseConfig.copy(query = (baseConfig.query ?: emptyMap()) + searchQueryParams)
+
+        // 4. Search layer: the config's own static fields + transform. The
+        //    search params now live on the base, not here.
         val searchConfig =
           TransformableRequestConfig(
             transform = apiConfig.transform,
@@ -1110,13 +1121,13 @@ class BrowserManager {
             path = apiConfig.path,
             baseUrl = apiConfig.baseUrl,
             headers = apiConfig.headers,
-            query = (apiConfig.query ?: emptyMap()) + searchQueryParams,
+            query = apiConfig.query,
             body = apiConfig.body,
             contentType = apiConfig.contentType,
             userAgent = apiConfig.userAgent,
           )
 
-        // 3. Merge configs and apply transform if provided
+        // 5. Merge configs and apply transform if provided
         var mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, searchConfig, emptyMap())
 
         // 4. Build and execute HTTP request
@@ -1126,7 +1137,8 @@ class BrowserManager {
         response.fold(
           onSuccess = { httpResponse ->
             if (httpResponse.isSuccessful) {
-              // 4. Parse response as Track array
+              // The search endpoint returns a bare Track array (unlike browse,
+              // which returns a page object). iOS parses it the same way.
               val jsonTracks = json.decodeFromString<List<JsonTrack>>(httpResponse.body)
               jsonTracks.map { it.toNitro() }.toTypedArray()
             } else {

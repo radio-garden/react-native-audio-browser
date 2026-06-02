@@ -473,6 +473,19 @@ export interface ArtworkRequestConfig extends RequestConfig {
   imageQueryParams?: ImageQueryParams
 }
 
+/**
+ * Source for a browse container's contents.
+ *
+ * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
+ * return a single **page object** — a {@link ResolvedTrack}
+ * (`{ title, url?, children: Track[] }`). The `children` array holds the rows
+ * shown for the container; each child is a playable leaf (`src`) or a navigable
+ * sub-container (`url`). A callback / static `ResolvedTrack` returns the same
+ * page object directly.
+ *
+ * Contrast with {@link SearchSource}, whose HTTP endpoint returns a bare
+ * `Track[]` rather than a page object.
+ */
 export type BrowserSource =
   | ResolvedTrack
   | BrowserSourceCallback
@@ -517,6 +530,13 @@ export type TabsSource =
 
 /**
  * Search source configuration for handling search requests.
+ *
+ * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
+ * return a bare **`Track[]`** — a flat JSON array of result rows, each a
+ * playable leaf (`src`) or a navigable container (`url`). This differs from
+ * {@link BrowserSource}, whose HTTP endpoint returns a page object
+ * (`{ title, children }`); search results are a flat list, matching the
+ * `SearchSourceCallback`'s `Promise<Track[]>` return.
  *
  * @see BrowserConfiguration.search
  */
@@ -643,6 +663,13 @@ export type BrowserConfiguration = {
    *   - q: search query string (always present)
    *   - mode: search mode (any/genre/artist/album/song/playlist) - omitted for unstructured search
    *   - artist, album, genre, title, playlist: included when present
+   *
+   * These query-param keys are fixed (not configurable). If your endpoint
+   * expects different names, rename them in `transform` — it receives the params
+   * already on `request.query`, e.g. `query: { search: request.query?.q }`.
+   *
+   * Response shape: the endpoint must return a bare JSON `Track[]` array (a flat
+   * list of result rows), NOT a browse-style page object. See {@link SearchSource}.
    *
    * @example
    * ```typescript
