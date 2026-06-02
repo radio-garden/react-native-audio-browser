@@ -84,13 +84,11 @@ export function usePolledProgress(updateInterval = 1000): Progress {
   })
 
   useEffect(() => {
-    let mounted = true
     let timer: ReturnType<typeof setTimeout> | undefined
     let unsubscribeState: (() => void) | undefined
 
     const update = () => {
       try {
-        if (!mounted) return
         const { position, duration, buffered } = getProgress()
 
         setState((currentState) =>
@@ -107,7 +105,7 @@ export function usePolledProgress(updateInterval = 1000): Progress {
 
     const poll = () => {
       update()
-      if (mounted) timer = setTimeout(poll, updateInterval)
+      timer = setTimeout(poll, updateInterval)
     }
 
     // We only poll and listen for playback changes while the app is active. On
@@ -134,7 +132,6 @@ export function usePolledProgress(updateInterval = 1000): Progress {
     if (AppState.currentState === 'active') start()
 
     return () => {
-      mounted = false
       stop()
       appStateSub.remove()
     }
