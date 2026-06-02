@@ -1,4 +1,4 @@
-package com.margelo.nitro.audiobrowser
+package com.audiobrowser
 
 import android.content.ComponentName
 import android.content.Context
@@ -109,6 +109,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     NativeBrowserConfiguration(
       path = null,
       request = null,
+      browse = null,
       media = null,
       artwork = null,
       routes = null,

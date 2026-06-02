@@ -32,6 +32,9 @@ object BrowserPathHelper {
   /** Offline error placeholder media ID */
   const val OFFLINE_PATH = "/__offline"
 
+  /** Generic browse error placeholder media ID */
+  const val ERROR_PATH = "/__error"
+
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 

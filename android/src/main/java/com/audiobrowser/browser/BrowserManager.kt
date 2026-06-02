@@ -739,6 +739,7 @@ class BrowserManager {
       // Create ResolvedTrack
       val searchResolvedTrack =
         ResolvedTrack(
+          id = null,
           url = searchPath,
           title = "Search: ${params.query}",
           children = searchResults,
@@ -778,6 +779,7 @@ class BrowserManager {
       // Return empty search result on error
       val emptySearchResult =
         ResolvedTrack(
+          id = null,
           url = searchPath,
           title = "Search: ${params.query}",
           children = emptyArray(),

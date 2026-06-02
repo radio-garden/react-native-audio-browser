@@ -70,22 +70,53 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /** Creates an offline error MediaItem. */
-  private fun createOfflineMediaItem(): MediaItem {
-    val errorTitle = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error)
-    val errorSubtitle =
-      player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error_subtitle)
-    return MediaItem.Builder()
-      .setMediaId(BrowserPathHelper.OFFLINE_PATH)
+  private fun createOfflineMediaItem(): MediaItem =
+    createErrorMediaItem(
+      mediaId = BrowserPathHelper.OFFLINE_PATH,
+      title = player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error),
+      subtitle =
+        player.context.getString(com.audiobrowser.R.string.audio_browser_offline_error_subtitle),
+    )
+
+  /**
+   * Builds a non-browsable, non-playable [MediaItem] used to surface an error inside an Android
+   * Auto / AAOS browse list. Rendered as a greyed-out, non-interactive tile, which is the only
+   * side-effect-free way to communicate a browse failure to legacy controllers (Media3 drops
+   * [LibraryResult.ofError] on the legacy browse bridge, leaving an empty "No items" screen).
+   */
+  private fun createErrorMediaItem(
+    mediaId: String,
+    title: String,
+    subtitle: String,
+  ): MediaItem =
+    MediaItem.Builder()
+      .setMediaId(mediaId)
       .setMediaMetadata(
         MediaMetadata.Builder()
-          .setTitle(errorTitle)
-          .setSubtitle(errorSubtitle)
+          .setTitle(title)
+          .setSubtitle(subtitle)
+          // Non-browsable, non-playable. Android Auto ignores these flags and still drills into a
+          // tapped tile, but onGetChildren returns an empty list for the sentinel paths so it's a
+          // harmless "No Items" dead-end rather than an endless stack of error pages.
           .setIsBrowsable(false)
           .setIsPlayable(false)
           .build()
       )
       .build()
-  }
+
+  /**
+   * Builds a generic "something went wrong" error tile for a browse failure. The true offline case
+   * is handled separately by the [networkMonitor] guard in [onGetChildren]; anything reaching the
+   * catch block is an online-but-failed request (e.g. server down, bad status), so it must NOT be
+   * labelled "no internet connection".
+   */
+  private fun createBrowseErrorMediaItem(): MediaItem =
+    createErrorMediaItem(
+      mediaId = BrowserPathHelper.ERROR_PATH,
+      title = player.context.getString(com.audiobrowser.R.string.audio_browser_browse_error),
+      subtitle =
+        player.context.getString(com.audiobrowser.R.string.audio_browser_browse_error_subtitle),
+    )
 
   fun updateMediaSession(
     mediaSession: MediaSession,
@@ -212,6 +243,15 @@ class MediaSessionCallback(private val player: Player) :
           .also { Timber.d("Browser ready, proceeding with onGetChildren") }
           .browserManager
 
+      // The error / offline tiles are dead-ends. Some controllers (e.g. Android Auto when online)
+      // treat a non-browsable tile as tappable and subscribe to its mediaId anyway; returning the
+      // error tile again here would push an endless stack of error pages. Return nothing instead.
+      if (
+        parentId == BrowserPathHelper.OFFLINE_PATH || parentId == BrowserPathHelper.ERROR_PATH
+      ) {
+        return@future LibraryResult.ofItemList(ImmutableList.of<MediaItem>(), params)
+      }
+
       // Show offline error when offline:
       if (
         !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
@@ -257,7 +297,13 @@ class MediaSessionCallback(private val player: Player) :
         LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
       } catch (e: Exception) {
         Timber.e(e, "Error getting children for parentId: $parentId")
-        LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
+        // Surface an error tile instead of a bare ofError(): Media3 drops the error on the legacy
+        // browse bridge, which would otherwise leave an empty "No items" screen in Android Auto.
+        // See https://github.com/androidx/media/issues/2901
+        LibraryResult.ofItemList(
+          ImmutableList.of(createBrowseErrorMediaItem()),
+          params,
+        )
       }
     }
   }
@@ -272,6 +318,12 @@ class MediaSessionCallback(private val player: Player) :
       // Handle special paths first (these don't need browser)
       if (mediaId == BrowserPathHelper.OFFLINE_PATH) {
         return@future LibraryResult.ofItem(createOfflineMediaItem(), null)
+      }
+
+      // Return the error tile as a non-browsable item so tapping it can't re-browse into a
+      // failing path (which would push another error page onto the stack).
+      if (mediaId == BrowserPathHelper.ERROR_PATH) {
+        return@future LibraryResult.ofItem(createBrowseErrorMediaItem(), null)
       }
 
       if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {

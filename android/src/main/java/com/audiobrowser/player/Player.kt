@@ -17,7 +17,7 @@ import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.Callbacks
-import com.margelo.nitro.audiobrowser.AudioBrowser
+import com.audiobrowser.AudioBrowser
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.audiobrowser.model.PlayerSetupOptions

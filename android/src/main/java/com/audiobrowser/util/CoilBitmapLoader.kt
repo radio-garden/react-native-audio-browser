@@ -258,9 +258,11 @@ class CoilBitmapLoader(
     }
 
     return try {
-      // Create base config
-      val baseConfig =
-        globalConfig?.baseConfig ?: RequestConfig(null, null, null, null, null, null, null, null)
+      // Create base config from the shared request layer (its transform runs for artwork too)
+      var baseConfig = RequestConfig(null, null, null, null, null, null, null, null)
+      globalConfig?.requestConfig?.let {
+        baseConfig = RequestConfigBuilder.mergeConfig(baseConfig, it, emptyMap())
+      }
 
       // Start with base config, using track.artwork as the default path if present
       var mergedConfig =
