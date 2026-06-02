@@ -628,6 +628,7 @@ final class BrowserManager {
       url: BrowserPathHelper.createSearchPath(query),
       children: results,
       carPlaySiriListButton: nil,
+      id: nil,
       src: nil,
       artwork: nil,
       artworkSource: nil,

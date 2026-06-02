@@ -158,10 +158,10 @@ extension JsonImageRowItem {
 extension JsonResolvedTrack {
   func toNitro() -> ResolvedTrack {
     ResolvedTrack(
-      id: id,
       url: url,
       children: children?.map { $0.toNitro() },
       carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
+      id: id,
       src: src,
       artwork: artwork,
       artworkSource: nil,

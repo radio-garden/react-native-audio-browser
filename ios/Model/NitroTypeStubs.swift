@@ -52,6 +52,7 @@ struct ResolvedTrack: Equatable {
   var url: String
   var children: [Track]? = nil
   var carPlaySiriListButton: CarPlaySiriListButtonPosition? = nil
+  var id: String? = nil
   var src: String? = nil
   var artwork: String? = nil
   var artworkSource: ImageSource? = nil

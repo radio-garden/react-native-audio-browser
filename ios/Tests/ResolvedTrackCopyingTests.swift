@@ -35,6 +35,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     url: "/original",
     children: [Track(id: "t1", url: "/t1")],
     carPlaySiriListButton: .top,
+    id: "original-id",
     src: "src.mp3",
     artwork: "art.jpg",
     artworkSource: ImageSource(uri: "resolved-art.jpg"),
@@ -93,6 +94,12 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   let original = makeResolvedTrack()
   let copy = original.copying(src: "new-src.mp3")
   #expect(copy.src == "new-src.mp3")
+}
+
+@Test func copyingOverridesId() {
+  let original = makeResolvedTrack()
+  let copy = original.copying(id: "new-id")
+  #expect(copy.id == "new-id")
 }
 
 @Test func copyingOverridesArtwork() {
