@@ -8,6 +8,7 @@ import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
+import { parseSearchResponse } from './parseSearchResponse'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
@@ -514,7 +515,7 @@ export class BrowserManager {
       queryParams
     )
     const response = await this.httpClient.executeRequest(merged)
-    return Array.isArray(response) ? (response as Track[]) : []
+    return parseSearchResponse(response)
   }
 
   /**
