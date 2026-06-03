@@ -198,14 +198,19 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       return
     }
 
-    val playbackError =
-      PlaybackError(
+    // When the device is offline at the moment of failure, normalize to a cross-platform code
+    // (matching iOS) so consumers can reliably tell "no internet" from a broken/unreachable stream.
+    // ExoPlayer's own error codes don't distinguish the two; the connectivity monitor does.
+    val code =
+      if (!player.networkMonitor.getOnline()) {
+        "not-connected-to-internet"
+      } else {
         error.errorCodeName
           .replace("ERROR_CODE_", "")
           .lowercase(Locale.getDefault())
-          .replace("_", "-"),
-        error.message ?: "An unknown error occurred",
-      )
+          .replace("_", "-")
+      }
+    val playbackError = PlaybackError(code, error.message ?: "An unknown error occurred")
     player.callbacks?.onPlaybackError(playbackError)
     player.playbackError = playbackError
     player.setPlaybackState(PlaybackState.ERROR)

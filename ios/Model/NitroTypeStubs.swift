@@ -213,15 +213,15 @@ extension TrackPlayerError.PlaybackError {
   func toNitroError() -> PlaybackError {
     let code = switch self {
     case .failedToLoadKeyValue:
-      "failed_to_load"
+      "failed-to-load"
     case .invalidSourceUrl:
-      "invalid_source_url"
+      "invalid-source-url"
     case .notConnectedToInternet:
-      "not_connected_to_internet"
+      "not-connected-to-internet"
     case .playbackFailed:
-      "playback_failed"
+      "playback-failed"
     case .trackWasUnplayable:
-      "track_unplayable"
+      "track-unplayable"
     }
     return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
   }
