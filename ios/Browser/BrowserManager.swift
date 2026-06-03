@@ -404,7 +404,7 @@ final class BrowserManager {
     )
     merged = try await applyLayer(config.request, to: merged, params: params)
     if let initialQuery, !initialQuery.isEmpty {
-      merged.query = mergeDicts(merged.query, initialQuery)
+      merged = merged.copying(query: mergeDicts(merged.query, initialQuery))
     }
     merged = try await applyLayer(kindConfig, to: merged, params: params)
     merged = try await applyLayer(routeConfig, to: merged, params: params)
