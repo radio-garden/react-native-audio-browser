@@ -13,19 +13,17 @@ import timber.log.Timber
  * A DataSource wrapper that defers media URL transformation to ExoPlayer's IO thread.
  *
  * ExoPlayer calls [MediaSource.Factory.createMediaSource] on the main thread during
- * `addMediaItem()`, but calls [DataSource.open] on a background IO thread when it
- * needs to fetch data. By deferring URL transformation (which may invoke a JS callback
- * via `runBlocking`) to [open], we avoid blocking the main thread and prevent deadlocks
- * when the JS thread is occupied by synchronous Nitro calls (e.g., `seekTo`).
+ * `addMediaItem()`, but calls [DataSource.open] on a background IO thread when it needs to fetch
+ * data. By deferring URL transformation (which may invoke a JS callback via `runBlocking`) to
+ * [open], we avoid blocking the main thread and prevent deadlocks when the JS thread is occupied by
+ * synchronous Nitro calls (e.g., `seekTo`).
  *
- * The transform is resolved once per track on the first [open] call (the manifest/media
- * URL). The resulting headers and user-agent are cached on the [Factory] and reused for
- * subsequent requests (segments, encryption keys) without calling the JS transform again.
+ * The transform is resolved once per track on the first [open] call (the manifest/media URL). The
+ * resulting headers and user-agent are cached on the [Factory] and reused for subsequent requests
+ * (segments, encryption keys) without calling the JS transform again.
  */
-class TransformingDataSource(
-  private val upstream: DataSource,
-  private val factory: Factory,
-) : DataSource {
+class TransformingDataSource(private val upstream: DataSource, private val factory: Factory) :
+  DataSource {
 
   companion object {
     private const val DEFAULT_USER_AGENT = "react-native-audio-browser"
@@ -41,14 +39,24 @@ class TransformingDataSource(
     // All subsequent opens (segments, keys, replays) reuse the cached
     // headers/user-agent but keep their original URLs.
     val cached = factory.cachedTransform
-    val (finalUrl, headers, userAgent) = if (cached == null) {
-      val resolved = resolveRequestConfig(originalUrl)
-      factory.cachedTransform = resolved
-      Timber.d("TransformingDataSource: resolved $originalUrl -> ${resolved.first}")
-      resolved
-    } else {
-      Triple(originalUrl, cached.second, cached.third)
-    }
+    val (finalUrl, headers, userAgent) =
+      when {
+        cached == null -> {
+          val resolved = resolveRequestConfig(originalUrl)
+          factory.cachedTransform = resolved
+          factory.cachedOriginalUrl = originalUrl
+          Timber.d("TransformingDataSource: resolved $originalUrl -> ${resolved.first}")
+          resolved
+        }
+        // Re-open of the same media URL — e.g. a progressive-stream retry after a network drop.
+        // Reuse the resolved URL: falling back to the original would re-emit a schemeless/relative
+        // path (e.g. "/listen/<id>/channel.mp3"), which DefaultDataSource routes to the file data
+        // source -> FileNotFoundException, killing playback instead of retrying the stream.
+        originalUrl == factory.cachedOriginalUrl -> cached
+        // A different URL (e.g. an already-absolute HLS segment or key): reuse the cached
+        // headers/user-agent but keep its own URL.
+        else -> Triple(originalUrl, cached.second, cached.third)
+      }
 
     // Build merged headers including user-agent override
     val mergedHeaders = buildMap {
@@ -77,6 +85,18 @@ class TransformingDataSource(
 
   override fun getUri(): Uri? {
     return resolvedUri ?: upstream.uri
+  }
+
+  /**
+   * Forward the upstream response headers. ExoPlayer's `ProgressiveMediaPeriod` reads these back
+   * through the data-source chain to parse `IcyHeaders` (the `icy-metaint` interval) and only then
+   * installs the `IcyDataSource` that emits in-stream ICY/Shoutcast song metadata via
+   * `Player.Listener.onMetadata`. The `DataSource` default returns an empty map, so without this
+   * override this transparent wrapper would swallow the ICY headers — playback keeps working but
+   * `onMetadata` never fires (live "now playing" song goes missing).
+   */
+  override fun getResponseHeaders(): Map<String, List<String>> {
+    return upstream.responseHeaders
   }
 
   override fun close() {
@@ -129,19 +149,22 @@ class TransformingDataSource(
   ) : DataSource.Factory {
 
     /**
-     * Cached transform result (url, headers, userAgent) from the first open() call.
-     * Shared across all DataSource instances created by this factory.
-     * A new Factory is created per [MediaFactory.createMediaSource] call (per track),
-     * so the cache naturally resets on track transitions.
+     * Cached transform result (url, headers, userAgent) from the first open() call. Shared across
+     * all DataSource instances created by this factory. A new Factory is created per
+     * [MediaFactory.createMediaSource] call (per track), so the cache naturally resets on track
+     * transitions.
      */
-    @Volatile
-    internal var cachedTransform: Triple<String, Map<String, String>, String>? = null
+    @Volatile internal var cachedTransform: Triple<String, Map<String, String>, String>? = null
+
+    /**
+     * The original (pre-transform) URL that [cachedTransform] was resolved from. Used to recognise
+     * a re-open of the same media URL (e.g. a retry) so it reuses the resolved URL instead of the
+     * raw original.
+     */
+    @Volatile internal var cachedOriginalUrl: String? = null
 
     override fun createDataSource(): DataSource {
-      return TransformingDataSource(
-        upstream = upstreamFactory.createDataSource(),
-        factory = this,
-      )
+      return TransformingDataSource(upstream = upstreamFactory.createDataSource(), factory = this)
     }
   }
 }
