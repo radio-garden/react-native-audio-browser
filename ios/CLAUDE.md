@@ -250,6 +250,35 @@ func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
 
 Use Nitro's Promise helpers for async operations.
 
+#### Chaining `.then`/`.catch` on a JS-callback Promise from an `@MainActor` type
+
+When you invoke a JS callback that returns a `Promise<T>` (a `formatNavigationError` / now-playing
+formatter, etc.) and chain `.then`/`.catch`, **Nitro resolves that promise on the JS thread**, not
+on main. `Promise.then(_:)` takes a non-`@Sendable` closure, so inside an `@MainActor` type the
+resolver is *inferred* `@MainActor`-isolated — and running a main-isolated closure off-main traps:
+`_swift_task_checkIsolated` → `dispatch_assert_queue_fail` (crashes on the
+`com.facebook.react.runtime.JavaScript` thread).
+
+Mark the resolver `@Sendable` to break the isolation inheritance, then hop back to the main actor
+for any main-isolated work:
+
+```swift
+formatter(params)
+  .then { @Sendable [weak self] result in
+    guard let self, let result else { return }
+    Task { @MainActor in self.apply(result) }
+  }
+  .catch { @Sendable error in
+    let message = error.localizedDescription      // compute off-main; only a String crosses
+    Task { @MainActor in self?.logger.error("formatter failed: \(message)") }
+  }
+```
+
+This is the same reason the artwork callback in `NowPlayingUpdater` is `@Sendable`. A direct
+`self?.someMainActorMethod(...)` call inside `.then` only *appears* to work when that particular
+promise happens to resolve on main — it's a latent crash otherwise.
+**`CarPlayController.showNavigationError` currently has that latent shape; don't copy it.**
+
 ### Logging
 
 **Always use `os.Logger` instead of `print()` for debugging.**

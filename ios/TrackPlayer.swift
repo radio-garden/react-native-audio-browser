@@ -134,6 +134,19 @@ class TrackPlayer {
     set { coordinator.playWhenReady = newValue }
   }
 
+  /// Time playback must have progressed before a buffer dip counts as a stall, so the initial
+  /// connect / a seek doesn't read as one. iOS has no native rebuffer-vs-initial signal.
+  private static let stallGraceSeconds: TimeInterval = 0.5
+
+  /// True while ongoing playback has stalled waiting for data. Approximated from
+  /// `isPlaybackLikelyToKeepUp`, gated on having actually started and the play intent (so an
+  /// initial connect / seek doesn't read as a stall). Mirrors the Android `stalled` signal, which
+  /// the load control distinguishes natively.
+  var isStalled: Bool {
+    guard let item = avPlayer.currentItem else { return false }
+    return currentTime > Self.stallGraceSeconds && playWhenReady && !item.isPlaybackLikelyToKeepUp
+  }
+
   /**
    Controls the time pitch algorithm applied to each track loaded into the player.
    */

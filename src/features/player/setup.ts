@@ -66,9 +66,6 @@ export type FormatNowPlayingParams = {
  * @returns The now-playing fields to display, or `undefined` to fall back to the track's own
  *   `title` / `artist`.
  *
- * @remarks Currently honored on Android. On iOS the player still uses the default now-playing
- * behavior; the formatter is a no-op there until it's wired up.
- *
  * @example
  * ```ts
  * setupPlayer({
@@ -609,7 +606,8 @@ export interface PartialSetupPlayerOptions {
    * stream), so external controllers (Android Auto / CarPlay) keep their transport controls
    * (next / previous) instead of tearing the session down. The error is still reported via
    * `onPlaybackError` / `playbackState`; this only affects what the OS media session observes.
-   * Currently honored on Android.
+   * Applies on Android. On iOS the media session already stays controllable through errors (the
+   * player resolves a terminal error to paused and retains the now-playing), so this is a no-op.
    * @default false
    */
   keepSessionAliveOnError?: boolean
@@ -623,8 +621,7 @@ export interface PartialSetupPlayerOptions {
 
   /**
    * @internal Normalized from `autoUpdateNowPlaying` when it's a function. Customizes what's
-   * rendered on the now-playing surface. Currently honored on Android; iOS keeps the imperative
-   * `updateNowPlaying` flow until the formatter is wired there.
+   * rendered on the now-playing surface.
    */
   nowPlayingMetadataFormatter?: FormatNowPlayingCallback
 }

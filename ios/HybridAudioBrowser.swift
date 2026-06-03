@@ -33,6 +33,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
   private var nowPlayingOverride: NowPlayingUpdate?
+  /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
+  private var nowPlayingMetadataEnabled = true
+  /// Customizes the now-playing title/subtitle from the track + live timed metadata + playback state.
+  private var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
+  /// Keep the media session controllable through a terminal error (see `keepSessionAliveOnError`).
+  private var keepSessionAliveOnError = false
+  /// Latest live timed (ICY/ID3) metadata, passed to the formatter. Cleared on track change.
+  private var latestTimedMetadata: TimedMetadata?
   private let playerOptions = PlayerUpdateOptions()
 
   /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
@@ -504,10 +512,28 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext)
         }
 
+        // Emit the JS `onNowPlayingChanged` event when the rendered title/artist change. The updater
+        // owns the system now-playing write; this shapes the JS metadata (elapsed time / artwork).
+        player?.nowPlayingUpdater.onChanged = { [weak self] track, title, artist in
+          guard let self else { return }
+          self.onNowPlayingChanged(self.makeNowPlayingMetadata(track: track, title: title, artist: artist))
+        }
+
         // Configure sleep timer callback
         player?.sleepTimerManager.onChanged = { [weak self] state in
           self?.onSleepTimerChanged(state)
         }
+
+        // Now-playing: whether to manage metadata, the optional formatter that owns the rendered
+        // lines, and whether to keep the session alive through a terminal error.
+        nowPlayingMetadataEnabled = options.autoUpdateNowPlayingMetadata ?? true
+        nowPlayingMetadataFormatter = options.nowPlayingMetadataFormatter
+        // Stored for API symmetry, but iOS needs no masking: a terminal error resolves the playback
+        // state to *paused* (PlaybackCoordinator.applySideEffects), the now-playing info is retained
+        // (never cleared on error), and next/previous stay enabled (gated on queue position, not
+        // state). So the session stays controllable through errors by default — the behavior Android
+        // achieves via InterceptingPlayer is already the iOS norm.
+        keepSessionAliveOnError = options.keepSessionAliveOnError ?? false
 
         // Apply default remote commands (play, pause, next, previous, seekTo)
         applyRemoteCommands()
@@ -841,17 +867,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onMainActor {
       guard let track = player?.currentTrack else { return nil }
       let override = nowPlayingOverride
-      return NowPlayingMetadata(
-        elapsedTime: player?.currentTime,
+      return makeNowPlayingMetadata(
+        track: track,
         title: override?.title ?? track.title,
-        album: track.album,
-        artist: override?.artist ?? track.artist,
-        duration: track.duration,
-        artwork: nowPlayingArtwork(for: track),
-        description: track.description,
-        mediaId: track.src ?? track.url,
-        genre: track.genre,
-        rating: nil,
+        artist: override?.artist ?? track.artist
       )
     }
   }
@@ -865,17 +884,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
   }
 
-  /// Applies the current now playing metadata (with override if set) to NowPlayingInfoCenter and notifies JS.
+  /// Builds the JS-facing now-playing metadata for the given rendered title/artist line.
   @MainActor
-  private func applyNowPlayingMetadata() {
-    guard let track = player?.currentTrack else { return }
-    let override = nowPlayingOverride
-
-    let nowPlaying = NowPlayingMetadata(
+  private func makeNowPlayingMetadata(track: Track, title: String, artist: String?) -> NowPlayingMetadata {
+    NowPlayingMetadata(
       elapsedTime: player?.currentTime,
-      title: override?.title ?? track.title,
+      title: title,
       album: track.album,
-      artist: override?.artist ?? track.artist,
+      artist: artist,
       duration: track.duration,
       artwork: nowPlayingArtwork(for: track),
       description: track.description,
@@ -883,16 +899,22 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       genre: track.genre,
       rating: nil,
     )
+  }
 
-    // Update NowPlayingInfoCenter with override values (one publish, not two).
-    if let override {
-      player?.nowPlayingInfoController.set(keyValues: [
-        MediaItemProperty.title(override.title ?? track.title),
-        MediaItemProperty.artist(override.artist ?? track.artist),
-      ])
-    }
-
-    onNowPlayingChanged(nowPlaying)
+  /// Re-renders the now-playing surface via `NowPlayingUpdater`, handing it the current playback
+  /// signals, override, and formatter. Called on every track / metadata / playback-state change.
+  @MainActor
+  private func applyNowPlayingMetadata() {
+    guard let player, let track = player.currentTrack else { return }
+    player.nowPlayingUpdater.render(
+      track: track,
+      timedMetadata: latestTimedMetadata,
+      playWhenReady: player.playWhenReady,
+      stalled: player.isStalled,
+      error: player.coordinator.playbackError?.toNitroError(),
+      override: nowPlayingMetadataEnabled ? nowPlayingOverride : nil,
+      formatter: nowPlayingMetadataEnabled ? nowPlayingMetadataFormatter : nil
+    )
   }
 
   // MARK: - Network
@@ -982,13 +1004,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func openIosOutputPicker() throws {
     DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
       guard let windowScene = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
         .first(where: { $0.activationState == .foregroundActive }),
         let window = windowScene.windows.first(where: { $0.isKeyWindow }),
         var topController = window.rootViewController
       else {
-        self?.logger.debug("openIosOutputPicker: Could not find active window scene")
+        self.logger.error("openIosOutputPicker: no active window scene / root view controller")
         return
       }
 
@@ -997,23 +1020,50 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         topController = presented
       }
 
-      let routePicker = AVRoutePickerView(frame: .zero)
-      routePicker.isHidden = true
+      // AVRoutePickerView has no public API to present its picker
+      // programmatically, so we add it to the hierarchy and tap its internal
+      // button. Two requirements that are easy to get wrong:
+      //   1. The view must be *visible* to the system (a `isHidden` source view
+      //      suppresses the presentation), so we keep it transparent instead.
+      //   2. The internal button can be nested below the top-level subviews on
+      //      modern iOS, so we search recursively rather than only direct children.
+      let routePicker = AVRoutePickerView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+      routePicker.alpha = 0.01
       topController.view.addSubview(routePicker)
 
-      // Find the button inside AVRoutePickerView and trigger it
-      for subview in routePicker.subviews {
-        if let button = subview as? UIButton {
-          button.sendActions(for: .touchUpInside)
-          break
-        }
+      let button = Self.firstButton(in: routePicker)
+      self.logger.notice(
+        "openIosOutputPicker: hierarchy=\(Self.describeHierarchy(routePicker), privacy: .public), buttonFound=\(button != nil, privacy: .public)"
+      )
+
+      if let button {
+        button.sendActions(for: .touchUpInside)
+      } else {
+        self.logger.error("openIosOutputPicker: no UIButton found inside AVRoutePickerView")
       }
 
-      // Remove after a delay to ensure picker has opened
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      // Keep the source view in the hierarchy long enough for the picker to
+      // present (on iPad it anchors a popover to this view).
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
         routePicker.removeFromSuperview()
       }
     }
+  }
+
+  /// Depth-first search for the first `UIButton` inside a view tree.
+  private static func firstButton(in view: UIView) -> UIButton? {
+    if let button = view as? UIButton { return button }
+    for subview in view.subviews {
+      if let button = firstButton(in: subview) { return button }
+    }
+    return nil
+  }
+
+  /// Compact description of a view tree, e.g. `AVRoutePickerView[UIButton[UIImageView]]`.
+  private static func describeHierarchy(_ view: UIView) -> String {
+    let name = String(describing: type(of: view))
+    let children = view.subviews.map(describeHierarchy).joined(separator: ", ")
+    return children.isEmpty ? name : "\(name)[\(children)]"
   }
 
   // MARK: - Equalizer (unsupported on iOS)
@@ -1060,11 +1110,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func playerDidChangePlayback(_ playback: Playback) {
     onPlaybackChanged(playback)
+    // Re-render so the formatter reflects the new state — notably the error line on a failure (the
+    // coordinator sets playbackError before this fires). Redundant updates are deduped on publish.
+    applyNowPlayingMetadata()
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
-    // Clear now playing override when track changes (matches Kotlin behavior)
+    // Clear now playing override + live metadata when track changes (matches Kotlin behavior)
     nowPlayingOverride = nil
+    latestTimedMetadata = nil
     // Hydrate the active track's `favorited` from the authoritative set so JS
     // consumers (useActiveTrack) match getActiveTrack()'s hydrated value — the
     // coordinator emits the raw queue track, whose flag isn't kept in sync.
@@ -1090,6 +1144,9 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidChangePlayingState(_ state: PlayingState) {
     onPlaybackPlayingState(state)
+    // Re-render so the formatter reacts to a stall starting or recovering (`stalled`) — a buffering
+    // flag change that may not transition the coordinator state.
+    applyNowPlayingMetadata()
   }
 
   public func playerDidEndQueue(_ event: PlaybackQueueEndedEvent) {
@@ -1120,7 +1177,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   public func playerDidReceiveTimedMetadata(_ groups: [AVTimedMetadataGroup]) {
     for group in groups {
       if let metadata = TimedMetadata.from(items: group.items) {
+        latestTimedMetadata = metadata
         onTimedMetadata(metadata)
+        // Re-render the now-playing so the formatter can reflect the live song.
+        applyNowPlayingMetadata()
       }
     }
   }
