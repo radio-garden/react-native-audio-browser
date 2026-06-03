@@ -3,6 +3,7 @@ package com.audiobrowser.model
 import androidx.media3.exoplayer.DefaultLoadControl
 import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
 import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
@@ -45,6 +46,14 @@ data class PlayerSetupOptions(
   var wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
   var audioOffload: AudioOffloadOptions? = null,
   var retryPolicy: RetryPolicy = RetryPolicy.Default,
+  // Keep the media session alive & controllable through a terminal playback error so external
+  // controllers (Android Auto) keep their transport controls instead of tearing the session down.
+  var keepSessionAliveOnError: Boolean = false,
+  // Whether the player publishes/refreshes track metadata on the now-playing surface.
+  var autoUpdateNowPlayingMetadata: Boolean = true,
+  // Optional JS formatter that customizes the now-playing title/subtitle from the track + live
+  // timed metadata. When null, the default mapping is used.
+  var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
 ) {
   /**
    * Whether automatic buffer management is enabled. True when rebufferBuffer is not explicitly set
@@ -97,5 +106,9 @@ data class PlayerSetupOptions(
           }
         }
     }
+
+    options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
+    options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
+    options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
   }
 }

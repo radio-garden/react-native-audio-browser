@@ -47,6 +47,15 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
   @Volatile private var prepareStartTimeMs: Long = 0
   @Volatile private var playbackStarted: Boolean = false
 
+  // ExoPlayer's own rebuffering signal (buffer depletion mid-playback, as opposed to an initial
+  // connect, a seek, or a track transition). Mirrored from LoadControl.Parameters so consumers
+  // (e.g. the now-playing "Buffering…" subtitle) can tell a rebuffer apart from an initial connect.
+  @Volatile private var rebuffering: Boolean = false
+
+  /** Whether playback is currently rebuffering due to buffer depletion (not initial start/seek). */
+  val isRebuffering: Boolean
+    get() = rebuffering
+
   // Mutable buffer thresholds - can be updated at runtime
   @Volatile private var minBufferUs: Long = initialConfig.minBufferMs * 1000L
 
@@ -104,10 +113,14 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
   override fun retainBackBufferFromKeyframe(): Boolean = false
 
   override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+    // Refreshed on every load-control poll (all playback states) so the flag clears once a
+    // rebuffer recovers, not just while buffering.
+    rebuffering = parameters.rebuffering
     return parameters.bufferedDurationUs < maxBufferUs
   }
 
   override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
+    rebuffering = parameters.rebuffering
     val bufferedDurationUs = parameters.bufferedDurationUs
     val targetUs =
       adjustForPlaybackSpeed(
@@ -141,6 +154,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     allocator.reset()
     prepareStartTimeMs = System.currentTimeMillis()
     playbackStarted = false
+    rebuffering = false
   }
 
   override fun onTracksSelected(

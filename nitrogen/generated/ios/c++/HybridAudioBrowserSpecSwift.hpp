@@ -176,6 +176,10 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
@@ -186,8 +190,6 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
-// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 
 #include <string>
 #include <optional>
@@ -279,12 +281,13 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
 #include "RetryConfig.hpp"
+#include "NowPlayingUpdate.hpp"
+#include "FormatNowPlayingParams.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "UpdateOptions.hpp"
 #include "AndroidUpdateOptions.hpp"
 #include "Progress.hpp"
-#include "NowPlayingUpdate.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 

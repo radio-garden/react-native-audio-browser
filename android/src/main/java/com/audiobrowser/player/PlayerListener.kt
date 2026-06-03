@@ -29,7 +29,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     }
 
     // Extract and emit timed metadata (ICY, ID3, etc.)
-    PlaybackMetadata.from(metadata)?.let { player.callbacks?.onTimedMetadata(it.toNitro()) }
+    PlaybackMetadata.from(metadata)?.let {
+      val timed = it.toNitro()
+      player.callbacks?.onTimedMetadata(timed)
+      player.onTimedMetadataReceived(timed)
+    }
   }
 
   override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -133,8 +137,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     for (i in 0 until events.size()) {
       when (events[i]) {
         MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED -> {
+          // Read the real ExoPlayer state, not the forwarding player's — the InterceptingPlayer
+          // masks STATE_IDLE→READY on a terminal error to keep the session alive, and that mask
+          // must not feed back into our own state machine (it would clear the ERROR
+          // state/subtitle).
           val state =
-            when (media3Player.playbackState) {
+            when (player.exoPlayer.playbackState) {
               MediaPlayer.STATE_BUFFERING -> PlaybackState.BUFFERING
               MediaPlayer.STATE_READY -> PlaybackState.READY
               MediaPlayer.STATE_IDLE ->

@@ -1,6 +1,98 @@
 // MARK: - Types
 
 import { nativeBrowser } from '../../native'
+import type { Track } from '../../types'
+import type { PlaybackError } from '../errors'
+import type { NowPlayingUpdate, TimedMetadata } from '../metadata'
+
+/**
+ * Parameters passed to the {@link FormatNowPlayingCallback}.
+ *
+ * The formatter owns every line shown on the now-playing surface — the track text, the live song,
+ * *and* any transient status (reconnecting / error). The library no longer renders status copy
+ * itself, so these fields give you what you need to render (and localize) it yourself. The formatter
+ * is re-invoked on track change, each timed-metadata update, and play/pause + error/rebuffer
+ * transitions. (Device network state isn't passed — read it on demand with `getOnline()`.)
+ */
+export type FormatNowPlayingParams = {
+  /** The currently playing track. */
+  track: Track
+  /** Timed metadata (ICY / ID3 "now playing song") received during playback, if any. */
+  timedMetadata?: TimedMetadata
+  /** The play/pause intent — `false` while paused. Stays `true` through buffers, so the song line won't flicker. */
+  playWhenReady: boolean
+  /**
+   * True only while ongoing playback has stalled waiting for data — a mid-stream halt from buffer
+   * depletion, never an initial connect or a seek. Safe to use on its own (e.g. `if (stalled)`) to
+   * show a "Reconnecting…/Buffering…" line; it won't flash on track start or bleed into playback.
+   */
+  stalled: boolean
+  /** The current playback error, if playback has failed. */
+  error?: PlaybackError
+}
+
+/**
+ * Customizes what's rendered on the now-playing surface — lock screen, notification, Control Center,
+ * CarPlay, and Android Auto — for the currently playing track.
+ *
+ * Configure it via {@link SetupPlayerOptions.autoUpdateNowPlaying}. Where the default behavior
+ * simply publishes the track's own `title` / `artist`, the formatter hands you the two now-playing
+ * text lines outright: render the live timed metadata (the ICY / ID3 "now playing song"), surface a
+ * transient status line ("Reconnecting…", an error message), drop the song while paused — anything
+ * you can derive from the {@link FormatNowPlayingParams} for that moment.
+ *
+ * The callback is **synchronous** and should stay cheap: it's a pure formatting function, run on the
+ * JS thread and awaited natively. Don't do I/O in it. If you need asynchronously-fetched data (e.g.
+ * album art), resolve it out-of-band and stamp it imperatively rather than awaiting inside here.
+ *
+ * ### When it's invoked
+ * The player re-invokes the formatter whenever the now-playing could change:
+ * - on track change (a new item becomes current);
+ * - on each timed-metadata update ({@link FormatNowPlayingParams.timedMetadata} arrives or changes);
+ * - on every playback transition — play / pause, a stall starting or recovering, an error.
+ *
+ * Identical results are de-duplicated natively before they reach the media session, so returning the
+ * same fields across a rapid burst of transitions is cheap and won't flicker the surface.
+ *
+ * ### What to return
+ * Return a {@link NowPlayingUpdate} with the fields to display. Each field falls back **independently**
+ * to the track's own value when omitted — so `{ artist: 'Some Song' }` replaces only the secondary
+ * line and leaves the title as the track's title. Return `undefined` (or `{}`) to use the library
+ * default entirely (the track's own `title` / `artist`).
+ *
+ * @param params - The current track, latest timed metadata, and playback signals for this moment
+ *   ({@link FormatNowPlayingParams}). Ambient device state is intentionally not included — read
+ *   network connectivity on demand with {@link getOnline}.
+ * @returns The now-playing fields to display, or `undefined` to fall back to the track's own
+ *   `title` / `artist`.
+ *
+ * @remarks Currently honored on Android. On iOS the player still uses the default now-playing
+ * behavior; the formatter is a no-op there until it's wired up.
+ *
+ * @example
+ * ```ts
+ * setupPlayer({
+ *   autoUpdateNowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
+ *     if (error)   return { artist: getOnline() ? error.message : 'Offline' }
+ *     if (stalled) return { artist: 'Reconnecting…' }
+ *     // Show the live song only while actually playing; otherwise fall back to the track default.
+ *     if (!playWhenReady || !timedMetadata?.title) return
+ *     return {
+ *       artist: timedMetadata.artist
+ *         ? `${timedMetadata.artist} — ${timedMetadata.title}`
+ *         : timedMetadata.title
+ *     }
+ *   }
+ * })
+ * ```
+ *
+ * @see {@link FormatNowPlayingParams} - the per-invocation signals passed in
+ * @see {@link NowPlayingUpdate} - the shape returned
+ * @see {@link SetupPlayerOptions.autoUpdateNowPlaying} - where the callback is configured
+ */
+export type FormatNowPlayingCallback = (
+  params: FormatNowPlayingParams
+) => NowPlayingUpdate | undefined
 
 /**
  * AndroidAudioContentType options:
@@ -494,8 +586,8 @@ export interface PartialSetupPlayerOptions {
   /** iOS-specific configuration options for setup */
   ios?: PartialIOSSetupPlayerOptions
   /**
-   * Indicates whether the player should automatically update now playing metadata data in control center / notification.
-   * Defaults to `true`.
+   * @deprecated Never implemented natively (no-op). Use `autoUpdateNowPlaying` (its `metadata`
+   * field) instead. Will be removed in a future release.
    */
   autoUpdateMetadata?: boolean
 
@@ -511,6 +603,30 @@ export interface PartialSetupPlayerOptions {
    * @default false
    */
   retry?: boolean | RetryConfig
+
+  /**
+   * Keep the media session alive and controllable through a terminal playback error (e.g. a dead
+   * stream), so external controllers (Android Auto / CarPlay) keep their transport controls
+   * (next / previous) instead of tearing the session down. The error is still reported via
+   * `onPlaybackError` / `playbackState`; this only affects what the OS media session observes.
+   * Currently honored on Android.
+   * @default false
+   */
+  keepSessionAliveOnError?: boolean
+
+  /**
+   * @internal Normalized from the public `autoUpdateNowPlaying` option. Whether the player
+   * publishes/refreshes track metadata on the now-playing surface.
+   * @default true
+   */
+  autoUpdateNowPlayingMetadata?: boolean
+
+  /**
+   * @internal Normalized from `autoUpdateNowPlaying` when it's a function. Customizes what's
+   * rendered on the now-playing surface. Currently honored on Android; iOS keeps the imperative
+   * `updateNowPlaying` flow until the formatter is wired there.
+   */
+  nowPlayingMetadataFormatter?: FormatNowPlayingCallback
 }
 
 export interface PlayerOptions {
@@ -541,11 +657,78 @@ export interface PlayerOptions {
 // MARK: - Lifecycle
 
 /**
+ * Public setup options. Mirrors {@link PartialSetupPlayerOptions} but exposes the ergonomic
+ * `autoUpdateNowPlaying` option instead of the normalized native field(s).
+ */
+export type SetupPlayerOptions = Omit<
+  PartialSetupPlayerOptions,
+  'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter'
+> & {
+  /**
+   * Controls what the player renders on the now-playing surface (lock screen / notification /
+   * Control Center / CarPlay / Android Auto).
+   *
+   * - `true` (default): publish the track's own title / artist.
+   * - `false`: don't manage the now-playing metadata at all.
+   * - a {@link FormatNowPlayingCallback}: render it yourself — the callback owns every line,
+   *   including any transient status (buffering / reconnecting / offline / error), which the
+   *   library no longer renders on your behalf.
+   *
+   * @default true
+   */
+  autoUpdateNowPlaying?: boolean | FormatNowPlayingCallback
+}
+
+/** The normalized native now-playing fields, resolved from the public option. */
+type NormalizedNowPlaying = Pick<
+  PartialSetupPlayerOptions,
+  'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter'
+>
+
+/** Resolves the public `autoUpdateNowPlaying` option to the normalized native fields. */
+function resolveNowPlaying(
+  value: SetupPlayerOptions['autoUpdateNowPlaying']
+): NormalizedNowPlaying {
+  if (typeof value === 'function') {
+    return {
+      autoUpdateNowPlayingMetadata: true,
+      nowPlayingMetadataFormatter: wrapNowPlayingFormatter(value)
+    }
+  }
+  // `undefined` defaults to on; `true`/`false` toggle the default mapping.
+  return {
+    autoUpdateNowPlayingMetadata: value ?? true,
+    nowPlayingMetadataFormatter: undefined
+  }
+}
+
+/**
+ * Wraps a {@link FormatNowPlayingCallback} so it never resolves the native callback to `null`.
+ *
+ * The callback contract lets consumers `return undefined` to mean "use the default". But Nitro's
+ * `Promise<T | undefined>.await()` throws `Failed to cast Object to T!` when the callback resolves
+ * to null/undefined — which surfaces on Android as the misleading "Cannot reject Promise … it is
+ * already resolved!" (the cast error is swallowed, then a reject is attempted on the
+ * already-resolved promise). So we coalesce `undefined` to an empty update before it crosses the
+ * boundary: the native side already falls back to the track's own title/artist for each missing
+ * field, so `{}` is equivalent to "use the default" without ever sending a null across.
+ */
+function wrapNowPlayingFormatter(
+  formatter: FormatNowPlayingCallback
+): FormatNowPlayingCallback {
+  return (params) => formatter(params) ?? {}
+}
+
+/**
  * Initializes the player with the specified options.
  * @param options - The options to initialize the player with.
  */
 export async function setupPlayer(
-  options: PartialSetupPlayerOptions = {}
+  options: SetupPlayerOptions = {}
 ): Promise<void> {
-  return nativeBrowser.setupPlayer(options)
+  const { autoUpdateNowPlaying, ...rest } = options
+  return nativeBrowser.setupPlayer({
+    ...rest,
+    ...resolveNowPlaying(autoUpdateNowPlaying)
+  })
 }

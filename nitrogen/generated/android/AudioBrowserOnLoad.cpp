@@ -57,6 +57,7 @@
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
 #include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::audiobrowser {
@@ -123,6 +124,7 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryWarningPendingChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_cxx::registerNatives();
 
   // Register Nitro Hybrid Objects
   HybridObjectRegistry::registerHybridObjectConstructor(

@@ -16,10 +16,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import com.audiobrowser.Callbacks
 import com.audiobrowser.AudioBrowser
+import com.audiobrowser.Callbacks
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
-import com.margelo.nitro.audiobrowser.ImageContext
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
@@ -32,6 +31,8 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Playback
@@ -50,13 +51,17 @@ import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.SleepTimer as NitroSleepTimer
 import com.margelo.nitro.audiobrowser.SleepTimerEndOfTrack
 import com.margelo.nitro.audiobrowser.SleepTimerTime
+import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.NullType
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
@@ -95,13 +100,34 @@ class Player(internal val context: Context) {
    */
   @Volatile private var pendingNetworkRetry = false
 
+  /**
+   * When true (from setup options' `keepSessionAliveOnError`), mask a terminal playback error so the
+   * media session stays alive & controllable (external controllers keep next/previous) instead of
+   * tearing down. When false, a terminal error surfaces to the session as usual.
+   */
+  private var keepSessionAliveOnError = false
+
+  /** Whether the player publishes/refreshes track metadata on the now-playing surface. */
+  private var nowPlayingMetadataEnabled = true
+
+  /**
+   * Optional JS formatter that customizes the now-playing title/subtitle. Null = default mapping.
+   */
+  private var nowPlayingFormatter: NowPlayingFormatter? = null
+
+  /** Latest live timed (ICY/ID3) metadata, passed to the formatter. Reset on track change. */
+  @Volatile private var latestTimedMetadata: TimedMetadata? = null
+
+  /** Scope for invoking the (async) now-playing formatter. */
+  private val nowPlayingScope = MainScope()
+
   private var _browser: AudioBrowser? = null
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
   /**
-   * Coil ImageLoader for SVG pre-rendering in Android Auto browse items.
-   * Set by Service after creation.
+   * Coil ImageLoader for SVG pre-rendering in Android Auto browse items. Set by Service after
+   * creation.
    */
   var imageLoader: coil3.ImageLoader? = null
 
@@ -132,9 +158,9 @@ class Player(internal val context: Context) {
     }
 
   /**
-   * Notifies that the browser configuration is ready (routes/tabs are configured).
-   * This should be called after setting the browser AND its configuration.
-   * Only then will Android Auto be able to browse content.
+   * Notifies that the browser configuration is ready (routes/tabs are configured). This should be
+   * called after setting the browser AND its configuration. Only then will Android Auto be able to
+   * browse content.
    */
   fun notifyBrowserConfigurationReady() {
     val audioBrowser = _browser ?: return
@@ -210,6 +236,43 @@ class Player(internal val context: Context) {
    */
   private inner class InterceptingPlayer(player: ExoPlayer) : ForwardingPlayer(player) {
 
+    // Hide playback errors from the platform session. Media3 builds the legacy PlaybackStateCompat
+    // from player.getPlayerError() (-> STATE_ERROR), which Android Auto and the notification render
+    // as a disruptive error. The error still surfaces via the onPlaybackError JS callback and
+    // `playbackState`, so a now-playing formatter can render it; playback context is preserved.
+    override fun getPlayerError(): androidx.media3.common.PlaybackException? = null
+
+    // A terminal load error idles ExoPlayer, which the platform session renders as STATE_NONE —
+    // Android Auto reads that as "nothing playing" and tears down the now-playing screen, losing
+    // the next/previous buttons. Keep the session alive by reporting a paused-but-ready state while
+    // the (suppressed) error is present, so the user can still skip to a working station. Based on
+    // the real underlying error (super.getPlayerError()) so it's race-free with state-change
+    // listeners.
+    override fun getPlaybackState(): Int {
+      val state = super.getPlaybackState()
+      return if (
+        keepSessionAliveOnError &&
+          state == androidx.media3.common.Player.STATE_IDLE &&
+          super.getPlayerError() != null
+      ) {
+        androidx.media3.common.Player.STATE_READY
+      } else {
+        state
+      }
+    }
+
+    override fun getPlayWhenReady(): Boolean {
+      return if (
+        keepSessionAliveOnError &&
+          super.getPlaybackState() == androidx.media3.common.Player.STATE_IDLE &&
+          super.getPlayerError() != null
+      ) {
+        false
+      } else {
+        super.getPlayWhenReady()
+      }
+    }
+
     override fun setMediaItems(mediaItems: MutableList<MediaItem>, resetPosition: Boolean) {
       return super.setMediaItems(mediaItems, resetPosition)
     }
@@ -234,10 +297,22 @@ class Player(internal val context: Context) {
       return super.setMediaItems(mediaItems)
     }
 
+    // A terminal error leaves ExoPlayer idle; the default transport controls (super.play() /
+    // super.seekToNext()) then flip playWhenReady or move the queue index but never restart a
+    // stopped player. prepare() recovers it (and early-returns when not idle, so it's a no-op
+    // during normal playback) — so next/previous/play resume on the selected station from the
+    // masked error state instead of doing nothing.
+    private fun recoverFromErrorIfNeeded() {
+      if (keepSessionAliveOnError && super.getPlayerError() != null) {
+        exoPlayer.prepare()
+      }
+    }
+
     // Intercept playback controls and dispatch to callbacks or fall back to default behavior
     override fun play() {
       if (callbacks?.handleRemotePlay() != true) {
         super.play()
+        recoverFromErrorIfNeeded()
       }
     }
 
@@ -251,6 +326,7 @@ class Player(internal val context: Context) {
       Timber.Forest.d("InterceptingPlayer.seekToNext() called")
       if (callbacks?.handleRemoteNext() != true) {
         super.seekToNext()
+        recoverFromErrorIfNeeded()
       }
     }
 
@@ -258,6 +334,7 @@ class Player(internal val context: Context) {
       Timber.Forest.d("InterceptingPlayer.seekToNextMediaItem() called")
       if (callbacks?.handleRemoteNext() != true) {
         super.seekToNextMediaItem()
+        recoverFromErrorIfNeeded()
       }
     }
 
@@ -265,6 +342,7 @@ class Player(internal val context: Context) {
       Timber.Forest.d("InterceptingPlayer.seekToPrevious() called")
       if (callbacks?.handleRemotePrevious() != true) {
         super.seekToPrevious()
+        recoverFromErrorIfNeeded()
       }
     }
 
@@ -272,6 +350,7 @@ class Player(internal val context: Context) {
       Timber.Forest.d("InterceptingPlayer.seekToPreviousMediaItem() called")
       if (callbacks?.handleRemotePrevious() != true) {
         super.seekToPreviousMediaItem()
+        recoverFromErrorIfNeeded()
       }
     }
 
@@ -354,6 +433,16 @@ class Player(internal val context: Context) {
 
   /** Current now playing metadata override (null = use track metadata) */
   private var nowPlayingOverride: NowPlayingUpdate? = null
+
+  /** The last now-playing fields actually published, to dedupe redundant [replaceMediaItem] calls. */
+  private data class PublishedNowPlaying(
+    val index: Int,
+    val trackId: String?,
+    val title: String?,
+    val secondaryLine: String?,
+  )
+
+  private var lastPublishedNowPlaying: PublishedNowPlaying? = null
 
   fun getPlayback(): Playback {
     return Playback(playbackState, playbackError)
@@ -466,6 +555,10 @@ class Player(internal val context: Context) {
    */
   fun setup(setupOptions: PlayerSetupOptions) {
     Timber.Forest.d("Setting up player with new options")
+
+    keepSessionAliveOnError = setupOptions.keepSessionAliveOnError
+    nowPlayingMetadataEnabled = setupOptions.autoUpdateNowPlayingMetadata
+    nowPlayingFormatter = setupOptions.nowPlayingMetadataFormatter
 
     val isInitialSetup = !::exoPlayer.isInitialized
 
@@ -620,8 +713,8 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Starts observing network connectivity changes and invokes the callback when state changes.
-   * Also handles accelerating pending network retries when connectivity is restored.
+   * Starts observing network connectivity changes and invokes the callback when state changes. Also
+   * handles accelerating pending network retries when connectivity is restored.
    *
    * @param scope The coroutine scope to use for observation
    */
@@ -896,6 +989,18 @@ class Player(internal val context: Context) {
    */
   internal fun clearNowPlayingOverride() {
     nowPlayingOverride = null
+    latestTimedMetadata = null
+  }
+
+  /**
+   * Records the latest live timed (ICY/ID3) metadata and, when a now-playing formatter is
+   * configured, re-runs it so the live song is reflected on the now-playing surface.
+   */
+  internal fun onTimedMetadataReceived(timed: TimedMetadata) {
+    latestTimedMetadata = timed
+    if (nowPlayingMetadataEnabled && nowPlayingFormatter != null) {
+      applyNowPlayingMetadata()
+    }
   }
 
   /**
@@ -912,15 +1017,91 @@ class Player(internal val context: Context) {
   internal fun applyNowPlayingMetadata() {
     val index = currentIndex ?: return
     val track = currentTrack ?: return
-    val override = nowPlayingOverride
 
+    // Metadata source. When metadata is disabled, use the raw track (ignore override + formatter);
+    // otherwise the imperative `updateNowPlaying` override wins over the track's own fields.
+    val override = if (nowPlayingMetadataEnabled) nowPlayingOverride else null
+    val defaultTitle = override?.title ?: track.title
+    val defaultSecondary = override?.artist ?: track.artist
+
+    // Apply the default immediately so the now-playing never lags a track/status change.
+    applyNowPlayingFields(index, track, defaultTitle, defaultSecondary)
+
+    // If a formatter is configured, let it customize the fields asynchronously (mirrors the
+    // navigation-error formatter pattern). Falls back to the default on null/throw.
+    val formatter = if (nowPlayingMetadataEnabled) nowPlayingFormatter else null
+    if (formatter != null) {
+      val capturedId = track.src ?: track.url
+      // Gate the raw load-control signal to the buffering state so `stalled` is correct on its own:
+      // ExoPlayer's rebuffering flag is polled on a different cadence than state transitions and can
+      // linger true into the PLAYING transition as a rebuffer recovers. AND-ing with the tracked
+      // state keeps it true only while ongoing playback is actually stalled, never bleeding into it.
+      val stalled = playbackState == PlaybackState.BUFFERING && loadControl.isRebuffering
+      // The real play/pause intent, not the InterceptingPlayer-masked value (which can report false
+      // through a masked error to keep the session paused-but-alive).
+      val params =
+        FormatNowPlayingParams(
+          track,
+          latestTimedMetadata,
+          exoPlayer.playWhenReady,
+          stalled,
+          playbackError,
+        )
+      nowPlayingScope.launch {
+        val formatted =
+          try {
+            formatter.invoke(params).await()
+          } catch (e: Exception) {
+            Timber.e(e, "NowPlaying formatter threw; using default")
+            null
+          }
+        // Apply only if still the same track (a fast skip must not be overwritten by a stale
+        // result).
+        val current = currentTrack
+        val currentIdx = currentIndex
+        if (
+          formatted != null &&
+            current != null &&
+            currentIdx != null &&
+            (current.src ?: current.url) == capturedId
+        ) {
+          applyNowPlayingFields(
+            currentIdx,
+            current,
+            formatted.title ?: defaultTitle,
+            formatted.artist ?: defaultSecondary,
+          )
+        }
+      }
+    }
+  }
+
+  /** Stamps the now-playing media item with the given title + secondary line. */
+  private fun applyNowPlayingFields(
+    index: Int,
+    track: Track,
+    title: String?,
+    secondaryLine: String?,
+  ) {
     val currentMediaItem = exoPlayer.getMediaItemAt(index)
+
+    // Skip republishing identical fields. The formatter is re-invoked on every state change, so the
+    // same (title, secondaryLine) is recomputed often; an unconditional replaceMediaItem would churn
+    // the MediaSession (and flicker Android Auto / now-playing) for no visible change. Keyed on the
+    // track identity so a new track with a coincidentally identical line still publishes.
+    val published = PublishedNowPlaying(index, track.src ?: track.url, title, secondaryLine)
+    if (published == lastPublishedNowPlaying) return
+    lastPublishedNowPlaying = published
+
     val updatedMetadata =
       currentMediaItem.mediaMetadata
         .buildUpon()
-        .setTitle(override?.title ?: track.title)
-        .setDisplayTitle(override?.title ?: track.title)
-        .setArtist(override?.artist ?: track.artist)
+        .setTitle(title)
+        .setDisplayTitle(title)
+        .setArtist(secondaryLine)
+        // Android Auto reads DISPLAY_SUBTITLE (not ARTIST) once DISPLAY_TITLE is set, so mirror the
+        // line into `subtitle`; `artist` still drives the lock screen / notification.
+        .setSubtitle(secondaryLine)
         .build()
 
     val updatedMediaItem =
@@ -1045,6 +1226,7 @@ class Player(internal val context: Context) {
    */
   fun destroy() {
     stop()
+    nowPlayingScope.cancel()
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
     automaticBufferManager = null
@@ -1089,6 +1271,13 @@ class Player(internal val context: Context) {
 
       val playback = Playback(state, playbackError)
       callbacks?.onPlaybackChanged(playback)
+
+      // Re-render the now-playing on every state change: the metadata formatter receives
+      // `playbackState` (plus isRebuffering / isOnline / error), so any transition can change its
+      // output — the live song while paused, a "Reconnecting…" line on a rebuffer, an offline/error
+      // line. The publish-dedupe in applyNowPlayingFields drops redundant updates, so re-running
+      // through the rapid startup sequence (none→loading→buffering→ready→playing) is cheap.
+      applyNowPlayingMetadata()
 
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state

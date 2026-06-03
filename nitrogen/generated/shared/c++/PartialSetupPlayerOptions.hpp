@@ -34,12 +34,20 @@ namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions
 namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include <optional>
 #include "PartialIOSSetupPlayerOptions.hpp"
 #include "RetryConfig.hpp"
 #include <variant>
+#include "NowPlayingUpdate.hpp"
+#include <NitroModules/Promise.hpp>
+#include "FormatNowPlayingParams.hpp"
+#include <functional>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -52,13 +60,16 @@ namespace margelo::nitro::audiobrowser {
     std::optional<PartialIOSSetupPlayerOptions> ios     SWIFT_PRIVATE;
     std::optional<bool> autoUpdateMetadata     SWIFT_PRIVATE;
     std::optional<std::variant<bool, RetryConfig>> retry     SWIFT_PRIVATE;
+    std::optional<bool> keepSessionAliveOnError     SWIFT_PRIVATE;
+    std::optional<bool> autoUpdateNowPlayingMetadata     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> nowPlayingMetadataFormatter     SWIFT_PRIVATE;
 
   public:
     PartialSetupPlayerOptions() = default;
-    explicit PartialSetupPlayerOptions(std::optional<PartialAndroidSetupPlayerOptions> android, std::optional<PartialIOSSetupPlayerOptions> ios, std::optional<bool> autoUpdateMetadata, std::optional<std::variant<bool, RetryConfig>> retry): android(android), ios(ios), autoUpdateMetadata(autoUpdateMetadata), retry(retry) {}
+    explicit PartialSetupPlayerOptions(std::optional<PartialAndroidSetupPlayerOptions> android, std::optional<PartialIOSSetupPlayerOptions> ios, std::optional<bool> autoUpdateMetadata, std::optional<std::variant<bool, RetryConfig>> retry, std::optional<bool> keepSessionAliveOnError, std::optional<bool> autoUpdateNowPlayingMetadata, std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> nowPlayingMetadataFormatter): android(android), ios(ios), autoUpdateMetadata(autoUpdateMetadata), retry(retry), keepSessionAliveOnError(keepSessionAliveOnError), autoUpdateNowPlayingMetadata(autoUpdateNowPlayingMetadata), nowPlayingMetadataFormatter(nowPlayingMetadataFormatter) {}
 
   public:
-    friend bool operator==(const PartialSetupPlayerOptions& lhs, const PartialSetupPlayerOptions& rhs) = default;
+    // PartialSetupPlayerOptions is not equatable because these properties are not equatable: nowPlayingMetadataFormatter
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -74,7 +85,10 @@ namespace margelo::nitro {
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialAndroidSetupPlayerOptions>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "android"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "ios"))),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "autoUpdateMetadata"))),
-        JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retry")))
+        JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retry"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "keepSessionAliveOnError"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "autoUpdateNowPlayingMetadata"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<margelo::nitro::audiobrowser::NowPlayingUpdate>>>(const margelo::nitro::audiobrowser::FormatNowPlayingParams&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "nowPlayingMetadataFormatter")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PartialSetupPlayerOptions& arg) {
@@ -83,6 +97,9 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "ios"), JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::toJSI(runtime, arg.ios));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "autoUpdateMetadata"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.autoUpdateMetadata));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "retry"), JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::toJSI(runtime, arg.retry));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "keepSessionAliveOnError"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.keepSessionAliveOnError));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "autoUpdateNowPlayingMetadata"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.autoUpdateNowPlayingMetadata));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "nowPlayingMetadataFormatter"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<margelo::nitro::audiobrowser::NowPlayingUpdate>>>(const margelo::nitro::audiobrowser::FormatNowPlayingParams&)>>>::toJSI(runtime, arg.nowPlayingMetadataFormatter));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -97,6 +114,9 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PartialIOSSetupPlayerOptions>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "ios")))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "autoUpdateMetadata")))) return false;
       if (!JSIConverter<std::optional<std::variant<bool, margelo::nitro::audiobrowser::RetryConfig>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retry")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "keepSessionAliveOnError")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "autoUpdateNowPlayingMetadata")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<margelo::nitro::audiobrowser::NowPlayingUpdate>>>(const margelo::nitro::audiobrowser::FormatNowPlayingParams&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "nowPlayingMetadataFormatter")))) return false;
       return true;
     }
   };

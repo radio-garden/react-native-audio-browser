@@ -13,29 +13,54 @@
 #include "AndroidAudioContentType.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidPlayerWakeMode.hpp"
+#include "FormatNowPlayingParams.hpp"
+#include "HttpMethod.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "ImageRowItem.hpp"
+#include "ImageSource.hpp"
 #include "JAndroidAudioContentType.hpp"
 #include "JAndroidAudioOffloadSettings.hpp"
 #include "JAndroidPlayerWakeMode.hpp"
+#include "JFormatNowPlayingParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
+#include "JHttpMethod.hpp"
 #include "JIOSCategory.hpp"
 #include "JIOSCategoryMode.hpp"
 #include "JIOSCategoryOptions.hpp"
 #include "JIOSCategoryPolicy.hpp"
+#include "JImageRowItem.hpp"
+#include "JImageSource.hpp"
+#include "JNowPlayingUpdate.hpp"
 #include "JPartialAndroidSetupPlayerOptions.hpp"
 #include "JPartialIOSSetupPlayerOptions.hpp"
+#include "JPlaybackError.hpp"
 #include "JRetryConfig.hpp"
+#include "JTimedMetadata.hpp"
+#include "JTrack.hpp"
+#include "JTrackStyle.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
 #include "JVariant_Boolean_RetryConfig.hpp"
 #include "JVariant_NullType_Double.hpp"
+#include "NowPlayingUpdate.hpp"
 #include "PartialAndroidSetupPlayerOptions.hpp"
 #include "PartialIOSSetupPlayerOptions.hpp"
+#include "PlaybackError.hpp"
 #include "RetryConfig.hpp"
+#include "TimedMetadata.hpp"
+#include "Track.hpp"
+#include "TrackStyle.hpp"
+#include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JNull.hpp>
+#include <NitroModules/JPromise.hpp>
 #include <NitroModules/Null.hpp>
+#include <NitroModules/Promise.hpp>
+#include <functional>
 #include <optional>
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -66,11 +91,28 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> autoUpdateMetadata = this->getFieldValue(fieldAutoUpdateMetadata);
       static const auto fieldRetry = clazz->getField<JVariant_Boolean_RetryConfig>("retry");
       jni::local_ref<JVariant_Boolean_RetryConfig> retry = this->getFieldValue(fieldRetry);
+      static const auto fieldKeepSessionAliveOnError = clazz->getField<jni::JBoolean>("keepSessionAliveOnError");
+      jni::local_ref<jni::JBoolean> keepSessionAliveOnError = this->getFieldValue(fieldKeepSessionAliveOnError);
+      static const auto fieldAutoUpdateNowPlayingMetadata = clazz->getField<jni::JBoolean>("autoUpdateNowPlayingMetadata");
+      jni::local_ref<jni::JBoolean> autoUpdateNowPlayingMetadata = this->getFieldValue(fieldAutoUpdateNowPlayingMetadata);
+      static const auto fieldNowPlayingMetadataFormatter = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams::javaobject>("nowPlayingMetadataFormatter");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams::javaobject> nowPlayingMetadataFormatter = this->getFieldValue(fieldNowPlayingMetadataFormatter);
       return PartialSetupPlayerOptions(
         android != nullptr ? std::make_optional(android->toCpp()) : std::nullopt,
         ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt,
         autoUpdateMetadata != nullptr ? std::make_optional(static_cast<bool>(autoUpdateMetadata->value())) : std::nullopt,
-        retry != nullptr ? std::make_optional(retry->toCpp()) : std::nullopt
+        retry != nullptr ? std::make_optional(retry->toCpp()) : std::nullopt,
+        keepSessionAliveOnError != nullptr ? std::make_optional(static_cast<bool>(keepSessionAliveOnError->value())) : std::nullopt,
+        autoUpdateNowPlayingMetadata != nullptr ? std::make_optional(static_cast<bool>(autoUpdateNowPlayingMetadata->value())) : std::nullopt,
+        nowPlayingMetadataFormatter != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)> {
+          if (nowPlayingMetadataFormatter->isInstanceOf(JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_cxx::javaobject>(nowPlayingMetadataFormatter);
+            return downcast->cthis()->getFunction();
+          } else {
+            auto nowPlayingMetadataFormatterRef = jni::make_global(nowPlayingMetadataFormatter);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams, std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(FormatNowPlayingParams)>(std::move(nowPlayingMetadataFormatterRef));
+          }
+        }()) : std::nullopt
       );
     }
 
@@ -80,7 +122,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPartialSetupPlayerOptions::javaobject> fromCpp(const PartialSetupPlayerOptions& value) {
-      using JSignature = JPartialSetupPlayerOptions(jni::alias_ref<JPartialAndroidSetupPlayerOptions>, jni::alias_ref<JPartialIOSSetupPlayerOptions>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JVariant_Boolean_RetryConfig>);
+      using JSignature = JPartialSetupPlayerOptions(jni::alias_ref<JPartialAndroidSetupPlayerOptions>, jni::alias_ref<JPartialIOSSetupPlayerOptions>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JVariant_Boolean_RetryConfig>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -88,7 +130,10 @@ namespace margelo::nitro::audiobrowser {
         value.android.has_value() ? JPartialAndroidSetupPlayerOptions::fromCpp(value.android.value()) : nullptr,
         value.ios.has_value() ? JPartialIOSSetupPlayerOptions::fromCpp(value.ios.value()) : nullptr,
         value.autoUpdateMetadata.has_value() ? jni::JBoolean::valueOf(value.autoUpdateMetadata.value()) : nullptr,
-        value.retry.has_value() ? JVariant_Boolean_RetryConfig::fromCpp(value.retry.value()) : nullptr
+        value.retry.has_value() ? JVariant_Boolean_RetryConfig::fromCpp(value.retry.value()) : nullptr,
+        value.keepSessionAliveOnError.has_value() ? jni::JBoolean::valueOf(value.keepSessionAliveOnError.value()) : nullptr,
+        value.autoUpdateNowPlayingMetadata.has_value() ? jni::JBoolean::valueOf(value.autoUpdateNowPlayingMetadata.value()) : nullptr,
+        value.nowPlayingMetadataFormatter.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_cxx::fromCpp(value.nowPlayingMetadataFormatter.value()) : nullptr
       );
     }
   };

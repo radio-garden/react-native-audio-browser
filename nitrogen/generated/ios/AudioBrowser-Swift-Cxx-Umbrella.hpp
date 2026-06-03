@@ -48,6 +48,8 @@ namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
 namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
+// Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `HeartRating` to properly resolve imports.
@@ -208,6 +210,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "FavoriteConfig.hpp"
 #include "FavoritesMatchMode.hpp"
 #include "FormatNavigationErrorParams.hpp"
+#include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"

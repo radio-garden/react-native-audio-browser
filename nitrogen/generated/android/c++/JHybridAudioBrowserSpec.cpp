@@ -177,12 +177,14 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
-// Forward declaration of `NowPlayingUpdate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 
 #include <string>
 #include <optional>
@@ -415,12 +417,15 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "RetryConfig.hpp"
 #include "JVariant_Boolean_RetryConfig.hpp"
 #include "JRetryConfig.hpp"
+#include "NowPlayingUpdate.hpp"
+#include "FormatNowPlayingParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
+#include "JNowPlayingUpdate.hpp"
+#include "JFormatNowPlayingParams.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "JNativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "JNitroAndroidUpdateOptions.hpp"
-#include "NowPlayingUpdate.hpp"
-#include "JNowPlayingUpdate.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

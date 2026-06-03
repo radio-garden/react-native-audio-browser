@@ -48,6 +48,8 @@ namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
 namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
+// Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `HeartRating` to properly resolve imports.
@@ -206,6 +208,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "FavoriteConfig.hpp"
 #include "FavoritesMatchMode.hpp"
 #include "FormatNavigationErrorParams.hpp"
+#include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
@@ -1638,6 +1641,123 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__RetryConfig_(value);
   }
   
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& / * params * /)>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______ = std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______(const std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)> get_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams = std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& / * params * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_Wrapper(std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>> call(FormatNowPlayingParams params) const noexcept {
+      auto __result = _function->operator()(params);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams create_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>`.
+   */
+  using std__shared_ptr_Promise_std__optional_NowPlayingUpdate___ = std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>;
+  inline std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>> create_std__shared_ptr_Promise_std__optional_NowPlayingUpdate___() noexcept {
+    return Promise<std::optional<NowPlayingUpdate>>::create();
+  }
+  inline PromiseHolder<std::optional<NowPlayingUpdate>> wrap_std__shared_ptr_Promise_std__optional_NowPlayingUpdate___(std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>> promise) noexcept {
+    return PromiseHolder<std::optional<NowPlayingUpdate>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<NowPlayingUpdate>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::optional<NowPlayingUpdate>&)>`.
+   */
+  using Func_void_std__optional_NowPlayingUpdate_ = std::function<void(const std::optional<NowPlayingUpdate>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::optional<NowPlayingUpdate>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__optional_NowPlayingUpdate__Wrapper final {
+  public:
+    explicit Func_void_std__optional_NowPlayingUpdate__Wrapper(std::function<void(const std::optional<NowPlayingUpdate>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::optional<NowPlayingUpdate>& /* result */)>>(std::move(func))) {}
+    inline void call(std::optional<NowPlayingUpdate> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::optional<NowPlayingUpdate>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__optional_NowPlayingUpdate_ create_Func_void_std__optional_NowPlayingUpdate_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__optional_NowPlayingUpdate__Wrapper wrap_Func_void_std__optional_NowPlayingUpdate_(Func_void_std__optional_NowPlayingUpdate_ value) noexcept {
+    return Func_void_std__optional_NowPlayingUpdate__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<NowPlayingUpdate>
+  /**
+   * Specialized version of `std::optional<NowPlayingUpdate>`.
+   */
+  using std__optional_NowPlayingUpdate_ = std::optional<NowPlayingUpdate>;
+  inline std::optional<NowPlayingUpdate> create_std__optional_NowPlayingUpdate_(const NowPlayingUpdate& value) noexcept {
+    return std::optional<NowPlayingUpdate>(value);
+  }
+  inline bool has_value_std__optional_NowPlayingUpdate_(const std::optional<NowPlayingUpdate>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NowPlayingUpdate get_std__optional_NowPlayingUpdate_(const std::optional<NowPlayingUpdate>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<TimedMetadata>
+  /**
+   * Specialized version of `std::optional<TimedMetadata>`.
+   */
+  using std__optional_TimedMetadata_ = std::optional<TimedMetadata>;
+  inline std::optional<TimedMetadata> create_std__optional_TimedMetadata_(const TimedMetadata& value) noexcept {
+    return std::optional<TimedMetadata>(value);
+  }
+  inline bool has_value_std__optional_TimedMetadata_(const std::optional<TimedMetadata>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline TimedMetadata get_std__optional_TimedMetadata_(const std::optional<TimedMetadata>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<PlaybackError>
+  /**
+   * Specialized version of `std::optional<PlaybackError>`.
+   */
+  using std__optional_PlaybackError_ = std::optional<PlaybackError>;
+  inline std::optional<PlaybackError> create_std__optional_PlaybackError_(const PlaybackError& value) noexcept {
+    return std::optional<PlaybackError>(value);
+  }
+  inline bool has_value_std__optional_PlaybackError_(const std::optional<PlaybackError>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PlaybackError get_std__optional_PlaybackError_(const std::optional<PlaybackError>& optional) noexcept {
+    return optional.value();
+  }
+  
   // pragma MARK: std::optional<NitroAndroidUpdateOptions>
   /**
    * Specialized version of `std::optional<NitroAndroidUpdateOptions>`.
@@ -1980,21 +2100,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   Func_void_PlaybackActiveTrackChangedEvent create_Func_void_PlaybackActiveTrackChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_PlaybackActiveTrackChangedEvent_Wrapper wrap_Func_void_PlaybackActiveTrackChangedEvent(Func_void_PlaybackActiveTrackChangedEvent value) noexcept {
     return Func_void_PlaybackActiveTrackChangedEvent_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::optional<PlaybackError>
-  /**
-   * Specialized version of `std::optional<PlaybackError>`.
-   */
-  using std__optional_PlaybackError_ = std::optional<PlaybackError>;
-  inline std::optional<PlaybackError> create_std__optional_PlaybackError_(const PlaybackError& value) noexcept {
-    return std::optional<PlaybackError>(value);
-  }
-  inline bool has_value_std__optional_PlaybackError_(const std::optional<PlaybackError>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline PlaybackError get_std__optional_PlaybackError_(const std::optional<PlaybackError>& optional) noexcept {
-    return optional.value();
   }
   
   // pragma MARK: std::function<void(const PlaybackErrorEvent& /* data */)>
@@ -2623,21 +2728,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline std::function<void(const RemoteSeekEvent& /* event */)> get_std__optional_std__function_void_const_RemoteSeekEvent_____event______(const std::optional<std::function<void(const RemoteSeekEvent& /* event */)>>& optional) noexcept {
-    return optional.value();
-  }
-  
-  // pragma MARK: std::optional<NowPlayingUpdate>
-  /**
-   * Specialized version of `std::optional<NowPlayingUpdate>`.
-   */
-  using std__optional_NowPlayingUpdate_ = std::optional<NowPlayingUpdate>;
-  inline std::optional<NowPlayingUpdate> create_std__optional_NowPlayingUpdate_(const NowPlayingUpdate& value) noexcept {
-    return std::optional<NowPlayingUpdate>(value);
-  }
-  inline bool has_value_std__optional_NowPlayingUpdate_(const std::optional<NowPlayingUpdate>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline NowPlayingUpdate get_std__optional_NowPlayingUpdate_(const std::optional<NowPlayingUpdate>& optional) noexcept {
     return optional.value();
   }
   

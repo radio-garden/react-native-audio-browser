@@ -18,7 +18,7 @@ public extension PartialSetupPlayerOptions {
   /**
    * Create a new instance of `PartialSetupPlayerOptions`.
    */
-  init(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Bool?, retry: Variant_Bool_RetryConfig?) {
+  init(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Bool?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?) {
     self.init({ () -> bridge.std__optional_PartialAndroidSetupPlayerOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_PartialAndroidSetupPlayerOptions_(__unwrappedValue)
@@ -47,6 +47,27 @@ public extension PartialSetupPlayerOptions {
               return bridge.create_std__variant_bool__RetryConfig_(__value)
           }
         }().variant)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = keepSessionAliveOnError {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = autoUpdateNowPlayingMetadata {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______ in
+      if let __unwrappedValue = nowPlayingMetadataFormatter {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__closureWrapper.toUnsafe())
+        }())
       } else {
         return .init()
       }
@@ -91,6 +112,68 @@ public extension PartialSetupPlayerOptions {
               return .second(__actual)
             default:
               fatalError("Variant can never have index \(__variant.index())!")
+          }
+        }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var keepSessionAliveOnError: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__keepSessionAliveOnError) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__keepSessionAliveOnError)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var autoUpdateNowPlayingMetadata: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__autoUpdateNowPlayingMetadata) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__autoUpdateNowPlayingMetadata)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)? {
+    return { () -> ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______(self.__nowPlayingMetadataFormatter) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______(self.__nowPlayingMetadataFormatter)
+        return { () -> (FormatNowPlayingParams) -> Promise<NowPlayingUpdate?> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__unwrapped)
+          return { (__params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?> in
+            let __result = __wrappedFunction.call(__params)
+            return { () -> Promise<NowPlayingUpdate?> in
+              let __promise = Promise<NowPlayingUpdate?>()
+              let __resolver = { (__result: NowPlayingUpdate?) in
+                __promise.resolve(withResult: __result)
+              }
+              let __rejecter = { (__error: Error) in
+                __promise.reject(withError: __error)
+              }
+              let __resolverCpp = { () -> bridge.Func_void_std__optional_NowPlayingUpdate_ in
+                let __closureWrapper = Func_void_std__optional_NowPlayingUpdate_(__resolver)
+                return bridge.create_Func_void_std__optional_NowPlayingUpdate_(__closureWrapper.toUnsafe())
+              }()
+              let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+              }()
+              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__optional_NowPlayingUpdate___(__result)
+              __promiseHolder.addOnResolvedListener(__resolverCpp)
+              __promiseHolder.addOnRejectedListener(__rejecterCpp)
+              return __promise
+            }()
           }
         }()
       } else {

@@ -9,7 +9,7 @@ package com.margelo.nitro.audiobrowser
 
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
-
+import com.margelo.nitro.core.Promise
 
 /**
  * Represents the JavaScript object/struct "PartialSetupPlayerOptions".
@@ -28,9 +28,22 @@ data class PartialSetupPlayerOptions(
   val autoUpdateMetadata: Boolean?,
   @DoNotStrip
   @Keep
-  val retry: Variant_Boolean_RetryConfig?
+  val retry: Variant_Boolean_RetryConfig?,
+  @DoNotStrip
+  @Keep
+  val keepSessionAliveOnError: Boolean?,
+  @DoNotStrip
+  @Keep
+  val autoUpdateNowPlayingMetadata: Boolean?,
+  @DoNotStrip
+  @Keep
+  val nowPlayingMetadataFormatter: Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams?
 ) {
-  /* primary constructor */
+  /**
+   * Create a new instance of PartialSetupPlayerOptions from Kotlin
+   */
+  constructor(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: ((params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?):
+         this(android, ios, autoUpdateMetadata, retry, keepSessionAliveOnError, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter?.let { Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_java(it) })
 
   companion object {
     /**
@@ -40,8 +53,8 @@ data class PartialSetupPlayerOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?, retry: Variant_Boolean_RetryConfig?): PartialSetupPlayerOptions {
-      return PartialSetupPlayerOptions(android, ios, autoUpdateMetadata, retry)
+    private fun fromCpp(android: PartialAndroidSetupPlayerOptions?, ios: PartialIOSSetupPlayerOptions?, autoUpdateMetadata: Boolean?, retry: Variant_Boolean_RetryConfig?, keepSessionAliveOnError: Boolean?, autoUpdateNowPlayingMetadata: Boolean?, nowPlayingMetadataFormatter: Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams?): PartialSetupPlayerOptions {
+      return PartialSetupPlayerOptions(android, ios, autoUpdateMetadata, retry, keepSessionAliveOnError, autoUpdateNowPlayingMetadata, nowPlayingMetadataFormatter)
     }
   }
 }
