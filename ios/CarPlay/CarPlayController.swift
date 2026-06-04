@@ -29,16 +29,22 @@ public final class RNABCarPlayController: NSObject {
   private var isStarted = false
   private var listenerRemovals: [() -> Void] = []
 
-  /// Current navigation stack paths (for back navigation context)
-  private var navigationStack: [String] = []
+  /// Paths whose loading template has been pushed but not yet appeared. Guards a
+  /// rapid double-tap from pushing the same destination twice (the first push is
+  /// async, so `topTemplate` may not reflect it yet). Cleared when it appears.
+  private var navigatingPaths: Set<String> = []
 
-  /// Key (src ?? url) of the item currently being selected.
-  /// Prevents duplicate taps from triggering parallel async operations.
-  private var pendingSelectionKey: String?
+  /// Templates with a content load in flight. Guards a re-entrant load when a
+  /// still-loading template re-appears (back-and-forth navigation) from spawning
+  /// a second resolve + watchdog.
+  private var loadingTemplates: Set<ObjectIdentifier> = []
 
-  /// URLs currently being resolved for navigation.
-  /// Prevents duplicate taps from pushing the same template twice.
-  private var pendingNavigationUrls: Set<String> = []
+  /// How long a browse resolve may run before the destination's loading spinner
+  /// is replaced with an error state. The selection completion is fired
+  /// immediately (so CarPlay never blocks the list — per Apple's async handler
+  /// guidance we push the destination and fill it in), so this only bounds how
+  /// long the *destination screen* spins. Backing out and re-tapping retries.
+  private let resolveTimeout: Duration = .seconds(15)
 
   /// Helper object for CPInterfaceControllerDelegate conformance
   private var interfaceDelegate: InterfaceControllerDelegate?
@@ -144,9 +150,8 @@ public final class RNABCarPlayController: NSObject {
     nowPlayingManager.teardown()
     listItemFactory = nil
 
-    navigationStack.removeAll()
-    pendingSelectionKey = nil
-    pendingNavigationUrls.removeAll()
+    navigatingPaths.removeAll()
+    loadingTemplates.removeAll()
   }
 
   // MARK: - Content Subscriptions
@@ -253,8 +258,9 @@ public final class RNABCarPlayController: NSObject {
   private func handleNavigationError(_ event: NavigationErrorEvent) {
     guard let error = event.error else { return }
     logger.warning("Navigation error: \(error.code.stringValue) - \(error.message)")
-    // Use current path from navigation stack, or "/" as fallback
-    let path = navigationStack.last ?? "/"
+    // Derive the current path from the live top template (authoritative) rather
+    // than a hand-maintained stack that goes stale on back navigation.
+    let path = interfaceController.topTemplate.flatMap { getPath(from: $0) } ?? "/"
     showNavigationError(error, path: path)
   }
 
@@ -365,21 +371,6 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - List Templates
 
-  @MainActor
-  private func createListTemplate(
-    for resolvedTrack: ResolvedTrack,
-    path: String,
-  ) -> CPListTemplate {
-    let template = CPListTemplate(
-      title: resolvedTrack.title,
-      sections: [],
-    )
-    updateTemplate(template, with: resolvedTrack)
-    template.userInfo = ["path": path] as [String: Any]
-
-    return template
-  }
-
   /// Finds the path associated with a template, if any
   private func getPath(from template: CPTemplate) -> String? {
     (template.userInfo as? [String: Any])?["path"] as? String
@@ -409,15 +400,47 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Content Loading
 
+  /// Resolves `path` and fills an empty (loading) template. Driven by
+  /// `templateDidAppear` → `loadContentIfNeeded`, so it runs once the template is
+  /// on screen — the timing where CarPlay actually applies updates (updates made
+  /// earlier, e.g. straight after push, are dropped). Shows a centered empty
+  /// state on empty/error/timeout.
   @MainActor
   private func loadContent(for path: String, into template: CPListTemplate) async {
     guard let audioBrowser else { return }
 
+    // Single-flight: don't start a second load if one is already in flight for
+    // this template (e.g. the user backed out and into a still-loading screen).
+    let templateId = ObjectIdentifier(template)
+    guard !loadingTemplates.contains(templateId) else { return }
+    loadingTemplates.insert(templateId)
+    defer { loadingTemplates.remove(templateId) }
+
+    // Watchdog: if still loading (no rows) after the timeout, show an error.
+    let timeout = resolveTimeout
+    let watchdog = Task { @MainActor [weak self] in
+      do { try await Task.sleep(for: timeout) } catch { return } // cancelled → abort
+      guard let self, template.sections.isEmpty else { return }
+      self.logger.error("loadContent: resolve timed out for \(path)")
+      self.showMessage(on: template, title: "Couldn't load", subtitle: "Go back and try again")
+    }
+
     do {
       let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
-      updateTemplate(template, with: resolved)
+      watchdog.cancel()
+      if resolved.children?.isEmpty ?? true {
+        showMessage(on: template, title: "Nothing here", subtitle: nil)
+      } else {
+        updateTemplate(template, with: resolved)
+      }
     } catch {
+      watchdog.cancel()
       logger.error("Failed to load content for \(path): \(error.localizedDescription)")
+      showMessage(
+        on: template,
+        title: NavigationError.from(error).defaultFormatted().message,
+        subtitle: "Go back and try again",
+      )
     }
   }
 
@@ -431,17 +454,8 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
-    // Deduplicate: ignore if the same item is already being loaded
-    let key = track.src ?? track.url
-    if let key, key == pendingSelectionKey {
-      completion()
-      return
-    }
-    pendingSelectionKey = key
-
-    // If this track is already loaded, resume playback and show Now Playing
+    // If this track is already loaded, resume playback and show Now Playing.
     if let src = track.src, isActiveTrack(src: src) {
-      pendingSelectionKey = nil
       try? audioBrowser.play()
       nowPlayingManager.showNowPlaying()
       completion()
@@ -449,14 +463,19 @@ public final class RNABCarPlayController: NSObject {
     }
 
     guard let player = audioBrowser.getPlayer(), let trackSelector else {
-      pendingSelectionKey = nil
       completion()
       return
     }
 
-    Task {
-      defer { self.pendingSelectionKey = nil }
+    // Release CarPlay immediately so the list never locks up. Apple's handler
+    // guidance is to finish processing the tap promptly; for a browse we "finish"
+    // by pushing the destination and filling it in (see navigateToUrl), and for
+    // playback the Now Playing surface owns its own loading state.
+    completion()
+
+    Task { [weak self] in
       let result = await trackSelector.select(track: track, player: player)
+      guard let self else { return }
       switch result {
       case .play(let intent):
         self.executePlayback(intent, player: player)
@@ -464,12 +483,10 @@ public final class RNABCarPlayController: NSObject {
       case .intercepted:
         self.nowPlayingManager.showNowPlaying()
       case .browse(let url):
-        self.navigateToUrl(url, completion: completion)
-        return // navigateToUrl handles its own completion
+        self.navigateToUrl(url, title: track.title)
       case .none:
         break
       }
-      completion()
     }
   }
 
@@ -484,43 +501,83 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  /// Navigates to a browsable URL path, showing error action sheet on failure with retry option.
-  private func navigateToUrl(_ url: String, completion: @escaping () -> Void) {
-    guard let audioBrowser else {
-      completion()
+  /// Pushes a browsable URL's destination immediately as an empty, spinning list
+  /// template — so the list the user tapped from is never blocked. The content is
+  /// filled by `templateDidAppear` → `loadContentIfNeeded` → `loadContent`, which
+  /// runs once the template is on screen (the timing CarPlay needs: updates made
+  /// right after a push are dropped). Backing out and re-tapping retries.
+  private func navigateToUrl(_ url: String, title: String) {
+    // Avoid pushing a duplicate if the top template already shows this path.
+    if let top = interfaceController.topTemplate, getPath(from: top) == url {
       return
     }
+    // …and guard a rapid double-tap whose first push hasn't appeared yet (so the
+    // check above can't see it). Cleared when the pushed template appears.
+    guard !navigatingPaths.contains(url) else { return }
+    navigatingPaths.insert(url)
 
-    // Deduplicate: ignore if already navigating to this URL
-    guard !pendingNavigationUrls.contains(url) else {
-      completion()
-      return
+    let template = makeLoadingTemplate(title: title, path: url)
+    interfaceController.pushTemplate(template, animated: true, completion: nil)
+  }
+
+  /// Builds an empty list template that shows a loading indicator: a real spinner
+  /// on iOS 18.4+ (`showsSpinnerWhileEmpty`), falling back to an empty-state
+  /// "Loading…" title on iOS 16–18.3. (Set before push, where it does take.)
+  private func makeLoadingTemplate(title: String, path: String) -> CPListTemplate {
+    let template = CPListTemplate(title: title, sections: [])
+    template.userInfo = ["path": path] as [String: Any]
+    if #available(iOS 18.4, *) {
+      template.showsSpinnerWhileEmpty = true
+    } else {
+      template.emptyViewTitleVariants = ["Loading…"]
     }
-    pendingNavigationUrls.insert(url)
+    return template
+  }
 
-    Task {
-      defer { self.pendingNavigationUrls.remove(url) }
-      do {
-        let resolved = try await audioBrowser.browserManager.resolve(url, useCache: true)
-
-        // Guard against duplicate push if top template already shows this path
-        if let top = self.interfaceController.topTemplate,
-           self.getPath(from: top) == url
-        {
-          completion()
-          return
-        }
-
-        let listTemplate = self.createListTemplate(for: resolved, path: url)
-        self.navigationStack.append(url)
-        self.interfaceController.pushTemplate(listTemplate, animated: true, completion: nil)
-        completion()
-      } catch {
-        logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
-        let navError = NavigationError.from(error)
-        self.showNavigationError(navError, path: url)
-        completion()
+  /// Shows a centered empty/error message on a loading template. A *pushed*
+  /// template is replaced (see `replaceWithMessage`); a *tab root* can't be
+  /// popped, so its empty view is set in place (best-effort — a tab renders its
+  /// empty view when selected).
+  private func showMessage(on template: CPListTemplate, title: String, subtitle: String?) {
+    if isTabRoot(template) {
+      if #available(iOS 18.4, *) {
+        template.showsSpinnerWhileEmpty = false
       }
+      template.emptyViewTitleVariants = [title.isEmpty ? "Couldn't load" : title]
+      template.emptyViewSubtitleVariants = subtitle.map { [$0] } ?? []
+      template.updateSections([])
+    } else {
+      replaceWithMessage(template, title: title, subtitle: subtitle)
+    }
+  }
+
+  /// Whether `template` is a tab's root template (a child of the tab bar). Such
+  /// templates can't be popped, so the replace-by-pop strategy doesn't apply.
+  private func isTabRoot(_ template: CPTemplate) -> Bool {
+    guard let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate else { return false }
+    return tabBar.templates.contains { $0 === template }
+  }
+
+  /// Replaces an on-screen loading template with a fresh list template showing a
+  /// centered empty-state message (empty result, or an error).
+  ///
+  /// We *replace* rather than mutate because CarPlay reliably renders a list
+  /// template's empty view only as its **initial** state at push time — changing
+  /// `emptyViewTitleVariants` / `showsSpinnerWhileEmpty` on an already-pushed
+  /// template is unreliable (it renders late, or not at all). The replacement
+  /// carries no `path`, so `loadContentIfNeeded` won't lazy-reload it; backing
+  /// out and re-tapping retries.
+  private func replaceWithMessage(_ loadingTemplate: CPListTemplate, title: String, subtitle: String?) {
+    // Only replace if the loading template is still the visible top template
+    // (the user may have backed out while the resolve was in flight).
+    guard interfaceController.topTemplate === loadingTemplate else { return }
+
+    let message = CPListTemplate(title: loadingTemplate.title, sections: [])
+    message.emptyViewTitleVariants = [title.isEmpty ? "Couldn't load" : title]
+    message.emptyViewSubtitleVariants = subtitle.map { [$0] } ?? []
+
+    interfaceController.popTemplate(animated: false) { [weak self] _, _ in
+      self?.interfaceController.pushTemplate(message, animated: false, completion: nil)
     }
   }
 
@@ -787,11 +844,15 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
 private extension RNABCarPlayController {
   /// Loads content for a template if it hasn't been loaded yet (lazy loading for tabs)
   func loadContentIfNeeded(for template: CPListTemplate) {
-    // Skip if already has content
-    guard template.sections.isEmpty else { return }
-
     // Get path from userInfo
     guard let path = getPath(from: template) else { return }
+
+    // The template is now on screen, so a queued duplicate navigation to it is
+    // no longer a concern (the top-template check will catch any further taps).
+    navigatingPaths.remove(path)
+
+    // Skip if already has content (single-flight in loadContent guards re-entry).
+    guard template.sections.isEmpty else { return }
 
     logger.debug("Lazy loading content for tab: \(path)")
 
