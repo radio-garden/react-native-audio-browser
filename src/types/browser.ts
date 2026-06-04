@@ -854,11 +854,12 @@ export type FormattedNavigationError = {
    */
   title: string
   /**
-   * Message body shown below the title in the error action sheet.
+   * Optional second line — the body in the error action sheet, the subtitle in
+   * the browse error/empty view. Omit it to show a title only.
    *
-   * Default value: `error.message`
+   * Default value: `error.message` (omitted when that is empty).
    */
-  message: string
+  message?: string
 }
 
 /**

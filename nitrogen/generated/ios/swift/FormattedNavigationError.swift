@@ -18,8 +18,14 @@ public extension FormattedNavigationError {
   /**
    * Create a new instance of `FormattedNavigationError`.
    */
-  init(title: String, message: String) {
-    self.init(std.string(title), std.string(message))
+  init(title: String, message: String?) {
+    self.init(std.string(title), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = message {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }())
   }
 
   @inline(__always)
@@ -28,7 +34,14 @@ public extension FormattedNavigationError {
   }
   
   @inline(__always)
-  var message: String {
-    return String(self.__message)
+  var message: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__message) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__message)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
   }
 }

@@ -460,7 +460,7 @@ public final class RNABCarPlayController: NSObject {
     showMessage(
       on: template,
       title: formatted.title,
-      subtitle: formatted.message.isEmpty ? nil : formatted.message,
+      subtitle: formatted.message.flatMap { $0.isEmpty ? nil : $0 },
     )
   }
 
@@ -560,16 +560,15 @@ public final class RNABCarPlayController: NSObject {
     interfaceController.pushTemplate(template, animated: true, completion: nil)
   }
 
-  /// Builds an empty list template that shows a loading indicator: a real spinner
-  /// on iOS 18.4+ (`showsSpinnerWhileEmpty`), falling back to an empty-state
-  /// "Loading…" title on iOS 16–18.3. (Set before push, where it does take.)
+  /// Builds an empty list template for a browse destination while it resolves.
+  /// On iOS 18.4+ it shows the system spinner (`showsSpinnerWhileEmpty`). On older
+  /// iOS there's no spinner API; we deliberately leave it blank rather than ship a
+  /// hardcoded, un-localized "Loading…" — the nav bar title still gives context.
   private func makeLoadingTemplate(title: String, path: String) -> CPListTemplate {
     let template = CPListTemplate(title: title, sections: [])
     template.userInfo = ["path": path] as [String: Any]
     if #available(iOS 18.4, *) {
       template.showsSpinnerWhileEmpty = true
-    } else {
-      template.emptyViewTitleVariants = ["Loading…"]
     }
     return template
   }

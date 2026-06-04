@@ -413,7 +413,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
       NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
     }
-    return FormattedNavigationError(title, error.message)
+    // Omit an empty message so it renders as title-only (e.g. the empty-content case).
+    return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
   }
 
   /** Returns localized HTTP status text for the given status code */

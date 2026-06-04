@@ -48,6 +48,7 @@ extension NavigationError {
       // the message (carried on the NavigationError) is typically empty. See ADR 0001.
       "Nothing here"
     }
-    return FormattedNavigationError(title: title, message: message)
+    // Omit an empty message so it renders as title-only (e.g. the empty-content case).
+    return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
   }
 }
