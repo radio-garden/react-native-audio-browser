@@ -57,6 +57,9 @@ namespace margelo::nitro::audiobrowser {
         case NavigationErrorType::UNKNOWN_ERROR:
           static const auto fieldUNKNOWN_ERROR = clazz->getStaticField<JNavigationErrorType>("UNKNOWN_ERROR");
           return clazz->getStaticFieldValue(fieldUNKNOWN_ERROR);
+        case NavigationErrorType::EMPTY_CONTENT:
+          static const auto fieldEMPTY_CONTENT = clazz->getStaticField<JNavigationErrorType>("EMPTY_CONTENT");
+          return clazz->getStaticFieldValue(fieldEMPTY_CONTENT);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

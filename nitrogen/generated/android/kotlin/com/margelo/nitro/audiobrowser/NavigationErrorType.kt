@@ -20,7 +20,8 @@ enum class NavigationErrorType(@DoNotStrip @Keep val value: Int) {
   NETWORK_ERROR(1),
   HTTP_ERROR(2),
   CALLBACK_ERROR(3),
-  UNKNOWN_ERROR(4);
+  UNKNOWN_ERROR(4),
+  EMPTY_CONTENT(5);
 
   companion object
 }

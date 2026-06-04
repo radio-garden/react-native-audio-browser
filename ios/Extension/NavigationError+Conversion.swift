@@ -43,6 +43,10 @@ extension NavigationError {
       "Error"
     case .unknownError:
       "Error"
+    case .emptyContent:
+      // Not a failure — a container that resolved with no children. Neutral copy;
+      // the message (carried on the NavigationError) is typically empty. See ADR 0001.
+      "Nothing here"
     }
     return FormattedNavigationError(title: title, message: message)
   }

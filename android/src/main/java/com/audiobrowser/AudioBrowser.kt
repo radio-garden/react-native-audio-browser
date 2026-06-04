@@ -410,6 +410,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       }
       NavigationErrorType.CALLBACK_ERROR -> "Error"
       NavigationErrorType.UNKNOWN_ERROR -> "Error"
+      // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
+      NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
     }
     return FormattedNavigationError(title, error.message)
   }

@@ -11,7 +11,8 @@ const ERROR_TITLES: Record<NavigationErrorType, string> = {
   'http-error': 'Server Error',
   'content-not-found': 'Content Not Found',
   'callback-error': 'Error',
-  'unknown-error': 'Error'
+  'unknown-error': 'Error',
+  'empty-content': 'Nothing here'
 }
 
 /**

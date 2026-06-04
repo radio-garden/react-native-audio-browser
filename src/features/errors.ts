@@ -29,6 +29,8 @@ export interface PlaybackErrorEvent {
  * - `'callback-error'` - The browse callback returned an error (e.g., `{ error: 'message' }`).
  *   Use this for business logic errors like authentication failures or subscription requirements.
  * - `'unknown-error'` - An unexpected error occurred (e.g., invalid configuration).
+ * - `'empty-content'` - The path resolved successfully but the container has no children (e.g. an
+ *   empty Favorites tab, a search with no results).
  */
 export type NavigationErrorType =
   | 'content-not-found'
@@ -36,6 +38,7 @@ export type NavigationErrorType =
   | 'http-error'
   | 'callback-error'
   | 'unknown-error'
+  | 'empty-content'
 
 export type NavigationError = {
   code: NavigationErrorType

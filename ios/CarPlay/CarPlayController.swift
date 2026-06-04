@@ -429,18 +429,58 @@ public final class RNABCarPlayController: NSObject {
       let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
       watchdog.cancel()
       if resolved.children?.isEmpty ?? true {
-        showMessage(on: template, title: "Nothing here", subtitle: nil)
+        // Empty is modeled as a navigation error (code .emptyContent) so it goes
+        // through the same path-aware formatter as failures — letting an app give
+        // an empty Favorites tab different copy than an empty search. ADR 0001.
+        let empty = NavigationError(
+          code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil,
+        )
+        await showNavigationErrorView(empty, path: path, on: template)
       } else {
         updateTemplate(template, with: resolved)
       }
     } catch {
       watchdog.cancel()
       logger.error("Failed to load content for \(path): \(error.localizedDescription)")
-      showMessage(
-        on: template,
-        title: NavigationError.from(error).defaultFormatted().message,
-        subtitle: "Go back and try again",
-      )
+      await showNavigationErrorView(NavigationError.from(error), path: path, on: template)
+    }
+  }
+
+  /// Renders a navigation error as the template's centered empty/error view,
+  /// formatted via the app's `formatNavigationError` (or the built-in default):
+  /// `title → view title`, `message → subtitle`. Used for both real failures and
+  /// the empty-content case (ADR 0001).
+  @MainActor
+  private func showNavigationErrorView(
+    _ navError: NavigationError,
+    path: String,
+    on template: CPListTemplate,
+  ) async {
+    let formatted = await formattedNavigationError(navError, path: path)
+    showMessage(
+      on: template,
+      title: formatted.title,
+      subtitle: formatted.message.isEmpty ? nil : formatted.message,
+    )
+  }
+
+  /// Resolves a navigation error to its display form via the app's
+  /// `formatNavigationError` callback, falling back to the default if unset/failed.
+  @MainActor
+  private func formattedNavigationError(
+    _ navError: NavigationError,
+    path: String,
+  ) async -> FormattedNavigationError {
+    let fallback = navError.defaultFormatted()
+    guard let formatter = config.formatNavigationError else { return fallback }
+    let params = FormatNavigationErrorParams(
+      error: navError, defaultFormatted: fallback, path: path,
+    )
+    do {
+      let custom = try await formatter(params).await()
+      return custom ?? fallback
+    } catch {
+      return fallback
     }
   }
 
