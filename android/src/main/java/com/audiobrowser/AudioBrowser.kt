@@ -412,6 +412,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       NavigationErrorType.UNKNOWN_ERROR -> "Error"
       // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
       NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
+      NavigationErrorType.TIMEOUT -> "Couldn't load"
     }
     // Omit an empty message so it renders as title-only (e.g. the empty-content case).
     return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })

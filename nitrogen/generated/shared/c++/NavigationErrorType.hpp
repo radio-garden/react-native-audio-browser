@@ -35,6 +35,7 @@ namespace margelo::nitro::audiobrowser {
     CALLBACK_ERROR      SWIFT_NAME(callbackError) = 3,
     UNKNOWN_ERROR      SWIFT_NAME(unknownError) = 4,
     EMPTY_CONTENT      SWIFT_NAME(emptyContent) = 5,
+    TIMEOUT      SWIFT_NAME(timeout) = 6,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -53,6 +54,7 @@ namespace margelo::nitro {
         case hashString("callback-error"): return margelo::nitro::audiobrowser::NavigationErrorType::CALLBACK_ERROR;
         case hashString("unknown-error"): return margelo::nitro::audiobrowser::NavigationErrorType::UNKNOWN_ERROR;
         case hashString("empty-content"): return margelo::nitro::audiobrowser::NavigationErrorType::EMPTY_CONTENT;
+        case hashString("timeout"): return margelo::nitro::audiobrowser::NavigationErrorType::TIMEOUT;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum NavigationErrorType - invalid value!");
       }
@@ -65,6 +67,7 @@ namespace margelo::nitro {
         case margelo::nitro::audiobrowser::NavigationErrorType::CALLBACK_ERROR: return JSIConverter<std::string>::toJSI(runtime, "callback-error");
         case margelo::nitro::audiobrowser::NavigationErrorType::UNKNOWN_ERROR: return JSIConverter<std::string>::toJSI(runtime, "unknown-error");
         case margelo::nitro::audiobrowser::NavigationErrorType::EMPTY_CONTENT: return JSIConverter<std::string>::toJSI(runtime, "empty-content");
+        case margelo::nitro::audiobrowser::NavigationErrorType::TIMEOUT: return JSIConverter<std::string>::toJSI(runtime, "timeout");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert NavigationErrorType to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -82,6 +85,7 @@ namespace margelo::nitro {
         case hashString("callback-error"):
         case hashString("unknown-error"):
         case hashString("empty-content"):
+        case hashString("timeout"):
           return true;
         default:
           return false;

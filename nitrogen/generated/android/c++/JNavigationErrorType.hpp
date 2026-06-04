@@ -60,6 +60,9 @@ namespace margelo::nitro::audiobrowser {
         case NavigationErrorType::EMPTY_CONTENT:
           static const auto fieldEMPTY_CONTENT = clazz->getStaticField<JNavigationErrorType>("EMPTY_CONTENT");
           return clazz->getStaticFieldValue(fieldEMPTY_CONTENT);
+        case NavigationErrorType::TIMEOUT:
+          static const auto fieldTIMEOUT = clazz->getStaticField<JNavigationErrorType>("TIMEOUT");
+          return clazz->getStaticFieldValue(fieldTIMEOUT);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

@@ -31,6 +31,8 @@ export interface PlaybackErrorEvent {
  * - `'unknown-error'` - An unexpected error occurred (e.g., invalid configuration).
  * - `'empty-content'` - The path resolved successfully but the container has no children (e.g. an
  *   empty Favorites tab, a search with no results).
+ * - `'timeout'` - The resolve did not complete within the allotted time (a stalled request or
+ *   unresponsive bridge). Surfaced on External surfaces that render their own browse list.
  */
 export type NavigationErrorType =
   | 'content-not-found'
@@ -39,6 +41,7 @@ export type NavigationErrorType =
   | 'callback-error'
   | 'unknown-error'
   | 'empty-content'
+  | 'timeout'
 
 export type NavigationError = {
   code: NavigationErrorType

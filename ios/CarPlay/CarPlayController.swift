@@ -422,7 +422,12 @@ public final class RNABCarPlayController: NSObject {
       do { try await Task.sleep(for: timeout) } catch { return } // cancelled → abort
       guard let self, template.sections.isEmpty else { return }
       self.logger.error("loadContent: resolve timed out for \(path)")
-      self.showMessage(on: template, title: "Couldn't load", subtitle: "Go back and try again")
+      // A timeout is a navigation error (code .timeout) too, so it formats through
+      // the app's formatNavigationError like every other browse failure.
+      let timedOut = NavigationError(
+        code: .timeout, message: "", statusCode: nil, statusCodeSuccess: nil,
+      )
+      await self.showNavigationErrorView(timedOut, path: path, on: template)
     }
 
     do {

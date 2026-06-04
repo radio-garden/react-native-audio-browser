@@ -21,7 +21,8 @@ enum class NavigationErrorType(@DoNotStrip @Keep val value: Int) {
   HTTP_ERROR(2),
   CALLBACK_ERROR(3),
   UNKNOWN_ERROR(4),
-  EMPTY_CONTENT(5);
+  EMPTY_CONTENT(5),
+  TIMEOUT(6);
 
   companion object
 }

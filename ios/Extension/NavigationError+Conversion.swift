@@ -47,6 +47,8 @@ extension NavigationError {
       // Not a failure — a container that resolved with no children. Neutral copy;
       // the message (carried on the NavigationError) is typically empty. See ADR 0001.
       "Nothing here"
+    case .timeout:
+      "Couldn't load"
     }
     // Omit an empty message so it renders as title-only (e.g. the empty-content case).
     return FormattedNavigationError(title: title, message: message.isEmpty ? nil : message)
