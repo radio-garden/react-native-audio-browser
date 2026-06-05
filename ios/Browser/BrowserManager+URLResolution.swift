@@ -196,6 +196,12 @@ extension BrowserManager {
         mergedConfig = extractConfig(transformedConfig)
       }
 
+      // Substitute the `{id}` template token with the track's id across path/query/header values.
+      // (Configs without the token are unaffected — e.g. browse artwork.) Only when the track has an id.
+      if let id = track.id, !id.isEmpty {
+        mergedConfig = substituteTrackId(in: mergedConfig, id: id)
+      }
+
       // Build final URL - if no path after merging, no artwork to transform
       guard mergedConfig.path != nil else {
         return nil
@@ -241,6 +247,26 @@ extension BrowserManager {
   }
 
   // MARK: - Config Utilities
+
+  /// Replaces the `{id}` token with the track id in a request config's path, query values, and
+  /// header values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves.
+  private func substituteTrackId(in config: RequestConfig, id: String) -> RequestConfig {
+    func sub(_ s: String?) -> String? { s?.replacingOccurrences(of: "{id}", with: id) }
+    func subDict(_ d: [String: String]?) -> [String: String]? {
+      guard let d else { return nil }
+      return d.mapValues { $0.replacingOccurrences(of: "{id}", with: id) }
+    }
+    return RequestConfig(
+      method: config.method,
+      path: sub(config.path),
+      baseUrl: config.baseUrl,
+      headers: subDict(config.headers),
+      query: subDict(config.query),
+      body: config.body,
+      contentType: config.contentType,
+      userAgent: config.userAgent,
+    )
+  }
 
   /// Extracts all values from a RequestConfig into a new instance to avoid
   /// memory corruption in Nitro's Swift-C++ bridge when the Promise is deallocated.

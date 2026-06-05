@@ -15,9 +15,6 @@ final class NowPlayingUpdater {
   private let nowPlayingInfoController: NowPlayingInfoController
 
   var artworkUrlResolver: ((Track, ImageContext?) async -> ImageSource?)?
-  /// Now-playing-only artwork URL template (`{id}` → track.id), set from config at setup.
-  /// Applied only here — the shared `resolveArtworkUrl` / CarPlay list paths never see it.
-  var nowPlayingUrlTemplate: String?
   /// Invoked when the published title/artist actually change, so the owner can emit the JS
   /// `onNowPlayingChanged` event (which it shapes with elapsed time / artwork / etc.).
   var onChanged: (@MainActor (_ track: Track, _ title: String, _ artist: String?) -> Void)?
@@ -128,17 +125,7 @@ final class NowPlayingUpdater {
   }
 
   private func loadArtwork(for track: Track) {
-    // Now-playing-only: if a URL template is configured and the track has a non-empty id,
-    // build a copy of the track whose `artwork` is the substituted URL so the SHARED
-    // resolver (artworkUrlResolver / resolveArtworkUrl) picks it up through the `request`
-    // layer / baseUrl. List paths always pass the original track and are unaffected.
-    let resolveTrack: Track = {
-      guard let template = nowPlayingUrlTemplate else { return track }
-      guard let id = track.id, !id.isEmpty else { return track }
-      return track.copying(artwork: template.replacingOccurrences(of: "{id}", with: id))
-    }()
-
-    let artworkUrl = resolveTrack.artworkSource?.uri ?? resolveTrack.artwork
+    let artworkUrl = track.artworkSource?.uri ?? track.artwork
     logger.debug("loadArtwork: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
 
     // Now Playing artwork: use screen width in pixels, capped at 1200px
@@ -155,14 +142,14 @@ final class NowPlayingUpdater {
 
       // Resolver provides size context for CDN optimization
       if let resolver = artworkUrlResolver,
-         let imageSource = await resolver(resolveTrack, nowPlayingSize)
+         let imageSource = await resolver(track, nowPlayingSize)
       {
         guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
         logger.debug("loadArtwork: using resolved URL: \(imageSource.uri)")
         image = await ArtworkImageFetcher.fetchImage(from: imageSource)
       } else {
         guard !Task.isCancelled, artworkGeneration == expectedGeneration else { return }
-        if let source = resolveTrack.artworkImageSource {
+        if let source = track.artworkImageSource {
           image = await ArtworkImageFetcher.fetchImage(from: source)
         } else {
           image = nil
