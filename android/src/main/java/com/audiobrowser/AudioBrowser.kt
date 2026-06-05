@@ -112,6 +112,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       browse = null,
       media = null,
       artwork = null,
+      nowPlayingArtwork = null,
       routes = null,
       singleTrack = null,
       handleTrackLoad = null,
