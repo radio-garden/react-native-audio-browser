@@ -263,10 +263,17 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * request config and artwork-specific config.
    */
   fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
-    val artworkConfig = _configuration.artwork ?: return null
+    val artworkConfig = _configuration.artwork
+    val requestConfig = _configuration.request
+    // Provide the config when EITHER an artwork config or the shared request layer is set.
+    // now-playing artwork comes in via `perRouteConfig` (not `artwork`), so we must still expose
+    // the request layer here — otherwise a relative `nowPlayingArtwork` path (e.g. `/artwork/{id}`)
+    // never gets `baseUrl` prepended. (Browse-list artwork with no artwork config still early-returns
+    // its absolute `track.artwork` in CoilBitmapLoader, so it's unaffected.)
+    if (artworkConfig == null && requestConfig == null) return null
     // Pass the request config (not a flattened static copy) so its transform
     // runs for artwork too, applied as the shared layer in CoilBitmapLoader.
-    return CoilBitmapLoader.ArtworkConfig(_configuration.request, artworkConfig)
+    return CoilBitmapLoader.ArtworkConfig(requestConfig, artworkConfig)
   }
 
   /**
