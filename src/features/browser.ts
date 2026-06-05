@@ -188,6 +188,7 @@ function toNativeConfig(
     browse: config.browse,
     media: config.media,
     artwork: config.artwork,
+    nowPlayingArtwork: config.nowPlayingArtwork,
     routes: flattenRoutes(config.routes, config.tabs, config.search),
     singleTrack: config.singleTrack,
     handleTrackLoad: config.handleTrackLoad,
