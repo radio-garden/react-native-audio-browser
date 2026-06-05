@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
@@ -32,6 +33,7 @@ import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
+import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
@@ -443,6 +445,19 @@ class Player(internal val context: Context) {
   )
 
   private var lastPublishedNowPlaying: PublishedNowPlaying? = null
+
+  /**
+   * The track id whose now-playing artwork has been resolved (or is being resolved), so a
+   * `nowPlayingArtwork` resolve runs once per track instead of on every [applyNowPlayingFields] call
+   * (which fires on each playback-state change). Null means "not yet resolved for any track".
+   */
+  private var nowPlayingArtworkResolvedForTrackId: String? = null
+
+  /**
+   * Size hint (px, square) used when resolving now-playing artwork via `nowPlayingArtwork`'s
+   * imageQueryParams / transform. Mirrors iOS's now-playing size (screen-width-capped to 1200).
+   */
+  private val nowPlayingArtworkSizePx = 1200.0
 
   fun getPlayback(): Playback {
     return Playback(playbackState, playbackError)
@@ -1116,6 +1131,74 @@ class Player(internal val context: Context) {
 
     // Notify JS of the now playing metadata change
     getNowPlaying()?.let { callbacks?.onNowPlayingChanged(it) }
+
+    // Resolve the now-playing-only artwork (lock screen / notification / Android Auto now-playing)
+    // from `nowPlayingArtwork`, keyed on track id so it runs once per track and not on every
+    // playback-state change. This is independent of the title/secondary dedupe above.
+    maybeResolveNowPlayingArtwork(index, track)
+  }
+
+  /**
+   * Resolves the playing track's now-playing artwork from `nowPlayingArtwork` (the now-playing-only
+   * artwork kind) and stamps it onto the playing media item's `artworkUri`.
+   *
+   * Guarded exactly like iOS: only when `nowPlayingArtwork` is configured AND the track has a
+   * non-empty id (so the `{id}` token never resolves to an empty string). Otherwise the existing
+   * `artworkUri` — which came from `artwork` / `track.artwork` (browse list path) — is left in place.
+   *
+   * The resolve is async (the request-layer transform is a suspend call); it runs in
+   * [nowPlayingScope] and applies on the main thread via `replaceMediaItem`. Keyed on track id so we
+   * don't kick off a redundant resolve on every [applyNowPlayingFields] call.
+   */
+  private fun maybeResolveNowPlayingArtwork(index: Int, track: Track) {
+    val trackId = track.id?.takeIf { it.isNotEmpty() } ?: run {
+      // No id → skip nowPlayingArtwork entirely; keep the existing (browse `artwork`) artworkUri.
+      nowPlayingArtworkResolvedForTrackId = null
+      return
+    }
+
+    val nowPlayingArtwork = browser?.browserManager?.config?.nowPlayingArtwork ?: run {
+      // No now-playing artwork config → fall back to the existing artworkUri (`artwork` / track.art).
+      nowPlayingArtworkResolvedForTrackId = null
+      return
+    }
+
+    val loader = coilBitmapLoader ?: return
+
+    // Already resolved (or resolving) for this track id — avoid a redundant resolve on every call.
+    if (nowPlayingArtworkResolvedForTrackId == trackId) return
+    nowPlayingArtworkResolvedForTrackId = trackId
+
+    // Now-playing surfaces want a large image; mirror iOS's now-playing size hint.
+    val imageContext = ImageContext(nowPlayingArtworkSizePx, nowPlayingArtworkSizePx)
+
+    nowPlayingScope.launch {
+      val resolved =
+        try {
+          loader.transformArtworkUrlForTrack(track, nowPlayingArtwork, imageContext)
+        } catch (e: Exception) {
+          Timber.e(e, "Failed to resolve now-playing artwork for track id=$trackId")
+          null
+        }
+      val uri = resolved?.uri?.takeIf { it.isNotEmpty() } ?: return@launch
+
+      // Apply only if still the same track (a fast skip must not be overwritten by a stale result).
+      val currentIdx = currentIndex ?: return@launch
+      val current = currentTrack ?: return@launch
+      if (current.id != trackId) return@launch
+
+      val currentMediaItem = exoPlayer.getMediaItemAt(currentIdx)
+      val updatedMetadata =
+        currentMediaItem.mediaMetadata.buildUpon().setArtworkUri(uri.toUri()).build()
+      val updatedMediaItem =
+        currentMediaItem
+          .buildUpon()
+          .setUri(currentMediaItem.localConfiguration?.uri)
+          .setMediaMetadata(updatedMetadata)
+          .setTag(current)
+          .build()
+      exoPlayer.replaceMediaItem(currentIdx, updatedMediaItem)
+    }
   }
 
   /**

@@ -1182,6 +1182,9 @@ data class BrowserConfig(
   val browse: TransformableRequestConfig? = null,
   val media: MediaRequestConfig? = null,
   val artwork: ArtworkRequestConfig? = null,
+  // Now-playing-only artwork configuration (lock screen / notification / Android Auto now-playing).
+  // A distinct kind from `artwork`; the now-playing path falls back to `artwork` when this is null.
+  val nowPlayingArtwork: ArtworkRequestConfig? = null,
   // Routes as array with flattened entries (includes __tabs__, __search__, and __default__ special
   // routes)
   val routes: Array<NativeRouteEntry>? = null,

@@ -250,6 +250,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       browse = _configuration.browse,
       media = _configuration.media,
       artwork = _configuration.artwork,
+      nowPlayingArtwork = _configuration.nowPlayingArtwork,
       routes = _configuration.routes,
       singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,

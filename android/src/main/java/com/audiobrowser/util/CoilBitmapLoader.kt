@@ -322,13 +322,21 @@ class CoilBitmapLoader(
       }
 
       // Apply transform callback if present (can override imageQueryParams)
-      val transformedConfig =
+      var transformedConfig =
         if (effectiveArtworkConfig.transform != null) {
           effectiveArtworkConfig.transform.invoke(MediaTransformParams(mergedConfig, imageContext))?.await()?.await()
             ?: mergedConfig
         } else {
           mergedConfig
         }
+
+      // Substitute the `{id}` template token with the track's id across path/query/header values.
+      // (Configs without the token are unaffected — e.g. browse artwork.) Only when the track has a
+      // non-empty id, so `{id}` never resolves to an empty string. Mirrors iOS `substituteTrackId`.
+      val trackId = track.id?.takeIf { it.isNotEmpty() }
+      if (trackId != null) {
+        transformedConfig = substituteTrackId(transformedConfig, trackId)
+      }
 
       // Build final URL
       val uri = RequestConfigBuilder.buildUrl(transformedConfig)
@@ -360,6 +368,22 @@ class CoilBitmapLoader(
       // On error, return null to clear artwork and avoid broken images
       null
     }
+  }
+
+  /**
+   * Replaces the `{id}` token with the track id in a request config's path, query values, and header
+   * values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves. Configs without
+   * the token are returned unchanged. Mirrors the iOS `substituteTrackId` helper.
+   */
+  private fun substituteTrackId(config: RequestConfig, id: String): RequestConfig {
+    fun sub(s: String?): String? = s?.replace("{id}", id)
+    fun subMap(m: Map<String, String>?): Map<String, String>? =
+      m?.mapValues { (_, value) -> value.replace("{id}", id) }
+    return config.copy(
+      path = sub(config.path),
+      headers = subMap(config.headers),
+      query = subMap(config.query),
+    )
   }
 
   /** Builds a headers map, merging explicit headers with userAgent and contentType. */
