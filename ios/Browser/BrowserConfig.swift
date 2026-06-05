@@ -20,6 +20,11 @@ struct BrowserConfig {
   /// Artwork URL transformation configuration
   let artwork: ArtworkRequestConfig?
 
+  /// Now-playing-only artwork configuration (lock screen / CarPlay / Android Auto
+  /// now-playing). A distinct kind from `artwork`; the now-playing path falls back to
+  /// `artwork` when this is nil.
+  let nowPlayingArtwork: ArtworkRequestConfig?
+
   /// Routes as array with flattened entries
   /// Includes __tabs__, __search__, and __default__ special routes
   let routes: [NativeRouteEntry]?
@@ -50,6 +55,7 @@ struct BrowserConfig {
     browse: TransformableRequestConfig? = nil,
     media: MediaRequestConfig? = nil,
     artwork: ArtworkRequestConfig? = nil,
+    nowPlayingArtwork: ArtworkRequestConfig? = nil,
     routes: [NativeRouteEntry]? = nil,
     singleTrack: Bool = false,
     handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)? = nil,
@@ -62,6 +68,7 @@ struct BrowserConfig {
     self.browse = browse
     self.media = media
     self.artwork = artwork
+    self.nowPlayingArtwork = nowPlayingArtwork
     self.routes = routes
     self.singleTrack = singleTrack
     self.handleTrackLoad = handleTrackLoad
@@ -77,6 +84,7 @@ struct BrowserConfig {
     browse = config.browse
     media = config.media
     artwork = config.artwork
+    nowPlayingArtwork = config.nowPlayingArtwork
     routes = config.routes
     singleTrack = config.singleTrack ?? false
     handleTrackLoad = config.handleTrackLoad
