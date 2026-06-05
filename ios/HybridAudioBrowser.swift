@@ -512,6 +512,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: nil, imageContext: imageContext)
         }
 
+        // Now-playing-only artwork URL template (e.g. "https://cdn.example.com/art/{id}.jpg").
+        // Applied before the resolver so the request layer / baseUrl are honoured.
+        // CarPlay list/browse paths are unaffected — they never touch nowPlayingUpdater.
+        player?.nowPlayingUpdater.nowPlayingUrlTemplate = browserManager.config.artwork?.nowPlayingUrlTemplate
+
         // Emit the JS `onNowPlayingChanged` event when the rendered title/artist change. The updater
         // owns the system now-playing write; this shapes the JS metadata (elapsed time / artwork).
         player?.nowPlayingUpdater.onChanged = { [weak self] track, title, artist in
