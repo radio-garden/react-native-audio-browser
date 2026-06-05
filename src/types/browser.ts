@@ -471,6 +471,17 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * ```
    */
   imageQueryParams?: ImageQueryParams
+
+  /**
+   * Optional URL template used ONLY for now-playing artwork (lock screen / CarPlay /
+   * Android Auto now-playing) — never for browse-list thumbnails. The token `{id}` is
+   * replaced with the track's `id`; the result is resolved through the shared `request`
+   * layer (so a relative path gets `baseUrl` prepended). When the template is unset or the
+   * track has no `id`, now-playing falls back to `artwork`/`artworkSource` as before.
+   *
+   * @example nowPlayingUrlTemplate: '/artwork/{id}'
+   */
+  nowPlayingUrlTemplate?: string
 }
 
 /**

@@ -28,6 +28,9 @@ data class ArtworkRequestConfig(
   val imageQueryParams: ImageQueryParams?,
   @DoNotStrip
   @Keep
+  val nowPlayingUrlTemplate: String?,
+  @DoNotStrip
+  @Keep
   val method: HttpMethod?,
   @DoNotStrip
   @Keep
@@ -54,8 +57,8 @@ data class ArtworkRequestConfig(
   /**
    * Create a new instance of ArtworkRequestConfig from Kotlin
    */
-  constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((params: MediaTransformParams) -> Promise<Promise<RequestConfig>>)?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
-         this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_java(it) }, imageQueryParams, method, path, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((params: MediaTransformParams) -> Promise<Promise<RequestConfig>>)?, imageQueryParams: ImageQueryParams?, nowPlayingUrlTemplate: String?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_java(it) }, imageQueryParams, nowPlayingUrlTemplate, method, path, baseUrl, headers, query, body, contentType, userAgent)
 
   companion object {
     /**
@@ -65,8 +68,8 @@ data class ArtworkRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): ArtworkRequestConfig {
-      return ArtworkRequestConfig(resolve, transform, imageQueryParams, method, path, baseUrl, headers, query, body, contentType, userAgent)
+    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams?, imageQueryParams: ImageQueryParams?, nowPlayingUrlTemplate: String?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): ArtworkRequestConfig {
+      return ArtworkRequestConfig(resolve, transform, imageQueryParams, nowPlayingUrlTemplate, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }
 }

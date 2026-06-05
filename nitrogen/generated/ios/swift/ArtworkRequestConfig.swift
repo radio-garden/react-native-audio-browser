@@ -18,7 +18,7 @@ public extension ArtworkRequestConfig {
   /**
    * Create a new instance of `ArtworkRequestConfig`.
    */
-  init(resolve: ((_ track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((_ params: MediaTransformParams) -> Promise<Promise<RequestConfig>>)?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
+  init(resolve: ((_ track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((_ params: MediaTransformParams) -> Promise<Promise<RequestConfig>>)?, imageQueryParams: ImageQueryParams?, nowPlayingUrlTemplate: String?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
     self.init({ () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______ in
       if let __unwrappedValue = resolve {
         return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track in
@@ -40,6 +40,12 @@ public extension ArtworkRequestConfig {
     }(), { () -> bridge.std__optional_ImageQueryParams_ in
       if let __unwrappedValue = imageQueryParams {
         return bridge.create_std__optional_ImageQueryParams_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = nowPlayingUrlTemplate {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -185,6 +191,18 @@ public extension ArtworkRequestConfig {
   @inline(__always)
   var imageQueryParams: ImageQueryParams? {
     return self.__imageQueryParams.value
+  }
+  
+  @inline(__always)
+  var nowPlayingUrlTemplate: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__nowPlayingUrlTemplate) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__nowPlayingUrlTemplate)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)
