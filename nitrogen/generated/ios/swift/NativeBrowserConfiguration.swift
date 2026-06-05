@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -45,6 +45,12 @@ public extension NativeBrowserConfiguration {
       }
     }(), { () -> bridge.std__optional_ArtworkRequestConfig_ in
       if let __unwrappedValue = artwork {
+        return bridge.create_std__optional_ArtworkRequestConfig_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_ArtworkRequestConfig_ in
+      if let __unwrappedValue = nowPlayingArtwork {
         return bridge.create_std__optional_ArtworkRequestConfig_(__unwrappedValue)
       } else {
         return .init()
@@ -142,6 +148,11 @@ public extension NativeBrowserConfiguration {
   @inline(__always)
   var artwork: ArtworkRequestConfig? {
     return self.__artwork.value
+  }
+  
+  @inline(__always)
+  var nowPlayingArtwork: ArtworkRequestConfig? {
+    return self.__nowPlayingArtwork.value
   }
   
   @inline(__always)

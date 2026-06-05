@@ -49,6 +49,7 @@ export interface NativeBrowserConfiguration {
   browse?: TransformableRequestConfig
   media?: MediaRequestConfig
   artwork?: ArtworkRequestConfig
+  nowPlayingArtwork?: ArtworkRequestConfig
 
   // Routes as array - includes:
   // - Explicit routes from config.routes

@@ -64,8 +64,6 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams::javaobject> transform = this->getFieldValue(fieldTransform);
       static const auto fieldImageQueryParams = clazz->getField<JImageQueryParams>("imageQueryParams");
       jni::local_ref<JImageQueryParams> imageQueryParams = this->getFieldValue(fieldImageQueryParams);
-      static const auto fieldNowPlayingUrlTemplate = clazz->getField<jni::JString>("nowPlayingUrlTemplate");
-      jni::local_ref<jni::JString> nowPlayingUrlTemplate = this->getFieldValue(fieldNowPlayingUrlTemplate);
       static const auto fieldMethod = clazz->getField<JHttpMethod>("method");
       jni::local_ref<JHttpMethod> method = this->getFieldValue(fieldMethod);
       static const auto fieldPath = clazz->getField<jni::JString>("path");
@@ -102,7 +100,6 @@ namespace margelo::nitro::audiobrowser {
           }
         }()) : std::nullopt,
         imageQueryParams != nullptr ? std::make_optional(imageQueryParams->toCpp()) : std::nullopt,
-        nowPlayingUrlTemplate != nullptr ? std::make_optional(nowPlayingUrlTemplate->toStdString()) : std::nullopt,
         method != nullptr ? std::make_optional(method->toCpp()) : std::nullopt,
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         baseUrl != nullptr ? std::make_optional(baseUrl->toStdString()) : std::nullopt,
@@ -134,7 +131,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JArtworkRequestConfig::javaobject> fromCpp(const ArtworkRequestConfig& value) {
-      using JSignature = JArtworkRequestConfig(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track::javaobject>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams::javaobject>, jni::alias_ref<JImageQueryParams>, jni::alias_ref<jni::JString>, jni::alias_ref<JHttpMethod>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JArtworkRequestConfig(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track::javaobject>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams::javaobject>, jni::alias_ref<JImageQueryParams>, jni::alias_ref<JHttpMethod>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -142,7 +139,6 @@ namespace margelo::nitro::audiobrowser {
         value.resolve.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx::fromCpp(value.resolve.value()) : nullptr,
         value.transform.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_cxx::fromCpp(value.transform.value()) : nullptr,
         value.imageQueryParams.has_value() ? JImageQueryParams::fromCpp(value.imageQueryParams.value()) : nullptr,
-        value.nowPlayingUrlTemplate.has_value() ? jni::make_jstring(value.nowPlayingUrlTemplate.value()) : nullptr,
         value.method.has_value() ? JHttpMethod::fromCpp(value.method.value()) : nullptr,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.baseUrl.has_value() ? jni::make_jstring(value.baseUrl.value()) : nullptr,

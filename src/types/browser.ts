@@ -472,16 +472,6 @@ export interface ArtworkRequestConfig extends RequestConfig {
    */
   imageQueryParams?: ImageQueryParams
 
-  /**
-   * Optional URL template used ONLY for now-playing artwork (lock screen / CarPlay /
-   * Android Auto now-playing) — never for browse-list thumbnails. The token `{id}` is
-   * replaced with the track's `id`; the result is resolved through the shared `request`
-   * layer (so a relative path gets `baseUrl` prepended). When the template is unset or the
-   * track has no `id`, now-playing falls back to `artwork`/`artworkSource` as before.
-   *
-   * @example nowPlayingUrlTemplate: '/artwork/{id}'
-   */
-  nowPlayingUrlTemplate?: string
 }
 
 /**
@@ -651,6 +641,24 @@ export type BrowserConfiguration = {
    * ```
    */
   artwork?: ArtworkRequestConfig
+
+  /**
+   * Artwork configuration for the NOW-PLAYING surface only (lock screen / CarPlay /
+   * Android Auto now-playing) — distinct from `artwork`, which configures browse-list
+   * thumbnails. When set, the now-playing artwork is resolved from THIS config instead of
+   * `artwork`; browse lists never read it, so they're unaffected. When unset, now-playing
+   * falls back to `artwork` / the track's own `artwork`.
+   *
+   * Being a full `RequestConfig`, it supports `path`, `query`, and `headers`. The token
+   * `{id}` in any of those values is replaced with the track's `id` during resolution, and
+   * the result flows through the shared `request` layer (so a relative path gets `baseUrl`
+   * prepended). For logic that can't be expressed as a template, use `resolve(track)`.
+   *
+   * @example
+   * // 302-redirect endpoint keyed by the track id:
+   * nowPlayingArtwork: { path: '/artwork/{id}' }
+   */
+  nowPlayingArtwork?: ArtworkRequestConfig
 
   // ─── Navigation ────────────────────────────────────────────────────────────
 

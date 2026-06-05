@@ -34,6 +34,9 @@ data class NativeBrowserConfiguration(
   val artwork: ArtworkRequestConfig?,
   @DoNotStrip
   @Keep
+  val nowPlayingArtwork: ArtworkRequestConfig?,
+  @DoNotStrip
+  @Keep
   val routes: Array<NativeRouteEntry>?,
   @DoNotStrip
   @Keep
@@ -57,8 +60,8 @@ data class NativeBrowserConfiguration(
   /**
    * Create a new instance of NativeBrowserConfiguration from Kotlin
    */
-  constructor(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?):
-         this(path, request, browse, media, artwork, routes, singleTrack, handleTrackLoad?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_java(it) }, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) })
+  constructor(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: ((event: TrackLoadEvent) -> Promise<Promise<Unit>>)?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, formatNavigationError: ((params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?):
+         this(path, request, browse, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_java(it) }, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, formatNavigationError?.let { Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_java(it) })
 
   companion object {
     /**
@@ -68,8 +71,8 @@ data class NativeBrowserConfiguration(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?): NativeBrowserConfiguration {
-      return NativeBrowserConfiguration(path, request, browse, media, artwork, routes, singleTrack, handleTrackLoad, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, formatNavigationError)
+    private fun fromCpp(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: Array<NativeRouteEntry>?, singleTrack: Boolean?, handleTrackLoad: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent?, androidControllerOfflineError: Boolean?, carPlayUpNextButton: Boolean?, carPlayNowPlayingButtons: Array<CarPlayNowPlayingButton>?, formatNavigationError: Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams?): NativeBrowserConfiguration {
+      return NativeBrowserConfiguration(path, request, browse, media, artwork, nowPlayingArtwork, routes, singleTrack, handleTrackLoad, androidControllerOfflineError, carPlayUpNextButton, carPlayNowPlayingButtons, formatNavigationError)
     }
   }
 }

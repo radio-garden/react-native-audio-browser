@@ -108,6 +108,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JMediaRequestConfig> media = this->getFieldValue(fieldMedia);
       static const auto fieldArtwork = clazz->getField<JArtworkRequestConfig>("artwork");
       jni::local_ref<JArtworkRequestConfig> artwork = this->getFieldValue(fieldArtwork);
+      static const auto fieldNowPlayingArtwork = clazz->getField<JArtworkRequestConfig>("nowPlayingArtwork");
+      jni::local_ref<JArtworkRequestConfig> nowPlayingArtwork = this->getFieldValue(fieldNowPlayingArtwork);
       static const auto fieldRoutes = clazz->getField<jni::JArrayClass<JNativeRouteEntry>>("routes");
       jni::local_ref<jni::JArrayClass<JNativeRouteEntry>> routes = this->getFieldValue(fieldRoutes);
       static const auto fieldSingleTrack = clazz->getField<jni::JBoolean>("singleTrack");
@@ -128,6 +130,7 @@ namespace margelo::nitro::audiobrowser {
         browse != nullptr ? std::make_optional(browse->toCpp()) : std::nullopt,
         media != nullptr ? std::make_optional(media->toCpp()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toCpp()) : std::nullopt,
+        nowPlayingArtwork != nullptr ? std::make_optional(nowPlayingArtwork->toCpp()) : std::nullopt,
         routes != nullptr ? std::make_optional([&]() {
           size_t __size = routes->size();
           std::vector<NativeRouteEntry> __vector;
@@ -178,7 +181,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeBrowserConfiguration::javaobject> fromCpp(const NativeBrowserConfiguration& value) {
-      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
+      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -188,6 +191,7 @@ namespace margelo::nitro::audiobrowser {
         value.browse.has_value() ? JTransformableRequestConfig::fromCpp(value.browse.value()) : nullptr,
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
         value.artwork.has_value() ? JArtworkRequestConfig::fromCpp(value.artwork.value()) : nullptr,
+        value.nowPlayingArtwork.has_value() ? JArtworkRequestConfig::fromCpp(value.nowPlayingArtwork.value()) : nullptr,
         value.routes.has_value() ? [&]() {
           size_t __size = value.routes.value().size();
           jni::local_ref<jni::JArrayClass<JNativeRouteEntry>> __array = jni::JArrayClass<JNativeRouteEntry>::newArray(__size);
