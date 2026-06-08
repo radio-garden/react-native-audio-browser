@@ -18,7 +18,7 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
+  init(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = id {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -46,6 +46,12 @@ public extension Track {
     }(), { () -> bridge.std__optional_ImageSource_ in
       if let __unwrappedValue = artworkSource {
         return bridge.create_std__optional_ImageSource_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_TrackRequest_ in
+      if let __unwrappedValue = request {
+        return bridge.create_std__optional_TrackRequest_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -187,6 +193,11 @@ public extension Track {
   @inline(__always)
   var artworkSource: ImageSource? {
     return self.__artworkSource.value
+  }
+  
+  @inline(__always)
+  var request: TrackRequest? {
+    return self.__request.value
   }
   
   @inline(__always)

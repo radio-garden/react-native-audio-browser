@@ -40,6 +40,7 @@
 #include "JRetryConfig.hpp"
 #include "JTimedMetadata.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "JVariant_Boolean_AndroidAudioOffloadSettings.hpp"
 #include "JVariant_Boolean_RetryConfig.hpp"
@@ -51,6 +52,7 @@
 #include "RetryConfig.hpp"
 #include "TimedMetadata.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JNull.hpp>

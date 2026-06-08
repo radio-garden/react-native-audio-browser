@@ -19,10 +19,12 @@
 #include "JPlaybackError.hpp"
 #include "JTimedMetadata.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "PlaybackError.hpp"
 #include "TimedMetadata.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>

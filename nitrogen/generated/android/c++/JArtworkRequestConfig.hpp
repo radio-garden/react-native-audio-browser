@@ -25,10 +25,12 @@
 #include "JMediaTransformParams.hpp"
 #include "JRequestConfig.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "MediaTransformParams.hpp"
 #include "RequestConfig.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>

@@ -54,6 +54,7 @@
 #include "JSearchParams.hpp"
 #include "JTrack.hpp"
 #include "JTrackLoadEvent.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "JVariant_TransformableRequestConfig_Promise_TransformableRequestConfig_.hpp"
@@ -68,6 +69,7 @@
 #include "SearchParams.hpp"
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include <NitroModules/JNICallable.hpp>

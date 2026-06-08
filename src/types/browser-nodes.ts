@@ -23,6 +23,20 @@ export interface ImageSource {
   body?: string
 }
 
+/**
+ * Per-track override applied as the most-specific layer of THIS track's media
+ * request (after the shared `request` and `media` layers). Deliberately narrow:
+ * a track may customize HOW its request is made (identity, auth, signed-URL
+ * params), not WHERE it goes — `baseUrl`/`path`/`method`/`body` are intentionally
+ * absent so a (often server-sourced) track can't repoint its own host or verb.
+ * Carried verbatim on the Track and round-tripped like any other field.
+ */
+export interface TrackRequest {
+  userAgent?: string
+  headers?: Record<string, string>
+  query?: Record<string, string>
+}
+
 // export interface BrowserSection {
 //   title: string
 //   style?: BrowserItemStyle
@@ -112,6 +126,9 @@ export interface Track {
    * ```
    */
   readonly artworkSource?: ImageSource
+
+  /** Per-track media-request override; merged last (request → media → track.request). */
+  request?: TrackRequest
 
   /**
    * Whether this artwork should be tinted based on CarPlay's current appearance (light/dark mode).

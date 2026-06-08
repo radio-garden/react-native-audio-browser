@@ -41,6 +41,7 @@
 #include "JSearchMode.hpp"
 #include "JSearchParams.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "MediaRequestConfig.hpp"
@@ -50,6 +51,7 @@
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include <NitroModules/JNICallable.hpp>

@@ -18,6 +18,8 @@ namespace margelo::nitro::audiobrowser { struct Track; }
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
+// Forward declaration of `TrackRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `ImageRowItem` to properly resolve imports.
@@ -198,6 +200,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "ImageSource.hpp"
 #include "HttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "ImageRowItem.hpp"
 #include <functional>

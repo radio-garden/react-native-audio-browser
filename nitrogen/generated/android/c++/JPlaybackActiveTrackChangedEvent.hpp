@@ -17,8 +17,10 @@
 #include "JImageRowItem.hpp"
 #include "JImageSource.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>

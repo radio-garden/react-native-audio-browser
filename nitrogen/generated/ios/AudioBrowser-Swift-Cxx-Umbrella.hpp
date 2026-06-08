@@ -180,6 +180,8 @@ namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
+// Forward declaration of `TrackRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -277,6 +279,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"
 #include "TrackMetadata.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"

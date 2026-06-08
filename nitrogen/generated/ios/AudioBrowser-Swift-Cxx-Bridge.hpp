@@ -174,6 +174,8 @@ namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackMetadata; }
+// Forward declaration of `TrackRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `Track` to properly resolve imports.
@@ -272,6 +274,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"
 #include "TrackMetadata.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include "UpdateOptions.hpp"
@@ -377,6 +380,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline void emplace_std__unordered_map_std__string__std__string_(std__unordered_map_std__string__std__string_& map, const std::string& key, const std::string& value) noexcept {
     map.emplace(key, value);
+  }
+  
+  // pragma MARK: std::optional<TrackRequest>
+  /**
+   * Specialized version of `std::optional<TrackRequest>`.
+   */
+  using std__optional_TrackRequest_ = std::optional<TrackRequest>;
+  inline std::optional<TrackRequest> create_std__optional_TrackRequest_(const TrackRequest& value) noexcept {
+    return std::optional<TrackRequest>(value);
+  }
+  inline bool has_value_std__optional_TrackRequest_(const std::optional<TrackRequest>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline TrackRequest get_std__optional_TrackRequest_(const std::optional<TrackRequest>& optional) noexcept {
+    return optional.value();
   }
   
   // pragma MARK: std::optional<bool>

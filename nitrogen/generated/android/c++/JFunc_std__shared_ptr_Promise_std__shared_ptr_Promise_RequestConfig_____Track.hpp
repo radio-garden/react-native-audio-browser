@@ -25,6 +25,8 @@
 #include "JTrack.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
+#include "TrackRequest.hpp"
+#include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
 #include "ImageRowItem.hpp"
