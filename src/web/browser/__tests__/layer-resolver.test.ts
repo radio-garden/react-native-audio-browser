@@ -53,12 +53,17 @@ describe('BrowserManager layer resolver', () => {
     expect(calls).toBe(2)
   })
 
-  it('supports an async resolver', async () => {
+  it('supports an async resolver and invokes it exactly once', async () => {
+    let calls = 0
     const manager = makeManager()
     manager.configuration = {
       path: '/',
-      requestResolver: async () => ({ baseUrl: 'https://api.example.com' })
+      requestResolver: async () => {
+        calls += 1
+        return { baseUrl: 'https://api.example.com' }
+      }
     }
     await expect(manager.navigatePath('/a')).resolves.not.toThrow()
+    expect(calls).toBe(1)
   })
 })

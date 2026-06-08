@@ -489,15 +489,6 @@ export class BrowserManager {
   }
 
   /**
-   * Resolves content from the layered request config chain:
-   * `request` (shared) → `kindConfig` (browse/search) → `routeConfig` (route).
-   * Each layer's transform receives the previous layer's output; a layer with no
-   * transform merges its static fields. `routeConfig` is undefined for the
-   * implicit browse default; `kindConfig` is undefined for search.
-   *
-   * Mirrors native's BrowserManager.resolveFromConfig.
-   */
-  /**
    * Ensures the request/browse layer configs are resolved for the current
    * generation. Any present resolver is invoked once per generation and the
    * result cached; a static config (no resolver) passes through unchanged.
@@ -525,11 +516,27 @@ export class BrowserManager {
         this._resolvedBrowse = resolvedBrowse
         this._resolvedLayerGeneration = generation
       }
-    })()
+    })().catch((err) => {
+      // A failed resolution must not wedge the generation — clear the in-flight
+      // cache so the next navigation retries (e.g. a transient async resolver error).
+      if (this._layerResolution?.generation === generation) {
+        this._layerResolution = undefined
+      }
+      throw err
+    })
     this._layerResolution = { generation, promise }
     return promise
   }
 
+  /**
+   * Resolves content from the layered request config chain:
+   * `request` (shared) → `kindConfig` (browse/search) → `routeConfig` (route).
+   * Each layer's transform receives the previous layer's output; a layer with no
+   * transform merges its static fields. `routeConfig` is undefined for the
+   * implicit browse default; `kindConfig` is undefined for search.
+   *
+   * Mirrors native's BrowserManager.resolveFromConfig.
+   */
   private async resolveFromConfig(
     kindConfig: TransformableRequestConfig | undefined,
     routeConfig: TransformableRequestConfig | undefined,
@@ -539,7 +546,12 @@ export class BrowserManager {
     await this.ensureLayersResolved()
     const merged = await RequestConfigBuilder.applyLayers(
       { path },
-      [this._resolvedRequest, this._resolvedBrowse ?? kindConfig, routeConfig],
+      [
+        this._resolvedRequest,
+        // fall back to the route's kind config when no browse layer is configured
+        this._resolvedBrowse ?? kindConfig,
+        routeConfig
+      ],
       params
     )
     const response = await this.httpClient.executeRequest(merged)
