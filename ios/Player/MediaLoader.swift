@@ -171,6 +171,21 @@ final class MediaLoader {
     asset = nil
   }
 
+  /// Builds AVURLAsset options, merging any explicit headers with a resolved
+  /// User-Agent. An explicit `User-Agent` in `headers` wins (mirrors the artwork
+  /// path in BrowserManager+URLResolution). A nil/empty userAgent contributes
+  /// nothing, so "no UA configured" still falls through to AVPlayer's default.
+  nonisolated static func buildAssetOptions(
+    headers: [String: String]?,
+    userAgent: String?
+  ) -> [String: Any]? {
+    var merged = headers ?? [:]
+    if let userAgent, !userAgent.isEmpty, merged["User-Agent"] == nil {
+      merged["User-Agent"] = userAgent
+    }
+    return merged.isEmpty ? nil : ["AVURLAssetHTTPHeaderFieldsKey": merged]
+  }
+
   // MARK: - Private
 
   private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl) {
@@ -180,14 +195,9 @@ final class MediaLoader {
       return
     }
 
-    var options: [String: Any] = [:]
-    if let headers = resolved.headers, !headers.isEmpty {
-      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
-    }
-
     let isLocalFile = mediaUrl.isFileURL
     url = isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl
-    urlOptions = options.isEmpty ? nil : options
+    urlOptions = Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent)
 
     logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
     logger.debug("  isLocalFile: \(isLocalFile)")
