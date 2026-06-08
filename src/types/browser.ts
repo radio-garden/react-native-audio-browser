@@ -246,16 +246,34 @@ export interface TransformableRequestConfig extends RequestConfig {
 }
 
 /**
- * A zero-arg resolver for a request layer. Resolved ONCE per content generation
- * (re-resolved on `invalidateAllContent()`), cached, and merged into every
- * request natively — so dynamic-but-rarely-changing values (a base URL, a locale
- * query param) are read fresh per generation without a per-request JS hop.
+ * Lazily builds the config for a `request` or `browse` layer. Reach for it when
+ * the config depends on a value that changes now and then — a base URL, a
+ * locale — but not on every request.
  *
- * Return a plain `TransformableRequestConfig` synchronously (the common case — no
- * `async`, no Promise), or a `Promise` of one when resolution needs to await.
- * The returned config may itself carry a `transform` for the rare case that a
- * per-request callback is genuinely needed; that transform runs per request as
- * usual.
+ * How it differs from a `transform`: **a resolver runs once and its result is
+ * cached**, then reused for every browse/search/media/artwork request — whereas a
+ * `transform` runs on *every* request. The resolver re-runs only when you call
+ * `invalidateAllContent()`, so call that after (say) an environment or locale
+ * switch to pick up the new value.
+ *
+ * Return the config directly — no `async`/Promise needed in the common case — or
+ * a `Promise` when you must await (e.g. fetching a token). The cached config
+ * flows through the normal layering, so its `query` merges additively and its
+ * `baseUrl` overrides, exactly like a static config; it may also include a
+ * `transform` if you additionally need genuine per-request logic.
+ *
+ * @example
+ * ```typescript
+ * configureBrowser({
+ *   // Read once and cached; re-read after the next invalidateAllContent().
+ *   request: () => ({ baseUrl: currentBaseUrl() }),
+ *   // Browse-only locale param, merged into every browse request's query.
+ *   browse: () => ({ query: { hl: currentLocale() } }),
+ * })
+ *
+ * // Async resolver (e.g. awaiting a token) — still runs once, then cached:
+ * request: async () => ({ headers: { authorization: await freshToken() } })
+ * ```
  */
 export type RequestConfigResolver = () =>
   | TransformableRequestConfig
@@ -602,9 +620,16 @@ export type BrowserConfiguration = {
 
   /**
    * Shared request settings applied to every HTTP request (browse, search,
-   * media, artwork). The `transform` runs first for all of them, layered before
-   * the per-kind config and (for browse) the route — so request → `<kind>` →
-   * route. Specific configs override these defaults.
+   * media, artwork). Layered before the per-kind config and (for browse) the
+   * route — so request → `<kind>` → route. Specific configs override these
+   * defaults.
+   *
+   * Either a static {@link TransformableRequestConfig} (its optional `transform`
+   * runs per request), or a {@link RequestConfigResolver} thunk resolved once per
+   * content generation and re-resolved on `invalidateAllContent()`. Reach for the
+   * resolver when a value changes rarely (a base URL, an auth host) so it is read
+   * once per generation and merged natively — rather than recomputed on every
+   * browse/search/media/artwork request via a `transform`.
    */
   request?: TransformableRequestConfig | RequestConfigResolver
 
@@ -621,6 +646,12 @@ export type BrowserConfiguration = {
    * `request` + `browse` applied to the path, so this also defines the default
    * browse behaviour. Register a `routes['*']` entry only to override that
    * default with a callback / static / bespoke config.
+   *
+   * Like `request`, this may be a static {@link TransformableRequestConfig} or a
+   * {@link RequestConfigResolver} thunk (resolved once per content generation) —
+   * e.g. a locale query param that only changes when `invalidateAllContent()` is
+   * called. A resolver's `query` is merged additively into each browse request's
+   * query, exactly as a static `query` would be.
    */
   browse?: TransformableRequestConfig | RequestConfigResolver
 
