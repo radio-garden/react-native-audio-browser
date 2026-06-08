@@ -9,21 +9,27 @@ struct BuildAssetOptionsTests {
   }
 
   @Test func userAgentOnly_setsUserAgentHeader() {
-    let options = MediaLoader.buildAssetOptions(headers: nil, userAgent: "RadioGarden/1.0-1")
-    #expect(headerFields(options)?["User-Agent"] == "RadioGarden/1.0-1")
+    let options = MediaLoader.buildAssetOptions(headers: nil, userAgent: "TestAgent/1.0")
+    #expect(headerFields(options)?["User-Agent"] == "TestAgent/1.0")
   }
 
   @Test func userAgentMergedWithHeaders() {
     let options = MediaLoader.buildAssetOptions(
-      headers: ["X-Test": "1"], userAgent: "RadioGarden/1.0-1")
+      headers: ["X-Test": "1"], userAgent: "TestAgent/1.0")
     #expect(headerFields(options)?["X-Test"] == "1")
-    #expect(headerFields(options)?["User-Agent"] == "RadioGarden/1.0-1")
+    #expect(headerFields(options)?["User-Agent"] == "TestAgent/1.0")
   }
 
   @Test func explicitUserAgentHeaderWins() {
     let options = MediaLoader.buildAssetOptions(
-      headers: ["User-Agent": "Explicit"], userAgent: "RadioGarden/1.0-1")
+      headers: ["User-Agent": "Explicit"], userAgent: "TestAgent/1.0")
     #expect(headerFields(options)?["User-Agent"] == "Explicit")
+  }
+
+  @Test func headersOnly_nilUserAgent_keepsHeaders() {
+    let options = MediaLoader.buildAssetOptions(headers: ["X-Test": "1"], userAgent: nil)
+    #expect(headerFields(options)?["X-Test"] == "1")
+    #expect(headerFields(options)?["User-Agent"] == nil)
   }
 
   @Test func emptyUserAgent_notApplied() {
