@@ -14,6 +14,12 @@ struct BrowserConfig {
   /// layered request → browse → route)
   let browse: TransformableRequestConfig?
 
+  /// Resolver for the shared request layer (resolved once per content generation).
+  let requestResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)?
+
+  /// Resolver for the browse layer (resolved once per content generation).
+  let browseResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)?
+
   /// Media URL transformation configuration
   let media: MediaRequestConfig?
 
@@ -53,6 +59,8 @@ struct BrowserConfig {
   init(
     request: TransformableRequestConfig? = nil,
     browse: TransformableRequestConfig? = nil,
+    requestResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)? = nil,
+    browseResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)? = nil,
     media: MediaRequestConfig? = nil,
     artwork: ArtworkRequestConfig? = nil,
     nowPlayingArtwork: ArtworkRequestConfig? = nil,
@@ -66,6 +74,8 @@ struct BrowserConfig {
   ) {
     self.request = request
     self.browse = browse
+    self.requestResolver = requestResolver
+    self.browseResolver = browseResolver
     self.media = media
     self.artwork = artwork
     self.nowPlayingArtwork = nowPlayingArtwork
@@ -82,6 +92,8 @@ struct BrowserConfig {
   init(from config: NativeBrowserConfiguration) {
     request = config.request
     browse = config.browse
+    requestResolver = config.requestResolver
+    browseResolver = config.browseResolver
     media = config.media
     artwork = config.artwork
     nowPlayingArtwork = config.nowPlayingArtwork
