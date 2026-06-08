@@ -12,7 +12,10 @@ struct MediaResolvedUrl {
 final class MediaLoader {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaLoader")
 
-  var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
+  /// Resolves a playback src into a concrete URL + headers/user-agent.
+  /// The `Track` is threaded through so the resolver can invoke the
+  /// consumer-supplied `media.resolve(track)` as the final media layer.
+  var mediaUrlResolver: ((String, Track?) async -> MediaResolvedUrl)?
 
   /// Internal access so TrackPlayer can read it for observer guards.
   private(set) var asset: AVURLAsset?
@@ -30,7 +33,7 @@ final class MediaLoader {
 
   // MARK: - Public API
 
-  func resolveAndLoad(src: String) {
+  func resolveAndLoad(src: String, track: Track? = nil) {
     if let resolver = mediaUrlResolver {
       mediaResolverTask?.cancel()
       mediaResolverTask = Task {
@@ -42,7 +45,7 @@ final class MediaLoader {
         }
 
         self.logger.debug("resolveAndLoad: calling resolver...")
-        let resolved = await resolver(src)
+        let resolved = await resolver(src, track)
 
         guard !Task.isCancelled else {
           self.logger.debug("resolveAndLoad: cancelled after resolver returned")

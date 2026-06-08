@@ -516,13 +516,12 @@ final class BrowserManager {
   }
 
   /// Merges two optional dictionaries, with override values taking precedence.
+  /// Delegates to the pure, unit-tested `MediaResolveComposer.mergeDicts`.
   func mergeDicts(
     _ base: [String: String]?,
     _ override: [String: String]?,
   ) -> [String: String]? {
-    guard let base else { return override }
-    guard let override else { return base }
-    return base.merging(override) { _, new in new }
+    MediaResolveComposer.mergeDicts(base, override)
   }
 
   // MARK: - Layer Resolvers

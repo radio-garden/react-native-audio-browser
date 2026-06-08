@@ -545,8 +545,8 @@ extension TrackPlayer: PlaybackEffectHandler {
     stopObservingAVPlayerItem()
   }
 
-  func loadTrack(src: String) {
-    mediaLoader.resolveAndLoad(src: src)
+  func loadTrack(src: String, track: Track) {
+    mediaLoader.resolveAndLoad(src: src, track: track)
   }
 
   func reloadTrack(startFromCurrentTime: Bool) {

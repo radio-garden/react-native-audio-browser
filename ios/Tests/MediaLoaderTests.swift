@@ -102,7 +102,7 @@ struct ResolveAndLoadTests {
   @Test func withResolver_callsResolver() async {
     let (loader, _) = makeLoader()
     var resolverCalled = false
-    loader.mediaUrlResolver = { src in
+    loader.mediaUrlResolver = { src, _ in
       resolverCalled = true
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
@@ -116,7 +116,7 @@ struct ResolveAndLoadTests {
 
   @Test func withResolver_returningInvalidUrl_callsErrorDelegate() async {
     let (loader, spy) = makeLoader()
-    loader.mediaUrlResolver = { _ in
+    loader.mediaUrlResolver = { _, _ in
       MediaResolvedUrl(url: "", headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
@@ -139,7 +139,7 @@ struct ResolveAndLoadTests {
   @Test func cancelsPreviousResolverTask() async {
     let (loader, _) = makeLoader()
     var callCount = 0
-    loader.mediaUrlResolver = { src in
+    loader.mediaUrlResolver = { src, _ in
       callCount += 1
       // Simulate slow resolution
       try? await Task.sleep(for: .milliseconds(100))
@@ -168,7 +168,7 @@ struct ResolveAndLoadTests {
 struct CancelAllTests {
   @Test func preventsDelegateCallbacksAfterResolveAndLoad() async {
     let (loader, spy) = makeLoader()
-    loader.mediaUrlResolver = { src in
+    loader.mediaUrlResolver = { src, _ in
       try? await Task.sleep(for: .milliseconds(50))
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }

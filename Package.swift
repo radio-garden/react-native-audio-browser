@@ -10,6 +10,7 @@ let package = Package(
       path: "ios",
       sources: [
         "Browser/BrowserPathHelper.swift",
+        "Browser/MediaResolveComposer.swift",
         "Browser/JsonModels.swift",
         "Browser/SimpleRouter.swift",
         "Player/QueueManager.swift",

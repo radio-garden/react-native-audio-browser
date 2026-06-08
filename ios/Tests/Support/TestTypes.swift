@@ -56,11 +56,15 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
 
   // Track loading
   var loadTrackCalls: [String] = []
+  var loadTrackTracks: [Track] = []
   var reloadTrackCalls: [Bool] = []
   var unloadTrackCallCount = 0
   var cancelMediaLoadingCallCount = 0
 
-  func loadTrack(src: String) { loadTrackCalls.append(src) }
+  func loadTrack(src: String, track: Track) {
+    loadTrackCalls.append(src)
+    loadTrackTracks.append(track)
+  }
   func reloadTrack(startFromCurrentTime: Bool) { reloadTrackCalls.append(startFromCurrentTime) }
   func unloadTrack() { unloadTrackCallCount += 1 }
   func cancelMediaLoading() { cancelMediaLoadingCallCount += 1 }

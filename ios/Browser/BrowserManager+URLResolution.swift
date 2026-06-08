@@ -8,7 +8,13 @@ extension BrowserManager {
 
   /// Resolves a media URL using the configured media transform.
   /// Returns the transformed URL, headers, and user-agent for playback.
-  func resolveMediaUrl(_ originalUrl: String) async -> MediaResolvedUrl {
+  ///
+  /// Resolution layers, least- to most-specific: shared `request` layer →
+  /// `media` transform / static fields → `media.resolve(track)`. The final
+  /// `resolve` layer (if configured) is merged last via `mergeRequestConfig`,
+  /// so its fields win. The `track` is only used to feed `resolve`; we do NOT
+  /// auto-merge `track.request` here.
+  func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
     logger.debug("Resolving media URL: \(originalUrl)")
 
     // Apply the shared `request` layer first (its transform runs for media too,
@@ -31,14 +37,25 @@ extension BrowserManager {
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
 
+    // Resolve the consumer-supplied final media layer once, up front. This is the
+    // most-specific layer and is merged over every branch's result below.
+    let resolveLayer: RequestConfig?
+    do {
+      resolveLayer = try await resolveMediaTrackConfig(track)
+    } catch {
+      logger.error("Media resolve callback failed: \(error.localizedDescription)")
+      resolveLayer = nil
+    }
+
     // No media-specific config: build the URL from the request-layered base.
     guard let mediaConfig = config.media else {
-      let finalUrl = buildUrl(from: baseRequest)
+      let merged = applyMediaResolveLayer(base: baseRequest, resolve: resolveLayer)
+      let finalUrl = buildUrl(from: merged)
       logger.debug("No media config; request-layered URL: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
         url: finalUrl,
-        headers: baseRequest.headers,
-        userAgent: baseRequest.userAgent,
+        headers: merged.headers,
+        userAgent: merged.userAgent,
       )
     }
 
@@ -56,16 +73,18 @@ extension BrowserManager {
         // Extract values immediately to Swift native types to avoid
         // memory corruption in Nitro's Swift-C++ bridge when the
         // Promise<RequestConfig> is deallocated
-        let finalUrl = buildUrl(from: transformedConfig)
-        let headers = transformedConfig.headers
-        let userAgent = transformedConfig.userAgent
+        let merged = applyMediaResolveLayer(
+          base: extractConfig(transformedConfig),
+          resolve: resolveLayer,
+        )
+        let finalUrl = buildUrl(from: merged)
 
         logger.debug("Media URL transformed: \(originalUrl) -> \(finalUrl)")
 
         return MediaResolvedUrl(
           url: finalUrl,
-          headers: headers,
-          userAgent: userAgent,
+          headers: merged.headers,
+          userAgent: merged.userAgent,
         )
       } catch {
         logger.error("Media transform failed: \(error.localizedDescription)")
@@ -76,16 +95,51 @@ extension BrowserManager {
     // No media transform: apply media static fields over the request-layered base.
     let baseUrl = mediaConfig.baseUrl ?? baseRequest.baseUrl
     if let baseUrl {
-      let finalUrl = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: originalUrl)
+      let staticBase = RequestConfig(
+        method: baseRequest.method,
+        path: originalUrl,
+        baseUrl: baseUrl,
+        headers: mediaConfig.headers ?? baseRequest.headers,
+        query: baseRequest.query,
+        body: baseRequest.body,
+        contentType: baseRequest.contentType,
+        userAgent: mediaConfig.userAgent ?? baseRequest.userAgent,
+      )
+      let merged = applyMediaResolveLayer(base: staticBase, resolve: resolveLayer)
+      let finalUrl = buildUrl(from: merged)
       logger.debug("Media URL with baseUrl: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
         url: finalUrl,
-        headers: mediaConfig.headers ?? baseRequest.headers,
-        userAgent: mediaConfig.userAgent ?? baseRequest.userAgent,
+        headers: merged.headers,
+        userAgent: merged.userAgent,
       )
     }
 
     return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+  }
+
+  /// Invokes the consumer-supplied `media.resolve(track)` and unwraps the
+  /// returned variant (sync `RequestConfig` or `Promise<RequestConfig>`) into a
+  /// concrete `RequestConfig`. Returns `nil` when no `resolve` is configured or
+  /// no track is available. Mirrors `resolveLayer`'s variant handling.
+  func resolveMediaTrackConfig(_ track: Track?) async throws -> RequestConfig? {
+    guard let track, let resolve = config.media?.resolve else { return nil }
+    let variant = try await resolve(track).await()
+    switch variant {
+    case let .first(requestConfig):
+      // Extract to a fresh value to avoid use-after-free of the bridged value.
+      return extractConfig(requestConfig)
+    case let .second(promise):
+      let resolved = try await promise.await()
+      return extractConfig(resolved)
+    }
+  }
+
+  /// Merges the resolve layer (most specific, override-wins) over `base`.
+  /// A no-op when `resolve` is nil.
+  private func applyMediaResolveLayer(base: RequestConfig, resolve: RequestConfig?) -> RequestConfig {
+    guard let resolve else { return base }
+    return mergeRequestConfig(base: base, override: resolve)
   }
 
   // MARK: - Artwork URL Resolution

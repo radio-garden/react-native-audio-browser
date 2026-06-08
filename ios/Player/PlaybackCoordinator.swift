@@ -496,7 +496,7 @@ class PlaybackCoordinator {
       logger.debug("  track.url: \(currentTrack.url ?? "nil")")
       logger.debug("  track.src: \(src)")
 
-      effectHandler?.loadTrack(src: src)
+      effectHandler?.loadTrack(src: src, track: currentTrack)
     } else {
       effectHandler?.unloadTrack()
       effectHandler?.clearNowPlaying()
