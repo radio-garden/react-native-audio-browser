@@ -380,7 +380,10 @@ export class BrowserManager {
     if (!artworkConfig) {
       return content
     }
-    const requestConfig = this._configuration.request
+    // The shared request layer applies to artwork too — use the resolved layer
+    // (resolver result or static config) so a resolver-only config still works.
+    await this.ensureLayersResolved()
+    const requestConfig = this._resolvedRequest
 
     // Transform parent artwork
     const parentArtworkSource =
@@ -682,7 +685,9 @@ export class BrowserManager {
     // request layer (incl. its transform) applies, matching content/search.
     const artworkConfig = this._configuration.artwork
     if (!artworkConfig) return tabs
-    const requestConfig = this._configuration.request
+    // Resolved request layer (resolver or static), matching content/search.
+    await this.ensureLayersResolved()
+    const requestConfig = this._resolvedRequest
     return Promise.all(
       tabs.map(async (track) => {
         const artworkSource =
