@@ -1067,6 +1067,19 @@ class BrowserManager {
   }
 
   /**
+   * Ensures the request layer is resolved for the current generation and returns it (the resolver
+   * result when a [BrowserConfig.requestResolver] is configured, else the static [BrowserConfig.request]).
+   *
+   * Consumers outside the browse path (media URL building, artwork) must obtain the request layer
+   * through this accessor rather than reading the static `config.request`, so a resolver-only
+   * consumer still gets a baseUrl/headers/transform for media, artwork, and now-playing artwork.
+   */
+  internal suspend fun resolvedRequestConfig(): TransformableRequestConfig? {
+    ensureLayersResolved()
+    return resolvedRequestLayer
+  }
+
+  /**
    * Execute an API request for browser content. Handles URL parameter substitution, config merging,
    * and transforms.
    */
@@ -1157,7 +1170,10 @@ class BrowserManager {
             contentType = null,
             userAgent = null,
           )
-        config.request?.let {
+        // Resolve the request resolver thunk once per content generation (cached), so a
+        // resolver-only consumer still gets a baseUrl/headers/transform for search.
+        ensureLayersResolved()
+        resolvedRequestLayer?.let {
           baseConfig = RequestConfigBuilder.mergeConfig(baseConfig, it, emptyMap())
         }
 

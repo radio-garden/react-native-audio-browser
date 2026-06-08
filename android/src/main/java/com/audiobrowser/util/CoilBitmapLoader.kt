@@ -49,7 +49,7 @@ import timber.log.Timber
 class CoilBitmapLoader(
   private val context: Context,
   private val imageLoader: ImageLoader,
-  private val getArtworkConfig: () -> ArtworkConfig?,
+  private val getArtworkConfig: suspend () -> ArtworkConfig?,
   private val getArtworkSizeHint: () -> Int? = { null },
 ) : BitmapLoader {
 

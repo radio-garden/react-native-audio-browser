@@ -266,17 +266,21 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * Returns the artwork configuration for use by CoilBitmapLoader. This provides access to the base
    * request config and artwork-specific config.
    */
-  fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
+  suspend fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
     val artworkConfig = _configuration.artwork
-    val requestConfig = _configuration.request
     // Provide the config when EITHER an artwork config or the shared request layer is set.
+    // The request layer counts as present when a static `request` OR a `requestResolver` is set —
+    // a resolver-only consumer still needs its baseUrl/headers/transform applied to artwork.
     // now-playing artwork comes in via `perRouteConfig` (not `artwork`), so we must still expose
     // the request layer here — otherwise a relative `nowPlayingArtwork` path (e.g. `/artwork/{id}`)
     // never gets `baseUrl` prepended. (Browse-list artwork with no artwork config still early-returns
     // its absolute `track.artwork` in CoilBitmapLoader, so it's unaffected.)
-    if (artworkConfig == null && requestConfig == null) return null
-    // Pass the request config (not a flattened static copy) so its transform
+    val hasRequestLayer =
+      _configuration.request != null || _configuration.requestResolver != null
+    if (artworkConfig == null && !hasRequestLayer) return null
+    // Resolve the request layer (resolver thunk result, or the static request) so its transform
     // runs for artwork too, applied as the shared layer in CoilBitmapLoader.
+    val requestConfig = browserManager.resolvedRequestConfig()
     return CoilBitmapLoader.ArtworkConfig(requestConfig, artworkConfig)
   }
 
@@ -287,11 +291,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    */
   fun getMediaRequestConfig(originalUrl: String): MediaRequestConfig? {
     val mediaConfig = _configuration.media
-    val requestConfig = _configuration.request
-    if (mediaConfig == null && requestConfig == null) return null
+    // The request layer counts as present when a static `request` OR a `requestResolver` is set —
+    // a resolver-only consumer still needs its baseUrl/headers/transform applied to media URLs.
+    val hasRequestLayer =
+      _configuration.request != null || _configuration.requestResolver != null
+    if (mediaConfig == null && !hasRequestLayer) return null
 
     return try {
+      // Runs on ExoPlayer's IO thread (TransformingDataSource.open), so blocking here is safe and
+      // intentional — it lets us await the async request resolver and the media transform callback.
       runBlocking {
+        // Resolve the request layer (resolver thunk result, or the static request).
+        val requestConfig = browserManager.resolvedRequestConfig()
         // Layered: request (shared, incl. its transform) → media. The request
         // layer runs for media too, per the documented contract, even when no
         // media-specific config is present (so a relative src still gets baseUrl).
