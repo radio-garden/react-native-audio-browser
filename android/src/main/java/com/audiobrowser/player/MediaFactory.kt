@@ -92,7 +92,14 @@ class MediaFactory(
     // JS thread to resolve.
     val httpFactory =
       DefaultHttpDataSource.Factory().apply {
-        setUserAgent(DEFAULT_USER_AGENT)
+        // Deliberately NOT setUserAgent(): DefaultHttpDataSource applies the factory
+        // user-agent as a FINAL setRequestProperty("User-Agent", …) that runs after —
+        // and overrides — the per-request DataSpec headers. That would clobber the
+        // User-Agent TransformingDataSource sets per request (the whole point of the
+        // per-request userAgent override). Supplying the same value as a default
+        // request property keeps the default for un-overridden requests while letting
+        // the per-request DataSpec header win.
+        setDefaultRequestProperties(mapOf("User-Agent" to DEFAULT_USER_AGENT))
         setAllowCrossProtocolRedirects(true)
         // Connect transfer listener for bandwidth measurement
         transferListener?.let { setTransferListener(it) }
