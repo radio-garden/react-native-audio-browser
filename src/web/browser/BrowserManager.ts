@@ -26,6 +26,19 @@ export class BrowserManager {
   private _configuration: NativeBrowserConfiguration = {}
   private router = new SimpleRouter()
 
+  // Layer resolution: any present request/browse resolver is invoked once per
+  // content generation, and the resolved TransformableRequestConfig is cached
+  // and fed into applyLayers in place of the static request/browse config. The
+  // generation bumps on config-set and on invalidateAllContent().
+  private _layerGeneration = 0
+  private _resolvedLayerGeneration = -1
+  private _resolvedRequest?: TransformableRequestConfig
+  private _resolvedBrowse?: TransformableRequestConfig
+  // Dedupes concurrent resolution within a generation (config-set triggers an
+  // initial navigate that can overlap with an explicit navigatePath), so a
+  // resolver is invoked exactly once per generation even under concurrency.
+  private _layerResolution?: { generation: number; promise: Promise<void> }
+
   // Navigation tracking to prevent race conditions (matches Android's @Volatile currentNavigationId)
   private currentNavigationId = 0
 
@@ -137,6 +150,7 @@ export class BrowserManager {
    */
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
+    this._layerGeneration += 1
     this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
 
@@ -195,6 +209,7 @@ export class BrowserManager {
    * to re-resolve it.
    */
   invalidateAllContent(): void {
+    this._layerGeneration += 1
     if (this._path) {
       void this.navigate(this._path)
     }
@@ -482,15 +497,49 @@ export class BrowserManager {
    *
    * Mirrors native's BrowserManager.resolveFromConfig.
    */
+  /**
+   * Ensures the request/browse layer configs are resolved for the current
+   * generation. Any present resolver is invoked once per generation and the
+   * result cached; a static config (no resolver) passes through unchanged.
+   */
+  private async ensureLayersResolved(): Promise<void> {
+    if (this._resolvedLayerGeneration === this._layerGeneration) return
+    // Reuse an in-flight resolution for the same generation so concurrent
+    // navigations (e.g. config-set's initial navigate overlapping an explicit
+    // navigatePath) don't each invoke the resolver.
+    if (this._layerResolution?.generation === this._layerGeneration) {
+      return this._layerResolution.promise
+    }
+    const generation = this._layerGeneration
+    const promise = (async () => {
+      const cfg = this._configuration
+      const resolvedRequest = cfg.requestResolver
+        ? await cfg.requestResolver()
+        : cfg.request
+      const resolvedBrowse = cfg.browseResolver
+        ? await cfg.browseResolver()
+        : cfg.browse
+      // Only commit if no newer generation superseded us mid-resolution.
+      if (this._layerGeneration === generation) {
+        this._resolvedRequest = resolvedRequest
+        this._resolvedBrowse = resolvedBrowse
+        this._resolvedLayerGeneration = generation
+      }
+    })()
+    this._layerResolution = { generation, promise }
+    return promise
+  }
+
   private async resolveFromConfig(
     kindConfig: TransformableRequestConfig | undefined,
     routeConfig: TransformableRequestConfig | undefined,
     path: string,
     params: Record<string, string>
   ): Promise<ResolvedTrack> {
+    await this.ensureLayersResolved()
     const merged = await RequestConfigBuilder.applyLayers(
       { path },
-      [this._configuration.request, kindConfig, routeConfig],
+      [this._resolvedRequest, this._resolvedBrowse ?? kindConfig, routeConfig],
       params
     )
     const response = await this.httpClient.executeRequest(merged)
@@ -509,9 +558,10 @@ export class BrowserManager {
     searchConfig: TransformableRequestConfig,
     queryParams: Record<string, string>
   ): Promise<Track[]> {
+    await this.ensureLayersResolved()
     const merged = await RequestConfigBuilder.applyLayers(
       { path: searchConfig.path, query: queryParams },
-      [this._configuration.request, searchConfig],
+      [this._resolvedRequest, searchConfig],
       queryParams
     )
     const response = await this.httpClient.executeRequest(merged)
@@ -577,8 +627,14 @@ export class BrowserManager {
 
     // Implicit default — no matching route, fetch the path via the layered
     // request → browse chain. Only attempt this when there's something to fetch
-    // (a configured request or browse layer); otherwise there's no content.
-    if (this._configuration.request || this._configuration.browse) {
+    // (a configured request or browse layer, static or resolver); otherwise
+    // there's no content.
+    if (
+      this._configuration.request ||
+      this._configuration.requestResolver ||
+      this._configuration.browse ||
+      this._configuration.browseResolver
+    ) {
       try {
         return await this.resolveFromConfig(
           this._configuration.browse,
