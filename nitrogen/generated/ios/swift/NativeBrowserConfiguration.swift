@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, browse: TransformableRequestConfig?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -31,9 +31,27 @@ public extension NativeBrowserConfiguration {
       } else {
         return .init()
       }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________ in
+      if let __unwrappedValue = requestResolver {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________({ () -> bridge.Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__closureWrapper.toUnsafe())
+        }())
+      } else {
+        return .init()
+      }
     }(), { () -> bridge.std__optional_TransformableRequestConfig_ in
       if let __unwrappedValue = browse {
         return bridge.create_std__optional_TransformableRequestConfig_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________ in
+      if let __unwrappedValue = browseResolver {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________({ () -> bridge.Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__closureWrapper.toUnsafe())
+        }())
       } else {
         return .init()
       }
@@ -136,8 +154,84 @@ public extension NativeBrowserConfiguration {
   }
   
   @inline(__always)
+  var requestResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)? {
+    return { () -> (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(self.__requestResolver) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(self.__requestResolver)
+        return { () -> () -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__unwrapped)
+          return { () -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_> in
+            let __result = __wrappedFunction.call()
+            return { () -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_> in
+              let __promise = Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>()
+              let __resolver = { (__result: Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_) in
+                __promise.resolve(withResult: __result)
+              }
+              let __rejecter = { (__error: Error) in
+                __promise.reject(withError: __error)
+              }
+              let __resolverCpp = { () -> bridge.Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ in
+                let __closureWrapper = Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(__resolver)
+                return bridge.create_Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(__closureWrapper.toUnsafe())
+              }()
+              let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+              }()
+              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__result)
+              __promiseHolder.addOnResolvedListener(__resolverCpp)
+              __promiseHolder.addOnRejectedListener(__rejecterCpp)
+              return __promise
+            }()
+          }
+        }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
   var browse: TransformableRequestConfig? {
     return self.__browse.value
+  }
+  
+  @inline(__always)
+  var browseResolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)? {
+    return { () -> (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(self.__browseResolver) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(self.__browseResolver)
+        return { () -> () -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__unwrapped)
+          return { () -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_> in
+            let __result = __wrappedFunction.call()
+            return { () -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_> in
+              let __promise = Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>()
+              let __resolver = { (__result: Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_) in
+                __promise.resolve(withResult: __result)
+              }
+              let __rejecter = { (__error: Error) in
+                __promise.reject(withError: __error)
+              }
+              let __resolverCpp = { () -> bridge.Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ in
+                let __closureWrapper = Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(__resolver)
+                return bridge.create_Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(__closureWrapper.toUnsafe())
+              }()
+              let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+              }()
+              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(__result)
+              __promiseHolder.addOnResolvedListener(__resolverCpp)
+              __promiseHolder.addOnRejectedListener(__rejecterCpp)
+              return __promise
+            }()
+          }
+        }()
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)

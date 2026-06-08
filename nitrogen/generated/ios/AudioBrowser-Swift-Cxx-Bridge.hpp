@@ -812,6 +812,141 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RequestConfig_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________ = std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>> create_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(const std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(const std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()> get_std__optional_std__function_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_________(const std::optional<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>`.
+   */
+  using Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ = std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______Wrapper(std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>> call() const noexcept {
+      auto __result = _function->operator()();
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ create_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______Wrapper wrap_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>`.
+   */
+  using std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ = std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>;
+  inline std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>> create_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____() noexcept {
+    return Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>::create();
+  }
+  inline PromiseHolder<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>> wrap_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>> promise) noexcept {
+    return PromiseHolder<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>&)>`.
+   */
+  using Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ = std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig____Wrapper final {
+  public:
+    explicit Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig____Wrapper(std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ create_Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig____Wrapper wrap_Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ value) noexcept {
+    return Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig____Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>
+  /**
+   * Wrapper struct for `std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ final {
+    std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>> variant;
+    std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>> variant): variant(variant) { }
+    operator std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline TransformableRequestConfig get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline std::shared_ptr<Promise<TransformableRequestConfig>> get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ create_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(const TransformableRequestConfig& value) noexcept {
+    return std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(value);
+  }
+  inline std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ create_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(const std::shared_ptr<Promise<TransformableRequestConfig>>& value) noexcept {
+    return std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(value);
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<TransformableRequestConfig>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<TransformableRequestConfig>>`.
+   */
+  using std__shared_ptr_Promise_TransformableRequestConfig__ = std::shared_ptr<Promise<TransformableRequestConfig>>;
+  inline std::shared_ptr<Promise<TransformableRequestConfig>> create_std__shared_ptr_Promise_TransformableRequestConfig__() noexcept {
+    return Promise<TransformableRequestConfig>::create();
+  }
+  inline PromiseHolder<TransformableRequestConfig> wrap_std__shared_ptr_Promise_TransformableRequestConfig__(std::shared_ptr<Promise<TransformableRequestConfig>> promise) noexcept {
+    return PromiseHolder<TransformableRequestConfig>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const TransformableRequestConfig& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const TransformableRequestConfig&)>`.
+   */
+  using Func_void_TransformableRequestConfig = std::function<void(const TransformableRequestConfig& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const TransformableRequestConfig& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_TransformableRequestConfig_Wrapper final {
+  public:
+    explicit Func_void_TransformableRequestConfig_Wrapper(std::function<void(const TransformableRequestConfig& /* result */)>&& func): _function(std::make_unique<std::function<void(const TransformableRequestConfig& /* result */)>>(std::move(func))) {}
+    inline void call(TransformableRequestConfig result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const TransformableRequestConfig& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_TransformableRequestConfig create_Func_void_TransformableRequestConfig(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_TransformableRequestConfig_Wrapper wrap_Func_void_TransformableRequestConfig(Func_void_TransformableRequestConfig value) noexcept {
+    return Func_void_TransformableRequestConfig_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<MediaRequestConfig>
   /**
    * Specialized version of `std::optional<MediaRequestConfig>`.

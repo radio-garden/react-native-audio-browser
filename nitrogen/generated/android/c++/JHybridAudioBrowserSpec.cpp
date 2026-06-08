@@ -228,6 +228,9 @@ namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include <NitroModules/JPromise.hpp>
 #include "JRequestConfig.hpp"
+#include <variant>
+#include "JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____.hpp"
+#include "JVariant_TransformableRequestConfig_Promise_TransformableRequestConfig_.hpp"
 #include "MediaRequestConfig.hpp"
 #include "JMediaRequestConfig.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
@@ -243,7 +246,6 @@ namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 #include "NativeRouteEntry.hpp"
 #include "JNativeRouteEntry.hpp"
 #include "BrowseError.hpp"
-#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
 #include "JBrowseResult.hpp"

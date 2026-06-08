@@ -211,6 +211,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "TransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
+#include <variant>
 #include "MediaRequestConfig.hpp"
 #include "ArtworkRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
@@ -218,7 +219,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "ImageQueryParams.hpp"
 #include "NativeRouteEntry.hpp"
 #include "BrowseError.hpp"
-#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
 #include "SearchMode.hpp"

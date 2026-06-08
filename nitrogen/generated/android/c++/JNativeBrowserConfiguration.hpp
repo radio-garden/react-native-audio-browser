@@ -37,6 +37,7 @@
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageContext.hpp"
 #include "JImageQueryParams.hpp"
@@ -55,6 +56,7 @@
 #include "JTrackLoadEvent.hpp"
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
+#include "JVariant_TransformableRequestConfig_Promise_TransformableRequestConfig_.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeRouteEntry.hpp"
@@ -102,8 +104,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
       static const auto fieldRequest = clazz->getField<JTransformableRequestConfig>("request");
       jni::local_ref<JTransformableRequestConfig> request = this->getFieldValue(fieldRequest);
+      static const auto fieldRequestResolver = clazz->getField<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::javaobject>("requestResolver");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::javaobject> requestResolver = this->getFieldValue(fieldRequestResolver);
       static const auto fieldBrowse = clazz->getField<JTransformableRequestConfig>("browse");
       jni::local_ref<JTransformableRequestConfig> browse = this->getFieldValue(fieldBrowse);
+      static const auto fieldBrowseResolver = clazz->getField<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::javaobject>("browseResolver");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::javaobject> browseResolver = this->getFieldValue(fieldBrowseResolver);
       static const auto fieldMedia = clazz->getField<JMediaRequestConfig>("media");
       jni::local_ref<JMediaRequestConfig> media = this->getFieldValue(fieldMedia);
       static const auto fieldArtwork = clazz->getField<JArtworkRequestConfig>("artwork");
@@ -127,7 +133,25 @@ namespace margelo::nitro::audiobrowser {
       return NativeBrowserConfiguration(
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         request != nullptr ? std::make_optional(request->toCpp()) : std::nullopt,
+        requestResolver != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()> {
+          if (requestResolver->isInstanceOf(JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______cxx::javaobject>(requestResolver);
+            return downcast->cthis()->getFunction();
+          } else {
+            auto requestResolverRef = jni::make_global(requestResolver);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____, std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>(std::move(requestResolverRef));
+          }
+        }()) : std::nullopt,
         browse != nullptr ? std::make_optional(browse->toCpp()) : std::nullopt,
+        browseResolver != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()> {
+          if (browseResolver->isInstanceOf(JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______cxx::javaobject>(browseResolver);
+            return downcast->cthis()->getFunction();
+          } else {
+            auto browseResolverRef = jni::make_global(browseResolver);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____, std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>(std::move(browseResolverRef));
+          }
+        }()) : std::nullopt,
         media != nullptr ? std::make_optional(media->toCpp()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toCpp()) : std::nullopt,
         nowPlayingArtwork != nullptr ? std::make_optional(nowPlayingArtwork->toCpp()) : std::nullopt,
@@ -181,14 +205,16 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeBrowserConfiguration::javaobject> fromCpp(const NativeBrowserConfiguration& value) {
-      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
+      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::javaobject>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.request.has_value() ? JTransformableRequestConfig::fromCpp(value.request.value()) : nullptr,
+        value.requestResolver.has_value() ? JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______cxx::fromCpp(value.requestResolver.value()) : nullptr,
         value.browse.has_value() ? JTransformableRequestConfig::fromCpp(value.browse.value()) : nullptr,
+        value.browseResolver.has_value() ? JFunc_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig______cxx::fromCpp(value.browseResolver.value()) : nullptr,
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
         value.artwork.has_value() ? JArtworkRequestConfig::fromCpp(value.artwork.value()) : nullptr,
         value.nowPlayingArtwork.has_value() ? JArtworkRequestConfig::fromCpp(value.nowPlayingArtwork.value()) : nullptr,
