@@ -19,7 +19,7 @@ import com.margelo.nitro.core.Promise
 data class MediaRequestConfig(
   @DoNotStrip
   @Keep
-  val resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?,
+  val resolve: Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track?,
   @DoNotStrip
   @Keep
   val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?,
@@ -51,8 +51,8 @@ data class MediaRequestConfig(
   /**
    * Create a new instance of MediaRequestConfig from Kotlin
    */
-  constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
-         this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(resolve: ((track: Track) -> Promise<Variant_RequestConfig_Promise_RequestConfig_>)?, transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(resolve?.let { Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
 
   companion object {
     /**
@@ -62,7 +62,7 @@ data class MediaRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): MediaRequestConfig {
+    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): MediaRequestConfig {
       return MediaRequestConfig(resolve, transform, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }

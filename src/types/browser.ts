@@ -412,7 +412,7 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    * `transform` if provided.
    *
    * @param track - The track being requested
-   * @returns Request configuration for this specific track
+   * @returns Request configuration for this specific track (sync or async)
    *
    * @example
    * ```typescript
@@ -422,7 +422,7 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    * })
    * ```
    */
-  resolve?: (track: Track) => Promise<RequestConfig>
+  resolve?: (track: Track) => RequestConfig | Promise<RequestConfig>
 }
 
 export interface ArtworkRequestConfig extends RequestConfig {

@@ -112,6 +112,23 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const Track& /* track */)>
+  Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track create_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const Track& track) mutable -> std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> {
+      auto __result = swiftClosure.call(track);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>
+  Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>
   Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track::fromUnsafe(swiftClosureWrapper);
