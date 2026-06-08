@@ -246,6 +246,22 @@ export interface TransformableRequestConfig extends RequestConfig {
 }
 
 /**
+ * A zero-arg resolver for a request layer. Resolved ONCE per content generation
+ * (re-resolved on `invalidateAllContent()`), cached, and merged into every
+ * request natively — so dynamic-but-rarely-changing values (a base URL, a locale
+ * query param) are read fresh per generation without a per-request JS hop.
+ *
+ * Return a plain `TransformableRequestConfig` synchronously (the common case — no
+ * `async`, no Promise), or a `Promise` of one when resolution needs to await.
+ * The returned config may itself carry a `transform` for the rare case that a
+ * per-request callback is genuinely needed; that transform runs per request as
+ * usual.
+ */
+export type RequestConfigResolver = () =>
+  | TransformableRequestConfig
+  | Promise<TransformableRequestConfig>
+
+/**
  * Configuration for artwork image requests
  *
  * ## Configuration Hierarchy
@@ -590,7 +606,7 @@ export type BrowserConfiguration = {
    * the per-kind config and (for browse) the route — so request → `<kind>` →
    * route. Specific configs override these defaults.
    */
-  request?: TransformableRequestConfig
+  request?: TransformableRequestConfig | RequestConfigResolver
 
   // ─── Per-kind request configuration ─────────────────────────────────────────
 
@@ -606,7 +622,7 @@ export type BrowserConfiguration = {
    * browse behaviour. Register a `routes['*']` entry only to override that
    * default with a callback / static / bespoke config.
    */
-  browse?: TransformableRequestConfig
+  browse?: TransformableRequestConfig | RequestConfigResolver
 
   /** Media/audio stream request configuration. */
   media?: MediaRequestConfig

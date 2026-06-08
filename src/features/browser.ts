@@ -184,8 +184,10 @@ function toNativeConfig(
 ): NativeBrowserConfiguration {
   return {
     path: config.path,
-    request: config.request,
-    browse: config.browse,
+    // Task 2 will lower the resolver union into dedicated native sibling fields;
+    // until then, cast through so the existing native type stays unchanged.
+    request: config.request as TransformableRequestConfig | undefined,
+    browse: config.browse as TransformableRequestConfig | undefined,
     media: config.media,
     artwork: config.artwork,
     nowPlayingArtwork: config.nowPlayingArtwork,
