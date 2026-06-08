@@ -77,7 +77,7 @@ final class BrowserManager {
   // Resolver caching: request/browse thunks resolve once per content generation.
   private var layerGeneration = 0
   private var resolvedLayerGeneration = -1
-  private var resolvedRequestLayer: TransformableRequestConfig?
+  var resolvedRequestLayer: TransformableRequestConfig?
   private var resolvedBrowseLayer: TransformableRequestConfig?
 
   // Set of favorited track identifiers (src)
@@ -544,7 +544,7 @@ final class BrowserManager {
   /// Ensure request/browse resolvers are resolved for the current generation,
   /// caching the results. Re-resolves after a generation bump (config change /
   /// invalidateAllContent). Idempotent within a generation.
-  private func ensureLayersResolved() async throws {
+  func ensureLayersResolved() async throws {
     guard resolvedLayerGeneration != layerGeneration else { return }
     let generation = layerGeneration
     let req = try await resolveLayer(config: config.request, resolver: config.requestResolver)
