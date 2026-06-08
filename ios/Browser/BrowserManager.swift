@@ -74,6 +74,12 @@ final class BrowserManager {
   private var lastSearchQuery: String?
   private var lastSearchResults: [Track]?
 
+  // Resolver caching: request/browse thunks resolve once per content generation.
+  private var layerGeneration = 0
+  private var resolvedLayerGeneration = -1
+  private var resolvedRequestLayer: TransformableRequestConfig?
+  private var resolvedBrowseLayer: TransformableRequestConfig?
+
   // Set of favorited track identifiers (src)
   private var favoriteIds: Set<String> = []
 
@@ -118,6 +124,8 @@ final class BrowserManager {
   var config: BrowserConfig = .init() {
     didSet {
       isConfigured = true
+      // New config means the cached resolver results are stale.
+      layerGeneration += 1
       onConfigChanged?(config)
     }
   }
@@ -276,8 +284,10 @@ final class BrowserManager {
   }
 
   /// Clears the entire content cache (e.g. on a locale change).
+  /// Runs from `invalidateAllContent`, so re-resolve the layer thunks too.
   func clearContentCache() {
     contentCache.clear()
+    layerGeneration += 1
   }
 
   /// Refreshes the current path by invalidating cache and re-resolving.
@@ -309,7 +319,7 @@ final class BrowserManager {
     } else {
       // Implicit default — no route config, just request → browse → fetch path.
       resolvedTrack = try await resolveFromConfig(
-        kind: config.browse, nil, path: path, params: ["path": path]
+        nil, path: path, params: ["path": path]
       )
     }
 
@@ -373,7 +383,7 @@ final class BrowserManager {
 
     if let browseConfig = entry.browseConfig {
       return try await resolveFromConfig(
-        kind: config.browse, browseConfig, path: path, params: params
+        browseConfig, path: path, params: params
       )
     }
 
@@ -398,11 +408,13 @@ final class BrowserManager {
     params: [String: String],
     initialQuery: [String: String]? = nil,
   ) async throws -> HttpClient.HttpRequest {
+    try await ensureLayersResolved()
+
     var merged = RequestConfig(
       method: nil, path: path, baseUrl: nil, headers: nil,
       query: nil, body: nil, contentType: nil, userAgent: nil,
     )
-    merged = try await applyLayer(config.request, to: merged, params: params)
+    merged = try await applyLayer(resolvedRequestLayer, to: merged, params: params)
     if let initialQuery, !initialQuery.isEmpty {
       merged = merged.copying(query: mergeDicts(merged.query, initialQuery))
     }
@@ -428,14 +440,16 @@ final class BrowserManager {
   }
 
   /// Resolves a browse route: a page object (`{title,url,children:[…]}`).
+  /// The browse kind layer is the cached resolved layer (`resolvedBrowseLayer`),
+  /// populated by `ensureLayersResolved()` inside `buildApiRequest`.
   private func resolveFromConfig(
-    kind kindConfig: TransformableRequestConfig?,
     _ routeConfig: TransformableRequestConfig?,
     path: String,
     params: [String: String],
   ) async throws -> ResolvedTrack {
+    try await ensureLayersResolved()
     let request = try await buildApiRequest(
-      kind: kindConfig, routeConfig, path: path, params: params,
+      kind: resolvedBrowseLayer, routeConfig, path: path, params: params,
     )
 
     logger.debug("Resolving content from API")
@@ -509,6 +523,37 @@ final class BrowserManager {
     guard let base else { return override }
     guard let override else { return base }
     return base.merging(override) { _, new in new }
+  }
+
+  // MARK: - Layer Resolvers
+
+  /// Resolve one layer: invoke its resolver (sync or async arm) if present,
+  /// else return the static layer config unchanged.
+  private func resolveLayer(
+    config staticConfig: TransformableRequestConfig?,
+    resolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)?,
+  ) async throws -> TransformableRequestConfig? {
+    guard let resolver else { return staticConfig }
+    let variant = try await resolver().await()
+    switch variant {
+    case let .first(config): return config
+    case let .second(promise): return try await promise.await()
+    }
+  }
+
+  /// Ensure request/browse resolvers are resolved for the current generation,
+  /// caching the results. Re-resolves after a generation bump (config change /
+  /// invalidateAllContent). Idempotent within a generation.
+  private func ensureLayersResolved() async throws {
+    guard resolvedLayerGeneration != layerGeneration else { return }
+    let generation = layerGeneration
+    let req = try await resolveLayer(config: config.request, resolver: config.requestResolver)
+    let brw = try await resolveLayer(config: config.browse, resolver: config.browseResolver)
+    // Only commit if still current (a newer generation may have started during await).
+    guard generation == layerGeneration else { return }
+    resolvedRequestLayer = req
+    resolvedBrowseLayer = brw
+    resolvedLayerGeneration = generation
   }
 
   // MARK: - Child Transformation
