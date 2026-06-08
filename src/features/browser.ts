@@ -2,6 +2,7 @@ import type {
   BrowserConfiguration,
   BrowserSource,
   BrowserSourceCallback,
+  RequestConfigResolver,
   ResolvedTrack,
   RouteConfig,
   SearchSource,
@@ -48,6 +49,20 @@ function isRouteConfig(source: unknown): source is RouteConfig {
   const obj = source as Record<string, unknown>
   // RouteConfig has browse/media/artwork properties at the top level
   return 'browse' in obj || ('media' in obj && !('baseUrl' in obj))
+}
+
+function splitLayer(
+  layer: TransformableRequestConfig | RequestConfigResolver | undefined
+): {
+  config?: TransformableRequestConfig
+  resolver?: RequestConfigResolver
+} {
+  if (!layer) return {}
+  // A function is a resolver thunk; an object is a static layer config. (The
+  // `request`/`browse` layer fields are object-only today, so this is
+  // unambiguous — unlike route/search sources which already accept a callback.)
+  if (isCallback(layer)) return { resolver: layer as RequestConfigResolver }
+  return { config: layer as TransformableRequestConfig }
 }
 
 function flattenBrowseSource(source: BrowserSource | undefined): {
@@ -182,12 +197,14 @@ function flattenRoutes(
 function toNativeConfig(
   config: BrowserConfiguration
 ): NativeBrowserConfiguration {
+  const request = splitLayer(config.request)
+  const browse = splitLayer(config.browse)
   return {
     path: config.path,
-    // Task 2 will lower the resolver union into dedicated native sibling fields;
-    // until then, cast through so the existing native type stays unchanged.
-    request: config.request as TransformableRequestConfig | undefined,
-    browse: config.browse as TransformableRequestConfig | undefined,
+    request: request.config,
+    requestResolver: request.resolver,
+    browse: browse.config,
+    browseResolver: browse.resolver,
     media: config.media,
     artwork: config.artwork,
     nowPlayingArtwork: config.nowPlayingArtwork,

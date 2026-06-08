@@ -13,6 +13,7 @@ import type {
   FormatNavigationErrorCallback,
   HandleTrackLoadCallback,
   MediaRequestConfig,
+  RequestConfigResolver,
   SearchSourceCallback,
   TransformableRequestConfig
 } from './browser'
@@ -42,11 +43,15 @@ export interface NativeRouteEntry {
 export interface NativeBrowserConfiguration {
   path?: string
 
-  // Request defaults (applied to every request: browse, search, media, artwork)
+  // Request defaults (applied to every request: browse, search, media, artwork).
+  // The union `TransformableRequestConfig | RequestConfigResolver` from the public
+  // API is lowered here into two sibling fields (mirrors browseCallback/browseConfig).
   request?: TransformableRequestConfig
+  requestResolver?: RequestConfigResolver
 
   // Per-kind request config, layered request → <kind> → route.
   browse?: TransformableRequestConfig
+  browseResolver?: RequestConfigResolver
   media?: MediaRequestConfig
   artwork?: ArtworkRequestConfig
   nowPlayingArtwork?: ArtworkRequestConfig
