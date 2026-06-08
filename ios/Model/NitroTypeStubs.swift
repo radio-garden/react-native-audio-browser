@@ -2,10 +2,17 @@
 /// Lightweight stand-ins for NitroModules types used by the testable target.
 /// Only compiled when NitroModules is unavailable (SPM test builds).
 
+struct TrackRequest: Equatable {
+  var userAgent: String? = nil
+  var headers: [String: String]? = nil
+  var query: [String: String]? = nil
+}
+
 struct Track: Equatable {
   var id: String
   var url: String? = nil
   var src: String? = nil
+  var request: TrackRequest? = nil
   var title: String = ""
   var artist: String? = nil
   var album: String? = nil
@@ -27,6 +34,14 @@ enum RepeatMode {
 enum CarPlaySiriListButtonPosition {
   case top
   case bottom
+
+  init?(fromString string: String) {
+    switch string {
+    case "top": self = .top
+    case "bottom": self = .bottom
+    default: return nil
+    }
+  }
 }
 
 struct ImageSource: Equatable {
@@ -39,6 +54,14 @@ struct ImageSource: Equatable {
 enum TrackStyle {
   case list
   case grid
+
+  init?(fromString string: String) {
+    switch string {
+    case "list": self = .list
+    case "grid": self = .grid
+    default: return nil
+    }
+  }
 }
 
 struct ImageRowItem: Equatable {

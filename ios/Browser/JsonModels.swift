@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(NitroModules)
 import NitroModules
+#endif
 
 /// JSON serializable models for parsing API responses.
 /// These will be converted to Nitro types after parsing.
@@ -19,6 +21,19 @@ struct JsonImageRowItem: Codable {
     self.artwork = artwork
     self.title = title
   }
+}
+
+/// JSON model for per-track HTTP request configuration.
+struct JsonTrackRequest: Codable {
+  let userAgent: String?
+  let headers: [String: String]?
+  let query: [String: String]?
+
+  #if canImport(NitroModules)
+  func toNitro() -> TrackRequest {
+    TrackRequest(userAgent: userAgent, headers: headers, query: query)
+  }
+  #endif
 }
 
 /// JSON model for resolved track (container with children).
@@ -93,6 +108,7 @@ struct JsonTrack: Codable {
   let genre: String?
   let duration: Double?
   let src: String?
+  let request: JsonTrackRequest?
   let style: String?
   let childrenStyle: String?
   let groupTitle: String?
@@ -111,6 +127,7 @@ struct JsonTrack: Codable {
     genre: String? = nil,
     duration: Double? = nil,
     src: String? = nil,
+    request: JsonTrackRequest? = nil,
     style: String? = nil,
     childrenStyle: String? = nil,
     groupTitle: String? = nil,
@@ -127,6 +144,7 @@ struct JsonTrack: Codable {
     self.genre = genre
     self.duration = duration
     self.src = src
+    self.request = request
     self.style = style
     self.childrenStyle = childrenStyle
     self.groupTitle = groupTitle
@@ -137,6 +155,8 @@ struct JsonTrack: Codable {
 }
 
 // MARK: - Convert JSON models to Nitro types
+
+#if canImport(NitroModules)
 
 private extension String {
   func toTrackStyle() -> TrackStyle? {
@@ -191,6 +211,7 @@ extension JsonTrack {
       src: src,
       artwork: artwork,
       artworkSource: nil,
+      request: request?.toNitro(),
       artworkCarPlayTinted: nil,
       title: title,
       subtitle: subtitle,
@@ -208,3 +229,23 @@ extension JsonTrack {
     )
   }
 }
+
+#else
+
+// Test-only path: construct minimal stubs for SPM test builds.
+extension JsonTrack {
+  func toNitro() -> Track {
+    Track(
+      id: id ?? "",
+      url: url,
+      src: src,
+      request: request.map { TrackRequest(userAgent: $0.userAgent, headers: $0.headers, query: $0.query) },
+      title: title,
+      artist: artist,
+      album: album,
+      live: live,
+    )
+  }
+}
+
+#endif
