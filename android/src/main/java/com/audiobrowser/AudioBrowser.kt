@@ -109,7 +109,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     NativeBrowserConfiguration(
       path = null,
       request = null,
+      requestResolver = null,
       browse = null,
+      browseResolver = null,
       media = null,
       artwork = null,
       nowPlayingArtwork = null,
@@ -248,7 +250,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   internal fun buildConfig(): BrowserConfig {
     return BrowserConfig(
       request = _configuration.request,
+      requestResolver = _configuration.requestResolver,
       browse = _configuration.browse,
+      browseResolver = _configuration.browseResolver,
       media = _configuration.media,
       artwork = _configuration.artwork,
       nowPlayingArtwork = _configuration.nowPlayingArtwork,

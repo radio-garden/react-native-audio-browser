@@ -10,6 +10,7 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.FavoritesMatchMode
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -104,8 +105,34 @@ class BrowserManager {
   /**
    * Browser configuration containing routes, search, tabs, and request settings. This can be
    * updated dynamically when the configuration changes.
+   *
+   * Setting a new config bumps [layerGeneration] so the cached request/browse resolver layers are
+   * re-resolved on the next request (the resolvers may close over config-derived state).
    */
   var config: BrowserConfig = BrowserConfig()
+    set(value) {
+      field = value
+      layerGeneration += 1
+    }
+
+  // Resolver-layer caching. The request/browse layers may be resolver thunks
+  // (config.requestResolver / config.browseResolver) resolved once per *content generation*:
+  // re-resolved when content is invalidated (clearContentCache, from invalidateAllContent) or when
+  // a new config is set, cached, and merged per request.
+  private var layerGeneration = 0
+  private var resolvedLayerGeneration = -1
+  private var resolvedRequestLayer: TransformableRequestConfig? = null
+  private var resolvedBrowseLayer: TransformableRequestConfig? = null
+
+  /** Test-only accessors for the resolver-layer cache state (see ensureLayersResolved). */
+  internal val layerGenerationForTest: Int
+    get() = layerGeneration
+  internal val resolvedLayerGenerationForTest: Int
+    get() = resolvedLayerGeneration
+  internal val resolvedRequestLayerForTest: TransformableRequestConfig?
+    get() = resolvedRequestLayer
+  internal val resolvedBrowseLayerForTest: TransformableRequestConfig?
+    get() = resolvedBrowseLayer
 
   /**
    * Callback to transform artwork URLs for tracks. Takes a track and optional per-route artwork
@@ -393,6 +420,9 @@ class BrowserManager {
   /** Clears all cached content. Used when artwork resolver is wired up to force re-fetch. */
   fun clearContentCache() {
     contentCache.evictAll()
+    // Bump the layer generation so request/browse resolver thunks are re-resolved on the next
+    // request (invalidateAllContent → clearContentCache is the documented re-resolve trigger).
+    layerGeneration += 1
     Timber.d("Cleared all content cache")
   }
 
@@ -999,6 +1029,44 @@ class BrowserManager {
   }
 
   /**
+   * Resolves a single request/browse layer. When a resolver thunk is present it is invoked and its
+   * result awaited; the resolver may return either a sync [TransformableRequestConfig] (variant
+   * first arm) or a `Promise<TransformableRequestConfig>` (second arm). When there is no resolver
+   * the static layer config is returned as-is.
+   */
+  private suspend fun resolveLayer(
+    staticConfig: TransformableRequestConfig?,
+    resolver:
+      Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____?,
+  ): TransformableRequestConfig? {
+    if (resolver == null) return staticConfig
+    val variant = resolver.invoke().await()
+    return variant.match(
+      first = { it },
+      second = { it.await() },
+    )
+  }
+
+  /**
+   * Ensures the request/browse resolver layers are resolved for the current [layerGeneration],
+   * caching the result. Re-resolves when the generation changes (config set or content
+   * invalidation). Uses a simple generation guard with no in-flight cache: a benign idempotent
+   * double-resolve under concurrent first-requests is acceptable, and on a thrown resolver nothing
+   * is cached so the next request retries naturally.
+   */
+  internal suspend fun ensureLayersResolved() {
+    if (resolvedLayerGeneration == layerGeneration) return
+    val generation = layerGeneration
+    val req = resolveLayer(config.request, config.requestResolver)
+    val brw = resolveLayer(config.browse, config.browseResolver)
+    // A newer generation started while we were awaiting — drop this stale result.
+    if (generation != layerGeneration) return
+    resolvedRequestLayer = req
+    resolvedBrowseLayer = brw
+    resolvedLayerGeneration = generation
+  }
+
+  /**
    * Execute an API request for browser content. Handles URL parameter substitution, config merging,
    * and transforms.
    */
@@ -1023,10 +1091,12 @@ class BrowserManager {
           contentType = null,
           userAgent = null,
         )
-      config.request?.let {
+      // Resolve the request/browse resolver thunks once per content generation (cached).
+      ensureLayersResolved()
+      resolvedRequestLayer?.let {
         mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
       }
-      config.browse?.let {
+      resolvedBrowseLayer?.let {
         mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
       }
       apiConfig?.let {
@@ -1179,7 +1249,18 @@ class CallbackException(message: String) : Exception(message)
  */
 data class BrowserConfig(
   val request: TransformableRequestConfig? = null,
+  // Resolver thunk for the shared request layer. When set, it is resolved once per content
+  // generation (re-resolved after invalidateAllContent), cached, and merged per request — instead
+  // of carrying a static `request`. `request` and `requestResolver` are mutually exclusive in
+  // practice (the consumer sets one or the other), but both are merged if present.
+  val requestResolver:
+    Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____? =
+    null,
   val browse: TransformableRequestConfig? = null,
+  // Resolver thunk for the browse layer. See `requestResolver`.
+  val browseResolver:
+    Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____? =
+    null,
   val media: MediaRequestConfig? = null,
   val artwork: ArtworkRequestConfig? = null,
   // Now-playing-only artwork configuration (lock screen / notification / Android Auto now-playing).
