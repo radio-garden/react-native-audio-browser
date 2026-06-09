@@ -776,6 +776,7 @@ class BrowserManager {
           carPlaySiriListButton = null,
           artwork = null,
           artworkSource = null,
+          request = null,
           artworkCarPlayTinted = null,
           artist = null,
           description = null,
@@ -816,6 +817,7 @@ class BrowserManager {
           carPlaySiriListButton = null,
           artwork = null,
           artworkSource = null,
+          request = null,
           artworkCarPlayTinted = null,
           artist = null,
           description = null,
@@ -955,14 +957,19 @@ class BrowserManager {
     entry.browseCallback?.let { callback ->
       Timber.d("Resolving route via callback")
       val param = BrowserSourceCallbackParam(path, routeParams)
-      val promise = callback.invoke(param)
-      val innerPromise = promise.await()
-      val result = innerPromise.await()
-
-      // Handle BrowseResult variant: either ResolvedTrack or BrowseError
-      return result.match(
+      // BrowserSourceCallback may return a BrowseResult synchronously or via a
+      // Promise. Nitro flattens (ResolvedTrack | BrowseError) | Promise<BrowseResult>
+      // into a 3-arm variant: sync track, sync error, or a Promise resolving to a
+      // BrowseResult (which is itself a ResolvedTrack | BrowseError variant).
+      return callback.invoke(param).await().match(
         first = { resolvedTrack -> resolvedTrack },
-        second = { browseError -> throw CallbackException(browseError.error) }
+        second = { browseError -> throw CallbackException(browseError.error) },
+        third = { promise ->
+          promise.await().match(
+            first = { resolvedTrack -> resolvedTrack },
+            second = { browseError -> throw CallbackException(browseError.error) },
+          )
+        },
       )
     }
 

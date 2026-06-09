@@ -19,10 +19,10 @@ import com.margelo.nitro.core.Promise
 data class ArtworkRequestConfig(
   @DoNotStrip
   @Keep
-  val resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?,
+  val resolve: Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track?,
   @DoNotStrip
   @Keep
-  val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams?,
+  val transform: Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams?,
   @DoNotStrip
   @Keep
   val imageQueryParams: ImageQueryParams?,
@@ -54,8 +54,8 @@ data class ArtworkRequestConfig(
   /**
    * Create a new instance of ArtworkRequestConfig from Kotlin
    */
-  constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((params: MediaTransformParams) -> Promise<Promise<RequestConfig>>)?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
-         this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_java(it) }, imageQueryParams, method, path, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(resolve: ((track: Track) -> Promise<Variant_RequestConfig_Promise_RequestConfig_>)?, transform: ((params: MediaTransformParams) -> Promise<Variant_RequestConfig_Promise_RequestConfig_>)?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(resolve?.let { Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams_java(it) }, imageQueryParams, method, path, baseUrl, headers, query, body, contentType, userAgent)
 
   companion object {
     /**
@@ -65,7 +65,7 @@ data class ArtworkRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): ArtworkRequestConfig {
+    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track?, transform: Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams?, imageQueryParams: ImageQueryParams?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): ArtworkRequestConfig {
       return ArtworkRequestConfig(resolve, transform, imageQueryParams, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }

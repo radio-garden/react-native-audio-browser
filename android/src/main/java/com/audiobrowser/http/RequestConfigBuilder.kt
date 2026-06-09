@@ -6,6 +6,7 @@ import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +59,12 @@ object RequestConfigBuilder {
     // Apply transform function if provided
     return override.transform?.let { transformFn ->
       try {
-        transformFn.invoke(base, routeParams).await().await() // Transform result wins completely
+        // Transform result wins completely; the callback may return its config
+        // synchronously (first) or via a Promise (second).
+        transformFn.invoke(base, routeParams).await().match(
+          first = { it },
+          second = { it.await() },
+        )
       } catch (e: Exception) {
         Timber.e(e, "Failed to apply transform function, using base config")
         base
@@ -76,7 +82,10 @@ object RequestConfigBuilder {
       override.transform?.let { transformFn ->
         try {
           Timber.d("Invoking media transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(base, routeParams).await().await()
+          val transformed = transformFn.invoke(base, routeParams).await().match(
+            first = { it },
+            second = { it.await() },
+          )
           Timber.d(
             "Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
           )
@@ -113,6 +122,49 @@ object RequestConfigBuilder {
   }
 
   /**
+   * Applies the per-track `media.resolve(track)` callback as the final, most-specific
+   * layer over an already request+media-layered config. The callback receives the full
+   * Track — carrying any per-track `request` override (e.g. a strict-UA sentinel the
+   * consumer swaps for a clean User-Agent) — and returns the config whose fields win.
+   *
+   * No-op when the media config has no `resolve` callback or no track is available (so
+   * the request/media layers stand). The callback may return its config synchronously
+   * (variant `first`) or via a Promise (`second`). Mirrors iOS resolveMediaTrackConfig +
+   * applyMediaResolveLayer.
+   */
+  suspend fun applyMediaResolve(
+    layered: MediaRequestConfig,
+    track: Track?,
+  ): MediaRequestConfig {
+    val resolveFn = layered.resolve ?: return layered
+    if (track == null) return layered
+    val resolved =
+      try {
+        resolveFn.invoke(track).await().match(
+          first = { it },
+          second = { it.await() },
+        )
+      } catch (e: Exception) {
+        Timber.e(e, "Failed to apply media.resolve, using layered config")
+        return layered
+      }
+    // Resolve wins: merge it over the layered config (override-wins on every field).
+    val merged = mergeConfig(toRequestConfig(layered), resolved)
+    return MediaRequestConfig(
+      resolve = layered.resolve,
+      transform = layered.transform,
+      method = merged.method,
+      path = merged.path,
+      baseUrl = merged.baseUrl,
+      headers = merged.headers,
+      query = merged.query,
+      body = merged.body,
+      contentType = merged.contentType,
+      userAgent = merged.userAgent,
+    )
+  }
+
+  /**
    * Merges artwork request config with base config, applying transform with ImageContext.
    * Used for artwork URL transformation where size hints are needed.
    */
@@ -126,7 +178,10 @@ object RequestConfigBuilder {
       override.transform?.let { transformFn ->
         try {
           Timber.d("Invoking artwork transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(MediaTransformParams(base, imageContext)).await().await()
+          val transformed = transformFn.invoke(MediaTransformParams(base, imageContext)).await().match(
+            first = { it },
+            second = { it.await() },
+          )
           Timber.d(
             "Artwork transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
           )

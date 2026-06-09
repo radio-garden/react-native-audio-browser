@@ -278,7 +278,11 @@ class CoilBitmapLoader(
       // The resolve callback receives the track directly and can return:
       // - RequestConfig with path/query/etc for URL generation
       // - undefined to indicate no artwork
-      val resolvedConfig = effectiveArtworkConfig.resolve?.invoke(track)?.await()?.await()
+      // resolve may return its config synchronously (first) or via a Promise (second).
+      val resolvedConfig = effectiveArtworkConfig.resolve?.invoke(track)?.await()?.match(
+        first = { it },
+        second = { it.await() },
+      )
 
       // If resolve callback exists and returned null, that means no artwork
       if (effectiveArtworkConfig.resolve != null && resolvedConfig == null) {
@@ -324,7 +328,10 @@ class CoilBitmapLoader(
       // Apply transform callback if present (can override imageQueryParams)
       var transformedConfig =
         if (effectiveArtworkConfig.transform != null) {
-          effectiveArtworkConfig.transform.invoke(MediaTransformParams(mergedConfig, imageContext))?.await()?.await()
+          effectiveArtworkConfig.transform.invoke(MediaTransformParams(mergedConfig, imageContext))?.await()?.match(
+            first = { it },
+            second = { it.await() },
+          )
             ?: mergedConfig
         } else {
           mergedConfig

@@ -56,7 +56,7 @@ export type BrowseResult = ResolvedTrack | BrowseError
 
 export type BrowserSourceCallback = (
   param: BrowserSourceCallbackParam
-) => Promise<BrowseResult>
+) => BrowseResult | Promise<BrowseResult>
 
 /**
  * Search mode types for structured voice search.
@@ -115,7 +115,7 @@ export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
 export type RequestConfigTransformer = (
   request: RequestConfig,
   routeParams?: Record<string, string>
-) => Promise<RequestConfig>
+) => RequestConfig | Promise<RequestConfig>
 
 export type HttpMethod =
   | 'GET'
@@ -217,7 +217,7 @@ export interface MediaTransformParams {
  */
 export type MediaRequestConfigTransformer = (
   params: MediaTransformParams
-) => Promise<RequestConfig>
+) => RequestConfig | Promise<RequestConfig>
 
 /**
  * Request configuration that supports async transformation.
@@ -448,7 +448,7 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
-  resolve?: (track: Track) => Promise<RequestConfig>
+  resolve?: (track: Track) => RequestConfig | Promise<RequestConfig>
 
   /**
    * Final transformation callback for media/artwork requests.
@@ -551,7 +551,7 @@ export type RouteConfig = {
   artwork?: ArtworkRequestConfig
 }
 
-export type TabsSourceCallback = () => Promise<Track[]>
+export type TabsSourceCallback = () => Track[] | Promise<Track[]>
 /**
  * Tab source configuration for navigation tabs.
  *

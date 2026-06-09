@@ -368,16 +368,22 @@ final class BrowserManager {
     // Priority: callback > config > static
     if let callback = entry.browseCallback {
       let callbackParam = BrowserSourceCallbackParam(path: path, routeParams: params)
-      let outerPromise = callback(callbackParam)
-      let innerPromise = try await outerPromise.await()
-      let result = try await innerPromise.await()
-
-      // Handle the BrowseResult union type
-      switch result {
+      // BrowserSourceCallback may return a BrowseResult synchronously or via a
+      // Promise. Nitro flattens (ResolvedTrack | BrowseError) | Promise<BrowseResult>
+      // into a 3-arm variant: sync track, sync error, or a Promise resolving to a
+      // BrowseResult (which is itself a ResolvedTrack | BrowseError variant).
+      switch try await callback(callbackParam).await() {
       case let .first(resolvedTrack):
         return resolvedTrack
       case let .second(browseError):
         throw BrowserError.callbackError(browseError.error)
+      case let .third(promise):
+        switch try await promise.await() {
+        case let .first(resolvedTrack):
+          return resolvedTrack
+        case let .second(browseError):
+          throw BrowserError.callbackError(browseError.error)
+        }
       }
     }
 
@@ -496,13 +502,17 @@ final class BrowserManager {
   /// out of the Nitro bridge immediately to avoid use-after-free when the
   /// `Promise<RequestConfig>` is deallocated.
   func applyTransform(
-    _ transform: @escaping (RequestConfig, [String: String]?) -> Promise<Promise<RequestConfig>>,
+    _ transform: @escaping (RequestConfig, [String: String]?) -> Promise<Variant_RequestConfig_Promise_RequestConfig_>,
     request: RequestConfig,
     params: [String: String],
   ) async throws -> RequestConfig {
-    let outerPromise = transform(request, params)
-    let innerPromise = try await outerPromise.await()
-    let result = try await innerPromise.await()
+    // The transform may return its config synchronously (`.first`) or via a
+    // Promise (`.second`); both arms yield the same RequestConfig.
+    let result: RequestConfig
+    switch try await transform(request, params).await() {
+    case let .first(config): result = config
+    case let .second(promise): result = try await promise.await()
+    }
     return RequestConfig(
       method: result.method,
       path: result.path,
@@ -594,7 +604,7 @@ final class BrowserManager {
             url: item.url,
             src: nil,
             artwork: item.artwork,
-            artworkSource: nil,
+            artworkSource: nil, request: nil,
             artworkCarPlayTinted: nil,
             title: item.title,
             subtitle: nil,
@@ -698,7 +708,7 @@ final class BrowserManager {
       id: nil,
       src: nil,
       artwork: nil,
-      artworkSource: nil,
+      artworkSource: nil, request: nil,
       artworkCarPlayTinted: nil,
       title: "Search: \(query)",
       subtitle: nil,

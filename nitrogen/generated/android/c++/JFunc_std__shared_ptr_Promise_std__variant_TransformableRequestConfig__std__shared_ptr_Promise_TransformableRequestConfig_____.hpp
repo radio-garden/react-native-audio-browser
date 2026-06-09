@@ -22,7 +22,8 @@
 #include <string>
 #include <unordered_map>
 #include <optional>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JVariant_RequestConfig_Promise_RequestConfig_.hpp"
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"

@@ -63,18 +63,15 @@ extension BrowserManager {
     if let transform = mediaConfig.transform {
       do {
         logger.debug("resolveMediaUrl: calling transform callback...")
-        let outerPromise = transform(baseRequest, nil)
-        logger.debug("resolveMediaUrl: awaiting outer promise...")
-        let innerPromise = try await outerPromise.await()
-        logger.debug("resolveMediaUrl: awaiting inner promise...")
-        let transformedConfig = try await innerPromise.await()
+        // unwrapConfigVariant awaits the outer Nitro promise, then resolves the
+        // sync (.first) or async (.second) arm and copies values immediately to
+        // Swift native types to avoid memory corruption in Nitro's Swift-C++
+        // bridge when the bridged config/Promise is deallocated.
+        let transformedConfig = try await unwrapConfigVariant(transform(baseRequest, nil).await())
         logger.debug("resolveMediaUrl: transform complete")
 
-        // Extract values immediately to Swift native types to avoid
-        // memory corruption in Nitro's Swift-C++ bridge when the
-        // Promise<RequestConfig> is deallocated
         let merged = applyMediaResolveLayer(
-          base: extractConfig(transformedConfig),
+          base: transformedConfig,
           resolve: resolveLayer,
         )
         let finalUrl = buildUrl(from: merged)
@@ -124,15 +121,7 @@ extension BrowserManager {
   /// no track is available. Mirrors `resolveLayer`'s variant handling.
   func resolveMediaTrackConfig(_ track: Track?) async throws -> RequestConfig? {
     guard let track, let resolve = config.media?.resolve else { return nil }
-    let variant = try await resolve(track).await()
-    switch variant {
-    case let .first(requestConfig):
-      // Extract to a fresh value to avoid use-after-free of the bridged value.
-      return extractConfig(requestConfig)
-    case let .second(promise):
-      let resolved = try await promise.await()
-      return extractConfig(resolved)
-    }
+    return try await unwrapConfigVariant(resolve(track).await())
   }
 
   /// Merges the resolve layer (most specific, override-wins) over `base`.
@@ -194,11 +183,8 @@ extension BrowserManager {
       )
 
       if let resolve = artworkConfig.resolve {
-        let outerPromise = resolve(track)
-        let innerPromise = try await outerPromise.await()
-        let resolvedConfig = try await innerPromise.await()
-
-        mergedConfig = mergeRequestConfig(base: mergedConfig, override: extractConfig(resolvedConfig))
+        let resolvedConfig = try await unwrapConfigVariant(resolve(track).await())
+        mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolvedConfig)
       } else {
         let artworkStaticConfig = RequestConfig(
           method: artworkConfig.method,
@@ -246,10 +232,9 @@ extension BrowserManager {
       // Skip transform at browse-time (no size context) — applied at load-time
       let hasSize = imageContext?.width != nil || imageContext?.height != nil
       if let transform = artworkConfig.transform, hasSize {
-        let outerPromise = transform(MediaTransformParams(request: mergedConfig, context: imageContext))
-        let innerPromise = try await outerPromise.await()
-        let transformedConfig = try await innerPromise.await()
-        mergedConfig = extractConfig(transformedConfig)
+        mergedConfig = try await unwrapConfigVariant(
+          transform(MediaTransformParams(request: mergedConfig, context: imageContext)).await()
+        )
       }
 
       // Substitute the `{id}` template token with the track's id across path/query/header values.
@@ -322,6 +307,22 @@ extension BrowserManager {
       contentType: config.contentType,
       userAgent: config.userAgent,
     )
+  }
+
+  /// Unwraps a `Variant_RequestConfig_Promise_RequestConfig_` — the result of a
+  /// resolve/transform callback after awaiting the outer Nitro promise — into a
+  /// concrete, bridge-safe `RequestConfig`. `.first` is a synchronous config;
+  /// `.second` is a `Promise<RequestConfig>` that must be awaited. Both arms are
+  /// copied via `extractConfig` to avoid use-after-free of the bridged value.
+  private func unwrapConfigVariant(
+    _ variant: Variant_RequestConfig_Promise_RequestConfig_
+  ) async throws -> RequestConfig {
+    switch variant {
+    case let .first(requestConfig):
+      return extractConfig(requestConfig)
+    case let .second(promise):
+      return extractConfig(try await promise.await())
+    }
   }
 
   /// Extracts all values from a RequestConfig into a new instance to avoid

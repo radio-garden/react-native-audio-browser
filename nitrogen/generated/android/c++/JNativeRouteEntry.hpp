@@ -24,12 +24,11 @@
 #include "JBrowseResult.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageContext.hpp"
 #include "JImageQueryParams.hpp"
@@ -46,6 +45,7 @@
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "JVariant_RequestConfig_Promise_RequestConfig_.hpp"
+#include "JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "RequestConfig.hpp"
@@ -87,8 +87,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldPath = clazz->getField<jni::JString>("path");
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
-      static const auto fieldBrowseCallback = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam::javaobject>("browseCallback");
-      jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam::javaobject> browseCallback = this->getFieldValue(fieldBrowseCallback);
+      static const auto fieldBrowseCallback = clazz->getField<JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam::javaobject>("browseCallback");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam::javaobject> browseCallback = this->getFieldValue(fieldBrowseCallback);
       static const auto fieldBrowseConfig = clazz->getField<JTransformableRequestConfig>("browseConfig");
       jni::local_ref<JTransformableRequestConfig> browseConfig = this->getFieldValue(fieldBrowseConfig);
       static const auto fieldBrowseStatic = clazz->getField<JResolvedTrack>("browseStatic");
@@ -103,13 +103,13 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JArtworkRequestConfig> artwork = this->getFieldValue(fieldArtwork);
       return NativeRouteEntry(
         path->toStdString(),
-        browseCallback != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)> {
-          if (browseCallback->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_cxx::javaClassStatic())) [[likely]] {
-            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_cxx::javaobject>(browseCallback);
+        browseCallback != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)> {
+          if (browseCallback->isInstanceOf(JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_cxx::javaobject>(browseCallback);
             return downcast->cthis()->getFunction();
           } else {
             auto browseCallbackRef = jni::make_global(browseCallback);
-            return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam, std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(BrowserSourceCallbackParam)>(std::move(browseCallbackRef));
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(BrowserSourceCallbackParam)>(std::move(browseCallbackRef));
           }
         }()) : std::nullopt,
         browseConfig != nullptr ? std::make_optional(browseConfig->toCpp()) : std::nullopt,
@@ -135,13 +135,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeRouteEntry::javaobject> fromCpp(const NativeRouteEntry& value) {
-      using JSignature = JNativeRouteEntry(jni::alias_ref<jni::JString>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JResolvedTrack>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>);
+      using JSignature = JNativeRouteEntry(jni::alias_ref<jni::JString>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JResolvedTrack>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         jni::make_jstring(value.path),
-        value.browseCallback.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_cxx::fromCpp(value.browseCallback.value()) : nullptr,
+        value.browseCallback.has_value() ? JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_cxx::fromCpp(value.browseCallback.value()) : nullptr,
         value.browseConfig.has_value() ? JTransformableRequestConfig::fromCpp(value.browseConfig.value()) : nullptr,
         value.browseStatic.has_value() ? JResolvedTrack::fromCpp(value.browseStatic.value()) : nullptr,
         value.searchCallback.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::fromCpp(value.searchCallback.value()) : nullptr,

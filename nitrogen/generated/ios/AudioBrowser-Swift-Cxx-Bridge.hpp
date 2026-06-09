@@ -724,76 +724,105 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(value);
+  using std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ = std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> get_std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>;
+  using Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__ = std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper final {
+  class Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
+    explicit Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
       auto __result = _function->operator()(request, routeParams);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper wrap_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__(Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>
+  // pragma MARK: std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>
   /**
-   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>`.
+   * Specialized version of `std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>`.
    */
-  using std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig____ = std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>;
-  inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig____() noexcept {
-    return Promise<std::shared_ptr<Promise<RequestConfig>>>::create();
+  using std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig_____ = std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>;
+  inline std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> create_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig_____() noexcept {
+    return Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>::create();
   }
-  inline PromiseHolder<std::shared_ptr<Promise<RequestConfig>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig____(std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> promise) noexcept {
-    return PromiseHolder<std::shared_ptr<Promise<RequestConfig>>>(std::move(promise));
+  inline PromiseHolder<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>> wrap_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig_____(std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> promise) noexcept {
+    return PromiseHolder<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>(std::move(promise));
   }
   
-  // pragma MARK: std::function<void(const std::shared_ptr<Promise<RequestConfig>>& /* result */)>
+  // pragma MARK: std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>
   /**
-   * Specialized version of `std::function<void(const std::shared_ptr<Promise<RequestConfig>>&)>`.
+   * Specialized version of `std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>&)>`.
    */
-  using Func_void_std__shared_ptr_Promise_RequestConfig__ = std::function<void(const std::shared_ptr<Promise<RequestConfig>>& /* result */)>;
+  using Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ = std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>;
   /**
-   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<RequestConfig>>& / * result * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& / * result * /)>`, this can be used from Swift.
    */
-  class Func_void_std__shared_ptr_Promise_RequestConfig___Wrapper final {
+  class Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper final {
   public:
-    explicit Func_void_std__shared_ptr_Promise_RequestConfig___Wrapper(std::function<void(const std::shared_ptr<Promise<RequestConfig>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<RequestConfig>>& /* result */)>>(std::move(func))) {}
-    inline void call(std::shared_ptr<Promise<RequestConfig>> result) const noexcept {
+    explicit Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper(std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>> result) const noexcept {
       _function->operator()(result);
     }
   private:
-    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<RequestConfig>>& /* result */)>> _function;
+    std::unique_ptr<std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_std__shared_ptr_Promise_RequestConfig__ create_Func_void_std__shared_ptr_Promise_RequestConfig__(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__shared_ptr_Promise_RequestConfig___Wrapper wrap_Func_void_std__shared_ptr_Promise_RequestConfig__(Func_void_std__shared_ptr_Promise_RequestConfig__ value) noexcept {
-    return Func_void_std__shared_ptr_Promise_RequestConfig___Wrapper(std::move(value));
+  Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper wrap_Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ value) noexcept {
+    return Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>
+  /**
+   * Wrapper struct for `std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ final {
+    std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>> variant;
+    std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>> variant): variant(variant) { }
+    operator std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline RequestConfig get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline std::shared_ptr<Promise<RequestConfig>> get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(const RequestConfig& value) noexcept {
+    return std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(value);
+  }
+  inline std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(const std::shared_ptr<Promise<RequestConfig>>& value) noexcept {
+    return std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(value);
   }
   
   // pragma MARK: std::shared_ptr<Promise<RequestConfig>>
@@ -1018,69 +1047,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>`.
-   */
-  using std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig_____ = std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>;
-  inline std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> create_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig_____() noexcept {
-    return Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>::create();
-  }
-  inline PromiseHolder<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>> wrap_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig_____(std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> promise) noexcept {
-    return PromiseHolder<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>&)>`.
-   */
-  using Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ = std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper final {
-  public:
-    explicit Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper(std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>>(std::move(func))) {}
-    inline void call(std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>> result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper wrap_Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ value) noexcept {
-    return Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig____Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>
-  /**
-   * Wrapper struct for `std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
-   */
-  struct std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ final {
-    std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>> variant;
-    std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>> variant): variant(variant) { }
-    operator std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline RequestConfig get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline std::shared_ptr<Promise<RequestConfig>> get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-  };
-  inline std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(const RequestConfig& value) noexcept {
-    return std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(value);
-  }
-  inline std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(const std::shared_ptr<Promise<RequestConfig>>& value) noexcept {
-    return std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(value);
-  }
-  
   // pragma MARK: std::optional<ArtworkRequestConfig>
   /**
    * Specialized version of `std::optional<ArtworkRequestConfig>`.
@@ -1096,80 +1062,42 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& / * track * /)>>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& / * params * /)>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(value);
+  using std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_MediaTransformParams_____params______ = std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_MediaTransformParams_____params______(const std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_MediaTransformParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)> get_std__optional_std__function_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______const_MediaTransformParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track&)>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams&)>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>;
+  using Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams = std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& / * track * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& / * params * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper final {
+  class Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams_Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(Track track) const noexcept {
-      auto __result = _function->operator()(track);
-      return __result;
-    }
-  private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>
-  /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& / * params * /)>>`.
-   */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>(value);
-  }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_MediaTransformParams_____params______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>& optional) noexcept {
-    return optional.value();
-  }
-  
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>
-  /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams&)>`.
-   */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>;
-  /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& / * params * /)>`, this can be used from Swift.
-   */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper final {
-  public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(MediaTransformParams params) const noexcept {
+    explicit Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams_Wrapper(std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> call(MediaTransformParams params) const noexcept {
       auto __result = _function->operator()(params);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams create_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams_Wrapper wrap_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams(Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams value) noexcept {
+    return Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<ImageContext>
@@ -1228,76 +1156,111 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& / * param * /)>>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& / * param * /)>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>(value);
+  using std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______ = std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______(const std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)> get_std__optional_std__function_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______const_BrowserSourceCallbackParam_____param______(const std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam&)>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam&)>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>;
+  using Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam = std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& / * param * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& / * param * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper final {
+  class Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> call(BrowserSourceCallbackParam param) const noexcept {
+    explicit Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_Wrapper(std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>> call(BrowserSourceCallbackParam param) const noexcept {
       auto __result = _function->operator()(param);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam create_Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_Wrapper wrap_Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam(Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam value) noexcept {
+    return Func_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>
+  // pragma MARK: std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>
   /**
-   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>`.
+   * Specialized version of `std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>`.
    */
-  using std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____ = std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>;
-  inline std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____() noexcept {
-    return Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>::create();
+  using std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______ = std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>;
+  inline std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>> create_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______() noexcept {
+    return Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>::create();
   }
-  inline PromiseHolder<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____(std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> promise) noexcept {
-    return PromiseHolder<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>(std::move(promise));
+  inline PromiseHolder<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>> wrap_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______(std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>> promise) noexcept {
+    return PromiseHolder<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(std::move(promise));
   }
   
-  // pragma MARK: std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>
+  // pragma MARK: std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>& /* result */)>
   /**
-   * Specialized version of `std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>&)>`.
+   * Specialized version of `std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>&)>`.
    */
-  using Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ = std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>;
+  using Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ = std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>& /* result */)>;
   /**
-   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& / * result * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>& / * result * /)>`, this can be used from Swift.
    */
-  class Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper final {
+  class Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____Wrapper final {
   public:
-    explicit Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper(std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>>(std::move(func))) {}
-    inline void call(std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>> result) const noexcept {
+    explicit Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____Wrapper(std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>> result) const noexcept {
       _function->operator()(result);
     }
   private:
-    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& /* result */)>> _function;
+    std::unique_ptr<std::function<void(const std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>& /* result */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ create_Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper wrap_Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___(Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError___ value) noexcept {
-    return Func_void_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____Wrapper(std::move(value));
+  Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ create_Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____Wrapper wrap_Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ value) noexcept {
+    return Func_void_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_____Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>
+  /**
+   * Wrapper struct for `std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ final {
+    std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>> variant;
+    std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>> variant): variant(variant) { }
+    operator std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline ResolvedTrack get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline BrowseError get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+    inline std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>> get_2() const noexcept {
+      return std::get<2>(variant);
+    }
+  };
+  inline std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ create_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(const ResolvedTrack& value) noexcept {
+    return std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(value);
+  }
+  inline std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ create_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(const BrowseError& value) noexcept {
+    return std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(value);
+  }
+  inline std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____ create_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(const std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>& value) noexcept {
+    return std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError____(value);
   }
   
   // pragma MARK: std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>
