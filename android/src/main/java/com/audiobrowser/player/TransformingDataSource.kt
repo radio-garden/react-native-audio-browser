@@ -71,6 +71,12 @@ class TransformingDataSource(
     return upstream.read(buffer, offset, length)
   }
 
+  // Delegate to upstream so ExoPlayer can read icy-metaint and strip ICY/Shoutcast
+  // metadata. Without this, the metadata bytes are decoded as audio (chirping).
+  override fun getResponseHeaders(): Map<String, List<String>> {
+    return upstream.responseHeaders
+  }
+
   override fun addTransferListener(transferListener: TransferListener) {
     upstream.addTransferListener(transferListener)
   }
