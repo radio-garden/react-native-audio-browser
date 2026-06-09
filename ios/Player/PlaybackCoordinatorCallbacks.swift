@@ -9,6 +9,7 @@ import NitroModules
   func playerDidChangePlayback(_ playback: Playback)
   func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent)
   func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent)
+  func playerDidFirePlaybackInterval()
   func playerDidChangePlayWhenReady(_ playWhenReady: Bool)
   func playerDidChangePlayingState(_ state: PlayingState)
   func playerDidEndQueue(_ event: PlaybackQueueEndedEvent)

@@ -28,6 +28,7 @@ let package = Package(
         "Player/SleepTimerHandling.swift",
         "Player/PlayingStateManager.swift",
         "Player/PlaybackProgressUpdateManager.swift",
+        "Player/PlaybackIntervalManager.swift",
         "Model/TrackPlayerError.swift",
         "Model/NitroTypeStubs.swift",
         "PlaybackEvent.swift",

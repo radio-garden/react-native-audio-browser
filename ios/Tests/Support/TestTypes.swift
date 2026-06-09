@@ -120,6 +120,7 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   var repeatModeChanges: [RepeatModeChangedEvent] = []
   var shuffleEnabledChanges: [Bool] = []
   var errorEvents: [PlaybackErrorEvent] = []
+  var playbackIntervalFiredCount = 0
 
   func playerDidChangePlayback(_ playback: Playback) {
     playbackChanges.append(playback)
@@ -129,6 +130,9 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   }
   func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
     progressUpdates.append(event)
+  }
+  func playerDidFirePlaybackInterval() {
+    playbackIntervalFiredCount += 1
   }
   func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
     playWhenReadyChanges.append(playWhenReady)

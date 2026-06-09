@@ -38,6 +38,11 @@ class PlaybackCoordinator {
       callbacks?.playerDidUpdateProgress(progressEvent)
     }
 
+  private lazy var playbackIntervalManager: PlaybackIntervalManager =
+    PlaybackIntervalManager { [weak self] in
+      self?.callbacks?.playerDidFirePlaybackInterval()
+    }
+
   // MARK: - State
 
   private(set) var state: PlaybackState = .none
@@ -207,6 +212,7 @@ class PlaybackCoordinator {
     effectHandler?.updateNowPlayingState(playWhenReady: playbackActive && playWhenReady)
 
     progressUpdateManager.onPlaybackStateChanged(new)
+    playbackIntervalManager.onPlaybackStateChanged(new)
     playingStateManager.update(playWhenReady: playWhenReady, state: new)
   }
 
@@ -528,6 +534,10 @@ class PlaybackCoordinator {
 
   func setProgressUpdateInterval(_ interval: TimeInterval?) {
     progressUpdateManager.setUpdateInterval(interval)
+  }
+
+  func setPlaybackIntervalEnabled(_ enabled: Bool) {
+    playbackIntervalManager.setEnabled(enabled)
   }
 }
 

@@ -168,6 +168,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onPlaybackPlayWhenReadyChanged: (PlaybackPlayWhenReadyChangedEvent) -> Void = { _ in }
   public var onPlaybackPlayingState: (PlayingState) -> Void = { _ in }
   public var onPlaybackProgressUpdated: (PlaybackProgressUpdatedEvent) -> Void = { _ in }
+  public var onPlaybackInterval: () -> Void = {}
   public var onPlaybackQueueEnded: (PlaybackQueueEndedEvent) -> Void = { _ in }
   public var onPlaybackQueueChanged: ([Track]) -> Void = { _ in }
   public var onPlaybackRepeatModeChanged: (RepeatModeChangedEvent) -> Void = { _ in }
@@ -582,6 +583,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func getOptions() throws -> UpdateOptions {
     playerOptions.toUpdateOptions()
+  }
+
+  public func setPlaybackIntervalEnabled(enabled: Bool) {
+    onMainActor { player?.setPlaybackIntervalEnabled(enabled) }
   }
 
   // MARK: - Playback Control
@@ -1137,6 +1142,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
     onPlaybackProgressUpdated(event)
+  }
+
+  public func playerDidFirePlaybackInterval() {
+    onPlaybackInterval()
   }
 
   public func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {

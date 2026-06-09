@@ -397,6 +397,10 @@ class TrackPlayer {
     coordinator.setProgressUpdateInterval(interval)
   }
 
+  func setPlaybackIntervalEnabled(_ enabled: Bool) {
+    coordinator.setPlaybackIntervalEnabled(enabled)
+  }
+
   // MARK: - AVPlayer Management
 
   func setTimePitchingAlgorithmForCurrentItem() {
