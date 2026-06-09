@@ -297,6 +297,7 @@ namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
 #include "JPlaybackProgressUpdatedEvent.hpp"
+#include "JFunc_void.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JPlaybackQueueEndedEvent.hpp"
@@ -319,7 +320,6 @@ namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 #include "JPlayback.hpp"
 #include "PlaybackState.hpp"
 #include "JPlaybackState.hpp"
-#include "JFunc_void.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "JFunc_void_RemoteJumpBackwardEvent.hpp"
 #include "JRemoteJumpBackwardEvent.hpp"
@@ -730,6 +730,23 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PlaybackProgressUpdatedEvent::javaobject> /* onPlaybackProgressUpdated */)>("setOnPlaybackProgressUpdated_cxx");
     method(_javaPart, JFunc_void_PlaybackProgressUpdatedEvent_cxx::fromCpp(onPlaybackProgressUpdated));
+  }
+  std::function<void()> JHybridAudioBrowserSpec::getOnPlaybackInterval() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnPlaybackInterval_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void()> {
+      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnPlaybackInterval(const std::function<void()>& onPlaybackInterval) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onPlaybackInterval */)>("setOnPlaybackInterval_cxx");
+    method(_javaPart, JFunc_void_cxx::fromCpp(onPlaybackInterval));
   }
   std::function<void(const PlaybackQueueEndedEvent& /* data */)> JHybridAudioBrowserSpec::getOnPlaybackQueueEnded() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PlaybackQueueEndedEvent::javaobject>()>("getOnPlaybackQueueEnded_cxx");
@@ -1641,6 +1658,10 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JProgress>()>("getProgress");
     auto __result = method(_javaPart);
     return __result->toCpp();
+  }
+  void JHybridAudioBrowserSpec::setPlaybackIntervalEnabled(bool enabled) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jboolean /* enabled */)>("setPlaybackIntervalEnabled");
+    method(_javaPart, enabled);
   }
   Playback JHybridAudioBrowserSpec::getPlayback() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPlayback>()>("getPlayback");

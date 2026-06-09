@@ -204,6 +204,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnPlaybackPlayingState(const std::function<void(const PlayingState& /* data */)>& onPlaybackPlayingState) = 0;
       virtual std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> getOnPlaybackProgressUpdated() = 0;
       virtual void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) = 0;
+      virtual std::function<void()> getOnPlaybackInterval() = 0;
+      virtual void setOnPlaybackInterval(const std::function<void()>& onPlaybackInterval) = 0;
       virtual std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() = 0;
       virtual void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) = 0;
       virtual std::function<void(const std::vector<Track>& /* queue */)> getOnPlaybackQueueChanged() = 0;
@@ -323,6 +325,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void setRate(double rate) = 0;
       virtual double getRate() = 0;
       virtual Progress getProgress() = 0;
+      virtual void setPlaybackIntervalEnabled(bool enabled) = 0;
       virtual Playback getPlayback() = 0;
       virtual PlayingState getPlayingState() = 0;
       virtual RepeatMode getRepeatMode() = 0;

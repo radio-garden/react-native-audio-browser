@@ -46,6 +46,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onPlaybackPlayingState", &HybridAudioBrowserSpec::setOnPlaybackPlayingState);
       prototype.registerHybridGetter("onPlaybackProgressUpdated", &HybridAudioBrowserSpec::getOnPlaybackProgressUpdated);
       prototype.registerHybridSetter("onPlaybackProgressUpdated", &HybridAudioBrowserSpec::setOnPlaybackProgressUpdated);
+      prototype.registerHybridGetter("onPlaybackInterval", &HybridAudioBrowserSpec::getOnPlaybackInterval);
+      prototype.registerHybridSetter("onPlaybackInterval", &HybridAudioBrowserSpec::setOnPlaybackInterval);
       prototype.registerHybridGetter("onPlaybackQueueEnded", &HybridAudioBrowserSpec::getOnPlaybackQueueEnded);
       prototype.registerHybridSetter("onPlaybackQueueEnded", &HybridAudioBrowserSpec::setOnPlaybackQueueEnded);
       prototype.registerHybridGetter("onPlaybackQueueChanged", &HybridAudioBrowserSpec::getOnPlaybackQueueChanged);
@@ -162,6 +164,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("setRate", &HybridAudioBrowserSpec::setRate);
       prototype.registerHybridMethod("getRate", &HybridAudioBrowserSpec::getRate);
       prototype.registerHybridMethod("getProgress", &HybridAudioBrowserSpec::getProgress);
+      prototype.registerHybridMethod("setPlaybackIntervalEnabled", &HybridAudioBrowserSpec::setPlaybackIntervalEnabled);
       prototype.registerHybridMethod("getPlayback", &HybridAudioBrowserSpec::getPlayback);
       prototype.registerHybridMethod("getPlayingState", &HybridAudioBrowserSpec::getPlayingState);
       prototype.registerHybridMethod("getRepeatMode", &HybridAudioBrowserSpec::getRepeatMode);

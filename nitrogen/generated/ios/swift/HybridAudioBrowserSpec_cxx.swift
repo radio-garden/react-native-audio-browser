@@ -457,6 +457,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onPlaybackInterval: bridge.Func_void {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void in
+        let __closureWrapper = Func_void(self.__implementation.onPlaybackInterval)
+        return bridge.create_Func_void(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onPlaybackInterval = { () -> () -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void(newValue)
+        return { () -> Void in
+          __wrappedFunction.call()
+        }
+      }()
+    }
+  }
+  
   public final var onPlaybackQueueEnded: bridge.Func_void_PlaybackQueueEndedEvent {
     @inline(__always)
     get {
@@ -1850,6 +1869,17 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_Progress_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setPlaybackIntervalEnabled(enabled: Bool) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setPlaybackIntervalEnabled(enabled: enabled)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
   

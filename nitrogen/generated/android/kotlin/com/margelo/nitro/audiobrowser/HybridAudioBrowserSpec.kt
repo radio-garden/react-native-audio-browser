@@ -227,6 +227,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPlaybackProgressUpdated = value
     }
   
+  abstract var onPlaybackInterval: () -> Unit
+  
+  private var onPlaybackInterval_cxx: Func_void
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_java(onPlaybackInterval)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onPlaybackInterval = value
+    }
+  
   abstract var onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) -> Unit
   
   private var onPlaybackQueueEnded_cxx: Func_void_PlaybackQueueEndedEvent
@@ -955,6 +969,10 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getProgress(): Progress
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setPlaybackIntervalEnabled(enabled: Boolean): Unit
   
   @DoNotStrip
   @Keep

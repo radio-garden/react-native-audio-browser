@@ -82,6 +82,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnPlaybackPlayingState(const std::function<void(const PlayingState& /* data */)>& onPlaybackPlayingState) override;
     std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> getOnPlaybackProgressUpdated() override;
     void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) override;
+    std::function<void()> getOnPlaybackInterval() override;
+    void setOnPlaybackInterval(const std::function<void()>& onPlaybackInterval) override;
     std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() override;
     void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) override;
     std::function<void(const std::vector<Track>& /* queue */)> getOnPlaybackQueueChanged() override;
@@ -201,6 +203,7 @@ namespace margelo::nitro::audiobrowser {
     void setRate(double rate) override;
     double getRate() override;
     Progress getProgress() override;
+    void setPlaybackIntervalEnabled(bool enabled) override;
     Playback getPlayback() override;
     PlayingState getPlayingState() override;
     RepeatMode getRepeatMode() override;

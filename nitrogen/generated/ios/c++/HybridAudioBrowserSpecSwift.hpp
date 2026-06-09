@@ -449,6 +449,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) noexcept override {
       _swiftPart.setOnPlaybackProgressUpdated(onPlaybackProgressUpdated);
     }
+    inline std::function<void()> getOnPlaybackInterval() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackInterval();
+      return __result;
+    }
+    inline void setOnPlaybackInterval(const std::function<void()>& onPlaybackInterval) noexcept override {
+      _swiftPart.setOnPlaybackInterval(onPlaybackInterval);
+    }
     inline std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() noexcept override {
       auto __result = _swiftPart.getOnPlaybackQueueEnded();
       return __result;
@@ -947,6 +954,12 @@ namespace margelo::nitro::audiobrowser {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline void setPlaybackIntervalEnabled(bool enabled) override {
+      auto __result = _swiftPart.setPlaybackIntervalEnabled(std::forward<decltype(enabled)>(enabled));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline Playback getPlayback() override {
       auto __result = _swiftPart.getPlayback();
