@@ -16,7 +16,7 @@ import javax.net.ssl.X509TrustManager
  */
 class AiaChasingTrustManager(
   private val delegate: X509TrustManager,
-  private val fetch: (url: String) -> X509Certificate?,
+  private val fetch: (url: String) -> List<X509Certificate>,
 ) : X509TrustManager {
 
   override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {

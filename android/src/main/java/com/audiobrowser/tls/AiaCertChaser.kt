@@ -74,15 +74,17 @@ object AiaCertChaser {
    *
    * Only ever *adds* certificates — the caller is still responsible for validating the completed
    * chain against the system trust anchors, so this can never cause an untrusted chain to be
-   * accepted. A fetched certificate is appended only if it is genuinely the issuer of the preceding
-   * one (defends against an AIA pointer to an unrelated certificate).
+   * accepted. From each URL's candidates the genuine issuer of the preceding certificate is
+   * selected (defends against an AIA pointer to an unrelated certificate, and picks the right one
+   * out of a multi-certificate PKCS#7 bundle).
    *
-   * @param fetch resolves a CA-Issuers URL to a certificate, or null if it cannot be retrieved.
+   * @param fetch resolves a CA-Issuers URL to its candidate certificates (e.g. every certificate in
+   *   a PKCS#7 bundle); empty if nothing could be retrieved.
    */
   fun completeChain(
     presented: List<X509Certificate>,
     maxIntermediates: Int = 5,
-    fetch: (url: String) -> X509Certificate?,
+    fetch: (url: String) -> List<X509Certificate>,
   ): List<X509Certificate> {
     if (presented.isEmpty()) return presented
     val chain = presented.toMutableList()
@@ -94,7 +96,7 @@ object AiaCertChaser {
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()
-          .mapNotNull { url -> runCatching { fetch(url) }.getOrNull() }
+          .flatMap { url -> runCatching { fetch(url) }.getOrElse { emptyList() } }
           .firstOrNull { it.subjectX500Principal == last.issuerX500Principal } ?: break
       if (!seen.add(issuer)) break // cycle guard
       chain.add(issuer)
@@ -103,7 +105,11 @@ object AiaCertChaser {
     return chain
   }
 
-  /** Minimal DER TLV reader over a byte buffer. */
+  /**
+   * Minimal DER TLV reader over a byte buffer. Does no bounds-checking by design: truncated or
+   * malformed input throws (e.g. [IndexOutOfBoundsException]), which the callers above expect and
+   * turn into "no AIA".
+   */
   private class DerReader(private val buf: ByteArray) {
     private var pos = 0
 

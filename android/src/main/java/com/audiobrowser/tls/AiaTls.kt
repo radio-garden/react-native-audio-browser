@@ -19,7 +19,11 @@ import javax.net.ssl.X509TrustManager
  */
 object AiaTls {
 
-  /** An [SSLSocketFactory] whose handshake validation chases missing intermediates via AIA. */
+  /**
+   * An [SSLSocketFactory] whose handshake validation chases missing intermediates via AIA. Intended
+   * to be built once (e.g. installed as the process default at startup); each call gets its own
+   * fetched-intermediate cache.
+   */
   fun socketFactory(): SSLSocketFactory =
     SSLContext.getInstance("TLS").apply { init(null, arrayOf(trustManager()), null) }.socketFactory
 

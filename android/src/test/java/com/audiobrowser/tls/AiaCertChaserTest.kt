@@ -13,19 +13,9 @@ import org.junit.Test
 
 class AiaCertChaserTest {
 
-  private fun loadCert(resource: String): X509Certificate {
-    val stream =
-      checkNotNull(javaClass.getResourceAsStream("/certs/$resource")) {
-        "Missing test fixture: /certs/$resource"
-      }
-    return stream.use {
-      CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
-    }
-  }
-
   @Test
   fun `extracts CA Issuers URL from real leaf certificate AIA extension`() {
-    val leaf = loadCert("stationplaylist-leaf.pem")
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
 
     val urls = AiaCertChaser.extractCaIssuerUrls(leaf)
 
@@ -34,10 +24,12 @@ class AiaCertChaserTest {
 
   @Test
   fun `completeChain appends fetched intermediate when server sends leaf only`() {
-    val leaf = loadCert("stationplaylist-leaf.pem")
-    val r13 = loadCert("letsencrypt-r13.pem")
-    // Fetcher knows only the R13 URL (the leaf's AIA pointer); returns null for the root URL.
-    val fetch = { url: String -> if (url == "http://r13.i.lencr.org/") r13 else null }
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    // Fetcher knows only the R13 URL (the leaf's AIA pointer); empty for the root URL.
+    val fetch = { url: String ->
+      if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+    }
 
     val completed = AiaCertChaser.completeChain(listOf(leaf), fetch = fetch)
 
@@ -45,14 +37,29 @@ class AiaCertChaserTest {
   }
 
   @Test
+  fun `completeChain selects the real issuer from a multi-certificate response`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val unrelated = CertFixtures.cert("isrg-root-x1.pem") // not the leaf's issuer
+
+    // A PKCS#7-style bundle where the genuine issuer is not first must still be selected.
+    val completed =
+      AiaCertChaser.completeChain(listOf(leaf)) {
+        if (it == "http://r13.i.lencr.org/") listOf(unrelated, r13) else emptyList()
+      }
+
+    assertEquals(listOf(leaf, r13), completed)
+  }
+
+  @Test
   fun `completeChain leaves a self-signed root untouched without fetching`() {
-    val root = loadCert("isrg-root-x1.pem")
+    val root = CertFixtures.cert("isrg-root-x1.pem")
     var fetches = 0
 
     val completed =
       AiaCertChaser.completeChain(listOf(root)) {
         fetches++
-        null
+        emptyList()
       }
 
     assertEquals(listOf(root), completed)
@@ -61,18 +68,18 @@ class AiaCertChaserTest {
 
   @Test
   fun `completeChain stops when the issuer cannot be fetched`() {
-    val leaf = loadCert("stationplaylist-leaf.pem")
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
 
-    val completed = AiaCertChaser.completeChain(listOf(leaf)) { null }
+    val completed = AiaCertChaser.completeChain(listOf(leaf)) { emptyList() }
 
     assertEquals(listOf(leaf), completed)
   }
 
   @Test
   fun `AIA-completed chain forms a valid PKIX path to the trusted root`() {
-    val leaf = loadCert("stationplaylist-leaf.pem")
-    val r13 = loadCert("letsencrypt-r13.pem")
-    val root = loadCert("isrg-root-x1.pem")
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val root = CertFixtures.cert("isrg-root-x1.pem")
     // Validate as of just after issuance so the fixtures never rot when the leaf expires.
     val date = Date(leaf.notBefore.time + 86_400_000L)
 
@@ -82,7 +89,7 @@ class AiaCertChaserTest {
     // After AIA chasing splices in R13, the chain validates to the trusted root.
     val completed =
       AiaCertChaser.completeChain(listOf(leaf)) {
-        if (it == "http://r13.i.lencr.org/") r13 else null
+        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
     validatePath(completed, root, date) // must not throw
   }
