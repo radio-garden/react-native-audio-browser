@@ -67,6 +67,7 @@ export class NativeAudioBrowser
   }
   dispose() {
     this.clearUpdateEventInterval()
+    this.setPlaybackIntervalEnabled(false)
     // Remove window event listeners to prevent memory leaks
     if (typeof window !== 'undefined' && this.onlineHandler) {
       window.removeEventListener('online', this.onlineHandler)
@@ -88,6 +89,7 @@ export class NativeAudioBrowser
   // Player state
   private currentLoadId = 0
   private progressUpdateEventInterval: NodeJS.Timeout | undefined
+  private playbackIntervalTimer: NodeJS.Timeout | undefined
   private _online: boolean =
     typeof navigator !== 'undefined' ? navigator.onLine : true
   private onlineHandler: (() => void) | undefined
@@ -151,6 +153,7 @@ export class NativeAudioBrowser
   onPlaybackPlayingState: (data: PlayingState) => void = () => {}
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void =
     () => {}
+  onPlaybackInterval: () => void = () => {}
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void = () => {}
   onPlaybackQueueChanged: (queue: Track[]) => void = () => {}
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void = () => {}
@@ -328,6 +331,17 @@ export class NativeAudioBrowser
     if (this.progressUpdateEventInterval) {
       clearInterval(this.progressUpdateEventInterval)
     }
+  }
+
+  setPlaybackIntervalEnabled(enabled: boolean): void {
+    if (this.playbackIntervalTimer) {
+      clearInterval(this.playbackIntervalTimer)
+      this.playbackIntervalTimer = undefined
+    }
+    if (!enabled) return
+    this.playbackIntervalTimer = setInterval(() => {
+      if (this.state.state === 'playing') this.onPlaybackInterval()
+    }, 1000)
   }
 
   protected onPlaylistEnded() {
