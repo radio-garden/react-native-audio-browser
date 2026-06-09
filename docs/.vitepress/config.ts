@@ -37,7 +37,11 @@ export default withMermaid(
             text: 'Platform Setup',
             items: [
               { text: 'Android Auto', link: '/guide/android-auto' },
-              { text: 'CarPlay', link: '/guide/carplay' }
+              { text: 'CarPlay', link: '/guide/carplay' },
+              {
+                text: 'Missing Intermediate Certificates',
+                link: '/guide/android-certificates'
+              }
             ]
           }
         ],
