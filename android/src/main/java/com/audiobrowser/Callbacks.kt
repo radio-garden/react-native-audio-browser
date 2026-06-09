@@ -31,6 +31,8 @@ interface Callbacks {
 
   fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent)
 
+  fun onPlaybackInterval()
+
   fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent)
 
   fun onPlaybackPlayingState(event: PlayingState)

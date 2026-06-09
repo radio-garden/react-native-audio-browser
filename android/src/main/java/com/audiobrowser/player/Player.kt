@@ -419,6 +419,10 @@ class Player(internal val context: Context) {
     }
   }
 
+  private val playbackIntervalManager: PlaybackIntervalManager by lazy {
+    PlaybackIntervalManager { callbacks?.onPlaybackInterval() }
+  }
+
   internal var playingState: PlayingState = PlayingState(false, false)
 
   val currentTrack: Track?
@@ -1390,6 +1394,7 @@ class Player(internal val context: Context) {
       }
 
       progressUpdateManager.onPlaybackStateChanged(state)
+      playbackIntervalManager.onPlaybackStateChanged(state)
       val newPlayingState = PlayingStateFactory.derive(playWhenReady, state)
       if (newPlayingState != playingState) {
         Timber.d(
@@ -1408,6 +1413,10 @@ class Player(internal val context: Context) {
    */
   fun setProgressUpdateInterval(interval: Double?) {
     progressUpdateManager.setUpdateInterval(interval)
+  }
+
+  fun setPlaybackIntervalEnabled(enabled: Boolean) {
+    playbackIntervalManager.setEnabled(enabled)
   }
 
   /**

@@ -165,6 +165,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     {}
   override var onPlaybackPlayingState: (data: PlayingState) -> Unit = {}
   override var onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) -> Unit = {}
+  override var onPlaybackInterval: () -> Unit = {}
   override var onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) -> Unit = {}
   override var onPlaybackQueueChanged: (queue: Array<Track>) -> Unit = {}
   override var onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) -> Unit = {}
@@ -834,6 +835,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     player.shuffleMode = enabled
   }
 
+  override fun setPlaybackIntervalEnabled(enabled: Boolean) = runBlockingOnMain {
+    player.setPlaybackIntervalEnabled(enabled)
+  }
+
   override fun getPlaybackError(): PlaybackError? = runBlockingOnMain { player.playbackError }
 
   override fun retry() = runBlockingOnMain { player.prepare() }
@@ -1127,6 +1132,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       override fun onPlaybackProgressUpdated(event: PlaybackProgressUpdatedEvent) {
         post { this@AudioBrowser.onPlaybackProgressUpdated(event) }
+      }
+
+      override fun onPlaybackInterval() {
+        post { this@AudioBrowser.onPlaybackInterval() }
       }
 
       override fun onPlaybackPlayWhenReadyChanged(event: PlaybackPlayWhenReadyChangedEvent) {
