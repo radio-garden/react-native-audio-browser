@@ -128,6 +128,13 @@ export interface AudioBrowser extends HybridObject<{
   ) => void
   onPlaybackPlayingState: (data: PlayingState) => void
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
+  /**
+   * Fired on a fixed internal cadence while playback is `playing`, once enabled
+   * via `setPlaybackIntervalEnabled`. Carries no payload — it is a tick, not a
+   * progress/position update. Independent of `onPlaybackProgressUpdated` and the
+   * `progressUpdateEventInterval` option.
+   */
+  onPlaybackInterval: () => void
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
   onPlaybackQueueChanged: (queue: Track[]) => void
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
@@ -193,6 +200,11 @@ export interface AudioBrowser extends HybridObject<{
   setRate(rate: number): void
   getRate(): number
   getProgress(): Progress
+  /**
+   * Enables or disables the internal playback tick that drives
+   * `onPlaybackInterval`. When disabled (default), no tick is emitted.
+   */
+  setPlaybackIntervalEnabled(enabled: boolean): void
   getPlayback(): Playback
   getPlayingState(): PlayingState
   getRepeatMode(): RepeatMode
