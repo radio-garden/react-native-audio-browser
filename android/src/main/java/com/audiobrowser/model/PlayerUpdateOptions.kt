@@ -22,13 +22,21 @@ data class PlayerUpdateOptions(
 
   // Player capabilities - most enabled by default, only false values disable
   // Exceptions: bookmark, jumpForward, jumpBackward default to false
-  var capabilities: PlayerCapabilities = PlayerCapabilities(
-    play = null, pause = null, stop = null, seekTo = null,
-    skipToNext = null, skipToPrevious = null,
-    jumpForward = false, jumpBackward = false,
-    favorite = null,
-    shuffleMode = null, repeatMode = null, playbackRate = null
-  ),
+  var capabilities: PlayerCapabilities =
+    PlayerCapabilities(
+      play = null,
+      pause = null,
+      stop = null,
+      seekTo = null,
+      skipToNext = null,
+      skipToPrevious = null,
+      jumpForward = false,
+      jumpBackward = false,
+      favorite = null,
+      shuffleMode = null,
+      repeatMode = null,
+      playbackRate = null,
+    ),
 
   // Notification button layout (null = derive from capabilities)
   var notificationButtons: NotificationButtonLayout? = null,
@@ -52,9 +60,7 @@ data class PlayerUpdateOptions(
         }
     }
 
-    options.capabilities?.let { newCaps ->
-      capabilities = mergeCapabilities(capabilities, newCaps)
-    }
+    options.capabilities?.let { newCaps -> capabilities = mergeCapabilities(capabilities, newCaps) }
 
     // Update Android-specific options
     options.android?.let { androidOptions ->
@@ -105,7 +111,7 @@ data class PlayerUpdateOptions(
   /** Merge incoming capabilities with existing - only explicitly set values override */
   private fun mergeCapabilities(
     existing: PlayerCapabilities,
-    incoming: PlayerCapabilities
+    incoming: PlayerCapabilities,
   ): PlayerCapabilities {
     return PlayerCapabilities(
       play = incoming.play ?: existing.play,
@@ -119,7 +125,7 @@ data class PlayerUpdateOptions(
       favorite = incoming.favorite ?: existing.favorite,
       shuffleMode = incoming.shuffleMode ?: existing.shuffleMode,
       repeatMode = incoming.repeatMode ?: existing.repeatMode,
-      playbackRate = incoming.playbackRate ?: existing.playbackRate
+      playbackRate = incoming.playbackRate ?: existing.playbackRate,
     )
   }
 }

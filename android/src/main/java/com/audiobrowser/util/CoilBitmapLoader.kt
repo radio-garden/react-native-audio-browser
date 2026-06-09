@@ -21,8 +21,8 @@ import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,8 +56,8 @@ class CoilBitmapLoader(
   private val scope = CoroutineScope(Dispatchers.IO)
 
   /**
-   * Default artwork size in pixels when no hint is provided by the media browser.
-   * Lock screen media controls are ~128dp, at 4x density (xxxhdpi) = 512px.
+   * Default artwork size in pixels when no hint is provided by the media browser. Lock screen media
+   * controls are ~128dp, at 4x density (xxxhdpi) = 512px.
    */
   private val defaultArtworkSizePixels = 512
 
@@ -118,9 +118,7 @@ class CoilBitmapLoader(
 
         // Force SVG decoder for .svg URLs (Coil's auto-detection can fail with some CDNs)
         if (isSvg) {
-          requestBuilder.decoderFactory { result, options, _ ->
-            SvgDecoder(result.source, options)
-          }
+          requestBuilder.decoderFactory { result, options, _ -> SvgDecoder(result.source, options) }
         }
 
         val result = imageLoader.execute(requestBuilder.build())
@@ -171,23 +169,25 @@ class CoilBitmapLoader(
 
       // Base via the shared request layer (its transform runs for artwork too),
       // with the original URL as path.
-      var mergedBaseConfig =
-        RequestConfig(null, originalUrl, null, null, null, null, null, null)
+      var mergedBaseConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
       config.requestConfig?.let {
         mergedBaseConfig = RequestConfigBuilder.mergeConfig(mergedBaseConfig, it, emptyMap())
       }
 
       // Create ImageContext from size hint if available
-      val imageContext = sizeHintPixels?.takeIf { it > 0 }?.let {
-        ImageContext(it.toDouble(), it.toDouble())
-      }
+      val imageContext =
+        sizeHintPixels?.takeIf { it > 0 }?.let { ImageContext(it.toDouble(), it.toDouble()) }
 
       // Apply image query params BEFORE transform (so transform can override)
       val queryParams = artworkConfig.imageQueryParams
       if (imageContext != null && queryParams != null) {
         val contextQuery = mutableMapOf<String, String>()
-        queryParams.width?.let { key -> imageContext.width?.let { contextQuery[key] = it.toInt().toString() } }
-        queryParams.height?.let { key -> imageContext.height?.let { contextQuery[key] = it.toInt().toString() } }
+        queryParams.width?.let { key ->
+          imageContext.width?.let { contextQuery[key] = it.toInt().toString() }
+        }
+        queryParams.height?.let { key ->
+          imageContext.height?.let { contextQuery[key] = it.toInt().toString() }
+        }
 
         if (contextQuery.isNotEmpty()) {
           Timber.d("Adding image query params: $contextQuery")
@@ -198,7 +198,8 @@ class CoilBitmapLoader(
       }
 
       // Apply artwork transformation (transform can override imageQueryParams)
-      val finalConfig = RequestConfigBuilder.mergeConfig(mergedBaseConfig, artworkConfig, imageContext)
+      val finalConfig =
+        RequestConfigBuilder.mergeConfig(mergedBaseConfig, artworkConfig, imageContext)
 
       // Build final URL
       val finalUrl =
@@ -241,7 +242,9 @@ class CoilBitmapLoader(
     // Treat empty string as null for artwork
     val trackArtwork = track.artwork?.takeIf { it.isNotEmpty() }
 
-    Timber.d("transformArtworkUrlForTrack: track='${track.title}', artwork='$trackArtwork', hasConfig=${effectiveArtworkConfig != null}")
+    Timber.d(
+      "transformArtworkUrlForTrack: track='${track.title}', artwork='$trackArtwork', hasConfig=${effectiveArtworkConfig != null}"
+    )
 
     // If no artwork config and no track.artwork, nothing to transform
     if (effectiveArtworkConfig == null && trackArtwork == null) {
@@ -279,10 +282,11 @@ class CoilBitmapLoader(
       // - RequestConfig with path/query/etc for URL generation
       // - undefined to indicate no artwork
       // resolve may return its config synchronously (first) or via a Promise (second).
-      val resolvedConfig = effectiveArtworkConfig.resolve?.invoke(track)?.await()?.match(
-        first = { it },
-        second = { it.await() },
-      )
+      val resolvedConfig =
+        effectiveArtworkConfig.resolve
+          ?.invoke(track)
+          ?.await()
+          ?.match(first = { it }, second = { it.await() })
 
       // If resolve callback exists and returned null, that means no artwork
       if (effectiveArtworkConfig.resolve != null && resolvedConfig == null) {
@@ -313,8 +317,12 @@ class CoilBitmapLoader(
         val queryParams = effectiveArtworkConfig.imageQueryParams
         if (queryParams != null) {
           val contextQuery = mutableMapOf<String, String>()
-          queryParams.width?.let { key -> imageContext.width?.let { contextQuery[key] = it.toInt().toString() } }
-          queryParams.height?.let { key -> imageContext.height?.let { contextQuery[key] = it.toInt().toString() } }
+          queryParams.width?.let { key ->
+            imageContext.width?.let { contextQuery[key] = it.toInt().toString() }
+          }
+          queryParams.height?.let { key ->
+            imageContext.height?.let { contextQuery[key] = it.toInt().toString() }
+          }
 
           if (contextQuery.isNotEmpty()) {
             Timber.d("Adding image query params: $contextQuery")
@@ -328,11 +336,10 @@ class CoilBitmapLoader(
       // Apply transform callback if present (can override imageQueryParams)
       var transformedConfig =
         if (effectiveArtworkConfig.transform != null) {
-          effectiveArtworkConfig.transform.invoke(MediaTransformParams(mergedConfig, imageContext))?.await()?.match(
-            first = { it },
-            second = { it.await() },
-          )
-            ?: mergedConfig
+          effectiveArtworkConfig.transform
+            .invoke(MediaTransformParams(mergedConfig, imageContext))
+            ?.await()
+            ?.match(first = { it }, second = { it.await() }) ?: mergedConfig
         } else {
           mergedConfig
         }
@@ -378,9 +385,9 @@ class CoilBitmapLoader(
   }
 
   /**
-   * Replaces the `{id}` token with the track id in a request config's path, query values, and header
-   * values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves. Configs without
-   * the token are returned unchanged. Mirrors the iOS `substituteTrackId` helper.
+   * Replaces the `{id}` token with the track id in a request config's path, query values, and
+   * header values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves. Configs
+   * without the token are returned unchanged. Mirrors the iOS `substituteTrackId` helper.
    */
   private fun substituteTrackId(config: RequestConfig, id: String): RequestConfig {
     fun sub(s: String?): String? = s?.replace("{id}", id)

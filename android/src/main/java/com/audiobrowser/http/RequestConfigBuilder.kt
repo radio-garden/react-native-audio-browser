@@ -61,10 +61,7 @@ object RequestConfigBuilder {
       try {
         // Transform result wins completely; the callback may return its config
         // synchronously (first) or via a Promise (second).
-        transformFn.invoke(base, routeParams).await().match(
-          first = { it },
-          second = { it.await() },
-        )
+        transformFn.invoke(base, routeParams).await().match(first = { it }, second = { it.await() })
       } catch (e: Exception) {
         Timber.e(e, "Failed to apply transform function, using base config")
         base
@@ -82,10 +79,11 @@ object RequestConfigBuilder {
       override.transform?.let { transformFn ->
         try {
           Timber.d("Invoking media transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(base, routeParams).await().match(
-            first = { it },
-            second = { it.await() },
-          )
+          val transformed =
+            transformFn
+              .invoke(base, routeParams)
+              .await()
+              .match(first = { it }, second = { it.await() })
           Timber.d(
             "Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
           )
@@ -122,28 +120,21 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Applies the per-track `media.resolve(track)` callback as the final, most-specific
-   * layer over an already request+media-layered config. The callback receives the full
-   * Track — carrying any per-track `request` override (e.g. a strict-UA sentinel the
-   * consumer swaps for a clean User-Agent) — and returns the config whose fields win.
+   * Applies the per-track `media.resolve(track)` callback as the final, most-specific layer over an
+   * already request+media-layered config. The callback receives the full Track — carrying any
+   * per-track `request` override (e.g. a strict-UA sentinel the consumer swaps for a clean
+   * User-Agent) — and returns the config whose fields win.
    *
-   * No-op when the media config has no `resolve` callback or no track is available (so
-   * the request/media layers stand). The callback may return its config synchronously
-   * (variant `first`) or via a Promise (`second`). Mirrors iOS resolveMediaTrackConfig +
-   * applyMediaResolveLayer.
+   * No-op when the media config has no `resolve` callback or no track is available (so the
+   * request/media layers stand). The callback may return its config synchronously (variant `first`)
+   * or via a Promise (`second`). Mirrors iOS resolveMediaTrackConfig + applyMediaResolveLayer.
    */
-  suspend fun applyMediaResolve(
-    layered: MediaRequestConfig,
-    track: Track?,
-  ): MediaRequestConfig {
+  suspend fun applyMediaResolve(layered: MediaRequestConfig, track: Track?): MediaRequestConfig {
     val resolveFn = layered.resolve ?: return layered
     if (track == null) return layered
     val resolved =
       try {
-        resolveFn.invoke(track).await().match(
-          first = { it },
-          second = { it.await() },
-        )
+        resolveFn.invoke(track).await().match(first = { it }, second = { it.await() })
       } catch (e: Exception) {
         Timber.e(e, "Failed to apply media.resolve, using layered config")
         return layered
@@ -165,8 +156,8 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Merges artwork request config with base config, applying transform with ImageContext.
-   * Used for artwork URL transformation where size hints are needed.
+   * Merges artwork request config with base config, applying transform with ImageContext. Used for
+   * artwork URL transformation where size hints are needed.
    */
   suspend fun mergeConfig(
     base: RequestConfig,
@@ -178,10 +169,11 @@ object RequestConfigBuilder {
       override.transform?.let { transformFn ->
         try {
           Timber.d("Invoking artwork transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(MediaTransformParams(base, imageContext)).await().match(
-            first = { it },
-            second = { it.await() },
-          )
+          val transformed =
+            transformFn
+              .invoke(MediaTransformParams(base, imageContext))
+              .await()
+              .match(first = { it }, second = { it.await() })
           Timber.d(
             "Artwork transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
           )

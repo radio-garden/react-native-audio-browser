@@ -15,7 +15,6 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import timber.log.Timber
 
 class MediaFactory(
   private val context: Context,

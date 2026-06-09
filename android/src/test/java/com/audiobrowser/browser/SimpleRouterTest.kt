@@ -109,8 +109,7 @@ class SimpleRouterTest {
 
   @Test
   fun `works with parameters before tail wildcard`() {
-    val result =
-      router.findBestMatch("/api/v1/users/list", mapOf("/api/{version}/**" to true))
+    val result = router.findBestMatch("/api/v1/users/list", mapOf("/api/{version}/**" to true))
     assertNotNull(result)
     assertEquals(mapOf("version" to "v1", "tail" to "users/list"), result!!.second.params)
   }

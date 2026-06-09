@@ -17,20 +17,18 @@ import timber.log.Timber
 /**
  * Utility for pre-rendering SVG artwork to bitmaps for Android Auto compatibility.
  *
- * Android Auto loads artwork from URLs directly and doesn't support SVG format.
- * This class pre-renders SVG images to PNG bitmaps that can be embedded in MediaMetadata
- * using setArtworkData().
+ * Android Auto loads artwork from URLs directly and doesn't support SVG format. This class
+ * pre-renders SVG images to PNG bitmaps that can be embedded in MediaMetadata using
+ * setArtworkData().
  *
- * Note: SVGs are rendered as-is without tinting. Content providers should provide
- * appropriately colored icons for Android Auto's dark UI (e.g., white icons).
+ * Note: SVGs are rendered as-is without tinting. Content providers should provide appropriately
+ * colored icons for Android Auto's dark UI (e.g., white icons).
  */
 object SvgArtworkRenderer {
 
   private const val DEFAULT_SIZE = 256 // Default size for rendered SVGs
 
-  /**
-   * Checks if a URL points to an SVG image.
-   */
+  /** Checks if a URL points to an SVG image. */
   fun isSvgUrl(url: String?): Boolean {
     if (url == null) return false
     return try {
@@ -44,9 +42,8 @@ object SvgArtworkRenderer {
   /**
    * Pre-renders an SVG URL to PNG bitmap bytes.
    *
-   * The SVG is rendered as-is without color modification. Content providers
-   * should provide icons in the appropriate color for the target UI (e.g.,
-   * white icons for Android Auto's dark background).
+   * The SVG is rendered as-is without color modification. Content providers should provide icons in
+   * the appropriate color for the target UI (e.g., white icons for Android Auto's dark background).
    *
    * @param context Android context
    * @param imageLoader Coil ImageLoader instance
@@ -59,43 +56,43 @@ object SvgArtworkRenderer {
     imageLoader: ImageLoader,
     url: String,
     size: Int = DEFAULT_SIZE,
-  ): ByteArray? = withContext(Dispatchers.IO) {
-    try {
-      Timber.d("Pre-rendering SVG: $url")
+  ): ByteArray? =
+    withContext(Dispatchers.IO) {
+      try {
+        Timber.d("Pre-rendering SVG: $url")
 
-      val request = ImageRequest.Builder(context)
-        .data(url)
-        .size(size)
-        .allowHardware(false)
-        .decoderFactory { result, options, _ ->
-          SvgDecoder(result.source, options)
+        val request =
+          ImageRequest.Builder(context)
+            .data(url)
+            .size(size)
+            .allowHardware(false)
+            .decoderFactory { result, options, _ -> SvgDecoder(result.source, options) }
+            .build()
+
+        val result = imageLoader.execute(request)
+        val bitmap = result.image?.toBitmap()
+
+        if (bitmap != null) {
+          Timber.d("SVG rendered successfully: ${bitmap.width}x${bitmap.height}")
+
+          val stream = ByteArrayOutputStream()
+          bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+          stream.toByteArray()
+        } else {
+          Timber.e("Failed to render SVG: result.image was null")
+          null
         }
-        .build()
-
-      val result = imageLoader.execute(request)
-      val bitmap = result.image?.toBitmap()
-
-      if (bitmap != null) {
-        Timber.d("SVG rendered successfully: ${bitmap.width}x${bitmap.height}")
-
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        stream.toByteArray()
-      } else {
-        Timber.e("Failed to render SVG: result.image was null")
+      } catch (e: Exception) {
+        Timber.e(e, "Error pre-rendering SVG: $url")
         null
       }
-    } catch (e: Exception) {
-      Timber.e(e, "Error pre-rendering SVG: $url")
-      null
     }
-  }
 
   /**
    * Applies artwork to MediaMetadata.Builder, pre-rendering SVGs as needed.
    *
-   * For SVG URLs, this renders the image to PNG and uses setArtworkData().
-   * For other URLs, this uses setArtworkUri() as normal.
+   * For SVG URLs, this renders the image to PNG and uses setArtworkData(). For other URLs, this
+   * uses setArtworkUri() as normal.
    *
    * @param builder The MediaMetadata.Builder to modify
    * @param artworkUrl The artwork URL (may be SVG or other format)

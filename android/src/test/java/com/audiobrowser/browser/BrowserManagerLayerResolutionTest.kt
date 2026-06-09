@@ -94,7 +94,10 @@ class BrowserManagerLayerResolutionTest {
     assertEquals(genBeforeSet + 1, browserManager.layerGenerationForTest)
 
     browserManager.ensureLayersResolved()
-    assertEquals(browserManager.layerGenerationForTest, browserManager.resolvedLayerGenerationForTest)
+    assertEquals(
+      browserManager.layerGenerationForTest,
+      browserManager.resolvedLayerGenerationForTest,
+    )
     assertSame(request2, browserManager.resolvedRequestLayerForTest)
   }
 

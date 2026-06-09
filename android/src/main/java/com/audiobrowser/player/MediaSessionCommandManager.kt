@@ -59,13 +59,21 @@ class MediaSessionCommandManager {
     private set
 
   /** Stored state for rebuilding layout */
-  private var currentCapabilities: PlayerCapabilities = PlayerCapabilities(
-    play = null, pause = null, stop = null, seekTo = null,
-    skipToNext = null, skipToPrevious = null,
-    jumpForward = null, jumpBackward = null,
-    favorite = null,
-    shuffleMode = null, repeatMode = null, playbackRate = null
-  )
+  private var currentCapabilities: PlayerCapabilities =
+    PlayerCapabilities(
+      play = null,
+      pause = null,
+      stop = null,
+      seekTo = null,
+      skipToNext = null,
+      skipToPrevious = null,
+      jumpForward = null,
+      jumpBackward = null,
+      favorite = null,
+      shuffleMode = null,
+      repeatMode = null,
+      playbackRate = null,
+    )
   private var currentNotificationButtons: NotificationButtonLayout? = null
   private var currentSearchAvailable: Boolean = false
   private var currentFavorited: Boolean? = null
@@ -91,8 +99,8 @@ class MediaSessionCommandManager {
    *
    * @param mediaSession The MediaSession to configure
    * @param capabilities Global capabilities that enable commands for ALL MediaSession controllers
-   *   (Bluetooth, Android Auto, lock screen, notification, etc.). All capabilities are enabled
-   *   by default - only false values disable them.
+   *   (Bluetooth, Android Auto, lock screen, notification, etc.). All capabilities are enabled by
+   *   default - only false values disable them.
    * @param notificationButtons Slot-based button layout for notifications. When null, button layout
    *   is derived from capabilities using smart defaults.
    * @param searchAvailable Whether search functionality is configured and available

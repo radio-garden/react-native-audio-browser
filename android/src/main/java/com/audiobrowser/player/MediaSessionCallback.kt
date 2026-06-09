@@ -6,9 +6,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
 import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaConstants
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
@@ -17,7 +17,6 @@ import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFactory
 import com.audiobrowser.util.ResolvedTrackFactory
 import com.audiobrowser.util.TrackFactory
-import com.margelo.nitro.audiobrowser.Track
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -49,7 +48,8 @@ class MediaSessionCallback(private val player: Player) :
    * Recommended artwork size in pixels from the connected media browser (e.g., Android Auto).
    * Updated when onGetLibraryRoot is called with EXTRAS_KEY_MEDIA_ART_SIZE_PIXELS hint.
    */
-  @Volatile var artworkSizeHintPixels: Int? = null
+  @Volatile
+  var artworkSizeHintPixels: Int? = null
     private set
 
   init {
@@ -84,11 +84,7 @@ class MediaSessionCallback(private val player: Player) :
    * side-effect-free way to communicate a browse failure to legacy controllers (Media3 drops
    * [LibraryResult.ofError] on the legacy browse bridge, leaving an empty "No items" screen).
    */
-  private fun createErrorMediaItem(
-    mediaId: String,
-    title: String,
-    subtitle: String,
-  ): MediaItem =
+  private fun createErrorMediaItem(mediaId: String, title: String, subtitle: String): MediaItem =
     MediaItem.Builder()
       .setMediaId(mediaId)
       .setMediaMetadata(
@@ -246,9 +242,7 @@ class MediaSessionCallback(private val player: Player) :
       // The error / offline tiles are dead-ends. Some controllers (e.g. Android Auto when online)
       // treat a non-browsable tile as tappable and subscribe to its mediaId anyway; returning the
       // error tile again here would push an endless stack of error pages. Return nothing instead.
-      if (
-        parentId == BrowserPathHelper.OFFLINE_PATH || parentId == BrowserPathHelper.ERROR_PATH
-      ) {
+      if (parentId == BrowserPathHelper.OFFLINE_PATH || parentId == BrowserPathHelper.ERROR_PATH) {
         return@future LibraryResult.ofItemList(ImmutableList.of<MediaItem>(), params)
       }
 
@@ -283,12 +277,15 @@ class MediaSessionCallback(private val player: Player) :
             val resolvedTrack = browserManager.resolve(parentId)
 
             // Convert children to MediaItems (url is already set to contextual URL)
-            val trackChildren = resolvedTrack.children
-              ?: throw IllegalStateException(
-                "Expected browsed ResolvedTrack to have a children array"
-              )
+            val trackChildren =
+              resolvedTrack.children
+                ?: throw IllegalStateException(
+                  "Expected browsed ResolvedTrack to have a children array"
+                )
             if (imageLoader != null) {
-              trackChildren.map { track -> TrackFactory.toMedia3WithSvgSupport(track, context, imageLoader) }
+              trackChildren.map { track ->
+                TrackFactory.toMedia3WithSvgSupport(track, context, imageLoader)
+              }
             } else {
               trackChildren.map { track -> TrackFactory.toMedia3(track) }
             }
@@ -300,10 +297,7 @@ class MediaSessionCallback(private val player: Player) :
         // Surface an error tile instead of a bare ofError(): Media3 drops the error on the legacy
         // browse bridge, which would otherwise leave an empty "No items" screen in Android Auto.
         // See https://github.com/androidx/media/issues/2901
-        LibraryResult.ofItemList(
-          ImmutableList.of(createBrowseErrorMediaItem()),
-          params,
-        )
+        LibraryResult.ofItemList(ImmutableList.of(createBrowseErrorMediaItem()), params)
       }
     }
   }
@@ -401,14 +395,12 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Notifies all subscribed controllers that content everywhere has changed
-   * (e.g. on a locale switch) so they re-query their children. Pairs with
-   * AudioBrowser.invalidateAllContent(), which clears the content cache first.
+   * Notifies all subscribed controllers that content everywhere has changed (e.g. on a locale
+   * switch) so they re-query their children. Pairs with AudioBrowser.invalidateAllContent(), which
+   * clears the content cache first.
    */
   fun invalidateAllContent() {
-    Timber.d(
-      "Invalidating all content - notifying ${parentIdSubscriptions.size} subscribed paths"
-    )
+    Timber.d("Invalidating all content - notifying ${parentIdSubscriptions.size} subscribed paths")
     notifySubscribedChildrenChanged()
   }
 
@@ -522,11 +514,7 @@ class MediaSessionCallback(private val player: Player) :
       fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition {
         val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
         val currentIndex = player.currentIndex ?: 0
-        return MediaSession.MediaItemsWithStartPosition(
-          currentItems,
-          currentIndex,
-          startPositionMs,
-        )
+        return MediaSession.MediaItemsWithStartPosition(currentItems, currentIndex, startPositionMs)
       }
 
       // Check if this is a single contextual URL that matches the current queue source
@@ -542,14 +530,16 @@ class MediaSessionCallback(private val player: Player) :
             if (index >= 0) {
               Timber.d("Queue already from $parentPath, skipping to index $index")
               val track = player.tracks[index]
-              return@future handleTrackLoad(audioBrowser.configuration.handleTrackLoad, track, player.tracks, index.toDouble(), ::currentPlayerState) {
+              return@future handleTrackLoad(
+                audioBrowser.configuration.handleTrackLoad,
+                track,
+                player.tracks,
+                index.toDouble(),
+                ::currentPlayerState,
+              ) {
                 // Return the existing queue items with the new start index
                 val existingItems = player.tracks.map { TrackFactory.toMedia3(it) }
-                MediaSession.MediaItemsWithStartPosition(
-                  existingItems,
-                  index,
-                  startPositionMs,
-                )
+                MediaSession.MediaItemsWithStartPosition(existingItems, index, startPositionMs)
               }
             }
           }
@@ -563,7 +553,13 @@ class MediaSessionCallback(private val player: Player) :
       val tracks = result.mediaItems.map { TrackFactory.fromMedia3(it) }.toTypedArray()
       val selectedTrack = tracks.getOrElse(result.startIndex) { tracks.first() }
 
-      handleTrackLoad(audioBrowser.configuration.handleTrackLoad, selectedTrack, tracks, result.startIndex.toDouble(), ::currentPlayerState) {
+      handleTrackLoad(
+        audioBrowser.configuration.handleTrackLoad,
+        selectedTrack,
+        tracks,
+        result.startIndex.toDouble(),
+        ::currentPlayerState,
+      ) {
         // If this was a contextual URL expansion, track the source path (only for default behavior)
         if (mediaItems.size == 1) {
           val mediaId = mediaItems[0].mediaId

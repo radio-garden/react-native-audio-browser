@@ -20,8 +20,8 @@ object TrackFactory {
   /**
    * Converts a Track to a Media3 MediaItem.
    *
-   * Note: This synchronous version uses setArtworkUri() which doesn't support SVG.
-   * For Android Auto browse items with SVG artwork, use [toMedia3WithSvgSupport] instead.
+   * Note: This synchronous version uses setArtworkUri() which doesn't support SVG. For Android Auto
+   * browse items with SVG artwork, use [toMedia3WithSvgSupport] instead.
    */
   fun toMedia3(track: Track): MediaItem {
     val extras = MediaExtrasBuilder.build(track)
@@ -61,9 +61,8 @@ object TrackFactory {
   /**
    * Converts a Track to a Media3 MediaItem with SVG artwork support.
    *
-   * For SVG artwork URLs, this pre-renders the image to PNG and embeds it
-   * using setArtworkData(). This is necessary for Android Auto which doesn't
-   * support loading SVG images from URLs.
+   * For SVG artwork URLs, this pre-renders the image to PNG and embeds it using setArtworkData().
+   * This is necessary for Android Auto which doesn't support loading SVG images from URLs.
    *
    * @param track The track to convert
    * @param context Android context for image loading
@@ -81,16 +80,17 @@ object TrackFactory {
     val artworkUrl = track.artworkSource?.uri ?: track.artwork
 
     // Build metadata with SVG support
-    val metadataBuilder = MediaMetadata.Builder()
-      .setTitle(track.title)
-      .setArtist(track.subtitle)
-      .setAlbumTitle(track.album)
-      .setDescription(track.description)
-      .setGenre(track.genre)
-      .setIsBrowsable(track.src == null)
-      .setIsPlayable(track.src != null)
-      .setExtras(extras)
-      .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
+    val metadataBuilder =
+      MediaMetadata.Builder()
+        .setTitle(track.title)
+        .setArtist(track.subtitle)
+        .setAlbumTitle(track.album)
+        .setDescription(track.description)
+        .setGenre(track.genre)
+        .setIsBrowsable(track.src == null)
+        .setIsPlayable(track.src != null)
+        .setExtras(extras)
+        .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
 
     // Apply artwork with SVG pre-rendering if needed
     SvgArtworkRenderer.applyArtwork(metadataBuilder, artworkUrl, context, imageLoader)
@@ -112,9 +112,7 @@ object TrackFactory {
       .build()
   }
 
-  /**
-   * Converts multiple Tracks to Media3 MediaItems with SVG artwork support.
-   */
+  /** Converts multiple Tracks to Media3 MediaItems with SVG artwork support. */
   suspend fun toMedia3WithSvgSupport(
     tracks: Array<Track>,
     context: Context,

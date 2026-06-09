@@ -33,8 +33,8 @@ import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
-import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
+import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Playback
@@ -103,9 +103,9 @@ class Player(internal val context: Context) {
   @Volatile private var pendingNetworkRetry = false
 
   /**
-   * When true (from setup options' `keepSessionAliveOnError`), mask a terminal playback error so the
-   * media session stays alive & controllable (external controllers keep next/previous) instead of
-   * tearing down. When false, a terminal error surfaces to the session as usual.
+   * When true (from setup options' `keepSessionAliveOnError`), mask a terminal playback error so
+   * the media session stays alive & controllable (external controllers keep next/previous) instead
+   * of tearing down. When false, a terminal error surfaces to the session as usual.
    */
   private var keepSessionAliveOnError = false
 
@@ -436,7 +436,9 @@ class Player(internal val context: Context) {
   /** Current now playing metadata override (null = use track metadata) */
   private var nowPlayingOverride: NowPlayingUpdate? = null
 
-  /** The last now-playing fields actually published, to dedupe redundant [replaceMediaItem] calls. */
+  /**
+   * The last now-playing fields actually published, to dedupe redundant [replaceMediaItem] calls.
+   */
   private data class PublishedNowPlaying(
     val index: Int,
     val trackId: String?,
@@ -448,8 +450,8 @@ class Player(internal val context: Context) {
 
   /**
    * The track id whose now-playing artwork has been resolved (or is being resolved), so a
-   * `nowPlayingArtwork` resolve runs once per track instead of on every [applyNowPlayingFields] call
-   * (which fires on each playback-state change). Null means "not yet resolved for any track".
+   * `nowPlayingArtwork` resolve runs once per track instead of on every [applyNowPlayingFields]
+   * call (which fires on each playback-state change). Null means "not yet resolved for any track".
    */
   private var nowPlayingArtworkResolvedForTrackId: String? = null
 
@@ -1048,9 +1050,11 @@ class Player(internal val context: Context) {
     if (formatter != null) {
       val capturedId = track.src ?: track.url
       // Gate the raw load-control signal to the buffering state so `stalled` is correct on its own:
-      // ExoPlayer's rebuffering flag is polled on a different cadence than state transitions and can
+      // ExoPlayer's rebuffering flag is polled on a different cadence than state transitions and
+      // can
       // linger true into the PLAYING transition as a rebuffer recovers. AND-ing with the tracked
-      // state keeps it true only while ongoing playback is actually stalled, never bleeding into it.
+      // state keeps it true only while ongoing playback is actually stalled, never bleeding into
+      // it.
       val stalled = playbackState == PlaybackState.BUFFERING && loadControl.isRebuffering
       // The real play/pause intent, not the InterceptingPlayer-masked value (which can report false
       // through a masked error to keep the session paused-but-alive).
@@ -1101,7 +1105,8 @@ class Player(internal val context: Context) {
     val currentMediaItem = exoPlayer.getMediaItemAt(index)
 
     // Skip republishing identical fields. The formatter is re-invoked on every state change, so the
-    // same (title, secondaryLine) is recomputed often; an unconditional replaceMediaItem would churn
+    // same (title, secondaryLine) is recomputed often; an unconditional replaceMediaItem would
+    // churn
     // the MediaSession (and flicker Android Auto / now-playing) for no visible change. Keyed on the
     // track identity so a new track with a coincidentally identical line still publishes.
     val published = PublishedNowPlaying(index, track.src ?: track.url, title, secondaryLine)
@@ -1144,24 +1149,31 @@ class Player(internal val context: Context) {
    *
    * Guarded exactly like iOS: only when `nowPlayingArtwork` is configured AND the track has a
    * non-empty id (so the `{id}` token never resolves to an empty string). Otherwise the existing
-   * `artworkUri` — which came from `artwork` / `track.artwork` (browse list path) — is left in place.
+   * `artworkUri` — which came from `artwork` / `track.artwork` (browse list path) — is left in
+   * place.
    *
    * The resolve is async (the request-layer transform is a suspend call); it runs in
-   * [nowPlayingScope] and applies on the main thread via `replaceMediaItem`. Keyed on track id so we
-   * don't kick off a redundant resolve on every [applyNowPlayingFields] call.
+   * [nowPlayingScope] and applies on the main thread via `replaceMediaItem`. Keyed on track id so
+   * we don't kick off a redundant resolve on every [applyNowPlayingFields] call.
    */
   private fun maybeResolveNowPlayingArtwork(index: Int, track: Track) {
-    val trackId = track.id?.takeIf { it.isNotEmpty() } ?: run {
-      // No id → skip nowPlayingArtwork entirely; keep the existing (browse `artwork`) artworkUri.
-      nowPlayingArtworkResolvedForTrackId = null
-      return
-    }
+    val trackId =
+      track.id?.takeIf { it.isNotEmpty() }
+        ?: run {
+          // No id → skip nowPlayingArtwork entirely; keep the existing (browse `artwork`)
+          // artworkUri.
+          nowPlayingArtworkResolvedForTrackId = null
+          return
+        }
 
-    val nowPlayingArtwork = browser?.browserManager?.config?.nowPlayingArtwork ?: run {
-      // No now-playing artwork config → fall back to the existing artworkUri (`artwork` / track.art).
-      nowPlayingArtworkResolvedForTrackId = null
-      return
-    }
+    val nowPlayingArtwork =
+      browser?.browserManager?.config?.nowPlayingArtwork
+        ?: run {
+          // No now-playing artwork config → fall back to the existing artworkUri (`artwork` /
+          // track.art).
+          nowPlayingArtworkResolvedForTrackId = null
+          return
+        }
 
     val loader = coilBitmapLoader ?: return
 

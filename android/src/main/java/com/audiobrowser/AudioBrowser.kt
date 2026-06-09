@@ -13,18 +13,15 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
-import com.audiobrowser.Callbacks
-import com.audiobrowser.Service
 import com.audiobrowser.browser.BrowserConfig
 import com.audiobrowser.browser.BrowserManager
-import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.CallbackException
 import com.audiobrowser.browser.ContentNotFoundException
 import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
+import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.http.RequestConfigBuilder
-import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.BatteryOptimizationHelper
@@ -35,12 +32,10 @@ import com.audiobrowser.util.SystemVolumeMonitor
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
-import com.margelo.nitro.audiobrowser.ChapterMetadata
-import com.margelo.nitro.audiobrowser.TimedMetadata
-import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatus
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
 import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
+import com.margelo.nitro.audiobrowser.ChapterMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
@@ -78,7 +73,9 @@ import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.SleepTimer
+import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
@@ -238,9 +235,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     handler.post { ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver) }
 
     // Observe system volume changes
-    systemVolumeMonitor.setOnVolumeChanged { volume ->
-      post { onSystemVolumeChanged(volume) }
-    }
+    systemVolumeMonitor.setOnVolumeChanged { volume -> post { onSystemVolumeChanged(volume) } }
   }
 
   // ============================================================================
@@ -273,10 +268,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // a resolver-only consumer still needs its baseUrl/headers/transform applied to artwork.
     // now-playing artwork comes in via `perRouteConfig` (not `artwork`), so we must still expose
     // the request layer here — otherwise a relative `nowPlayingArtwork` path (e.g. `/artwork/{id}`)
-    // never gets `baseUrl` prepended. (Browse-list artwork with no artwork config still early-returns
+    // never gets `baseUrl` prepended. (Browse-list artwork with no artwork config still
+    // early-returns
     // its absolute `track.artwork` in CoilBitmapLoader, so it's unaffected.)
-    val hasRequestLayer =
-      _configuration.request != null || _configuration.requestResolver != null
+    val hasRequestLayer = _configuration.request != null || _configuration.requestResolver != null
     if (artworkConfig == null && !hasRequestLayer) return null
     // Resolve the request layer (resolver thunk result, or the static request) so its transform
     // runs for artwork too, applied as the shared layer in CoilBitmapLoader.
@@ -285,16 +280,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   /**
-   * Creates a request config for media URL transformation by applying the shared
-   * request layer and any media config. Returns null only when neither a request
-   * nor a media config is set (the caller then uses the original URL as-is).
+   * Creates a request config for media URL transformation by applying the shared request layer and
+   * any media config. Returns null only when neither a request nor a media config is set (the
+   * caller then uses the original URL as-is).
    */
   fun getMediaRequestConfig(originalUrl: String): MediaRequestConfig? {
     val mediaConfig = _configuration.media
     // The request layer counts as present when a static `request` OR a `requestResolver` is set —
     // a resolver-only consumer still needs its baseUrl/headers/transform applied to media URLs.
-    val hasRequestLayer =
-      _configuration.request != null || _configuration.requestResolver != null
+    val hasRequestLayer = _configuration.request != null || _configuration.requestResolver != null
     if (mediaConfig == null && !hasRequestLayer) return null
 
     return try {
@@ -429,23 +423,25 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var formattedNavigationError: FormattedNavigationError? = null
 
   override fun getNavigationError(): NavigationError? = navigationError
+
   override fun getFormattedNavigationError(): FormattedNavigationError? = formattedNavigationError
 
   /** Creates a default formatted error from a NavigationError */
   private fun defaultFormattedError(error: NavigationError): FormattedNavigationError {
-    val title = when (error.code) {
-      NavigationErrorType.CONTENT_NOT_FOUND -> "Content Not Found"
-      NavigationErrorType.NETWORK_ERROR -> "Network Error"
-      NavigationErrorType.HTTP_ERROR -> {
-        // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
-        error.statusCode?.let { httpStatusText(it.toInt()) } ?: "Server Error"
+    val title =
+      when (error.code) {
+        NavigationErrorType.CONTENT_NOT_FOUND -> "Content Not Found"
+        NavigationErrorType.NETWORK_ERROR -> "Network Error"
+        NavigationErrorType.HTTP_ERROR -> {
+          // Use system-localized HTTP status text (e.g., "Not Found", "Service Unavailable")
+          error.statusCode?.let { httpStatusText(it.toInt()) } ?: "Server Error"
+        }
+        NavigationErrorType.CALLBACK_ERROR -> "Error"
+        NavigationErrorType.UNKNOWN_ERROR -> "Error"
+        // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
+        NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
+        NavigationErrorType.TIMEOUT -> "Couldn't load"
       }
-      NavigationErrorType.CALLBACK_ERROR -> "Error"
-      NavigationErrorType.UNKNOWN_ERROR -> "Error"
-      // Not a failure — a container that resolved with no children. Neutral copy. See ADR 0001.
-      NavigationErrorType.EMPTY_CONTENT -> "Nothing here"
-      NavigationErrorType.TIMEOUT -> "Couldn't load"
-    }
     // Omit an empty message so it renders as title-only (e.g. the empty-content case).
     return FormattedNavigationError(title, error.message.takeIf { it.isNotEmpty() })
   }
@@ -514,19 +510,35 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       }
       is NetworkException -> {
         Timber.e(e, "Network error $logContext")
-        setNavigationError(NavigationErrorType.NETWORK_ERROR, e.message ?: "Network request failed", path)
+        setNavigationError(
+          NavigationErrorType.NETWORK_ERROR,
+          e.message ?: "Network request failed",
+          path,
+        )
       }
       is ContentNotFoundException -> {
         Timber.e(e, "Content not found $logContext")
-        setNavigationError(NavigationErrorType.CONTENT_NOT_FOUND, e.message ?: "Content not found", path)
+        setNavigationError(
+          NavigationErrorType.CONTENT_NOT_FOUND,
+          e.message ?: "Content not found",
+          path,
+        )
       }
       is CallbackException -> {
         Timber.e(e, "Callback error $logContext")
-        setNavigationError(NavigationErrorType.CALLBACK_ERROR, e.message ?: "An error occurred", path)
+        setNavigationError(
+          NavigationErrorType.CALLBACK_ERROR,
+          e.message ?: "An error occurred",
+          path,
+        )
       }
       else -> {
         Timber.e(e, "Unexpected error $logContext")
-        setNavigationError(NavigationErrorType.UNKNOWN_ERROR, e.message ?: "An unexpected error occurred", path)
+        setNavigationError(
+          NavigationErrorType.UNKNOWN_ERROR,
+          e.message ?: "An unexpected error occurred",
+          path,
+        )
       }
     }
   }
@@ -586,10 +598,17 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 val index = player.tracks.indexOfFirst { it.src == trackId }
                 if (index >= 0) {
                   Timber.d("Queue already from $parentPath, skipping to index $index")
-                  handleTrackLoad(_configuration.handleTrackLoad, track, player.tracks, index.toDouble(), intercepted = {}, defaultBehavior = {
-                    player.skipTo(index)
-                    player.play()
-                  })
+                  handleTrackLoad(
+                    _configuration.handleTrackLoad,
+                    track,
+                    player.tracks,
+                    index.toDouble(),
+                    intercepted = {},
+                    defaultBehavior = {
+                      player.skipTo(index)
+                      player.play()
+                    },
+                  )
                   return@launch
                 }
               }
@@ -602,17 +621,31 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 Timber.d(
                   "Loading expanded queue: ${tracks.size} tracks, starting at index $startIndex"
                 )
-                handleTrackLoad(_configuration.handleTrackLoad, track, tracks, startIndex.toDouble(), intercepted = {}, defaultBehavior = {
-                  // Replace queue and seek to selected track
-                  // Use internal player methods directly to avoid blocking on main thread
-                  player.setQueue(tracks, startIndex, sourcePath = parentPath)
-                  player.play()
-                })
+                handleTrackLoad(
+                  _configuration.handleTrackLoad,
+                  track,
+                  tracks,
+                  startIndex.toDouble(),
+                  intercepted = {},
+                  defaultBehavior = {
+                    // Replace queue and seek to selected track
+                    // Use internal player methods directly to avoid blocking on main thread
+                    player.setQueue(tracks, startIndex, sourcePath = parentPath)
+                    player.play()
+                  },
+                )
                 return@launch
               } else {
                 // Fallback: just load the single track
                 Timber.w("Queue expansion failed, loading single track")
-                handleTrackLoad(_configuration.handleTrackLoad, track, arrayOf(track), 0.0, intercepted = {}, defaultBehavior = { player.load(track) })
+                handleTrackLoad(
+                  _configuration.handleTrackLoad,
+                  track,
+                  arrayOf(track),
+                  0.0,
+                  intercepted = {},
+                  defaultBehavior = { player.load(track) },
+                )
               }
             }
             // Navigate to browsable track to show browsing UI
@@ -623,7 +656,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             // If track is playable (has src), load it into player
             track.src != null -> {
               Timber.d("Loading playable track into player: ${track.title}")
-              handleTrackLoad(_configuration.handleTrackLoad, track, arrayOf(track), 0.0, intercepted = {}, defaultBehavior = { player.load(track) })
+              handleTrackLoad(
+                _configuration.handleTrackLoad,
+                track,
+                arrayOf(track),
+                0.0,
+                intercepted = {},
+                defaultBehavior = { player.load(track) },
+              )
             }
             else -> {
               throw IllegalArgumentException("Track must have either an 'url' or an 'src' property")

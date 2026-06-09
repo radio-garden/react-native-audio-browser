@@ -127,19 +127,23 @@ class BrowserManager {
   /** Test-only accessors for the resolver-layer cache state (see ensureLayersResolved). */
   internal val layerGenerationForTest: Int
     get() = layerGeneration
+
   internal val resolvedLayerGenerationForTest: Int
     get() = resolvedLayerGeneration
+
   internal val resolvedRequestLayerForTest: TransformableRequestConfig?
     get() = resolvedRequestLayer
+
   internal val resolvedBrowseLayerForTest: TransformableRequestConfig?
     get() = resolvedBrowseLayer
 
   /**
    * Callback to transform artwork URLs for tracks. Takes a track and optional per-route artwork
-   * config, returns ImageSource or null. Injected by AudioBrowser when artwork config is set.
-   * The ImageContext parameter provides size hints for CDN URL generation.
+   * config, returns ImageSource or null. Injected by AudioBrowser when artwork config is set. The
+   * ImageContext parameter provides size hints for CDN URL generation.
    */
-  var artworkUrlResolver: (suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?)? = null
+  var artworkUrlResolver: (suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?)? =
+    null
 
   /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
@@ -151,8 +155,8 @@ class BrowserManager {
   }
 
   /**
-   * Sets the favorite match mode (propagated from the `favorite` capability).
-   * null disables row-heart hydration.
+   * Sets the favorite match mode (propagated from the `favorite` capability). null disables
+   * row-heart hydration.
    */
   fun setFavoriteMatch(match: FavoritesMatchMode?) {
     favoriteMatch = match
@@ -961,16 +965,21 @@ class BrowserManager {
       // Promise. Nitro flattens (ResolvedTrack | BrowseError) | Promise<BrowseResult>
       // into a 3-arm variant: sync track, sync error, or a Promise resolving to a
       // BrowseResult (which is itself a ResolvedTrack | BrowseError variant).
-      return callback.invoke(param).await().match(
-        first = { resolvedTrack -> resolvedTrack },
-        second = { browseError -> throw CallbackException(browseError.error) },
-        third = { promise ->
-          promise.await().match(
-            first = { resolvedTrack -> resolvedTrack },
-            second = { browseError -> throw CallbackException(browseError.error) },
-          )
-        },
-      )
+      return callback
+        .invoke(param)
+        .await()
+        .match(
+          first = { resolvedTrack -> resolvedTrack },
+          second = { browseError -> throw CallbackException(browseError.error) },
+          third = { promise ->
+            promise
+              .await()
+              .match(
+                first = { resolvedTrack -> resolvedTrack },
+                second = { browseError -> throw CallbackException(browseError.error) },
+              )
+          },
+        )
     }
 
     entry.browseConfig?.let { apiConfig ->
@@ -1048,10 +1057,7 @@ class BrowserManager {
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
     val variant = resolver.invoke().await()
-    return variant.match(
-      first = { it },
-      second = { it.await() },
-    )
+    return variant.match(first = { it }, second = { it.await() })
   }
 
   /**
@@ -1075,7 +1081,8 @@ class BrowserManager {
 
   /**
    * Ensures the request layer is resolved for the current generation and returns it (the resolver
-   * result when a [BrowserConfig.requestResolver] is configured, else the static [BrowserConfig.request]).
+   * result when a [BrowserConfig.requestResolver] is configured, else the static
+   * [BrowserConfig.request]).
    *
    * Consumers outside the browse path (media URL building, artwork) must obtain the request layer
    * through this accessor rather than reading the static `config.request`, so a resolver-only
@@ -1202,8 +1209,7 @@ class BrowserManager {
         //    — the transform would see an empty `request.query`. Putting them on
         //    the base means a transform sees them in `request.query` (and a
         //    transform-less config still merges them into the URL as before).
-        baseConfig =
-          baseConfig.copy(query = (baseConfig.query ?: emptyMap()) + searchQueryParams)
+        baseConfig = baseConfig.copy(query = (baseConfig.query ?: emptyMap()) + searchQueryParams)
 
         // 4. Search layer: the config's own static fields + transform. The
         //    search params now live on the base, not here.

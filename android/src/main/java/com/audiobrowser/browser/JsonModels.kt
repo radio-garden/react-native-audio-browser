@@ -91,12 +91,7 @@ private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosi
 }
 
 private fun JsonImageRowItem.toNitro(): ImageRowItem {
-  return ImageRowItem(
-    url = url,
-    artwork = artwork,
-    artworkSource = null,
-    title = title,
-  )
+  return ImageRowItem(url = url, artwork = artwork, artworkSource = null, title = title)
 }
 
 fun JsonResolvedTrack.toNitro(): ResolvedTrack {

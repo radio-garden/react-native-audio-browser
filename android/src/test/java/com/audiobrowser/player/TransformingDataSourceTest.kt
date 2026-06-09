@@ -85,11 +85,7 @@ class TransformingDataSourceTest {
     // `icy-metaint` response header back through the data-source chain. A transparent wrapper that
     // swallows getResponseHeaders() (returning the DataSource default empty map) silently disables
     // ICY metadata — playback still works, but onMetadata never fires.
-    val icyHeaders =
-      mapOf(
-        "icy-metaint" to listOf("16000"),
-        "icy-name" to listOf("Example FM"),
-      )
+    val icyHeaders = mapOf("icy-metaint" to listOf("16000"), "icy-name" to listOf("Example FM"))
     val factory =
       TransformingDataSource.Factory({ RecordingDataSource(icyHeaders) }) {
         config("https://cdn.example.com", "/s.mp3")

@@ -2,8 +2,6 @@ package com.audiobrowser
 
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.margelo.nitro.audiobrowser.ChapterMetadata
-import com.margelo.nitro.audiobrowser.TimedMetadata
-import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
@@ -20,7 +18,9 @@ import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SleepTimer
+import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackMetadata
 
 /** Callbacks for all player events. */
 interface Callbacks {
