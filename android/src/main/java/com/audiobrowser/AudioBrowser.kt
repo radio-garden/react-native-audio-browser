@@ -308,23 +308,31 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         // media-specific config is present (so a relative src still gets baseUrl).
         var base = RequestConfig(null, originalUrl, null, null, null, null, null, null)
         requestConfig?.let { base = RequestConfigBuilder.mergeConfig(base, it) }
-        if (mediaConfig != null) {
-          RequestConfigBuilder.mergeConfig(base, mediaConfig)
-        } else {
-          // No media config: wrap the request-layered base as a MediaRequestConfig.
-          MediaRequestConfig(
-            resolve = null,
-            transform = null,
-            method = base.method,
-            path = base.path,
-            baseUrl = base.baseUrl,
-            headers = base.headers,
-            query = base.query,
-            body = base.body,
-            contentType = base.contentType,
-            userAgent = base.userAgent,
-          )
-        }
+        val mediaLayered =
+          if (mediaConfig != null) {
+            RequestConfigBuilder.mergeConfig(base, mediaConfig)
+          } else {
+            // No media config: wrap the request-layered base as a MediaRequestConfig.
+            MediaRequestConfig(
+              resolve = null,
+              transform = null,
+              method = base.method,
+              path = base.path,
+              baseUrl = base.baseUrl,
+              headers = base.headers,
+              query = base.query,
+              body = base.body,
+              contentType = base.contentType,
+              userAgent = base.userAgent,
+            )
+          }
+        // Final, most-specific layer: media.resolve(track). The cached Track carries any
+        // per-track `request` override (e.g. a strict-UA sentinel); resolve reads it and
+        // returns the winning config. Only look up the track when a resolve callback
+        // exists, to avoid a needless cache lookup (and its miss-log) otherwise.
+        val track =
+          if (mediaConfig?.resolve != null) browserManager.getCachedTrack(originalUrl) else null
+        RequestConfigBuilder.applyMediaResolve(mediaLayered, track)
       }
     } catch (e: Exception) {
       Timber.e(e, "Failed to transform media URL: $originalUrl")

@@ -79,6 +79,7 @@ struct ResolvedTrack: Equatable {
   var src: String? = nil
   var artwork: String? = nil
   var artworkSource: ImageSource? = nil
+  var request: TrackRequest? = nil
   var artworkCarPlayTinted: Bool? = nil
   var title: String
   var subtitle: String? = nil

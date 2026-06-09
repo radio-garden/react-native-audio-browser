@@ -184,7 +184,7 @@ extension JsonResolvedTrack {
       id: id,
       src: src,
       artwork: artwork,
-      artworkSource: nil,
+      artworkSource: nil, request: nil,
       artworkCarPlayTinted: nil,
       title: title,
       subtitle: subtitle,

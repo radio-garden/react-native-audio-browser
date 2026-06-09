@@ -4,6 +4,7 @@ import com.margelo.nitro.audiobrowser.CarPlaySiriListButtonPosition
 import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackRequest
 import com.margelo.nitro.audiobrowser.TrackStyle
 import kotlinx.serialization.Serializable
 
@@ -17,6 +18,16 @@ data class JsonImageRowItem(
   val artwork: String? = null,
   val title: String,
 )
+
+/** JSON model for a track's per-request HTTP override (identity/auth/signed-url). */
+@Serializable
+data class JsonTrackRequest(
+  val userAgent: String? = null,
+  val headers: Map<String, String>? = null,
+  val query: Map<String, String>? = null,
+) {
+  fun toNitro(): TrackRequest = TrackRequest(userAgent, headers, query)
+}
 
 @Serializable
 data class JsonResolvedTrack(
@@ -54,6 +65,7 @@ data class JsonTrack(
   val genre: String? = null,
   val duration: Double? = null,
   val src: String? = null,
+  val request: JsonTrackRequest? = null,
   val style: String? = null,
   val childrenStyle: String? = null,
   val groupTitle: String? = null,
@@ -97,6 +109,8 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     subtitle = subtitle,
     artwork = artwork,
     artworkSource = null,
+    // Containers carry no per-track media-request override (mirrors iOS JsonResolvedTrack).
+    request = null,
     artworkCarPlayTinted = null,
     artist = artist,
     album = album,
@@ -121,6 +135,7 @@ fun JsonTrack.toNitro(): Track {
     subtitle = subtitle,
     artwork = artwork,
     artworkSource = null,
+    request = request?.toNitro(),
     artworkCarPlayTinted = null,
     artist = artist,
     album = album,

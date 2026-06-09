@@ -191,6 +191,10 @@ class PlaybackStateStore(private val player: Player) {
             else null,
           groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
           live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
+          // Not persisted: on resumption the contextual URL is re-browsed
+          // (expandQueueFromContextualUrl), which re-parses each track's request
+          // from the API's current response and re-caches it.
+          request = null,
           imageRow = null, // Not persisted
         )
       }
