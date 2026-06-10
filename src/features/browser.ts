@@ -8,6 +8,8 @@ import {
   validateBrowserConfiguration
 } from './browser-config'
 
+let currentConfiguration: BrowserConfiguration | undefined
+
 /**
  * Configures the browser with routes, tabs, and other settings.
  * Also registers the browser with the player to enable:
@@ -30,8 +32,6 @@ import {
  * })
  * ```
  */
-let currentConfiguration: BrowserConfiguration | undefined
-
 export function configureBrowser(configuration: BrowserConfiguration): void {
   // __DEV__ is a React Native global; absent under plain node (vitest).
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
