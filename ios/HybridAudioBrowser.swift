@@ -1338,16 +1338,26 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   ///   - searchTerm: The search query from Siri.
   ///   - completion: Called with `true` if tracks were found and queued, `false` otherwise.
   public func handlePlayMediaIntent(searchTerm: String, completion: @escaping @Sendable (Bool) -> Void) {
-    Task {
+    Task { @MainActor in
+      // A cold Siri launch delivers the intent while JS may still be configuring
+      // the browser — wait for readiness like CarPlay does, but bounded so Siri
+      // always gets an answer. The resolved pair is also the *live* instance,
+      // where `self` could be a stale pre-reload one.
+      guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(10)) else {
+        self.logger.error("handlePlayMediaIntent: browser/player not ready within timeout")
+        completion(false)
+        return
+      }
       do {
-        let resolved = try await self.browserManager.search(searchTerm)
-        guard let tracks = resolved.children, !tracks.isEmpty else {
+        let resolved = try await browser.browserManager.search(searchTerm)
+        // Search results can include browse-only nodes (url, no src); only
+        // playable tracks belong in the queue.
+        let tracks = (resolved.children ?? []).filter { $0.src != nil }
+        guard !tracks.isEmpty else {
           completion(false)
           return
         }
-        await MainActor.run {
-          self.getPlayer()?.setQueue(tracks, initialIndex: 0, playWhenReady: true)
-        }
+        player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
         completion(true)
       } catch {
         self.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")
