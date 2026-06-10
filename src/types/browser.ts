@@ -549,8 +549,8 @@ export interface ArtworkRequestConfig extends RequestConfig {
  * sub-container (`url`). A callback / static `ResolvedTrack` returns the same
  * page object directly.
  *
- * Contrast with {@link SearchSource}, whose HTTP endpoint returns a bare
- * `Track[]` rather than a page object.
+ * {@link SearchSource} and {@link TabsSource} HTTP endpoints return this same
+ * page shape; only the meaning of `children` differs (results / tabs).
  */
 export type BrowserSource =
   | ResolvedTrack
