@@ -10,6 +10,7 @@ public enum TrackPlayerError: Error {
     case notConnectedToInternet
     case playbackFailed
     case trackWasUnplayable
+    case playbackStalled
   }
 
   public enum QueueError: Error {
@@ -32,6 +33,8 @@ extension TrackPlayerError.PlaybackError: LocalizedError {
       "Playback failed"
     case .trackWasUnplayable:
       "Track is not playable"
+    case .playbackStalled:
+      "Playback stalled"
     }
   }
 }
@@ -66,6 +69,8 @@ public extension TrackPlayerError.PlaybackError {
       "playback-failed"
     case .trackWasUnplayable:
       "track-unplayable"
+    case .playbackStalled:
+      "playback-stalled"
     }
     return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
   }

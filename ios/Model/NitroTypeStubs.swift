@@ -246,6 +246,8 @@ extension TrackPlayerError.PlaybackError {
       "playback-failed"
     case .trackWasUnplayable:
       "track-unplayable"
+    case .playbackStalled:
+      "playback-stalled"
     }
     return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
   }

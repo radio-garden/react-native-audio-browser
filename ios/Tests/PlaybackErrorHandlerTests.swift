@@ -211,3 +211,13 @@ struct ErrorHandlerResetTests {
     #expect(mock.resetCallCount == 1)
   }
 }
+
+// MARK: - PlaybackError Nitro Code Mapping
+
+@Suite("PlaybackError.toNitroError")
+@MainActor
+struct PlaybackErrorNitroCodeTests {
+  @Test func playbackStalled_mapsToNitroCode() {
+    #expect(TrackPlayerError.PlaybackError.playbackStalled.toNitroError().code == "playback-stalled")
+  }
+}
