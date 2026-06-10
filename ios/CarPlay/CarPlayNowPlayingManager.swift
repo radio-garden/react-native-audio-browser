@@ -275,8 +275,12 @@ final class CarPlayNowPlayingManager {
 
     logger.info("Showing Up Next queue with \(tracks.count) tracks")
 
+    // Reuse the now-playing template's button title (system-localized "Up Next"
+    // by default, and whatever the app set otherwise) instead of hardcoding an
+    // un-localized string.
+    let upNextTitle = CPNowPlayingTemplate.shared.upNextTitle
     let template = CPListTemplate(
-      title: "Up Next",
+      title: upNextTitle.isEmpty ? "Up Next" : upNextTitle,
       sections: [createUpNextSection(tracks: tracks, player: player)]
     )
 
@@ -286,7 +290,13 @@ final class CarPlayNowPlayingManager {
   }
 
   private func createUpNextSection(tracks: [Track], player: TrackPlayer) -> CPListSection {
-    let items = tracks.enumerated().map { index, track -> CPListItem in
+    // Clamp to CarPlay's list limit (createSections does the same for browse
+    // lists). Taking the prefix keeps item positions aligned with queue indices.
+    let maxItems = CPListTemplate.maximumItemCount
+    if tracks.count > maxItems {
+      logger.info("Up Next queue has \(tracks.count) tracks, clamping to CarPlay's limit of \(maxItems)")
+    }
+    let items = tracks.prefix(maxItems).enumerated().map { index, track -> CPListItem in
       listItemFactory(track) { [weak self] _, completion in
         self?.logger.info("Skipping to track at index \(index): \(track.title)")
         do {

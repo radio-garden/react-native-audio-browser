@@ -242,10 +242,14 @@ public final class RNABCarPlayController: NSObject {
     // Subscribe to external content changes (notifyContentChanged /
     // invalidateAllContent).
     let externalContentToken = audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
-      if path == HybridAudioBrowser.invalidateAllSentinel {
-        self?.invalidateAllContent()
-      } else {
-        self?.notifyContentChanged(path: path)
+      // Hop to the main actor like the sibling listeners — the emitter runs
+      // listeners synchronously on the emitting (JS) thread.
+      Task { @MainActor in
+        if path == HybridAudioBrowser.invalidateAllSentinel {
+          self?.invalidateAllContent()
+        } else {
+          self?.notifyContentChanged(path: path)
+        }
       }
     }
     listenerRemovals.append { [weak audioBrowser] in
@@ -300,7 +304,9 @@ public final class RNABCarPlayController: NSObject {
   private func buildInitialInterface() async {
     guard let audioBrowser else {
       logger.error("AudioBrowser not available")
-      showErrorTemplate(message: "Audio browser not initialized")
+      await showRootNavigationError(
+        NavigationError(code: .unknownError, message: "", statusCode: nil, statusCodeSuccess: nil),
+      )
       return
     }
 
@@ -312,16 +318,21 @@ public final class RNABCarPlayController: NSObject {
     } else {
       // No tabs yet - query them
       logger.info("No tabs available, querying...")
+      }
       do {
         let queriedTabs = try await audioBrowser.browserManager.queryTabs()
         if !queriedTabs.isEmpty {
           await showTabBar(tabs: queriedTabs)
         } else {
-          showErrorTemplate(message: "No content available")
+          // Empty is a navigation error (.emptyContent) so it formats through
+          // the app's formatNavigationError like every other failure (ADR 0001).
+          await showRootNavigationError(
+            NavigationError(code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil),
+          )
         }
       } catch {
         logger.error("Failed to query tabs: \(error.localizedDescription)")
-        showErrorTemplate(message: "Failed to load content")
+        await showRootNavigationError(NavigationError.from(error))
       }
     }
   }
@@ -921,15 +932,16 @@ public final class RNABCarPlayController: NSObject {
     interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
   }
 
-  /// Shows a simple error template as root (for initialization errors when no other template exists)
-  private func showErrorTemplate(message: String) {
-    // CPAlertTemplate cannot be set as root - use a list template instead
-    let errorItem = CPListItem(text: message, detailText: nil)
-    errorItem.isEnabled = false
-    let template = CPListTemplate(
-      title: "Error",
-      sections: [CPListSection(items: [errorItem])],
-    )
+  /// Shows an initialization failure as the root template — a centered empty
+  /// view formatted via the app's `formatNavigationError` (path "/"), like every
+  /// other browse failure. The empty view renders reliably here because it's the
+  /// template's initial state at set-root time.
+  @MainActor
+  private func showRootNavigationError(_ navError: NavigationError) async {
+    let formatted = await formattedNavigationError(navError, path: "/")
+    let template = CPListTemplate(title: nil, sections: [])
+    template.emptyViewTitleVariants = [formatted.title]
+    template.emptyViewSubtitleVariants = formatted.message.flatMap { $0.isEmpty ? nil : [$0] } ?? []
     interfaceController.setRootTemplate(template, animated: true, completion: nil)
   }
 }

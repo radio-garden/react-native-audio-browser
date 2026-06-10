@@ -213,4 +213,4 @@ Siri cannot be tested in the iOS Simulator or CarPlay Simulator. You must test o
 
 ## Reference
 
-See the [example app](https://github.com/anthropics/react-native-audio-browser/tree/main/apps/example-native/ios/AudioBrowserExample) for a complete working implementation including the Intents Extension.
+See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native/ios/AudioBrowserExample) for a complete working implementation including the Intents Extension.
