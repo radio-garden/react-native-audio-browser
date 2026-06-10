@@ -29,7 +29,7 @@ struct UnconditionalEventTests {
 
   @Test func trackUnloaded_alwaysTransitionsToNone() {
     for state in allStates {
-      #expect(nextPlaybackState(from: state, on: .trackUnloaded) == .none)
+      #expect(nextPlaybackState(from: state, on: .trackUnloaded) == PlaybackState.none)
     }
   }
 
@@ -100,7 +100,7 @@ struct AVPlayerPausedTests {
     let nonStoppedStates = allStates.filter { $0 != .stopped }
     for state in nonStoppedStates {
       #expect(
-        nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: false)) == .none,
+        nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: false)) == PlaybackState.none,
         "Expected .none from \(state) with hasAsset: false"
       )
     }
