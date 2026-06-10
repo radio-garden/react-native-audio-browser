@@ -8,6 +8,7 @@ import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
+import { assertBrowsePageShape } from './assertBrowsePageShape'
 import { parseSearchResponse } from './parseSearchResponse'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
@@ -558,7 +559,7 @@ export class BrowserManager {
       params
     )
     const response = await this.httpClient.executeRequest(merged)
-    return response as ResolvedTrack
+    return assertBrowsePageShape(response, path)
   }
 
   /**
