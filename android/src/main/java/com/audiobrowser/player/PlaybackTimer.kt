@@ -7,13 +7,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * A playback-gated repeating timer. Runs [onTick] every [interval] seconds while
- * the current playback state satisfies [isActive]. A null interval (or <= 0) means
- * stopped — the single off-switch.
+ * A playback-gated repeating timer. Runs [onTick] every [interval] seconds while the current
+ * playback state satisfies [isActive]. A null interval (or <= 0) means stopped — the single
+ * off-switch.
  */
 class PlaybackTimer(
   private val isActive: (PlaybackState) -> Boolean,
-  private val onTick: () -> Unit
+  private val onTick: () -> Unit,
 ) {
   private val scope = MainScope()
   private var job: Job? = null
