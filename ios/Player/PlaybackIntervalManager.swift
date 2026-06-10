@@ -30,9 +30,11 @@ class PlaybackIntervalManager {
 
   func onPlaybackStateChanged(_ state: PlaybackState) {
     switch state {
-    case .loading, .buffering, .playing:
+    // Only actual playback counts as "playback time"; buffering/loading freeze
+    // the clock so consumers measure cumulative *playing* time.
+    case .playing:
       active = true
-    case .paused, .stopped, .ended, .error:
+    case .loading, .buffering, .paused, .stopped, .ended, .error:
       active = false
     default:
       break

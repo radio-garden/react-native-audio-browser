@@ -22,9 +22,11 @@ class PlaybackIntervalManager(private val onTick: () -> Unit) {
   fun onPlaybackStateChanged(state: PlaybackState) {
     active =
       when (state) {
+        // Only actual playback counts as "playback time"; buffering/loading
+        // freeze the clock so consumers measure cumulative *playing* time.
+        PlaybackState.PLAYING -> true
         PlaybackState.LOADING,
         PlaybackState.BUFFERING,
-        PlaybackState.PLAYING -> true
         PlaybackState.PAUSED,
         PlaybackState.STOPPED,
         PlaybackState.ENDED,
