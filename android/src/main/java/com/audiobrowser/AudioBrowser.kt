@@ -118,6 +118,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       androidControllerOfflineError = null,
       carPlayUpNextButton = null,
       carPlayNowPlayingButtons = null,
+      carPlayLoadingTitle = null,
       formatNavigationError = null,
     )
 

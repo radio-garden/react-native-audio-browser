@@ -49,6 +49,10 @@ struct BrowserConfig {
   /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
   let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
 
+  /// App-localized title for CarPlay loading screens (shown as the centered
+  /// empty state while content resolves; nil leaves them blank)
+  let carPlayLoadingTitle: String?
+
   /// Custom handler for track load events (overrides default load behavior)
   let handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
 
@@ -70,6 +74,7 @@ struct BrowserConfig {
     androidControllerOfflineError: Bool = true,
     carPlayUpNextButton: Bool = true,
     carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
+    carPlayLoadingTitle: String? = nil,
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
@@ -85,6 +90,7 @@ struct BrowserConfig {
     self.androidControllerOfflineError = androidControllerOfflineError
     self.carPlayUpNextButton = carPlayUpNextButton
     self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
+    self.carPlayLoadingTitle = carPlayLoadingTitle
     self.formatNavigationError = formatNavigationError
   }
 
@@ -103,6 +109,7 @@ struct BrowserConfig {
     androidControllerOfflineError = config.androidControllerOfflineError ?? true
     carPlayUpNextButton = config.carPlayUpNextButton ?? true
     carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
+    carPlayLoadingTitle = config.carPlayLoadingTitle
     formatNavigationError = config.formatNavigationError
   }
 

@@ -298,6 +298,7 @@ export function toNativeConfig(
     androidControllerOfflineError: config.androidControllerOfflineError,
     carPlayUpNextButton: config.carPlayUpNextButton,
     carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
+    carPlayLoadingTitle: config.carPlayLoadingTitle,
     formatNavigationError: config.formatNavigationError
   }
 }

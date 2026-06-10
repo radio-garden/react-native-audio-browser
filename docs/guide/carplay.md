@@ -57,6 +57,19 @@ func application(
 }
 ```
 
+## Loading States
+
+Browse screens show a loading state while their content resolves — pushed destinations, tabs loading lazily, and the startup screen while tabs are queried. On iOS 18.4+ the system loading spinner is shown automatically. Older iOS versions have no spinner API; those screens stay blank unless you supply your app's localized loading title:
+
+```ts
+configureBrowser({
+  carPlayLoadingTitle: t('loading'),
+  // ...
+})
+```
+
+The title renders as the list's centered empty state and disappears as soon as content arrives.
+
 ## Siri Voice Search
 
 The library can show an "Ask Siri to Play Audio" button on CarPlay list templates. To enable it, set `carPlaySiriListButton` on the resolved content returned by your route source:

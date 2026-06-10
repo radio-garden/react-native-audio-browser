@@ -888,6 +888,24 @@ export type BrowserConfiguration = {
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 
   /**
+   * Title shown (as the list's centered empty state) on CarPlay screens whose
+   * content is still loading — browse destinations while they resolve, and the
+   * startup screen while tabs load. Supply your app's localized "Loading…"
+   * string. On iOS 18.4+ the system loading spinner is shown instead.
+   *
+   * When unset, loading screens are left blank (apart from the spinner on
+   * iOS 18.4+) rather than showing un-localized copy.
+   *
+   * @example
+   * ```typescript
+   * carPlayLoadingTitle: t('loading')
+   * ```
+   *
+   * @platform ios
+   */
+  carPlayLoadingTitle?: string
+
+  /**
    * Callback to customize error messages for navigation errors.
    * Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
    *

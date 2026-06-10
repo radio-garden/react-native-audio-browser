@@ -128,7 +128,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     path: nil, request: nil, requestResolver: nil, browse: nil, browseResolver: nil, media: nil, artwork: nil, nowPlayingArtwork: nil, routes: nil,
     singleTrack: nil, handleTrackLoad: nil,
     androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, formatNavigationError: nil,
+    carPlayNowPlayingButtons: nil, carPlayLoadingTitle: nil, formatNavigationError: nil,
   ) {
     didSet {
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }

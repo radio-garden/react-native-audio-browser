@@ -318,6 +318,11 @@ public final class RNABCarPlayController: NSObject {
     } else {
       // No tabs yet - query them
       logger.info("No tabs available, querying...")
+      // Config exists by now (start() waited for it), so re-show the loading
+      // root to pick up the app's localized loading title — the first loading
+      // template was created before config was available.
+      if config.carPlayLoadingTitle != nil {
+        showLoadingTemplate()
       }
       do {
         let queriedTabs = try await audioBrowser.browserManager.queryTabs()
@@ -337,12 +342,12 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  /// Shows a loading template while waiting for initialization
+  /// Shows a loading template as root while waiting for initialization. Before
+  /// the browser is configured this can only show the spinner (iOS 18.4+) — the
+  /// app's `carPlayLoadingTitle` isn't known yet; `buildInitialInterface`
+  /// re-shows it once config is available.
   private func showLoadingTemplate() {
-    let template = CPListTemplate(
-      title: nil,
-      sections: [],
-    )
+    let template = makeLoadingTemplate(title: nil, path: nil)
     interfaceController.setRootTemplate(template, animated: false, completion: nil)
   }
 
@@ -370,20 +375,15 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  /// Creates a tab template shell without loading content (synchronous)
+  /// Creates a tab template shell without loading content (synchronous).
+  /// The shell carries the loading state (spinner / `carPlayLoadingTitle`)
+  /// until its content lazy-loads on first appearance.
   private func createTabTemplate(for track: Track) -> CPListTemplate {
-    let template = CPListTemplate(
-      title: track.title,
-      sections: [],
-    )
+    // The path stored on the template drives lazy loading and refresh.
+    let template = makeLoadingTemplate(title: track.title, path: track.url)
 
     // Set tab title explicitly (required for tab bar display)
     template.tabTitle = track.title
-
-    // Store path for lazy loading and refresh
-    if let url = track.url {
-      template.userInfo = ["path": url] as [String: Any]
-    }
 
     // Set tab image - CarPlay requires an image for proper tab display
     // Tab bar icons are 24pt x 24pt per CarPlay Developer Guide
@@ -627,13 +627,20 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  /// Builds an empty list template for a browse destination while it resolves.
+  /// Builds an empty list template for content that is still resolving.
   /// On iOS 18.4+ it shows the system spinner (`showsSpinnerWhileEmpty`). On older
-  /// iOS there's no spinner API; we deliberately leave it blank rather than ship a
-  /// hardcoded, un-localized "Loading…" — the nav bar title still gives context.
-  private func makeLoadingTemplate(title: String, path: String) -> CPListTemplate {
+  /// iOS it shows the app-localized `carPlayLoadingTitle` as the centered empty
+  /// state when configured; otherwise it stays blank rather than ship a
+  /// hardcoded, un-localized "Loading…". The empty view is set at creation —
+  /// the timing CarPlay renders reliably (see `replaceWithMessage`).
+  private func makeLoadingTemplate(title: String?, path: String?) -> CPListTemplate {
     let template = CPListTemplate(title: title, sections: [])
-    template.userInfo = ["path": path] as [String: Any]
+    if let path {
+      template.userInfo = ["path": path] as [String: Any]
+    }
+    if let loadingTitle = config.carPlayLoadingTitle {
+      template.emptyViewTitleVariants = [loadingTitle]
+    }
     if #available(iOS 18.4, *) {
       template.showsSpinnerWhileEmpty = true
     }
