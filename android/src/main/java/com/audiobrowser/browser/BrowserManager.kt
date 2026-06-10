@@ -88,9 +88,9 @@ class BrowserManager {
   // Invalidated via invalidateContentCache() when content changes
   private val contentCache = LruCache<String, ResolvedTrack>(20)
 
-  // Cache for search results - keyed by query string
-  private var lastSearchQuery: String? = null
-  private var lastSearchResults: Array<Track>? = null
+  // Cache for the most recent search - the query string and its results stored as one pair, so a
+  // concurrent reader never sees one query matched with another query's results.
+  @Volatile private var lastSearch: Pair<String, Array<Track>>? = null
 
   // Set of favorited track identifiers (src)
   private var favoriteIds = setOf<String>()
@@ -246,27 +246,53 @@ class BrowserManager {
   }
 
   /**
-   * Resolves multiple media IDs from cache. Throws IllegalStateException if any mediaId is not
-   * found in cache.
+   * Resolves a single Media3 MediaItem to a Track. Prefers the track cache (keyed by url and src).
    *
-   * @param mediaIds The media IDs to resolve
-   * @return List of Track objects
+   * A cache miss is legitimately reachable: a controller can replay a mediaId this process never
+   * browsed — e.g. a search-result track (whose mediaId is its bare src) after process death. When
+   * the mediaId is a playable URL, fall back to a minimal track built from the item's own metadata
+   * instead of failing playback.
+   *
+   * @throws IllegalStateException if the mediaId is not cached and not a playable URL
    */
-  fun resolveMediaIdsFromCache(mediaIds: List<String>): List<Track> {
-    return mediaIds.map { mediaId ->
-      Timber.d("=== Resolving from cache: mediaId='$mediaId' ===")
+  private fun resolveMediaItemToTrack(mediaItem: MediaItem): Track {
+    val mediaId = mediaItem.mediaId
 
-      getCachedTrack(mediaId)?.let { cachedTrack ->
-        Timber.d("→ Found cached Track: '${cachedTrack.title}'")
-        return@map cachedTrack
-      }
+    getCachedTrack(mediaId)?.let { cachedTrack ->
+      Timber.d("Resolved mediaId='$mediaId' from cache: '${cachedTrack.title}'")
+      return cachedTrack
+    }
 
-      // Cache miss - this indicates a bug in our caching system
-      Timber.e("→ Cache MISS for mediaId='$mediaId' - this should not happen")
-      throw IllegalStateException(
-        "MediaItem not found in cache: $mediaId. This indicates a bug in the caching system."
+    if (mediaId.startsWith("http://") || mediaId.startsWith("https://")) {
+      Timber.w("Cache MISS for mediaId='$mediaId' - building minimal track from media item")
+      val metadata = mediaItem.mediaMetadata
+      return hydrateFavorite(
+        Track(
+          id = null,
+          url = null,
+          src = mediaId,
+          artwork = metadata.artworkUri?.toString(),
+          artworkSource = null,
+          request = null,
+          artworkCarPlayTinted = null,
+          title = metadata.title?.toString() ?: mediaId,
+          subtitle = metadata.artist?.toString(),
+          artist = null,
+          album = metadata.albumTitle?.toString(),
+          description = metadata.description?.toString(),
+          genre = metadata.genre?.toString(),
+          duration = null,
+          style = null,
+          childrenStyle = null,
+          favorited = null,
+          groupTitle = null,
+          live = null,
+          imageRow = null,
+        )
       )
     }
+
+    throw IllegalStateException("MediaItem not found in cache: $mediaId")
   }
 
   /**
@@ -283,7 +309,7 @@ class BrowserManager {
    * @param startIndex Index of the item to start playing
    * @param startPositionMs Position within the start item to begin playback
    * @return MediaSession.MediaItemsWithStartPosition ready for Media3
-   * @throws IllegalStateException if any mediaId is not found in cache
+   * @throws IllegalStateException if a mediaId is neither cached nor a playable URL
    */
   suspend fun resolveMediaItemsForPlayback(
     mediaItems: List<MediaItem>,
@@ -352,12 +378,11 @@ class BrowserManager {
       }
     }
 
-    // No expansion - resolve from cache
-    val mediaIds = mediaItems.map { it.mediaId }
-    val cachedTracks = resolveMediaIdsFromCache(mediaIds)
+    // No expansion - resolve from cache (with a minimal-track fallback for replayed mediaIds)
+    val resolvedTracks = mediaItems.map { resolveMediaItemToTrack(it) }
 
     // Convert to Media3 MediaItems
-    val resolvedMediaItems = cachedTracks.map { track -> TrackFactory.toMedia3(track) }
+    val resolvedMediaItems = resolvedTracks.map { track -> TrackFactory.toMedia3(track) }
 
     return MediaSession.MediaItemsWithStartPosition(resolvedMediaItems, startIndex, startPositionMs)
   }
@@ -674,8 +699,9 @@ class BrowserManager {
    * @return Array of Track results, or null if not found
    */
   fun getCachedSearchResults(query: String): Array<Track>? {
-    if (query != lastSearchQuery) return null
-    return lastSearchResults?.map { hydrateFavorite(it) }?.toTypedArray()
+    val (cachedQuery, cachedResults) = lastSearch ?: return null
+    if (query != cachedQuery) return null
+    return cachedResults.map { hydrateFavorite(it) }.toTypedArray()
   }
 
   /**
@@ -718,10 +744,11 @@ class BrowserManager {
 
     // Check if result is browsable-only (container/route) vs playable
     // If it's browsable but also playable (has src or playable=true), treat it as playable
+    val firstResultUrl = firstResult.url
     val tracksToFilter =
-      if (firstResult.src == null) {
-        Timber.d("First search result is browsable-only, resolving: ${firstResult.url}")
-        val resolvedTrack = resolve(firstResult.url!!)
+      if (firstResult.src == null && firstResultUrl != null) {
+        Timber.d("First search result is browsable-only, resolving: $firstResultUrl")
+        val resolvedTrack = resolve(firstResultUrl)
         resolvedTrack.children
           ?.filter { it.src != null }
           ?.takeIf { it.isNotEmpty() }
@@ -767,8 +794,19 @@ class BrowserManager {
     val searchPath = BrowserPathHelper.createSearchPath(params.query)
 
     try {
-      // Execute search
-      val searchResults = resolveSearch(params)
+      // Execute search. Drop results without a stable identifier (url or src): search results come
+      // from server/JS data that doesn't pass through validateTrack like browse children do, and
+      // downstream conversion (TrackFactory.toMedia3) and browsable-result resolution require one.
+      val searchResults =
+        resolveSearch(params)
+          .filter { track ->
+            val valid = track.url != null || track.src != null
+            if (!valid) {
+              Timber.w("Dropping search result without url or src: '${track.title}'")
+            }
+            valid
+          }
+          .toTypedArray()
 
       // Create ResolvedTrack
       val searchResolvedTrack =
@@ -798,8 +836,7 @@ class BrowserManager {
         )
 
       // Cache search results for getCachedSearchResults()
-      lastSearchQuery = params.query
-      lastSearchResults = searchResults
+      lastSearch = params.query to searchResults
 
       // Cache individual tracks for Media3 lookups
       cacheChildren(searchResolvedTrack)
@@ -1052,8 +1089,7 @@ class BrowserManager {
    */
   private suspend fun resolveLayer(
     staticConfig: TransformableRequestConfig?,
-    resolver:
-      Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?,
+    resolver: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?,
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
     // Promise-only resolver (the TS layer wraps a sync-or-async thunk in

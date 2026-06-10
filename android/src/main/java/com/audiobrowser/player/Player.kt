@@ -67,7 +67,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
-// media3's configurable stuck-buffering (type-1, STUCK_BUFFERING_NO_PROGRESS) timeout. Fires only on
+// media3's configurable stuck-buffering (type-1, STUCK_BUFFERING_NO_PROGRESS) timeout. Fires only
+// on
 // zero loading progress; 60s of silent non-progress is already a bad live-radio experience, while
 // the media3 default of 600s would mean 10 minutes of dead air. (Type-0 STUCK_BUFFERING_NOT_LOADING
 // is a separate, uncontrollable fixed-4s check.)
@@ -414,9 +415,7 @@ class Player(internal val context: Context) {
   private val progressTimer: PlaybackTimer by lazy {
     PlaybackTimer(
       isActive = {
-        it == PlaybackState.LOADING ||
-          it == PlaybackState.BUFFERING ||
-          it == PlaybackState.PLAYING
+        it == PlaybackState.LOADING || it == PlaybackState.BUFFERING || it == PlaybackState.PLAYING
       }
     ) {
       val index = currentIndex ?: return@PlaybackTimer
@@ -432,9 +431,7 @@ class Player(internal val context: Context) {
   }
 
   private val intervalTimer: PlaybackTimer by lazy {
-    PlaybackTimer(isActive = { it == PlaybackState.PLAYING }) {
-      callbacks?.onPlaybackInterval()
-    }
+    PlaybackTimer(isActive = { it == PlaybackState.PLAYING }) { callbacks?.onPlaybackInterval() }
   }
 
   internal var playingState: PlayingState = PlayingState(false, false)
@@ -1341,6 +1338,7 @@ class Player(internal val context: Context) {
   fun destroy() {
     stop()
     nowPlayingScope.cancel()
+    mediaSessionCallback.destroy()
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
     automaticBufferManager = null

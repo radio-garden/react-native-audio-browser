@@ -27,7 +27,7 @@ suspend fun <T> handleTrackLoad(
   track: Track,
   queue: Array<Track>,
   startIndex: Double,
-  intercepted: () -> T,
+  intercepted: suspend () -> T,
   defaultBehavior: suspend () -> T,
 ): T {
   if (handler != null) {

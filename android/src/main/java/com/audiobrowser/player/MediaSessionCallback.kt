@@ -23,10 +23,18 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
+import com.margelo.nitro.audiobrowser.Track
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.guava.future
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
@@ -39,7 +47,9 @@ class MediaSessionCallback(private val player: Player) :
   internal val commandManager = MediaSessionCommandManager()
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-  // Track which controllers are subscribed to which media IDs
+  // Track which controllers are subscribed to which media IDs.
+  // Mutated on the Media3 application thread (onSubscribe/onUnsubscribe) but read from other
+  // threads (network observer, JS-triggered notifies) — guard all access with synchronized(this).
   private val parentIdSubscriptions =
     mutableMapOf<String, MutableSet<MediaSession.ControllerInfo>>()
   private var mediaLibrarySession: MediaLibraryService.MediaLibrarySession? = null
@@ -255,10 +265,6 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       try {
-        // Get context and imageLoader for SVG pre-rendering
-        val context = player.context
-        val imageLoader = player.imageLoader
-
         val children =
           if (parentId == BrowserPathHelper.RECENT_PATH) {
             // TODO: implement recent media items
@@ -266,12 +272,13 @@ class MediaSessionCallback(private val player: Player) :
           } else if (parentId == BrowserPathHelper.ROOT_PATH) {
             // Return tabs as root children (limited to 4 for automotive platform compatibility)
             // TODO: Check what Android Auto does with empty tabs list - may need to return error?
-            val tabs = browserManager.queryTabs().take(4)
-            if (imageLoader != null) {
-              tabs.map { tab -> TrackFactory.toMedia3WithSvgSupport(tab, context, imageLoader) }
-            } else {
-              tabs.map { tab -> TrackFactory.toMedia3(tab) }
+            val tabs = browserManager.queryTabs()
+            if (tabs.size > 4) {
+              Timber.w(
+                "Root has ${tabs.size} tabs; dropping ${tabs.size - 4} (Android Auto root limit)"
+              )
             }
+            toMediaItems(tabs.take(4))
           } else {
             // Resolve the specific path and get its children
             val resolvedTrack = browserManager.resolve(parentId)
@@ -282,23 +289,35 @@ class MediaSessionCallback(private val player: Player) :
                 ?: throw IllegalStateException(
                   "Expected browsed ResolvedTrack to have a children array"
                 )
-            if (imageLoader != null) {
-              trackChildren.map { track ->
-                TrackFactory.toMedia3WithSvgSupport(track, context, imageLoader)
-              }
-            } else {
-              trackChildren.map { track -> TrackFactory.toMedia3(track) }
-            }
+            toMediaItems(trackChildren.toList())
           }
 
         LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
       } catch (e: Exception) {
+        // A cancelled browse (controller disconnected) is not a failure — don't render it as an
+        // error tile. awaitBrowser's TimeoutCancellationException IS a real failure, keep that.
+        if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting children for parentId: $parentId")
         // Surface an error tile instead of a bare ofError(): Media3 drops the error on the legacy
         // browse bridge, which would otherwise leave an empty "No items" screen in Android Auto.
         // See https://github.com/androidx/media/issues/2901
         LibraryResult.ofItemList(ImmutableList.of(createBrowseErrorMediaItem()), params)
       }
+    }
+  }
+
+  /**
+   * Converts tracks to MediaItems, pre-rendering SVG artwork when an ImageLoader is available. SVG
+   * renders can hit the network, so they run concurrently — a long list of distinct SVG artworks
+   * would otherwise fetch one at a time and stall the browse response.
+   */
+  private suspend fun toMediaItems(tracks: List<Track>): List<MediaItem> {
+    val imageLoader = player.imageLoader ?: return tracks.map { TrackFactory.toMedia3(it) }
+    val context = player.context
+    return coroutineScope {
+      tracks
+        .map { track -> async { TrackFactory.toMedia3WithSvgSupport(track, context, imageLoader) } }
+        .awaitAll()
     }
   }
 
@@ -335,11 +354,19 @@ class MediaSessionCallback(private val player: Player) :
       // Wait for browser to be registered if it's not available yet
       val browserManager = player.awaitBrowser().browserManager
 
+      // Serve tracks from the track cache first (keyed by url and src). Besides avoiding an HTTP
+      // resolve, this keeps item identity correct for contextual mediaIds: resolve() strips
+      // __trackId and would return the *parent container's* metadata as the item.
+      browserManager.getCachedTrack(mediaId)?.let { track ->
+        return@future LibraryResult.ofItem(TrackFactory.toMedia3(track), null)
+      }
+
       try {
         val resolvedTrack = browserManager.resolve(mediaId)
         val mediaItem = ResolvedTrackFactory.toMedia3(resolvedTrack)
         LibraryResult.ofItem(mediaItem, null)
       } catch (e: Exception) {
+        if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting item for mediaId: $mediaId")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
@@ -354,8 +381,17 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<LibraryResult<Void>> {
     Timber.d("onSubscribe: ${browser.packageName}, parentId = $parentId")
 
-    parentIdSubscriptions.getOrPut(parentId) { mutableSetOf() }.add(browser)
-    return super.onSubscribe(session, browser, parentId, params)
+    synchronized(this) { parentIdSubscriptions.getOrPut(parentId) { mutableSetOf() }.add(browser) }
+
+    // Don't call super: Media3's default onSubscribe validates the parent by calling
+    // onGetItem(parentId), which for us is a full resolve() — an HTTP fetch whose result the
+    // legacy stub discards for Android Auto controllers. onGetChildren already surfaces browse
+    // failures. Keep the default's other behavior: notify Media3 (non-legacy) browsers so they
+    // fetch the children; legacy browsers get onLoadChildren from the framework after subscribing.
+    if (browser.controllerVersion != MediaSession.ControllerInfo.LEGACY_CONTROLLER_VERSION) {
+      session.notifyChildrenChanged(browser, parentId, Int.MAX_VALUE, params)
+    }
+    return Futures.immediateFuture(LibraryResult.ofVoid())
   }
 
   override fun onUnsubscribe(
@@ -365,9 +401,11 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<LibraryResult<Void>> {
     Timber.d("onUnsubscribe: ${browser.packageName}, parentId = $parentId")
 
-    parentIdSubscriptions[parentId]?.remove(browser)
-    if (parentIdSubscriptions[parentId]?.isEmpty() == true) {
-      parentIdSubscriptions.remove(parentId)
+    synchronized(this) {
+      parentIdSubscriptions[parentId]?.remove(browser)
+      if (parentIdSubscriptions[parentId]?.isEmpty() == true) {
+        parentIdSubscriptions.remove(parentId)
+      }
     }
 
     return super.onUnsubscribe(session, browser, parentId)
@@ -376,22 +414,28 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Notifies all subscribed controllers to refresh their content. Called internally when network
    * state changes to refresh all subscribed paths.
+   *
+   * Safe to call from any thread: snapshots the subscribed paths and dispatches the session calls
+   * to the main (Media3 application) thread.
    */
   private fun notifySubscribedChildrenChanged() {
-    parentIdSubscriptions.keys.forEach { parentId ->
-      mediaLibrarySession?.notifyChildrenChanged(parentId, Int.MAX_VALUE, null)
+    val session = mediaLibrarySession ?: return
+    val parentIds = synchronized(this) { parentIdSubscriptions.keys.toList() }
+    scope.launch(Dispatchers.Main) {
+      parentIds.forEach { parentId -> session.notifyChildrenChanged(parentId, Int.MAX_VALUE, null) }
     }
   }
 
   /**
    * Notifies external controllers that content at the given path has changed. Controllers
-   * subscribed to this path will refresh their UI.
+   * subscribed to this path will refresh their UI. Safe to call from any thread.
    *
    * @param path The path where content has changed
    */
   fun notifyContentChanged(path: String) {
     Timber.d("Notifying content changed for path: $path")
-    mediaLibrarySession?.notifyChildrenChanged(path, Int.MAX_VALUE, null)
+    val session = mediaLibrarySession ?: return
+    scope.launch(Dispatchers.Main) { session.notifyChildrenChanged(path, Int.MAX_VALUE, null) }
   }
 
   /**
@@ -400,7 +444,7 @@ class MediaSessionCallback(private val player: Player) :
    * clears the content cache first.
    */
   fun invalidateAllContent() {
-    Timber.d("Invalidating all content - notifying ${parentIdSubscriptions.size} subscribed paths")
+    Timber.d("Invalidating all content - notifying all subscribed paths")
     notifySubscribedChildrenChanged()
   }
 
@@ -409,8 +453,13 @@ class MediaSessionCallback(private val player: Player) :
    * controllers to refresh their content.
    */
   fun notifyBrowserReady() {
-    Timber.d("Browser ready - notifying ${parentIdSubscriptions.size} subscribed paths")
+    Timber.d("Browser ready - notifying all subscribed paths")
     notifySubscribedChildrenChanged()
+  }
+
+  /** Cancels in-flight browse/search work. Call when the owning player is destroyed. */
+  fun destroy() {
+    scope.cancel()
   }
 
   override fun onSearch(
@@ -421,12 +470,15 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<LibraryResult<Void>> {
     Timber.d("onSearch: ${browser.packageName}, query = $query")
     return scope.future {
-      val browserManager = player.browser?.browserManager
-
-      if (browserManager == null) {
-        Timber.w("AudioBrowser not registered - search not available")
-        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-      }
+      // Wait for browser registration like onGetChildren does, so a cold-start voice search
+      // doesn't fail before JS has configured the browser.
+      val browserManager =
+        try {
+          player.awaitBrowser().browserManager
+        } catch (e: TimeoutCancellationException) {
+          Timber.w("Timed out waiting for browser - search not available")
+          return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
+        }
 
       // Check if search is configured
       if (!browserManager.config.hasSearch) {
@@ -446,6 +498,7 @@ class MediaSessionCallback(private val player: Player) :
 
         LibraryResult.ofVoid()
       } catch (e: Exception) {
+        if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error during search for query: $query")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
@@ -464,12 +517,13 @@ class MediaSessionCallback(private val player: Player) :
       "onGetSearchResult: ${browser.packageName}, query = $query, page = $page, pageSize = $pageSize"
     )
     return scope.future {
-      val browserManager = player.browser?.browserManager
-
-      if (browserManager == null) {
-        Timber.w("AudioBrowser not registered - search not available")
-        return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
-      }
+      val browserManager =
+        try {
+          player.awaitBrowser().browserManager
+        } catch (e: TimeoutCancellationException) {
+          Timber.w("Timed out waiting for browser - search not available")
+          return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
+        }
 
       try {
         // Get cached search results from BrowserManager
@@ -490,6 +544,7 @@ class MediaSessionCallback(private val player: Player) :
             LibraryResult.ofItemList(ImmutableList.of(), params)
           }
       } catch (e: Exception) {
+        if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting search results for query: $query")
         LibraryResult.ofError(SessionError.ERROR_UNKNOWN)
       }
@@ -504,18 +559,26 @@ class MediaSessionCallback(private val player: Player) :
     startPositionMs: Long,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
     Timber.Forest.d(
-      "onSetMediaItems: ${controller.packageName}, count=${mediaItems.size}, mediaId=${mediaItems[0].mediaId}, uri=${mediaItems[0].localConfiguration?.uri}, title=${mediaItems[0].mediaMetadata.title}"
+      "onSetMediaItems: ${controller.packageName}, count=${mediaItems.size}, mediaId=${mediaItems.firstOrNull()?.mediaId}, uri=${mediaItems.firstOrNull()?.localConfiguration?.uri}, title=${mediaItems.firstOrNull()?.mediaMetadata?.title}"
     )
+
+    if (mediaItems.isEmpty()) {
+      return Futures.immediateFuture(
+        MediaSession.MediaItemsWithStartPosition(emptyList(), 0, startPositionMs)
+      )
+    }
 
     return scope.future {
       val audioBrowser = player.awaitBrowser()
 
-      // Helper: returns the current player state unchanged so Media3 doesn't modify playback
-      fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition {
-        val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
-        val currentIndex = player.currentIndex ?: 0
-        return MediaSession.MediaItemsWithStartPosition(currentItems, currentIndex, startPositionMs)
-      }
+      // Helper: returns the current player state unchanged so Media3 doesn't modify playback.
+      // ExoPlayer is main-thread confined; this future runs on IO, so hop to Main for the reads.
+      suspend fun currentPlayerState(): MediaSession.MediaItemsWithStartPosition =
+        withContext(Dispatchers.Main) {
+          val currentItems = player.tracks.map { TrackFactory.toMedia3(it) }
+          val currentIndex = player.currentIndex ?: 0
+          MediaSession.MediaItemsWithStartPosition(currentItems, currentIndex, startPositionMs)
+        }
 
       // Check if this is a single contextual URL that matches the current queue source
       if (mediaItems.size == 1) {
@@ -526,19 +589,20 @@ class MediaSessionCallback(private val player: Player) :
 
           // Check if queue already came from this parent path - just skip to the track
           if (trackId != null && parentPath == player.queueSourcePath) {
-            val index = player.tracks.indexOfFirst { it.src == trackId }
+            val queueTracks = withContext(Dispatchers.Main) { player.tracks }
+            val index = queueTracks.indexOfFirst { it.src == trackId }
             if (index >= 0) {
               Timber.d("Queue already from $parentPath, skipping to index $index")
-              val track = player.tracks[index]
+              val track = queueTracks[index]
               return@future handleTrackLoad(
                 audioBrowser.configuration.handleTrackLoad,
                 track,
-                player.tracks,
+                queueTracks,
                 index.toDouble(),
                 ::currentPlayerState,
               ) {
                 // Return the existing queue items with the new start index
-                val existingItems = player.tracks.map { TrackFactory.toMedia3(it) }
+                val existingItems = queueTracks.map { TrackFactory.toMedia3(it) }
                 MediaSession.MediaItemsWithStartPosition(existingItems, index, startPositionMs)
               }
             }

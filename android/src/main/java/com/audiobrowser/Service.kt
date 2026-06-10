@@ -53,6 +53,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   var onBatteryWarningPendingChanged: ((Boolean) -> Unit)? = null
 
   // Headless service binding
+  private var headlessBound = false
   private val headlessConnection: ServiceConnection =
     object : ServiceConnection {
       override fun onServiceConnected(className: ComponentName, service: IBinder) {}
@@ -140,8 +141,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Bind headless service once at startup for JS task execution
     Intent(applicationContext, HeadlessTaskService::class.java).also { headlessIntent ->
       Timber.d("Binding to HeadlessTaskService for JS execution")
-      val bound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
-      Timber.d("HeadlessTaskService bind result: $bound")
+      headlessBound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
+      Timber.d("HeadlessTaskService bind result: $headlessBound")
     }
   }
 
@@ -285,12 +286,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
-    // Ensure player is properly set up for external controllers like Android Auto
-    // Only call setup if callbacks haven't been installed yet (meaning React Native hasn't
-    // connected)
+    // The player is always set up by onCreate. Don't re-run setup() here for controllers that
+    // connect before React Native does: setup() releases and recreates the ExoPlayer, which would
+    // kill in-progress playback (e.g. playback resumption from a car/Bluetooth controller) when a
+    // second controller connects while JS is still booting.
     if (player.getCallbacks() == null) {
       Timber.w("External controller connecting before React Native setup - using default options")
-      player.setup(PlayerSetupOptions())
     }
 
     return mediaSession
@@ -316,8 +317,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
-    // Unbind from HeadlessTaskService to avoid ServiceConnection leak
-    unbindService(headlessConnection)
+    // Unbind from HeadlessTaskService to avoid ServiceConnection leak.
+    // Unbinding a connection that never bound throws IllegalArgumentException.
+    if (headlessBound) {
+      unbindService(headlessConnection)
+      headlessBound = false
+    }
 
     Timber.d("Releasing media session and destroying player")
     if (::mediaSession.isInitialized) {
