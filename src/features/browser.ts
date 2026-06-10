@@ -32,7 +32,7 @@ let currentConfiguration: BrowserConfiguration | undefined
  *   request: { baseUrl: 'https://api.example.com' },
  *   routes: {
  *     // `{id}` is a route parameter — see the `routes` docs for matching rules.
- *     '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams.id),
+ *     '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams?.id),
  *     // Remapping a browse path to a different API path requires a transform;
  *     // a static `path` on a request config does NOT rewrite the path.
  *     '/artists/{id}': {
