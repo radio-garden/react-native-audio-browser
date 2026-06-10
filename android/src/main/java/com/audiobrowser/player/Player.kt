@@ -405,9 +405,15 @@ class Player(internal val context: Context) {
   private lateinit var playerListener: PlayerListener
   private var cache: SimpleCache? = null
 
-  private val progressUpdateManager: PlaybackProgressUpdateManager by lazy {
-    PlaybackProgressUpdateManager {
-      val index = currentIndex ?: return@PlaybackProgressUpdateManager
+  private val progressTimer: PlaybackTimer by lazy {
+    PlaybackTimer(
+      isActive = {
+        it == PlaybackState.LOADING ||
+          it == PlaybackState.BUFFERING ||
+          it == PlaybackState.PLAYING
+      }
+    ) {
+      val index = currentIndex ?: return@PlaybackTimer
       val event =
         PlaybackProgressUpdatedEvent(
           position = position.toSeconds(),
@@ -419,8 +425,10 @@ class Player(internal val context: Context) {
     }
   }
 
-  private val playbackIntervalManager: PlaybackIntervalManager by lazy {
-    PlaybackIntervalManager { callbacks?.onPlaybackInterval() }
+  private val intervalTimer: PlaybackTimer by lazy {
+    PlaybackTimer(isActive = { it == PlaybackState.PLAYING }) {
+      callbacks?.onPlaybackInterval()
+    }
   }
 
   internal var playingState: PlayingState = PlayingState(false, false)
@@ -1393,8 +1401,8 @@ class Player(internal val context: Context) {
         }
       }
 
-      progressUpdateManager.onPlaybackStateChanged(state)
-      playbackIntervalManager.onPlaybackStateChanged(state)
+      progressTimer.onPlaybackStateChanged(state)
+      intervalTimer.onPlaybackStateChanged(state)
       val newPlayingState = PlayingStateFactory.derive(playWhenReady, state)
       if (newPlayingState != playingState) {
         Timber.d(
@@ -1412,11 +1420,11 @@ class Player(internal val context: Context) {
    * @param interval The interval in seconds, or null to disable progress updates
    */
   fun setProgressUpdateInterval(interval: Double?) {
-    progressUpdateManager.setUpdateInterval(interval)
+    progressTimer.setInterval(interval)
   }
 
   fun setPlaybackIntervalEnabled(enabled: Boolean) {
-    playbackIntervalManager.setEnabled(enabled)
+    intervalTimer.setInterval(if (enabled) 1.0 else null)
   }
 
   /**

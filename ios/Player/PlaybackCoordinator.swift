@@ -26,22 +26,24 @@ class PlaybackCoordinator {
     self?.callbacks?.playerDidChangePlayingState(state)
   }
 
-  private lazy var progressUpdateManager: PlaybackProgressUpdateManager =
-    PlaybackProgressUpdateManager { [weak self] in
-      guard let self, currentIndex >= 0, let effectHandler else { return }
-      let progressEvent = PlaybackProgressUpdatedEvent(
-        track: Double(currentIndex),
-        position: effectHandler.currentTime,
-        duration: effectHandler.duration,
-        buffered: effectHandler.bufferedPosition,
-      )
-      callbacks?.playerDidUpdateProgress(progressEvent)
-    }
+  private lazy var progressTimer = PlaybackTimer(
+    isActive: { $0 == .loading || $0 == .buffering || $0 == .playing }
+  ) { [weak self] in
+    guard let self, currentIndex >= 0, let effectHandler else { return }
+    let progressEvent = PlaybackProgressUpdatedEvent(
+      track: Double(currentIndex),
+      position: effectHandler.currentTime,
+      duration: effectHandler.duration,
+      buffered: effectHandler.bufferedPosition,
+    )
+    callbacks?.playerDidUpdateProgress(progressEvent)
+  }
 
-  private lazy var playbackIntervalManager: PlaybackIntervalManager =
-    PlaybackIntervalManager { [weak self] in
-      self?.callbacks?.playerDidFirePlaybackInterval()
-    }
+  private lazy var intervalTimer = PlaybackTimer(
+    isActive: { $0 == .playing }
+  ) { [weak self] in
+    self?.callbacks?.playerDidFirePlaybackInterval()
+  }
 
   // MARK: - State
 
@@ -211,8 +213,8 @@ class PlaybackCoordinator {
     // "playing" after playback fails or stops.
     effectHandler?.updateNowPlayingState(playWhenReady: playbackActive && playWhenReady)
 
-    progressUpdateManager.onPlaybackStateChanged(new)
-    playbackIntervalManager.onPlaybackStateChanged(new)
+    progressTimer.onPlaybackStateChanged(new)
+    intervalTimer.onPlaybackStateChanged(new)
     playingStateManager.update(playWhenReady: playWhenReady, state: new)
   }
 
@@ -533,11 +535,11 @@ class PlaybackCoordinator {
   // MARK: - Progress Updates
 
   func setProgressUpdateInterval(_ interval: TimeInterval?) {
-    progressUpdateManager.setUpdateInterval(interval)
+    progressTimer.setInterval(interval)
   }
 
   func setPlaybackIntervalEnabled(_ enabled: Bool) {
-    playbackIntervalManager.setEnabled(enabled)
+    intervalTimer.setInterval(enabled ? 1 : nil)
   }
 }
 
