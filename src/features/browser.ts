@@ -45,6 +45,9 @@ export function configureBrowser(configuration: BrowserConfiguration): void {
  * Returns the configuration last passed to {@link configureBrowser}, in its
  * original public shape (the native getter exposes only the lowered internal
  * form). `undefined` until the browser is configured.
+ *
+ * Treat the returned object as read-only: it is the live reference, and
+ * mutating it does NOT reconfigure the browser — call configureBrowser again.
  */
 export function getBrowserConfiguration(): BrowserConfiguration | undefined {
   return currentConfiguration
