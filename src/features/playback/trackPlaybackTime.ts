@@ -58,6 +58,16 @@ function install() {
  * re-subscribe for a fresh `total`). Coarse, best-effort cadence (~1s resolution),
  * not a precise timer.
  *
+ * Typical use is a periodic "still listening" signal: fire an analytics ping, a
+ * listen-check, or a heartbeat every N seconds of *actual* listening, so paused
+ * time doesn't inflate the count.
+ *
+ * Note this counts cumulative play time across the whole session, NOT per track:
+ * `total` keeps climbing through track changes, and `track` only tells you what
+ * was playing at the moment each callback fired. To measure playtime per track,
+ * subscribe to {@link onActiveTrackChanged} and cancel + re-subscribe here on each
+ * change, so every track gets a fresh `total` starting at zero.
+ *
  * @param callback Invoked once per elapsed `period`, with cumulative play time
  *                 and the currently playing track.
  * @param period  Seconds of playback between calls. Must be >= 1.
