@@ -241,6 +241,11 @@ export type MediaRequestConfigTransformerSync = (
  * before the request is made. This is useful for adding dynamic headers,
  * signing URLs, or other request-time modifications.
  *
+ * Note: when a layer provides a transform, the layer's other static fields
+ * are NOT merged — the transform receives the merged config from the layers
+ * below it, and its return value replaces that config entirely. Spread the
+ * incoming request (`{ ...request, ... }`) to keep its fields.
+ *
  * @example
  * ```typescript
  * const config: TransformableRequestConfig = {
@@ -581,8 +586,11 @@ export type TabsSourceCallback = () => Track[] | Promise<Track[]>
 /**
  * Tab source configuration for navigation tabs.
  *
- * When using API configuration (TransformableRequestConfig), the request path defaults to '/'
- * and should return an array of Track objects with urls representing the tabs.
+ * When using API configuration (TransformableRequestConfig), the request path
+ * defaults to '/' and the endpoint must return a page object
+ * `{ title?, children: Track[] }` whose `children` are the tabs — the same
+ * shape a browse endpoint returns. Callback/static sources provide `Track[]`
+ * directly.
  */
 export type TabsSource =
   | Track[]
@@ -593,11 +601,10 @@ export type TabsSource =
  * Search source configuration for handling search requests.
  *
  * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
- * return a bare **`Track[]`** — a flat JSON array of result rows, each a
- * playable leaf (`src`) or a navigable container (`url`). This differs from
- * {@link BrowserSource}, whose HTTP endpoint returns a page object
- * (`{ title, children }`); search results are a flat list, matching the
- * `SearchSourceCallback`'s `Promise<Track[]>` return.
+ * return a page object — `{ title?, children: Track[] }` — whose `children`
+ * are the result rows, the same shape a browse endpoint returns. (The web
+ * implementation additionally accepts a bare `Track[]` for back-compat;
+ * iOS/Android do not.) Callback sources return `Track[]` directly.
  *
  * @see BrowserConfiguration.search
  */
@@ -638,7 +645,9 @@ export interface FavoriteConfig {
 
 export type BrowserConfiguration = {
   /**
-   * Initial navigation path. Setting this triggers initial navigation to the specified path.
+   * Initial navigation path. Setting this triggers initial navigation to the
+   * specified path. When unset, the first tab's URL is used; when there are
+   * no tabs either, `/`.
    */
   path?: string | undefined
 
@@ -681,7 +690,13 @@ export type BrowserConfiguration = {
    */
   browse?: TransformableRequestConfig | RequestConfigResolver
 
-  /** Media/audio stream request configuration. */
+  /**
+   * Media/audio stream request configuration.
+   *
+   * Unlike `request`/`browse`, this does not accept a resolver thunk. For
+   * values that change at runtime, use the shared `request` resolver (it
+   * applies to media requests too), a per-track `resolve`, or a `transform`.
+   */
   media?: MediaRequestConfig
 
   /**
@@ -692,8 +707,9 @@ export type BrowserConfiguration = {
    * Artwork URLs are transformed when tracks are processed (before being passed to media controllers
    * like Android Auto). This is different from media requests which are transformed at playback time.
    *
-   * Note: Since media controllers load images directly from URLs, HTTP headers cannot be applied
-   * to artwork requests. Use query parameters for authentication tokens if your CDN supports it.
+   * Headers ARE applied to artwork requests: the library fetches CarPlay and
+   * Android Auto images in-process, and in-app consumers receive them via
+   * `artworkSource` (which carries the headers for React Native's `<Image>`).
    *
    * @example
    * ```typescript
@@ -726,6 +742,10 @@ export type BrowserConfiguration = {
    * `{id}` in any of those values is replaced with the track's `id` during resolution, and
    * the result flows through the shared `request` layer (so a relative path gets `baseUrl`
    * prepended). For logic that can't be expressed as a template, use `resolve(track)`.
+   *
+   * The `{id}` templating is specific to `nowPlayingArtwork` — static values
+   * in other configs are not templated. Not implemented by the web
+   * implementation.
    *
    * @example
    * // 302-redirect endpoint keyed by the track id:
@@ -760,8 +780,8 @@ export type BrowserConfiguration = {
    * expects different names, rename them in `transform` — it receives the params
    * already on `request.query`, e.g. `query: { search: request.query?.q }`.
    *
-   * Response shape: the endpoint must return a bare JSON `Track[]` array (a flat
-   * list of result rows), NOT a browse-style page object. See {@link SearchSource}.
+   * Response shape: the endpoint must return a page object
+   * `{ children: Track[] }` — see {@link SearchSource}.
    *
    * @example
    * ```typescript
@@ -806,20 +826,47 @@ export type BrowserConfiguration = {
   tabs?: TabsSource
 
   /**
-   * Route-specific configurations. Maps URL paths to browse sources.
-   * Routes match by prefix, most specific (most slashes) wins.
+   * Route-specific configurations. Maps URL path patterns to browse sources.
    *
-   * Can be a simple `BrowserSource` or extended `RouteConfig` with media/artwork overrides.
+   * ## Matching
+   *
+   * Patterns match on **exact segment count** — `/artists` does NOT match
+   * `/artists/123`. Segments may be:
+   * - a constant: `/favorites`
+   * - a parameter: `/albums/{id}` — captured into `routeParams.id` and passed
+   *   to callbacks and transforms
+   * - a single-segment wildcard: `*`
+   * - a tail wildcard: `/files/**` — matches any depth; the remainder is
+   *   captured into `routeParams.tail`
+   *
+   * When several patterns match, the most specific wins
+   * (constants > parameters > wildcards > tail wildcard).
+   *
+   * ## Defaults and reserved keys
+   *
+   * A path matching no route is fetched over HTTP via the `request` →
+   * `browse` layers with the path applied — most APIs only need explicit
+   * routes for exceptions. The special key `'*'` overrides that default with
+   * its own source. Keys starting with `__` are reserved for internal use.
+   *
+   * Note: a static `path` on a route's request config does not rewrite the
+   * request path (the navigated path is used); remap paths in a `transform`,
+   * which receives `routeParams` as its second argument.
+   *
+   * Values can be a `BrowserSource` (callback, request config, or static page
+   * object) or a `RouteConfig` with per-route `media`/`artwork` overrides.
    *
    * @example
    * ```typescript
    * routes: {
-   *   '/favorites': async () => getFavorites(),
-   *   '/artists': { baseUrl: 'https://music-api.com' },
+   *   '/favorites': async () => getFavoritesPage(),
+   *   '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams?.id),
    *   '/premium': {
-   *     browse: { baseUrl: 'https://premium-api.com' },
-   *     artwork: { baseUrl: 'https://premium-images.cdn.com' }
-   *   }
+   *     browse: { baseUrl: 'https://premium-api.example.com' },
+   *     artwork: { baseUrl: 'https://premium-images.example.com' }
+   *   },
+   *   // Custom default for anything no other route matches:
+   *   '*': { baseUrl: 'https://api.example.com' }
    * }
    * ```
    */

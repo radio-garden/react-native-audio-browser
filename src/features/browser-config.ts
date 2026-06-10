@@ -151,7 +151,8 @@ function tabsSourceToRouteEntry(source: TabsSource): NativeRouteEntry {
     }
   }
 
-  // TransformableRequestConfig - native will handle wrapping the response
+  // TransformableRequestConfig — the endpoint returns a page object whose
+  // children are the tabs (same shape as a browse endpoint).
   return {
     path: TABS_ROUTE_PATH,
     browseConfig: source
