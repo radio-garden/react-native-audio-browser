@@ -67,6 +67,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
+// media3's configurable stuck-buffering (type-1, STUCK_BUFFERING_NO_PROGRESS) timeout. Fires only on
+// zero loading progress; 60s of silent non-progress is already a bad live-radio experience, while
+// the media3 default of 600s would mean 10 minutes of dead air. (Type-0 STUCK_BUFFERING_NOT_LOADING
+// is a separate, uncontrollable fixed-4s check.)
+private const val STUCK_BUFFERING_DETECTION_TIMEOUT_MS = 60_000
+
 @SuppressLint("RestrictedApi")
 class Player(internal val context: Context) {
   val appKilledPlaybackBehavior: AppKilledPlaybackBehavior
@@ -666,6 +672,7 @@ class Player(internal val context: Context) {
         .setBandwidthMeter(bandwidthMeter)
         .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
         .setMediaSourceFactory(mediaFactory)
+        .setStuckBufferingDetectionTimeoutMs(STUCK_BUFFERING_DETECTION_TIMEOUT_MS)
         .setWakeMode(
           when (setupOptions.wakeMode) {
             AndroidPlayerWakeMode.NONE -> C.WAKE_MODE_NONE
