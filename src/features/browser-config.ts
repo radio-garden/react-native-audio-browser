@@ -254,7 +254,7 @@ export function validateBrowserConfiguration(
             `route "${path}" matched no source shape — expected a callback, ` +
               `a request config ({ baseUrl, path, headers, ... }), a ` +
               `RouteConfig ({ browse, media, artwork }), or a static page ` +
-              `({ url, title, children }). It will be served as static ` +
+              `({ url, title, children? }). It will be served as static ` +
               `content and likely render a blank screen.`
           )
         }
