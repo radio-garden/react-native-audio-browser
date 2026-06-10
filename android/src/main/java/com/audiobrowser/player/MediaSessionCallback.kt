@@ -583,12 +583,14 @@ class MediaSessionCallback(private val player: Player) :
    *
    * @param mediaSession The media session
    * @param controller The controller requesting resumption
-   * @param playback True if playback should start, false if just gathering info for UI
+   * @param isForPlayback True if this should start playback; false if just gathering info for the
+   *   boot-time resumption notification (no network; local metadata only).
    * @see https://developer.android.com/media/media3/session/background-playback#resumption
    */
   override fun onPlaybackResumption(
     mediaSession: MediaSession,
     controller: MediaSession.ControllerInfo,
+    isForPlayback: Boolean,
   ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
     Timber.d("${controller.packageName}")
 
@@ -601,6 +603,18 @@ class MediaSessionCallback(private val player: Player) :
             Timber.w("No persisted playback state found")
             throw IllegalStateException("No playback state to resume")
           }
+
+      // isForPlayback == false is the device-boot-time notification case: network may be
+      // unavailable and we must not start playback. Return just the locally-stored track with its
+      // already-local metadata; skip the network queue expansion below.
+      if (!isForPlayback) {
+        Timber.d("Info-gathering resumption (boot-time); returning stored track without expansion")
+        return@future MediaSession.MediaItemsWithStartPosition(
+          ImmutableList.of(TrackFactory.toMedia3(state.track)),
+          0,
+          state.positionMs,
+        )
+      }
 
       val url = state.track.url
       Timber.d("Resuming from url=$url, positionMs=${state.positionMs}")
