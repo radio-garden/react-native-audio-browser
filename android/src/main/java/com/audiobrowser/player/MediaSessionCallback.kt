@@ -252,7 +252,13 @@ class MediaSessionCallback(private val player: Player) :
       // The error / offline tiles are dead-ends. Some controllers (e.g. Android Auto when online)
       // treat a non-browsable tile as tappable and subscribe to its mediaId anyway; returning the
       // error tile again here would push an endless stack of error pages. Return nothing instead.
+      // For the offline tile, re-send the alert when still offline so a tap surfaces the
+      // explanation again — but only then, since these paths are also re-queried by
+      // notifyChildrenChanged (e.g. when connectivity returns) without any user action.
       if (parentId == BrowserPathHelper.OFFLINE_PATH || parentId == BrowserPathHelper.ERROR_PATH) {
+        if (parentId == BrowserPathHelper.OFFLINE_PATH && !player.networkMonitor.isOnline.value) {
+          sendBrowseError(session, browser, offline = true)
+        }
         return@future LibraryResult.ofItemList(ImmutableList.of<MediaItem>(), params)
       }
 
@@ -261,6 +267,7 @@ class MediaSessionCallback(private val player: Player) :
         !player.networkMonitor.isOnline.value && browserManager.config.androidControllerOfflineError
       ) {
         Timber.w("Network offline - returning error message for: $parentId")
+        sendBrowseError(session, browser, offline = true)
         return@future LibraryResult.ofItemList(ImmutableList.of(createOfflineMediaItem()), params)
       }
 
@@ -298,12 +305,48 @@ class MediaSessionCallback(private val player: Player) :
         // error tile. awaitBrowser's TimeoutCancellationException IS a real failure, keep that.
         if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting children for parentId: $parentId")
-        // Surface an error tile instead of a bare ofError(): Media3 drops the error on the legacy
-        // browse bridge, which would otherwise leave an empty "No items" screen in Android Auto.
-        // See https://github.com/androidx/media/issues/2901
+        // Surface an error tile instead of a bare ofError(): Media3 drops the error message on the
+        // legacy browse bridge, which would otherwise leave an empty "No items" screen in Android
+        // Auto. See https://github.com/androidx/media/issues/2901
+        //
+        // Verified on a head unit (2026-06): the AA browse list NEVER renders error text — not for
+        // transient sendError, sticky non-fatal replication, or fatal replication
+        // (setLibraryErrorReplicationMode). Fatal replication does show the message on the
+        // playback screen, but presents the session as STATE_ERROR with no actions, hiding the
+        // now-playing item and transport controls — not worth it. Tiles remain the only in-browse
+        // signal we control.
+        sendBrowseError(session, browser, offline = false)
         LibraryResult.ofItemList(ImmutableList.of(createBrowseErrorMediaItem()), params)
       }
     }
+  }
+
+  /**
+   * Sends a non-fatal [SessionError] to the controller whose browse failed, complementing the
+   * error tile. Media3 browsers receive it via MediaController.Listener.onError; for legacy
+   * controllers Media3 transiently attaches the error code/message to the platform session's
+   * playback state without entering STATE_ERROR.
+   *
+   * NOTE: current Android Auto renders NOTHING for this (verified on a head unit — see
+   * androidx/media#2901; the transient state is cleared microseconds after being set). It is kept
+   * because it is the correct Media3-API error signal, costs nothing, and becomes user-visible if
+   * Android Auto moves to consuming SessionError via the Media3 controller API.
+   *
+   * Dispatched to the main thread: the session and its legacy stub are application-thread bound.
+   */
+  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+  private fun sendBrowseError(
+    session: MediaLibraryService.MediaLibrarySession,
+    browser: MediaSession.ControllerInfo,
+    offline: Boolean,
+  ) {
+    val message =
+      player.context.getString(
+        if (offline) com.audiobrowser.R.string.audio_browser_offline_error
+        else com.audiobrowser.R.string.audio_browser_browse_error
+      )
+    val code = if (offline) SessionError.ERROR_IO else SessionError.ERROR_UNKNOWN
+    scope.launch(Dispatchers.Main) { session.sendError(browser, SessionError(code, message)) }
   }
 
   /**
