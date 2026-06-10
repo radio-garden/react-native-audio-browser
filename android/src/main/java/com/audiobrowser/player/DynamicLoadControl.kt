@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import androidx.media3.common.C
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.LoadControl
+import androidx.media3.exoplayer.analytics.PlayerId
 import androidx.media3.exoplayer.source.TrackGroupArray
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.upstream.Allocator
@@ -106,7 +107,9 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     updateBufferConfig(BufferConfig())
   }
 
-  override fun getAllocator(): Allocator = allocator
+  // media3 1.10 added a PlayerId parameter for multi-player allocator sharing. This LoadControl is
+  // only ever attached to a single ExoPlayer, so we return the same allocator regardless of player.
+  override fun getAllocator(playerId: PlayerId): Allocator = allocator
 
   override fun getBackBufferDurationUs(): Long = backBufferUs
 
