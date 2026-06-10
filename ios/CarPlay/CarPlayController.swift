@@ -562,7 +562,17 @@ public final class RNABCarPlayController: NSObject {
     navigatingPaths.insert(url)
 
     let template = makeLoadingTemplate(title: title, path: url)
-    interfaceController.pushTemplate(template, animated: true, completion: nil)
+    interfaceController.pushTemplate(template, animated: true) { [weak self] pushed, error in
+      guard !pushed else { return }
+      // The push can fail (e.g. CarPlay's template stack depth limit). The
+      // appear callback that normally clears the guard will never fire, so
+      // clear it here — otherwise the destination stays unreachable until
+      // CarPlay reconnects.
+      self?.navigatingPaths.remove(url)
+      if let error {
+        self?.logger.error("pushTemplate failed for \(url): \(error.localizedDescription)")
+      }
+    }
   }
 
   /// Builds an empty list template for a browse destination while it resolves.
