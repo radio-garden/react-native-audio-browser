@@ -30,12 +30,24 @@ import {
  * })
  * ```
  */
+let currentConfiguration: BrowserConfiguration | undefined
+
 export function configureBrowser(configuration: BrowserConfiguration): void {
   // __DEV__ is a React Native global; absent under plain node (vitest).
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     validateBrowserConfiguration(configuration)
   }
+  currentConfiguration = configuration
   nativeBrowser.configuration = toNativeConfig(configuration)
+}
+
+/**
+ * Returns the configuration last passed to {@link configureBrowser}, in its
+ * original public shape (the native getter exposes only the lowered internal
+ * form). `undefined` until the browser is configured.
+ */
+export function getBrowserConfiguration(): BrowserConfiguration | undefined {
+  return currentConfiguration
 }
 
 export function navigate(pathOrTrack: string | Track) {
