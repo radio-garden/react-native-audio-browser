@@ -215,6 +215,69 @@ function flattenRoutes(
   return entries.length > 0 ? entries : undefined
 }
 
+/** Android Auto / CarPlay display at most this many tabs. */
+const MAX_TABS = 4
+
+/** CarPlay supports at most this many now-playing buttons. */
+const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
+
+/**
+ * Dev-only sanity checks for a BrowserConfiguration. Warns (never throws) on
+ * mistakes the type system cannot catch: reserved route keys, route values
+ * that match no source shape (and would be served as garbage static content),
+ * and platform display limits. Called by configureBrowser under __DEV__.
+ */
+export function validateBrowserConfiguration(
+  config: BrowserConfiguration
+): void {
+  const warn = (message: string) =>
+    console.warn(`[react-native-audio-browser] configureBrowser: ${message}`)
+
+  if (config.routes) {
+    for (const [path, source] of Object.entries(config.routes)) {
+      if (path !== '*' && path.startsWith('__')) {
+        warn(
+          `route "${path}" uses the reserved "__" prefix and will conflict ` +
+            `with internal routing entries. Rename the route.`
+        )
+        continue
+      }
+      if (
+        !isCallback(source) &&
+        !isRouteConfig(source) &&
+        !isTransformableRequestConfig(source)
+      ) {
+        // Falls through to the static-page branch; a page needs url + title.
+        const page = source as Partial<ResolvedTrack>
+        if (typeof page.url !== 'string' || typeof page.title !== 'string') {
+          warn(
+            `route "${path}" matched no source shape — expected a callback, ` +
+              `a request config ({ baseUrl, path, headers, ... }), a ` +
+              `RouteConfig ({ browse, media, artwork }), or a static page ` +
+              `({ url, title, children }). It will be served as static ` +
+              `content and likely render a blank screen.`
+          )
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(config.tabs) && config.tabs.length > MAX_TABS) {
+    warn(
+      `${config.tabs.length} tabs configured; Android Auto and CarPlay ` +
+        `display at most ${MAX_TABS} — extra tabs will not be shown.`
+    )
+  }
+
+  const buttons = config.carPlayNowPlayingButtons
+  if (buttons && buttons.length > MAX_CARPLAY_NOW_PLAYING_BUTTONS) {
+    warn(
+      `${buttons.length} CarPlay now-playing buttons configured; CarPlay ` +
+        `shows at most ${MAX_CARPLAY_NOW_PLAYING_BUTTONS}.`
+    )
+  }
+}
+
 export function toNativeConfig(
   config: BrowserConfiguration
 ): NativeBrowserConfiguration {

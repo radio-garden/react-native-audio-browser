@@ -2,7 +2,11 @@ import type { BrowserConfiguration, ResolvedTrack, Track } from '../types'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
-import { SEARCH_ROUTE_PATH, toNativeConfig } from './browser-config'
+import {
+  SEARCH_ROUTE_PATH,
+  toNativeConfig,
+  validateBrowserConfiguration
+} from './browser-config'
 
 /**
  * Configures the browser with routes, tabs, and other settings.
@@ -27,6 +31,10 @@ import { SEARCH_ROUTE_PATH, toNativeConfig } from './browser-config'
  * ```
  */
 export function configureBrowser(configuration: BrowserConfiguration): void {
+  // __DEV__ is a React Native global; absent under plain node (vitest).
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    validateBrowserConfiguration(configuration)
+  }
   nativeBrowser.configuration = toNativeConfig(configuration)
 }
 

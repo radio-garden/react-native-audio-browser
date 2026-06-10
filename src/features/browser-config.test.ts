@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { toNativeConfig } from './browser-config'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { toNativeConfig, validateBrowserConfiguration } from './browser-config'
 
 function entryFor(
   routes: Parameters<typeof toNativeConfig>[0]['routes'],
@@ -46,5 +46,80 @@ describe('toNativeConfig route classification', () => {
       routes: { '*': { baseUrl: 'https://api.example.com' } }
     })
     expect(native.routes?.[0]?.path).toBe('__default__')
+  })
+})
+
+describe('validateBrowserConfiguration', () => {
+  let warnings: string[]
+
+  beforeEach(() => {
+    warnings = []
+    vi.spyOn(console, 'warn').mockImplementation((message: unknown) => {
+      warnings.push(String(message))
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('is silent for a valid configuration', () => {
+    validateBrowserConfiguration({
+      routes: {
+        '/favorites': async () => ({ url: '/favorites', title: 'Favorites' }),
+        '/albums/{id}': { baseUrl: 'https://api.example.com' },
+        '*': { baseUrl: 'https://api.example.com' }
+      },
+      tabs: [
+        { title: 'Home', url: '/' },
+        { title: 'Search', url: '/search' }
+      ],
+      carPlayNowPlayingButtons: ['shuffle', 'repeat']
+    })
+    expect(warnings).toEqual([])
+  })
+
+  it('warns on reserved "__" route keys', () => {
+    validateBrowserConfiguration({
+      routes: { __tabs__: { baseUrl: 'https://api.example.com' } }
+    })
+    expect(warnings.some((w) => w.includes('reserved'))).toBe(true)
+  })
+
+  it('warns when a route value matches no source shape', () => {
+    validateBrowserConfiguration({
+      routes: { '/x': {} as never }
+    })
+    expect(warnings.some((w) => w.includes('matched no source shape'))).toBe(
+      true
+    )
+  })
+
+  it('does not flag a valid static page as unclassifiable', () => {
+    validateBrowserConfiguration({
+      routes: { '/x': { url: '/x', title: 'X', children: [] } }
+    })
+    expect(warnings).toEqual([])
+  })
+
+  it('warns on more than 4 static tabs', () => {
+    validateBrowserConfiguration({
+      tabs: [1, 2, 3, 4, 5].map((n) => ({ title: `Tab ${n}`, url: `/${n}` }))
+    })
+    expect(warnings.some((w) => w.includes('at most 4'))).toBe(true)
+  })
+
+  it('warns on more than 5 CarPlay now-playing buttons', () => {
+    validateBrowserConfiguration({
+      carPlayNowPlayingButtons: [
+        'shuffle',
+        'repeat',
+        'favorite',
+        'playback-rate',
+        'shuffle',
+        'repeat'
+      ]
+    })
+    expect(warnings.some((w) => w.includes('at most 5'))).toBe(true)
   })
 })
