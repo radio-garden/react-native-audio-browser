@@ -14,6 +14,14 @@ describe('assertBrowsePageShape', () => {
   })
 
   it('rejects non-object bodies', () => {
-    expect(() => assertBrowsePageShape('nope', '/x')).toThrow(/page object/)
+    expect(() => assertBrowsePageShape('nope', '/x')).toThrow(
+      /Browse endpoint for "\/x" returned "nope"/
+    )
+  })
+
+  it('rejects null bodies', () => {
+    expect(() => assertBrowsePageShape(null, '/x')).toThrow(
+      /returned null.*page object/
+    )
   })
 })

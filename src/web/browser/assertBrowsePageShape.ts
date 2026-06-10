@@ -13,14 +13,14 @@ export function assertBrowsePageShape(
   if (Array.isArray(response)) {
     throw new Error(
       `Browse endpoint for "${path}" returned a JSON array; expected a ` +
-        `page object { title, children: Track[] }. Wrap the rows in a ` +
+        `page object { title, children?: Track[] }. Wrap the rows in a ` +
         `\`children\` array.`
     )
   }
   if (response === null || typeof response !== 'object') {
     throw new Error(
       `Browse endpoint for "${path}" returned ${JSON.stringify(response)}; ` +
-        `expected a page object { title, children: Track[] }.`
+        `expected a page object { title, children?: Track[] }.`
     )
   }
   return response as ResolvedTrack
