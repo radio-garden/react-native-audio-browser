@@ -5,8 +5,8 @@ package com.audiobrowser.player
  * [androidx.media3.common.util.StuckPlayerException] before surfacing a terminal error.
  *
  * media3 1.9.0 detects a stuck player and reports it through Player.Listener.onPlayerError. We
- * recover (re-prepare / rejoin live edge) rather than going to ERROR, because for a live-radio app a
- * transient stall should reconnect, not stop playback. But a genuinely dead stream would re-fire
+ * recover (re-prepare / rejoin live edge) rather than going to ERROR, because for a live-radio app
+ * a transient stall should reconnect, not stop playback. But a genuinely dead stream would re-fire
  * forever, so we allow at most [maxRecoveries] recoveries. The budget refills only when the caller
  * has proof the stream is alive (sustained playback) or on a track change — both via [reset]. Once
  * the cap is exceeded the decision stays [Decision.GIVE_UP] (it does not self-refill), so a dead
