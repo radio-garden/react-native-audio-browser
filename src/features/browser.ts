@@ -40,7 +40,8 @@ function isTransformableRequestConfig(
     'path' in obj ||
     'headers' in obj ||
     'query' in obj ||
-    'transform' in obj
+    'transform' in obj ||
+    'transformSync' in obj
   )
 }
 
@@ -55,13 +56,19 @@ function splitLayer(
   layer: TransformableRequestConfig | RequestConfigResolver | undefined
 ): {
   config?: TransformableRequestConfig
-  resolver?: RequestConfigResolver
+  resolver?: () => Promise<TransformableRequestConfig>
 } {
   if (!layer) return {}
   // A function is a resolver thunk; an object is a static layer config. (The
   // `request`/`browse` layer fields are object-only today, so this is
   // unambiguous — unlike route/search sources which already accept a callback.)
-  if (isCallback(layer)) return { resolver: layer as RequestConfigResolver }
+  if (isCallback(layer)) {
+    const resolve = layer as RequestConfigResolver
+    // Normalize the sync-or-async resolver to Promise-only for the bridge so it
+    // never sees a `T | Promise<T>` variant (which misreads the async case).
+    // Resolvers run once per content generation, so the wrap costs nothing.
+    return { resolver: () => Promise.resolve(resolve()) }
+  }
   return { config: layer as TransformableRequestConfig }
 }
 

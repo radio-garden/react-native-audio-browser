@@ -277,19 +277,19 @@ class CoilBitmapLoader(
           baseConfig
         }
 
-      // If there's a resolve callback, call it to get per-track config
-      // The resolve callback receives the track directly and can return:
-      // - RequestConfig with path/query/etc for URL generation
-      // - undefined to indicate no artwork
-      // resolve may return its config synchronously (first) or via a Promise (second).
-      val resolvedConfig =
-        effectiveArtworkConfig.resolve
-          ?.invoke(track)
-          ?.await()
-          ?.match(first = { it }, second = { it.await() })
+      // Per-track resolution — async `resolve` first, then `resolveSync` merged over
+      // it (sync winning) via the tested helper. Mirrors iOS resolveArtworkUrl.
+      val asyncResolved =
+        effectiveArtworkConfig.resolve?.let { RequestConfigBuilder.awaitAsyncConfig(it.invoke(track)) }
+      val syncResolved =
+        effectiveArtworkConfig.resolveSync?.let { RequestConfigBuilder.awaitSyncConfig(it.invoke(track)) }
+      val resolvedConfig = RequestConfigBuilder.composeResolved(asyncResolved, syncResolved)
 
-      // If resolve callback exists and returned null, that means no artwork
-      if (effectiveArtworkConfig.resolve != null && resolvedConfig == null) {
+      // If a resolver ran but produced nothing, that means no artwork
+      if (
+        (effectiveArtworkConfig.resolve != null || effectiveArtworkConfig.resolveSync != null) &&
+          resolvedConfig == null
+      ) {
         return null
       }
 
@@ -333,16 +333,16 @@ class CoilBitmapLoader(
         }
       }
 
-      // Apply transform callback if present (can override imageQueryParams)
-      var transformedConfig =
-        if (effectiveArtworkConfig.transform != null) {
-          effectiveArtworkConfig.transform
-            .invoke(MediaTransformParams(mergedConfig, imageContext))
-            ?.await()
-            ?.match(first = { it }, second = { it.await() }) ?: mergedConfig
-        } else {
-          mergedConfig
-        }
+      // Apply transform (can override imageQueryParams) — async first, then sync.
+      var transformedConfig = mergedConfig
+      effectiveArtworkConfig.transform?.let {
+        transformedConfig =
+          RequestConfigBuilder.awaitAsyncConfig(it.invoke(MediaTransformParams(transformedConfig, imageContext)))
+      }
+      effectiveArtworkConfig.transformSync?.let {
+        transformedConfig =
+          RequestConfigBuilder.awaitSyncConfig(it.invoke(MediaTransformParams(transformedConfig, imageContext)))
+      }
 
       // Substitute the `{id}` template token with the track's id across path/query/header values.
       // (Configs without the token are unaffected — e.g. browse artwork.) Only when the track has a

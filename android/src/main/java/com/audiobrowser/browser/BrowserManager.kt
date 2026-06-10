@@ -10,7 +10,7 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.FavoritesMatchMode
-import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -1046,18 +1046,19 @@ class BrowserManager {
 
   /**
    * Resolves a single request/browse layer. When a resolver thunk is present it is invoked and its
-   * result awaited; the resolver may return either a sync [TransformableRequestConfig] (variant
-   * first arm) or a `Promise<TransformableRequestConfig>` (second arm). When there is no resolver
-   * the static layer config is returned as-is.
+   * result awaited. The resolver is Promise-only (the TS layer normalizes a sync-or-async thunk via
+   * Promise.resolve), so its native shape is `Promise<Promise<TransformableRequestConfig>>` — a
+   * double await. When there is no resolver the static layer config is returned as-is.
    */
   private suspend fun resolveLayer(
     staticConfig: TransformableRequestConfig?,
     resolver:
-      Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____?,
+      Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____?,
   ): TransformableRequestConfig? {
     if (resolver == null) return staticConfig
-    val variant = resolver.invoke().await()
-    return variant.match(first = { it }, second = { it.await() })
+    // Promise-only resolver (the TS layer wraps a sync-or-async thunk in
+    // Promise.resolve) → double await: the bridge promise, then the JS promise.
+    return resolver.invoke().await().await()
   }
 
   /**
@@ -1128,6 +1129,15 @@ class BrowserManager {
       }
       apiConfig?.let {
         mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
+      }
+
+      // No URL configured (no request baseUrl and no route override that supplies
+      // one) → there is nothing to fetch, so the path is genuinely "not found"
+      // rather than a network error. Mirrors iOS's `guard let baseUrl` in
+      // buildApiRequest. Without this, an unconfigured navigate builds a relative
+      // URL that fails as an opaque IllegalArgumentException/NetworkException.
+      if (mergedConfig.baseUrl.isNullOrBlank()) {
+        throw ContentNotFoundException(path)
       }
 
       // Build and execute HTTP request
@@ -1216,6 +1226,7 @@ class BrowserManager {
         val searchConfig =
           TransformableRequestConfig(
             transform = apiConfig.transform,
+            transformSync = apiConfig.transformSync,
             method = apiConfig.method,
             path = apiConfig.path,
             baseUrl = apiConfig.baseUrl,
@@ -1283,12 +1294,12 @@ data class BrowserConfig(
   // of carrying a static `request`. `request` and `requestResolver` are mutually exclusive in
   // practice (the consumer sets one or the other), but both are merged if present.
   val requestResolver:
-    Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____? =
+    Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____? =
     null,
   val browse: TransformableRequestConfig? = null,
   // Resolver thunk for the browse layer. See `requestResolver`.
   val browseResolver:
-    Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____? =
+    Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____? =
     null,
   val media: MediaRequestConfig? = null,
   val artwork: ArtworkRequestConfig? = null,

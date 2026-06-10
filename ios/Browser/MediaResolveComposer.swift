@@ -56,15 +56,33 @@ enum MediaResolveComposer {
     case async(() async throws -> Config)
   }
 
-  /// Unwraps a variant into a concrete config, awaiting the async arm if needed.
-  /// Mirrors the `switch variant { case .first / .second }` shape used for the
-  /// Nitro `Variant_RequestConfig_Promise_RequestConfig_`.
+  /// Unwraps a sync/async config into a concrete config, awaiting the async arm
+  /// if needed. (Production no longer uses a Nitro variant — `resolve`/`resolveSync`
+  /// are separate fields — but this stays as a pure, testable composition helper.)
   static func unwrap<Config>(_ variant: ResolveVariant<Config>) async throws -> Config {
     switch variant {
     case let .sync(config):
       config
     case let .async(makeConfig):
       try await makeConfig()
+    }
+  }
+
+  /// Run-both resolve composition: the async-resolved config first, then the
+  /// sync-resolved merged over it (sync winning) via `combine`. `nil` when neither
+  /// produced a config. Generic so it is shared verbatim by production (Nitro
+  /// `RequestConfig` + `mergeRequestConfig`) and tests (`RequestConfigLike` +
+  /// `merge`) — one implementation, exercised on both sides.
+  static func composeResolved<C>(
+    async asyncResolved: C?,
+    sync syncResolved: C?,
+    combine: (C, C) -> C,
+  ) -> C? {
+    switch (asyncResolved, syncResolved) {
+    case (nil, nil): nil
+    case let (value?, nil): value
+    case let (nil, value?): value
+    case let (a?, s?): combine(a, s)
     }
   }
 

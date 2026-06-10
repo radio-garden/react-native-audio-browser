@@ -112,10 +112,20 @@ export interface SearchParams {
 }
 
 export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
+// Sync and async transforms are SEPARATE fields (`transform` / `transformSync`),
+// never a `T | Promise<T>` union. A union lowers to a Nitro `variant<Struct,
+// Promise<Struct>>`, and an all-optional struct's `canConvert` also accepts a
+// Promise — so the async case is silently misread as an empty config. Two
+// single-typed fields keep both paths unambiguous, and the sync field allocates
+// no Promise. When both are set they run as a pipeline: async first, then sync.
 export type RequestConfigTransformer = (
   request: RequestConfig,
   routeParams?: Record<string, string>
-) => RequestConfig | Promise<RequestConfig>
+) => Promise<RequestConfig>
+export type RequestConfigTransformerSync = (
+  request: RequestConfig,
+  routeParams?: Record<string, string>
+) => RequestConfig
 
 export type HttpMethod =
   | 'GET'
@@ -215,9 +225,13 @@ export interface MediaTransformParams {
  * }
  * ```
  */
+// Split sync/async — see RequestConfigTransformer. Set `transform` and/or `transformSync`.
 export type MediaRequestConfigTransformer = (
   params: MediaTransformParams
-) => RequestConfig | Promise<RequestConfig>
+) => Promise<RequestConfig>
+export type MediaRequestConfigTransformerSync = (
+  params: MediaTransformParams
+) => RequestConfig
 
 /**
  * Request configuration that supports async transformation.
@@ -242,7 +256,10 @@ export type MediaRequestConfigTransformer = (
  * ```
  */
 export interface TransformableRequestConfig extends RequestConfig {
+  /** Async per-request transform. When both are set, runs BEFORE `transformSync`. */
   transform?: RequestConfigTransformer
+  /** Sync per-request transform (no Promise allocation). When both are set, runs AFTER `transform`. */
+  transformSync?: RequestConfigTransformerSync
 }
 
 /**
@@ -422,7 +439,10 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    * })
    * ```
    */
-  resolve?: (track: Track) => RequestConfig | Promise<RequestConfig>
+  /** Async per-track resolution. When both are set, runs (merged) BEFORE `resolveSync`. */
+  resolve?: (track: Track) => Promise<RequestConfig>
+  /** Sync per-track resolution (no Promise allocation). When both are set, runs (merged) AFTER `resolve`. */
+  resolveSync?: (track: Track) => RequestConfig
 }
 
 export interface ArtworkRequestConfig extends RequestConfig {
@@ -448,7 +468,10 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
-  resolve?: (track: Track) => RequestConfig | Promise<RequestConfig>
+  /** Async per-track resolution. When both are set, runs (merged) BEFORE `resolveSync`. */
+  resolve?: (track: Track) => Promise<RequestConfig>
+  /** Sync per-track resolution (no Promise allocation). When both are set, runs (merged) AFTER `resolve`. */
+  resolveSync?: (track: Track) => RequestConfig
 
   /**
    * Final transformation callback for media/artwork requests.
@@ -479,7 +502,10 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
+  /** Async final transform. When both are set, runs BEFORE `transformSync`. */
   transform?: MediaRequestConfigTransformer
+  /** Sync final transform (no Promise allocation). When both are set, runs AFTER `transform`. */
+  transformSync?: MediaRequestConfigTransformerSync
 
   /**
    * Query parameter names for automatic context injection from CarPlay/Android Auto.

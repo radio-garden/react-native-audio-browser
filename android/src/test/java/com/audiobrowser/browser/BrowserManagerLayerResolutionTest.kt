@@ -39,6 +39,7 @@ class BrowserManagerLayerResolutionTest {
   private fun staticConfig(path: String): TransformableRequestConfig =
     TransformableRequestConfig(
       transform = null,
+      transformSync = null,
       method = null,
       path = path,
       baseUrl = null,

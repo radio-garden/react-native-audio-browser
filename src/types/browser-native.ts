@@ -13,11 +13,16 @@ import type {
   FormatNavigationErrorCallback,
   HandleTrackLoadCallback,
   MediaRequestConfig,
-  RequestConfigResolver,
   SearchSourceCallback,
   TransformableRequestConfig
 } from './browser'
 import type { ResolvedTrack } from './browser-nodes'
+
+// Native resolvers are Promise-only. The public `request`/`browse` resolver may
+// return its config sync OR async; `toNativeConfig` wraps it in Promise.resolve so
+// the bridge never sees a `T | Promise<T>` variant (which would misread the async
+// case). Resolvers run once per content generation, so the wrap is free.
+type NativeRequestConfigResolver = () => Promise<TransformableRequestConfig>
 
 /**
  * Flattened route entry for native bridge.
@@ -47,11 +52,11 @@ export interface NativeBrowserConfiguration {
   // The union `TransformableRequestConfig | RequestConfigResolver` from the public
   // API is lowered here into two sibling fields (mirrors browseCallback/browseConfig).
   request?: TransformableRequestConfig
-  requestResolver?: RequestConfigResolver
+  requestResolver?: NativeRequestConfigResolver
 
   // Per-kind request config, layered request → <kind> → route.
   browse?: TransformableRequestConfig
-  browseResolver?: RequestConfigResolver
+  browseResolver?: NativeRequestConfigResolver
   media?: MediaRequestConfig
   artwork?: ArtworkRequestConfig
   nowPlayingArtwork?: ArtworkRequestConfig

@@ -474,17 +474,23 @@ final class BrowserManager {
   }
 
   /// Applies one request-config layer (request / browse / route) onto a base.
-  /// A layer with a transform wins completely (it receives the base and returns
-  /// the result); otherwise the layer's static fields merge over the base.
-  /// `path` is carried from the base (only a transform may change it).
+  /// A transform (async and/or sync) wins completely: it receives the base and its
+  /// result replaces it. When both are set they run as a pipeline — async first,
+  /// then sync. Otherwise the layer's static fields merge over the base. `path` is
+  /// carried from the base (only a transform may change it).
   func applyLayer(
     _ layer: TransformableRequestConfig?,
     to base: RequestConfig,
     params: [String: String],
   ) async throws -> RequestConfig {
     guard let layer else { return base }
-    if let transform = layer.transform {
-      return try await applyTransform(transform, request: base, params: params)
+    // Run-both transform: async first, then sync (each replaces the running config).
+    // The bridge await depth — the bug-prone part — is centralised in awaitAsync/SyncConfig.
+    if layer.transform != nil || layer.transformSync != nil {
+      var result = base
+      if let transform = layer.transform { result = try await awaitAsyncConfig(transform(result, params)) }
+      if let transformSync = layer.transformSync { result = try await awaitSyncConfig(transformSync(result, params)) }
+      return result
     }
     return RequestConfig(
       method: layer.method ?? base.method,
@@ -495,33 +501,6 @@ final class BrowserManager {
       body: layer.body ?? base.body,
       contentType: layer.contentType ?? base.contentType,
       userAgent: layer.userAgent ?? base.userAgent,
-    )
-  }
-
-  /// Invokes a request `transform` (global or per-route) and copies the result
-  /// out of the Nitro bridge immediately to avoid use-after-free when the
-  /// `Promise<RequestConfig>` is deallocated.
-  func applyTransform(
-    _ transform: @escaping (RequestConfig, [String: String]?) -> Promise<Variant_RequestConfig_Promise_RequestConfig_>,
-    request: RequestConfig,
-    params: [String: String],
-  ) async throws -> RequestConfig {
-    // The transform may return its config synchronously (`.first`) or via a
-    // Promise (`.second`); both arms yield the same RequestConfig.
-    let result: RequestConfig
-    switch try await transform(request, params).await() {
-    case let .first(config): result = config
-    case let .second(promise): result = try await promise.await()
-    }
-    return RequestConfig(
-      method: result.method,
-      path: result.path,
-      baseUrl: result.baseUrl,
-      headers: result.headers,
-      query: result.query,
-      body: result.body,
-      contentType: result.contentType,
-      userAgent: result.userAgent,
     )
   }
 
@@ -536,18 +515,16 @@ final class BrowserManager {
 
   // MARK: - Layer Resolvers
 
-  /// Resolve one layer: invoke its resolver (sync or async arm) if present,
-  /// else return the static layer config unchanged.
+  /// Resolve one layer: invoke its resolver if present, else return the static
+  /// layer config unchanged. The resolver is Promise-only (the TS layer wraps a
+  /// sync-or-async thunk in Promise.resolve), so its result is the JS promise
+  /// behind the bridge promise — a double await.
   private func resolveLayer(
     config staticConfig: TransformableRequestConfig?,
-    resolver: (() -> Promise<Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_>)?,
+    resolver: (() -> Promise<Promise<TransformableRequestConfig>>)?,
   ) async throws -> TransformableRequestConfig? {
     guard let resolver else { return staticConfig }
-    let variant = try await resolver().await()
-    switch variant {
-    case let .first(config): return config
-    case let .second(promise): return try await promise.await()
-    }
+    return try await resolver().await().await()
   }
 
   /// Ensure request/browse resolvers are resolved for the current generation,

@@ -41,7 +41,6 @@ namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include <variant>
 #include "Track.hpp"
 #include <functional>
 #include <optional>
@@ -58,8 +57,10 @@ namespace margelo::nitro::audiobrowser {
    */
   struct ArtworkRequestConfig final {
   public:
-    std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const Track& /* track */)>> resolve     SWIFT_PRIVATE;
-    std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>> transform     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> resolve     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const Track& /* track */)>> resolveSync     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> transform     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const MediaTransformParams& /* params */)>> transformSync     SWIFT_PRIVATE;
     std::optional<ImageQueryParams> imageQueryParams     SWIFT_PRIVATE;
     std::optional<HttpMethod> method     SWIFT_PRIVATE;
     std::optional<std::string> path     SWIFT_PRIVATE;
@@ -72,10 +73,10 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     ArtworkRequestConfig() = default;
-    explicit ArtworkRequestConfig(std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const Track& /* track */)>> resolve, std::optional<std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>> transform, std::optional<ImageQueryParams> imageQueryParams, std::optional<HttpMethod> method, std::optional<std::string> path, std::optional<std::string> baseUrl, std::optional<std::unordered_map<std::string, std::string>> headers, std::optional<std::unordered_map<std::string, std::string>> query, std::optional<std::string> body, std::optional<std::string> contentType, std::optional<std::string> userAgent): resolve(resolve), transform(transform), imageQueryParams(imageQueryParams), method(method), path(path), baseUrl(baseUrl), headers(headers), query(query), body(body), contentType(contentType), userAgent(userAgent) {}
+    explicit ArtworkRequestConfig(std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>> resolve, std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const Track& /* track */)>> resolveSync, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>> transform, std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const MediaTransformParams& /* params */)>> transformSync, std::optional<ImageQueryParams> imageQueryParams, std::optional<HttpMethod> method, std::optional<std::string> path, std::optional<std::string> baseUrl, std::optional<std::unordered_map<std::string, std::string>> headers, std::optional<std::unordered_map<std::string, std::string>> query, std::optional<std::string> body, std::optional<std::string> contentType, std::optional<std::string> userAgent): resolve(resolve), resolveSync(resolveSync), transform(transform), transformSync(transformSync), imageQueryParams(imageQueryParams), method(method), path(path), baseUrl(baseUrl), headers(headers), query(query), body(body), contentType(contentType), userAgent(userAgent) {}
 
   public:
-    // ArtworkRequestConfig is not equatable because these properties are not equatable: resolve, transform
+    // ArtworkRequestConfig is not equatable because these properties are not equatable: resolve, resolveSync, transform, transformSync
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -88,8 +89,10 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::ArtworkRequestConfig fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::ArtworkRequestConfig(
-        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::RequestConfig, std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>>(const margelo::nitro::audiobrowser::Track&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolve"))),
-        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::RequestConfig, std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "transform"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::Track&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolve"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>(const margelo::nitro::audiobrowser::Track&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolveSync"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "transform"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "transformSync"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageQueryParams>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageQueryParams"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "method"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path"))),
@@ -103,8 +106,10 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::ArtworkRequestConfig& arg) {
       jsi::Object obj(runtime);
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "resolve"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::RequestConfig, std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>>(const margelo::nitro::audiobrowser::Track&)>>>::toJSI(runtime, arg.resolve));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "transform"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::RequestConfig, std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::toJSI(runtime, arg.transform));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "resolve"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::Track&)>>>::toJSI(runtime, arg.resolve));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "resolveSync"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>(const margelo::nitro::audiobrowser::Track&)>>>::toJSI(runtime, arg.resolveSync));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "transform"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::toJSI(runtime, arg.transform));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "transformSync"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::toJSI(runtime, arg.transformSync));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "imageQueryParams"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageQueryParams>>::toJSI(runtime, arg.imageQueryParams));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "method"), JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::toJSI(runtime, arg.method));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "path"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.path));
@@ -124,8 +129,10 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
-      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::RequestConfig, std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>>(const margelo::nitro::audiobrowser::Track&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolve")))) return false;
-      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::RequestConfig, std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "transform")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::Track&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolve")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>(const margelo::nitro::audiobrowser::Track&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolveSync")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "transform")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<margelo::nitro::audiobrowser::RequestConfig>>(const margelo::nitro::audiobrowser::MediaTransformParams&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "transformSync")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageQueryParams>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "imageQueryParams")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::HttpMethod>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "method")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path")))) return false;

@@ -105,4 +105,22 @@ struct MediaResolveTests {
     #expect(MediaResolveComposer.mergeDicts(["a": "1"], nil) == ["a": "1"])
     #expect(MediaResolveComposer.mergeDicts(nil, ["b": "2"]) == ["b": "2"])
   }
+
+  // MARK: - Run-both resolve composition
+
+  @Test("resolve composition merges async then sync (sync wins); nil when neither")
+  func composeResolved() {
+    // Same `combine` production uses (mergeRequestConfig), here over the test type.
+    let combine: (Config, Config) -> Config = { MediaResolveComposer.merge(base: $0, override: $1) }
+    #expect(MediaResolveComposer.composeResolved(async: nil, sync: nil, combine: combine) == nil)
+
+    let a = Config(baseUrl: "https://async.example.com", userAgent: "ASYNC")
+    let s = Config(userAgent: "SYNC")
+    let merged = MediaResolveComposer.composeResolved(async: a, sync: s, combine: combine)
+    #expect(merged?.userAgent == "SYNC") // sync wins
+    #expect(merged?.baseUrl == "https://async.example.com") // async's baseUrl survives
+
+    #expect(MediaResolveComposer.composeResolved(async: a, sync: nil, combine: combine)?.userAgent == "ASYNC")
+    #expect(MediaResolveComposer.composeResolved(async: nil, sync: s, combine: combine)?.userAgent == "SYNC")
+  }
 }

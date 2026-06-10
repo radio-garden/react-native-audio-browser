@@ -56,6 +56,14 @@ android {
   ndkVersion getExtOrDefault("ndkVersion")
   compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
 
+  // JVM unit tests don't link the Android framework, so un-mocked android.* calls
+  // (e.g. android.util.LruCache.evictAll) throw "not mocked". Returning default
+  // values makes them no-ops so logic-only tests (e.g. layer-generation caching)
+  // can exercise code paths that touch framework types.
+  testOptions {
+    unitTests.returnDefaultValues = true
+  }
+
   defaultConfig {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")

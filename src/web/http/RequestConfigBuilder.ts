@@ -108,8 +108,14 @@ export const RequestConfigBuilder = {
     params?: Record<string, string>
   ): Promise<RequestConfig> {
     if (!layer) return base
-    if (layer.transform) {
-      return layer.transform(base, params)
+    // A transform (async and/or sync) wins completely: it receives the base and
+    // its result replaces it. When both are set they run as a pipeline — async
+    // first, then sync (mirrors native applyLayer).
+    if (layer.transform || layer.transformSync) {
+      let cfg = base
+      if (layer.transform) cfg = await layer.transform(cfg, params)
+      if (layer.transformSync) cfg = layer.transformSync(cfg, params)
+      return cfg
     }
     return {
       method: layer.method ?? base.method,
@@ -283,14 +289,23 @@ export const RequestConfigBuilder = {
       // Its transform (if any) runs for artwork too — e.g. a dynamic baseUrl.
       const baseConfig = await this.applyLayer({ path: artworkUrl }, requestConfig)
 
-      // Step 1: Call resolve callback if provided to get per-track config
+      // Step 1: Per-track resolution — async `resolve` first, then `resolveSync`
+      // merged over it (mirrors native).
       let resolvedConfig: RequestConfig | undefined
       if (artworkConfig.resolve) {
         resolvedConfig = await artworkConfig.resolve(track)
-        // If resolve callback returned null/undefined, that means no artwork
-        if (!resolvedConfig && artworkUrl === undefined) {
-          return undefined
-        }
+      }
+      if (artworkConfig.resolveSync) {
+        const r = artworkConfig.resolveSync(track)
+        resolvedConfig = resolvedConfig ? this.mergeConfig(resolvedConfig, r) : r
+      }
+      // If a resolver ran but produced nothing and there's no artwork URL, no artwork
+      if (
+        (artworkConfig.resolve || artworkConfig.resolveSync) &&
+        !resolvedConfig &&
+        artworkUrl === undefined
+      ) {
+        return undefined
       }
 
       // Step 2: Merge base config + resolved per-track config
@@ -306,9 +321,15 @@ export const RequestConfigBuilder = {
         imageContext
       )
 
-      // Step 4: Apply transform callback if present
+      // Step 4: Apply transform — async first, then sync (pipeline)
       if (artworkConfig.transform) {
         mergedConfig = await artworkConfig.transform({
+          request: mergedConfig,
+          context: imageContext
+        })
+      }
+      if (artworkConfig.transformSync) {
+        mergedConfig = artworkConfig.transformSync({
           request: mergedConfig,
           context: imageContext
         })

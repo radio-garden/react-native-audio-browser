@@ -59,15 +59,19 @@ extension BrowserManager {
       )
     }
 
-    // If there's a transform function, call it
-    if let transform = mediaConfig.transform {
+    // If there's a transform (async and/or sync), run it as a pipeline: async
+    // first, then sync. Each result is copied out of the Nitro bridge immediately
+    // (extractConfig) to avoid use-after-free when the Promise is deallocated.
+    if mediaConfig.transform != nil || mediaConfig.transformSync != nil {
       do {
         logger.debug("resolveMediaUrl: calling transform callback...")
-        // unwrapConfigVariant awaits the outer Nitro promise, then resolves the
-        // sync (.first) or async (.second) arm and copies values immediately to
-        // Swift native types to avoid memory corruption in Nitro's Swift-C++
-        // bridge when the bridged config/Promise is deallocated.
-        let transformedConfig = try await unwrapConfigVariant(transform(baseRequest, nil).await())
+        var transformedConfig = baseRequest
+        if let transform = mediaConfig.transform {
+          transformedConfig = try await awaitAsyncConfig(transform(transformedConfig, nil))
+        }
+        if let transformSync = mediaConfig.transformSync {
+          transformedConfig = try await awaitSyncConfig(transformSync(transformedConfig, nil))
+        }
         logger.debug("resolveMediaUrl: transform complete")
 
         let merged = applyMediaResolveLayer(
@@ -115,13 +119,20 @@ extension BrowserManager {
     return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
   }
 
-  /// Invokes the consumer-supplied `media.resolve(track)` and unwraps the
-  /// returned variant (sync `RequestConfig` or `Promise<RequestConfig>`) into a
-  /// concrete `RequestConfig`. Returns `nil` when no `resolve` is configured or
-  /// no track is available. Mirrors `resolveLayer`'s variant handling.
+  /// Invokes the consumer-supplied `media.resolve`/`resolveSync(track)` and merges
+  /// the results (async first, then sync, sync winning) into a concrete
+  /// `RequestConfig`. Returns `nil` when neither is configured or no track is
+  /// available. Each result is copied out of the Nitro bridge immediately.
   func resolveMediaTrackConfig(_ track: Track?) async throws -> RequestConfig? {
-    guard let track, let resolve = config.media?.resolve else { return nil }
-    return try await unwrapConfigVariant(resolve(track).await())
+    guard let track, let media = config.media else { return nil }
+    var asyncResolved: RequestConfig?
+    if let resolve = media.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
+    var syncResolved: RequestConfig?
+    if let resolveSync = media.resolveSync { syncResolved = try await awaitSyncConfig(resolveSync(track)) }
+    return MediaResolveComposer.composeResolved(
+      async: asyncResolved, sync: syncResolved,
+      combine: { self.mergeRequestConfig(base: $0, override: $1) },
+    )
   }
 
   /// Merges the resolve layer (most specific, override-wins) over `base`.
@@ -182,9 +193,17 @@ extension BrowserManager {
         params: [:],
       )
 
-      if let resolve = artworkConfig.resolve {
-        let resolvedConfig = try await unwrapConfigVariant(resolve(track).await())
-        mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolvedConfig)
+      if artworkConfig.resolve != nil || artworkConfig.resolveSync != nil {
+        var asyncResolved: RequestConfig?
+        if let resolve = artworkConfig.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
+        var syncResolved: RequestConfig?
+        if let resolveSync = artworkConfig.resolveSync { syncResolved = try await awaitSyncConfig(resolveSync(track)) }
+        if let resolved = MediaResolveComposer.composeResolved(
+          async: asyncResolved, sync: syncResolved,
+          combine: { self.mergeRequestConfig(base: $0, override: $1) },
+        ) {
+          mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolved)
+        }
       } else {
         let artworkStaticConfig = RequestConfig(
           method: artworkConfig.method,
@@ -229,12 +248,15 @@ extension BrowserManager {
         }
       }
 
-      // Skip transform at browse-time (no size context) — applied at load-time
+      // Skip transform at browse-time (no size context) — applied at load-time.
       let hasSize = imageContext?.width != nil || imageContext?.height != nil
-      if let transform = artworkConfig.transform, hasSize {
-        mergedConfig = try await unwrapConfigVariant(
-          transform(MediaTransformParams(request: mergedConfig, context: imageContext)).await()
-        )
+      if hasSize {
+        if let transform = artworkConfig.transform {
+          mergedConfig = try await awaitAsyncConfig(transform(MediaTransformParams(request: mergedConfig, context: imageContext)))
+        }
+        if let transformSync = artworkConfig.transformSync {
+          mergedConfig = try await awaitSyncConfig(transformSync(MediaTransformParams(request: mergedConfig, context: imageContext)))
+        }
       }
 
       // Substitute the `{id}` template token with the track's id across path/query/header values.
@@ -309,25 +331,25 @@ extension BrowserManager {
     )
   }
 
-  /// Unwraps a `Variant_RequestConfig_Promise_RequestConfig_` — the result of a
-  /// resolve/transform callback after awaiting the outer Nitro promise — into a
-  /// concrete, bridge-safe `RequestConfig`. `.first` is a synchronous config;
-  /// `.second` is a `Promise<RequestConfig>` that must be awaited. Both arms are
-  /// copied via `extractConfig` to avoid use-after-free of the bridged value.
-  private func unwrapConfigVariant(
-    _ variant: Variant_RequestConfig_Promise_RequestConfig_
-  ) async throws -> RequestConfig {
-    switch variant {
-    case let .first(requestConfig):
-      return extractConfig(requestConfig)
-    case let .second(promise):
-      return extractConfig(try await promise.await())
-    }
+  /// Awaits an **async** config callback and copies the result out of the Nitro
+  /// bridge. The callback lowers to `Promise<Promise<RequestConfig>>` (bridge hop →
+  /// JS promise), so it is a DOUBLE await. This await depth is the bug-prone part
+  /// (single-awaiting an async callback hands a `Promise` downstream — the original
+  /// "empty config" bug), so it lives in exactly one place. Pairs with `awaitSyncConfig`.
+  func awaitAsyncConfig(_ promise: Promise<Promise<RequestConfig>>) async throws -> RequestConfig {
+    extractConfig(try await promise.await().await())
+  }
+
+  /// Awaits a **sync** config callback (lowers to `Promise<RequestConfig>` — a single
+  /// bridge await) and copies the result out. Pairs with `awaitAsyncConfig`.
+  func awaitSyncConfig(_ promise: Promise<RequestConfig>) async throws -> RequestConfig {
+    extractConfig(try await promise.await())
   }
 
   /// Extracts all values from a RequestConfig into a new instance to avoid
   /// memory corruption in Nitro's Swift-C++ bridge when the Promise is deallocated.
-  private func extractConfig(_ config: RequestConfig) -> RequestConfig {
+  /// Internal so `applyLayer` (in BrowserManager.swift) can copy transform results.
+  func extractConfig(_ config: RequestConfig) -> RequestConfig {
     RequestConfig(
       method: config.method,
       path: config.path,

@@ -237,4 +237,27 @@ class RequestConfigBuilderTest {
 
     assertEquals("https://api.example.com/albums", result.url) // No query string
   }
+
+  // Run-both composition: the sync/async split replaced the old ambiguous variant.
+
+  @Test
+  fun `composeResolved merges async then sync with sync winning`() {
+    val async =
+      RequestConfig(null, null, "https://async.example.com", null, null, null, null, "ASYNC")
+    val sync = RequestConfig(null, null, null, null, null, null, null, "SYNC")
+
+    val merged = RequestConfigBuilder.composeResolved(async, sync)
+
+    assertEquals("SYNC", merged?.userAgent) // sync wins
+    assertEquals("https://async.example.com", merged?.baseUrl) // async's baseUrl survives
+  }
+
+  @Test
+  fun `composeResolved returns the single present side, or null for neither`() {
+    val cfg = RequestConfig(null, null, null, null, null, null, null, "ONLY")
+
+    assertEquals("ONLY", RequestConfigBuilder.composeResolved(cfg, null)?.userAgent)
+    assertEquals("ONLY", RequestConfigBuilder.composeResolved(null, cfg)?.userAgent)
+    assertNull(RequestConfigBuilder.composeResolved(null, null))
+  }
 }

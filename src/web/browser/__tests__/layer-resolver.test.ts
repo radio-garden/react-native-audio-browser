@@ -26,7 +26,7 @@ describe('BrowserManager layer resolver', () => {
     const manager = makeManager()
     manager.configuration = {
       path: '/',
-      requestResolver: () => {
+      requestResolver: async () => {
         calls += 1
         return { baseUrl: 'https://api.example.com' }
       }
@@ -41,7 +41,7 @@ describe('BrowserManager layer resolver', () => {
     const manager = makeManager()
     manager.configuration = {
       path: '/',
-      requestResolver: () => {
+      requestResolver: async () => {
         calls += 1
         return { baseUrl: 'https://api.example.com' }
       }

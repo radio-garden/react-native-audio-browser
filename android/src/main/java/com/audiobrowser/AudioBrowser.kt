@@ -310,7 +310,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
             // No media config: wrap the request-layered base as a MediaRequestConfig.
             MediaRequestConfig(
               resolve = null,
+              resolveSync = null,
               transform = null,
+              transformSync = null,
               method = base.method,
               path = base.path,
               baseUrl = base.baseUrl,

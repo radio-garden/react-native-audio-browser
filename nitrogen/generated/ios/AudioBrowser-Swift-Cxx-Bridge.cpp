@@ -62,19 +62,19 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
-  Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______RequestConfig_std__optional_std__unordered_map_std__string__std__string__::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams) mutable -> std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> {
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
       auto __result = swiftClosure.call(request, routeParams);
       return __result;
     };
   }
   
-  // pragma MARK: std::function<void(const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& /* result */)>
-  Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___ create_Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig___::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>& result) mutable -> void {
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<RequestConfig>>& /* result */)>
+  Func_void_std__shared_ptr_Promise_RequestConfig__ create_Func_void_std__shared_ptr_Promise_RequestConfig__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__shared_ptr_Promise_RequestConfig__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<Promise<RequestConfig>>& result) mutable -> void {
       swiftClosure.call(result);
     };
   }
@@ -87,19 +87,28 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>>()>
-  Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____ create_Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig_____::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)]() mutable -> std::shared_ptr<Promise<std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>>> {
+  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
+  Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams) mutable -> std::shared_ptr<Promise<RequestConfig>> {
+      auto __result = swiftClosure.call(request, routeParams);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)]() mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>> {
       auto __result = swiftClosure.call();
       return __result;
     };
   }
   
-  // pragma MARK: std::function<void(const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& /* result */)>
-  Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___ create_Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_std__variant_TransformableRequestConfig__std__shared_ptr_Promise_TransformableRequestConfig___::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::variant<TransformableRequestConfig, std::shared_ptr<Promise<TransformableRequestConfig>>>& result) mutable -> void {
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<TransformableRequestConfig>>& /* result */)>
+  Func_void_std__shared_ptr_Promise_TransformableRequestConfig__ create_Func_void_std__shared_ptr_Promise_TransformableRequestConfig__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__shared_ptr_Promise_TransformableRequestConfig__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<Promise<TransformableRequestConfig>>& result) mutable -> void {
       swiftClosure.call(result);
     };
   }
@@ -112,19 +121,37 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const Track& /* track */)>
-  Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track create_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______Track::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const Track& track) mutable -> std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> {
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const Track& /* track */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const Track& track) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
       auto __result = swiftClosure.call(track);
       return __result;
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>>(const MediaTransformParams& /* params */)>
-  Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams create_Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__variant_RequestConfig__std__shared_ptr_Promise_RequestConfig______MediaTransformParams::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const MediaTransformParams& params) mutable -> std::shared_ptr<Promise<std::variant<RequestConfig, std::shared_ptr<Promise<RequestConfig>>>>> {
+  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const Track& /* track */)>
+  Func_std__shared_ptr_Promise_RequestConfig___Track create_Func_std__shared_ptr_Promise_RequestConfig___Track(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_RequestConfig___Track::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const Track& track) mutable -> std::shared_ptr<Promise<RequestConfig>> {
+      auto __result = swiftClosure.call(track);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const MediaTransformParams& /* params */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const MediaTransformParams& params) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
+      auto __result = swiftClosure.call(params);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const MediaTransformParams& /* params */)>
+  Func_std__shared_ptr_Promise_RequestConfig___MediaTransformParams create_Func_std__shared_ptr_Promise_RequestConfig___MediaTransformParams(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_RequestConfig___MediaTransformParams::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const MediaTransformParams& params) mutable -> std::shared_ptr<Promise<RequestConfig>> {
       auto __result = swiftClosure.call(params);
       return __result;
     };

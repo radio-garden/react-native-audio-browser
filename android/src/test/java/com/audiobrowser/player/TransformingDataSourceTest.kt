@@ -43,7 +43,9 @@ class TransformingDataSourceTest {
   private fun config(baseUrl: String, path: String) =
     MediaRequestConfig(
       resolve = null,
+      resolveSync = null,
       transform = null,
+      transformSync = null,
       method = null,
       path = path,
       baseUrl = baseUrl,
