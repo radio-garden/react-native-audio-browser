@@ -3,6 +3,7 @@ import type {
   BrowserSource,
   BrowserSourceCallback,
   RequestConfigResolver,
+  ResolvedTrack,
   RouteConfig,
   SearchSource,
   SearchSourceCallback,
@@ -29,27 +30,39 @@ function isCallback(
   return typeof source === 'function'
 }
 
+function isObjectValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 function isTransformableRequestConfig(
   source: unknown
 ): source is TransformableRequestConfig {
-  if (typeof source !== 'object' || source === null) return false
-  const obj = source as Record<string, unknown>
-  // Has request config properties (not a ResolvedTrack which has 'title')
+  if (!isObjectValue(source)) return false
+  // Any RequestConfig key marks a request config. A static ResolvedTrack
+  // shares none of these at the top level (its per-track request override is
+  // nested under `request`).
   return (
-    'baseUrl' in obj ||
-    'path' in obj ||
-    'headers' in obj ||
-    'query' in obj ||
-    'transform' in obj ||
-    'transformSync' in obj
+    'baseUrl' in source ||
+    'path' in source ||
+    'headers' in source ||
+    'query' in source ||
+    'method' in source ||
+    'body' in source ||
+    'contentType' in source ||
+    'userAgent' in source ||
+    'transform' in source ||
+    'transformSync' in source
   )
 }
 
 function isRouteConfig(source: unknown): source is RouteConfig {
-  if (typeof source !== 'object' || source === null) return false
-  const obj = source as Record<string, unknown>
-  // RouteConfig has browse/media/artwork properties at the top level
-  return 'browse' in obj || ('media' in obj && !('baseUrl' in obj))
+  if (!isObjectValue(source)) return false
+  // `browse`/`media` keys only exist on RouteConfig. `artwork` also exists on
+  // a static ResolvedTrack — but there it is a string URL, while RouteConfig's
+  // is a config object, so only an object-valued `artwork` marks a RouteConfig.
+  return (
+    'browse' in source || 'media' in source || isObjectValue(source.artwork)
+  )
 }
 
 function splitLayer(
@@ -105,7 +118,7 @@ function searchSourceToRouteEntry(source: SearchSource): NativeRouteEntry {
  * Wraps a Track[] into a ResolvedTrack for tabs.
  * Tabs are represented as a special route that returns children.
  */
-function wrapTracksAsResolvedTrack(tracks: Track[]) {
+function wrapTracksAsResolvedTrack(tracks: Track[]): ResolvedTrack {
   return {
     url: TABS_ROUTE_PATH,
     title: 'Tabs',
@@ -166,7 +179,8 @@ const DEFAULT_ROUTE_PATH = '__default__'
 /** Internal path used for navigation tabs */
 const TABS_ROUTE_PATH = '__tabs__'
 
-/** Internal path used for search */
+// Exported for hasSearch() in browser.ts, which inspects the lowered config.
+// DEFAULT_ROUTE_PATH and TABS_ROUTE_PATH are not needed outside this module.
 export const SEARCH_ROUTE_PATH = '__search__'
 
 function flattenRoutes(
