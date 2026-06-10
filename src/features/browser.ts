@@ -17,13 +17,30 @@ let currentConfiguration: BrowserConfiguration | undefined
  * - Android Auto / CarPlay browsing integration
  * - Playback of browsable tracks via navigate()
  *
+ * Calling this again REPLACES the entire configuration (no merging) and
+ * re-runs initial navigation — external browse UIs such as CarPlay reset to
+ * the first tab. For values that change at runtime (base URL, locale, auth
+ * token), don't reconfigure: read them inside a `request`/`browse` resolver
+ * or a `transform`, and call {@link invalidateAllContent} so every surface
+ * re-fetches in place.
+ *
  * @param configuration - Browser configuration including routes, tabs, media config, etc.
  *
  * @example
  * ```ts
  * configureBrowser({
+ *   request: { baseUrl: 'https://api.example.com' },
  *   routes: {
- *     '/albums/:id': { path: '/api/albums/:id' }
+ *     // `{id}` is a route parameter — see the `routes` docs for matching rules.
+ *     '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams.id),
+ *     // Remapping a browse path to a different API path requires a transform;
+ *     // a static `path` on a request config does NOT rewrite the path.
+ *     '/artists/{id}': {
+ *       transformSync: (request, routeParams) => ({
+ *         ...request,
+ *         path: `/api/v2/artists/${routeParams?.id}`
+ *       })
+ *     }
  *   },
  *   tabs: [
  *     { title: 'Home', url: '/' },
