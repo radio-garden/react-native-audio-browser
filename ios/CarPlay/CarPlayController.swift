@@ -542,6 +542,17 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
+    // A playable track always lands on the Now Playing surface (selection
+    // resolves to .play or .intercepted, never .browse) — push it now and stamp
+    // the tapped track's metadata, instead of after selection resolves: queue
+    // expansion and the media URL resolve can both hit the network, and waiting
+    // animates in a blank Now Playing screen. The load pipeline re-publishes
+    // the same fields and dedupes.
+    if track.src != nil {
+      player.loadNowPlayingMetadata(for: track)
+      nowPlayingManager.showNowPlaying()
+    }
+
     // Release CarPlay immediately so the list never locks up. Apple's handler
     // guidance is to finish processing the tap promptly; for a browse we "finish"
     // by pushing the destination and filling it in (see navigateToUrl), and for

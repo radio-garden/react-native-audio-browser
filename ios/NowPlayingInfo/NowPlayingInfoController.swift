@@ -115,8 +115,15 @@ class NowPlayingInfoController {
   }
 
   /// Attaches metadata to the current item — the supported channel under automatic publishing.
+  /// While no item exists (the media URL resolve is still in flight), publishes to the
+  /// session's center directly so the Now Playing surface isn't blank between load
+  /// intent and item creation; the item channel takes over via `prepareItem`.
   private func performUpdate() {
-    linkedPlayer?.currentItem?.nowPlayingInfo = _info
+    if let item = linkedPlayer?.currentItem {
+      item.nowPlayingInfo = _info
+    } else {
+      nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = _info
+    }
   }
 
   /// Prepares an AVPlayerItem with stored metadata before it becomes current, so the
@@ -130,6 +137,7 @@ class NowPlayingInfoController {
   func clear() {
     _info = [:]
     linkedPlayer?.currentItem?.nowPlayingInfo = nil
+    nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = nil
   }
 
   /// Sets the play/pause state CarPlay / Control Center show for their transport
