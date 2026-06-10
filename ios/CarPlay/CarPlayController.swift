@@ -39,6 +39,11 @@ public final class RNABCarPlayController: NSObject {
   /// a second resolve + watchdog.
   private var loadingTemplates: Set<ObjectIdentifier> = []
 
+  /// Tabs received while the user had templates pushed. Rebuilding the tab bar
+  /// replaces the root template, which tears down the pushed navigation stack —
+  /// so the rebuild is deferred until the user is back at the tab bar.
+  private var pendingTabs: [Track]?
+
   /// How long a browse resolve may run before the destination's loading spinner
   /// is replaced with an error state. The selection completion is fired
   /// immediately (so CarPlay never blocks the list — per Apple's async handler
@@ -96,6 +101,18 @@ public final class RNABCarPlayController: NSObject {
     interfaceDelegate = delegate
     interfaceController.delegate = delegate
 
+    // Restart when a new HybridAudioBrowser replaces the shared instance
+    // (JS runtime reload) — our subscriptions point at the old instance's
+    // emitters and would otherwise go silent.
+    let instanceToken = HybridAudioBrowser.instanceChangedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.restart()
+      }
+    }
+    listenerRemovals.append {
+      HybridAudioBrowser.instanceChangedEmitter.removeListener(instanceToken)
+    }
+
     // Show loading template while waiting
     showLoadingTemplate()
 
@@ -152,6 +169,19 @@ public final class RNABCarPlayController: NSObject {
 
     navigatingPaths.removeAll()
     loadingTemplates.removeAll()
+    pendingTabs = nil
+  }
+
+  /// Full stop/start cycle. Used when the JS runtime reloads: the new
+  /// HybridAudioBrowser instance replaces the emitters this controller is
+  /// subscribed to and resets the readiness gate, so everything must be
+  /// re-subscribed against the live instance (start() waits for it).
+  @MainActor
+  private func restart() {
+    guard isStarted else { return }
+    logger.info("AudioBrowser instance changed — restarting CarPlay controller")
+    stop()
+    start()
   }
 
   // MARK: - Content Subscriptions
@@ -640,10 +670,32 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func handleTabsChanged(_ tabs: [Track]) {
     logger.debug("Tabs changed: \(tabs.count) tabs")
-    // Rebuild tab bar if we're at the root
+    // Rebuilding replaces the root template, tearing down any pushed
+    // navigation stack. If the user is browsing, defer until they're back at
+    // the tab bar (applied from templateDidAppear).
+    guard interfaceController.templates.count <= 1 else {
+      pendingTabs = tabs
+      return
+    }
+    pendingTabs = nil
     Task {
       await showTabBar(tabs: tabs)
     }
+  }
+
+  /// Applies a deferred tab change once the user has popped back to the tab
+  /// bar. Returns true if a rebuild was kicked off (the appeared template is
+  /// about to be replaced, so callers should skip further work on it).
+  @MainActor
+  fileprivate func applyPendingTabsIfAtRoot() -> Bool {
+    guard let tabs = pendingTabs, interfaceController.templates.count <= 1 else {
+      return false
+    }
+    pendingTabs = nil
+    Task {
+      await showTabBar(tabs: tabs)
+    }
+    return true
   }
 
   @MainActor
@@ -884,6 +936,10 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
 
   func templateDidAppear(_ aTemplate: CPTemplate, animated _: Bool) {
     guard let listTemplate = aTemplate as? CPListTemplate else { return }
+
+    // A tab change deferred while the user was browsing replaces the whole
+    // tab bar — no point updating a template that's about to be discarded.
+    if controller?.applyPendingTabsIfAtRoot() == true { return }
 
     // Update playing indicators when navigating back to a list template
     controller?.updatePlayingIndicators()

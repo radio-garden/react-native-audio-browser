@@ -24,6 +24,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Shared instance for CarPlay access. Set when HybridAudioBrowser is created.
   private(set) nonisolated(unsafe) weak static var shared: HybridAudioBrowser?
 
+  /// Fires when a new instance becomes `shared` (e.g. on a JS runtime reload),
+  /// so connected external controllers (CarPlay) can re-subscribe — their
+  /// listeners sit on the previous instance's emitters and would otherwise go
+  /// silent.
+  static let instanceChangedEmitter = Emitter<Void>()
+
   // MARK: - Private Properties
 
   private var player: TrackPlayer?
@@ -255,6 +261,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       HybridAudioBrowser.shared?.player?.destroy()
       playerAndConfiguredBrowser.reset()
       HybridAudioBrowser.shared = self
+      // Tell connected external controllers (CarPlay) to re-subscribe against
+      // this instance. Unconditional: `shared` is weak, so on a JS reload the
+      // old instance may already be gone — "shared was nil" does not mean no
+      // controller is subscribed to a dead instance's emitters.
+      HybridAudioBrowser.instanceChangedEmitter.emit(())
     }
     setupEmitterToNitroForwarding()
     setupBrowserCallbacks()
