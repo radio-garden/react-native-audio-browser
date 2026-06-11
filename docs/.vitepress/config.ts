@@ -33,7 +33,7 @@ export default withMermaid(
               { text: 'Basic Usage', link: '/guide/basic-usage' },
               {
                 text: 'Now Playing',
-                link: '/guide/now-playing-metadata'
+                link: '/guide/now-playing'
               }
             ]
           },
