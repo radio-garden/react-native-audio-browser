@@ -1872,6 +1872,14 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNowPlayingUpdate> /* update */)>("updateNowPlaying");
     method(_javaPart, update.has_value() ? JNowPlayingUpdate::fromCpp(update.value()) : nullptr);
   }
+  void JHybridAudioBrowserSpec::flashNowPlaying(const NowPlayingUpdate& update, double durationMs) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNowPlayingUpdate> /* update */, double /* durationMs */)>("flashNowPlaying");
+    method(_javaPart, JNowPlayingUpdate::fromCpp(update), durationMs);
+  }
+  void JHybridAudioBrowserSpec::clearNowPlayingFlash() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("clearNowPlayingFlash");
+    method(_javaPart);
+  }
   std::optional<NowPlayingMetadata> JHybridAudioBrowserSpec::getNowPlaying() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JNowPlayingMetadata>()>("getNowPlaying");
     auto __result = method(_javaPart);

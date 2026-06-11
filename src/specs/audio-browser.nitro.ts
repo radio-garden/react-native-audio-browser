@@ -280,6 +280,18 @@ export interface AudioBrowser extends HybridObject<{
    */
   updateNowPlaying(update: NowPlayingUpdate | undefined): void
   /**
+   * Temporarily replaces now-playing fields for `durationMs`, then reverts.
+   * Outranks the formatter and the `updateNowPlaying` override while active,
+   * and is reverted by a native timer (JS timers pause in a backgrounded
+   * host). Cleared early on track change. Repeated calls restart the window.
+   */
+  flashNowPlaying(update: NowPlayingUpdate, durationMs: number): void
+  /**
+   * Clears an active flash immediately, reverting to the live metadata.
+   * No-op when no flash is active.
+   */
+  clearNowPlayingFlash(): void
+  /**
    * Gets the current now playing metadata (override if set, else track metadata).
    */
   getNowPlaying(): NowPlayingMetadata | undefined

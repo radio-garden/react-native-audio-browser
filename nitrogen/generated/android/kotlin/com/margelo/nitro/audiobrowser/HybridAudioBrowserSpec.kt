@@ -1128,6 +1128,14 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clearNowPlayingFlash(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun getNowPlaying(): NowPlayingMetadata?
   
   @DoNotStrip

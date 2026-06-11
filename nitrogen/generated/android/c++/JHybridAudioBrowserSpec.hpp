@@ -239,6 +239,8 @@ namespace margelo::nitro::audiobrowser {
     std::optional<double> getActiveTrackIndex() override;
     std::optional<Track> getActiveTrack() override;
     void updateNowPlaying(const std::optional<NowPlayingUpdate>& update) override;
+    void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) override;
+    void clearNowPlayingFlash() override;
     std::optional<NowPlayingMetadata> getNowPlaying() override;
     bool getOnline() override;
     double getSystemVolume() override;

@@ -60,9 +60,11 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -1006,16 +1008,52 @@ class Player(internal val context: Context) {
     applyNowPlayingMetadata()
   }
 
-  /** Gets the current now playing metadata (override if set, else track metadata). */
+  /**
+   * Transient now-playing fields (e.g. feedback for a refused remote command). Outranks the
+   * formatter and the override while active, so live metadata can't stomp it mid-flash. Reverted by
+   * a coroutine delay on the main scope — NOT a JS timer, which pauses with a backgrounded host (and
+   * the lock screen is exactly the backgrounded case) — and cleared early on track change.
+   */
+  private var nowPlayingFlash: NowPlayingUpdate? = null
+  private var nowPlayingFlashRevert: Job? = null
+
+  fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) {
+    nowPlayingFlashRevert?.cancel()
+    nowPlayingFlash = update
+    nowPlayingFlashRevert =
+      nowPlayingScope.launch {
+        delay(durationMs.toLong())
+        nowPlayingFlash = null
+        nowPlayingFlashRevert = null
+        applyNowPlayingMetadata()
+      }
+    applyNowPlayingMetadata()
+  }
+
+  /** Clears an active flash immediately, reverting to the live metadata. No-op when none. */
+  fun clearNowPlayingFlash() {
+    if (nowPlayingFlash == null) return
+    cancelNowPlayingFlash()
+    applyNowPlayingMetadata()
+  }
+
+  private fun cancelNowPlayingFlash() {
+    nowPlayingFlashRevert?.cancel()
+    nowPlayingFlashRevert = null
+    nowPlayingFlash = null
+  }
+
+  /** Gets the current now playing metadata (flash/override if set, else track metadata). */
   fun getNowPlaying(): NowPlayingMetadata? {
     val track = currentTrack ?: return null
+    val flash = nowPlayingFlash
     val override = nowPlayingOverride
 
     return NowPlayingMetadata(
       elapsedTime = null,
-      title = override?.title ?: track.title,
+      title = flash?.title ?: override?.title ?: track.title,
       album = track.album,
-      artist = override?.artist ?: track.artist,
+      artist = flash?.artist ?: override?.artist ?: track.artist,
       duration = track.duration,
       artwork = track.artwork,
       description = track.description,
@@ -1031,6 +1069,7 @@ class Player(internal val context: Context) {
    */
   internal fun clearNowPlayingOverride() {
     nowPlayingOverride = null
+    cancelNowPlayingFlash()
     latestTimedMetadata = null
   }
 
@@ -1065,6 +1104,14 @@ class Player(internal val context: Context) {
     val override = if (nowPlayingMetadataEnabled) nowPlayingOverride else null
     val defaultTitle = override?.title ?: track.title
     val defaultSecondary = override?.artist ?: track.artist
+
+    // A flash outranks both the formatter and the override; while one is active the formatter pass
+    // is skipped entirely so its async result can't land on top.
+    val flash = if (nowPlayingMetadataEnabled) nowPlayingFlash else null
+    if (flash != null) {
+      applyNowPlayingFields(index, track, flash.title ?: defaultTitle, flash.artist ?: defaultSecondary)
+      return
+    }
 
     // Apply the default immediately so the now-playing never lags a track/status change.
     applyNowPlayingFields(index, track, defaultTitle, defaultSecondary)

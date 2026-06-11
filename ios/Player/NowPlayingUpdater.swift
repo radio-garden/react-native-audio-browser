@@ -53,13 +53,16 @@ final class NowPlayingUpdater {
 
   /// Renders the now-playing title/artist line: the default (`override ?? track`) immediately, then —
   /// when a formatter is configured — its async result overlaid (each field falling back to the
-  /// default). Safe to call on every playback transition; redundant writes are deduped.
+  /// default). A `flash` (transient line, e.g. feedback for a refused remote command) outranks both:
+  /// while one is active the formatter pass is skipped entirely, so its async result can't land on
+  /// top. Safe to call on every playback transition; redundant writes are deduped.
   func render(
     track: Track,
     timedMetadata: TimedMetadata?,
     playWhenReady: Bool,
     stalled: Bool,
     error: PlaybackError?,
+    flash: NowPlayingUpdate? = nil,
     override: NowPlayingUpdate?,
     formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
   ) {
@@ -68,6 +71,16 @@ final class NowPlayingUpdater {
 
     let defaultTitle = override?.title ?? track.title
     let defaultSecondary = override?.artist ?? track.artist
+
+    if let flash {
+      applyFields(
+        track: track,
+        title: flash.title ?? defaultTitle,
+        artist: flash.artist ?? defaultSecondary,
+      )
+      return
+    }
+
     applyFields(track: track, title: defaultTitle, artist: defaultSecondary)
 
     guard let formatter else { return }

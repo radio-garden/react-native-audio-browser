@@ -1190,6 +1190,18 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) override {
+      auto __result = _swiftPart.flashNowPlaying(std::forward<decltype(update)>(update), std::forward<decltype(durationMs)>(durationMs));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void clearNowPlayingFlash() override {
+      auto __result = _swiftPart.clearNowPlayingFlash();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline std::optional<NowPlayingMetadata> getNowPlaying() override {
       auto __result = _swiftPart.getNowPlaying();
       if (__result.hasError()) [[unlikely]] {

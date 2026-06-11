@@ -200,6 +200,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getActiveTrackIndex", &HybridAudioBrowserSpec::getActiveTrackIndex);
       prototype.registerHybridMethod("getActiveTrack", &HybridAudioBrowserSpec::getActiveTrack);
       prototype.registerHybridMethod("updateNowPlaying", &HybridAudioBrowserSpec::updateNowPlaying);
+      prototype.registerHybridMethod("flashNowPlaying", &HybridAudioBrowserSpec::flashNowPlaying);
+      prototype.registerHybridMethod("clearNowPlayingFlash", &HybridAudioBrowserSpec::clearNowPlayingFlash);
       prototype.registerHybridMethod("getNowPlaying", &HybridAudioBrowserSpec::getNowPlaying);
       prototype.registerHybridMethod("getOnline", &HybridAudioBrowserSpec::getOnline);
       prototype.registerHybridMethod("getSystemVolume", &HybridAudioBrowserSpec::getSystemVolume);

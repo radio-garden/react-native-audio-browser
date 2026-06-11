@@ -135,6 +135,8 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getActiveTrackIndex() throws -> Double?
   func getActiveTrack() throws -> Track?
   func updateNowPlaying(update: NowPlayingUpdate?) throws -> Void
+  func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws -> Void
+  func clearNowPlayingFlash() throws -> Void
   func getNowPlaying() throws -> NowPlayingMetadata?
   func getOnline() throws -> Bool
   func getSystemVolume() throws -> Double

@@ -937,14 +937,53 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
+  /// Transient now-playing fields (e.g. feedback for a refused remote
+  /// command). Outranks the formatter and the override while active, so live
+  /// metadata can't stomp it mid-flash. Reverted by a NATIVE timer — JS
+  /// timers pause with a backgrounded host on Android, and the lock screen
+  /// is exactly the backgrounded case — and cleared early on track change.
+  private var nowPlayingFlash: NowPlayingUpdate?
+  private var nowPlayingFlashRevert: DispatchWorkItem?
+
+  public func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
+    onMainActor {
+      nowPlayingFlashRevert?.cancel()
+      nowPlayingFlash = update
+      let revert = DispatchWorkItem { [weak self] in
+        guard let self else { return }
+        self.nowPlayingFlash = nil
+        self.nowPlayingFlashRevert = nil
+        self.applyNowPlayingMetadata()
+      }
+      nowPlayingFlashRevert = revert
+      DispatchQueue.main.asyncAfter(deadline: .now() + durationMs / 1000, execute: revert)
+      applyNowPlayingMetadata()
+    }
+  }
+
+  public func clearNowPlayingFlash() throws {
+    onMainActor {
+      guard nowPlayingFlash != nil else { return }
+      cancelNowPlayingFlash()
+      applyNowPlayingMetadata()
+    }
+  }
+
+  private func cancelNowPlayingFlash() {
+    nowPlayingFlashRevert?.cancel()
+    nowPlayingFlashRevert = nil
+    nowPlayingFlash = nil
+  }
+
   public func getNowPlaying() throws -> NowPlayingMetadata? {
     onMainActor {
       guard let track = player?.currentTrack else { return nil }
+      let flash = nowPlayingFlash
       let override = nowPlayingOverride
       return makeNowPlayingMetadata(
         track: track,
-        title: override?.title ?? track.title,
-        artist: override?.artist ?? track.artist,
+        title: flash?.title ?? override?.title ?? track.title,
+        artist: flash?.artist ?? override?.artist ?? track.artist,
       )
     }
   }
@@ -986,6 +1025,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       playWhenReady: player.playWhenReady,
       stalled: player.isStalled,
       error: player.coordinator.playbackError?.toNitroError(),
+      flash: nowPlayingFlash,
       override: nowPlayingMetadataEnabled ? nowPlayingOverride : nil,
       formatter: nowPlayingMetadataEnabled ? nowPlayingMetadataFormatter : nil,
     )
@@ -1190,8 +1230,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
-    // Clear now playing override + live metadata when track changes (matches Kotlin behavior)
+    // Clear now playing override + flash + live metadata when track changes
+    // (matches Kotlin behavior; a flash must not carry over to a new track)
     nowPlayingOverride = nil
+    cancelNowPlayingFlash()
     latestTimedMetadata = nil
     // Hydrate the active track's `favorited` from the authoritative set so JS
     // consumers (useActiveTrack) match getActiveTrack()'s hydrated value — the

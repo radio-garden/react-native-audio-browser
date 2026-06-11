@@ -951,6 +951,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     player.updateNowPlaying(update)
   }
 
+  override fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) = runBlockingOnMain {
+    player.flashNowPlaying(update, durationMs)
+  }
+
+  override fun clearNowPlayingFlash() = runBlockingOnMain { player.clearNowPlayingFlash() }
+
   override fun getNowPlaying(): NowPlayingMetadata? = runBlockingOnMain { player.getNowPlaying() }
 
   // ============================================================================

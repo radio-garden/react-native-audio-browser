@@ -877,6 +877,26 @@ export class NativeAudioBrowser
     return this.nowPlayingManager.getNowPlaying(track, duration)
   }
 
+  private nowPlayingFlashRevert: ReturnType<typeof setTimeout> | undefined
+
+  flashNowPlaying(update: NowPlayingUpdate, durationMs: number): void {
+    // Web approximation: an override + timer is sufficient here — the
+    // background-timer and formatter-priority concerns are native-only.
+    this.updateNowPlaying(update)
+    if (this.nowPlayingFlashRevert) clearTimeout(this.nowPlayingFlashRevert)
+    this.nowPlayingFlashRevert = setTimeout(() => {
+      this.nowPlayingFlashRevert = undefined
+      this.updateNowPlaying(undefined)
+    }, durationMs)
+  }
+
+  clearNowPlayingFlash(): void {
+    if (!this.nowPlayingFlashRevert) return
+    clearTimeout(this.nowPlayingFlashRevert)
+    this.nowPlayingFlashRevert = undefined
+    this.updateNowPlaying(undefined)
+  }
+
   // MARK: Network connectivity
   getOnline(): boolean {
     return this._online
