@@ -1040,10 +1040,13 @@ public final class RNABCarPlayController: NSObject {
   /// spaces (the "variants" are width alternatives, not lines).
   private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPListTemplate {
     let template: CPListTemplate
-    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty,
-       let buttonImage = UIImage(systemName: "checkmark.circle")
-    {
-      let button = CPButton(image: buttonImage) { [weak self] _ in
+    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
+      // CPButton's initializer demands an image, but the header button
+      // should be a text-only pill (the first-party look) — feed it a
+      // transparent 1pt placeholder so only the title renders.
+      let clearImage = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+        .image { _ in }
+      let button = CPButton(image: clearImage) { [weak self] _ in
         self?.audioBrowser?.onBrowseGateButtonPressed()
       }
       button.title = buttonTitle
