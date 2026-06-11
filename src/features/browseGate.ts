@@ -9,7 +9,12 @@ import { nativeBrowser } from '../native'
 export type NativeBrowseGate = {
   /** Headline shown on the gate page. */
   title: string
-  /** Body copy shown below the title. */
+  /**
+   * Body copy shown below the title. On CarPlay with a button the page is a
+   * list whose rows don't wrap: a newline splits the message into the row's
+   * title and detail lines. Without a button the message renders as the
+   * centered empty view, which wraps.
+   */
   message?: string
   /**
    * Title of the action button. Omit for a page without a button (the
