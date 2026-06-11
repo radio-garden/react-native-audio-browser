@@ -40,6 +40,8 @@ namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
+// Forward declaration of `Track` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
@@ -56,6 +58,7 @@ namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 #include <vector>
 #include "TrackLoadEvent.hpp"
 #include "CarPlayNowPlayingButton.hpp"
+#include "Track.hpp"
 #include "FormattedNavigationError.hpp"
 #include "FormatNavigationErrorParams.hpp"
 
@@ -81,14 +84,15 @@ namespace margelo::nitro::audiobrowser {
     std::optional<bool> carPlayUpNextButton     SWIFT_PRIVATE;
     std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons     SWIFT_PRIVATE;
     std::optional<std::string> carPlayLoadingTitle     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>> resolveAlbumUrl     SWIFT_PRIVATE;
     std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>> formatNavigationError     SWIFT_PRIVATE;
 
   public:
     NativeBrowserConfiguration() = default;
-    explicit NativeBrowserConfiguration(std::optional<std::string> path, std::optional<TransformableRequestConfig> request, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>> requestResolver, std::optional<TransformableRequestConfig> browse, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>> browseResolver, std::optional<MediaRequestConfig> media, std::optional<ArtworkRequestConfig> artwork, std::optional<ArtworkRequestConfig> nowPlayingArtwork, std::optional<std::vector<NativeRouteEntry>> routes, std::optional<bool> singleTrack, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(const TrackLoadEvent& /* event */)>> handleTrackLoad, std::optional<bool> androidControllerOfflineError, std::optional<bool> carPlayUpNextButton, std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons, std::optional<std::string> carPlayLoadingTitle, std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>> formatNavigationError): path(path), request(request), requestResolver(requestResolver), browse(browse), browseResolver(browseResolver), media(media), artwork(artwork), nowPlayingArtwork(nowPlayingArtwork), routes(routes), singleTrack(singleTrack), handleTrackLoad(handleTrackLoad), androidControllerOfflineError(androidControllerOfflineError), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons), carPlayLoadingTitle(carPlayLoadingTitle), formatNavigationError(formatNavigationError) {}
+    explicit NativeBrowserConfiguration(std::optional<std::string> path, std::optional<TransformableRequestConfig> request, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>> requestResolver, std::optional<TransformableRequestConfig> browse, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>> browseResolver, std::optional<MediaRequestConfig> media, std::optional<ArtworkRequestConfig> artwork, std::optional<ArtworkRequestConfig> nowPlayingArtwork, std::optional<std::vector<NativeRouteEntry>> routes, std::optional<bool> singleTrack, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(const TrackLoadEvent& /* event */)>> handleTrackLoad, std::optional<bool> androidControllerOfflineError, std::optional<bool> carPlayUpNextButton, std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons, std::optional<std::string> carPlayLoadingTitle, std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>> resolveAlbumUrl, std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>> formatNavigationError): path(path), request(request), requestResolver(requestResolver), browse(browse), browseResolver(browseResolver), media(media), artwork(artwork), nowPlayingArtwork(nowPlayingArtwork), routes(routes), singleTrack(singleTrack), handleTrackLoad(handleTrackLoad), androidControllerOfflineError(androidControllerOfflineError), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons), carPlayLoadingTitle(carPlayLoadingTitle), resolveAlbumUrl(resolveAlbumUrl), formatNavigationError(formatNavigationError) {}
 
   public:
-    // NativeBrowserConfiguration is not equatable because these properties are not equatable: request, requestResolver, browse, browseResolver, media, artwork, nowPlayingArtwork, routes, handleTrackLoad, formatNavigationError
+    // NativeBrowserConfiguration is not equatable because these properties are not equatable: request, requestResolver, browse, browseResolver, media, artwork, nowPlayingArtwork, routes, handleTrackLoad, resolveAlbumUrl, formatNavigationError
   };
 
 } // namespace margelo::nitro::audiobrowser
@@ -116,6 +120,7 @@ namespace margelo::nitro {
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayUpNextButton"))),
         JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayLoadingTitle"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const margelo::nitro::audiobrowser::Track&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolveAlbumUrl"))),
         JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<margelo::nitro::audiobrowser::FormattedNavigationError>>>(const margelo::nitro::audiobrowser::FormatNavigationErrorParams&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "formatNavigationError")))
       );
     }
@@ -136,6 +141,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "carPlayUpNextButton"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.carPlayUpNextButton));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons"), JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::toJSI(runtime, arg.carPlayNowPlayingButtons));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "carPlayLoadingTitle"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.carPlayLoadingTitle));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "resolveAlbumUrl"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const margelo::nitro::audiobrowser::Track&)>>>::toJSI(runtime, arg.resolveAlbumUrl));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "formatNavigationError"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<margelo::nitro::audiobrowser::FormattedNavigationError>>>(const margelo::nitro::audiobrowser::FormatNavigationErrorParams&)>>>::toJSI(runtime, arg.formatNavigationError));
       return obj;
     }
@@ -162,6 +168,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayUpNextButton")))) return false;
       if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::CarPlayNowPlayingButton>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayNowPlayingButtons")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "carPlayLoadingTitle")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const margelo::nitro::audiobrowser::Track&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "resolveAlbumUrl")))) return false;
       if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::optional<margelo::nitro::audiobrowser::FormattedNavigationError>>>(const margelo::nitro::audiobrowser::FormatNavigationErrorParams&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "formatNavigationError")))) return false;
       return true;
     }

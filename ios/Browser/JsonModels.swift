@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// JSON serializable models for parsing API responses.
@@ -30,9 +30,9 @@ struct JsonTrackRequest: Codable {
   let query: [String: String]?
 
   #if canImport(NitroModules)
-  func toNitro() -> TrackRequest {
-    TrackRequest(userAgent: userAgent, headers: headers, query: query)
-  }
+    func toNitro() -> TrackRequest {
+      TrackRequest(userAgent: userAgent, headers: headers, query: query)
+    }
   #endif
 }
 
@@ -44,6 +44,7 @@ struct JsonResolvedTrack: Codable {
   let subtitle: String?
   let artwork: String?
   let artist: String?
+  let albumUrl: String?
   let album: String?
   let description: String?
   let genre: String?
@@ -63,6 +64,7 @@ struct JsonResolvedTrack: Codable {
     subtitle: String? = nil,
     artwork: String? = nil,
     artist: String? = nil,
+    albumUrl: String? = nil,
     album: String? = nil,
     description: String? = nil,
     genre: String? = nil,
@@ -80,6 +82,7 @@ struct JsonResolvedTrack: Codable {
     self.subtitle = subtitle
     self.artwork = artwork
     self.artist = artist
+    self.albumUrl = albumUrl
     self.album = album
     self.description = description
     self.genre = genre
@@ -103,6 +106,7 @@ struct JsonTrack: Codable {
   let subtitle: String?
   let artwork: String?
   let artist: String?
+  let albumUrl: String?
   let album: String?
   let description: String?
   let genre: String?
@@ -122,6 +126,7 @@ struct JsonTrack: Codable {
     subtitle: String? = nil,
     artwork: String? = nil,
     artist: String? = nil,
+    albumUrl: String? = nil,
     album: String? = nil,
     description: String? = nil,
     genre: String? = nil,
@@ -139,6 +144,7 @@ struct JsonTrack: Codable {
     self.subtitle = subtitle
     self.artwork = artwork
     self.artist = artist
+    self.albumUrl = albumUrl
     self.album = album
     self.description = description
     self.genre = genre
@@ -158,94 +164,97 @@ struct JsonTrack: Codable {
 
 #if canImport(NitroModules)
 
-private extension String {
-  func toTrackStyle() -> TrackStyle? {
-    TrackStyle(fromString: lowercased())
+  private extension String {
+    func toTrackStyle() -> TrackStyle? {
+      TrackStyle(fromString: lowercased())
+    }
   }
-}
 
-extension JsonImageRowItem {
-  func toNitro() -> ImageRowItem {
-    ImageRowItem(
-      url: url,
-      artwork: artwork,
-      artworkSource: nil,
-      title: title,
-    )
+  extension JsonImageRowItem {
+    func toNitro() -> ImageRowItem {
+      ImageRowItem(
+        url: url,
+        artwork: artwork,
+        artworkSource: nil,
+        title: title,
+      )
+    }
   }
-}
 
-extension JsonResolvedTrack {
-  func toNitro() -> ResolvedTrack {
-    ResolvedTrack(
-      url: url,
-      children: children?.map { $0.toNitro() },
-      carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
-      id: id,
-      src: src,
-      artwork: artwork,
-      artworkSource: nil, request: nil,
-      artworkCarPlayTinted: nil,
-      title: title,
-      subtitle: subtitle,
-      artist: artist,
-      album: album,
-      description: description,
-      genre: genre,
-      duration: duration,
-      style: style?.toTrackStyle(),
-      childrenStyle: childrenStyle?.toTrackStyle(),
-      favorited: nil,
-      groupTitle: groupTitle,
-      live: live,
-      imageRow: nil,
-    )
+  extension JsonResolvedTrack {
+    func toNitro() -> ResolvedTrack {
+      ResolvedTrack(
+        url: url,
+        children: children?.map { $0.toNitro() },
+        carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
+        id: id,
+        src: src,
+        artwork: artwork,
+        artworkSource: nil, request: nil,
+        artworkCarPlayTinted: nil,
+        title: title,
+        subtitle: subtitle,
+        artist: artist,
+        albumUrl: albumUrl,
+        album: album,
+        description: description,
+        genre: genre,
+        duration: duration,
+        style: style?.toTrackStyle(),
+        childrenStyle: childrenStyle?.toTrackStyle(),
+        favorited: nil,
+        groupTitle: groupTitle,
+        live: live,
+        imageRow: nil,
+      )
+    }
   }
-}
 
-extension JsonTrack {
-  func toNitro() -> Track {
-    Track(
-      id: id,
-      url: url,
-      src: src,
-      artwork: artwork,
-      artworkSource: nil,
-      request: request?.toNitro(),
-      artworkCarPlayTinted: nil,
-      title: title,
-      subtitle: subtitle,
-      artist: artist,
-      album: album,
-      description: description,
-      genre: genre,
-      duration: duration,
-      style: style?.toTrackStyle(),
-      childrenStyle: childrenStyle?.toTrackStyle(),
-      favorited: nil,
-      groupTitle: groupTitle,
-      live: live,
-      imageRow: imageRow?.map { $0.toNitro() },
-    )
+  extension JsonTrack {
+    func toNitro() -> Track {
+      Track(
+        id: id,
+        url: url,
+        src: src,
+        artwork: artwork,
+        artworkSource: nil,
+        request: request?.toNitro(),
+        artworkCarPlayTinted: nil,
+        title: title,
+        subtitle: subtitle,
+        artist: artist,
+        albumUrl: albumUrl,
+        album: album,
+        description: description,
+        genre: genre,
+        duration: duration,
+        style: style?.toTrackStyle(),
+        childrenStyle: childrenStyle?.toTrackStyle(),
+        favorited: nil,
+        groupTitle: groupTitle,
+        live: live,
+        imageRow: imageRow?.map { $0.toNitro() },
+      )
+    }
   }
-}
 
 #else
 
-// Test-only path: construct minimal stubs for SPM test builds.
-extension JsonTrack {
-  func toNitro() -> Track {
-    Track(
-      id: id ?? "",
-      url: url,
-      src: src,
-      request: request.map { TrackRequest(userAgent: $0.userAgent, headers: $0.headers, query: $0.query) },
-      title: title,
-      artist: artist,
-      album: album,
-      live: live,
-    )
+  // Test-only path: construct minimal stubs for SPM test builds.
+  extension JsonTrack {
+    func toNitro() -> Track {
+      Track(
+        id: id ?? "",
+        url: url,
+        src: src,
+        request: request.map { TrackRequest(userAgent: $0.userAgent, headers: $0.headers, query: $0.query) },
+        title: title,
+        artist: artist,
+        albumUrl: albumUrl,
+        album: album,
+        live: live,
+      )
+    }
   }
-}
 
 #endif

@@ -224,6 +224,23 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>
+  Func_std__shared_ptr_Promise_std__optional_std__string____Track create_Func_std__shared_ptr_Promise_std__optional_std__string____Track(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__optional_std__string____Track::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const Track& track) mutable -> std::shared_ptr<Promise<std::optional<std::string>>> {
+      auto __result = swiftClosure.call(track);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<std::string>& /* result */)>
+  Func_void_std__optional_std__string_ create_Func_void_std__optional_std__string_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__optional_std__string_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::optional<std::string>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>
   Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams create_Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::fromUnsafe(swiftClosureWrapper);

@@ -85,6 +85,9 @@ public final class RNABCarPlayController: NSObject {
       self?.listItemFactory?.createListItem(for: track, handler: handler)
         ?? CPListItem(text: track.title, detailText: nil)
     }
+    nowPlayingManager.navigateToUrl = { [weak self] url, title in
+      self?.navigateToUrl(url, title: title)
+    }
   }
 
   // MARK: - Lifecycle
@@ -127,7 +130,7 @@ public final class RNABCarPlayController: NSObject {
       // Create image loader with CarPlay display traits
       self.imageLoader = CarPlayImageLoader(
         carTraitCollection: self.interfaceController.carTraitCollection,
-        browserManager: browser.browserManager
+        browserManager: browser.browserManager,
       )
 
       // Create list item factory
@@ -135,7 +138,7 @@ public final class RNABCarPlayController: NSObject {
         isActiveTrack: { [weak self] src in self?.isActiveTrack(src: src) ?? false },
         onItemSelected: { [weak self] track, completion in
           self?.handleItemSelection(track: track, completion: completion)
-        }
+        },
       )
       factory.imageLoader = self.imageLoader
       self.listItemFactory = factory
@@ -157,7 +160,9 @@ public final class RNABCarPlayController: NSObject {
     logger.info("Stopping CarPlay controller")
 
     // Remove all emitter listeners
-    for removal in listenerRemovals { removal() }
+    for removal in listenerRemovals {
+      removal()
+    }
     listenerRemovals.removeAll()
 
     // Clear config callback
@@ -212,10 +217,12 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.contentChangedEmitter.removeListener(contentToken)
     }
 
-    // Subscribe to config changes (for Now Playing buttons)
+    // Subscribe to config changes (for Now Playing buttons and per-track
+    // button state — e.g. resolveAlbumUrl appearing/disappearing)
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.setupNowPlayingButtons()
+        self?.nowPlayingManager.updateNowPlayingButtonStates()
       }
     }
 
@@ -561,6 +568,9 @@ public final class RNABCarPlayController: NSObject {
     // the same fields and dedupes.
     if track.src != nil {
       player.loadNowPlayingMetadata(for: track)
+      // Derive the album line's destination from the tapped track before the
+      // push — CarPlay reads isAlbumArtistButtonEnabled at display time.
+      nowPlayingManager.prepareAlbumArtistButton(for: track)
       nowPlayingManager.showNowPlaying()
     }
 
@@ -574,12 +584,12 @@ public final class RNABCarPlayController: NSObject {
       let result = await trackSelector.select(track: track, player: player)
       guard let self else { return }
       switch result {
-      case .play(let intent):
+      case let .play(intent):
         self.executePlayback(intent, player: player)
         self.nowPlayingManager.showNowPlaying()
       case .intercepted:
         self.nowPlayingManager.showNowPlaying()
-      case .browse(let url):
+      case let .browse(url):
         self.navigateToUrl(url, title: track.title)
       case .none:
         break
@@ -589,11 +599,11 @@ public final class RNABCarPlayController: NSObject {
 
   private func executePlayback(_ intent: TrackSelector.PlaybackIntent, player: TrackPlayer) {
     switch intent {
-    case .skipTo(let index):
+    case let .skipTo(index):
       try? player.skipTo(index, playWhenReady: true)
-    case .setQueue(let tracks, let startIndex, let sourcePath):
+    case let .setQueue(tracks, startIndex, sourcePath):
       player.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-    case .loadTrack(let track):
+    case let .loadTrack(track):
       player.load(track, playWhenReady: true)
     }
   }
@@ -739,8 +749,9 @@ public final class RNABCarPlayController: NSObject {
   private func handleActiveTrackChanged(_ event: PlaybackActiveTrackChangedEvent) {
     logger.debug("handleActiveTrackChanged: \(event.lastTrack?.src ?? "nil") → \(event.track?.src ?? "nil")")
     updatePlayingIndicators()
-    // Update favorite button to reflect the new track's favorite state
-    nowPlayingManager.updateFavoriteButtonState()
+    // Refresh per-track button state: favorite heart, Up Next availability,
+    // and the album line's pre-resolved destination.
+    nowPlayingManager.handleActiveTrackChanged()
   }
 
   /// Updates the isPlaying state on all list items based on the current active track.

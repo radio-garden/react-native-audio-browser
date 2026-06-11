@@ -300,6 +300,7 @@ export function toNativeConfig(
     carPlayUpNextButton: config.carPlayUpNextButton,
     carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
     carPlayLoadingTitle: config.carPlayLoadingTitle,
+    resolveAlbumUrl: config.resolveAlbumUrl,
     formatNavigationError: config.formatNavigationError
   }
 }

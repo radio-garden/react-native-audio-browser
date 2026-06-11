@@ -119,6 +119,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       carPlayUpNextButton = null,
       carPlayNowPlayingButtons = null,
       carPlayLoadingTitle = null,
+      resolveAlbumUrl = null,
       formatNavigationError = null,
     )
 

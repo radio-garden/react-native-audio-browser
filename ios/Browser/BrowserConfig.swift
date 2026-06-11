@@ -53,6 +53,11 @@ struct BrowserConfig {
   /// empty state while content resolves; nil leaves them blank)
   let carPlayLoadingTitle: String?
 
+  /// Resolves a browse path for the CarPlay Now Playing album line when the
+  /// active track has no albumUrl. Invoked on track changes (not at tap) so
+  /// the album line only becomes tappable when a destination exists.
+  let resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)?
+
   /// Custom handler for track load events (overrides default load behavior)
   let handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
 
@@ -75,6 +80,7 @@ struct BrowserConfig {
     carPlayUpNextButton: Bool = true,
     carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
     carPlayLoadingTitle: String? = nil,
+    resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)? = nil,
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
@@ -91,6 +97,7 @@ struct BrowserConfig {
     self.carPlayUpNextButton = carPlayUpNextButton
     self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
     self.carPlayLoadingTitle = carPlayLoadingTitle
+    self.resolveAlbumUrl = resolveAlbumUrl
     self.formatNavigationError = formatNavigationError
   }
 
@@ -110,6 +117,7 @@ struct BrowserConfig {
     carPlayUpNextButton = config.carPlayUpNextButton ?? true
     carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
     carPlayLoadingTitle = config.carPlayLoadingTitle
+    resolveAlbumUrl = config.resolveAlbumUrl
     formatNavigationError = config.formatNavigationError
   }
 

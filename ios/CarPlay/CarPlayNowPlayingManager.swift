@@ -16,6 +16,8 @@ final class CarPlayNowPlayingManager {
 
   private let interfaceController: CPInterfaceController
   var listItemFactory: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
+  /// Pushes a browse destination (wired to the controller's navigateToUrl).
+  var navigateToUrl: ((_ url: String, _ title: String) -> Void)?
 
   private weak var audioBrowser: HybridAudioBrowser?
   private var nowPlayingObserver: NowPlayingObserver?
@@ -30,6 +32,21 @@ final class CarPlayNowPlayingManager {
   /// unrelated config churn (queue/content changes) and a rebuild recreates every
   /// button, flashing e.g. the shuffle button.
   private var builtButtonTypes: [CarPlayNowPlayingButton]?
+
+  /// Browse path the album line navigates to for the active track —
+  /// `track.albumUrl`, or the pre-resolved `resolveAlbumUrl` result. Resolved
+  /// at track-change time (not at tap) so the album line only surfaces when a
+  /// destination actually exists.
+  private var albumArtistDestination: String?
+  /// Drops a stale async `resolveAlbumUrl` result when the track changed while
+  /// the resolver was in flight (latest-update-wins).
+  private var albumArtistGeneration: UInt = 0
+  /// The just-tapped track whose load is still in flight. CarPlay reads
+  /// `isAlbumArtistButtonEnabled` when the template is displayed (a change while
+  /// visible doesn't re-render), and Now Playing is pushed at tap time — before
+  /// the player's `currentTrack` reflects the tap — so the flag must be derived
+  /// from the tapped track at push time. Cleared when the active track changes.
+  private var pendingAlbumArtistTrack: Track?
 
   /// Convenience accessor for browser config
   private var config: BrowserConfig {
@@ -59,6 +76,7 @@ final class CarPlayNowPlayingManager {
       CPNowPlayingTemplate.shared.remove(observer)
       nowPlayingObserver = nil
     }
+    pendingAlbumArtistTrack = nil
     audioBrowser = nil
   }
 
@@ -109,7 +127,7 @@ final class CarPlayNowPlayingManager {
 
       case .favorite:
         let favoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: isActiveTrackFavorited)
+          image: favoriteButtonImage(isFavorited: isActiveTrackFavorited),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -156,7 +174,7 @@ final class CarPlayNowPlayingManager {
     for (index, button) in buttons.enumerated() {
       if button is CPNowPlayingImageButton {
         let newFavoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: favorited)
+          image: favoriteButtonImage(isFavorited: favorited),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -174,6 +192,69 @@ final class CarPlayNowPlayingManager {
   func updateNowPlayingButtonStates() {
     updateNowPlayingUpNextButton()
     updateFavoriteButtonState()
+    updateAlbumArtistButtonState()
+  }
+
+  /// Re-resolves the album line's destination for the active track and
+  /// enables the (tappable) album/artist button only when one exists:
+  /// `track.albumUrl`, or the app's `resolveAlbumUrl` result.
+  /// Marks `track` as the just-tapped (still loading) track and derives the
+  /// album line's destination from it. Must run before the Now Playing
+  /// template is pushed — CarPlay reads `isAlbumArtistButtonEnabled` at display
+  /// time, so enabling after the push (when the load lands) renders no chevron.
+  func prepareAlbumArtistButton(for track: Track) {
+    pendingAlbumArtistTrack = track
+    updateAlbumArtistButtonState()
+  }
+
+  /// Clears the tap-time pending track (the player's `currentTrack` is now
+  /// authoritative) and refreshes all button states.
+  func handleActiveTrackChanged() {
+    pendingAlbumArtistTrack = nil
+    updateNowPlayingButtonStates()
+  }
+
+  func updateAlbumArtistButtonState() {
+    albumArtistGeneration &+= 1
+    let generation = albumArtistGeneration
+
+    // The just-tapped track wins while its load is in flight: currentTrack
+    // still points at the previous track (or nil) at push time.
+    guard let track = pendingAlbumArtistTrack ?? audioBrowser?.getPlayer()?.currentTrack else {
+      logger.debug("AlbumArtist: no current track → disabled")
+      setAlbumArtistDestination(nil)
+      return
+    }
+    logger.info("AlbumArtist: track=\(track.title) albumUrl=\(track.albumUrl ?? "nil") resolver=\(self.config.resolveAlbumUrl != nil)")
+    if let albumUrl = track.albumUrl {
+      setAlbumArtistDestination(albumUrl)
+      return
+    }
+    guard let resolver = config.resolveAlbumUrl else {
+      setAlbumArtistDestination(nil)
+      return
+    }
+    Task { @MainActor [weak self] in
+      let path: String?
+      do {
+        path = try await resolver(track).await()
+      } catch {
+        self?.logger.error("resolveAlbumUrl failed: \(error.localizedDescription)")
+        path = nil
+      }
+      guard let self, self.albumArtistGeneration == generation else { return }
+      self.setAlbumArtistDestination(path)
+    }
+  }
+
+  private func setAlbumArtistDestination(_ path: String?) {
+    albumArtistDestination = path
+    let template = CPNowPlayingTemplate.shared
+    let enabled = path != nil
+    if template.isAlbumArtistButtonEnabled != enabled {
+      logger.info("AlbumArtist: button \(enabled ? "enabled" : "disabled") (destination: \(path ?? "nil"))")
+      template.isAlbumArtistButtonEnabled = enabled
+    }
   }
 
   // MARK: - Queue Changes
@@ -255,6 +336,16 @@ final class CarPlayNowPlayingManager {
 
   // MARK: - Private - Up Next
 
+  fileprivate func handleAlbumArtistButtonTapped() {
+    guard let destination = albumArtistDestination else { return }
+    let track = pendingAlbumArtistTrack ?? audioBrowser?.getPlayer()?.currentTrack
+    // The album line is what was tapped, so its text is the natural title for
+    // the pushed destination (artist may be unset, or the live song).
+    let title = track?.album ?? track?.artist ?? track?.title ?? ""
+    logger.info("Album/Artist button tapped, navigating to \(destination)")
+    navigateToUrl?(destination, title)
+  }
+
   private func updateNowPlayingUpNextButton() {
     let template = CPNowPlayingTemplate.shared
     template.isUpNextButtonEnabled = config.carPlayUpNextButton && (audioBrowser?.getPlayer()?.tracks.count ?? 0) > 1
@@ -281,7 +372,7 @@ final class CarPlayNowPlayingManager {
     let upNextTitle = CPNowPlayingTemplate.shared.upNextTitle
     let template = CPListTemplate(
       title: upNextTitle.isEmpty ? "Up Next" : upNextTitle,
-      sections: [createUpNextSection(tracks: tracks, player: player)]
+      sections: [createUpNextSection(tracks: tracks, player: player)],
     )
 
     upNextTemplate = template
@@ -331,6 +422,8 @@ private final class NowPlayingObserver: NSObject, CPNowPlayingTemplateObserver, 
   }
 
   func nowPlayingTemplateAlbumArtistButtonTapped(_: CPNowPlayingTemplate) {
-    logger.debug("Album/Artist button tapped (not implemented)")
+    Task { @MainActor in
+      manager?.handleAlbumArtistButtonTapped()
+    }
   }
 }

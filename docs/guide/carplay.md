@@ -70,6 +70,30 @@ configureBrowser({
 
 The title renders as the list's centered empty state and disappears as soon as content arrives.
 
+## Album Line Navigation
+
+The album line on the Now Playing screen can navigate into the browse tree. Set `albumUrl` on a track to make its album line tappable while that track is active — tapping pushes that browse path:
+
+```ts
+{ title: 'Song', artist: 'Some Artist', album: 'Some Album', src: 'https://…', albumUrl: '/album/123' }
+```
+
+For tracks without an `albumUrl`, configure a resolver. It runs when the active track changes (not at tap time), so the album line only becomes tappable when there is actually somewhere to go:
+
+```ts
+configureBrowser({
+  resolveAlbumUrl: (track) =>
+    track.album ? `/album/${slugify(track.album)}` : undefined,
+  // ...
+})
+```
+
+Return a browse path to enable the album line for that track, or `undefined` to leave it untappable.
+
+::: warning Album metadata required
+CarPlay renders the tappable album/artist button as a **separate line built from the track's `album`** (visible as the third metadata line, with a chevron). Tracks without an `album` have no string for CarPlay to turn into a button — the artist line alone is never tappable. Set `album` on any track that should offer album-line navigation. See [Now Playing Metadata](/guide/now-playing-metadata) for the full field-by-surface rendering matrix.
+:::
+
 ## Siri Voice Search
 
 The library can show an "Ask Siri to Play Audio" button on CarPlay list templates. To enable it, set `carPlaySiriListButton` on the resolved content returned by your route source:

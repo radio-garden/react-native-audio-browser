@@ -1,5 +1,5 @@
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 extension ResolvedTrack {
@@ -24,6 +24,7 @@ extension ResolvedTrack {
     title: String? = nil,
     subtitle: String?? = nil,
     artist: String?? = nil,
+    albumUrl: String?? = nil,
     album: String?? = nil,
     description: String?? = nil,
     genre: String?? = nil,
@@ -33,7 +34,7 @@ extension ResolvedTrack {
     favorited: Bool?? = nil,
     groupTitle: String?? = nil,
     live: Bool?? = nil,
-    imageRow: [ImageRowItem]?? = nil
+    imageRow: [ImageRowItem]?? = nil,
   ) -> ResolvedTrack {
     ResolvedTrack(
       url: url ?? self.url,
@@ -48,6 +49,7 @@ extension ResolvedTrack {
       title: title ?? self.title,
       subtitle: subtitle ?? self.subtitle,
       artist: artist ?? self.artist,
+      albumUrl: albumUrl ?? self.albumUrl,
       album: album ?? self.album,
       description: description ?? self.description,
       genre: genre ?? self.genre,
@@ -57,7 +59,7 @@ extension ResolvedTrack {
       favorited: favorited ?? self.favorited,
       groupTitle: groupTitle ?? self.groupTitle,
       live: live ?? self.live,
-      imageRow: imageRow ?? self.imageRow
+      imageRow: imageRow ?? self.imageRow,
     )
   }
 }

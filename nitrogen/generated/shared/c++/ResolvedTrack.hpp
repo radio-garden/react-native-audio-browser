@@ -70,6 +70,7 @@ namespace margelo::nitro::audiobrowser {
     std::string title     SWIFT_PRIVATE;
     std::optional<std::string> subtitle     SWIFT_PRIVATE;
     std::optional<std::string> artist     SWIFT_PRIVATE;
+    std::optional<std::string> albumUrl     SWIFT_PRIVATE;
     std::optional<std::string> album     SWIFT_PRIVATE;
     std::optional<std::string> description     SWIFT_PRIVATE;
     std::optional<std::string> genre     SWIFT_PRIVATE;
@@ -83,7 +84,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     ResolvedTrack() = default;
-    explicit ResolvedTrack(std::string url, std::optional<std::vector<Track>> children, std::optional<CarPlaySiriListButtonPosition> carPlaySiriListButton, std::optional<std::string> id, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::optional<TrackRequest> request, std::optional<bool> artworkCarPlayTinted, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style, std::optional<TrackStyle> childrenStyle, std::optional<bool> favorited, std::optional<std::string> groupTitle, std::optional<bool> live, std::optional<std::vector<ImageRowItem>> imageRow): url(url), children(children), carPlaySiriListButton(carPlaySiriListButton), id(id), src(src), artwork(artwork), artworkSource(artworkSource), request(request), artworkCarPlayTinted(artworkCarPlayTinted), title(title), subtitle(subtitle), artist(artist), album(album), description(description), genre(genre), duration(duration), style(style), childrenStyle(childrenStyle), favorited(favorited), groupTitle(groupTitle), live(live), imageRow(imageRow) {}
+    explicit ResolvedTrack(std::string url, std::optional<std::vector<Track>> children, std::optional<CarPlaySiriListButtonPosition> carPlaySiriListButton, std::optional<std::string> id, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::optional<TrackRequest> request, std::optional<bool> artworkCarPlayTinted, std::string title, std::optional<std::string> subtitle, std::optional<std::string> artist, std::optional<std::string> albumUrl, std::optional<std::string> album, std::optional<std::string> description, std::optional<std::string> genre, std::optional<double> duration, std::optional<TrackStyle> style, std::optional<TrackStyle> childrenStyle, std::optional<bool> favorited, std::optional<std::string> groupTitle, std::optional<bool> live, std::optional<std::vector<ImageRowItem>> imageRow): url(url), children(children), carPlaySiriListButton(carPlaySiriListButton), id(id), src(src), artwork(artwork), artworkSource(artworkSource), request(request), artworkCarPlayTinted(artworkCarPlayTinted), title(title), subtitle(subtitle), artist(artist), albumUrl(albumUrl), album(album), description(description), genre(genre), duration(duration), style(style), childrenStyle(childrenStyle), favorited(favorited), groupTitle(groupTitle), live(live), imageRow(imageRow) {}
 
   public:
     friend bool operator==(const ResolvedTrack& lhs, const ResolvedTrack& rhs) = default;
@@ -111,6 +112,7 @@ namespace margelo::nitro {
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "subtitle"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artist"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "albumUrl"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "album"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "description"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "genre"))),
@@ -137,6 +139,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "title"), JSIConverter<std::string>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "subtitle"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.subtitle));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "artist"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artist));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "albumUrl"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.albumUrl));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "album"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.album));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "description"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.description));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "genre"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.genre));
@@ -169,6 +172,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "subtitle")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artist")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "albumUrl")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "album")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "description")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "genre")))) return false;

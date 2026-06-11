@@ -31,6 +31,7 @@
 #include "JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_std__string____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
 #include "JFunc_void_std__vector_ChapterMetadata_.hpp"
 #include "JFunc_void_TrackMetadata.hpp"
@@ -102,6 +103,7 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__vector_ChapterMetadata__cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_TrackMetadata_cxx::registerNatives();

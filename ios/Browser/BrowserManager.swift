@@ -206,9 +206,9 @@ final class BrowserManager {
   private func isFavorite(src: String, match: FavoritesMatchMode) -> Bool {
     switch match {
     case .exact:
-      return favoriteIds.contains(src)
+      favoriteIds.contains(src)
     case .partial:
-      return favoriteIds.contains { BrowserPathHelper.containsSegment(src, $0) }
+      favoriteIds.contains { BrowserPathHelper.containsSegment(src, $0) }
     }
   }
 
@@ -313,20 +313,19 @@ final class BrowserManager {
     // the implicit default: fetch the path via the request + browse config.
     let routeEntry = (config.routes).flatMap { findBestRouteMatch(path: path, routes: $0) }
 
-    let resolvedTrack: ResolvedTrack
-    if let (entry, routeMatch) = routeEntry {
-      resolvedTrack = try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
+    let resolvedTrack: ResolvedTrack = if let (entry, routeMatch) = routeEntry {
+      try await resolveRouteEntry(entry, path: path, params: routeMatch.params)
     } else {
       // Implicit default — no route config, just request → browse → fetch path.
-      resolvedTrack = try await resolveFromConfig(
-        nil, path: path, params: ["path": path]
+      try await resolveFromConfig(
+        nil, path: path, params: ["path": path],
       )
     }
 
     // Validate and transform children
     if let children = resolvedTrack.children {
       let transformed = try await transformChildren(
-        children, parentPath: path, routeEntry: routeEntry?.0
+        children, parentPath: path, routeEntry: routeEntry?.0,
       )
       return resolvedTrack.copying(children: transformed)
     }
@@ -389,7 +388,7 @@ final class BrowserManager {
 
     if let browseConfig = entry.browseConfig {
       return try await resolveFromConfig(
-        browseConfig, path: path, params: params
+        browseConfig, path: path, params: params,
       )
     }
 
@@ -586,6 +585,7 @@ final class BrowserManager {
             title: item.title,
             subtitle: nil,
             artist: nil,
+            albumUrl: nil,
             album: nil,
             description: nil,
             genre: nil,
@@ -690,6 +690,7 @@ final class BrowserManager {
       title: "Search: \(query)",
       subtitle: nil,
       artist: nil,
+      albumUrl: nil,
       album: nil,
       description: nil,
       genre: nil,

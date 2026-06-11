@@ -1601,6 +1601,78 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>
+  /**
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& / * track * /)>>`.
+   */
+  using std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______ = std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(const std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)> get_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(const std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__optional_std__string____Track = std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& / * track * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__optional_std__string____Track_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__optional_std__string____Track_Wrapper(std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::optional<std::string>>> call(Track track) const noexcept {
+      auto __result = _function->operator()(track);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__optional_std__string____Track create_Func_std__shared_ptr_Promise_std__optional_std__string____Track(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__optional_std__string____Track_Wrapper wrap_Func_std__shared_ptr_Promise_std__optional_std__string____Track(Func_std__shared_ptr_Promise_std__optional_std__string____Track value) noexcept {
+    return Func_std__shared_ptr_Promise_std__optional_std__string____Track_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::optional<std::string>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::optional<std::string>>>`.
+   */
+  using std__shared_ptr_Promise_std__optional_std__string___ = std::shared_ptr<Promise<std::optional<std::string>>>;
+  inline std::shared_ptr<Promise<std::optional<std::string>>> create_std__shared_ptr_Promise_std__optional_std__string___() noexcept {
+    return Promise<std::optional<std::string>>::create();
+  }
+  inline PromiseHolder<std::optional<std::string>> wrap_std__shared_ptr_Promise_std__optional_std__string___(std::shared_ptr<Promise<std::optional<std::string>>> promise) noexcept {
+    return PromiseHolder<std::optional<std::string>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<std::string>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::optional<std::string>&)>`.
+   */
+  using Func_void_std__optional_std__string_ = std::function<void(const std::optional<std::string>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::optional<std::string>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__optional_std__string__Wrapper final {
+  public:
+    explicit Func_void_std__optional_std__string__Wrapper(std::function<void(const std::optional<std::string>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::optional<std::string>& /* result */)>>(std::move(func))) {}
+    inline void call(std::optional<std::string> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::optional<std::string>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__optional_std__string_ create_Func_void_std__optional_std__string_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__optional_std__string__Wrapper wrap_Func_void_std__optional_std__string_(Func_void_std__optional_std__string_ value) noexcept {
+    return Func_void_std__optional_std__string__Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)>>
   /**
    * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& / * params * /)>>`.

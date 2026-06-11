@@ -145,6 +145,7 @@ class PlaybackStateStore(private val player: Player) {
         put("title", track.title)
         put("subtitle", track.subtitle)
         put("artist", track.artist)
+        put("albumUrl", track.albumUrl)
         put("album", track.album)
         put("artwork", track.artwork)
         put("description", track.description)
@@ -168,6 +169,7 @@ class PlaybackStateStore(private val player: Player) {
           title = obj.getString("title"),
           subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
           artist = obj.optString("artist").takeIf { it.isNotEmpty() },
+          albumUrl = obj.optString("albumUrl").takeIf { it.isNotEmpty() },
           album = obj.optString("album").takeIf { it.isNotEmpty() },
           artwork = obj.optString("artwork").takeIf { it.isNotEmpty() },
           artworkSource = null, // Not persisted - will be re-transformed on browse

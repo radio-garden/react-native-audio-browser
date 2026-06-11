@@ -10,6 +10,7 @@ import type {
   ArtworkRequestConfig,
   BrowserSourceCallback,
   CarPlayNowPlayingButton,
+  ResolveAlbumUrlCallback,
   FormatNavigationErrorCallback,
   HandleTrackLoadCallback,
   MediaRequestConfig,
@@ -78,5 +79,6 @@ export interface NativeBrowserConfiguration {
   carPlayUpNextButton?: boolean
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
   carPlayLoadingTitle?: string
+  resolveAlbumUrl?: ResolveAlbumUrlCallback
   formatNavigationError?: FormatNavigationErrorCallback
 }

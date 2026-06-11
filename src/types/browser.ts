@@ -953,6 +953,25 @@ export type BrowserConfiguration = {
   carPlayLoadingTitle?: string
 
   /**
+   * Called when the album line on the CarPlay Now Playing screen is tapped
+   * and the active track has no {@link Track.albumUrl}. Return a browse path
+   * to navigate the CarPlay browse stack there, or `undefined` if the tap was
+   * handled (or should do nothing).
+   *
+   * The album line is tappable whenever the active track has an `albumUrl`
+   * or this callback is configured.
+   *
+   * @example
+   * ```typescript
+   * resolveAlbumUrl: (track) =>
+   *   track.album ? `/album/${slugify(track.album)}` : undefined
+   * ```
+   *
+   * @platform ios
+   */
+  resolveAlbumUrl?: ResolveAlbumUrlCallback
+
+  /**
    * Callback to customize error messages for navigation errors.
    * Used by CarPlay and available via `useFormattedNavigationError()` for app UI.
    *
@@ -1057,3 +1076,11 @@ export type FormatNavigationErrorParams = {
 export type FormatNavigationErrorCallback = (
   params: FormatNavigationErrorParams
 ) => FormattedNavigationError | undefined
+
+/**
+ * Maps the tapped active track to a browse path for the CarPlay album line,
+ * or `undefined` to do nothing. See `resolveAlbumUrl`.
+ */
+export type ResolveAlbumUrlCallback = (
+  track: Track
+) => string | undefined

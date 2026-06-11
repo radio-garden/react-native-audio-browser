@@ -169,9 +169,30 @@ export interface Track {
    * each for the surface you want it on.
    */
   artist?: string
+
+  /**
+   * Browse path the {@link album} line navigates to (same path namespace as
+   * {@link url}). On CarPlay, when the active track has an `albumUrl`, its
+   * album line on the Now Playing screen becomes tappable and navigates the
+   * browse stack there. See also `resolveAlbumUrl` in the browser
+   * configuration for a dynamic fallback.
+   *
+   * Requires {@link album} to be set: CarPlay renders the tappable line from
+   * the album metadata — without an album there is no line to tap.
+   *
+   * @platform ios
+   */
+  albumUrl?: string
+
   album?: string
   description?: string
   genre?: string
+
+  /**
+   * Duration in seconds, as catalog metadata for app UI (e.g. an episode
+   * list). Does not drive the now-playing scrubber — every platform surface
+   * derives elapsed/duration from the player itself.
+   */
   duration?: number
 
   /**

@@ -85,9 +85,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// because DispatchQueue.main.sync blocks the caller — no concurrent access window.
   private func onMainActor<T>(_ work: @MainActor () -> T) -> T {
     if Thread.isMainThread {
-      return MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
+      MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
     } else {
-      return DispatchQueue.main.sync {
+      DispatchQueue.main.sync {
         MainActor.assumeIsolated { UncheckedSendableBox(value: work()) }.value
       }
     }
@@ -95,10 +95,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   private func onMainActor<T>(_ work: @MainActor () throws -> T) throws -> T {
     if Thread.isMainThread {
-      return try MainActor.assumeIsolated { UncheckedSendableBox(value: try work()) }.value
+      try MainActor.assumeIsolated { try UncheckedSendableBox(value: work()) }.value
     } else {
-      return try DispatchQueue.main.sync {
-        try MainActor.assumeIsolated { UncheckedSendableBox(value: try work()) }.value
+      try DispatchQueue.main.sync {
+        try MainActor.assumeIsolated { try UncheckedSendableBox(value: work()) }.value
       }
     }
   }
@@ -128,7 +128,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     path: nil, request: nil, requestResolver: nil, browse: nil, browseResolver: nil, media: nil, artwork: nil, nowPlayingArtwork: nil, routes: nil,
     singleTrack: nil, handleTrackLoad: nil,
     androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, carPlayLoadingTitle: nil, formatNavigationError: nil,
+    carPlayNowPlayingButtons: nil, carPlayLoadingTitle: nil, resolveAlbumUrl: nil, formatNavigationError: nil,
   ) {
     didSet {
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }
@@ -375,11 +375,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       guard let player else { return }
       let result = await trackSelector.select(track: track, player: player)
       switch result {
-      case .play(let intent):
+      case let .play(intent):
         executePlayback(intent)
       case .intercepted:
         break
-      case .browse(let url):
+      case let .browse(url):
         navigateToBrowsableUrl(url)
       case .none:
         break
@@ -390,15 +390,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private func executePlayback(_ intent: TrackSelector.PlaybackIntent) {
     onMainActor {
       switch intent {
-      case .skipTo(let index):
+      case let .skipTo(index):
         do {
           try player?.skipTo(index, playWhenReady: true)
         } catch {
           logger.error("Failed to skip to track at index \(index): \(error)")
         }
-      case .setQueue(let tracks, let startIndex, let sourcePath):
+      case let .setQueue(tracks, startIndex, sourcePath):
         player?.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-      case .loadTrack(let track):
+      case let .loadTrack(track):
         player?.load(track, playWhenReady: true)
       }
     }
@@ -838,7 +838,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       player.setQueue(
         tracks,
         initialIndex: startIndex.map { Int($0) } ?? 0,
-        startPositionMs: startPositionMs
+        startPositionMs: startPositionMs,
       )
     }
   }
@@ -887,7 +887,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       return makeNowPlayingMetadata(
         track: track,
         title: override?.title ?? track.title,
-        artist: override?.artist ?? track.artist
+        artist: override?.artist ?? track.artist,
       )
     }
   }
@@ -930,7 +930,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       stalled: player.isStalled,
       error: player.coordinator.playbackError?.toNitroError(),
       override: nowPlayingMetadataEnabled ? nowPlayingOverride : nil,
-      formatter: nowPlayingMetadataEnabled ? nowPlayingMetadataFormatter : nil
+      formatter: nowPlayingMetadataEnabled ? nowPlayingMetadataFormatter : nil,
     )
   }
 
@@ -1050,7 +1050,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
       let button = Self.firstButton(in: routePicker)
       self.logger.notice(
-        "openIosOutputPicker: hierarchy=\(Self.describeHierarchy(routePicker), privacy: .public), buttonFound=\(button != nil, privacy: .public)"
+        "openIosOutputPicker: hierarchy=\(Self.describeHierarchy(routePicker), privacy: .public), buttonFound=\(button != nil, privacy: .public)",
       )
 
       if let button {

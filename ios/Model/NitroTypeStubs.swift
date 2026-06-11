@@ -15,6 +15,7 @@
     var request: TrackRequest?
     var title: String = ""
     var artist: String?
+    var albumUrl: String?
     var album: String?
     var live: Bool?
   }
@@ -84,6 +85,7 @@
     var title: String
     var subtitle: String?
     var artist: String?
+    var albumUrl: String?
     var album: String?
     var description: String?
     var genre: String?

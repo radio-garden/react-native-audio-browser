@@ -30,7 +30,11 @@ export default withMermaid(
             text: 'Introduction',
             items: [
               { text: 'Getting Started', link: '/guide/getting-started' },
-              { text: 'Basic Usage', link: '/guide/basic-usage' }
+              { text: 'Basic Usage', link: '/guide/basic-usage' },
+              {
+                text: 'Now Playing Metadata',
+                link: '/guide/now-playing-metadata'
+              }
             ]
           },
           {

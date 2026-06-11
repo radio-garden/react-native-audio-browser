@@ -18,7 +18,7 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
+  init(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumUrl: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = id {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -69,6 +69,12 @@ public extension Track {
       }
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = artist {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = albumUrl {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -234,6 +240,18 @@ public extension Track {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__artist) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__artist)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var albumUrl: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__albumUrl) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__albumUrl)
         return String(__unwrapped)
       } else {
         return nil
