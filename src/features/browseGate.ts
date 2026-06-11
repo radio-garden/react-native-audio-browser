@@ -10,19 +10,17 @@ export type NativeBrowseGate = {
   /** Headline shown on the gate page. */
   title: string
   /**
-   * Body copy shown below the title. On CarPlay it renders as the tab page's
-   * centered text, and as the body of the gate alert when a button is
-   * configured. Newlines collapse to spaces (CarPlay renders single labels).
+   * Body copy shown below the title. On CarPlay with a button the page is a
+   * list whose section header carries the message in large type: a newline
+   * splits it into the header's title and subtitle lines. Without a button
+   * the message renders as the centered empty view, where newlines collapse
+   * to spaces.
    */
   message?: string
   /**
-   * Title of the gate's action button. On CarPlay the button can't live on
-   * the tab pages (tab children show neither rows-with-empty-view nor
-   * navigation-bar buttons), so configuring it presents a modal alert — the
-   * message as large centered text with this action plus a system-localized
-   * OK — when the gate engages or CarPlay connects while gated. Dismissing
-   * leaves the buttonless gate pages in the tabs. Omit for no alert (the
-   * `onButtonPressed` callback is then never invoked).
+   * Title of the action button. On CarPlay it renders as the gate page's
+   * single row, beneath the message header. Omit for a page without a button
+   * (the `onButtonPressed` callback is then never invoked).
    */
   buttonTitle?: string
 }

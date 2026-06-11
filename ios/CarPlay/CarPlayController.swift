@@ -45,14 +45,11 @@ public final class RNABCarPlayController: NSObject {
   private var pendingTabs: [Track]?
 
   /// The active Browse Gate. While set, tabs keep their tab-bar entries but
-  /// render the gate page instead of content, and navigation/selection is
-  /// blocked. Mirrors `audioBrowser.browseGate`; seeded in start() so a gate
-  /// set before the scene connects renders at connect.
+  /// render the gate page (a CPInformationTemplate) instead of content, and
+  /// navigation/selection is blocked. Mirrors `audioBrowser.browseGate`;
+  /// seeded in start() so a gate set before the scene connects renders at
+  /// connect.
   private var activeGate: NativeBrowseGate?
-
-  /// The modal gate alert currently presented, if any. Weak — the interface
-  /// controller owns presented templates.
-  private weak var presentedGateAlert: CPAlertTemplate?
 
   /// How long a browse resolve may run before the destination's loading spinner
   /// is replaced with an error state. The selection completion is fired
@@ -169,12 +166,6 @@ public final class RNABCarPlayController: NSObject {
       self.nowPlayingManager.setup(audioBrowser: browser)
 
       await self.buildInitialInterface()
-
-      // Connecting while gated: surface the gate alert (centered text +
-      // button) over the gated tabs, like the system's own terms screens.
-      if let gate = self.activeGate {
-        self.presentGateAlert(gate)
-      }
     }
   }
 
@@ -946,17 +937,9 @@ public final class RNABCarPlayController: NSObject {
   /// Now Playing buttons (e.g. favorite) hide while gated and return on clear.
   @MainActor
   private func handleBrowseGateChanged(_ gate: NativeBrowseGate?) {
-    let wasGated = activeGate != nil
     activeGate = gate
     if let gate {
       applyGate(gate)
-      // Present the gate alert (centered text + button) on the nil→set
-      // transition, and re-present on a re-set while it's still up so copy
-      // updates (e.g. a failed re-check) reach the user. A re-set after the
-      // user dismissed the alert does NOT re-surface it.
-      if !wasGated || presentedGateAlert != nil {
-        presentGateAlert(gate)
-      }
     } else {
       removeGate()
     }
@@ -1008,7 +991,6 @@ public final class RNABCarPlayController: NSObject {
   /// tab when the tab bar is already up.
   @MainActor
   private func removeGate() {
-    dismissGateAlertIfPresented()
     let tabs = audioBrowser?.browserManager.getTabs() ?? []
     guard !tabs.isEmpty else {
       // Never had tabs (gate was up since before config) — full initial build.
@@ -1048,21 +1030,45 @@ public final class RNABCarPlayController: NSObject {
   /// entitlement does not include the information template — handing one to
   /// CPTabBarTemplate throws an unhandled ObjC exception (crash at init).
   ///
-  /// The page is the list's centered empty view (title + message; newlines
-  /// collapse to spaces — the "variants" are width alternatives, not lines).
-  /// No button here: the empty view renders only on a row-less list, and tab
-  /// children never show navigation-bar buttons (the tab bar owns that
-  /// chrome) — the gate's button lives on the modal gate alert instead (see
-  /// presentGateAlert).
+  /// Within a list, CarPlay then forces a choice: the centered empty view
+  /// renders only when the list has NO rows, and tab children never show
+  /// navigation-bar buttons (the tab bar owns that chrome). So a gate WITH a
+  /// button renders as an enhanced section header (large-type message lines;
+  /// a newline in the message splits header and subtitle) above a single
+  /// button row — and a buttonless gate gets the centered empty view, where
+  /// newlines collapse to spaces (the "variants" are alternatives, not
+  /// lines).
   private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPListTemplate {
-    let template = CPListTemplate(title: gate.title, sections: [])
-    // Set at creation — the timing CarPlay renders the empty view reliably
-    // (see replaceWithMessage).
-    template.emptyViewTitleVariants = [gate.title]
-    if let message = gate.message, !message.isEmpty {
-      template.emptyViewSubtitleVariants = [
-        message.replacingOccurrences(of: "\n", with: " "),
-      ]
+    let template: CPListTemplate
+    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
+      let button = CPListItem(text: buttonTitle, detailText: nil)
+      button.handler = { [weak self] _, completion in
+        self?.audioBrowser?.onBrowseGateButtonPressed()
+        completion()
+      }
+      let lines = (gate.message ?? "")
+        .split(separator: "\n", maxSplits: 1)
+        .map(String.init)
+        .filter { !$0.isEmpty }
+      let section = CPListSection(
+        items: [button],
+        header: lines.first ?? gate.title,
+        headerSubtitle: lines.count > 1 ? lines[1] : nil,
+        headerImage: nil,
+        headerButton: nil,
+        sectionIndexTitle: nil,
+      )
+      template = CPListTemplate(title: gate.title, sections: [section])
+    } else {
+      template = CPListTemplate(title: gate.title, sections: [])
+      // Set at creation — the timing CarPlay renders the empty view reliably
+      // (see replaceWithMessage).
+      template.emptyViewTitleVariants = [gate.title]
+      if let message = gate.message, !message.isEmpty {
+        template.emptyViewSubtitleVariants = [
+          message.replacingOccurrences(of: "\n", with: " "),
+        ]
+      }
     }
     // Marks the page as a gate (vs. a content tab, which carries a `path`),
     // so the lazy-loader and refresh paths never try to fill it.
@@ -1071,55 +1077,6 @@ public final class RNABCarPlayController: NSObject {
       applyTabBarEntry(to: template, for: tab)
     }
     return template
-  }
-
-  /// The gate's foreground: a modal CPAlertTemplate — the only layout CarPlay
-  /// gives an audio app for large centered text WITH buttons (the pattern the
-  /// system itself uses for terms/onboarding screens). Shown when the gate
-  /// engages; the action button forwards to the app's `onButtonPressed`, and
-  /// a system-localized OK dismisses, leaving the (buttonless) gate pages in
-  /// the tabs. Presenting replaces any presented template, and a gate re-set
-  /// while the alert is up re-presents it with the fresh copy.
-  @MainActor
-  private func presentGateAlert(_ gate: NativeBrowseGate) {
-    guard let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty else { return }
-
-    let text = [gate.message?.replacingOccurrences(of: "\n", with: " ")]
-      .compactMap { $0 }
-      .first ?? gate.title
-    let action = CPAlertAction(title: buttonTitle, style: .default) { [weak self] _ in
-      self?.audioBrowser?.onBrowseGateButtonPressed()
-    }
-    let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
-    let dismiss = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
-      self?.interfaceController.dismissTemplate(animated: true, completion: nil)
-    }
-    let alert = CPAlertTemplate(titleVariants: [text], actions: [action, dismiss])
-
-    let present = { [weak self] in
-      guard let self else { return }
-      self.presentedGateAlert = alert
-      self.interfaceController.presentTemplate(alert, animated: true) { [weak self] presented, _ in
-        if !presented {
-          self?.presentedGateAlert = nil
-        }
-      }
-    }
-    if interfaceController.presentedTemplate != nil {
-      interfaceController.dismissTemplate(animated: false) { _, _ in present() }
-    } else {
-      present()
-    }
-  }
-
-  /// Dismisses the gate alert if it is the currently presented template.
-  @MainActor
-  private func dismissGateAlertIfPresented() {
-    guard let presentedGateAlert,
-          interfaceController.presentedTemplate === presentedGateAlert
-    else { return }
-    self.presentedGateAlert = nil
-    interfaceController.dismissTemplate(animated: true, completion: nil)
   }
 
   // MARK: - Error Handling
