@@ -335,7 +335,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<PlaybackError> getPlaybackError() = 0;
       virtual void retry() = 0;
       virtual std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() = 0;
-      virtual void setSleepTimer(double seconds) = 0;
+      virtual void setSleepTimer(double seconds, std::optional<double> fadeDuration) = 0;
       virtual void setSleepTimerToEndOfTrack() = 0;
       virtual bool clearSleepTimer() = 0;
       virtual void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) = 0;

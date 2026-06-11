@@ -213,7 +213,7 @@ namespace margelo::nitro::audiobrowser {
     std::optional<PlaybackError> getPlaybackError() override;
     void retry() override;
     std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() override;
-    void setSleepTimer(double seconds) override;
+    void setSleepTimer(double seconds, std::optional<double> fadeDuration) override;
     void setSleepTimerToEndOfTrack() override;
     bool clearSleepTimer() override;
     void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) override;

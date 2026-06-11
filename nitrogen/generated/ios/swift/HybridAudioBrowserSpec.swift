@@ -111,7 +111,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getPlaybackError() throws -> PlaybackError?
   func retry() throws -> Void
   func getSleepTimer() throws -> SleepTimer
-  func setSleepTimer(seconds: Double) throws -> Void
+  func setSleepTimer(seconds: Double, fadeDuration: Double?) throws -> Void
   func setSleepTimerToEndOfTrack() throws -> Void
   func clearSleepTimer() throws -> Bool
   func add(tracks: [Track], insertBeforeIndex: Double?) throws -> Void

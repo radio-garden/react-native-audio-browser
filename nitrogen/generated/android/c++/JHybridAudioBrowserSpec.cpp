@@ -269,6 +269,7 @@ namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 #include "JTrackLoadEvent.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "JCarPlayNowPlayingButton.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_std__string____Track.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
 #include "JFormatNavigationErrorParams.hpp"
@@ -1706,9 +1707,9 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result->toCpp();
   }
-  void JHybridAudioBrowserSpec::setSleepTimer(double seconds) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* seconds */)>("setSleepTimer");
-    method(_javaPart, seconds);
+  void JHybridAudioBrowserSpec::setSleepTimer(double seconds, std::optional<double> fadeDuration) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* seconds */, jni::alias_ref<jni::JDouble> /* fadeDuration */)>("setSleepTimer");
+    method(_javaPart, seconds, fadeDuration.has_value() ? jni::JDouble::valueOf(fadeDuration.value()) : nullptr);
   }
   void JHybridAudioBrowserSpec::setSleepTimerToEndOfTrack() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("setSleepTimerToEndOfTrack");

@@ -2004,9 +2004,16 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setSleepTimer(seconds: Double) -> bridge.Result_void_ {
+  public final func setSleepTimer(seconds: Double, fadeDuration: bridge.std__optional_double_) -> bridge.Result_void_ {
     do {
-      try self.__implementation.setSleepTimer(seconds: seconds)
+      try self.__implementation.setSleepTimer(seconds: seconds, fadeDuration: { () -> Double? in
+        if bridge.has_value_std__optional_double_(fadeDuration) {
+          let __unwrapped = bridge.get_std__optional_double_(fadeDuration)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }())
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

@@ -1012,7 +1012,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setSleepTimer(seconds: Double): Unit
+  abstract fun setSleepTimer(seconds: Double, fadeDuration: Double?): Unit
   
   @DoNotStrip
   @Keep
