@@ -65,8 +65,13 @@ Timed metadata is never auto-applied: the library surfaces ICY (Shoutcast/Icecas
 `flashNowPlaying(update, durationMs)` is the toast of the now-playing world: it briefly replaces the fields it sets, then reverts to whatever the lower layers say. External surfaces have no notification primitive, so a transient metadata swap is the only way to give feedback there — the canonical use is answering a refused remote command:
 
 ```ts
+// A radio product with an hourly skip allowance:
 handleRemoteNext(() => {
-  flashNowPlaying({ artist: 'Skipping requires Premium' }, 3000)
+  if (skipsRemaining() > 0) {
+    skipToNext()
+  } else {
+    flashNowPlaying({ artist: 'Skip limit reached' }, 3000)
+  }
 })
 ```
 

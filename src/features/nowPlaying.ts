@@ -46,7 +46,11 @@ export function getNowPlaying(): NowPlayingMetadata | undefined {
  *
  * @example
  * ```ts
- * handleRemoteNext(() => flashNowPlaying({ artist: 'Skipping requires Premium' }, 3000))
+ * // A radio product with an hourly skip allowance:
+ * handleRemoteNext(() => {
+ *   if (skipsRemaining() > 0) skipToNext()
+ *   else flashNowPlaying({ artist: 'Skip limit reached' }, 3000)
+ * })
  * ```
  */
 export function flashNowPlaying(
