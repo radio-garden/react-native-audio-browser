@@ -1030,32 +1030,33 @@ public final class RNABCarPlayController: NSObject {
   /// entitlement does not include the information template — handing one to
   /// CPTabBarTemplate throws an unhandled ObjC exception (crash at init).
   ///
-  /// Within a list, CarPlay then forces a choice: the centered empty view
-  /// renders only when the list has NO rows, and tab children never show
-  /// navigation-bar buttons (the tab bar owns that chrome). So a gate WITH a
-  /// button renders as an enhanced section header (large-type message lines;
-  /// a newline in the message splits header and subtitle) above a single
-  /// button row — and a buttonless gate gets the centered empty view, where
-  /// newlines collapse to spaces (the "variants" are alternatives, not
-  /// lines).
+  /// Within a list, tab children never show navigation-bar buttons (the tab
+  /// bar owns that chrome), and the centered empty view renders only when
+  /// the list has NO rows. The page-with-button look first-party audio apps
+  /// use is the iOS 15 *enhanced section header*: a row-less section whose
+  /// header carries the message in large type (a newline in the message
+  /// splits header and subtitle) plus a titled CPButton. A buttonless gate
+  /// gets the centered empty view instead, where newlines collapse to
+  /// spaces (the "variants" are width alternatives, not lines).
   private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPListTemplate {
     let template: CPListTemplate
-    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
-      let button = CPListItem(text: buttonTitle, detailText: nil)
-      button.handler = { [weak self] _, completion in
+    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty,
+       let buttonImage = UIImage(systemName: "checkmark.circle")
+    {
+      let button = CPButton(image: buttonImage) { [weak self] _ in
         self?.audioBrowser?.onBrowseGateButtonPressed()
-        completion()
       }
+      button.title = buttonTitle
       let lines = (gate.message ?? "")
         .split(separator: "\n", maxSplits: 1)
         .map(String.init)
         .filter { !$0.isEmpty }
       let section = CPListSection(
-        items: [button],
+        items: [],
         header: lines.first ?? gate.title,
         headerSubtitle: lines.count > 1 ? lines[1] : nil,
         headerImage: nil,
-        headerButton: nil,
+        headerButton: button,
         sectionIndexTitle: nil,
       )
       template = CPListTemplate(title: gate.title, sections: [section])
