@@ -132,6 +132,10 @@ _Avoid_: Permission, Feature flag, Control.
 A boolean on a Track marking it as a user favorite. Toggled programmatically or via the heart button on an External surface. The library's domain vocabulary has no Rating concept.
 _Avoid_: Rating, hearted, liked, starred.
 
+**Browse Gate**:
+An app-imposed block on browsing from External surfaces, set and cleared at runtime. While gated, **Tabs** stay visible but every tab's content is replaced by a single full-page message — title, body, and an optional button wired to an app callback — and **Search** from External surfaces resolves to the same message. The **Player**, the **Queue**, and **Now Playing** are unaffected: a gate blocks *finding* content, never *hearing* it. Generic by design — subscription, login, and region blocks are all Browse Gates.
+_Avoid_: Paywall (one app's reason for a gate, not the concept), error page (a gate is deliberate app state, not a **NavigationError**), lock screen (that's an External surface).
+
 ## Relationships
 
 - A **Browser** holds zero or more **Routes**, up to four **Tabs**, and optionally one **Search**.
@@ -141,6 +145,7 @@ _Avoid_: Rating, hearted, liked, starred.
 - The `media` and `artwork` request pipelines accept a per-Track **Resolve**; all requests accept a final **Transform**.
 - **External surfaces** display **Now Playing**, may browse the **BrowseTree**, and emit **Remote commands**.
 - A **Capability** controls whether a matching **Remote command** can be invoked from an External surface.
+- A **Browse Gate** blocks the **BrowseTree** and **Search** on External surfaces, but never the **Player**, the **Queue**, or **Now Playing**.
 - A Track is **Favorited** independently of being the Active Track — favoriting is set on the Track, not on the Queue.
 
 ## Example dialogue
