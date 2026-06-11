@@ -337,13 +337,13 @@ extension BrowserManager {
   /// (single-awaiting an async callback hands a `Promise` downstream — the original
   /// "empty config" bug), so it lives in exactly one place. Pairs with `awaitSyncConfig`.
   func awaitAsyncConfig(_ promise: Promise<Promise<RequestConfig>>) async throws -> RequestConfig {
-    extractConfig(try await promise.await().await())
+    try await extractConfig(promise.await().await())
   }
 
   /// Awaits a **sync** config callback (lowers to `Promise<RequestConfig>` — a single
   /// bridge await) and copies the result out. Pairs with `awaitAsyncConfig`.
   func awaitSyncConfig(_ promise: Promise<RequestConfig>) async throws -> RequestConfig {
-    extractConfig(try await promise.await())
+    try await extractConfig(promise.await())
   }
 
   /// Extracts all values from a RequestConfig into a new instance to avoid

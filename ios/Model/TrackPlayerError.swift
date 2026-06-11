@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 public enum TrackPlayerError: Error {
@@ -53,26 +53,27 @@ extension TrackPlayerError.QueueError: LocalizedError {
 }
 
 #if canImport(NitroModules)
-// MARK: - Nitro PlaybackError Conversion
 
-public extension TrackPlayerError.PlaybackError {
-  /// Converts to Nitro PlaybackError for JS callbacks
-  func toNitroError() -> PlaybackError {
-    let code = switch self {
-    case .failedToLoadKeyValue:
-      "failed-to-load"
-    case .invalidSourceUrl:
-      "invalid-source-url"
-    case .notConnectedToInternet:
-      "not-connected-to-internet"
-    case .playbackFailed:
-      "playback-failed"
-    case .trackWasUnplayable:
-      "track-unplayable"
-    case .playbackStalled:
-      "playback-stalled"
+  // MARK: - Nitro PlaybackError Conversion
+
+  public extension TrackPlayerError.PlaybackError {
+    /// Converts to Nitro PlaybackError for JS callbacks
+    func toNitroError() -> PlaybackError {
+      let code = switch self {
+      case .failedToLoadKeyValue:
+        "failed-to-load"
+      case .invalidSourceUrl:
+        "invalid-source-url"
+      case .notConnectedToInternet:
+        "not-connected-to-internet"
+      case .playbackFailed:
+        "playback-failed"
+      case .trackWasUnplayable:
+        "track-unplayable"
+      case .playbackStalled:
+        "playback-stalled"
+      }
+      return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
     }
-    return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
   }
-}
 #endif

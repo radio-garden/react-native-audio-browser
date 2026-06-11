@@ -41,7 +41,7 @@ enum CarPlayArtworkResolver {
     targetWidth: Double,
     targetHeight: Double,
     displayScale: Double,
-    urlResolver: ((Double, Double) async -> ArtworkResolvedImage?)?
+    urlResolver: ((Double, Double) async -> ArtworkResolvedImage?)?,
   ) async -> ArtworkLoadAction {
     // 1. Primary SF symbol check
     if let artwork, artwork.hasPrefix("sf:") {
@@ -59,7 +59,7 @@ enum CarPlayArtworkResolver {
             artworkSourceUri: artworkSourceUri,
             artworkCarPlayTinted: artworkCarPlayTinted,
             targetWidth: targetWidth,
-            targetHeight: targetHeight
+            targetHeight: targetHeight,
           )
         }
         let isSvg = resolvedUrl.pathExtension.lowercased() == "svg"
@@ -67,7 +67,7 @@ enum CarPlayArtworkResolver {
           uri: resolved.uri,
           headers: resolved.headers,
           shouldTint: artworkCarPlayTinted ?? false,
-          isSvg: isSvg
+          isSvg: isSvg,
         )
       }
     }
@@ -78,7 +78,7 @@ enum CarPlayArtworkResolver {
       artworkSourceUri: artworkSourceUri,
       artworkCarPlayTinted: artworkCarPlayTinted,
       targetWidth: targetWidth,
-      targetHeight: targetHeight
+      targetHeight: targetHeight,
     )
   }
 
@@ -87,7 +87,7 @@ enum CarPlayArtworkResolver {
     artworkSourceUri: String?,
     artworkCarPlayTinted: Bool?,
     targetWidth: Double,
-    targetHeight: Double
+    targetHeight: Double,
   ) -> ArtworkLoadAction {
     guard let directUri = artwork ?? artworkSourceUri else { return .none }
 
@@ -101,7 +101,7 @@ enum CarPlayArtworkResolver {
       uri: directUri,
       headers: nil,
       shouldTint: artworkCarPlayTinted ?? false,
-      isSvg: isSvg
+      isSvg: isSvg,
     )
   }
 }

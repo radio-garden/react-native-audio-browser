@@ -66,11 +66,11 @@ import Foundation
     isObserving = false
   }
 
-  @objc nonisolated private func avItemDidPlayToEndTime() {
+  @objc private nonisolated func avItemDidPlayToEndTime() {
     Task { @MainActor in self.onDidPlayToEndTime() }
   }
 
-  @objc nonisolated private func avItemFailedToPlayToEndTime(_ notification: Notification) {
+  @objc private nonisolated func avItemFailedToPlayToEndTime(_ notification: Notification) {
     // Extract the error from the notification's userInfo
     // AVPlayerItemFailedToPlayToEndTimeErrorKey contains the actual error
     let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error

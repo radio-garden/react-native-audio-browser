@@ -88,11 +88,11 @@ class NowPlayingInfoController {
   /// (e.g. artwork) are treated as changed.
   private func valueUnchanged(_ key: String, _ newValue: Any?) -> Bool {
     switch (_info[key], newValue) {
-    case (nil, nil): return true
-    case let (a as String, b as String): return a == b
-    case let (a as Bool, b as Bool): return a == b
-    case let (a as NSNumber, b as NSNumber): return a == b
-    default: return false
+    case (nil, nil): true
+    case let (a as String, b as String): a == b
+    case let (a as Bool, b as Bool): a == b
+    case let (a as NSNumber, b as NSNumber): a == b
+    default: false
     }
   }
 

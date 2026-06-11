@@ -77,7 +77,7 @@ struct ResolveAndLoadTests {
     let (loader, spy) = makeLoader()
     loader.resolveAndLoad(src: "")
     #expect(spy.playbackErrors.count == 1)
-    if case .invalidSourceUrl(let url) = spy.playbackErrors.first {
+    if case let .invalidSourceUrl(url) = spy.playbackErrors.first {
       #expect(url == "")
     } else {
       Issue.record("expected .invalidSourceUrl, got \(String(describing: spy.playbackErrors.first))")
@@ -123,13 +123,13 @@ struct ResolveAndLoadTests {
 
     // The resolver runs in a Task that awaits the resolver then does MainActor.run,
     // so we need multiple yields for the full chain to settle.
-    for _ in 0..<10 {
+    for _ in 0 ..< 10 {
       await Task.yield()
       if !spy.playbackErrors.isEmpty { break }
     }
 
     #expect(spy.playbackErrors.count == 1)
-    if case .invalidSourceUrl(let url) = spy.playbackErrors.first {
+    if case let .invalidSourceUrl(url) = spy.playbackErrors.first {
       #expect(url == "")
     } else {
       Issue.record("expected .invalidSourceUrl")
@@ -214,7 +214,7 @@ struct AsyncLoadingTests {
     loader.resolveAndLoad(src: "file:///nonexistent/path.mp3")
 
     // Poll for delegate callback — asset loading is async
-    for _ in 0..<50 {
+    for _ in 0 ..< 50 {
       if !spy.retryableErrors.isEmpty || !spy.playbackErrors.isEmpty || !spy.preparedItems.isEmpty {
         break
       }

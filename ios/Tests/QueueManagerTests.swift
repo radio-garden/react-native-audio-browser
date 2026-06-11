@@ -950,7 +950,9 @@ struct SkipAvailabilityTests {
     q.setQueue(tracks("a", "b", "c", "d"))
     q.shuffleEnabled = true
     q.repeatMode = .off
-    while !q.isLastInPlaybackOrder { _ = q.next() } // advance to last in shuffle order
+    while !q.isLastInPlaybackOrder {
+      _ = q.next()
+    } // advance to last in shuffle order
     #expect(q.canNext == true) // next() wraps to the first shuffle position
   }
 
@@ -959,7 +961,9 @@ struct SkipAvailabilityTests {
     q.setQueue(tracks("a", "b", "c", "d"))
     q.shuffleEnabled = true
     q.repeatMode = .off
-    while !q.previousTracks.isEmpty { _ = q.previous() } // back to first in shuffle order
+    while !q.previousTracks.isEmpty {
+      _ = q.previous()
+    } // back to first in shuffle order
     #expect(q.canPrevious == true) // previous() wraps to the last shuffle position
   }
 }

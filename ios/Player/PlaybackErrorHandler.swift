@@ -18,15 +18,15 @@ public enum PlaybackErrorContext {
 
   var startFromCurrentTime: Bool {
     switch self {
-    case .playback:   true
-    case .mediaLoad:  false
+    case .playback: true
+    case .mediaLoad: false
     }
   }
 
   var fallbackError: TrackPlayerError.PlaybackError {
     switch self {
-    case .playback:   .playbackFailed
-    case .mediaLoad:  .failedToLoadKeyValue
+    case .playback: .playbackFailed
+    case .mediaLoad: .failedToLoadKeyValue
     }
   }
 }

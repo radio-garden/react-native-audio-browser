@@ -1,6 +1,6 @@
+@testable import AudioBrowserTestable
 import Foundation
 import Testing
-@testable import AudioBrowserTestable
 
 @Suite("JsonTrack.request")
 struct JsonTrackRequestTests {

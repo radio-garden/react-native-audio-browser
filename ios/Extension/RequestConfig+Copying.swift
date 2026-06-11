@@ -15,7 +15,7 @@ extension RequestConfig {
     query: [String: String]?? = nil,
     body: String?? = nil,
     contentType: String?? = nil,
-    userAgent: String?? = nil
+    userAgent: String?? = nil,
   ) -> RequestConfig {
     RequestConfig(
       method: method ?? self.method,
@@ -25,7 +25,7 @@ extension RequestConfig {
       query: query ?? self.query,
       body: body ?? self.body,
       contentType: contentType ?? self.contentType,
-      userAgent: userAgent ?? self.userAgent
+      userAgent: userAgent ?? self.userAgent,
     )
   }
 }

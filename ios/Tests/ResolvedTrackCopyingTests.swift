@@ -4,7 +4,7 @@ import Testing
 
 private func makeResolvedTrack(
   url: String = "/test",
-  title: String = "Test Track"
+  title: String = "Test Track",
 ) -> ResolvedTrack {
   ResolvedTrack(
     url: url,
@@ -26,7 +26,7 @@ private func makeResolvedTrack(
     favorited: nil,
     groupTitle: nil,
     live: nil,
-    imageRow: nil
+    imageRow: nil,
   )
 }
 
@@ -52,7 +52,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     favorited: true,
     groupTitle: "Group A",
     live: false,
-    imageRow: [ImageRowItem(title: "Row 1")]
+    imageRow: [ImageRowItem(title: "Row 1")],
   )
 }
 
@@ -210,7 +210,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     title: "Updated Title",
     artist: "New Artist",
     duration: 240.0,
-    favorited: true
+    favorited: true,
   )
   #expect(copy.url == "/updated")
   #expect(copy.title == "Updated Title")

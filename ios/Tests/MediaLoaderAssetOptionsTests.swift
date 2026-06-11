@@ -15,14 +15,16 @@ struct BuildAssetOptionsTests {
 
   @Test func userAgentMergedWithHeaders() {
     let options = MediaLoader.buildAssetOptions(
-      headers: ["X-Test": "1"], userAgent: "TestAgent/1.0")
+      headers: ["X-Test": "1"], userAgent: "TestAgent/1.0",
+    )
     #expect(headerFields(options)?["X-Test"] == "1")
     #expect(headerFields(options)?["User-Agent"] == "TestAgent/1.0")
   }
 
   @Test func explicitUserAgentHeaderWins() {
     let options = MediaLoader.buildAssetOptions(
-      headers: ["User-Agent": "Explicit"], userAgent: "TestAgent/1.0")
+      headers: ["User-Agent": "Explicit"], userAgent: "TestAgent/1.0",
+    )
     #expect(headerFields(options)?["User-Agent"] == "Explicit")
   }
 

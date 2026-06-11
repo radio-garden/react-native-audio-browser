@@ -1,5 +1,5 @@
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Subset of TrackPlayerCallbacks containing only the callbacks the coordinator fires.

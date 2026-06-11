@@ -76,7 +76,7 @@ struct LoadSeekCompletedTests {
     for state in allStates where state != .loading {
       #expect(
         nextPlaybackState(from: state, on: .loadSeekCompleted) == nil,
-        "Expected nil from \(state), got non-nil"
+        "Expected nil from \(state), got non-nil",
       )
     }
   }
@@ -101,7 +101,7 @@ struct AVPlayerPausedTests {
     for state in nonStoppedStates {
       #expect(
         nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: false)) == PlaybackState.none,
-        "Expected .none from \(state) with hasAsset: false"
+        "Expected .none from \(state) with hasAsset: false",
       )
     }
   }
@@ -112,7 +112,7 @@ struct AVPlayerPausedTests {
     for state in validStates {
       #expect(
         nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: true)) == .paused,
-        "Expected .paused from \(state) with hasAsset: true"
+        "Expected .paused from \(state) with hasAsset: true",
       )
     }
   }
@@ -130,7 +130,7 @@ struct BufferingSufficientTests {
     for state in allStates where state != .playing {
       #expect(
         nextPlaybackState(from: state, on: .bufferingSufficient) == .ready,
-        "Expected .ready from \(state)"
+        "Expected .ready from \(state)",
       )
     }
   }

@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// A playback-gated repeating timer. Runs `onTick` every `interval` seconds while
@@ -10,7 +10,7 @@ import NitroModules
 final class PlaybackTimer {
   // nonisolated(unsafe) for deinit cleanup — Timer must be invalidated to break
   // the RunLoop retain, and deinit is always nonisolated in Swift 6.
-  nonisolated(unsafe) private var timer: Timer?
+  private nonisolated(unsafe) var timer: Timer?
   private var interval: TimeInterval?
   private var active = false
   private let isActive: (PlaybackState) -> Bool

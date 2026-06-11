@@ -7,11 +7,11 @@ extension PlayerCapabilities {
   var favoriteMatch: FavoritesMatchMode? {
     switch favorite {
     case .none:
-      return nil
-    case .some(.first(let enabled)):
-      return enabled ? .exact : nil
-    case .some(.second(let config)):
-      return config.match
+      nil
+    case let .some(.first(enabled)):
+      enabled ? .exact : nil
+    case let .some(.second(config)):
+      config.match
     }
   }
 

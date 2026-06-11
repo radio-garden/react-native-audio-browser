@@ -23,11 +23,11 @@ extension Track {
   /// Builds an `ImageSource` from the track's artwork fields, skipping SF Symbol strings.
   var artworkImageSource: ImageSource? {
     if let source = artworkSource {
-      return source
+      source
     } else if let artwork, !SFSymbolRenderer.isSFSymbol(artwork) {
-      return ImageSource(uri: artwork, method: nil, headers: nil, body: nil)
+      ImageSource(uri: artwork, method: nil, headers: nil, body: nil)
     } else {
-      return nil
+      nil
     }
   }
 }

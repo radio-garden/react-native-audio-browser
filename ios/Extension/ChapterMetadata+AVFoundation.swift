@@ -1,7 +1,7 @@
 import AVFoundation
 
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 extension ChapterMetadata {

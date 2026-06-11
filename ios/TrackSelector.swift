@@ -23,7 +23,7 @@ import os.log
 @MainActor
 class TrackSelector {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "TrackSelector")
-  nonisolated(unsafe) private let browserManager: any TrackSelectionBrowser
+  private nonisolated(unsafe) let browserManager: any TrackSelectionBrowser
 
   nonisolated init(browserManager: any TrackSelectionBrowser) {
     self.browserManager = browserManager
@@ -57,7 +57,7 @@ class TrackSelector {
   /// Handles contextual URL expansion, queue reuse, and handler interception.
   func select(
     track: Track,
-    player: some TrackSelectionPlayer
+    player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
     let url = track.url
 
@@ -85,7 +85,7 @@ class TrackSelector {
   private func handleContextualUrl(
     _ url: String,
     track: Track,
-    player: some TrackSelectionPlayer
+    player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
     let parentPath = BrowserPathHelper.stripTrackId(url)
     let trackId = BrowserPathHelper.extractTrackId(url)
@@ -126,9 +126,9 @@ class TrackSelector {
 
   private func handlePlayableTrack(
     _ track: Track,
-    player: some TrackSelectionPlayer
+    player _: some TrackSelectionPlayer,
   ) async -> SelectionResult {
-    return await singleTrackResult(track)
+    await singleTrackResult(track)
   }
 
   private func singleTrackResult(_ track: Track) async -> SelectionResult {

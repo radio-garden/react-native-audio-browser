@@ -75,13 +75,13 @@ final class CarPlayImageLoader {
         targetWidth: Double(size.width),
         targetHeight: Double(size.height),
         displayScale: Double(self.carTraitCollection.displayScale),
-        urlResolver: urlResolver
+        urlResolver: urlResolver,
       )
 
       switch action {
-      case .sfSymbol(let artwork, let width, let height):
+      case let .sfSymbol(artwork, width, height):
         completion(self.sfSymbolImage(forArtwork: artwork, canvasSize: CGSize(width: width, height: height)))
-      case .fetch(let uri, let headers, let shouldTint, let isSvg):
+      case let .fetch(uri, headers, shouldTint, isSvg):
         let image = await self.fetchImage(uri: uri, headers: headers, isSvg: isSvg)
         if let image, shouldTint {
           completion(self.createAdaptiveImage(image, carTraitCollection: self.carTraitCollection))

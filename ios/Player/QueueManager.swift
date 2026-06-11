@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Notifies the owner when the track list changes.
@@ -121,12 +121,12 @@ class QueueManager {
     index: Int,
     name: String = "index",
     min: Int? = nil,
-    max: Int? = nil
+    max: Int? = nil,
   ) throws {
     guard index >= (min ?? 0), (max ?? tracks.count) > index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
-        message: "\(name) must be non-negative and less than \(tracks.count)"
+        message: "\(name) must be non-negative and less than \(tracks.count)",
       )
     }
   }
@@ -140,13 +140,12 @@ class QueueManager {
   /// the order unconditionally (like Media3); sequential wraps only on repeat-all.
   private var nextIndex: Int? {
     guard currentTrack != nil, tracks.count > 1 else { return nil }
-    let candidate: Int?
-    if shuffleEnabled {
-      candidate = shuffleOrder.getNextIndex(after: currentIndex) ?? shuffleOrder.firstIndex
+    let candidate: Int? = if shuffleEnabled {
+      shuffleOrder.getNextIndex(after: currentIndex) ?? shuffleOrder.firstIndex
     } else if currentIndex + 1 < tracks.count {
-      candidate = currentIndex + 1
+      currentIndex + 1
     } else {
-      candidate = repeatMode == .queue ? 0 : nil
+      repeatMode == .queue ? 0 : nil
     }
     guard let candidate, candidate != currentIndex else { return nil }
     return candidate
@@ -155,13 +154,12 @@ class QueueManager {
   /// The index `previous()` will move to. Symmetric to `nextIndex`.
   private var previousIndex: Int? {
     guard currentTrack != nil, tracks.count > 1 else { return nil }
-    let candidate: Int?
-    if shuffleEnabled {
-      candidate = shuffleOrder.getPreviousIndex(before: currentIndex) ?? shuffleOrder.lastIndex
+    let candidate: Int? = if shuffleEnabled {
+      shuffleOrder.getPreviousIndex(before: currentIndex) ?? shuffleOrder.lastIndex
     } else if currentIndex - 1 >= 0 {
-      candidate = currentIndex - 1
+      currentIndex - 1
     } else {
-      candidate = repeatMode == .queue ? tracks.count - 1 : nil
+      repeatMode == .queue ? tracks.count - 1 : nil
     }
     guard let candidate, candidate != currentIndex else { return nil }
     return candidate
@@ -236,7 +234,7 @@ class QueueManager {
     guard index >= 0, tracks.count >= index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
-        message: "Index to insert at has to be non-negative and equal to or smaller than the number of tracks: (\(tracks.count))"
+        message: "Index to insert at has to be non-negative and equal to or smaller than the number of tracks: (\(tracks.count))",
       )
     }
     let wasEmpty = tracks.isEmpty

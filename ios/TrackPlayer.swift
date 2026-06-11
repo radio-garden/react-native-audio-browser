@@ -97,14 +97,17 @@ class TrackPlayer {
     get { coordinator.playbackError }
     set { coordinator.playbackError = newValue }
   }
+
   var lastIndex: Int {
     get { coordinator.lastIndex }
     set { coordinator.lastIndex = newValue }
   }
+
   var lastTrack: Track? {
     get { coordinator.lastTrack }
     set { coordinator.lastTrack = newValue }
   }
+
   var tracks: [Track] { coordinator.tracks }
   var currentIndex: Int { coordinator.currentIndex }
   var currentTrack: Track? { coordinator.currentTrack }
@@ -278,6 +281,7 @@ class TrackPlayer {
   func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
     try coordinator.handlePlayWhenReady(playWhenReady, action: action)
   }
+
   func transition(_ event: PlaybackEvent) { coordinator.transition(event) }
 
   // MARK: - Player Actions
@@ -377,7 +381,7 @@ class TrackPlayer {
     // Apply current next/previous availability so re-/late-configured commands
     // start in the correct enabled state (not unconditionally enabled).
     remoteCommandController.setSkipAvailability(
-      canNext: coordinator.canNext, canPrevious: coordinator.canPrevious
+      canNext: coordinator.canNext, canPrevious: coordinator.canPrevious,
     )
   }
 
@@ -620,14 +624,14 @@ extension TrackPlayer {
     initialIndex: Int = 0,
     startPositionMs: Double? = nil,
     playWhenReady: Bool? = nil,
-    sourcePath: String? = nil
+    sourcePath: String? = nil,
   ) {
     coordinator.setQueue(
       newTracks,
       initialIndex: initialIndex,
       startPositionMs: startPositionMs,
       playWhenReady: playWhenReady,
-      sourcePath: sourcePath
+      sourcePath: sourcePath,
     )
   }
 
@@ -708,4 +712,3 @@ extension TrackPlayer: MediaLoaderDelegate {
     callbacks?.playerDidReceiveTimedMetadata(groups)
   }
 }
-

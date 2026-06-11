@@ -28,6 +28,7 @@ final class NowPlayingUpdater {
     let title: String?
     let artist: String?
   }
+
   private var lastPublished: Published?
 
   /// Bumped on every `render`; an async formatter result applies only if its render is still the
@@ -60,7 +61,7 @@ final class NowPlayingUpdater {
     stalled: Bool,
     error: PlaybackError?,
     override: NowPlayingUpdate?,
-    formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
+    formatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?,
   ) {
     renderGeneration &+= 1
     let generation = renderGeneration
@@ -75,7 +76,7 @@ final class NowPlayingUpdater {
       timedMetadata: timedMetadata,
       playWhenReady: playWhenReady,
       stalled: stalled,
-      error: error
+      error: error,
     )
     // `@Sendable` breaks the @MainActor isolation inheritance: Nitro resolves the promise on the JS
     // thread, so the resolver must NOT be main-isolated (a main-isolated closure run off-main traps
@@ -90,7 +91,7 @@ final class NowPlayingUpdater {
           self.applyFields(
             track: track,
             title: formatted.title ?? defaultTitle,
-            artist: formatted.artist ?? defaultSecondary
+            artist: formatted.artist ?? defaultSecondary,
           )
         }
       }
@@ -112,7 +113,7 @@ final class NowPlayingUpdater {
     let published = Published(
       trackId: track.src ?? track.url,
       title: resolvedTitle,
-      artist: resolvedArtist
+      artist: resolvedArtist,
     )
     guard published != lastPublished else { return }
     lastPublished = published

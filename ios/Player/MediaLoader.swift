@@ -180,7 +180,7 @@ final class MediaLoader {
   /// nothing, so "no UA configured" still falls through to AVPlayer's default.
   nonisolated static func buildAssetOptions(
     headers: [String: String]?,
-    userAgent: String?
+    userAgent: String?,
   ) -> [String: Any]? {
     var merged = headers ?? [:]
     if let userAgent, !userAgent.isEmpty, merged["User-Agent"] == nil {
