@@ -32,7 +32,7 @@ export default withMermaid(
               { text: 'Getting Started', link: '/guide/getting-started' },
               { text: 'Basic Usage', link: '/guide/basic-usage' },
               {
-                text: 'Now Playing Metadata',
+                text: 'Now Playing',
                 link: '/guide/now-playing-metadata'
               }
             ]
