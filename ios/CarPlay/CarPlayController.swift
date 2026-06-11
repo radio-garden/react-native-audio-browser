@@ -1029,23 +1029,46 @@ public final class RNABCarPlayController: NSObject {
   /// per-entitlement template allowances at runtime, and the audio
   /// entitlement does not include the information template — handing one to
   /// CPTabBarTemplate throws an unhandled ObjC exception (crash at init).
-  /// An *empty* list renders its empty view as centered, wrapped text — the
-  /// full-page message look — and the action button rides in the navigation
-  /// bar (CPListTemplate conforms to CPBarButtonProviding), keeping the page
-  /// itself row-free.
+  ///
+  /// Within a list, CarPlay then forces a choice: the centered empty view
+  /// renders only when the list has NO rows, and tab children never show
+  /// navigation-bar buttons (the tab bar owns that chrome). So a gate WITH a
+  /// button renders as an enhanced section header (large-type message lines;
+  /// a newline in the message splits header and subtitle) above a single
+  /// button row — and a buttonless gate gets the centered empty view, where
+  /// newlines collapse to spaces (the "variants" are alternatives, not
+  /// lines).
   private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPListTemplate {
-    let template = CPListTemplate(title: gate.title, sections: [])
-    // Set at creation — the timing CarPlay renders the empty view reliably
-    // (see replaceWithMessage).
-    template.emptyViewTitleVariants = [gate.title]
-    if let message = gate.message, !message.isEmpty {
-      template.emptyViewSubtitleVariants = [message]
-    }
+    let template: CPListTemplate
     if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
-      let button = CPBarButton(title: buttonTitle) { [weak self] _ in
+      let button = CPListItem(text: buttonTitle, detailText: nil)
+      button.handler = { [weak self] _, completion in
         self?.audioBrowser?.onBrowseGateButtonPressed()
+        completion()
       }
-      template.trailingNavigationBarButtons = [button]
+      let lines = (gate.message ?? "")
+        .split(separator: "\n", maxSplits: 1)
+        .map(String.init)
+        .filter { !$0.isEmpty }
+      let section = CPListSection(
+        items: [button],
+        header: lines.first ?? gate.title,
+        headerSubtitle: lines.count > 1 ? lines[1] : nil,
+        headerImage: nil,
+        headerButton: nil,
+        sectionIndexTitle: nil,
+      )
+      template = CPListTemplate(title: gate.title, sections: [section])
+    } else {
+      template = CPListTemplate(title: gate.title, sections: [])
+      // Set at creation — the timing CarPlay renders the empty view reliably
+      // (see replaceWithMessage).
+      template.emptyViewTitleVariants = [gate.title]
+      if let message = gate.message, !message.isEmpty {
+        template.emptyViewSubtitleVariants = [
+          message.replacingOccurrences(of: "\n", with: " "),
+        ]
+      }
     }
     // Marks the page as a gate (vs. a content tab, which carries a `path`),
     // so the lazy-loader and refresh paths never try to fill it.
