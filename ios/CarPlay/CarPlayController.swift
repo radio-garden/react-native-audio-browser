@@ -947,33 +947,16 @@ public final class RNABCarPlayController: NSObject {
     nowPlayingManager.updateNowPlayingButtonStates()
   }
 
-  /// Whether `template` is a gate page (vs. a content tab, which carries a
-  /// `path` in its userInfo instead).
-  private func isGateTemplate(_ template: CPTemplate) -> Bool {
-    (template.userInfo as? [String: Any])?["browseGate"] as? Bool == true
-  }
-
   @MainActor
   private func applyGate(_ gate: NativeBrowseGate) {
-    // Already gated and the title still fits the displayed templates → update
-    // the pages in place via updateSections (the reliable list-update path;
-    // a CPListTemplate's title is immutable). No navigation reset, the
-    // selected tab is kept.
-    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
-      let gateTemplates = tabBar.templates.compactMap { $0 as? CPListTemplate }
-      if gateTemplates.count == tabBar.templates.count, !gateTemplates.isEmpty,
-         gateTemplates.allSatisfy({ isGateTemplate($0) && $0.title == gate.title })
-      {
-        for template in gateTemplates {
-          template.updateSections(gateSections(gate))
-        }
-        return
-      }
-    }
-
     // Tear down any pushed navigation — content must not stay reachable
-    // behind the gate — then swap every tab's content for the gate page.
+    // behind the gate. (No-op when already at the root.)
     interfaceController.popToRootTemplate(animated: false, completion: nil)
+    // Gate pages render their message as the list empty view, which is only
+    // reliable as a template's *initial* state — so a re-set (e.g. the
+    // re-check button's "not found" copy) rebuilds the templates rather than
+    // mutating them; the equal-count updateTemplates swap in showGateTabBar
+    // keeps the selected tab.
     showGateTabBar(tabs: audioBrowser?.browserManager.getTabs() ?? [], gate: gate)
   }
 
@@ -1046,47 +1029,31 @@ public final class RNABCarPlayController: NSObject {
   /// per-entitlement template allowances at runtime, and the audio
   /// entitlement does not include the information template — handing one to
   /// CPTabBarTemplate throws an unhandled ObjC exception (crash at init).
-  /// With a button the gate renders as rows (message row + button row); with
-  /// no button it renders as the centered empty view, which wraps long copy.
+  /// An *empty* list renders its empty view as centered, wrapped text — the
+  /// full-page message look — and the action button rides in the navigation
+  /// bar (CPListTemplate conforms to CPBarButtonProviding), keeping the page
+  /// itself row-free.
   private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPListTemplate {
-    let sections = gateSections(gate)
-    let template = CPListTemplate(title: gate.title, sections: sections)
-    if sections.isEmpty {
-      // No button → full-page centered message (set at creation, the timing
-      // CarPlay renders the empty view reliably — see replaceWithMessage).
-      template.emptyViewTitleVariants = [gate.title]
-      if let message = gate.message, !message.isEmpty {
-        template.emptyViewSubtitleVariants = [message]
-      }
+    let template = CPListTemplate(title: gate.title, sections: [])
+    // Set at creation — the timing CarPlay renders the empty view reliably
+    // (see replaceWithMessage).
+    template.emptyViewTitleVariants = [gate.title]
+    if let message = gate.message, !message.isEmpty {
+      template.emptyViewSubtitleVariants = [message]
     }
+    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
+      let button = CPBarButton(title: buttonTitle) { [weak self] _ in
+        self?.audioBrowser?.onBrowseGateButtonPressed()
+      }
+      template.trailingNavigationBarButtons = [button]
+    }
+    // Marks the page as a gate (vs. a content tab, which carries a `path`),
+    // so the lazy-loader and refresh paths never try to fill it.
     template.userInfo = ["browseGate": true] as [String: Any]
     if let tab {
       applyTabBarEntry(to: template, for: tab)
     }
     return template
-  }
-
-  /// The gate page's rows: a non-interactive message row (a newline in the
-  /// message splits it into the row's title and detail lines — list rows
-  /// don't wrap) and the action button row. Empty when there's no button —
-  /// the message then renders as the empty view instead, which does wrap.
-  private func gateSections(_ gate: NativeBrowseGate) -> [CPListSection] {
-    guard let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty else { return [] }
-
-    var items: [CPListItem] = []
-    if let message = gate.message, !message.isEmpty {
-      let parts = message.split(separator: "\n", maxSplits: 1).map(String.init)
-      let messageItem = CPListItem(text: parts.first, detailText: parts.count > 1 ? parts[1] : nil)
-      messageItem.isEnabled = false
-      items.append(messageItem)
-    }
-    let button = CPListItem(text: buttonTitle, detailText: nil)
-    button.handler = { [weak self] _, completion in
-      self?.audioBrowser?.onBrowseGateButtonPressed()
-      completion()
-    }
-    items.append(button)
-    return [CPListSection(items: items)]
   }
 
   // MARK: - Error Handling

@@ -10,14 +10,13 @@ export type NativeBrowseGate = {
   /** Headline shown on the gate page. */
   title: string
   /**
-   * Body copy shown below the title. On CarPlay with a button the page is a
-   * list whose rows don't wrap: a newline splits the message into the row's
-   * title and detail lines. Without a button the message renders as the
-   * centered empty view, which wraps.
+   * Body copy shown below the title. On CarPlay it renders as centered,
+   * wrapped text (newlines are line breaks).
    */
   message?: string
   /**
-   * Title of the action button. Omit for a page without a button (the
+   * Title of the action button. On CarPlay it renders as a navigation-bar
+   * button above the message. Omit for a page without a button (the
    * `onButtonPressed` callback is then never invoked).
    */
   buttonTitle?: string
