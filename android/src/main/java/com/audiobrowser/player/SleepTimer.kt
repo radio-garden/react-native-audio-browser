@@ -7,7 +7,8 @@ import android.os.Looper
  * Manages a sleep timer that calls a completion callback after a specified duration.
  *
  * The timer stores the expiration time as a timestamp and uses a Handler to schedule the completion
- * callback. Supports both time-based and end-of-track modes.
+ * callback. Supports both time-based and end-of-track modes, plus an optional fade-out that starts
+ * `fadeDuration` seconds before the deadline so silence lands exactly when the timer completes.
  */
 open class SleepTimer {
   var time: Double? = null
@@ -17,6 +18,7 @@ open class SleepTimer {
     private set
 
   private var runnable: Runnable? = null
+  private var fadeRunnable: Runnable? = null
   private val handler = Handler(Looper.getMainLooper())
 
   val isRunning: Boolean
@@ -26,15 +28,27 @@ open class SleepTimer {
    * Sets a timer to complete after the specified number of seconds.
    *
    * @param seconds Number of seconds until the timer completes
+   * @param fadeDuration Seconds over which to fade out before completion; clamped to [seconds]
    */
-  fun sleepAfter(seconds: Double) {
+  fun sleepAfter(seconds: Double, fadeDuration: Double? = null) {
     stopTimer()
+    onFadeCancel()
     sleepWhenPlayedToEnd = false
 
     val runnable = Runnable { complete() }
     this.runnable = runnable
     handler.postDelayed(runnable, (seconds * 1000).toLong())
     time = System.currentTimeMillis() + (seconds * 1000)
+
+    if (fadeDuration != null && fadeDuration > 0) {
+      val fade = minOf(fadeDuration, seconds)
+      val fadeRunnable = Runnable {
+        this.fadeRunnable = null
+        onFadeStart(fade)
+      }
+      this.fadeRunnable = fadeRunnable
+      handler.postDelayed(fadeRunnable, ((seconds - fade) * 1000).toLong())
+    }
   }
 
   /**
@@ -43,6 +57,7 @@ open class SleepTimer {
    */
   fun sleepWhenPlayedToEnd() {
     stopTimer()
+    onFadeCancel()
     time = null
     sleepWhenPlayedToEnd = true
   }
@@ -55,6 +70,7 @@ open class SleepTimer {
   fun clear(): Boolean {
     val wasRunning = isRunning
     stopTimer()
+    onFadeCancel()
     time = null
     sleepWhenPlayedToEnd = false
     return wasRunning
@@ -65,9 +81,23 @@ open class SleepTimer {
     // Default implementation does nothing - override in subclass
   }
 
+  /** Override to begin fading the volume; the timer still completes at its deadline. */
+  open fun onFadeStart(durationSeconds: Double) {
+    // Default implementation does nothing - override in subclass
+  }
+
+  /** Override to handle a fade cancelled before completion — restore the volume. */
+  open fun onFadeCancel() {
+    // Default implementation does nothing - override in subclass
+  }
+
   private fun complete() {
     if (!isRunning) return
-    clear()
+    // Tear down without onFadeCancel: completion pauses first, then the completion handler
+    // restores the volume.
+    stopTimer()
+    time = null
+    sleepWhenPlayedToEnd = false
     onComplete()
   }
 
@@ -75,6 +105,10 @@ open class SleepTimer {
     runnable?.let {
       handler.removeCallbacks(it)
       runnable = null
+    }
+    fadeRunnable?.let {
+      handler.removeCallbacks(it)
+      fadeRunnable = null
     }
   }
 }

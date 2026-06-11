@@ -1,5 +1,8 @@
 import Foundation
-import NitroModules
+
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 
 /// Type alias for the Nitro SleepTimer variant type
 typealias SleepTimerState = SleepTimer
@@ -11,7 +14,8 @@ class SleepTimerManager: SleepTimerHandling {
   // MARK: - Properties
 
   // nonisolated(unsafe) for deinit cleanup — deinit is always nonisolated in Swift 6.
-  nonisolated(unsafe) private var sleepTimerJob: DispatchWorkItem?
+  private nonisolated(unsafe) var sleepTimerJob: DispatchWorkItem?
+  private nonisolated(unsafe) var fadeJob: DispatchWorkItem?
 
   /// The time when playback should stop (seconds since epoch), or -1 if inactive
   private(set) var sleepTimerTime: TimeInterval = -1 {
@@ -36,6 +40,14 @@ class SleepTimerManager: SleepTimerHandling {
   /// Callback invoked when the sleep timer fires
   var onComplete: (() -> Void)?
 
+  /// Callback invoked when the fade-out window of a time-based timer begins
+  var onFadeStart: ((_ duration: TimeInterval) -> Void)?
+
+  /// Callback invoked when a timer is cancelled/replaced while its fade may be
+  /// running — the listener restores the pre-fade volume. Not invoked on
+  /// completion: there the pause lands first, then the volume is restored.
+  var onFadeCancel: (() -> Void)?
+
   /// Callback invoked when the sleep timer state changes
   var onChanged: ((SleepTimerState) -> Void)?
 
@@ -49,6 +61,7 @@ class SleepTimerManager: SleepTimerHandling {
     if !hasSleepTimer { return false }
     sleepTimerTime = -1
     willSleepWhenCurrentItemReachesEnd = false
+    onFadeCancel?()
     onChanged?(.first(NullType.null))
     return true
   }
@@ -74,9 +87,13 @@ class SleepTimerManager: SleepTimerHandling {
   }
 
   /// Sets a time-based sleep timer.
-  /// - Parameter seconds: Number of seconds until playback stops
-  func set(seconds: TimeInterval) {
+  /// - Parameters:
+  ///   - seconds: Number of seconds until playback stops
+  ///   - fadeDuration: Seconds over which to fade the volume out before the
+  ///     deadline (clamped to `seconds`); silence lands exactly at the deadline
+  func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
     cancelSleepTimerJob()
+    onFadeCancel?()
     let job = DispatchWorkItem { [weak self] in
       MainActor.assumeIsolated {
         self?.complete()
@@ -85,6 +102,16 @@ class SleepTimerManager: SleepTimerHandling {
     sleepTimerJob = job
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
     DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: job)
+    if let fadeDuration, fadeDuration > 0 {
+      let fade = min(fadeDuration, seconds)
+      let fadeJob = DispatchWorkItem { [weak self] in
+        MainActor.assumeIsolated {
+          self?.onFadeStart?(fade)
+        }
+      }
+      self.fadeJob = fadeJob
+      DispatchQueue.main.asyncAfter(deadline: .now() + (seconds - fade), execute: fadeJob)
+    }
     if let state = get() { onChanged?(state) }
   }
 
@@ -92,7 +119,10 @@ class SleepTimerManager: SleepTimerHandling {
   func setToEndOfTrack() {
     let changed = !willSleepWhenCurrentItemReachesEnd
     willSleepWhenCurrentItemReachesEnd = true
-    if changed, let state = get() { onChanged?(state) }
+    if changed {
+      onFadeCancel?()
+      if let state = get() { onChanged?(state) }
+    }
   }
 
   /// Called when the current track changes. Resets end-of-track timer.
@@ -116,6 +146,8 @@ class SleepTimerManager: SleepTimerHandling {
   private func cancelSleepTimerJob() {
     sleepTimerJob?.cancel()
     sleepTimerJob = nil
+    fadeJob?.cancel()
+    fadeJob = nil
   }
 
   private func complete() {
@@ -127,5 +159,6 @@ class SleepTimerManager: SleepTimerHandling {
 
   deinit {
     sleepTimerJob?.cancel()
+    fadeJob?.cancel()
   }
 }

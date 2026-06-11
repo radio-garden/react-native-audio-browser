@@ -1,5 +1,5 @@
-import Testing
 @testable import AudioBrowserTestable
+import Testing
 
 /// Helper to build a coordinator with mocks for testing.
 @MainActor
@@ -7,7 +7,7 @@ private func makeCoordinator() -> (
   coordinator: PlaybackCoordinator,
   effectHandler: MockPlaybackEffectHandler,
   callbacks: MockPlaybackCoordinatorCallbacks,
-  sleepTimer: MockSleepTimerHandling
+  sleepTimer: MockSleepTimerHandling,
 ) {
   let retryHandler = MockRetryHandling()
   let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
@@ -26,7 +26,7 @@ private func loadTrack(
   _ coordinator: PlaybackCoordinator,
   id: String = "t1",
   src: String? = "https://example.com/audio.mp3",
-  title: String = "Test Track"
+  title: String = "Test Track",
 ) {
   let track = Track(id: id, src: src, title: title)
   coordinator.setQueue([track])
@@ -41,7 +41,7 @@ struct TransitionTests {
     let (c, eh, _, _) = makeCoordinator()
     loadTrack(c)
     c.playWhenReady = true
-    eh.startPlaybackCallCount = 0  // reset from playWhenReady setter
+    eh.startPlaybackCallCount = 0 // reset from playWhenReady setter
 
     c.transition(.bufferingSufficient)
 
@@ -239,7 +239,7 @@ struct ObserverGuardTests {
 
     c.avPlayerDidChangeTimeControlStatus(.waitingToPlayAtSpecifiedRate)
 
-    #expect(c.state == .playing)  // unchanged
+    #expect(c.state == .playing) // unchanged
   }
 
   @Test @MainActor
@@ -600,5 +600,90 @@ struct PlaybackCoordinatorNowPlayingStateTests {
     // Audio will play, so the now-playing button must end up "playing" — not the
     // stale "paused" captured before playWhenReady flipped true during loading.
     #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
+}
+
+// MARK: - Sleep Timer Fade
+
+@Suite("PlaybackCoordinator - sleep timer fade")
+struct SleepTimerFadeTests {
+  @Test @MainActor
+  func fadeStart_capturesPreFadeVolume() {
+    let (c, eh, _, st) = makeCoordinator()
+    eh.volume = 0.8
+
+    st.onFadeStart?(10)
+
+    #expect(c.volumeFader.isActive)
+    #expect(c.volumeFader.originalVolume == 0.8)
+  }
+
+  @Test @MainActor
+  func completion_pausesThenRestoresPreFadeVolume() {
+    let (c, eh, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+    c.transition(.bufferingSufficient) // leave .loading so pause reaches the player
+    eh.pausePlaybackCallCount = 0
+
+    st.onFadeStart?(10)
+    eh.volume = 0.2 // mid-fade
+
+    st.onComplete?()
+
+    #expect(c.playWhenReady == false)
+    #expect(eh.pausePlaybackCallCount == 1)
+    #expect(eh.volume == 1.0)
+    #expect(!c.volumeFader.isActive)
+  }
+
+  @Test @MainActor
+  func completion_withoutFade_justPauses() {
+    let (c, eh, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+    eh.volume = 0.8
+
+    st.onComplete?()
+
+    #expect(c.playWhenReady == false)
+    #expect(eh.volume == 0.8) // untouched — no fade ran
+  }
+
+  @Test @MainActor
+  func fadeCancel_restoresPreFadeVolume() {
+    let (c, eh, _, st) = makeCoordinator()
+    eh.volume = 0.8
+
+    st.onFadeStart?(10)
+    eh.volume = 0.1 // mid-fade
+
+    st.onFadeCancel?()
+
+    #expect(eh.volume == 0.8)
+    #expect(!c.volumeFader.isActive)
+  }
+
+  @Test @MainActor
+  func pauseDuringFade_clearsSleepTimer() {
+    let (c, _, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+
+    st.onFadeStart?(10)
+    c.pause()
+
+    #expect(st.clearCallCount == 1)
+  }
+
+  @Test @MainActor
+  func pauseWithoutFade_leavesSleepTimerAlone() {
+    let (c, _, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+
+    c.pause()
+
+    #expect(st.clearCallCount == 0)
   }
 }

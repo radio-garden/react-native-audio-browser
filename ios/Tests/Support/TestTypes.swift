@@ -1,8 +1,8 @@
 // This file is intentionally empty — mock types live in
 // Model/NitroTypeStubs.swift (part of the AudioBrowserTestable target).
 
-import AVFoundation
 @testable import AudioBrowserTestable
+import AVFoundation
 
 /// Creates an AVMetadataItem with the specified properties for testing.
 func makeMetadataItem(
@@ -10,7 +10,7 @@ func makeMetadataItem(
   commonKey: AVMetadataKey? = nil,
   keySpace: AVMetadataKeySpace? = nil,
   key: String? = nil,
-  value: String
+  value: String,
 ) -> AVMetadataItem {
   let item = AVMutableMetadataItem()
   if let identifier {
@@ -41,6 +41,9 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
   func pausePlayback() { pausePlaybackCallCount += 1 }
   func setTimePitchingAlgorithmForCurrentItem() { setTimePitchCallCount += 1 }
 
+  // Player volume
+  var volume: Float = 1
+
   // AVPlayer state queries
   var currentTime: Double = 0
   var duration: Double = 0
@@ -65,6 +68,7 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
     loadTrackCalls.append(src)
     loadTrackTracks.append(track)
   }
+
   func reloadTrack(startFromCurrentTime: Bool) { reloadTrackCalls.append(startFromCurrentTime) }
   func unloadTrack() { unloadTrackCallCount += 1 }
   func cancelMediaLoading() { cancelMediaLoadingCallCount += 1 }
@@ -84,6 +88,7 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
   func loadNowPlayingMetadata(for track: Track) {
     loadNowPlayingMetadataCalls.append(track)
   }
+
   func clearNowPlaying() { clearNowPlayingCallCount += 1 }
   func updateNowPlayingState(playWhenReady: Bool) {
     updateNowPlayingStateCalls.append(playWhenReady)
@@ -96,6 +101,7 @@ final class MockPlaybackEffectHandler: PlaybackEffectHandler {
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
     updateRemoteRepeatModeCalls.append(mode)
   }
+
   func updateRemoteShuffleMode(_ enabled: Bool) {
     updateRemoteShuffleModeCalls.append(enabled)
   }
@@ -125,33 +131,43 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   func playerDidChangePlayback(_ playback: Playback) {
     playbackChanges.append(playback)
   }
+
   func playerDidChangeActiveTrack(_ event: PlaybackActiveTrackChangedEvent) {
     activeTrackChanges.append(event)
   }
+
   func playerDidUpdateProgress(_ event: PlaybackProgressUpdatedEvent) {
     progressUpdates.append(event)
   }
+
   func playerDidFirePlaybackInterval() {
     playbackIntervalFiredCount += 1
   }
+
   func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
     playWhenReadyChanges.append(playWhenReady)
   }
+
   func playerDidChangePlayingState(_ state: PlayingState) {
     playingStateChanges.append(state)
   }
+
   func playerDidEndQueue(_ event: PlaybackQueueEndedEvent) {
     queueEndedEvents.append(event)
   }
+
   func playerDidChangeQueue(_ tracks: [Track]) {
     queueChanges.append(tracks)
   }
+
   func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent) {
     repeatModeChanges.append(event)
   }
+
   func playerDidChangeShuffleEnabled(_ enabled: Bool) {
     shuffleEnabledChanges.append(enabled)
   }
+
   func playerDidError(_ event: PlaybackErrorEvent) {
     errorEvents.append(event)
   }
@@ -162,8 +178,16 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
 @MainActor
 final class MockSleepTimerHandling: SleepTimerHandling {
   var onComplete: (() -> Void)?
+  var onFadeStart: ((_ duration: TimeInterval) -> Void)?
+  var onFadeCancel: (() -> Void)?
   var trackChangedCallCount = 0
   var trackPlayedToEndCallCount = 0
+  var clearCallCount = 0
+
+  @discardableResult func clear() -> Bool {
+    clearCallCount += 1
+    return true
+  }
 
   func onTrackChanged() { trackChangedCallCount += 1 }
   func onTrackPlayedToEnd() { trackPlayedToEndCallCount += 1 }
@@ -177,7 +201,7 @@ final class MockRetryHandling: RetryHandling {
   var attemptRetryResult = false
   var resetCallCount = 0
 
-  func isRetryable(_ error: Error?) -> Bool { isRetryableResult }
-  func attemptRetry(startFromCurrentTime: Bool) async -> Bool { attemptRetryResult }
+  func isRetryable(_: Error?) -> Bool { isRetryableResult }
+  func attemptRetry(startFromCurrentTime _: Bool) async -> Bool { attemptRetryResult }
   func reset() { resetCallCount += 1 }
 }

@@ -2,7 +2,7 @@ import Foundation
 import os.log
 
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Owns the playback state machine, side effect dispatch, observer context guards,
@@ -22,12 +22,17 @@ class PlaybackCoordinator {
   let sleepTimerManager: any SleepTimerHandling
   let loadSeekCoordinator = LoadSeekCoordinator()
 
+  lazy var volumeFader = VolumeFader(
+    getVolume: { [weak self] in self?.effectHandler?.volume ?? 1 },
+    setVolume: { [weak self] level in self?.effectHandler?.volume = level },
+  )
+
   lazy var playingStateManager: PlayingStateManager = PlayingStateManager { [weak self] state in
     self?.callbacks?.playerDidChangePlayingState(state)
   }
 
   private lazy var progressTimer = PlaybackTimer(
-    isActive: { $0 == .loading || $0 == .buffering || $0 == .playing }
+    isActive: { $0 == .loading || $0 == .buffering || $0 == .playing },
   ) { [weak self] in
     guard let self, currentIndex >= 0, let effectHandler else { return }
     let progressEvent = PlaybackProgressUpdatedEvent(
@@ -40,7 +45,7 @@ class PlaybackCoordinator {
   }
 
   private lazy var intervalTimer = PlaybackTimer(
-    isActive: { $0 == .playing }
+    isActive: { $0 == .playing },
   ) { [weak self] in
     self?.callbacks?.playerDidFirePlaybackInterval()
   }
@@ -82,7 +87,7 @@ class PlaybackCoordinator {
       effectHandler?.updateRemoteRepeatMode(newValue)
       pushSkipAvailability() // repeat-all wrap changes next/previous availability
       callbacks?.playerDidChangeRepeatMode(
-        RepeatModeChangedEvent(repeatMode: newValue)
+        RepeatModeChangedEvent(repeatMode: newValue),
       )
     }
   }
@@ -121,6 +126,11 @@ class PlaybackCoordinator {
       }
 
       if oldValue != playWhenReady {
+        // An explicit pause during the sleep fade is the timer's goal arriving
+        // early: clear the timer (restores the pre-fade volume via onFadeCancel).
+        if !playWhenReady, volumeFader.isActive {
+          sleepTimerManager.clear()
+        }
         callbacks?.playerDidChangePlayWhenReady(playWhenReady)
         playingStateManager.update(playWhenReady: playWhenReady, state: state)
         // Reflect play/pause intent immediately — even while the new item is
@@ -153,7 +163,14 @@ class PlaybackCoordinator {
 
     // Configure sleep timer
     sleepTimerManager.onComplete = { [weak self] in
-      self?.pause()
+      guard let self else { return }
+      self.volumeFader.resolve { self.pause() }
+    }
+    sleepTimerManager.onFadeStart = { [weak self] duration in
+      self?.volumeFader.start(duration: duration)
+    }
+    sleepTimerManager.onFadeCancel = { [weak self] in
+      self?.volumeFader.cancel(restoringVolume: true)
     }
 
     // Wire error handler to state machine
@@ -169,7 +186,7 @@ class PlaybackCoordinator {
 
     // Allow error-to-error transitions to update the error and emit callbacks,
     // even though the state enum value doesn't change.
-    if newState == state, case .errorOccurred(let error) = event {
+    if newState == state, case let .errorOccurred(error) = event {
       playbackError = error
       callbacks?.playerDidChangePlayback(
         Playback(state: state, error: playbackError?.toNitroError()),
@@ -192,7 +209,7 @@ class PlaybackCoordinator {
     if old == .error, new != .error {
       playbackError = nil
     }
-    if case .errorOccurred(let error) = event {
+    if case let .errorOccurred(error) = event {
       playbackError = error
     }
 
@@ -365,7 +382,7 @@ class PlaybackCoordinator {
     initialIndex: Int = 0,
     startPositionMs: Double? = nil,
     playWhenReady: Bool? = nil,
-    sourcePath: String? = nil
+    sourcePath: String? = nil,
   ) {
     guard !newTracks.isEmpty else {
       clear()
@@ -398,18 +415,18 @@ class PlaybackCoordinator {
   func next() {
     let result = queue.next()
     switch result {
-    case .trackChanged:    handleCurrentTrackChanged()
+    case .trackChanged: handleCurrentTrackChanged()
     case .sameTrackReplay: if playWhenReady { replay() }
-    case .noChange:        break
+    case .noChange: break
     }
   }
 
   func previous() {
     let result = queue.previous()
     switch result {
-    case .trackChanged:    handleCurrentTrackChanged()
+    case .trackChanged: handleCurrentTrackChanged()
     case .sameTrackReplay: if playWhenReady { replay() }
-    case .noChange:        break
+    case .noChange: break
     }
   }
 

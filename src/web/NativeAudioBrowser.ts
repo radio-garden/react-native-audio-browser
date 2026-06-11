@@ -50,7 +50,11 @@ import { HttpClient } from './http/HttpClient'
 import { RequestConfigBuilder } from './http/RequestConfigBuilder'
 import { NowPlayingManager } from './player/NowPlayingManager'
 import { OptionsManager } from './player/OptionsManager'
-import { PlaylistPlayer, SleepTimerManager } from './TrackPlayer'
+import {
+  PlaylistPlayer,
+  SleepTimerManager,
+  VolumeFader
+} from './TrackPlayer'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
 /**
@@ -94,14 +98,24 @@ export class NativeAudioBrowser
     typeof navigator !== 'undefined' ? navigator.onLine : true
   private onlineHandler: (() => void) | undefined
   private offlineHandler: (() => void) | undefined
+  private sleepFader = new VolumeFader(
+    () => this.getVolume(),
+    volume => this.setVolume(volume)
+  )
   private sleepTimer = new (class extends SleepTimerManager {
     constructor(private parent: NativeAudioBrowser) {
       super()
     }
     protected onComplete(): void {
-      console.log('Sleep timer completed, stopping playback')
-      this.parent.stop()
+      console.log('Sleep timer completed, pausing playback')
+      this.parent.sleepFader.resolve(() => this.parent.pause())
       this.parent.onSleepTimerChanged(null)
+    }
+    protected onFadeStart(durationSeconds: number): void {
+      this.parent.sleepFader.start(durationSeconds)
+    }
+    protected onFadeCancel(): void {
+      this.parent.sleepFader.cancel(true)
     }
   })(this)
 
@@ -634,6 +648,7 @@ export class NativeAudioBrowser
   setPlayWhenReady(pwr: boolean): void {
     const didChange = pwr !== this._playWhenReady
     super.playWhenReady = pwr
+    if (!pwr) this.clearSleepTimerIfFading()
 
     if (didChange) {
       this.onPlaybackPlayWhenReadyChanged({
@@ -695,9 +710,29 @@ export class NativeAudioBrowser
     return null
   }
 
-  setSleepTimer(seconds: number): void {
-    this.sleepTimer.sleepAfter(seconds)
+  setSleepTimer(seconds: number, fadeDuration?: number): void {
+    this.sleepTimer.sleepAfter(seconds, fadeDuration)
     this.onSleepTimerChanged(this.getSleepTimer())
+  }
+
+  /**
+   * An explicit pause intent during the sleep fade is the timer's goal
+   * arriving early: clear the timer (which restores the pre-fade volume).
+   * Called after the halt lands so the restore never precedes it. Mirrors
+   * the native playWhenReady hooks.
+   */
+  private clearSleepTimerIfFading(): void {
+    if (this.sleepFader.isActive) this.clearSleepTimer()
+  }
+
+  override pause(): void {
+    super.pause()
+    this.clearSleepTimerIfFading()
+  }
+
+  override stop(): void {
+    super.stop()
+    this.clearSleepTimerIfFading()
   }
 
   setSleepTimerToEndOfTrack(): void {
@@ -719,9 +754,9 @@ export class NativeAudioBrowser
   protected onTrackEnded(): void {
     // Check if sleep timer is set to end on track completion
     if (this.sleepTimer.sleepWhenPlayedToEnd) {
-      console.log('Sleep timer triggered on track end, stopping playback')
+      console.log('Sleep timer triggered on track end, pausing playback')
       this.sleepTimer.clear()
-      this.stop()
+      this.pause()
       this.onSleepTimerChanged(null)
       return
     }

@@ -1,5 +1,5 @@
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Protocol through which PlaybackCoordinator triggers AVPlayer-specific operations.
@@ -9,6 +9,9 @@ import NitroModules
   func startPlayback()
   func pausePlayback()
   func setTimePitchingAlgorithmForCurrentItem()
+
+  // Player volume (0-1); ramped by the sleep-timer fade
+  var volume: Float { get set }
 
   // AVPlayer state queries
   var currentTime: Double { get }

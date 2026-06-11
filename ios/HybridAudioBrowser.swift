@@ -722,9 +722,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  public func setSleepTimer(seconds: Double) throws {
+  public func setSleepTimer(seconds: Double, fadeDuration: Double?) throws {
     onMainActor {
-      player?.sleepTimerManager.set(seconds: seconds)
+      player?.sleepTimerManager.set(seconds: seconds, fadeDuration: fadeDuration)
     }
   }
 

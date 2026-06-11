@@ -214,7 +214,12 @@ export interface AudioBrowser extends HybridObject<{
   getPlaybackError(): PlaybackError | undefined
   retry(): void
   getSleepTimer(): SleepTimer
-  setSleepTimer(seconds: number): void
+  /**
+   * Stops playback after `seconds`. When `fadeDuration` is given, the volume
+   * ramps down over the final `fadeDuration` seconds so silence lands exactly
+   * at the deadline; the pre-fade volume is restored after pausing.
+   */
+  setSleepTimer(seconds: number, fadeDuration?: number): void
   setSleepTimerToEndOfTrack(): void
   clearSleepTimer(): boolean
 

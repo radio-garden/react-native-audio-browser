@@ -142,6 +142,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   /** Called when the value returned from Player.getPlayWhenReady() changes. */
   override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+    // An explicit pause during the sleep fade is the timer's goal arriving early: clear the
+    // timer (restores the pre-fade volume). The timer's own completion cancels the fader
+    // before pausing, so it never re-enters here.
+    if (!playWhenReady && player.volumeFader.isActive) {
+      player.clearSleepTimer()
+    }
+
     // Update thread-safe cache for access from non-main threads (e.g., retry policy)
     player.playWhenReadyCache = playWhenReady
     player.callbacks?.onPlaybackPlayWhenReadyChanged(

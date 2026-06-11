@@ -979,7 +979,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getSleepTimer(): SleepTimer = runBlockingOnMain { player.getSleepTimer() }
 
-  override fun setSleepTimer(seconds: Double) = runBlockingOnMain { player.setSleepTimer(seconds) }
+  override fun setSleepTimer(seconds: Double, fadeDuration: Double?) = runBlockingOnMain {
+    player.setSleepTimer(seconds, fadeDuration)
+  }
 
   override fun setSleepTimerToEndOfTrack() = runBlockingOnMain {
     player.setSleepTimerToEndOfTrack()

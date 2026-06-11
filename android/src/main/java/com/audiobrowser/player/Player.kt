@@ -86,11 +86,20 @@ class Player(internal val context: Context) {
   private var equalizerManager: EqualizerManager? = null
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(this)
+  internal val volumeFader = VolumeFader(getVolume = { volume }, setVolume = { volume = it })
   private val sleepTimer =
     object : SleepTimer() {
+      override fun onFadeStart(durationSeconds: Double) {
+        volumeFader.start(durationSeconds)
+      }
+
+      override fun onFadeCancel() {
+        volumeFader.cancel(restoreVolume = true)
+      }
+
       override fun onComplete() {
-        Timber.d("Sleep timer completed, stopping playback")
-        stop()
+        Timber.d("Sleep timer completed, pausing playback")
+        volumeFader.resolve { pause() }
         callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
       }
     }
@@ -1686,12 +1695,13 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Sets a sleep timer to stop playback after the specified duration.
+   * Sets a sleep timer to pause playback after the specified duration.
    *
-   * @param seconds Number of seconds until playback stops
+   * @param seconds Number of seconds until playback pauses
+   * @param fadeDuration Seconds over which to fade out before the deadline; clamped to [seconds]
    */
-  fun setSleepTimer(seconds: Double) {
-    sleepTimer.sleepAfter(seconds)
+  fun setSleepTimer(seconds: Double, fadeDuration: Double? = null) {
+    sleepTimer.sleepAfter(seconds, fadeDuration)
     callbacks?.onSleepTimerChanged(getSleepTimer())
   }
 
@@ -1715,14 +1725,14 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Checks if the sleep timer is set to end on track completion and stops playback if so. Called
+   * Checks if the sleep timer is set to end on track completion and pauses playback if so. Called
    * when a track naturally finishes playing.
    */
   internal fun checkSleepTimerOnTrackEnd() {
     if (sleepTimer.sleepWhenPlayedToEnd) {
-      Timber.d("Sleep timer triggered on track end, stopping playback")
+      Timber.d("Sleep timer triggered on track end, pausing playback")
       sleepTimer.clear()
-      stop()
+      pause()
       callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
     }
   }

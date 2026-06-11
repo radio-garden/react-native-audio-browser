@@ -26,6 +26,8 @@ let package = Package(
         "Player/PlaybackCoordinatorCallbacks.swift",
         "Player/PlaybackCoordinator.swift",
         "Player/SleepTimerHandling.swift",
+        "Player/SleepTimerManager.swift",
+        "Player/VolumeFader.swift",
         "Player/PlayingStateManager.swift",
         "Player/PlaybackTimer.swift",
         "Model/TrackPlayerError.swift",
