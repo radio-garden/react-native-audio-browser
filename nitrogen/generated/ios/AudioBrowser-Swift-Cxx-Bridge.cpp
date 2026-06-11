@@ -250,6 +250,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(bool /* connected */)>
+  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_bool::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](bool connected) mutable -> void {
+      swiftClosure.call(connected);
+    };
+  }
+  
   // pragma MARK: std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>
   Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams create_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams::fromUnsafe(swiftClosureWrapper);
@@ -344,14 +352,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     auto swiftClosure = AudioBrowser::Func_void_RepeatModeChangedEvent::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const RepeatModeChangedEvent& data) mutable -> void {
       swiftClosure.call(data);
-    };
-  }
-  
-  // pragma MARK: std::function<void(bool /* enabled */)>
-  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_bool::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](bool enabled) mutable -> void {
-      swiftClosure.call(enabled);
     };
   }
   

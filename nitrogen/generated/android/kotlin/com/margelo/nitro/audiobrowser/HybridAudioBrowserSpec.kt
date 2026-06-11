@@ -115,6 +115,34 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @set:Keep
   abstract var configuration: NativeBrowserConfiguration
   
+  abstract var onBrowseGateButtonPressed: () -> Unit
+  
+  private var onBrowseGateButtonPressed_cxx: Func_void
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_java(onBrowseGateButtonPressed)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onBrowseGateButtonPressed = value
+    }
+  
+  abstract var onCarPlayConnectedChanged: (connected: Boolean) -> Unit
+  
+  private var onCarPlayConnectedChanged_cxx: Func_void_bool
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_bool_java(onCarPlayConnectedChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onCarPlayConnectedChanged = value
+    }
+  
   abstract var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit
   
   private var onChapterMetadata_cxx: Func_void_std__vector_ChapterMetadata_
@@ -893,6 +921,22 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun setFavorites(favorites: Array<String>): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setBrowseGate(gate: NativeBrowseGate): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clearBrowseGate(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getBrowseGate(): NativeBrowseGate?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun isCarPlayConnected(): Boolean
   
   @DoNotStrip
   @Keep

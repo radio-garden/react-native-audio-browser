@@ -82,6 +82,8 @@ namespace margelo::nitro::audiobrowser { struct IosOutput; }
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `MediaTransformParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
+// Forward declaration of `NativeBrowseGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeRouteEntry; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -227,6 +229,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IosOutputType.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
+#include "NativeBrowseGate.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NavigationError.hpp"
 #include "NavigationErrorEvent.hpp"
@@ -1723,6 +1726,43 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return PromiseHolder<std::optional<FormattedNavigationError>>(std::move(promise));
   }
   
+  // pragma MARK: std::optional<NativeBrowseGate>
+  /**
+   * Specialized version of `std::optional<NativeBrowseGate>`.
+   */
+  using std__optional_NativeBrowseGate_ = std::optional<NativeBrowseGate>;
+  inline std::optional<NativeBrowseGate> create_std__optional_NativeBrowseGate_(const NativeBrowseGate& value) noexcept {
+    return std::optional<NativeBrowseGate>(value);
+  }
+  inline bool has_value_std__optional_NativeBrowseGate_(const std::optional<NativeBrowseGate>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NativeBrowseGate get_std__optional_NativeBrowseGate_(const std::optional<NativeBrowseGate>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<void(bool /* connected */)>
+  /**
+   * Specialized version of `std::function<void(bool)>`.
+   */
+  using Func_void_bool = std::function<void(bool /* connected */)>;
+  /**
+   * Wrapper class for a `std::function<void(bool / * connected * /)>`, this can be used from Swift.
+   */
+  class Func_void_bool_Wrapper final {
+  public:
+    explicit Func_void_bool_Wrapper(std::function<void(bool /* connected */)>&& func): _function(std::make_unique<std::function<void(bool /* connected */)>>(std::move(func))) {}
+    inline void call(bool connected) const noexcept {
+      _function->operator()(connected);
+    }
+  private:
+    std::unique_ptr<std::function<void(bool /* connected */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_bool_Wrapper wrap_Func_void_bool(Func_void_bool value) noexcept {
+    return Func_void_bool_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<PartialAndroidSetupPlayerOptions>
   /**
    * Specialized version of `std::optional<PartialAndroidSetupPlayerOptions>`.
@@ -2579,28 +2619,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RepeatModeChangedEvent_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::function<void(bool /* enabled */)>
-  /**
-   * Specialized version of `std::function<void(bool)>`.
-   */
-  using Func_void_bool = std::function<void(bool /* enabled */)>;
-  /**
-   * Wrapper class for a `std::function<void(bool / * enabled * /)>`, this can be used from Swift.
-   */
-  class Func_void_bool_Wrapper final {
-  public:
-    explicit Func_void_bool_Wrapper(std::function<void(bool /* enabled */)>&& func): _function(std::make_unique<std::function<void(bool /* enabled */)>>(std::move(func))) {}
-    inline void call(bool enabled) const noexcept {
-      _function->operator()(enabled);
-    }
-  private:
-    std::unique_ptr<std::function<void(bool /* enabled */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_bool_Wrapper wrap_Func_void_bool(Func_void_bool value) noexcept {
-    return Func_void_bool_Wrapper(std::move(value));
-  }
-  
   // pragma MARK: std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>
   /**
    * Wrapper struct for `std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>`.
@@ -3288,6 +3306,24 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Result<std::optional<FormattedNavigationError>>::withError(error);
   }
   
+  // pragma MARK: Result<std::optional<NativeBrowseGate>>
+  using Result_std__optional_NativeBrowseGate__ = Result<std::optional<NativeBrowseGate>>;
+  inline Result_std__optional_NativeBrowseGate__ create_Result_std__optional_NativeBrowseGate__(const std::optional<NativeBrowseGate>& value) noexcept {
+    return Result<std::optional<NativeBrowseGate>>::withValue(value);
+  }
+  inline Result_std__optional_NativeBrowseGate__ create_Result_std__optional_NativeBrowseGate__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<NativeBrowseGate>>::withError(error);
+  }
+  
+  // pragma MARK: Result<bool>
+  using Result_bool_ = Result<bool>;
+  inline Result_bool_ create_Result_bool_(bool value) noexcept {
+    return Result<bool>::withValue(std::move(value));
+  }
+  inline Result_bool_ create_Result_bool_(const std::exception_ptr& error) noexcept {
+    return Result<bool>::withError(error);
+  }
+  
   // pragma MARK: Result<std::shared_ptr<Promise<void>>>
   using Result_std__shared_ptr_Promise_void___ = Result<std::shared_ptr<Promise<void>>>;
   inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::shared_ptr<Promise<void>>& value) noexcept {
@@ -3304,15 +3340,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_UpdateOptions_ create_Result_UpdateOptions_(const std::exception_ptr& error) noexcept {
     return Result<UpdateOptions>::withError(error);
-  }
-  
-  // pragma MARK: Result<bool>
-  using Result_bool_ = Result<bool>;
-  inline Result_bool_ create_Result_bool_(bool value) noexcept {
-    return Result<bool>::withValue(std::move(value));
-  }
-  inline Result_bool_ create_Result_bool_(const std::exception_ptr& error) noexcept {
-    return Result<bool>::withError(error);
   }
   
   // pragma MARK: Result<double>

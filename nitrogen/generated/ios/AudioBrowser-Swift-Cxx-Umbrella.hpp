@@ -82,6 +82,8 @@ namespace margelo::nitro::audiobrowser { struct IosOutput; }
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `MediaTransformParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
+// Forward declaration of `NativeBrowseGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -229,6 +231,7 @@ namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 #include "IosOutputType.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
+#include "NativeBrowseGate.hpp"
 #include "NativeBrowserConfiguration.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NativeUpdateOptions.hpp"

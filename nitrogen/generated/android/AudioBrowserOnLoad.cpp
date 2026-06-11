@@ -33,6 +33,8 @@
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_std__string____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
+#include "JFunc_void.hpp"
+#include "JFunc_void_bool.hpp"
 #include "JFunc_void_std__vector_ChapterMetadata_.hpp"
 #include "JFunc_void_TrackMetadata.hpp"
 #include "JFunc_void_TimedMetadata.hpp"
@@ -41,10 +43,8 @@
 #include "JFunc_void_PlaybackPlayWhenReadyChangedEvent.hpp"
 #include "JFunc_void_PlayingState.hpp"
 #include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
-#include "JFunc_void.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_RepeatModeChangedEvent.hpp"
-#include "JFunc_void_bool.hpp"
 #include "JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__.hpp"
 #include "JFunc_void_Playback.hpp"
 #include "JFunc_void_RemoteJumpBackwardEvent.hpp"
@@ -105,6 +105,8 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__vector_ChapterMetadata__cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_TrackMetadata_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_TimedMetadata_cxx::registerNatives();
@@ -113,10 +115,8 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_PlayingState_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_PlaybackProgressUpdatedEvent_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_PlaybackQueueEndedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RepeatModeChangedEvent_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_Playback_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteJumpBackwardEvent_cxx::registerNatives();

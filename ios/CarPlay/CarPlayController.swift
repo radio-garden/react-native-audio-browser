@@ -44,6 +44,13 @@ public final class RNABCarPlayController: NSObject {
   /// so the rebuild is deferred until the user is back at the tab bar.
   private var pendingTabs: [Track]?
 
+  /// The active Browse Gate. While set, tabs keep their tab-bar entries but
+  /// render the gate page (a CPInformationTemplate) instead of content, and
+  /// navigation/selection is blocked. Mirrors `audioBrowser.browseGate`;
+  /// seeded in start() so a gate set before the scene connects renders at
+  /// connect.
+  private var activeGate: NativeBrowseGate?
+
   /// How long a browse resolve may run before the destination's loading spinner
   /// is replaced with an error state. The selection completion is fired
   /// immediately (so CarPlay never blocks the list — per Apple's async handler
@@ -92,6 +99,15 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Lifecycle
 
+  /// Reports CarPlay scene connection to the library (drives the JS-side
+  /// `isCarPlayConnected` / `onCarPlayConnectedChanged`). Called by
+  /// RNABCarPlaySceneDelegate on scene connect/disconnect — deliberately not
+  /// from start()/stop(), which also cycle on a JS runtime reload.
+  @objc
+  public static func setConnected(_ connected: Bool) {
+    HybridAudioBrowser.setCarPlayConnected(connected)
+  }
+
   @objc
   public func start() {
     guard !isStarted else { return }
@@ -125,6 +141,7 @@ public final class RNABCarPlayController: NSObject {
       guard self.isStarted else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
+      self.activeGate = browser.browseGate
       self.trackSelector = TrackSelector(browserManager: browser.browserManager)
 
       // Create image loader with CarPlay display traits
@@ -263,6 +280,16 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.externalContentChangedEmitter.removeListener(externalContentToken)
     }
 
+    // Subscribe to browse gate changes (set / in-place update / clear)
+    let gateToken = audioBrowser.browseGateChangedEmitter.addListener { [weak self] gate in
+      Task { @MainActor in
+        self?.handleBrowseGateChanged(gate)
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.browseGateChangedEmitter.removeListener(gateToken)
+    }
+
     // Subscribe to active track changes (for playing indicator in lists)
     let activeTrackToken = audioBrowser.activeTrackChangedEmitter.addListener { [weak self] event in
       Task { @MainActor in
@@ -362,6 +389,12 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func showTabBar(tabs: [Track]) async {
+    // While gated, tabs stay visible but every tab renders the gate page.
+    if let gate = activeGate {
+      showGateTabBar(tabs: tabs, gate: gate)
+      return
+    }
+
     logger.info("Building tab bar with \(tabs.count) tabs")
 
     let maxTabs = CPTabBarTemplate.maximumTabCount
@@ -388,7 +421,14 @@ public final class RNABCarPlayController: NSObject {
   private func createTabTemplate(for track: Track) -> CPListTemplate {
     // The path stored on the template drives lazy loading and refresh.
     let template = makeLoadingTemplate(title: track.title, path: track.url)
+    applyTabBarEntry(to: template, for: track)
+    return template
+  }
 
+  /// Stamps a template's tab-bar entry: title and image (default, SF Symbol,
+  /// or loaded artwork). Shared by content tabs and gate-page tabs so a gate
+  /// keeps the familiar tab bar.
+  private func applyTabBarEntry(to template: CPTemplate, for track: Track) {
     // Set tab title explicitly (required for tab bar display)
     template.tabTitle = track.title
 
@@ -413,8 +453,6 @@ public final class RNABCarPlayController: NSObject {
         }
       }
     }
-
-    return template
   }
 
   // MARK: - List Templates
@@ -614,6 +652,9 @@ public final class RNABCarPlayController: NSObject {
   /// runs once the template is on screen (the timing CarPlay needs: updates made
   /// right after a push are dropped). Backing out and re-tapping retries.
   private func navigateToUrl(_ url: String, title: String) {
+    // While gated there is nothing to browse into (tab content is the gate
+    // page); this also blocks indirect entries like the Now Playing album line.
+    guard activeGate == nil else { return }
     // Avoid pushing a duplicate if the top template already shows this path.
     if let top = interfaceController.topTemplate, getPath(from: top) == url {
       return
@@ -888,6 +929,138 @@ public final class RNABCarPlayController: NSObject {
         logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
       }
     }
+  }
+
+  // MARK: - Browse Gate
+
+  /// Applies a Browse Gate change: set, in-place update, or clear. Custom
+  /// Now Playing buttons (e.g. favorite) hide while gated and return on clear.
+  @MainActor
+  private func handleBrowseGateChanged(_ gate: NativeBrowseGate?) {
+    activeGate = gate
+    if let gate {
+      applyGate(gate)
+    } else {
+      removeGate()
+    }
+    nowPlayingManager.setupNowPlayingButtons()
+    nowPlayingManager.updateNowPlayingButtonStates()
+  }
+
+  @MainActor
+  private func applyGate(_ gate: NativeBrowseGate) {
+    // Already gated and the title still fits the displayed templates → update
+    // the pages in place (CPInformationTemplate items/actions are mutable;
+    // its title is not). No navigation reset, the selected tab is kept.
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
+      let gateTemplates = tabBar.templates.compactMap { $0 as? CPInformationTemplate }
+      if gateTemplates.count == tabBar.templates.count, !gateTemplates.isEmpty,
+         gateTemplates.allSatisfy({ $0.title == gate.title })
+      {
+        for template in gateTemplates {
+          template.items = gateItems(gate)
+          template.actions = gateActions(gate)
+        }
+        return
+      }
+    }
+
+    // Tear down any pushed navigation — content must not stay reachable
+    // behind the gate — then swap every tab's content for the gate page.
+    interfaceController.popToRootTemplate(animated: false, completion: nil)
+    showGateTabBar(tabs: audioBrowser?.browserManager.getTabs() ?? [], gate: gate)
+  }
+
+  /// Shows the gate inside the existing tab bar when possible (keeping the
+  /// selected tab), or as a fresh tab bar / single root page otherwise.
+  @MainActor
+  private func showGateTabBar(tabs: [Track], gate: NativeBrowseGate) {
+    guard !tabs.isEmpty else {
+      // Tabs unknown (config not loaded yet, or none) — single gate page root.
+      interfaceController.setRootTemplate(
+        makeGateTemplate(gate: gate, tab: nil), animated: true, completion: nil,
+      )
+      return
+    }
+
+    let gateTemplates = tabs.prefix(CPTabBarTemplate.maximumTabCount).map {
+      makeGateTemplate(gate: gate, tab: $0)
+    }
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+       tabBar.templates.count == gateTemplates.count
+    {
+      // Equal-count in-place swap keeps the selected tab index.
+      tabBar.updateTemplates(gateTemplates)
+    } else {
+      interfaceController.setRootTemplate(
+        CPTabBarTemplate(templates: gateTemplates), animated: true, completion: nil,
+      )
+    }
+  }
+
+  /// Restores normal tab content after the gate clears, keeping the selected
+  /// tab when the tab bar is already up.
+  @MainActor
+  private func removeGate() {
+    let tabs = audioBrowser?.browserManager.getTabs() ?? []
+    guard !tabs.isEmpty else {
+      // Never had tabs (gate was up since before config) — full initial build.
+      Task { await buildInitialInterface() }
+      return
+    }
+
+    let tabTemplates = tabs.prefix(CPTabBarTemplate.maximumTabCount).map {
+      createTabTemplate(for: $0)
+    }
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+       tabBar.templates.count == tabTemplates.count
+    {
+      // Equal-count in-place swap keeps the selected tab index.
+      tabBar.updateTemplates(tabTemplates)
+    } else {
+      interfaceController.setRootTemplate(
+        CPTabBarTemplate(templates: tabTemplates), animated: true, completion: nil,
+      )
+    }
+    // Fill all tabs eagerly: templateDidAppear isn't guaranteed to re-fire
+    // for templates swapped in via updateTemplates, and ≤4 resolves is cheap
+    // next to leaving the just-unlocked UI on a spinner.
+    Task { @MainActor in
+      for (tab, template) in zip(tabs, tabTemplates) {
+        guard let url = tab.url else { continue }
+        await loadContent(for: url, into: template)
+      }
+    }
+  }
+
+  /// Builds the gate page for one tab-bar slot: a CPInformationTemplate with
+  /// the gate copy and optional action button, carrying the tab's entry so
+  /// the tab bar itself stays familiar.
+  private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPInformationTemplate {
+    let template = CPInformationTemplate(
+      title: gate.title,
+      layout: .leading,
+      items: gateItems(gate),
+      actions: gateActions(gate),
+    )
+    if let tab {
+      applyTabBarEntry(to: template, for: tab)
+    }
+    return template
+  }
+
+  private func gateItems(_ gate: NativeBrowseGate) -> [CPInformationItem] {
+    guard let message = gate.message, !message.isEmpty else { return [] }
+    return [CPInformationItem(title: nil, detail: message)]
+  }
+
+  private func gateActions(_ gate: NativeBrowseGate) -> [CPTextButton] {
+    guard let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty else { return [] }
+    return [
+      CPTextButton(title: buttonTitle, textStyle: .confirm) { [weak self] _ in
+        self?.audioBrowser?.onBrowseGateButtonPressed()
+      },
+    ]
   }
 
   // MARK: - Error Handling

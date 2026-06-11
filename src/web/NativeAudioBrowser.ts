@@ -25,6 +25,7 @@ import type {
   SleepTimer,
   SleepTimerChangedEvent,
   FavoriteChangedEvent,
+  NativeBrowseGate,
   NavigationError,
   NavigationErrorEvent,
   FormattedNavigationError,
@@ -202,6 +203,8 @@ export class NativeAudioBrowser
   ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
   onIosOutputChanged: (output: IosOutput) => void = () => {}
+  onBrowseGateButtonPressed: () => void = () => {}
+  onCarPlayConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers
   handleRemoteBookmark: (() => void) | undefined = undefined
@@ -925,6 +928,26 @@ export class NativeAudioBrowser
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSystemVolume(_volume: number): void {
     // No-op on web - browsers can't set system volume
+  }
+
+  // MARK: Browse gate (stored only — web has no external browse surfaces)
+  private browseGate: NativeBrowseGate | undefined
+
+  setBrowseGate(gate: NativeBrowseGate): void {
+    this.browseGate = gate
+  }
+
+  clearBrowseGate(): void {
+    this.browseGate = undefined
+  }
+
+  getBrowseGate(): NativeBrowseGate | undefined {
+    return this.browseGate
+  }
+
+  // MARK: CarPlay (not applicable on web)
+  isCarPlayConnected(): boolean {
+    return false
   }
 
   // MARK: iOS output (not applicable on web)

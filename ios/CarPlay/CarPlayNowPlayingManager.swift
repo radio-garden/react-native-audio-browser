@@ -95,7 +95,9 @@ final class CarPlayNowPlayingManager {
 
   /// Sets up custom Now Playing buttons based on configuration
   func setupNowPlayingButtons() {
-    let buttons = config.carPlayNowPlayingButtons
+    // While a Browse Gate is set, custom buttons (favorite etc.) are hidden;
+    // the system transport controls stay — a gate never blocks playback.
+    let buttons = audioBrowser?.browseGate == nil ? config.carPlayNowPlayingButtons : []
     // Skip a full rebuild when the button set is unchanged (it recreates every
     // button and flashes e.g. the shuffle button); onConfigChanged fires on
     // unrelated config churn with the same buttons.

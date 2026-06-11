@@ -299,6 +299,44 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onBrowseGateButtonPressed: bridge.Func_void {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void in
+        let __closureWrapper = Func_void(self.__implementation.onBrowseGateButtonPressed)
+        return bridge.create_Func_void(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onBrowseGateButtonPressed = { () -> () -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void(newValue)
+        return { () -> Void in
+          __wrappedFunction.call()
+        }
+      }()
+    }
+  }
+  
+  public final var onCarPlayConnectedChanged: bridge.Func_void_bool {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_bool in
+        let __closureWrapper = Func_void_bool(self.__implementation.onCarPlayConnectedChanged)
+        return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onCarPlayConnectedChanged = { () -> (Bool) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
+        return { (__connected: Bool) -> Void in
+          __wrappedFunction.call(__connected)
+        }
+      }()
+    }
+  }
+  
   public final var onChapterMetadata: bridge.Func_void_std__vector_ChapterMetadata_ {
     @inline(__always)
     get {
@@ -1647,6 +1685,58 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setBrowseGate(gate: NativeBrowseGate) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setBrowseGate(gate: gate)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func clearBrowseGate() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.clearBrowseGate()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getBrowseGate() -> bridge.Result_std__optional_NativeBrowseGate__ {
+    do {
+      let __result = try self.__implementation.getBrowseGate()
+      let __resultCpp = { () -> bridge.std__optional_NativeBrowseGate_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_NativeBrowseGate_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_NativeBrowseGate__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_NativeBrowseGate__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func isCarPlayConnected() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.isCarPlayConnected()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
   

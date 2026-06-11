@@ -43,6 +43,7 @@ import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.IosOutput
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NativeBrowseGate
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NavigationError
@@ -725,6 +726,28 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun setFavorites(favorites: Array<String>) {
     browserManager.setFavorites(favorites.toList())
   }
+
+  // MARK: Browse gate (stored only — Android Auto rendering is not implemented yet)
+
+  private var browseGate: NativeBrowseGate? = null
+
+  override fun setBrowseGate(gate: NativeBrowseGate) {
+    browseGate = gate
+  }
+
+  override fun clearBrowseGate() {
+    browseGate = null
+  }
+
+  override fun getBrowseGate(): NativeBrowseGate? = browseGate
+
+  override var onBrowseGateButtonPressed: () -> Unit = {}
+
+  // MARK: CarPlay connection (iOS only)
+
+  override fun isCarPlayConnected(): Boolean = false
+
+  override var onCarPlayConnectedChanged: (Boolean) -> Unit = {}
 
   // ============================================================================
   // MARK: Player Setup and Options

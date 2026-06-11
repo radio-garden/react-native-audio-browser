@@ -78,6 +78,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public let navigationErrorEmitter = Emitter<NavigationErrorEvent>()
   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
   public let externalContentChangedEmitter = Emitter<String>()
+  public let browseGateChangedEmitter = Emitter<NativeBrowseGate?>()
 
   // MARK: - Thread Safety
 
@@ -163,6 +164,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onTabsChanged: ([Track]) -> Void = { _ in }
   public var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
   public var onFormattedNavigationError: (FormattedNavigationError?) -> Void = { _ in }
+  public var onBrowseGateButtonPressed: () -> Void = {}
 
   // MARK: - Player Callbacks
 
@@ -479,6 +481,61 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func setFavorites(favorites: [String]) throws {
     onMainActor { browserManager.setFavorites(favorites) }
+  }
+
+  // MARK: - Browse Gate
+
+  /// The current Browse Gate, if set. While set, external surfaces (CarPlay)
+  /// keep their tabs visible but render this full-page message as every tab's
+  /// content, and external-surface search is refused. Playback, the queue and
+  /// Now Playing are unaffected — a gate blocks finding content, never
+  /// hearing it.
+  private(set) var browseGate: NativeBrowseGate?
+
+  public func setBrowseGate(gate: NativeBrowseGate) throws {
+    onMainActor {
+      browseGate = gate
+      browseGateChangedEmitter.emit(gate)
+    }
+  }
+
+  public func clearBrowseGate() throws {
+    onMainActor {
+      guard browseGate != nil else { return }
+      browseGate = nil
+      browseGateChangedEmitter.emit(nil)
+    }
+  }
+
+  public func getBrowseGate() throws -> NativeBrowseGate? {
+    onMainActor { browseGate }
+  }
+
+  // MARK: - CarPlay Connection
+
+  /// Static because the CarPlay scene can connect before the JS runtime
+  /// creates the shared instance (cold start in the car).
+  private nonisolated(unsafe) static var carPlayConnected = false
+
+  /// Called by the CarPlay scene delegate (via `RNABCarPlayController`) on
+  /// scene connect/disconnect — not from controller start/stop, which also
+  /// cycle on a JS reload and would emit spurious connection changes.
+  static func setCarPlayConnected(_ connected: Bool) {
+    guard carPlayConnected != connected else { return }
+    carPlayConnected = connected
+    shared?.onCarPlayConnectedChanged(connected)
+  }
+
+  public func isCarPlayConnected() throws -> Bool {
+    HybridAudioBrowser.carPlayConnected
+  }
+
+  public var onCarPlayConnectedChanged: (Bool) -> Void = { _ in } {
+    didSet {
+      // Immediately notify current state (the scene may have connected before
+      // this JS runtime subscribed).
+      onCarPlayConnectedChanged(HybridAudioBrowser.carPlayConnected)
+    }
   }
 
   // MARK: - Player Setup
@@ -1356,6 +1413,13 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       // where `self` could be a stale pre-reload one.
       guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(10)) else {
         self.logger.error("handlePlayMediaIntent: browser/player not ready within timeout")
+        completion(false)
+        return
+      }
+      // A Browse Gate blocks external-surface search too — otherwise voice
+      // search is a way around the gate.
+      guard browser.browseGate == nil else {
+        self.logger.info("handlePlayMediaIntent: refused — browse gate is set")
         completion(false)
         return
       }
