@@ -1,0 +1,115 @@
+package com.audiobrowser.browser
+
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Tests [BrowserManager.buildApiRequest] — the single request-building path for
+ * browse and search (the Kotlin port of iOS `buildApiRequest`). Static layers
+ * only: Nitro Promises (transforms/resolvers) cannot be constructed on the JVM;
+ * transform semantics are covered by RequestConfigBuilderTest and the Swift suite.
+ */
+class BrowserManagerBuildApiRequestTest {
+
+  private lateinit var bm: BrowserManager
+
+  @Before
+  fun setup() {
+    bm = BrowserManager()
+  }
+
+  private fun layer(
+    baseUrl: String? = null,
+    path: String? = null,
+    query: Map<String, String>? = null,
+    headers: Map<String, String>? = null,
+  ) =
+    TransformableRequestConfig(
+      transform = null,
+      transformSync = null,
+      method = null,
+      path = path,
+      baseUrl = baseUrl,
+      headers = headers,
+      query = query,
+      body = null,
+      contentType = null,
+      userAgent = null,
+    )
+
+  @Test
+  fun `layers apply request then kind then route, override-wins`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request = layer(baseUrl = "https://api.example.com", query = mapOf("a" to "request"))
+      )
+    val request =
+      bm.buildApiRequest(
+        kindConfig = layer(query = mapOf("a" to "kind", "b" to "kind")),
+        routeConfig = layer(query = mapOf("b" to "route")),
+        path = "/stations",
+        params = emptyMap(),
+      )
+    assertTrue(request.url, request.url.startsWith("https://api.example.com/stations?"))
+    assertTrue(request.url, request.url.contains("a=kind"))
+    assertTrue(request.url, request.url.contains("b=route"))
+  }
+
+  @Test
+  fun `initialQuery seeds the base so it reaches the final URL`() = runTest {
+    bm.config = BrowserConfig(request = layer(baseUrl = "https://api.example.com"))
+    val request =
+      bm.buildApiRequest(
+        kindConfig = layer(path = "/search"),
+        routeConfig = null,
+        path = null,
+        params = emptyMap(),
+        initialQuery = mapOf("q" to "jazz", "mode" to "genre"),
+      )
+    assertTrue(request.url, request.url.contains("q=jazz"))
+    assertTrue(request.url, request.url.contains("mode=genre"))
+    assertTrue(request.url, request.url.startsWith("https://api.example.com/search?"))
+  }
+
+  @Test
+  fun `headers merge across layers with later layers winning`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request =
+          layer(
+            baseUrl = "https://api.example.com",
+            headers = mapOf("x-a" to "request", "x-b" to "request"),
+          )
+      )
+    val request =
+      bm.buildApiRequest(
+        kindConfig = layer(headers = mapOf("x-b" to "kind")),
+        routeConfig = null,
+        path = "/p",
+        params = emptyMap(),
+      )
+    assertEquals("request", request.headers?.get("x-a"))
+    assertEquals("kind", request.headers?.get("x-b"))
+  }
+
+  @Test
+  fun `missing baseUrl throws ContentNotFoundException`() = runTest {
+    bm.config = BrowserConfig(request = layer(query = mapOf("a" to "1")))
+    try {
+      bm.buildApiRequest(
+        kindConfig = null,
+        routeConfig = null,
+        path = "/nowhere",
+        params = emptyMap(),
+      )
+      fail("expected ContentNotFoundException")
+    } catch (e: ContentNotFoundException) {
+      assertEquals("/nowhere", e.path)
+    }
+  }
+}
