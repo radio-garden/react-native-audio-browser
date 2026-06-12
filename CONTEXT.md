@@ -74,6 +74,10 @@ _Avoid_: Build, generate.
 The final step in any outbound request, applied to the merged RequestConfig just before it goes out. Used to sign URLs, attach auth tokens, or fold in size hints. Optional.
 _Avoid_: Finalize, sign, decorate.
 
+**Request-Config Layer**:
+One config in the outbound-request stack, applied base-up: **request** (shared) → **kind** (browse / search / media) → **route** (per-Route). A Request-Config Layer with a **Transform** replaces the running config entirely (transform-wins); otherwise its static fields merge over it — except `path`, which is carried from the base (only a Transform may change it). `buildApiRequest` / `applyLayers` are the canonical application of the stack. Artwork configs are deliberately *not* applied as Request-Config Layers: their static fields merge override-wins, so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` can supply the path.
+_Avoid_: Layer (unqualified — too generic), stage, level.
+
 ### Playback
 
 **Queue**:
