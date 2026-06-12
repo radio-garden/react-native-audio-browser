@@ -26,7 +26,6 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.audiobrowser.util.CoilBitmapLoader
-import com.audiobrowser.util.EqualizerManager
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
@@ -47,11 +46,7 @@ import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.RatingType
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SearchParams
-import com.margelo.nitro.audiobrowser.SleepTimer as NitroSleepTimer
-import com.margelo.nitro.audiobrowser.SleepTimerEndOfTrack
-import com.margelo.nitro.audiobrowser.SleepTimerTime
 import com.margelo.nitro.audiobrowser.Track
-import com.margelo.nitro.core.NullType
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
@@ -59,7 +54,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -80,26 +74,18 @@ class Player(internal val context: Context) {
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
-  private var equalizerManager: EqualizerManager? = null
+  internal val equalizer = EqualizerController { settings ->
+    callbacks?.onEqualizerChanged(settings)
+  }
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(this)
   internal val volumeFader = VolumeFader(getVolume = { volume }, setVolume = { volume = it })
-  private val sleepTimer =
-    object : SleepTimer() {
-      override fun onFadeStart(durationSeconds: Double) {
-        volumeFader.start(durationSeconds)
-      }
-
-      override fun onFadeCancel() {
-        volumeFader.cancel(restoreVolume = true)
-      }
-
-      override fun onComplete() {
-        Timber.d("Sleep timer completed, pausing playback")
-        volumeFader.resolve { pause() }
-        callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
-      }
-    }
+  internal val sleepTimer =
+    SleepTimerManager(
+      volumeFader,
+      pause = { pause() },
+      onChanged = { callbacks?.onSleepTimerChanged(it) },
+    )
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
@@ -485,7 +471,7 @@ class Player(internal val context: Context) {
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
 
       // Initialize equalizer with audio session ID
-      initializeEqualizer()
+      equalizer.initialize(exoPlayer.audioSessionId)
     } else {
       // Re-setup - re-add listener and update MediaSession
       forwardingPlayer.addListener(playerListener)
@@ -1020,8 +1006,7 @@ class Player(internal val context: Context) {
     cache?.release()
     cache = null
     networkMonitor.destroy()
-    equalizerManager?.release()
-    equalizerManager = null
+    equalizer.release()
   }
 
   fun seekTo(duration: Long, unit: TimeUnit) {
@@ -1211,188 +1196,6 @@ class Player(internal val context: Context) {
    */
   fun getOnline(): Boolean {
     return networkMonitor.getOnline()
-  }
-
-  /** Initializes the equalizer with the player's audio session ID. */
-  private fun initializeEqualizer() {
-    val audioSessionId = exoPlayer.audioSessionId
-    if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
-      Timber.d("Skipping equalizer init - no audio session yet, will init on first playback")
-      return
-    }
-
-    try {
-      equalizerManager =
-        EqualizerManager(audioSessionId).apply {
-          setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
-        }
-      Timber.d("Equalizer initialized with session ID: $audioSessionId")
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to initialize equalizer")
-      equalizerManager = null
-    }
-  }
-
-  /**
-   * Reinitializes the equalizer when the audio session ID changes. Preserves current settings
-   * (enabled state, preset, or custom levels). Also handles first-time initialization when the
-   * equalizer was skipped at startup due to unset audio session ID.
-   */
-  internal fun reinitializeEqualizer(newAudioSessionId: Int) {
-    val oldManager = equalizerManager
-
-    // First-time initialization (skipped at startup because session was unset)
-    if (oldManager == null) {
-      Timber.d("First-time equalizer initialization with session ID: $newAudioSessionId")
-      try {
-        equalizerManager =
-          EqualizerManager(newAudioSessionId).apply {
-            setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
-          }
-        Timber.d("Equalizer initialized with session ID: $newAudioSessionId")
-      } catch (e: Exception) {
-        Timber.e(e, "Failed to initialize equalizer")
-        equalizerManager = null
-      }
-      return
-    }
-
-    // Same session ID, no need to reinitialize
-    if (oldManager.audioSessionId == newAudioSessionId) {
-      return
-    }
-
-    try {
-      // Capture current settings before releasing old equalizer
-      val currentSettings = oldManager.getSettings()
-
-      // Release old equalizer
-      oldManager.release()
-
-      // Create new equalizer with new session ID
-      equalizerManager =
-        EqualizerManager(newAudioSessionId).apply {
-          setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
-        }
-
-      // Restore previous settings if available
-      currentSettings?.let { settings ->
-        if (settings.activePreset != null) {
-          // Restore preset
-          equalizerManager?.setPreset(settings.activePreset)
-        } else if (settings.enabled) {
-          // Restore custom levels
-          equalizerManager?.setLevels(settings.bandLevels)
-        }
-        // Restore enabled state
-        equalizerManager?.setEnabled(settings.enabled)
-      }
-
-      Timber.d("Equalizer reinitialized for new session ID: $newAudioSessionId")
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to reinitialize equalizer")
-      equalizerManager = null
-    }
-  }
-
-  /**
-   * Gets the current equalizer settings.
-   *
-   * @return Current equalizer settings or null if not available
-   */
-  fun getEqualizerSettings(): com.margelo.nitro.audiobrowser.EqualizerSettings? {
-    return equalizerManager?.getSettings()
-  }
-
-  /**
-   * Enables or disables the equalizer.
-   *
-   * @param enabled true to enable, false to disable
-   */
-  fun setEqualizerEnabled(enabled: Boolean) {
-    equalizerManager?.setEnabled(enabled)
-  }
-
-  /**
-   * Applies a preset to the equalizer.
-   *
-   * @param preset Name of the preset to apply
-   */
-  fun setEqualizerPreset(preset: String) {
-    equalizerManager?.setPreset(preset)
-  }
-
-  /**
-   * Sets custom band levels for the equalizer.
-   *
-   * @param levels Array of level values in millibels for each band
-   */
-  fun setEqualizerLevels(levels: DoubleArray) {
-    equalizerManager?.setLevels(levels)
-  }
-
-  // MARK: - Sleep Timer
-
-  /**
-   * Gets the current sleep timer state.
-   *
-   * @return Sleep timer state or null if no timer is active
-   */
-  fun getSleepTimer(): NitroSleepTimer {
-    return when {
-      sleepTimer.time != null -> {
-        NitroSleepTimer.create(SleepTimerTime(sleepTimer.time!!))
-      }
-      sleepTimer.sleepWhenPlayedToEnd -> {
-        NitroSleepTimer.create(SleepTimerEndOfTrack(true))
-      }
-      else -> {
-        NitroSleepTimer.create(NullType.NULL)
-      }
-    }
-  }
-
-  /**
-   * Sets a sleep timer to pause playback after the specified duration.
-   *
-   * @param seconds Number of seconds until playback pauses
-   * @param fadeDuration Seconds over which to fade out before the deadline; clamped to [seconds]
-   */
-  fun setSleepTimer(seconds: Double, fadeDuration: Double? = null) {
-    sleepTimer.sleepAfter(seconds, fadeDuration)
-    callbacks?.onSleepTimerChanged(getSleepTimer())
-  }
-
-  /** Sets a sleep timer to stop playback when the current track finishes playing. */
-  fun setSleepTimerToEndOfTrack() {
-    sleepTimer.sleepWhenPlayedToEnd()
-    callbacks?.onSleepTimerChanged(getSleepTimer())
-  }
-
-  /**
-   * Clears the active sleep timer.
-   *
-   * @return true if a timer was cleared, false if no timer was active
-   */
-  fun clearSleepTimer(): Boolean {
-    val wasRunning = sleepTimer.clear()
-    if (wasRunning) {
-      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
-    }
-    return wasRunning
-  }
-
-  /**
-   * Checks if the sleep timer is set to end on track completion and pauses playback if so. Called
-   * when a track naturally finishes playing.
-   */
-  internal fun checkSleepTimerOnTrackEnd() {
-    if (sleepTimer.sleepWhenPlayedToEnd) {
-      Timber.d("Sleep timer triggered on track end, pausing playback")
-      sleepTimer.clear()
-      pause()
-      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
-    }
   }
 
   /**

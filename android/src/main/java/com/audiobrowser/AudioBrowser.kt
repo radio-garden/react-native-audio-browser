@@ -952,36 +952,34 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // ============================================================================
 
   override fun getEqualizerSettings(): EqualizerSettings? = runBlockingOnMain {
-    player.getEqualizerSettings()
+    player.equalizer.getSettings()
   }
 
   override fun setEqualizerEnabled(enabled: Boolean) = runBlockingOnMain {
-    player.setEqualizerEnabled(enabled)
+    player.equalizer.setEnabled(enabled)
   }
 
   override fun setEqualizerPreset(preset: String) = runBlockingOnMain {
-    player.setEqualizerPreset(preset)
+    player.equalizer.setPreset(preset)
   }
 
   override fun setEqualizerLevels(levels: DoubleArray) = runBlockingOnMain {
-    player.setEqualizerLevels(levels)
+    player.equalizer.setLevels(levels)
   }
 
   // ============================================================================
   // MARK: Sleep Timer
   // ============================================================================
 
-  override fun getSleepTimer(): SleepTimer = runBlockingOnMain { player.getSleepTimer() }
+  override fun getSleepTimer(): SleepTimer = runBlockingOnMain { player.sleepTimer.get() }
 
   override fun setSleepTimer(seconds: Double, fadeDuration: Double?) = runBlockingOnMain {
-    player.setSleepTimer(seconds, fadeDuration)
+    player.sleepTimer.setAfter(seconds, fadeDuration)
   }
 
-  override fun setSleepTimerToEndOfTrack() = runBlockingOnMain {
-    player.setSleepTimerToEndOfTrack()
-  }
+  override fun setSleepTimerToEndOfTrack() = runBlockingOnMain { player.sleepTimer.setEndOfTrack() }
 
-  override fun clearSleepTimer(): Boolean = runBlockingOnMain { player.clearSleepTimer() }
+  override fun clearSleepTimer(): Boolean = runBlockingOnMain { player.sleepTimer.clear() }
 
   // ============================================================================
   // MARK: Battery Optimization (Android only)

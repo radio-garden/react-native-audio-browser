@@ -93,7 +93,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
     // Check if sleep timer should trigger on track end
     if (reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-      player.checkSleepTimerOnTrackEnd()
+      player.sleepTimer.onTrackEnd()
     }
 
     // Update last track info for next transition
@@ -145,7 +145,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // timer (restores the pre-fade volume). The timer's own completion cancels the fader
     // before pausing, so it never re-enters here.
     if (!playWhenReady && player.volumeFader.isActive) {
-      player.clearSleepTimer()
+      player.sleepTimer.clear()
     }
 
     // Update thread-safe cache for access from non-main threads (e.g., retry policy).
@@ -305,6 +305,6 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
 
   override fun onAudioSessionIdChanged(audioSessionId: Int) {
     Timber.d("Audio session ID changed to: $audioSessionId")
-    player.reinitializeEqualizer(audioSessionId)
+    player.equalizer.onAudioSessionChanged(audioSessionId)
   }
 }
