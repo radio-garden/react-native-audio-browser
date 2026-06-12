@@ -20,6 +20,7 @@ import com.audiobrowser.browser.ContentNotFoundException
 import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.browser.handleTrackLoad
+import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.model.PlayerSetupOptions
@@ -284,56 +285,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   /**
-   * Creates a request config for media URL transformation by applying the shared request layer and
-   * any media config. Returns null only when neither a request nor a media config is set (the
-   * caller then uses the original URL as-is).
+   * Media URL transformation for [com.audiobrowser.player.TransformingDataSource].
+   * Resolution lives in [resolveMediaUrl] (browser/BrowserUrlResolution.kt); this
+   * shell owns only the blocking bridge: it runs on ExoPlayer's IO thread
+   * (TransformingDataSource.open), so blocking here is safe and intentional.
    */
   fun getMediaRequestConfig(originalUrl: String): MediaRequestConfig? {
-    val mediaConfig = _configuration.media
-    // The request layer counts as present when a static `request` OR a `requestResolver` is set —
-    // a resolver-only consumer still needs its baseUrl/headers/transform applied to media URLs.
-    val hasRequestLayer = _configuration.request != null || _configuration.requestResolver != null
-    if (mediaConfig == null && !hasRequestLayer) return null
-
     return try {
-      // Runs on ExoPlayer's IO thread (TransformingDataSource.open), so blocking here is safe and
-      // intentional — it lets us await the async request resolver and the media transform callback.
-      runBlocking {
-        // Resolve the request layer (resolver thunk result, or the static request).
-        val requestConfig = browserManager.resolvedRequestConfig()
-        // Layered: request (shared, incl. its transform) → media. The request
-        // layer runs for media too, per the documented contract, even when no
-        // media-specific config is present (so a relative src still gets baseUrl).
-        var base = RequestConfig(null, originalUrl, null, null, null, null, null, null)
-        requestConfig?.let { base = RequestConfigBuilder.mergeConfig(base, it) }
-        val mediaLayered =
-          if (mediaConfig != null) {
-            RequestConfigBuilder.mergeConfig(base, mediaConfig)
-          } else {
-            // No media config: wrap the request-layered base as a MediaRequestConfig.
-            MediaRequestConfig(
-              resolve = null,
-              resolveSync = null,
-              transform = null,
-              transformSync = null,
-              method = base.method,
-              path = base.path,
-              baseUrl = base.baseUrl,
-              headers = base.headers,
-              query = base.query,
-              body = base.body,
-              contentType = base.contentType,
-              userAgent = base.userAgent,
-            )
-          }
-        // Final, most-specific layer: media.resolve(track). The cached Track carries any
-        // per-track `request` override (e.g. a strict-UA sentinel); resolve reads it and
-        // returns the winning config. Only look up the track when a resolve callback
-        // exists, to avoid a needless cache lookup (and its miss-log) otherwise.
-        val track =
-          if (mediaConfig?.resolve != null) browserManager.getCachedTrack(originalUrl) else null
-        RequestConfigBuilder.applyMediaResolve(mediaLayered, track)
-      }
+      runBlocking { browserManager.resolveMediaUrl(originalUrl) }
     } catch (e: Exception) {
       Timber.e(e, "Failed to transform media URL: $originalUrl")
       null
