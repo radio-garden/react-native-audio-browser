@@ -35,12 +35,9 @@ import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
-import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
-import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
-import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -57,7 +54,6 @@ import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.SleepTimer as NitroSleepTimer
 import com.margelo.nitro.audiobrowser.SleepTimerEndOfTrack
 import com.margelo.nitro.audiobrowser.SleepTimerTime
-import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.core.NullType
 import java.io.File
@@ -65,12 +61,9 @@ import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -132,20 +125,6 @@ class Player(internal val context: Context) {
    * of tearing down. When false, a terminal error surfaces to the session as usual.
    */
   private var keepSessionAliveOnError = false
-
-  /** Whether the player publishes/refreshes track metadata on the now-playing surface. */
-  private var nowPlayingMetadataEnabled = true
-
-  /**
-   * Optional JS formatter that customizes the now-playing title/subtitle. Null = default mapping.
-   */
-  private var nowPlayingFormatter: NowPlayingFormatter? = null
-
-  /** Latest live timed (ICY/ID3) metadata, passed to the formatter. Reset on track change. */
-  @Volatile private var latestTimedMetadata: TimedMetadata? = null
-
-  /** Scope for invoking the (async) now-playing formatter. */
-  private val nowPlayingScope = MainScope()
 
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
@@ -432,35 +411,6 @@ class Player(internal val context: Context) {
   internal var playbackState: PlaybackState = PlaybackState.NONE
     private set
 
-  /** Current now playing metadata override (null = use track metadata) */
-  private var nowPlayingOverride: NowPlayingUpdate? = null
-
-  /**
-   * The last now-playing fields actually published, to dedupe redundant [replaceMediaItem] calls.
-   */
-  private data class PublishedNowPlaying(
-    val index: Int,
-    val trackId: String?,
-    val title: String?,
-    val secondaryLine: String?,
-    val album: String?,
-  )
-
-  private var lastPublishedNowPlaying: PublishedNowPlaying? = null
-
-  /**
-   * The track id whose now-playing artwork has been resolved (or is being resolved), so a
-   * `nowPlayingArtwork` resolve runs once per track instead of on every [applyNowPlayingFields]
-   * call (which fires on each playback-state change). Null means "not yet resolved for any track".
-   */
-  private var nowPlayingArtworkResolvedForTrackId: String? = null
-
-  /**
-   * Size hint (px, square) used when resolving now-playing artwork via `nowPlayingArtwork`'s
-   * imageQueryParams / transform. Mirrors iOS's now-playing size (screen-width-capped to 1200).
-   */
-  private val nowPlayingArtworkSizePx = 1200.0
-
   fun getPlayback(): Playback {
     return Playback(playbackState, playbackError)
   }
@@ -590,8 +540,11 @@ class Player(internal val context: Context) {
     Timber.Forest.d("Setting up player with new options")
 
     keepSessionAliveOnError = setupOptions.keepSessionAliveOnError
-    nowPlayingMetadataEnabled = setupOptions.autoUpdateNowPlayingMetadata
-    nowPlayingFormatter = setupOptions.nowPlayingMetadataFormatter
+    nowPlaying.enabled = setupOptions.autoUpdateNowPlayingMetadata
+    // Wrap the Nitro Func into a plain suspend call so the updater (and its tests) never touch
+    // bridge types; the double-await depth is unchanged (invoke -> bridge Promise -> JS promise).
+    nowPlaying.formatter =
+      setupOptions.nowPlayingMetadataFormatter?.let { f -> { params -> f.invoke(params).await() } }
 
     val isInitialSetup = !::exoPlayer.isInitialized
 
@@ -990,321 +943,108 @@ class Player(internal val context: Context) {
   // MARK: - Now Playing Metadata
 
   /**
-   * Updates the now playing notification metadata. Pass null to clear overrides and revert to track
-   * metadata.
+   * Now Playing rendering (flash/override/formatter precedence, dedupe, stale guards, artwork
+   * keying) lives in [NowPlayingUpdater]; this object is its platform surface — current playback
+   * reads plus MediaItem stamping via [replaceMediaItem], and artwork resolution via the browser.
    */
-  fun updateNowPlaying(update: NowPlayingUpdate?) {
-    nowPlayingOverride = update
-    applyNowPlayingMetadata()
-  }
+  val nowPlaying: NowPlayingUpdater =
+    NowPlayingUpdater(
+      object : NowPlayingSurface {
+        override val currentIndex
+          get() = this@Player.currentIndex
 
-  /**
-   * Transient now-playing fields (e.g. feedback for a refused remote command). Outranks the
-   * formatter and the override while active, so live metadata can't stomp it mid-flash. Reverted by
-   * a coroutine delay on the main scope — NOT a JS timer, which pauses with a backgrounded host
-   * (and the lock screen is exactly the backgrounded case) — and cleared early on track change.
-   */
-  private var nowPlayingFlash: NowPlayingUpdate? = null
-  private var nowPlayingFlashRevert: Job? = null
+        override val currentTrack
+          get() = this@Player.currentTrack
 
-  /**
-   * Monotonic stamp for now-playing renders. All renders happen on the main thread (MainScope); an
-   * async formatter result applies only when no newer render — notably a flash — has superseded the
-   * one that launched it.
-   */
-  private var nowPlayingRenderGeneration = 0L
+        override val playbackState
+          get() = this@Player.playbackState
 
-  fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) {
-    nowPlayingFlashRevert?.cancel()
-    nowPlayingFlash = update
-    nowPlayingFlashRevert =
-      nowPlayingScope.launch {
-        delay(durationMs.toLong())
-        nowPlayingFlash = null
-        nowPlayingFlashRevert = null
-        applyNowPlayingMetadata()
-      }
-    applyNowPlayingMetadata()
-  }
+        override val playbackError
+          get() = this@Player.playbackError
 
-  /** Clears an active flash immediately, reverting to the live metadata. No-op when none. */
-  fun clearNowPlayingFlash() {
-    if (nowPlayingFlash == null) return
-    cancelNowPlayingFlash()
-    applyNowPlayingMetadata()
-  }
+        override val playWhenReady
+          get() = exoPlayer.playWhenReady
 
-  private fun cancelNowPlayingFlash() {
-    nowPlayingFlashRevert?.cancel()
-    nowPlayingFlashRevert = null
-    nowPlayingFlash = null
-  }
+        override val isRebuffering
+          get() = ::loadControl.isInitialized && loadControl.isRebuffering
 
-  /** Gets the current now playing metadata (flash/override if set, else track metadata). */
-  fun getNowPlaying(): NowPlayingMetadata? {
-    val track = currentTrack ?: return null
-    val flash = nowPlayingFlash
-    val override = nowPlayingOverride
+        override val hasNowPlayingArtworkConfig
+          get() = browser?.browserManager?.config?.nowPlayingArtwork != null
 
-    return NowPlayingMetadata(
-      elapsedTime = null,
-      title = flash?.title ?: override?.title ?: track.title,
-      album = flash?.album ?: override?.album ?: track.album,
-      artist = flash?.artist ?: override?.artist ?: track.artist,
-      duration = track.duration,
-      artwork = track.artwork,
-      description = track.description,
-      mediaId = track.src ?: track.url,
-      genre = track.genre,
-      rating = null, // TODO: map track.favorited to rating if needed
+        override fun stampFields(
+          index: Int,
+          track: Track,
+          title: String?,
+          secondaryLine: String?,
+          album: String?,
+        ) {
+          val currentMediaItem = exoPlayer.getMediaItemAt(index)
+          val updatedMetadata =
+            currentMediaItem.mediaMetadata
+              .buildUpon()
+              .setTitle(title)
+              .setDisplayTitle(title)
+              .setArtist(secondaryLine)
+              // Android Auto reads DISPLAY_SUBTITLE (not ARTIST) once DISPLAY_TITLE is set, so
+              // mirror the line into `subtitle`; `artist` still drives the lock screen /
+              // notification.
+              .setSubtitle(secondaryLine)
+              .setAlbumTitle(album)
+              .build()
+          val updatedMediaItem =
+            currentMediaItem
+              .buildUpon()
+              .setUri(currentMediaItem.localConfiguration?.uri)
+              .setMediaMetadata(updatedMetadata)
+              .setTag(track)
+              .build()
+          exoPlayer.replaceMediaItem(index, updatedMediaItem)
+        }
+
+        override fun stampArtwork(index: Int, track: Track, uri: String) {
+          val currentMediaItem = exoPlayer.getMediaItemAt(index)
+          val updatedMetadata =
+            currentMediaItem.mediaMetadata.buildUpon().setArtworkUri(uri.toUri()).build()
+          val updatedMediaItem =
+            currentMediaItem
+              .buildUpon()
+              .setUri(currentMediaItem.localConfiguration?.uri)
+              .setMediaMetadata(updatedMetadata)
+              .setTag(track)
+              .build()
+          exoPlayer.replaceMediaItem(index, updatedMediaItem)
+        }
+
+        override suspend fun resolveNowPlayingArtwork(track: Track, sizePx: Double): String? {
+          val browserManager = browser?.browserManager ?: return null
+          val config = browserManager.config.nowPlayingArtwork ?: return null
+          val resolved =
+            try {
+              browserManager.resolveArtworkUrl(track, config, ImageContext(sizePx, sizePx))
+            } catch (e: Exception) {
+              Timber.e(e, "Failed to resolve now-playing artwork for track id=${track.id}")
+              null
+            }
+          val uri = resolved?.uri?.takeIf { it.isNotEmpty() } ?: return null
+          // Remember how this URI was produced: Media3 hands it back to the bitmap loader, which
+          // re-resolves Track-first (with the nowPlayingArtwork kind, not the global artwork
+          // config).
+          browserManager.artworkResolutions.register(uri, track, config)
+          return uri
+        }
+
+        override fun emitNowPlayingChanged(metadata: NowPlayingMetadata) {
+          callbacks?.onNowPlayingChanged(metadata)
+        }
+      },
+      MainScope(),
     )
-  }
-
-  /**
-   * Clears the now playing override when track changes. Called from
-   * PlayerListener.onMediaItemTransition.
-   */
-  internal fun clearNowPlayingOverride() {
-    nowPlayingOverride = null
-    cancelNowPlayingFlash()
-    latestTimedMetadata = null
-  }
-
-  /**
-   * Records the latest live timed (ICY/ID3) metadata and, when a now-playing formatter is
-   * configured, re-runs it so the live song is reflected on the now-playing surface.
-   */
-  internal fun onTimedMetadataReceived(timed: TimedMetadata) {
-    latestTimedMetadata = timed
-    if (nowPlayingMetadataEnabled && nowPlayingFormatter != null) {
-      applyNowPlayingMetadata()
-    }
-  }
 
   /**
    * Resets the retry timer when track changes. Called from PlayerListener.onMediaItemTransition.
    */
   internal fun resetRetryTimer() {
     mediaFactory.resetRetryTimer()
-  }
-
-  /**
-   * Applies the current now playing metadata to the media notification. Uses the override if set,
-   * otherwise uses track metadata.
-   */
-  internal fun applyNowPlayingMetadata() {
-    val index = currentIndex ?: return
-    val track = currentTrack ?: return
-    nowPlayingRenderGeneration += 1
-    val generation = nowPlayingRenderGeneration
-
-    // Metadata source. When metadata is disabled, use the raw track (ignore override + formatter);
-    // otherwise the imperative `updateNowPlaying` override wins over the track's own fields.
-    val override = if (nowPlayingMetadataEnabled) nowPlayingOverride else null
-    val defaultTitle = override?.title ?: track.title
-    val defaultSecondary = override?.artist ?: track.artist
-
-    val defaultAlbum = override?.album ?: track.album
-
-    // A flash outranks both the formatter and the override; while one is active the formatter pass
-    // is skipped entirely so its async result can't land on top.
-    val flash = if (nowPlayingMetadataEnabled) nowPlayingFlash else null
-    if (flash != null) {
-      applyNowPlayingFields(
-        index,
-        track,
-        flash.title ?: defaultTitle,
-        flash.artist ?: defaultSecondary,
-        flash.album ?: defaultAlbum,
-      )
-      return
-    }
-
-    // Apply the default immediately so the now-playing never lags a track/status change.
-    applyNowPlayingFields(index, track, defaultTitle, defaultSecondary, defaultAlbum)
-
-    // If a formatter is configured, let it customize the fields asynchronously (mirrors the
-    // navigation-error formatter pattern). Falls back to the default on null/throw.
-    val formatter = if (nowPlayingMetadataEnabled) nowPlayingFormatter else null
-    if (formatter != null) {
-      val capturedId = track.src ?: track.url
-      // Gate the raw load-control signal to the buffering state so `stalled` is correct on its own:
-      // ExoPlayer's rebuffering flag is polled on a different cadence than state transitions and
-      // can
-      // linger true into the PLAYING transition as a rebuffer recovers. AND-ing with the tracked
-      // state keeps it true only while ongoing playback is actually stalled, never bleeding into
-      // it.
-      val stalled = playbackState == PlaybackState.BUFFERING && loadControl.isRebuffering
-      // The real play/pause intent, not the InterceptingPlayer-masked value (which can report false
-      // through a masked error to keep the session paused-but-alive).
-      val params =
-        FormatNowPlayingParams(
-          track,
-          latestTimedMetadata,
-          exoPlayer.playWhenReady,
-          stalled,
-          playbackError,
-        )
-      nowPlayingScope.launch {
-        val formatted =
-          try {
-            formatter.invoke(params).await()
-          } catch (e: Exception) {
-            Timber.e(e, "NowPlaying formatter threw; using default")
-            null
-          }
-        // Apply only if still the same track (a fast skip must not be overwritten by a stale
-        // result) AND no newer render superseded this one — without the generation check, a
-        // formatter round-trip in flight when a flash starts lands a beat later and overwrites
-        // the flash (mirrors the iOS renderGeneration guard).
-        val current = currentTrack
-        val currentIdx = currentIndex
-        if (
-          formatted != null &&
-            current != null &&
-            currentIdx != null &&
-            (current.src ?: current.url) == capturedId &&
-            nowPlayingRenderGeneration == generation
-        ) {
-          applyNowPlayingFields(
-            currentIdx,
-            current,
-            formatted.title ?: defaultTitle,
-            formatted.artist ?: defaultSecondary,
-            formatted.album ?: defaultAlbum,
-          )
-        }
-      }
-    }
-  }
-
-  /** Stamps the now-playing media item with the given title + secondary line. */
-  private fun applyNowPlayingFields(
-    index: Int,
-    track: Track,
-    title: String?,
-    secondaryLine: String?,
-    album: String? = track.album,
-  ) {
-    val currentMediaItem = exoPlayer.getMediaItemAt(index)
-
-    // Skip republishing identical fields. The formatter is re-invoked on every state change, so the
-    // same (title, secondaryLine) is recomputed often; an unconditional replaceMediaItem would
-    // churn
-    // the MediaSession (and flicker Android Auto / now-playing) for no visible change. Keyed on the
-    // track identity so a new track with a coincidentally identical line still publishes.
-    val published = PublishedNowPlaying(index, track.src ?: track.url, title, secondaryLine, album)
-    if (published == lastPublishedNowPlaying) return
-    lastPublishedNowPlaying = published
-
-    val updatedMetadata =
-      currentMediaItem.mediaMetadata
-        .buildUpon()
-        .setTitle(title)
-        .setDisplayTitle(title)
-        .setArtist(secondaryLine)
-        // Android Auto reads DISPLAY_SUBTITLE (not ARTIST) once DISPLAY_TITLE is set, so mirror the
-        // line into `subtitle`; `artist` still drives the lock screen / notification.
-        .setSubtitle(secondaryLine)
-        .setAlbumTitle(album)
-        .build()
-
-    val updatedMediaItem =
-      currentMediaItem
-        .buildUpon()
-        .setUri(currentMediaItem.localConfiguration?.uri)
-        .setMediaMetadata(updatedMetadata)
-        .setTag(track)
-        .build()
-
-    exoPlayer.replaceMediaItem(index, updatedMediaItem)
-
-    // Notify JS of the now playing metadata change
-    getNowPlaying()?.let { callbacks?.onNowPlayingChanged(it) }
-
-    // Resolve the now-playing-only artwork (lock screen / notification / Android Auto now-playing)
-    // from `nowPlayingArtwork`, keyed on track id so it runs once per track and not on every
-    // playback-state change. This is independent of the title/secondary dedupe above.
-    maybeResolveNowPlayingArtwork(index, track)
-  }
-
-  /**
-   * Resolves the playing track's now-playing artwork from `nowPlayingArtwork` (the now-playing-only
-   * artwork kind) and stamps it onto the playing media item's `artworkUri`.
-   *
-   * Guarded exactly like iOS: only when `nowPlayingArtwork` is configured AND the track has a
-   * non-empty id (so the `{id}` token never resolves to an empty string). Otherwise the existing
-   * `artworkUri` — which came from `artwork` / `track.artwork` (browse list path) — is left in
-   * place.
-   *
-   * The resolve is async (the request-layer transform is a suspend call); it runs in
-   * [nowPlayingScope] and applies on the main thread via `replaceMediaItem`. Keyed on track id so
-   * we don't kick off a redundant resolve on every [applyNowPlayingFields] call.
-   */
-  private fun maybeResolveNowPlayingArtwork(index: Int, track: Track) {
-    val trackId =
-      track.id?.takeIf { it.isNotEmpty() }
-        ?: run {
-          // No id → skip nowPlayingArtwork entirely; keep the existing (browse `artwork`)
-          // artworkUri.
-          nowPlayingArtworkResolvedForTrackId = null
-          return
-        }
-
-    val browserManager =
-      browser?.browserManager
-        ?: run {
-          nowPlayingArtworkResolvedForTrackId = null
-          return
-        }
-    val nowPlayingArtwork =
-      browserManager.config.nowPlayingArtwork
-        ?: run {
-          // No now-playing artwork config → fall back to the existing artworkUri (`artwork` /
-          // track.art).
-          nowPlayingArtworkResolvedForTrackId = null
-          return
-        }
-
-    // Already resolved (or resolving) for this track id — avoid a redundant resolve on every call.
-    if (nowPlayingArtworkResolvedForTrackId == trackId) return
-    nowPlayingArtworkResolvedForTrackId = trackId
-
-    // Now-playing surfaces want a large image; mirror iOS's now-playing size hint.
-    val imageContext = ImageContext(nowPlayingArtworkSizePx, nowPlayingArtworkSizePx)
-
-    nowPlayingScope.launch {
-      val resolved =
-        try {
-          browserManager.resolveArtworkUrl(track, nowPlayingArtwork, imageContext)
-        } catch (e: Exception) {
-          Timber.e(e, "Failed to resolve now-playing artwork for track id=$trackId")
-          null
-        }
-      val uri = resolved?.uri?.takeIf { it.isNotEmpty() } ?: return@launch
-
-      // Remember how this URI was produced: Media3 hands it back to the bitmap
-      // loader, which re-resolves Track-first (with the nowPlayingArtwork kind,
-      // not the global artwork config).
-      browserManager.artworkResolutions.register(uri, track, nowPlayingArtwork)
-
-      // Apply only if still the same track (a fast skip must not be overwritten by a stale result).
-      val currentIdx = currentIndex ?: return@launch
-      val current = currentTrack ?: return@launch
-      if (current.id != trackId) return@launch
-
-      val currentMediaItem = exoPlayer.getMediaItemAt(currentIdx)
-      val updatedMetadata =
-        currentMediaItem.mediaMetadata.buildUpon().setArtworkUri(uri.toUri()).build()
-      val updatedMediaItem =
-        currentMediaItem
-          .buildUpon()
-          .setUri(currentMediaItem.localConfiguration?.uri)
-          .setMediaMetadata(updatedMetadata)
-          .setTag(current)
-          .build()
-      exoPlayer.replaceMediaItem(currentIdx, updatedMediaItem)
-    }
   }
 
   /**
@@ -1457,7 +1197,7 @@ class Player(internal val context: Context) {
    */
   fun destroy() {
     stop()
-    nowPlayingScope.cancel()
+    nowPlaying.destroy()
     mediaSessionCallback.destroy()
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
@@ -1509,7 +1249,7 @@ class Player(internal val context: Context) {
       // output — the live song while paused, a "Reconnecting…" line on a rebuffer, an offline/error
       // line. The publish-dedupe in applyNowPlayingFields drops redundant updates, so re-running
       // through the rapid startup sequence (none→loading→buffering→ready→playing) is cheap.
-      applyNowPlayingMetadata()
+      nowPlaying.render()
 
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state

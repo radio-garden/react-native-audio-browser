@@ -48,7 +48,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     PlaybackMetadata.from(metadata)?.let {
       val timed = it.toNitro()
       player.callbacks?.onTimedMetadata(timed)
-      player.onTimedMetadataReceived(timed)
+      player.nowPlaying.onTimedMetadataReceived(timed)
     }
   }
 
@@ -104,7 +104,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     player.updateFavoriteButtonState(player.currentTrack?.favorited)
 
     // Clear now playing override when track changes (new track = clean slate)
-    player.clearNowPlayingOverride()
+    player.nowPlaying.clearOverride()
 
     // Re-stamp the now-playing metadata for the new track. The browse-list
     // MediaItem carries `artist = subtitle` (the per-context list line), but the
@@ -113,7 +113,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // `artist`, so we overwrite the playing item's metadata here (the same
     // mechanism ICY song updates already use) to diverge it from the list items.
     // This also fires onNowPlayingChanged, so we don't emit it separately below.
-    player.applyNowPlayingMetadata()
+    player.nowPlaying.render()
 
     // Reset retry timer so new track gets fresh 2-minute window
     player.resetRetryTimer()

@@ -44,16 +44,16 @@ interface NowPlayingSurface {
 }
 
 /**
- * Owns the Now Playing rendering pipeline: the flash > override > formatter > track precedence,
- * the publish dedupe, the stale-result guards (render generation + track-id keying), timed (ICY)
- * metadata, and the once-per-track artwork keying. Mirrors iOS's NowPlayingUpdater. The platform
- * is reached only through [NowPlayingSurface]; the JS formatter arrives as a plain suspend lambda
+ * Owns the Now Playing rendering pipeline: the flash > override > formatter > track precedence, the
+ * publish dedupe, the stale-result guards (render generation + track-id keying), timed (ICY)
+ * metadata, and the once-per-track artwork keying. Mirrors iOS's NowPlayingUpdater. The platform is
+ * reached only through [NowPlayingSurface]; the JS formatter arrives as a plain suspend lambda
  * (wrapped at the Nitro boundary in Player.setup), so every guard here runs under JVM tests.
  */
 class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scope: CoroutineScope) {
 
   /** Whether now-playing rendering (override/flash/formatter) is enabled (PlayerSetupOptions). */
-  var enabled = false
+  var enabled = true
 
   /** The JS formatter, wrapped to a plain suspend call at the Nitro boundary (see Player.setup). */
   var formatter: (suspend (FormatNowPlayingParams) -> NowPlayingUpdate?)? = null
@@ -177,8 +177,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
   /**
    * Renders the current now playing metadata to the surface. Flash wins while active (formatter
    * skipped entirely so its async result can't land on top); otherwise the override-or-track
-   * default is stamped immediately and a configured formatter customizes it asynchronously,
-   * guarded by track identity and [renderGeneration].
+   * default is stamped immediately and a configured formatter customizes it asynchronously, guarded
+   * by track identity and [renderGeneration].
    */
   fun render() {
     val index = surface.currentIndex ?: return

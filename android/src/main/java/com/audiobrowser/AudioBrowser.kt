@@ -908,16 +908,20 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // ============================================================================
 
   override fun updateNowPlaying(update: NowPlayingUpdate?) = runBlockingOnMain {
-    player.updateNowPlaying(update)
+    player.nowPlaying.updateNowPlaying(update)
   }
 
   override fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) = runBlockingOnMain {
-    player.flashNowPlaying(update, durationMs)
+    player.nowPlaying.flashNowPlaying(update, durationMs)
   }
 
-  override fun clearNowPlayingFlash() = runBlockingOnMain { player.clearNowPlayingFlash() }
+  override fun clearNowPlayingFlash() = runBlockingOnMain {
+    player.nowPlaying.clearNowPlayingFlash()
+  }
 
-  override fun getNowPlaying(): NowPlayingMetadata? = runBlockingOnMain { player.getNowPlaying() }
+  override fun getNowPlaying(): NowPlayingMetadata? = runBlockingOnMain {
+    player.nowPlaying.getNowPlaying()
+  }
 
   // ============================================================================
   // MARK: Network Connectivity

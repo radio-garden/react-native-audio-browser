@@ -17,10 +17,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Tests the Now Playing rendering pipeline through a fake [NowPlayingSurface]: the
- * flash > override > formatter > track precedence, the publish dedupe, the stale-result guards
- * (render generation + track-id keying), timed-metadata reruns, the once-per-track artwork keying,
- * and the flash revert timing — all previously untestable inside Player.kt.
+ * Tests the Now Playing rendering pipeline through a fake [NowPlayingSurface]: the flash >
+ * override > formatter > track precedence, the publish dedupe, the stale-result guards (render
+ * generation + track-id keying), timed-metadata reruns, the once-per-track artwork keying, and the
+ * flash revert timing — all previously untestable inside Player.kt.
  */
 class NowPlayingUpdaterTest {
 
@@ -114,7 +114,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `disabled updater stamps raw track fields ignoring overrides`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope) // enabled = false
+    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = false }
     updater.updateNowPlaying(update(title = "Song"))
 
     assertEquals("Station", surface.stamps.last().title)
@@ -218,7 +218,10 @@ class NowPlayingUpdaterTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
     val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
     val gate = CompletableDeferred<Unit>()
-    updater.formatter = { gate.await(); update(title = "Stale") }
+    updater.formatter = {
+      gate.await()
+      update(title = "Stale")
+    }
 
     updater.render() // launches the gated formatter
     updater.flashNowPlaying(update(title = "Flash!"), durationMs = 60_000.0) // newer generation
@@ -235,7 +238,10 @@ class NowPlayingUpdaterTest {
     val surface = FakeSurface().apply { currentTrack = track("A", src = "https://s/a.mp3") }
     val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
     val gate = CompletableDeferred<Unit>()
-    updater.formatter = { gate.await(); update(title = "For A") }
+    updater.formatter = {
+      gate.await()
+      update(title = "For A")
+    }
 
     updater.render()
     surface.currentTrack = track("B", src = "https://s/b.mp3") // fast skip
