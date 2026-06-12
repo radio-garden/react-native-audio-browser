@@ -113,6 +113,9 @@ class BrowserManager {
     set(value) {
       field = value
       layerGeneration += 1
+      // Registered artwork resolutions pin configs (and their JS callback handles)
+      // from the previous configuration — never resolve through them again.
+      artworkResolutions.clear()
     }
 
   // Resolver-layer caching. The request/browse layers may be resolver thunks
@@ -138,12 +141,10 @@ class BrowserManager {
     get() = resolvedBrowseLayer
 
   /**
-   * Callback to transform artwork URLs for tracks. Takes a track and optional per-route artwork
-   * config, returns ImageSource or null. Injected by AudioBrowser when artwork config is set. The
-   * ImageContext parameter provides size hints for CDN URL generation.
+   * Maps produced artwork URIs back to (Track, artwork-config kind) so display-time bitmap loading
+   * can re-resolve Track-first. See [ArtworkResolutionRegistry].
    */
-  var artworkUrlResolver: (suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?)? =
-    null
+  val artworkResolutions = ArtworkResolutionRegistry()
 
   /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
@@ -447,12 +448,15 @@ class BrowserManager {
     Timber.d("Invalidated content cache for path='$path'")
   }
 
-  /** Clears all cached content. Used when artwork resolver is wired up to force re-fetch. */
+  /** Clears all cached content. */
   fun clearContentCache() {
     contentCache.evictAll()
     // Bump the layer generation so request/browse resolver thunks are re-resolved on the next
     // request (invalidateAllContent → clearContentCache is the documented re-resolve trigger).
     layerGeneration += 1
+    // Invalidated content's artwork resolutions go with it (same staleness rule as the
+    // config setter).
+    artworkResolutions.clear()
     Timber.d("Cleared all content cache")
   }
 
@@ -504,21 +508,15 @@ class BrowserManager {
                   )
                 }
 
-                // Transform artwork URL if resolver is configured
-                // At browse-time, we don't have display size info
-                val resolver = artworkUrlResolver
-                if (resolver != null) {
-                  val browseContext = ImageContext(null, null)
-                  transformedTrack =
-                    transformArtworkUrl(
-                      transformedTrack,
-                      effectiveArtworkConfig,
-                      resolver,
-                      path,
-                      index,
-                      browseContext,
-                    )
-                }
+                // Transform artwork URL. At browse-time there is no display size info.
+                transformedTrack =
+                  transformArtworkUrl(
+                    transformedTrack,
+                    effectiveArtworkConfig,
+                    path,
+                    index,
+                    ImageContext(null, null),
+                  )
 
                 transformedTrack
               }
@@ -536,7 +534,7 @@ class BrowserManager {
   }
 
   /**
-   * Transforms a track's artwork using the configured resolver. Populates artworkSource with the
+   * Transforms a track's artwork via [resolveArtworkUrl]. Populates artworkSource with the
    * transformed ImageSource, keeping artwork unchanged. Handles all edge cases: undefined returns,
    * errors, missing artwork.
    *
@@ -545,7 +543,6 @@ class BrowserManager {
   private suspend fun transformArtworkUrl(
     track: Track,
     artworkConfig: ArtworkRequestConfig?,
-    resolver: suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?,
     path: String,
     index: Int,
     imageContext: ImageContext? = null,
@@ -556,7 +553,7 @@ class BrowserManager {
     }
 
     return try {
-      val imageSource = resolver(track, artworkConfig, imageContext)
+      val imageSource = resolveArtworkUrl(track, artworkConfig, imageContext)
 
       when {
         // resolve returned null → no artwork source
@@ -569,6 +566,15 @@ class BrowserManager {
         // resolve returned ImageSource → set artworkSource
         else -> {
           Timber.d("[$path] Child[$index] '${track.title}': artworkSource set: ${imageSource.uri}")
+          // Remember how this URI was produced so display-time loading (which only
+          // gets a URI from Media3) can re-resolve Track-first with a size hint.
+          // Register the per-route config only when it isn't the global fallback,
+          // so display-time resolution reads the *current* config.artwork.
+          artworkResolutions.register(
+            imageSource.uri,
+            track,
+            artworkConfig?.takeIf { it !== config.artwork },
+          )
           track.copy(artworkSource = imageSource)
         }
       }
@@ -1134,8 +1140,60 @@ class BrowserManager {
   }
 
   /**
-   * Execute an API request for browser content. Handles URL parameter substitution, config merging,
-   * and transforms.
+   * Builds the HTTP request for an API-backed path by layering request (shared) →
+   * kind (browse/search) → route configs. Each layer's transform receives the
+   * previous layer's output; a layer with no transform merges its static fields.
+   *
+   * `initialQuery` seeds query params onto the BASE the kind layer receives (e.g.
+   * search q/mode/…): a layer with a transform "wins completely" and is handed only
+   * the base, so params placed on a layer's own static query would be dropped
+   * before the transform runs. The same goes for `path`: it is carried from the
+   * base through every layer (only a transform may change it), so a kind whose
+   * config supplies the path (search) must seed it via the `path` parameter.
+   * Mirrors iOS `buildApiRequest`.
+   *
+   * @throws ContentNotFoundException when no layer supplies a baseUrl — there is
+   *   nothing to fetch, so the path is genuinely "not found" rather than a network
+   *   error (mirrors iOS's `guard let baseUrl`).
+   */
+  internal suspend fun buildApiRequest(
+    kindConfig: TransformableRequestConfig?,
+    routeConfig: TransformableRequestConfig?,
+    path: String?,
+    params: Map<String, String>,
+    initialQuery: Map<String, String>? = null,
+  ): HttpClient.HttpRequest {
+    // Resolve the request/browse resolver thunks once per content generation (cached).
+    ensureLayersResolved()
+
+    var merged =
+      RequestConfig(
+        method = null,
+        path = path,
+        baseUrl = null,
+        headers = null,
+        query = null,
+        body = null,
+        contentType = null,
+        userAgent = null,
+      )
+    resolvedRequestLayer?.let { merged = RequestConfigBuilder.mergeConfig(merged, it, params) }
+    if (!initialQuery.isNullOrEmpty()) {
+      merged = merged.copy(query = (merged.query ?: emptyMap()) + initialQuery)
+    }
+    kindConfig?.let { merged = RequestConfigBuilder.mergeConfig(merged, it, params) }
+    routeConfig?.let { merged = RequestConfigBuilder.mergeConfig(merged, it, params) }
+
+    if (merged.baseUrl.isNullOrBlank()) {
+      throw ContentNotFoundException(path ?: "")
+    }
+    return RequestConfigBuilder.buildHttpRequest(merged)
+  }
+
+  /**
+   * Execute an API request for browser content. Request building (layering +
+   * transforms + baseUrl guard) lives in [buildApiRequest]; this adds the
+   * browse-specific response shape (a ResolvedTrack page object).
    */
   private suspend fun executeApiRequest(
     apiConfig: TransformableRequestConfig?,
@@ -1143,44 +1201,10 @@ class BrowserManager {
     routeParams: Map<String, String>,
   ): ResolvedTrack {
     return withContext(Dispatchers.IO) {
-      // Layered request: request (shared) → browse (kind) → route. Each layer's
-      // transform receives the previous layer's output; a layer with no
-      // transform merges its static fields. apiConfig is null for the implicit
-      // default (an unmatched browse path → fetch via request + browse + path).
-      var mergedConfig =
-        RequestConfig(
-          path = path,
-          method = null,
-          baseUrl = null,
-          headers = null,
-          query = null,
-          body = null,
-          contentType = null,
-          userAgent = null,
-        )
-      // Resolve the request/browse resolver thunks once per content generation (cached).
+      // request (shared) → browse (kind) → route. apiConfig is null for the
+      // implicit default (an unmatched browse path → fetch via request + browse + path).
       ensureLayersResolved()
-      resolvedRequestLayer?.let {
-        mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
-      }
-      resolvedBrowseLayer?.let {
-        mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
-      }
-      apiConfig?.let {
-        mergedConfig = RequestConfigBuilder.mergeConfig(mergedConfig, it, routeParams)
-      }
-
-      // No URL configured (no request baseUrl and no route override that supplies
-      // one) → there is nothing to fetch, so the path is genuinely "not found"
-      // rather than a network error. Mirrors iOS's `guard let baseUrl` in
-      // buildApiRequest. Without this, an unconfigured navigate builds a relative
-      // URL that fails as an opaque IllegalArgumentException/NetworkException.
-      if (mergedConfig.baseUrl.isNullOrBlank()) {
-        throw ContentNotFoundException(path)
-      }
-
-      // Build and execute HTTP request
-      val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
+      val httpRequest = buildApiRequest(resolvedBrowseLayer, apiConfig, path, routeParams)
       val response = httpClient.request(httpRequest)
 
       response.fold(
@@ -1220,27 +1244,6 @@ class BrowserManager {
   ): Array<Track> {
     return withContext(Dispatchers.IO) {
       try {
-        // 1. Base via the shared request layer (request → search route; no
-        //    browse layer — search is its own kind). Includes request.transform.
-        var baseConfig =
-          RequestConfig(
-            method = null,
-            path = null,
-            baseUrl = null,
-            headers = null,
-            query = null,
-            body = null,
-            contentType = null,
-            userAgent = null,
-          )
-        // Resolve the request resolver thunk once per content generation (cached), so a
-        // resolver-only consumer still gets a baseUrl/headers/transform for search.
-        ensureLayersResolved()
-        resolvedRequestLayer?.let {
-          baseConfig = RequestConfigBuilder.mergeConfig(baseConfig, it, emptyMap())
-        }
-
-        // 2. Build query parameters from SearchParams
         val searchQueryParams = buildMap {
           put("q", params.query)
           params.mode?.let { put("mode", it.toString().lowercase()) }
@@ -1251,36 +1254,19 @@ class BrowserManager {
           params.playlist?.let { put("playlist", it) }
         }
 
-        // 3. Seed the search params onto the BASE the search layer receives.
-        //    A search config with a transform "wins completely" and is handed
-        //    only the base (see mergeConfig), so placing q/mode/… on the
-        //    override's static query would be dropped before the transform runs
-        //    — the transform would see an empty `request.query`. Putting them on
-        //    the base means a transform sees them in `request.query` (and a
-        //    transform-less config still merges them into the URL as before).
-        baseConfig = baseConfig.copy(query = (baseConfig.query ?: emptyMap()) + searchQueryParams)
-
-        // 4. Search layer: the config's own static fields + transform. The
-        //    search params now live on the base, not here.
-        val searchConfig =
-          TransformableRequestConfig(
-            transform = apiConfig.transform,
-            transformSync = apiConfig.transformSync,
-            method = apiConfig.method,
+        // request (shared) → search (kind); no browse layer and no route — search
+        // is its own kind. The search params seed the base (see buildApiRequest
+        // docs), and so does the search config's path: a layer's static path
+        // never applies (the path is carried from the base), so the caller
+        // seeds it — mirrors the web stub's fetchSearchResults.
+        val httpRequest =
+          buildApiRequest(
+            kindConfig = apiConfig,
+            routeConfig = null,
             path = apiConfig.path,
-            baseUrl = apiConfig.baseUrl,
-            headers = apiConfig.headers,
-            query = apiConfig.query,
-            body = apiConfig.body,
-            contentType = apiConfig.contentType,
-            userAgent = apiConfig.userAgent,
+            params = emptyMap(),
+            initialQuery = searchQueryParams,
           )
-
-        // 5. Merge configs and apply transform if provided
-        var mergedConfig = RequestConfigBuilder.mergeConfig(baseConfig, searchConfig, emptyMap())
-
-        // 4. Build and execute HTTP request
-        val httpRequest = RequestConfigBuilder.buildHttpRequest(mergedConfig)
         val response = httpClient.request(httpRequest)
 
         response.fold(

@@ -47,76 +47,69 @@ extension BrowserManager {
       resolveLayer = nil
     }
 
-    // No media-specific config: build the URL from the request-layered base.
-    guard let mediaConfig = config.media else {
-      let merged = applyMediaResolveLayer(base: baseRequest, resolve: resolveLayer)
-      let finalUrl = buildUrl(from: merged)
-      logger.debug("No media config; request-layered URL: \(originalUrl) -> \(finalUrl)")
-      return MediaResolvedUrl(
-        url: finalUrl,
-        headers: merged.headers,
-        userAgent: merged.userAgent,
-      )
-    }
-
-    // If there's a transform (async and/or sync), run it as a pipeline: async
-    // first, then sync. Each result is copied out of the Nitro bridge immediately
-    // (extractConfig) to avoid use-after-free when the Promise is deallocated.
-    if mediaConfig.transform != nil || mediaConfig.transformSync != nil {
-      do {
-        logger.debug("resolveMediaUrl: calling transform callback...")
-        var transformedConfig = baseRequest
-        if let transform = mediaConfig.transform {
-          transformedConfig = try await awaitAsyncConfig(transform(transformedConfig, nil))
-        }
-        if let transformSync = mediaConfig.transformSync {
-          transformedConfig = try await awaitSyncConfig(transformSync(transformedConfig, nil))
-        }
-        logger.debug("resolveMediaUrl: transform complete")
-
-        let merged = applyMediaResolveLayer(
-          base: transformedConfig,
-          resolve: resolveLayer,
-        )
-        let finalUrl = buildUrl(from: merged)
-
-        logger.debug("Media URL transformed: \(originalUrl) -> \(finalUrl)")
-
-        return MediaResolvedUrl(
-          url: finalUrl,
-          headers: merged.headers,
-          userAgent: merged.userAgent,
-        )
-      } catch {
-        logger.error("Media transform failed: \(error.localizedDescription)")
-        return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+    // request → media (kind layer) → media.resolve(track), resolve winning.
+    // Matches the web stub and Android. (The old static branch dropped a media
+    // config's static query/method/body/contentType, and dropped its headers
+    // entirely when no baseUrl was configured anywhere.)
+    do {
+      var merged = baseRequest
+      if let mediaConfig = config.media {
+        merged = try await applyMediaLayer(mediaConfig, to: merged)
       }
-    }
-
-    // No media transform: apply media static fields over the request-layered base.
-    let baseUrl = mediaConfig.baseUrl ?? baseRequest.baseUrl
-    if let baseUrl {
-      let staticBase = RequestConfig(
-        method: baseRequest.method,
-        path: originalUrl,
-        baseUrl: baseUrl,
-        headers: mediaConfig.headers ?? baseRequest.headers,
-        query: baseRequest.query,
-        body: baseRequest.body,
-        contentType: baseRequest.contentType,
-        userAgent: mediaConfig.userAgent ?? baseRequest.userAgent,
-      )
-      let merged = applyMediaResolveLayer(base: staticBase, resolve: resolveLayer)
+      merged = applyMediaResolveLayer(base: merged, resolve: resolveLayer)
       let finalUrl = buildUrl(from: merged)
-      logger.debug("Media URL with baseUrl: \(originalUrl) -> \(finalUrl)")
+      logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
         url: finalUrl,
         headers: merged.headers,
         userAgent: merged.userAgent,
       )
+    } catch {
+      logger.error("Media transform failed: \(error.localizedDescription)")
+      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
+  }
 
-    return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+  /// Media-kind Request-Config Layer application: a transform (async and/or sync)
+  /// wins completely — async first, then sync, each result copied out of the Nitro
+  /// bridge immediately (extractConfig, via awaitAsync/SyncConfig) — otherwise the
+  /// media config's static fields merge over the base with `path` carried from the
+  /// base (only a transform may change it). The same rule as `applyLayer`; matches
+  /// the web stub and Android.
+  private func applyMediaLayer(_ media: MediaRequestConfig, to base: RequestConfig) async throws -> RequestConfig {
+    if media.transform != nil || media.transformSync != nil {
+      var result = base
+      if let transform = media.transform {
+        result = try await awaitAsyncConfig(transform(result, nil))
+      }
+      if let transformSync = media.transformSync {
+        result = try await awaitSyncConfig(transformSync(result, nil))
+      }
+      return result
+    }
+    let staticMerged = mergeRequestConfig(
+      base: base,
+      override: RequestConfig(
+        method: media.method,
+        path: media.path,
+        baseUrl: media.baseUrl,
+        headers: media.headers,
+        query: media.query,
+        body: media.body,
+        contentType: media.contentType,
+        userAgent: media.userAgent,
+      ),
+    )
+    return RequestConfig(
+      method: staticMerged.method,
+      path: base.path,
+      baseUrl: staticMerged.baseUrl,
+      headers: staticMerged.headers,
+      query: staticMerged.query,
+      body: staticMerged.body,
+      contentType: staticMerged.contentType,
+      userAgent: staticMerged.userAgent,
+    )
   }
 
   /// Invokes the consumer-supplied `media.resolve`/`resolveSync(track)` and merges
@@ -193,6 +186,22 @@ extension BrowserManager {
         params: [:],
       )
 
+      // Artwork config's static fields always apply (not resolve/transform — those
+      // run separately), with the per-track resolve merged over them — resolve
+      // wins. Matches the web stub and Android (the old either/or skipped static
+      // fields whenever a resolver was configured).
+      let artworkStaticConfig = RequestConfig(
+        method: artworkConfig.method,
+        path: artworkConfig.path,
+        baseUrl: artworkConfig.baseUrl,
+        headers: artworkConfig.headers,
+        query: artworkConfig.query,
+        body: artworkConfig.body,
+        contentType: artworkConfig.contentType,
+        userAgent: artworkConfig.userAgent,
+      )
+      mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
+
       if artworkConfig.resolve != nil || artworkConfig.resolveSync != nil {
         var asyncResolved: RequestConfig?
         if let resolve = artworkConfig.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
@@ -203,19 +212,11 @@ extension BrowserManager {
           combine: { self.mergeRequestConfig(base: $0, override: $1) },
         ) {
           mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolved)
+        } else if track.artwork == nil {
+          // A resolver ran but produced nothing, and there's no artwork URL either
+          // → no artwork (matches the web stub).
+          return nil
         }
-      } else {
-        let artworkStaticConfig = RequestConfig(
-          method: artworkConfig.method,
-          path: artworkConfig.path,
-          baseUrl: artworkConfig.baseUrl,
-          headers: artworkConfig.headers,
-          query: artworkConfig.query,
-          body: artworkConfig.body,
-          contentType: artworkConfig.contentType,
-          userAgent: artworkConfig.userAgent,
-        )
-        mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
       }
 
       // Apply image query params if configured and imageContext is provided
@@ -248,15 +249,16 @@ extension BrowserManager {
         }
       }
 
-      // Skip transform at browse-time (no size context) — applied at load-time.
-      let hasSize = imageContext?.width != nil || imageContext?.height != nil
-      if hasSize {
-        if let transform = artworkConfig.transform {
-          mergedConfig = try await awaitAsyncConfig(transform(MediaTransformParams(request: mergedConfig, context: imageContext)))
-        }
-        if let transformSync = artworkConfig.transformSync {
-          mergedConfig = try await awaitSyncConfig(transformSync(MediaTransformParams(request: mergedConfig, context: imageContext)))
-        }
+      // Transform (async first, then sync), receiving the image context — which is
+      // nil at browse time, matching the web stub and Android. (Previously skipped
+      // without a size, leaving browse-time `artworkSource` untransformed for JS
+      // consumers; load-time surfaces re-resolve Track-first with the real size,
+      // so running it here cannot double-transform.)
+      if let transform = artworkConfig.transform {
+        mergedConfig = try await awaitAsyncConfig(transform(MediaTransformParams(request: mergedConfig, context: imageContext)))
+      }
+      if let transformSync = artworkConfig.transformSync {
+        mergedConfig = try await awaitSyncConfig(transformSync(MediaTransformParams(request: mergedConfig, context: imageContext)))
       }
 
       // Substitute the `{id}` template token with the track's id across path/query/header values.

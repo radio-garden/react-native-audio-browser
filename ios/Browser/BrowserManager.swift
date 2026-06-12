@@ -653,8 +653,11 @@ final class BrowserManager {
       // endpoint returns a bare Track array (unlike browse's page object). The
       // search params go through `initialQuery` so they land in `request.query`
       // (and the URL); a config with a transform only ever sees the base.
+      // Seed the search config's static path onto the base — a layer's static
+      // path never applies (carried from the base; only a transform may change
+      // it). Matches the web stub's fetchSearchResults and Android.
       let request = try await buildApiRequest(
-        kind: nil, searchConfig, path: "/__search", params: ["q": query],
+        kind: nil, searchConfig, path: searchConfig.path ?? "/__search", params: ["q": query],
         initialQuery: ["q": query],
       )
       logger.debug("Searching via API: \(request.url)")

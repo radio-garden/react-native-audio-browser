@@ -104,7 +104,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       CoilBitmapLoader(
         context = this,
         imageLoader = imageLoader,
-        getArtworkConfig = { player.browser?.getArtworkConfig() },
+        resolveDisplayArtwork = { uri, sizeHint -> player.resolveDisplayArtwork(uri, sizeHint) },
         getArtworkSizeHint = { player.artworkSizeHintPixels },
       )
 
