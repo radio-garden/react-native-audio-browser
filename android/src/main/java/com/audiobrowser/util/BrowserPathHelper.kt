@@ -35,6 +35,9 @@ object BrowserPathHelper {
   /** Generic browse error placeholder media ID */
   const val ERROR_PATH = "/__error"
 
+  /** Browse Gate placeholder media ID (subscription/login/region block) */
+  const val GATE_PATH = "/__gate"
+
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 

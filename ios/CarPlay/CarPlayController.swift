@@ -263,6 +263,27 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.favoriteChangedEmitter.removeListener(favoriteToken)
     }
 
+    // Repeat/shuffle mode changes re-stamp the now-playing buttons' serialized
+    // `isSelected` (a rebuild, skipped when unchanged) so CarPlay re-renders
+    // draw the correct selected background on the first frame — see
+    // CarPlayNowPlayingManager.BuiltButtonRow.
+    let repeatToken = audioBrowser.repeatModeChangedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.nowPlayingManager.setupNowPlayingButtons()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.repeatModeChangedEmitter.removeListener(repeatToken)
+    }
+    let shuffleToken = audioBrowser.shuffleChangedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.nowPlayingManager.setupNowPlayingButtons()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.shuffleChangedEmitter.removeListener(shuffleToken)
+    }
+
     // Subscribe to external content changes (notifyContentChanged /
     // invalidateAllContent).
     let externalContentToken = audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in

@@ -1331,7 +1331,14 @@ class Player(internal val context: Context) {
    */
   suspend fun playFromSearch(params: SearchParams): Boolean {
     return try {
-      val browserManager = awaitBrowser().browserManager
+      val audioBrowser = awaitBrowser()
+      // A Browse Gate blocks external-surface search too — otherwise voice search is a way
+      // around the gate (mirrors the iOS play-media intent guard).
+      if (audioBrowser.getBrowseGate() != null) {
+        Timber.i("playFromSearch refused — browse gate is set")
+        return false
+      }
+      val browserManager = audioBrowser.browserManager
 
       Timber.d(
         "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"

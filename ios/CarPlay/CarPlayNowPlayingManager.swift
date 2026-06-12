@@ -22,16 +22,28 @@ final class CarPlayNowPlayingManager {
   private weak var audioBrowser: HybridAudioBrowser?
   private var nowPlayingObserver: NowPlayingObserver?
   private weak var upNextTemplate: CPListTemplate?
-  /// The favorited state currently reflected in the now-playing heart, so we can
-  /// skip rebuilding the buttons array when it hasn't changed — every
-  /// `updateNowPlayingButtons` call re-renders ALL buttons (flashing e.g. the
-  /// shuffle button), and the favorite is otherwise rebuilt on every track change.
-  private var displayedFavorited: Bool?
-  /// The button *types* currently built into the template, so setupNowPlayingButtons
-  /// can skip a full rebuild when the set is unchanged — `onConfigChanged` fires on
-  /// unrelated config churn (queue/content changes) and a rebuild recreates every
-  /// button, flashing e.g. the shuffle button.
-  private var builtButtonTypes: [CarPlayNowPlayingButton]?
+  /// Everything the built button row renders — button types, the heart's
+  /// favorited state, and the shuffle/repeat `isSelected` state. Rebuilds are
+  /// skipped while this is unchanged (`onConfigChanged` fires on unrelated
+  /// churn, and every `updateNowPlayingButtons` call re-renders ALL buttons).
+  ///
+  /// shuffle/repeat selected state is part of the snapshot because CarPlay
+  /// SERIALIZES the buttons (NSSecureCoding) to its UI process: whenever the
+  /// now-playing screen re-renders (it does on every metadata change), the
+  /// stateful buttons first draw from their serialized `isSelected`, and only
+  /// then overlay the live state the app reports via the command center. A
+  /// button built with the default `isSelected = false` while repeat/shuffle
+  /// is on therefore flashes background-off → background-on at every
+  /// re-render. Stamping `isSelected` at build time (and rebuilding when the
+  /// mode changes) makes the first-frame render match the live state.
+  private struct BuiltButtonRow: Equatable {
+    let types: [CarPlayNowPlayingButton]
+    let favorited: Bool?
+    let shuffleSelected: Bool?
+    let repeatSelected: Bool?
+  }
+
+  private var builtRow: BuiltButtonRow?
 
   /// Browse path the album line navigates to for the active track —
   /// `track.albumUrl`, or the pre-resolved `resolveAlbumUrl` result. Resolved
@@ -93,21 +105,25 @@ final class CarPlayNowPlayingManager {
     updateNowPlayingButtonStates()
   }
 
-  /// Sets up custom Now Playing buttons based on configuration
+  /// Sets up custom Now Playing buttons based on configuration and current
+  /// player state, skipping the rebuild when nothing the row renders changed.
   func setupNowPlayingButtons() {
     // While a Browse Gate is set, custom buttons (favorite etc.) are hidden;
     // the system transport controls stay — a gate never blocks playback.
     let buttons = audioBrowser?.browseGate == nil ? config.carPlayNowPlayingButtons : []
-    // Skip a full rebuild when the button set is unchanged (it recreates every
-    // button and flashes e.g. the shuffle button); onConfigChanged fires on
-    // unrelated config churn with the same buttons.
-    guard buttons != builtButtonTypes else { return }
-    builtButtonTypes = buttons
+    let player = audioBrowser?.getPlayer()
+    let row = BuiltButtonRow(
+      types: buttons,
+      favorited: buttons.contains(.favorite) ? isActiveTrackFavorited : nil,
+      shuffleSelected: buttons.contains(.shuffle) ? (player?.shuffleEnabled ?? false) : nil,
+      repeatSelected: buttons.contains(.repeat) ? (player?.getRepeatMode() ?? .off) != .off : nil,
+    )
+    guard row != builtRow else { return }
+    builtRow = row
     logger.info("Setting up Now Playing buttons: \(buttons.map(\.stringValue))")
 
     guard !buttons.isEmpty else {
       CPNowPlayingTemplate.shared.updateNowPlayingButtons([])
-      displayedFavorited = nil
       return
     }
 
@@ -119,17 +135,21 @@ final class CarPlayNowPlayingManager {
         let shuffleButton = CPNowPlayingShuffleButton { [weak self] _ in
           self?.handleShuffleButtonTapped()
         }
+        // Pre-stamp the serialized selected state — see BuiltButtonRow.
+        shuffleButton.isSelected = row.shuffleSelected ?? false
         nowPlayingButtons.append(shuffleButton)
 
       case .repeat:
         let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in
           self?.handleRepeatButtonTapped()
         }
+        // Pre-stamp the serialized selected state — see BuiltButtonRow.
+        repeatButton.isSelected = row.repeatSelected ?? false
         nowPlayingButtons.append(repeatButton)
 
       case .favorite:
         let favoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: isActiveTrackFavorited),
+          image: favoriteButtonImage(isFavorited: row.favorited ?? false),
         ) { [weak self] _ in
           self?.handleFavoriteButtonTapped()
         }
@@ -144,9 +164,6 @@ final class CarPlayNowPlayingManager {
     }
 
     CPNowPlayingTemplate.shared.updateNowPlayingButtons(nowPlayingButtons)
-    // The favorite button (if any) was just built from the current state; record
-    // it so updateFavoriteButtonState only rebuilds on an actual change.
-    displayedFavorited = buttons.contains(.favorite) ? isActiveTrackFavorited : nil
     logger.info("Updated Now Playing with \(nowPlayingButtons.count) custom button(s)")
   }
 
@@ -164,36 +181,17 @@ final class CarPlayNowPlayingManager {
 
   // MARK: - Button State Updates
 
-  /// Updates the favorite button appearance based on current track's favorite state
+  /// Refreshes the row for a favorite/shuffle/repeat state change — the
+  /// snapshot diff in setupNowPlayingButtons makes this a no-op when nothing
+  /// the row renders actually changed.
   func updateFavoriteButtonState() {
-    guard config.carPlayNowPlayingButtons.contains(.favorite) else { return }
-    let favorited = isActiveTrackFavorited
-    // Skip the rebuild when the heart wouldn't change — replacing the buttons
-    // array re-renders every button (the shuffle button flashes otherwise).
-    guard favorited != displayedFavorited else { return }
-    let buttons = CPNowPlayingTemplate.shared.nowPlayingButtons
-
-    for (index, button) in buttons.enumerated() {
-      if button is CPNowPlayingImageButton {
-        let newFavoriteButton = CPNowPlayingImageButton(
-          image: favoriteButtonImage(isFavorited: favorited),
-        ) { [weak self] _ in
-          self?.handleFavoriteButtonTapped()
-        }
-
-        var updatedButtons = buttons
-        updatedButtons[index] = newFavoriteButton
-        CPNowPlayingTemplate.shared.updateNowPlayingButtons(updatedButtons)
-        displayedFavorited = favorited
-        break
-      }
-    }
+    setupNowPlayingButtons()
   }
 
   /// Updates Now Playing button states based on config and current queue
   func updateNowPlayingButtonStates() {
     updateNowPlayingUpNextButton()
-    updateFavoriteButtonState()
+    setupNowPlayingButtons()
     updateAlbumArtistButtonState()
   }
 

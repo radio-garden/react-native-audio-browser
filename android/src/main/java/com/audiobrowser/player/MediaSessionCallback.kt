@@ -20,6 +20,7 @@ import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.margelo.nitro.audiobrowser.NativeBrowseGate
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
@@ -109,6 +110,20 @@ class MediaSessionCallback(private val player: Player) :
           .build()
       )
       .build()
+
+  /**
+   * Builds the Browse Gate tile: while a gate is set, tabs stay visible but every non-root level
+   * serves this single tile (see the gate check in [onGetChildren]). Same shape as the error tiles
+   * — non-browsable, non-playable — and deliberately NOT accompanied by a SessionError: a gate is
+   * deliberate app state, not a failure. The message renders as the tile's subtitle (newlines
+   * collapse to spaces — list rows are single-line).
+   */
+  private fun createGateMediaItem(gate: NativeBrowseGate): MediaItem =
+    createErrorMediaItem(
+      mediaId = BrowserPathHelper.GATE_PATH,
+      title = gate.title,
+      subtitle = gate.message?.replace('\n', ' ') ?: "",
+    )
 
   /**
    * Builds a generic "something went wrong" error tile for a browse failure. The true offline case
@@ -243,11 +258,23 @@ class MediaSessionCallback(private val player: Player) :
     )
     return scope.future {
       // Wait for browser to be registered if it's not available yet
-      val browserManager =
-        player
-          .awaitBrowser()
-          .also { Timber.d("Browser ready, proceeding with onGetChildren") }
-          .browserManager
+      val audioBrowser =
+        player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
+      val browserManager = audioBrowser.browserManager
+
+      // While a Browse Gate is set, tabs stay visible (the root keeps serving them below) but
+      // every other level — including re-queries of the gate tile's own sentinel path — serves
+      // the single gate tile, so drilling into it re-shows the message instead of dead-ending
+      // in "No items". Checked before the offline guard: gated content isn't coming back with
+      // connectivity, so the gate copy is the truer message.
+      audioBrowser.getBrowseGate()?.let { gate ->
+        if (parentId != BrowserPathHelper.ROOT_PATH) {
+          return@future LibraryResult.ofItemList(
+            ImmutableList.of(createGateMediaItem(gate)),
+            params,
+          )
+        }
+      }
 
       // The error / offline tiles are dead-ends. Some controllers (e.g. Android Auto when online)
       // treat a non-browsable tile as tappable and subscribe to its mediaId anyway; returning the
@@ -380,6 +407,13 @@ class MediaSessionCallback(private val player: Player) :
       // failing path (which would push another error page onto the stack).
       if (mediaId == BrowserPathHelper.ERROR_PATH) {
         return@future LibraryResult.ofItem(createBrowseErrorMediaItem(), null)
+      }
+
+      if (mediaId == BrowserPathHelper.GATE_PATH) {
+        val gate =
+          player.awaitBrowser().getBrowseGate()
+            ?: return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+        return@future LibraryResult.ofItem(createGateMediaItem(gate), null)
       }
 
       if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {
@@ -515,13 +549,21 @@ class MediaSessionCallback(private val player: Player) :
     return scope.future {
       // Wait for browser registration like onGetChildren does, so a cold-start voice search
       // doesn't fail before JS has configured the browser.
-      val browserManager =
+      val audioBrowser =
         try {
-          player.awaitBrowser().browserManager
+          player.awaitBrowser()
         } catch (e: TimeoutCancellationException) {
           Timber.w("Timed out waiting for browser - search not available")
           return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
         }
+      val browserManager = audioBrowser.browserManager
+
+      // External-surface search is gated with the rest of the browse tree — otherwise search is
+      // a way around the gate. One "result": the gate tile (see onGetSearchResult).
+      if (audioBrowser.getBrowseGate() != null) {
+        session.notifySearchResultChanged(browser, query, 1, params)
+        return@future LibraryResult.ofVoid()
+      }
 
       // Check if search is configured
       if (!browserManager.config.hasSearch) {
@@ -560,13 +602,19 @@ class MediaSessionCallback(private val player: Player) :
       "onGetSearchResult: ${browser.packageName}, query = $query, page = $page, pageSize = $pageSize"
     )
     return scope.future {
-      val browserManager =
+      val audioBrowser =
         try {
-          player.awaitBrowser().browserManager
+          player.awaitBrowser()
         } catch (e: TimeoutCancellationException) {
           Timber.w("Timed out waiting for browser - search not available")
           return@future LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED)
         }
+      val browserManager = audioBrowser.browserManager
+
+      // Gated: the single search "result" is the gate tile (paired with onSearch's count of 1).
+      audioBrowser.getBrowseGate()?.let { gate ->
+        return@future LibraryResult.ofItemList(ImmutableList.of(createGateMediaItem(gate)), params)
+      }
 
       try {
         // Get cached search results from BrowserManager

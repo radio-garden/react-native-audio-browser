@@ -727,16 +727,24 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     browserManager.setFavorites(favorites.toList())
   }
 
-  // MARK: Browse gate (stored only — Android Auto rendering is not implemented yet)
+  // MARK: Browse gate
 
-  private var browseGate: NativeBrowseGate? = null
+  // Written from the JS thread, read from the Media3 application thread
+  // (MediaSessionCallback serves the gate tile from it) — hence @Volatile.
+  @Volatile private var browseGate: NativeBrowseGate? = null
 
   override fun setBrowseGate(gate: NativeBrowseGate) {
     browseGate = gate
+    // Re-query every subscribed parent so a connected controller (Android
+    // Auto) swaps its lists for the gate tile without reconnecting. Notify
+    // only — the content cache stays warm for when the gate clears.
+    connectedService?.player?.invalidateAllContent()
   }
 
   override fun clearBrowseGate() {
+    if (browseGate == null) return
     browseGate = null
+    connectedService?.player?.invalidateAllContent()
   }
 
   override fun getBrowseGate(): NativeBrowseGate? = browseGate

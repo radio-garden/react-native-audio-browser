@@ -77,6 +77,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public let queueChangedEmitter = Emitter<[Track]>()
   public let navigationErrorEmitter = Emitter<NavigationErrorEvent>()
   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
+  public let shuffleChangedEmitter = Emitter<Bool>()
   public let externalContentChangedEmitter = Emitter<String>()
   public let browseGateChangedEmitter = Emitter<NativeBrowseGate?>()
 
@@ -1282,6 +1283,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangeShuffleEnabled(_ enabled: Bool) {
+    shuffleChangedEmitter.emit(enabled)
     onPlaybackShuffleModeChanged(enabled)
   }
 

@@ -29,8 +29,12 @@ export type NativeBrowseGate = {
  * An app-imposed block on browsing from external surfaces (CarPlay,
  * Android Auto), set and cleared at runtime. While gated, tabs stay visible
  * but every tab's content — and external-surface search — is replaced by a
- * single full-page message. Playback, the queue, and now-playing are
- * unaffected: a gate blocks finding content, never hearing it.
+ * single message: a full-page centered view on CarPlay, a non-playable list
+ * tile on Android Auto (the only in-browse signal its UI renders — buttons
+ * and full-page messages don't exist there, so `buttonTitle` is iOS-only).
+ * Voice-initiated search/play is refused on both platforms. Playback, the
+ * queue, and now-playing are unaffected: a gate blocks finding content,
+ * never hearing it.
  *
  * Generic by design: subscription, login, and region blocks are all
  * browse gates.

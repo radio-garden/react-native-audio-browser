@@ -133,7 +133,7 @@ A boolean on a Track marking it as a user favorite. Toggled programmatically or 
 _Avoid_: Rating, hearted, liked, starred.
 
 **Browse Gate**:
-An app-imposed block on browsing from External surfaces, set and cleared at runtime. While gated, **Tabs** stay visible but every tab's content is replaced by a single full-page message — title, body, and an optional button wired to an app callback — and **Search** from External surfaces resolves to the same message. The **Player**, the **Queue**, and **Now Playing** are unaffected: a gate blocks *finding* content, never *hearing* it. Generic by design — subscription, login, and region blocks are all Browse Gates.
+An app-imposed block on browsing from External surfaces, set and cleared at runtime. While gated, **Tabs** stay visible but every tab's content is replaced by a single message — rendered as each surface allows (a full-page view on CarPlay, a list tile on Android Auto) — and **Search** from External surfaces resolves to the same message. The **Player**, the **Queue**, and **Now Playing** are unaffected: a gate blocks *finding* content, never *hearing* it. Generic by design — subscription, login, and region blocks are all Browse Gates.
 _Avoid_: Paywall (one app's reason for a gate, not the concept), error page (a gate is deliberate app state, not a **NavigationError**), lock screen (that's an External surface).
 
 ## Relationships
