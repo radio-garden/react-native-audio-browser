@@ -1,6 +1,9 @@
 package com.audiobrowser.http
 
+import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.HttpMethod
+import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -260,4 +263,78 @@ class RequestConfigBuilderTest {
     assertEquals("ONLY", RequestConfigBuilder.composeResolved(null, cfg)?.userAgent)
     assertNull(RequestConfigBuilder.composeResolved(null, null))
   }
+
+  @Test
+  fun `mergeConfig MediaRequestConfig static fields merge over base and preserve callbacks`() =
+    runTest {
+      val base =
+        RequestConfig(
+          method = null,
+          path = "/stream.mp3",
+          baseUrl = "https://media.example.com",
+          headers = mapOf("x-base" to "1"),
+          query = null,
+          body = null,
+          contentType = null,
+          userAgent = "base-ua",
+        )
+      val override =
+        MediaRequestConfig(
+          resolve = null,
+          resolveSync = null,
+          transform = null,
+          transformSync = null,
+          method = null,
+          path = null,
+          baseUrl = null,
+          headers = mapOf("x-media" to "2"),
+          query = mapOf("token" to "abc"),
+          body = null,
+          contentType = null,
+          userAgent = null,
+        )
+      val merged = RequestConfigBuilder.mergeConfig(base, override)
+      assertEquals("/stream.mp3", merged.path)
+      assertEquals("https://media.example.com", merged.baseUrl)
+      assertEquals("1", merged.headers?.get("x-base"))
+      assertEquals("2", merged.headers?.get("x-media"))
+      assertEquals("abc", merged.query?.get("token"))
+      assertEquals("base-ua", merged.userAgent)
+    }
+
+  @Test
+  fun `mergeConfig ArtworkRequestConfig static fields merge and preserve imageQueryParams`() =
+    runTest {
+      val base =
+        RequestConfig(
+          method = null,
+          path = "/art.png",
+          baseUrl = "https://img.example.com",
+          headers = null,
+          query = null,
+          body = null,
+          contentType = null,
+          userAgent = null,
+        )
+      val override =
+        ArtworkRequestConfig(
+          resolve = null,
+          resolveSync = null,
+          transform = null,
+          transformSync = null,
+          imageQueryParams = ImageQueryParams(width = "w", height = "h"),
+          method = null,
+          path = null,
+          baseUrl = null,
+          headers = null,
+          query = mapOf("sig" to "xyz"),
+          body = null,
+          contentType = null,
+          userAgent = null,
+        )
+      val merged = RequestConfigBuilder.mergeConfig(base, override, imageContext = null)
+      assertEquals("/art.png", merged.path)
+      assertEquals("xyz", merged.query?.get("sig"))
+      assertEquals("w", merged.imageQueryParams?.width)
+    }
 }
