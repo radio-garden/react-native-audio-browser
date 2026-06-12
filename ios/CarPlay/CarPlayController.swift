@@ -771,6 +771,21 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func handleTabsChanged(_ tabs: [Track]) {
     logger.debug("Tabs changed: \(tabs.count) tabs")
+    // Same tabs by URL while ungated → only the tab-bar entries changed
+    // (e.g. titles after a locale switch): restamp them in place. No rebuild,
+    // so the selected tab and any pushed navigation stack survive. (Gate
+    // templates carry no path, so a gated tab bar never matches here.)
+    if activeGate == nil,
+       let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+       tabBar.templates.count == min(tabs.count, CPTabBarTemplate.maximumTabCount),
+       zip(tabBar.templates, tabs).allSatisfy({ getPath(from: $0) == $1.url })
+    {
+      for (template, tab) in zip(tabBar.templates, tabs) {
+        applyTabBarEntry(to: template, for: tab)
+      }
+      pendingTabs = nil
+      return
+    }
     // Rebuilding replaces the root template, tearing down any pushed
     // navigation stack. If the user is browsing, defer until they're back at
     // the tab bar (applied from templateDidAppear).

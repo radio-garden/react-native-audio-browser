@@ -18,6 +18,8 @@
     var albumUrl: String?
     var album: String?
     var live: Bool?
+    var artwork: String?
+    var artworkSource: ImageSource?
   }
 
   struct TrackLoadEvent {

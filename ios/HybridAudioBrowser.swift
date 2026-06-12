@@ -470,6 +470,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // Tell external controllers (CarPlay) to refresh every displayed template.
     externalContentChangedEmitter.emit(Self.invalidateAllSentinel)
 
+    // Re-query the tabs source too: a callback source can resolve to new
+    // titles after an invalidation (e.g. a locale switch). BrowserManager
+    // emits tabsChanged only when the result actually differs, and a failed
+    // re-query keeps the current tabs. (Android needs no equivalent — its
+    // root re-query already runs queryTabs(); the web stub re-queries tabs on
+    // the re-navigation.)
+    Task {
+      _ = try? await browserManager.queryTabs()
+    }
+
     // Re-resolve the JS-facing current path with the cache cleared.
     Task {
       do {

@@ -109,7 +109,11 @@ final class BrowserManager {
 
   private(set) var tabs: [Track]? {
     didSet {
-      if let tabs {
+      // Emit only on a real change: invalidateAllContent() re-queries the tabs
+      // source on every invalidation (a callback source can re-resolve, e.g.
+      // titles in a new locale), and an unchanged result must not churn the
+      // CarPlay tab bar or reset its selection.
+      if let tabs, !TabBarEntries.same(oldValue, tabs) {
         onTabsChanged?(tabs)
       }
     }
