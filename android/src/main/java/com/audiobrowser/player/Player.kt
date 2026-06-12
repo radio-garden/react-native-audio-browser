@@ -3,17 +3,13 @@ package com.audiobrowser.player
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.core.net.toUri
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
@@ -24,13 +20,11 @@ import com.audiobrowser.browser.unattributedArtworkSource
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
-import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.ImageContext
@@ -57,13 +51,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
-
-// media3's configurable stuck-buffering (type-1, STUCK_BUFFERING_NO_PROGRESS) timeout. Fires only
-// on
-// zero loading progress; 60s of silent non-progress is already a bad live-radio experience, while
-// the media3 default of 600s would mean 10 minutes of dead air. (Type-0 STUCK_BUFFERING_NOT_LOADING
-// is a separate, uncontrollable fixed-4s check.)
-private const val STUCK_BUFFERING_DETECTION_TIMEOUT_MS = 60_000
 
 @SuppressLint("RestrictedApi")
 class Player(internal val context: Context) {
@@ -368,41 +355,13 @@ class Player(internal val context: Context) {
       cache = null
     }
 
-    // Recreate ExoPlayer with new setup options
-    val renderer = DefaultRenderersFactory(context)
-    renderer.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-
-    // Create bandwidth meter for adaptive bitrate selection in HLS/DASH
-    val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
-
-    loadControl = run {
-      val minBuffer = setupOptions.minBuffer.toInt()
-      val maxBuffer = setupOptions.maxBuffer.toInt()
-      val playBuffer = setupOptions.playBuffer.toInt()
-      // When automatic (rebufferBuffer is null), start at playBuffer and let AutomaticBufferManager
-      // adjust
-      // When fixed (rebufferBuffer is set), use that value
-      val playAfterRebuffer = setupOptions.rebufferBuffer?.toInt() ?: playBuffer
-      val backBuffer = setupOptions.backBuffer.toInt()
-      val config =
-        BufferConfig(
-          minBufferMs = minBuffer,
-          maxBufferMs = maxBuffer,
-          bufferForPlaybackMs = playBuffer,
-          bufferForPlaybackAfterRebufferMs = playAfterRebuffer,
-          backBufferMs = backBuffer,
-        )
-      DynamicLoadControl(initialConfig = config)
-    }
-    // Create MediaFactory with reference to browser for media URL transformation
-    // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio
-    // focus). Uses thread-safe cache since this is called from ExoPlayer's playback thread.
-    // isOnline and onRetryPending enable network-aware retry acceleration.
-    mediaFactory =
-      MediaFactory(
+    // One engine generation: load control, media factory, ExoPlayer (pure construction —
+    // see buildPlayerEngine; lifecycle and wiring stay here).
+    val engine =
+      buildPlayerEngine(
         context,
+        setupOptions,
         cache,
-        setupOptions.retryPolicy,
         shouldRetry = { playWhenReadyCache },
         isOnline = { networkMonitor.getOnline() },
         onRetryPending = { isNetworkError ->
@@ -412,48 +371,11 @@ class Player(internal val context: Context) {
             Timber.d("Network retry pending, will accelerate on connectivity restoration")
           }
         },
-        transferListener = bandwidthMeter,
-      ) { url ->
-        browser?.getMediaRequestConfig(url)
-      }
-
-    exoPlayer =
-      ExoPlayer.Builder(context)
-        .setRenderersFactory(renderer)
-        .setBandwidthMeter(bandwidthMeter)
-        .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
-        .setMediaSourceFactory(mediaFactory)
-        .setStuckBufferingDetectionTimeoutMs(STUCK_BUFFERING_DETECTION_TIMEOUT_MS)
-        .setWakeMode(
-          when (setupOptions.wakeMode) {
-            AndroidPlayerWakeMode.NONE -> C.WAKE_MODE_NONE
-            AndroidPlayerWakeMode.LOCAL -> C.WAKE_MODE_LOCAL
-            AndroidPlayerWakeMode.NETWORK -> C.WAKE_MODE_NETWORK
-          }
-        )
-        .setLoadControl(loadControl)
-        .setName("AudioBrowser")
-        .build()
-    exoPlayer.setAudioAttributes(
-      AudioAttributes.Builder()
-        .setUsage(C.USAGE_MEDIA)
-        .setContentType(AndroidAudioContentTypeFactory.toMedia3(setupOptions.audioContentType))
-        .build(),
-      true, // handle audio focus
-    )
-
-    // Apply setup-specific options
-    setupOptions.audioOffload?.let {
-      val audioOffloadPreferences =
-        TrackSelectionParameters.AudioOffloadPreferences.Builder()
-          .setAudioOffloadMode(
-            TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
-          )
-          .setIsGaplessSupportRequired(it.gaplessSupportRequired)
-          .setIsSpeedChangeSupportRequired(it.rateChangeSupportRequired)
-          .build()
-      exoPlayer.trackSelectionParameters.audioOffloadPreferences = audioOffloadPreferences
-    }
+        resolveMediaConfig = { url -> browser?.getMediaRequestConfig(url) },
+      )
+    loadControl = engine.loadControl
+    mediaFactory = engine.mediaFactory
+    exoPlayer = engine.exoPlayer
 
     // Recreate forwarding player with new ExoPlayer
     forwardingPlayer =
