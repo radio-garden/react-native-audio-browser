@@ -19,3 +19,21 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// Gradle daemons launched from Android Studio don't inherit the shell PATH, so a
+// version-manager-installed node (mise/nvm) is invisible to codegen tasks that
+// spawn bare `node`. `yarn android:ide` records NODE_BINARY in local.properties;
+// point every React codegen task (the app's and each library's) at it when set.
+def localProps = new Properties()
+def localPropsFile = new File(rootDir, "local.properties")
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def nodeBinary = localProps.getProperty("NODE_BINARY")
+if (nodeBinary != null && new File(nodeBinary).exists()) {
+    allprojects {
+        plugins.withId("com.facebook.react") {
+            extensions.findByName("react")?.nodeExecutableAndArgs?.set([nodeBinary])
+        }
+    }
+}
