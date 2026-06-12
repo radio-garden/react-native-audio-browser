@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin (library `android/`), Media3, Coil, Nitro-generated types (`com.margelo.nitro.audiobrowser.*`), JUnit4 + kotlinx-coroutines-test on JVM. Swift only in Task 8.
 
-**Worktree:** All work happens in `/Users/puckey/rg/_libraries/rnab-wt-request-pipeline` (branch `request-pipeline`). All paths below are relative to that root.
+**Branch:** `request-pipeline`. All paths below are relative to the repo root.
 
 ---
 

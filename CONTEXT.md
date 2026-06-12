@@ -2,7 +2,7 @@
 
 Domain glossary for the library. Audience: contributors working across the TypeScript, Kotlin, and Swift layers, plus library users integrating it into an app.
 
-This file is a glossary, not a spec. For architectural decisions see `docs/adr/`. For implementation details see the per-platform `CLAUDE.md` files (`ios/CLAUDE.md`, `docs/CLAUDE.md`) and `ios/ARCHITECTURE.md`.
+This file is a glossary, not a spec. For architectural decisions see `docs/adr/`. For implementation details see the per-platform `CLAUDE.md` files (`ios/CLAUDE.md`, `website/CLAUDE.md`) and `ios/ARCHITECTURE.md`.
 
 ## Language
 

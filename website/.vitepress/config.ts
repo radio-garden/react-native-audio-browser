@@ -12,6 +12,9 @@ export default withMermaid(
 
     ignoreDeadLinks: true,
 
+    // Repo-internal files that live in the site root but are not site content.
+    srcExclude: ['CLAUDE.md', 'TODO.md'],
+
     themeConfig: {
       search: {
         provider: 'local'
