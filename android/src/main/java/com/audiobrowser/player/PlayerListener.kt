@@ -13,7 +13,6 @@ import androidx.media3.common.util.StuckPlayerException
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlaybackMetadata
 import com.audiobrowser.util.MetadataAdapter
-import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -149,16 +148,15 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       player.clearSleepTimer()
     }
 
-    // Update thread-safe cache for access from non-main threads (e.g., retry policy)
+    // Update thread-safe cache for access from non-main threads (e.g., retry policy).
+    // Deliberately the second writer: Player.playWhenReady's setter writes eagerly so
+    // non-main readers see the new intent before ExoPlayer round-trips; this event is
+    // the authoritative sync for changes ExoPlayer makes on its own (e.g. audio focus).
     player.playWhenReadyCache = playWhenReady
     player.callbacks?.onPlaybackPlayWhenReadyChanged(
       PlaybackPlayWhenReadyChangedEvent(playWhenReady)
     )
-    val newPlayingState = PlayingStateFactory.derive(playWhenReady, player.playbackState)
-    if (newPlayingState != player.playingState) {
-      player.playingState = newPlayingState
-      player.callbacks?.onPlaybackPlayingState(player.playingState)
-    }
+    player.refreshPlayingState()
 
     if (playWhenReady) {
       player.playbackStateStore.startPeriodicSave()

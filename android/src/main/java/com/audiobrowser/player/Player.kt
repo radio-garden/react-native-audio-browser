@@ -416,6 +416,7 @@ class Player(internal val context: Context) {
   }
 
   internal var playingState: PlayingState = PlayingState(false, false)
+    private set
 
   val currentTrack: Track?
     get() = exoPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
@@ -464,6 +465,22 @@ class Player(internal val context: Context) {
 
   fun getPlayingState(): PlayingState {
     return playingState
+  }
+
+  /**
+   * Re-derives [playingState] from the current `playWhenReady` + [playbackState] and emits
+   * `onPlaybackPlayingState` when it changed. The only writer of [playingState] — called from the
+   * state machine ([setPlaybackState]) and from [PlayerListener.onPlayWhenReadyChanged], the change
+   * points of its two inputs.
+   */
+  internal fun refreshPlayingState() {
+    val newPlayingState = PlayingStateFactory.derive(playWhenReady, playbackState)
+    if (newPlayingState == playingState) return
+    Timber.d(
+      "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
+    )
+    playingState = newPlayingState
+    callbacks?.onPlaybackPlayingState(playingState)
   }
 
   var playWhenReady: Boolean
@@ -1508,14 +1525,7 @@ class Player(internal val context: Context) {
 
       progressTimer.onPlaybackStateChanged(state)
       intervalTimer.onPlaybackStateChanged(state)
-      val newPlayingState = PlayingStateFactory.derive(playWhenReady, state)
-      if (newPlayingState != playingState) {
-        Timber.d(
-          "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
-        )
-        playingState = newPlayingState
-        callbacks?.onPlaybackPlayingState(playingState)
-      }
+      refreshPlayingState()
     }
   }
 
