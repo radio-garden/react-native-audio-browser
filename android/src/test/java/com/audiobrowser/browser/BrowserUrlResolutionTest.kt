@@ -14,10 +14,9 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Tests browser/BrowserUrlResolution.kt — media/artwork URL resolution owned by
- * BrowserManager (the Kotlin analog of iOS BrowserManager+URLResolution.swift).
- * Static configs only (Nitro Promises are JNI-backed; see file-top note in
- * BrowserManagerLayerResolutionTest).
+ * Tests browser/BrowserUrlResolution.kt — media/artwork URL resolution owned by BrowserManager (the
+ * Kotlin analog of iOS BrowserManager+URLResolution.swift). Static configs only (Nitro Promises are
+ * JNI-backed; see file-top note in BrowserManagerLayerResolutionTest).
  */
 class BrowserUrlResolutionTest {
 
@@ -48,7 +47,8 @@ class BrowserUrlResolutionTest {
     bm.config =
       BrowserConfig(
         request = transformableConfig(baseUrl = "https://api.example.com"),
-        media = mediaConfig(baseUrl = "https://media.example.com", headers = mapOf("x-token" to "abc")),
+        media =
+          mediaConfig(baseUrl = "https://media.example.com", headers = mapOf("x-token" to "abc")),
       )
     val resolved = bm.resolveMediaUrl("/stream/123")
     assertEquals("https://media.example.com", resolved?.baseUrl)

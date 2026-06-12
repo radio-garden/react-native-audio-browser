@@ -5,9 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Truth table for the PlayingState derivation — the single transition function
- * behind `onPlaybackPlayingState` (see Player.refreshPlayingState, its only
- * production caller path).
+ * Truth table for the PlayingState derivation — the single transition function behind
+ * `onPlaybackPlayingState` (see Player.refreshPlayingState, its only production caller path).
  */
 class PlayingStateFactoryTest {
 

@@ -18,10 +18,10 @@ import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
+import com.audiobrowser.Callbacks
 import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.browser.unattributedArtworkSource
-import com.audiobrowser.Callbacks
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -156,7 +156,9 @@ class Player(internal val context: Context) {
    */
   var imageLoader: coil3.ImageLoader? = null
 
-  /** Set the CoilBitmapLoader for display-time bitmap loading. Called from Service after creation. */
+  /**
+   * Set the CoilBitmapLoader for display-time bitmap loading. Called from Service after creation.
+   */
   var coilBitmapLoader: CoilBitmapLoader?
     get() = _coilBitmapLoader
     set(value) {
@@ -999,16 +1001,16 @@ class Player(internal val context: Context) {
   /**
    * Transient now-playing fields (e.g. feedback for a refused remote command). Outranks the
    * formatter and the override while active, so live metadata can't stomp it mid-flash. Reverted by
-   * a coroutine delay on the main scope — NOT a JS timer, which pauses with a backgrounded host (and
-   * the lock screen is exactly the backgrounded case) — and cleared early on track change.
+   * a coroutine delay on the main scope — NOT a JS timer, which pauses with a backgrounded host
+   * (and the lock screen is exactly the backgrounded case) — and cleared early on track change.
    */
   private var nowPlayingFlash: NowPlayingUpdate? = null
   private var nowPlayingFlashRevert: Job? = null
 
   /**
-   * Monotonic stamp for now-playing renders. All renders happen on the main thread (MainScope);
-   * an async formatter result applies only when no newer render — notably a flash — has
-   * superseded the one that launched it.
+   * Monotonic stamp for now-playing renders. All renders happen on the main thread (MainScope); an
+   * async formatter result applies only when no newer render — notably a flash — has superseded the
+   * one that launched it.
    */
   private var nowPlayingRenderGeneration = 0L
 
@@ -1323,8 +1325,8 @@ class Player(internal val context: Context) {
   /**
    * Track-first display-time artwork resolution for [CoilBitmapLoader]: registry hit
    * (browse/now-playing-resolved URIs) → queue-tag lookup (app-supplied tracks with raw artwork) →
-   * header-only fallback for unattributable URIs (registry eviction / process-death restore).
-   * Null means "fetch the URI as-is".
+   * header-only fallback for unattributable URIs (registry eviction / process-death restore). Null
+   * means "fetch the URI as-is".
    */
   suspend fun resolveDisplayArtwork(uri: String, sizeHintPixels: Int?): ImageSource? {
     val browserManager = browser?.browserManager ?: return null
@@ -1333,9 +1335,10 @@ class Player(internal val context: Context) {
     browserManager.displayArtworkSource(uri, imageContext)?.let {
       return it
     }
-    withContext(Dispatchers.Main) { findQueueTrackByArtworkUri(uri) }?.let { track ->
-      return browserManager.resolveArtworkUrl(track, null, imageContext)
-    }
+    withContext(Dispatchers.Main) { findQueueTrackByArtworkUri(uri) }
+      ?.let { track ->
+        return browserManager.resolveArtworkUrl(track, null, imageContext)
+      }
     return browserManager.unattributedArtworkSource(uri)
   }
 

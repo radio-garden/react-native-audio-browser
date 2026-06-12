@@ -12,7 +12,6 @@ import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.FavoritesMatchMode
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____
 import com.margelo.nitro.audiobrowser.ImageContext
-import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -1140,21 +1139,20 @@ class BrowserManager {
   }
 
   /**
-   * Builds the HTTP request for an API-backed path by layering request (shared) →
-   * kind (browse/search) → route configs. Each layer's transform receives the
-   * previous layer's output; a layer with no transform merges its static fields.
+   * Builds the HTTP request for an API-backed path by layering request (shared) → kind
+   * (browse/search) → route configs. Each layer's transform receives the previous layer's output; a
+   * layer with no transform merges its static fields.
    *
-   * `initialQuery` seeds query params onto the BASE the kind layer receives (e.g.
-   * search q/mode/…): a layer with a transform "wins completely" and is handed only
-   * the base, so params placed on a layer's own static query would be dropped
-   * before the transform runs. The same goes for `path`: it is carried from the
-   * base through every layer (only a transform may change it), so a kind whose
-   * config supplies the path (search) must seed it via the `path` parameter.
-   * Mirrors iOS `buildApiRequest`.
+   * `initialQuery` seeds query params onto the BASE the kind layer receives (e.g. search q/mode/…):
+   * a layer with a transform "wins completely" and is handed only the base, so params placed on a
+   * layer's own static query would be dropped before the transform runs. The same goes for `path`:
+   * it is carried from the base through every layer (only a transform may change it), so a kind
+   * whose config supplies the path (search) must seed it via the `path` parameter. Mirrors iOS
+   * `buildApiRequest`.
    *
-   * @throws ContentNotFoundException when no layer supplies a baseUrl — there is
-   *   nothing to fetch, so the path is genuinely "not found" rather than a network
-   *   error (mirrors iOS's `guard let baseUrl`).
+   * @throws ContentNotFoundException when no layer supplies a baseUrl — there is nothing to fetch,
+   *   so the path is genuinely "not found" rather than a network error (mirrors iOS's `guard let
+   *   baseUrl`).
    */
   internal suspend fun buildApiRequest(
     kindConfig: TransformableRequestConfig?,
@@ -1191,9 +1189,9 @@ class BrowserManager {
   }
 
   /**
-   * Execute an API request for browser content. Request building (layering +
-   * transforms + baseUrl guard) lives in [buildApiRequest]; this adds the
-   * browse-specific response shape (a ResolvedTrack page object).
+   * Execute an API request for browser content. Request building (layering + transforms + baseUrl
+   * guard) lives in [buildApiRequest]; this adds the browse-specific response shape (a
+   * ResolvedTrack page object).
    */
   private suspend fun executeApiRequest(
     apiConfig: TransformableRequestConfig?,

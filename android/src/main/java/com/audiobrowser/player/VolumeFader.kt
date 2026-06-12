@@ -9,10 +9,7 @@ import android.os.SystemClock
  * curve: loudness perception is logarithmic, so a linear gain ramp sounds like a late cutoff rather
  * than a fade.
  */
-class VolumeFader(
-  private val getVolume: () -> Float,
-  private val setVolume: (Float) -> Unit,
-) {
+class VolumeFader(private val getVolume: () -> Float, private val setVolume: (Float) -> Unit) {
   private val handler = Handler(Looper.getMainLooper())
   private var stepRunnable: Runnable? = null
 
@@ -55,8 +52,8 @@ class VolumeFader(
 
   /**
    * Stops the ramp. With [restoreVolume] the pre-fade volume is put back immediately
-   * (cancellation); without it the caller restores after pausing (completion path — restoring
-   * first would let full-volume audio slip out).
+   * (cancellation); without it the caller restores after pausing (completion path — restoring first
+   * would let full-volume audio slip out).
    */
   fun cancel(restoreVolume: Boolean) {
     stepRunnable?.let { handler.removeCallbacks(it) }

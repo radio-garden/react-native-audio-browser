@@ -13,16 +13,16 @@ import timber.log.Timber
 
 /**
  * Outbound URL resolution for media and artwork — the Android analog of iOS
- * `BrowserManager+URLResolution.swift`. Owns how a Track's `src` / `artwork`
- * becomes a fetchable request: request layer (shared, incl. its transform) →
- * kind config (media / artwork / nowPlayingArtwork) → per-Track Resolve, with
- * transform-wins semantics centralised in [RequestConfigBuilder].
+ * `BrowserManager+URLResolution.swift`. Owns how a Track's `src` / `artwork` becomes a fetchable
+ * request: request layer (shared, incl. its transform) → kind config (media / artwork /
+ * nowPlayingArtwork) → per-Track Resolve, with transform-wins semantics centralised in
+ * [RequestConfigBuilder].
  */
 
 /**
- * Builds the media request config for [originalUrl]. Returns null only when
- * neither a request layer nor a media config is set (the caller then uses the
- * original URL as-is). Mirrors the web stub's and iOS's `resolveMediaUrl`.
+ * Builds the media request config for [originalUrl]. Returns null only when neither a request layer
+ * nor a media config is set (the caller then uses the original URL as-is). Mirrors the web stub's
+ * and iOS's `resolveMediaUrl`.
  */
 suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestConfig? {
   val mediaConfig = config.media
@@ -81,12 +81,11 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestCon
 }
 
 /**
- * Resolves a Track's artwork into a fetchable [ImageSource]: request layer →
- * artwork config (per-route overrides global) → per-Track `artwork.resolve` →
- * image query params from [imageContext] → artwork transform → `{id}`
- * substitution. Mirrors the web stub's and iOS's `resolveArtworkUrl` flow.
- * Returns null when there is no artwork (or a resolver explicitly produced none
- * and the track has no artwork URL).
+ * Resolves a Track's artwork into a fetchable [ImageSource]: request layer → artwork config
+ * (per-route overrides global) → per-Track `artwork.resolve` → image query params from
+ * [imageContext] → artwork transform → `{id}` substitution. Mirrors the web stub's and iOS's
+ * `resolveArtworkUrl` flow. Returns null when there is no artwork (or a resolver explicitly
+ * produced none and the track has no artwork URL).
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
@@ -129,7 +128,9 @@ suspend fun BrowserManager.resolveArtworkUrl(
     // Per-track resolution — async `resolve` first, then `resolveSync` merged over
     // it (sync winning) via the tested helper. Matches the web stub.
     val asyncResolved =
-      effectiveArtworkConfig.resolve?.let { RequestConfigBuilder.awaitAsyncConfig(it.invoke(track)) }
+      effectiveArtworkConfig.resolve?.let {
+        RequestConfigBuilder.awaitAsyncConfig(it.invoke(track))
+      }
     val syncResolved =
       effectiveArtworkConfig.resolveSync?.let {
         RequestConfigBuilder.awaitSyncConfig(it.invoke(track))
@@ -175,9 +176,9 @@ suspend fun BrowserManager.resolveArtworkUrl(
     }
 
     // `{id}` token substitution, only for a non-empty id. Mirrors iOS substituteTrackId.
-    track.id?.takeIf { it.isNotEmpty() }?.let {
-      transformedConfig = substituteTrackId(transformedConfig, it)
-    }
+    track.id
+      ?.takeIf { it.isNotEmpty() }
+      ?.let { transformedConfig = substituteTrackId(transformedConfig, it) }
 
     val uri = RequestConfigBuilder.buildUrl(transformedConfig)
     // If URI is empty, there's no valid artwork path
@@ -202,10 +203,9 @@ suspend fun BrowserManager.resolveArtworkUrl(
 }
 
 /**
- * Display-time artwork resolution by URI (Media3's BitmapLoader only receives a
- * URI). A registry hit re-resolves Track-first with the real display-size
- * [imageContext] — never re-transforming an already-transformed URL. Returns
- * null for unknown URIs; the caller decides the fallback.
+ * Display-time artwork resolution by URI (Media3's BitmapLoader only receives a URI). A registry
+ * hit re-resolves Track-first with the real display-size [imageContext] — never re-transforming an
+ * already-transformed URL. Returns null for unknown URIs; the caller decides the fallback.
  */
 suspend fun BrowserManager.displayArtworkSource(
   uri: String,
@@ -216,13 +216,12 @@ suspend fun BrowserManager.displayArtworkSource(
 }
 
 /**
- * Header-only fallback for display-time artwork URIs that cannot be attributed to
- * a Track (registry eviction, process-death restore): the URI is fetched as-is —
- * never re-transformed — but the *static* request/artwork headers still apply, so
- * header-authenticated artwork keeps working. Transforms are deliberately not run
- * (no Track, no trustworthy base config); headers added by a transform rather
- * than static config are out of reach here, which is the documented limit.
- * Returns null when there are no headers to add.
+ * Header-only fallback for display-time artwork URIs that cannot be attributed to a Track (registry
+ * eviction, process-death restore): the URI is fetched as-is — never re-transformed — but the
+ * *static* request/artwork headers still apply, so header-authenticated artwork keeps working.
+ * Transforms are deliberately not run (no Track, no trustworthy base config); headers added by a
+ * transform rather than static config are out of reach here, which is the documented limit. Returns
+ * null when there are no headers to add.
  */
 suspend fun BrowserManager.unattributedArtworkSource(uri: String): ImageSource? {
   var merged =
@@ -274,7 +273,11 @@ private fun substituteTrackId(config: RequestConfig, id: String): RequestConfig 
   fun sub(s: String?): String? = s?.replace("{id}", id)
   fun subMap(m: Map<String, String>?): Map<String, String>? =
     m?.mapValues { (_, value) -> value.replace("{id}", id) }
-  return config.copy(path = sub(config.path), headers = subMap(config.headers), query = subMap(config.query))
+  return config.copy(
+    path = sub(config.path),
+    headers = subMap(config.headers),
+    query = subMap(config.query),
+  )
 }
 
 /** Builds a headers map, merging explicit headers with userAgent and contentType. */

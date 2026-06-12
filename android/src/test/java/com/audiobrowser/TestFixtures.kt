@@ -7,9 +7,9 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 
 /**
- * Shared builders for Nitro structs, whose generated constructors require every
- * field. Tests set only what they assert on; a new Track/config field breaks
- * exactly this file instead of every test.
+ * Shared builders for Nitro structs, whose generated constructors require every field. Tests set
+ * only what they assert on; a new Track/config field breaks exactly this file instead of every
+ * test.
  */
 object TestFixtures {
 

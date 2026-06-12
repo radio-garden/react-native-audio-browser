@@ -9,12 +9,11 @@ import coil3.ImageLoader
 import com.margelo.nitro.audiobrowser.Track
 
 /**
- * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift
- * fallbacks: the displayed artwork is the transformed `artworkSource.uri` falling
- * back to the raw `artwork` field, and the mediaId is `url` falling back to `src`
- * (a Track must have one of the two — see the `src` vs `url` note in CONTEXT.md).
- * The list line renders from `subtitle` (the now-playing line is re-stamped from
- * `artist` by the now-playing pipeline; see the Now Playing Metadata guide).
+ * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
+ * displayed artwork is the transformed `artworkSource.uri` falling back to the raw `artwork` field,
+ * and the mediaId is `url` falling back to `src` (a Track must have one of the two — see the `src`
+ * vs `url` note in CONTEXT.md). The list line renders from `subtitle` (the now-playing line is
+ * re-stamped from `artist` by the now-playing pipeline; see the Now Playing Metadata guide).
  */
 object TrackFactory {
   fun fromMedia3(mediaItem: MediaItem): Track {

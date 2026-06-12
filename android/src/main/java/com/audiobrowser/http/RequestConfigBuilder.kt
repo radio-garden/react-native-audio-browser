@@ -94,11 +94,10 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Request-Config Layer application: a transform (async and/or sync) wins
-   * completely — with both set they run as a pipeline, async first, then sync,
-   * each replacing the running config — otherwise the override's static fields
-   * merge over the base, EXCEPT `path`, which is carried from the base (only a
-   * transform may change it; mirrors iOS `applyLayer` and the web stub). A
+   * Request-Config Layer application: a transform (async and/or sync) wins completely — with both
+   * set they run as a pipeline, async first, then sync, each replacing the running config —
+   * otherwise the override's static fields merge over the base, EXCEPT `path`, which is carried
+   * from the base (only a transform may change it; mirrors iOS `applyLayer` and the web stub). A
    * thrown transform falls back to the base.
    */
   suspend fun mergeConfig(
@@ -123,9 +122,9 @@ object RequestConfigBuilder {
   }
 
   /**
-   * Media-kind layer application. A media config's transform/transformSync have
-   * the same shape as a [TransformableRequestConfig]'s, so this delegates to the
-   * layer overload above and rewraps — the layer semantics live in one place.
+   * Media-kind layer application. A media config's transform/transformSync have the same shape as a
+   * [TransformableRequestConfig]'s, so this delegates to the layer overload above and rewraps — the
+   * layer semantics live in one place.
    */
   suspend fun mergeConfig(
     base: RequestConfig,

@@ -13,9 +13,9 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.browser.handleTrackLoad
+import com.audiobrowser.extension.toTrack
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFactory
-import com.audiobrowser.extension.toTrack
 import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -349,10 +349,10 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Sends a non-fatal [SessionError] to the controller whose browse failed, complementing the
-   * error tile. Media3 browsers receive it via MediaController.Listener.onError; for legacy
-   * controllers Media3 transiently attaches the error code/message to the platform session's
-   * playback state without entering STATE_ERROR.
+   * Sends a non-fatal [SessionError] to the controller whose browse failed, complementing the error
+   * tile. Media3 browsers receive it via MediaController.Listener.onError; for legacy controllers
+   * Media3 transiently attaches the error code/message to the platform session's playback state
+   * without entering STATE_ERROR.
    *
    * NOTE: current Android Auto renders NOTHING for this (verified on a head unit — see
    * androidx/media#2901; the transient state is cleared microseconds after being set). It is kept

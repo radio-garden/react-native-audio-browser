@@ -303,7 +303,8 @@ class RequestConfigBuilderTest {
 
   @Test
   fun `mergeConfig MediaRequestConfig carries the base path over a static media path`() = runTest {
-    val base = RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
+    val base =
+      RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
     val media = mediaConfig(path = "/static-media-path")
     val merged = RequestConfigBuilder.mergeConfig(base, media)
     assertEquals("/stream/123", merged.path)

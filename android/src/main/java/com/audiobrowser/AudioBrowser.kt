@@ -23,7 +23,6 @@ import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
-import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.BatteryOptimizationHelper
@@ -72,7 +71,6 @@ import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RemoteSkipEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
-import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.SleepTimer
 import com.margelo.nitro.audiobrowser.TimedMetadata
@@ -273,10 +271,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   /**
-   * Media URL transformation for [com.audiobrowser.player.TransformingDataSource].
-   * Resolution lives in [resolveMediaUrl] (browser/BrowserUrlResolution.kt); this
-   * shell owns only the blocking bridge: it runs on ExoPlayer's IO thread
-   * (TransformingDataSource.open), so blocking here is safe and intentional.
+   * Media URL transformation for [com.audiobrowser.player.TransformingDataSource]. Resolution lives
+   * in [resolveMediaUrl] (browser/BrowserUrlResolution.kt); this shell owns only the blocking
+   * bridge: it runs on ExoPlayer's IO thread (TransformingDataSource.open), so blocking here is
+   * safe and intentional.
    */
   fun getMediaRequestConfig(originalUrl: String): MediaRequestConfig? {
     return try {

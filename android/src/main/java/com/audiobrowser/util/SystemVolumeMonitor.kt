@@ -51,8 +51,8 @@ class SystemVolumeMonitor(private val context: Context) {
 
   /**
    * Unregisters the volume receiver. Must be called when the owner is torn down
-   * (AudioBrowser.dispose) — without it the receiver leaks across JS runtime
-   * reloads. Safe to call more than once.
+   * (AudioBrowser.dispose) — without it the receiver leaks across JS runtime reloads. Safe to call
+   * more than once.
    */
   fun destroy() {
     try {
