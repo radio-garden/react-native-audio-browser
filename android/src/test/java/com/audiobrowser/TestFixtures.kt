@@ -18,6 +18,8 @@ object TestFixtures {
     id: String? = null,
     src: String? = "https://s/a.mp3",
     artwork: String? = null,
+    artist: String? = null,
+    album: String? = null,
   ) =
     Track(
       id = id,
@@ -29,9 +31,9 @@ object TestFixtures {
       artworkCarPlayTinted = null,
       title = title,
       subtitle = null,
-      artist = null,
+      artist = artist,
       albumUrl = null,
-      album = null,
+      album = album,
       description = null,
       genre = null,
       duration = null,
