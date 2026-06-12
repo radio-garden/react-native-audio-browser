@@ -1135,7 +1135,10 @@ class BrowserManager {
    * `initialQuery` seeds query params onto the BASE the kind layer receives (e.g.
    * search q/mode/…): a layer with a transform "wins completely" and is handed only
    * the base, so params placed on a layer's own static query would be dropped
-   * before the transform runs. Mirrors iOS `buildApiRequest`.
+   * before the transform runs. The same goes for `path`: it is carried from the
+   * base through every layer (only a transform may change it), so a kind whose
+   * config supplies the path (search) must seed it via the `path` parameter.
+   * Mirrors iOS `buildApiRequest`.
    *
    * @throws ContentNotFoundException when no layer supplies a baseUrl — there is
    *   nothing to fetch, so the path is genuinely "not found" rather than a network
@@ -1240,12 +1243,15 @@ class BrowserManager {
         }
 
         // request (shared) → search (kind); no browse layer and no route — search
-        // is its own kind. The search params seed the base (see buildApiRequest docs).
+        // is its own kind. The search params seed the base (see buildApiRequest
+        // docs), and so does the search config's path: a layer's static path
+        // never applies (the path is carried from the base), so the caller
+        // seeds it — mirrors the web stub's fetchSearchResults.
         val httpRequest =
           buildApiRequest(
             kindConfig = apiConfig,
             routeConfig = null,
-            path = null,
+            path = apiConfig.path,
             params = emptyMap(),
             initialQuery = searchQueryParams,
           )

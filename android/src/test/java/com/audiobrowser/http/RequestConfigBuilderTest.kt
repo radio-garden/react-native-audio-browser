@@ -1,8 +1,7 @@
 package com.audiobrowser.http
 
-import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.HttpMethod
-import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import kotlinx.coroutines.test.runTest
@@ -302,39 +301,51 @@ class RequestConfigBuilderTest {
       assertEquals("base-ua", merged.userAgent)
     }
 
+  // Request-Config Layer rule (mirrors iOS applyLayer and the web stub): a
+  // layer's static `path` never overrides the base path — the path is carried
+  // from the base; only a Transform may change it.
+
   @Test
-  fun `mergeConfig ArtworkRequestConfig static fields merge and preserve imageQueryParams`() =
+  fun `mergeConfig TransformableRequestConfig carries the base path over a static layer path`() =
     runTest {
       val base =
-        RequestConfig(
+        RequestConfig(null, "/navigated", "https://api.example.com", null, null, null, null, null)
+      val layer =
+        TransformableRequestConfig(
+          transform = null,
+          transformSync = null,
           method = null,
-          path = "/art.png",
-          baseUrl = "https://img.example.com",
+          path = "/static-layer-path",
+          baseUrl = null,
           headers = null,
           query = null,
           body = null,
           contentType = null,
           userAgent = null,
         )
-      val override =
-        ArtworkRequestConfig(
-          resolve = null,
-          resolveSync = null,
-          transform = null,
-          transformSync = null,
-          imageQueryParams = ImageQueryParams(width = "w", height = "h"),
-          method = null,
-          path = null,
-          baseUrl = null,
-          headers = null,
-          query = mapOf("sig" to "xyz"),
-          body = null,
-          contentType = null,
-          userAgent = null,
-        )
-      val merged = RequestConfigBuilder.mergeConfig(base, override, imageContext = null)
-      assertEquals("/art.png", merged.path)
-      assertEquals("xyz", merged.query?.get("sig"))
-      assertEquals("w", merged.imageQueryParams?.width)
+      val merged = RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
+      assertEquals("/navigated", merged.path)
     }
+
+  @Test
+  fun `mergeConfig MediaRequestConfig carries the base path over a static media path`() = runTest {
+    val base = RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
+    val media =
+      MediaRequestConfig(
+        resolve = null,
+        resolveSync = null,
+        transform = null,
+        transformSync = null,
+        method = null,
+        path = "/static-media-path",
+        baseUrl = null,
+        headers = null,
+        query = null,
+        body = null,
+        contentType = null,
+        userAgent = null,
+      )
+    val merged = RequestConfigBuilder.mergeConfig(base, media)
+    assertEquals("/stream/123", merged.path)
+  }
 }

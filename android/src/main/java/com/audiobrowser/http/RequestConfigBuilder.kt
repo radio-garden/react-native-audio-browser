@@ -2,9 +2,7 @@ package com.audiobrowser.http
 
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
-import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
@@ -49,7 +47,7 @@ object RequestConfigBuilder {
    * Run-both resolve composition: the async-resolved config first, then the sync-resolved merged
    * over it (sync winning). Returns null when neither produced a config. Extracted so the merge
    * ordering is unit-testable without Nitro callbacks; used by [applyMediaResolve] and the artwork
-   * resolve in CoilBitmapLoader.
+   * resolve in BrowserUrlResolution.
    */
   fun composeResolved(asyncResolved: RequestConfig?, syncResolved: RequestConfig?): RequestConfig? {
     return when {
@@ -72,10 +70,12 @@ object RequestConfigBuilder {
   suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig = promise.await()
 
   /**
-   * The single definition of layer-application semantics: a transform (async and/or
-   * sync) wins completely — with both set they run as a pipeline, async first, then
-   * sync, each replacing the running config — otherwise the override's static
-   * fields merge over the base. A thrown transform falls back to the base.
+   * The single definition of Request-Config Layer application: a transform (async
+   * and/or sync) wins completely — with both set they run as a pipeline, async
+   * first, then sync, each replacing the running config — otherwise the override's
+   * static fields merge over the base, EXCEPT `path`, which is carried from the
+   * base (only a transform may change it; mirrors iOS `applyLayer` and the web
+   * stub). A thrown transform falls back to the base.
    */
   private suspend fun applyLayerSemantics(
     base: RequestConfig,
@@ -84,7 +84,7 @@ object RequestConfigBuilder {
     label: String,
     runTransforms: suspend (RequestConfig) -> RequestConfig,
   ): RequestConfig {
-    if (!hasTransform) return mergeConfig(base, staticOverride)
+    if (!hasTransform) return mergeConfig(base, staticOverride).copy(path = base.path)
     return try {
       runTransforms(base)
     } catch (e: Exception) {
@@ -100,27 +100,6 @@ object RequestConfigBuilder {
       resolveSync = resolveSync,
       transform = transform,
       transformSync = transformSync,
-      method = c.method,
-      path = c.path,
-      baseUrl = c.baseUrl,
-      headers = c.headers,
-      query = c.query,
-      body = c.body,
-      contentType = c.contentType,
-      userAgent = c.userAgent,
-    )
-
-  /**
-   * Rebuilds an [ArtworkRequestConfig] with [c]'s request fields, preserving callbacks +
-   * imageQueryParams.
-   */
-  private fun ArtworkRequestConfig.withRequestFields(c: RequestConfig) =
-    ArtworkRequestConfig(
-      resolve = resolve,
-      resolveSync = resolveSync,
-      transform = transform,
-      transformSync = transformSync,
-      imageQueryParams = imageQueryParams,
       method = c.method,
       path = c.path,
       baseUrl = c.baseUrl,
@@ -203,34 +182,6 @@ object RequestConfigBuilder {
     // Resolve wins: merge it over the layered config (override-wins on every field).
     val merged = mergeConfig(toRequestConfig(layered), resolved)
     return layered.withRequestFields(merged)
-  }
-
-  /**
-   * Merges artwork request config with base config, applying transform with ImageContext. Used for
-   * artwork URL transformation where size hints are needed.
-   */
-  suspend fun mergeConfig(
-    base: RequestConfig,
-    override: ArtworkRequestConfig,
-    imageContext: ImageContext? = null,
-  ): ArtworkRequestConfig {
-    val finalConfig =
-      applyLayerSemantics(
-        base,
-        toRequestConfig(override),
-        hasTransform = override.transform != null || override.transformSync != null,
-        label = "artwork",
-      ) { start ->
-        var result = start
-        override.transform?.let {
-          result = awaitAsyncConfig(it.invoke(MediaTransformParams(result, imageContext)))
-        }
-        override.transformSync?.let {
-          result = awaitSyncConfig(it.invoke(MediaTransformParams(result, imageContext)))
-        }
-        result
-      }
-    return override.withRequestFields(finalConfig)
   }
 
   fun toRequestConfig(artworkConfig: ArtworkRequestConfig): RequestConfig {

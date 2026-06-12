@@ -65,15 +65,32 @@ class BrowserManagerBuildApiRequestTest {
     bm.config = BrowserConfig(request = layer(baseUrl = "https://api.example.com"))
     val request =
       bm.buildApiRequest(
-        kindConfig = layer(path = "/search"),
+        kindConfig = layer(query = mapOf("extra" to "1")),
         routeConfig = null,
-        path = null,
+        // The caller seeds the kind's path onto the base (as search does) — a
+        // layer's own static path never applies.
+        path = "/search",
         params = emptyMap(),
         initialQuery = mapOf("q" to "jazz", "mode" to "genre"),
       )
     assertTrue(request.url, request.url.contains("q=jazz"))
     assertTrue(request.url, request.url.contains("mode=genre"))
     assertTrue(request.url, request.url.startsWith("https://api.example.com/search?"))
+  }
+
+  @Test
+  fun `a layer's static path does not override the base path`() = runTest {
+    // Mirrors iOS applyLayer and the web stub: the path is carried from the
+    // base through every Request-Config Layer; only a Transform may change it.
+    bm.config = BrowserConfig(request = layer(baseUrl = "https://api.example.com"))
+    val request =
+      bm.buildApiRequest(
+        kindConfig = layer(path = "/kind-path"),
+        routeConfig = layer(path = "/route-path"),
+        path = "/stations",
+        params = emptyMap(),
+      )
+    assertTrue(request.url, request.url.startsWith("https://api.example.com/stations"))
   }
 
   @Test
