@@ -22,9 +22,7 @@ import timber.log.Timber
 /**
  * Builds the media request config for [originalUrl]. Returns null only when
  * neither a request layer nor a media config is set (the caller then uses the
- * original URL as-is). Mirrors the web stub's `resolveMediaUrl` (iOS currently
- * diverges in its static branch — it drops a media config's static query/method/
- * body — which is tracked as an iOS bug, not a contract).
+ * original URL as-is). Mirrors the web stub's and iOS's `resolveMediaUrl`.
  */
 suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestConfig? {
   val mediaConfig = config.media
@@ -86,11 +84,9 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestCon
  * Resolves a Track's artwork into a fetchable [ImageSource]: request layer →
  * artwork config (per-route overrides global) → per-Track `artwork.resolve` →
  * image query params from [imageContext] → artwork transform → `{id}`
- * substitution. Mirrors the web stub's `resolveArtworkUrl` flow. iOS currently
- * diverges on two axes (it skips the artwork transform at browse time and applies
- * static artwork fields only when no resolver is configured) — tracked as iOS
- * alignment work, not mirrored here. Returns null when there is no artwork (or a
- * resolver explicitly produced none).
+ * substitution. Mirrors the web stub's and iOS's `resolveArtworkUrl` flow.
+ * Returns null when there is no artwork (or a resolver explicitly produced none
+ * and the track has no artwork URL).
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
@@ -140,10 +136,13 @@ suspend fun BrowserManager.resolveArtworkUrl(
       }
     val resolvedConfig = RequestConfigBuilder.composeResolved(asyncResolved, syncResolved)
 
-    // If a resolver ran but produced nothing, that means no artwork
+    // A resolver ran but produced nothing AND there's no artwork URL either → no
+    // artwork (matches the web stub; with a track artwork present the static/url
+    // flow continues).
     if (
       (effectiveArtworkConfig.resolve != null || effectiveArtworkConfig.resolveSync != null) &&
-        resolvedConfig == null
+        resolvedConfig == null &&
+        trackArtwork == null
     ) {
       return null
     }
