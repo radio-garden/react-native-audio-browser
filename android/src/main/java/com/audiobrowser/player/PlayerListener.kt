@@ -174,6 +174,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Note that it is necessary to set `playerState` in order, since each mutation fires an
     // event.
     for (i in 0 until events.size()) {
+      // A new item clears any prior error even when no state transition follows (e.g. the queue
+      // was emptied) — silently, matching the pre-state-machine behavior. Kept out of the event
+      // mapping below so that stays pure; ordering within the batch is unchanged.
+      if (events[i] == MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION) {
+        player.playbackError = null
+      }
+
       val event =
         when (events[i]) {
           MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED ->
@@ -184,12 +191,8 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
               player.exoPlayer.playbackState,
               media3Player.mediaItemCount,
             )
-          MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION -> {
-            // A new item clears any prior error even when no state transition follows (e.g. the
-            // queue was emptied) — silently, matching the previous behavior.
-            player.playbackError = null
+          MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION ->
             PlaybackEvent.MediaItemTransition(player.currentTrack != null, player.isPlaying)
-          }
           MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED ->
             PlaybackEvent.PlayWhenReadyChanged(player.playWhenReady)
           MediaPlayer.EVENT_IS_PLAYING_CHANGED -> PlaybackEvent.IsPlayingChanged(player.isPlaying)

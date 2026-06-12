@@ -14,7 +14,10 @@ sealed interface PlaybackEvent {
    * InterceptingPlayer-masked value (which reports READY through a masked terminal error to keep
    * the session alive — feeding that back in would clear the ERROR state).
    */
-  data class ExoPlaybackStateChanged(val exoState: Int, val mediaItemCount: Int) : PlaybackEvent
+  data class ExoPlaybackStateChanged(
+    @get:MediaPlayer.State val exoState: Int,
+    val mediaItemCount: Int,
+  ) : PlaybackEvent
 
   /** The active media item changed (auto-advance, skip, queue swap). */
   data class MediaItemTransition(val hasTrack: Boolean, val isPlaying: Boolean) : PlaybackEvent

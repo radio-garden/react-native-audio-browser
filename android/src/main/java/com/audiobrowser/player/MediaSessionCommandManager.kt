@@ -289,52 +289,61 @@ class MediaSessionCommandManager {
     // favorite heart — slot-less here; the notification path assigns slots to the same buttons.
     val externalButtons =
       listOf(
-          NotificationButton.JUMP_BACKWARD to Control.JUMP_BACKWARD,
-          NotificationButton.JUMP_FORWARD to Control.JUMP_FORWARD,
-          NotificationButton.FAVORITE to Control.FAVORITE,
+          NotificationButton.JUMP_BACKWARD,
+          NotificationButton.JUMP_FORWARD,
+          NotificationButton.FAVORITE,
         )
-        .filter { (_, control) -> capabilities.isEnabled(control) }
-    for ((button, _) in externalButtons) {
-      val (builder, command) = buttonFor(button, favorited)
-      customLayoutButtons.add(builder.build())
-      command?.let { sessionCommandsBuilder.add(it) }
+        .filter { capabilities.allows(it) }
+    for (button in externalButtons) {
+      val spec = buttonFor(button, favorited)
+      customLayoutButtons.add(spec.builder.build())
+      spec.sessionCommand?.let { sessionCommandsBuilder.add(it) }
     }
 
     return Pair(sessionCommandsBuilder.build(), customLayoutButtons)
   }
 
   /**
-   * The CommandButton (and its custom SessionCommand, when the button is session-command-backed)
-   * for a control — the single definition of display name, icon, and action, shared by the
-   * external-controller layout and the notification layout. The caller registers the returned
-   * command on its SessionCommands and assigns slots.
+   * A button's definition plus, for session-command-backed buttons (jump/favorite), the custom
+   * command the caller must register on its SessionCommands; null for player-command-backed buttons
+   * (skip). The caller also assigns slots.
    */
-  private fun buttonFor(
-    button: NotificationButton,
-    favorited: Boolean?,
-  ): Pair<CommandButton.Builder, SessionCommand?> =
+  private data class ButtonSpec(
+    val builder: CommandButton.Builder,
+    val sessionCommand: SessionCommand?,
+  )
+
+  /**
+   * The single definition of a control's display name, icon, and action, shared by the
+   * external-controller layout and the notification layout.
+   */
+  private fun buttonFor(button: NotificationButton, favorited: Boolean?): ButtonSpec =
     when (button) {
       NotificationButton.SKIP_TO_PREVIOUS ->
         CommandButton.Builder(CommandButton.ICON_PREVIOUS)
           .setDisplayName("Previous")
-          .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS) to null
+          .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS)
+          .let { ButtonSpec(it, sessionCommand = null) }
       NotificationButton.SKIP_TO_NEXT ->
         CommandButton.Builder(CommandButton.ICON_NEXT)
           .setDisplayName("Next")
-          .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_NEXT) to null
+          .setPlayerCommand(MediaPlayer.COMMAND_SEEK_TO_NEXT)
+          .let { ButtonSpec(it, sessionCommand = null) }
       NotificationButton.JUMP_BACKWARD -> {
         val command = SessionCommand(CUSTOM_ACTION_JUMP_BACKWARD, Bundle())
         CommandButton.Builder()
           .setDisplayName("Jump Backward")
           .setSessionCommand(command)
-          .setIconResId(R.drawable.media3_icon_skip_back) to command
+          .setIconResId(R.drawable.media3_icon_skip_back)
+          .let { ButtonSpec(it, command) }
       }
       NotificationButton.JUMP_FORWARD -> {
         val command = SessionCommand(CUSTOM_ACTION_JUMP_FORWARD, Bundle())
         CommandButton.Builder()
           .setDisplayName("Jump Forward")
           .setSessionCommand(command)
-          .setIconResId(R.drawable.media3_icon_skip_forward) to command
+          .setIconResId(R.drawable.media3_icon_skip_forward)
+          .let { ButtonSpec(it, command) }
       }
       NotificationButton.FAVORITE -> {
         val heartIcon =
@@ -342,8 +351,10 @@ class MediaSessionCommandManager {
           else CommandButton.ICON_HEART_UNFILLED
         val displayName = if (favorited == true) "Remove from favorites" else "Add to favorites"
         val command = SessionCommand(CUSTOM_ACTION_FAVORITE, Bundle())
-        CommandButton.Builder(heartIcon).setDisplayName(displayName).setSessionCommand(command) to
-          command
+        ButtonSpec(
+          CommandButton.Builder(heartIcon).setDisplayName(displayName).setSessionCommand(command),
+          command,
+        )
       }
     }
 
@@ -376,9 +387,9 @@ class MediaSessionCommandManager {
 
     val buttons =
       slots.map { (button, slot) ->
-        val (builder, command) = buttonFor(button, favorited)
-        command?.let { sessionCommandsBuilder.add(it) }
-        builder.setSlots(media3Slot(slot)).build()
+        val spec = buttonFor(button, favorited)
+        spec.sessionCommand?.let { sessionCommandsBuilder.add(it) }
+        spec.builder.setSlots(media3Slot(slot)).build()
       }
 
     Timber.Forest.d("Built notification button preferences: ${buttons.map { it.displayName }}")

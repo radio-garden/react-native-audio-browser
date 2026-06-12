@@ -54,6 +54,35 @@ class PlaybackStateMachineTest {
     )
   }
 
+  @Test
+  fun `recovery out of error is allowed`() {
+    // The asymmetry that makes the session-error mask work: IDLE is suppressed from ERROR (the
+    // error keeps rendering), but a real recovery (re-prepare reaching BUFFERING/READY) must
+    // transition out of ERROR.
+    assertEquals(
+      listOf(PlaybackState.BUFFERING),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_BUFFERING, mediaItemCount = 1),
+        from = PlaybackState.ERROR,
+      ),
+    )
+    assertEquals(
+      listOf(PlaybackState.READY),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_READY, mediaItemCount = 1),
+        from = PlaybackState.ERROR,
+      ),
+    )
+  }
+
+  @Test
+  fun `an unmapped exo state is a no-op`() {
+    assertEquals(
+      emptyList<PlaybackState>(),
+      on(PlaybackEvent.ExoPlaybackStateChanged(exoState = 99, mediaItemCount = 1)),
+    )
+  }
+
   // MARK: media item transitions
 
   @Test

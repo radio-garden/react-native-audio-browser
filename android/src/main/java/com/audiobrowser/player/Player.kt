@@ -115,13 +115,6 @@ class Player(internal val context: Context) {
    */
   @Volatile private var pendingNetworkRetry = false
 
-  /**
-   * When true (from setup options' `keepSessionAliveOnError`), mask a terminal playback error so
-   * the media session stays alive & controllable (external controllers keep next/previous) instead
-   * of tearing down. When false, a terminal error surfaces to the session as usual.
-   */
-  private var keepSessionAliveOnError = false
-
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
@@ -361,7 +354,6 @@ class Player(internal val context: Context) {
   fun setup(setupOptions: PlayerSetupOptions) {
     Timber.Forest.d("Setting up player with new options")
 
-    keepSessionAliveOnError = setupOptions.keepSessionAliveOnError
     nowPlaying.enabled = setupOptions.autoUpdateNowPlayingMetadata
     // Wrap the Nitro Func into a plain suspend call so the updater (and its tests) never touch
     // bridge types; the double-await depth is unchanged (invoke -> bridge Promise -> JS promise).
@@ -479,7 +471,12 @@ class Player(internal val context: Context) {
 
     // Recreate forwarding player with new ExoPlayer
     forwardingPlayer =
-      InterceptingPlayer(exoPlayer, { callbacks }, { options }, keepSessionAliveOnError)
+      InterceptingPlayer(
+        exoPlayer,
+        { callbacks },
+        { options },
+        keepSessionAliveOnError = setupOptions.keepSessionAliveOnError,
+      )
 
     if (isInitialSetup) {
       // Initial setup - create player listener and emit initial state
