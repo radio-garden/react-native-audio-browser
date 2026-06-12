@@ -138,14 +138,6 @@ class BrowserManager {
     get() = resolvedBrowseLayer
 
   /**
-   * Callback to transform artwork URLs for tracks. Takes a track and optional per-route artwork
-   * config, returns ImageSource or null. Injected by AudioBrowser when artwork config is set. The
-   * ImageContext parameter provides size hints for CDN URL generation.
-   */
-  var artworkUrlResolver: (suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?)? =
-    null
-
-  /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
    * this list during browsing.
    */
@@ -504,21 +496,15 @@ class BrowserManager {
                   )
                 }
 
-                // Transform artwork URL if resolver is configured
-                // At browse-time, we don't have display size info
-                val resolver = artworkUrlResolver
-                if (resolver != null) {
-                  val browseContext = ImageContext(null, null)
-                  transformedTrack =
-                    transformArtworkUrl(
-                      transformedTrack,
-                      effectiveArtworkConfig,
-                      resolver,
-                      path,
-                      index,
-                      browseContext,
-                    )
-                }
+                // Transform artwork URL. At browse-time there is no display size info.
+                transformedTrack =
+                  transformArtworkUrl(
+                    transformedTrack,
+                    effectiveArtworkConfig,
+                    path,
+                    index,
+                    ImageContext(null, null),
+                  )
 
                 transformedTrack
               }
@@ -536,7 +522,7 @@ class BrowserManager {
   }
 
   /**
-   * Transforms a track's artwork using the configured resolver. Populates artworkSource with the
+   * Transforms a track's artwork via [resolveArtworkUrl]. Populates artworkSource with the
    * transformed ImageSource, keeping artwork unchanged. Handles all edge cases: undefined returns,
    * errors, missing artwork.
    *
@@ -545,7 +531,6 @@ class BrowserManager {
   private suspend fun transformArtworkUrl(
     track: Track,
     artworkConfig: ArtworkRequestConfig?,
-    resolver: suspend (Track, ArtworkRequestConfig?, ImageContext?) -> ImageSource?,
     path: String,
     index: Int,
     imageContext: ImageContext? = null,
@@ -556,7 +541,7 @@ class BrowserManager {
     }
 
     return try {
-      val imageSource = resolver(track, artworkConfig, imageContext)
+      val imageSource = resolveArtworkUrl(track, artworkConfig, imageContext)
 
       when {
         // resolve returned null → no artwork source

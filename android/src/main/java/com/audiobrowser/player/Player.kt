@@ -18,6 +18,7 @@ import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
+import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.Callbacks
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
@@ -141,7 +142,6 @@ class Player(internal val context: Context) {
   /** Scope for invoking the (async) now-playing formatter. */
   private val nowPlayingScope = MainScope()
 
-  private var _browser: AudioBrowser? = null
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
@@ -151,31 +151,17 @@ class Player(internal val context: Context) {
    */
   var imageLoader: coil3.ImageLoader? = null
 
-  /**
-   * Set the CoilBitmapLoader for artwork URL transformation. Called from Service after creation.
-   */
+  /** Set the CoilBitmapLoader for display-time bitmap loading. Called from Service after creation. */
   var coilBitmapLoader: CoilBitmapLoader?
     get() = _coilBitmapLoader
     set(value) {
       _coilBitmapLoader = value
-      // If browser is already set, wire up the resolver
-      _browser?.let { audioBrowser -> wireUpArtworkResolver(audioBrowser, value) }
     }
 
-  var browser: AudioBrowser?
-    get() = _browser
-    set(value) {
-      _browser = value
-      value?.let { audioBrowser ->
-        // Wire up artwork URL resolver
-        // This ensures the resolver is available when onGetChildren resumes
-        wireUpArtworkResolver(audioBrowser, _coilBitmapLoader)
-
-        // NOTE: We do NOT complete browserRegistered here.
-        // Configuration (routes/tabs) must be set before Android Auto can browse.
-        // Call notifyBrowserConfigurationReady() after configuration is set.
-      }
-    }
+  // NOTE: setting the browser does NOT complete browserRegistered.
+  // Configuration (routes/tabs) must be set before Android Auto can browse.
+  // Call notifyBrowserConfigurationReady() after configuration is set.
+  var browser: AudioBrowser? = null
 
   /**
    * Notifies that the browser configuration is ready (routes/tabs are configured). This should be
@@ -183,7 +169,7 @@ class Player(internal val context: Context) {
    * browse content.
    */
   fun notifyBrowserConfigurationReady() {
-    val audioBrowser = _browser ?: return
+    val audioBrowser = browser ?: return
 
     if (!browserRegistered.isCompleted) {
       Timber.d("Browser configuration ready - completing deferred")
@@ -205,27 +191,6 @@ class Player(internal val context: Context) {
           searchAvailable,
         )
       }
-    }
-  }
-
-  /**
-   * Wires up the artwork URL resolver between BrowserManager and CoilBitmapLoader. This enables
-   * artwork URL transformation during browse-time (Phase 2).
-   */
-  private fun wireUpArtworkResolver(audioBrowser: AudioBrowser, loader: CoilBitmapLoader?) {
-    val browserManager = audioBrowser.browserManager
-    if (loader != null) {
-      Timber.d("Wiring up artwork URL resolver")
-      browserManager.artworkUrlResolver = { track, perRouteConfig, imageContext ->
-        loader.transformArtworkUrlForTrack(track, perRouteConfig, imageContext)
-      }
-      // Clear content cache so that content resolved before the resolver was wired up
-      // will be re-fetched with artwork transformation applied
-      browserManager.clearContentCache()
-      Timber.d("Cleared content cache after wiring artwork resolver")
-    } else {
-      Timber.d("CoilBitmapLoader not available - artwork URL transformation disabled")
-      browserManager.artworkUrlResolver = null
     }
   }
 
@@ -1238,16 +1203,20 @@ class Player(internal val context: Context) {
           return
         }
 
+    val browserManager =
+      browser?.browserManager
+        ?: run {
+          nowPlayingArtworkResolvedForTrackId = null
+          return
+        }
     val nowPlayingArtwork =
-      browser?.browserManager?.config?.nowPlayingArtwork
+      browserManager.config.nowPlayingArtwork
         ?: run {
           // No now-playing artwork config → fall back to the existing artworkUri (`artwork` /
           // track.art).
           nowPlayingArtworkResolvedForTrackId = null
           return
         }
-
-    val loader = coilBitmapLoader ?: return
 
     // Already resolved (or resolving) for this track id — avoid a redundant resolve on every call.
     if (nowPlayingArtworkResolvedForTrackId == trackId) return
@@ -1259,7 +1228,7 @@ class Player(internal val context: Context) {
     nowPlayingScope.launch {
       val resolved =
         try {
-          loader.transformArtworkUrlForTrack(track, nowPlayingArtwork, imageContext)
+          browserManager.resolveArtworkUrl(track, nowPlayingArtwork, imageContext)
         } catch (e: Exception) {
           Timber.e(e, "Failed to resolve now-playing artwork for track id=$trackId")
           null
