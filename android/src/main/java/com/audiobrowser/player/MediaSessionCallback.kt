@@ -15,7 +15,7 @@ import androidx.media3.session.SessionResult
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.RatingFactory
-import com.audiobrowser.util.ResolvedTrackFactory
+import com.audiobrowser.extension.toTrack
 import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -440,8 +440,10 @@ class MediaSessionCallback(private val player: Player) :
 
       try {
         val resolvedTrack = browserManager.resolve(mediaId)
-        val mediaItem = ResolvedTrackFactory.toMedia3(resolvedTrack)
-        LibraryResult.ofItem(mediaItem, null)
+        // Through the one Track conversion, so the resolve path renders identically
+        // to the cached-track path above (list line from subtitle, favorited heart)
+        // and the item's tag is a Track, as fromMedia3 expects.
+        LibraryResult.ofItem(TrackFactory.toMedia3(resolvedTrack.toTrack()), null)
       } catch (e: Exception) {
         if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting item for mediaId: $mediaId")

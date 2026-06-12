@@ -8,6 +8,14 @@ import androidx.media3.common.MediaMetadata
 import coil3.ImageLoader
 import com.margelo.nitro.audiobrowser.Track
 
+/**
+ * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift
+ * fallbacks: the displayed artwork is the transformed `artworkSource.uri` falling
+ * back to the raw `artwork` field, and the mediaId is `url` falling back to `src`
+ * (a Track must have one of the two — see the `src` vs `url` note in CONTEXT.md).
+ * The list line renders from `subtitle` (the now-playing line is re-stamped from
+ * `artist` by the now-playing pipeline; see the Now Playing Metadata guide).
+ */
 object TrackFactory {
   fun fromMedia3(mediaItem: MediaItem): Track {
     return mediaItem.localConfiguration!!.tag as Track
@@ -24,38 +32,8 @@ object TrackFactory {
    * browse items with SVG artwork, use [toMedia3WithSvgSupport] instead.
    */
   fun toMedia3(track: Track): MediaItem {
-    val extras = MediaExtrasBuilder.build(track)
-
-    // Use transformed artworkSource.uri if available, otherwise fall back to original artwork
-    val artworkUri = track.artworkSource?.uri ?: track.artwork
-
-    val mediaMetadata =
-      MediaMetadata.Builder()
-        .setTitle(track.title)
-        .setArtist(track.subtitle)
-        .setAlbumTitle(track.album)
-        .setDescription(track.description)
-        .setGenre(track.genre)
-        .setArtworkUri(artworkUri?.toUri())
-        .setIsBrowsable(track.src == null)
-        .setIsPlayable(track.src != null)
-        .setExtras(extras)
-        .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
-        .build()
-
-    val mediaId =
-      track.url
-        ?: track.src
-        ?: throw IllegalArgumentException(
-          "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
-        )
-
-    return MediaItem.Builder()
-      .setMediaId(mediaId)
-      .setUri(track.src)
-      .setMediaMetadata(mediaMetadata)
-      .setTag(track)
-      .build()
+    val metadata = metadataBuilder(track).setArtworkUri(artworkUri(track)?.toUri()).build()
+    return buildMediaItem(track, metadata)
   }
 
   /**
@@ -74,42 +52,9 @@ object TrackFactory {
     context: Context,
     imageLoader: ImageLoader,
   ): MediaItem {
-    val extras = MediaExtrasBuilder.build(track)
-
-    // Use transformed artworkSource.uri if available, otherwise fall back to original artwork
-    val artworkUrl = track.artworkSource?.uri ?: track.artwork
-
-    // Build metadata with SVG support
-    val metadataBuilder =
-      MediaMetadata.Builder()
-        .setTitle(track.title)
-        .setArtist(track.subtitle)
-        .setAlbumTitle(track.album)
-        .setDescription(track.description)
-        .setGenre(track.genre)
-        .setIsBrowsable(track.src == null)
-        .setIsPlayable(track.src != null)
-        .setExtras(extras)
-        .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
-
-    // Apply artwork with SVG pre-rendering if needed
-    SvgArtworkRenderer.applyArtwork(metadataBuilder, artworkUrl, context, imageLoader)
-
-    val mediaMetadata = metadataBuilder.build()
-
-    val mediaId =
-      track.url
-        ?: track.src
-        ?: throw IllegalArgumentException(
-          "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
-        )
-
-    return MediaItem.Builder()
-      .setMediaId(mediaId)
-      .setUri(track.src)
-      .setMediaMetadata(mediaMetadata)
-      .setTag(track)
-      .build()
+    val metadataBuilder = metadataBuilder(track)
+    SvgArtworkRenderer.applyArtwork(metadataBuilder, artworkUri(track), context, imageLoader)
+    return buildMediaItem(track, metadataBuilder.build())
   }
 
   /** Converts multiple Tracks to Media3 MediaItems with SVG artwork support. */
@@ -119,5 +64,36 @@ object TrackFactory {
     imageLoader: ImageLoader,
   ): List<MediaItem> {
     return tracks.map { toMedia3WithSvgSupport(it, context, imageLoader) }
+  }
+
+  /** The transformed artworkSource wins over the raw artwork field. */
+  private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork
+
+  /** All metadata except artwork, which differs between the sync and SVG paths. */
+  private fun metadataBuilder(track: Track): MediaMetadata.Builder =
+    MediaMetadata.Builder()
+      .setTitle(track.title)
+      .setArtist(track.subtitle)
+      .setAlbumTitle(track.album)
+      .setDescription(track.description)
+      .setGenre(track.genre)
+      .setIsBrowsable(track.src == null)
+      .setIsPlayable(track.src != null)
+      .setExtras(MediaExtrasBuilder.build(track))
+      .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
+
+  private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
+    val mediaId =
+      track.url
+        ?: track.src
+        ?: throw IllegalArgumentException(
+          "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
+        )
+    return MediaItem.Builder()
+      .setMediaId(mediaId)
+      .setUri(track.src)
+      .setMediaMetadata(metadata)
+      .setTag(track)
+      .build()
   }
 }
