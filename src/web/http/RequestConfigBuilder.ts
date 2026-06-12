@@ -251,7 +251,7 @@ export const RequestConfigBuilder = {
   /**
    * Resolves an artwork URL asynchronously with full Track access.
    * Supports resolve and transform callbacks from ArtworkRequestConfig.
-   * Matches Android's CoilBitmapLoader.transformArtworkUrlForTrack() behavior.
+   * Matches the native platforms' BrowserManager resolveArtworkUrl behavior.
    *
    * The resolution order is:
    * 0. Apply the shared `request` layer (its transform runs for artwork too)
