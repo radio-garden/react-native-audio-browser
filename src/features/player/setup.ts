@@ -4,6 +4,9 @@ import { nativeBrowser } from '../../native'
 import type { Track } from '../../types'
 import type { PlaybackError } from '../errors'
 import type { NowPlayingUpdate, TimedMetadata } from '../metadata'
+import { setPlayWhenReady } from '../playback/playWhenReady'
+import { setRepeatMode, type RepeatMode } from '../queue/repeatMode'
+import { updateOptions, type UpdateOptions } from './options'
 
 /**
  * Parameters passed to the {@link FormatNowPlayingCallback}.
@@ -383,158 +386,7 @@ export type PartialAndroidSetupPlayerOptions = {
   wakeMode?: AndroidPlayerWakeMode
 }
 
-export interface AndroidSetupPlayerOptions {
-  /**
-   * Minimum duration of media that the player will attempt to buffer in ms.
-   *
-   * @throws Will throw if min buffer is higher than max buffer.
-   * @default 50000
-   */
-  minBuffer: number
-
-  /**
-   * Audio offload configuration for power-efficient playback.
-   *
-   * - `true`: Enable with default settings (gapless and rate change support required)
-   * - `false`: Disable audio offload
-   * - `{ gaplessSupportRequired?, rateChangeSupportRequired? }`: Enable with custom requirements
-   *
-   * Audio offload moves audio processing to dedicated hardware when available, saving battery
-   * during longer playbacks, especially with screen off. Requirements determine which features
-   * must be supported for offload to activate:
-   * - `gaplessSupportRequired`: Smooth track transitions without silence
-   * - `rateChangeSupportRequired`: Variable playback speeds (0.5x, 1.25x, 2x, etc.)
-   *
-   * @see https://developer.android.com/media/media3/exoplayer/track-selection#audioOffload
-   */
-  audioOffload: boolean | AndroidAudioOffloadSettings
-
-  /**
-   * Maximum duration of media that the player will attempt to buffer in ms.
-   * Max buffer may not be lower than min buffer.
-   *
-   * @throws Will throw if max buffer is lower than min buffer.
-   * @default 50000
-   */
-  maxBuffer: number
-
-  /**
-   * Duration in ms that should be kept in the buffer behind the current
-   * playhead time.
-   *
-   * @default 0
-   */
-  backBuffer: number
-
-  /**
-   * Duration of media in ms that must be buffered for playback to start or
-   * resume following a user action such as a seek.
-   *
-   * @default 2500
-   */
-  playBuffer: number
-
-  /**
-   * Duration of media in ms that must be buffered for playback to resume
-   * after a rebuffer (when the buffer runs empty during playback).
-   *
-   * When null (the default), uses automatic mode:
-   * - Starts at `playBuffer` value
-   * - On rebuffer, measures how fast the buffer drained
-   * - Calculates how much buffer is needed to sustain 60s of playback
-   * - Increases threshold accordingly (up to 8000ms max)
-   * - Resets when changing tracks
-   *
-   * Set to a number for a fixed threshold in ms. Should be >= playBuffer,
-   * otherwise playback may rebuffer repeatedly (resuming with less buffer
-   * than initial start).
-   *
-   * @default null (automatic)
-   */
-  rebufferBuffer: number | null
-
-  /**
-   * Maximum cache size in MB.
-   *
-   * @default 0
-   */
-  maxCacheSize: number
-
-  /**
-   * The audio content type indicates to the android system how
-   * you intend to use audio in your app.
-   *
-   * With `audioContentType: AndroidAudioContentType.Speech`, the audio will be
-   * paused during short interruptions, such as when a message arrives.
-   * Otherwise the playback volume is reduced while the notification is playing.
-   *
-   * @default AndroidAudioContentType.Music
-   */
-  audioContentType: AndroidAudioContentType
-
-  /**
-   * Whether the player should automatically pause when audio becomes noisy
-   * (e.g., when headphones are unplugged).
-   *
-   * @default true
-   */
-  handleAudioBecomingNoisy: boolean
-
-  /**
-   * Wake mode for the player to use.
-   *
-   * Determines whether wake locks are held to keep the CPU and/or
-   * WiFi active during playback.
-   *
-   * @default 'none'
-   */
-  wakeMode: AndroidPlayerWakeMode
-}
-
 export interface PartialIOSSetupPlayerOptions {
-  /**
-   * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
-   * chooses an appropriate level of buffering automatically.
-   *
-   * Setting this to a value greater than 0 disables `automaticallyWaitsToMinimizeStalling`.
-   *
-   * [Read more from Apple Documentation](https://developer.apple.com/documentation/avfoundation/avplayeritem/1643630-preferredforwardbufferduration)
-   *
-   * @default 0
-   */
-  buffer?: number
-
-  /**
-   * [AVAudioSession.Category](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616615-category)
-   * for iOS. Sets on `play()`.
-   */
-  category?: IOSCategory
-
-  /**
-   * The audio session mode, together with the audio session category,
-   * indicates to the system how you intend to use audio in your app. You can use
-   * a mode to configure the audio system for specific use cases such as video
-   * recording, voice or video chat, or audio analysis.
-   * Sets on `play()`.
-   *
-   * See https://developer.apple.com/documentation/avfoundation/avaudiosession/1616508-mode
-   */
-  categoryMode?: IOSCategoryMode
-
-  /**
-   * [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfoundation/avaudiosession/1616503-categoryoptions) for iOS.
-   * Sets on `play()`.
-   */
-  categoryOptions?: IOSCategoryOptions[]
-
-  /**
-   * [AVAudioSession.RouteSharingPolicy](https://developer.apple.com/documentation/AVFAudio/AVAudioSession/RouteSharingPolicy-swift.enum) for iOS.
-   * Sets on `play()`.
-   */
-  categoryPolicy?: IOSCategoryPolicy
-}
-
-export interface IOSSetupPlayerOptions {
   /**
    * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
    * chooses an appropriate level of buffering automatically.
@@ -626,55 +478,66 @@ export interface PartialSetupPlayerOptions {
   nowPlayingMetadataFormatter?: FormatNowPlayingCallback
 }
 
-export interface PlayerOptions {
-  /** Android-specific configuration options for setup */
-  android?: AndroidSetupPlayerOptions
-  /** iOS-specific configuration options for setup */
-  ios?: PartialIOSSetupPlayerOptions
-  /**
-   * Indicates whether the player should automatically update now playing metadata data in control center / notification.
-   * Defaults to `true`.
-   */
-  autoUpdateMetadata: boolean
-
-  /**
-   * Retry policy for load errors (network failures, timeouts, etc.)
-   * - `true`: Retry indefinitely with exponential backoff (2 minute timeout)
-   * - `false`/`undefined`: No automatic retry (default)
-   * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
-   * - `{ maxRetries: n, maxRetryDurationMs: m }`: Retry with custom timeout
-   *
-   * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
-   *
-   * @default false
-   */
-  retry?: boolean | RetryConfig
-}
-
 // MARK: - Lifecycle
 
 /**
+ * The launch-config options {@link setupPlayer} accepts on top of the native setup fields:
+ * the {@link UpdateOptions} that have a natural home at setup time, plus the initial
+ * playback intent and repeat mode. All of these can still be changed later through their
+ * imperative counterparts ({@link updateOptions} / {@link setPlayWhenReady} /
+ * {@link setRepeatMode}); accepting them here just spares consumers the call ordering
+ * (options before setup, player commands after).
+ */
+type SetupLaunchOptions = Pick<
+  UpdateOptions,
+  | 'capabilities'
+  | 'forwardJumpInterval'
+  | 'backwardJumpInterval'
+  | 'progressUpdateEventInterval'
+  | 'iosPlaybackRates'
+> & {
+  /**
+   * The initial play/pause intent, applied once setup completes. Set it to `true` so the first
+   * queued track starts playing as soon as it loads.
+   *
+   * Equivalent to calling {@link setPlayWhenReady} after `setupPlayer` resolves.
+   */
+  playWhenReady?: boolean
+
+  /**
+   * The initial repeat mode, applied once setup completes.
+   *
+   * Equivalent to calling {@link setRepeatMode} after `setupPlayer` resolves.
+   *
+   * @default 'off'
+   */
+  repeatMode?: RepeatMode
+}
+
+/**
  * Public setup options. Mirrors {@link PartialSetupPlayerOptions} but exposes the ergonomic
- * `autoUpdateNowPlaying` option instead of the normalized native field(s).
+ * `autoUpdateNowPlaying` option instead of the normalized native field(s), and accepts the
+ * {@link SetupLaunchOptions} so a player can be fully described in one call.
  */
 export type SetupPlayerOptions = Omit<
   PartialSetupPlayerOptions,
-  'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter'
-> & {
-  /**
-   * Controls what the player renders on the now-playing surface (lock screen / notification /
-   * Control Center / CarPlay / Android Auto).
-   *
-   * - `true` (default): publish the track's own title / artist.
-   * - `false`: don't manage the now-playing metadata at all.
-   * - a {@link FormatNowPlayingCallback}: render it yourself — the callback owns every line,
-   *   including any transient status (buffering / reconnecting / offline / error), which the
-   *   library no longer renders on your behalf.
-   *
-   * @default true
-   */
-  autoUpdateNowPlaying?: boolean | FormatNowPlayingCallback
-}
+  'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter' | 'autoUpdateMetadata'
+> &
+  SetupLaunchOptions & {
+    /**
+     * Controls what the player renders on the now-playing surface (lock screen / notification /
+     * Control Center / CarPlay / Android Auto).
+     *
+     * - `true` (default): publish the track's own title / artist.
+     * - `false`: don't manage the now-playing metadata at all.
+     * - a {@link FormatNowPlayingCallback}: render it yourself — the callback owns every line,
+     *   including any transient status (buffering / reconnecting / offline / error), which the
+     *   library no longer renders on your behalf.
+     *
+     * @default true
+     */
+    autoUpdateNowPlaying?: boolean | FormatNowPlayingCallback
+  }
 
 /** The normalized native now-playing fields, resolved from the public option. */
 type NormalizedNowPlaying = Pick<
@@ -718,14 +581,65 @@ function wrapNowPlayingFormatter(
 
 /**
  * Initializes the player with the specified options.
+ *
+ * Besides the native setup fields, this accepts the launch config that would otherwise need
+ * its own ordering-sensitive calls: {@link UpdateOptions} fields (`capabilities`, jump
+ * intervals, …) are applied *before* the native setup so the player is constructed with them
+ * in place, while `playWhenReady` / `repeatMode` are applied *after* it resolves (they need
+ * the live player). One declarative call instead of three imperative ones.
+ *
  * @param options - The options to initialize the player with.
+ *
+ * @example
+ * ```ts
+ * await setupPlayer({
+ *   retry: true,
+ *   playWhenReady: true,
+ *   repeatMode: 'queue',
+ *   capabilities: { favorite: true },
+ *   android: { audioContentType: 'music' },
+ *   ios: { category: 'playback' }
+ * })
+ * ```
  */
 export async function setupPlayer(
   options: SetupPlayerOptions = {}
 ): Promise<void> {
-  const { autoUpdateNowPlaying, ...rest } = options
-  return nativeBrowser.setupPlayer({
-    ...rest,
+  const {
+    autoUpdateNowPlaying,
+    playWhenReady,
+    repeatMode,
+    capabilities,
+    forwardJumpInterval,
+    backwardJumpInterval,
+    progressUpdateEventInterval,
+    iosPlaybackRates,
+    ...nativeSetup
+  } = options
+
+  // Options first — they're stored natively even before the player exists — so the player is
+  // constructed with them already in place (e.g. Android's media session derives its
+  // notification buttons from `capabilities` the moment the service connects). Note
+  // `progressUpdateEventInterval: null` is meaningful (disables progress events), so only
+  // `undefined` means "not provided".
+  const updates: UpdateOptions = {}
+  if (capabilities !== undefined) updates.capabilities = capabilities
+  if (forwardJumpInterval !== undefined)
+    updates.forwardJumpInterval = forwardJumpInterval
+  if (backwardJumpInterval !== undefined)
+    updates.backwardJumpInterval = backwardJumpInterval
+  if (progressUpdateEventInterval !== undefined)
+    updates.progressUpdateEventInterval = progressUpdateEventInterval
+  if (iosPlaybackRates !== undefined)
+    updates.iosPlaybackRates = iosPlaybackRates
+  if (Object.keys(updates).length > 0) updateOptions(updates)
+
+  await nativeBrowser.setupPlayer({
+    ...nativeSetup,
     ...resolveNowPlaying(autoUpdateNowPlaying)
   })
+
+  // These need the live player (on Android, the bound service): apply after setup resolves.
+  if (repeatMode !== undefined) setRepeatMode(repeatMode)
+  if (playWhenReady !== undefined) setPlayWhenReady(playWhenReady)
 }

@@ -340,9 +340,6 @@ export interface NitroAndroidUpdateOptions {
  *
  * @example
  * ```typescript
- * // Update only repeat mode
- * updateOptions({ repeatMode: 'track' });
- *
  * // Disable specific capabilities
  * updateOptions({
  *   capabilities: { shuffleMode: false, repeatMode: false }
@@ -451,9 +448,6 @@ export interface NativeUpdateOptions {
  * @see {@link getOptions} to get current options
  * @example
  * ```typescript
- * // Update single property
- * updateOptions({ repeatMode: 'track' });
- *
  * // Disable specific capabilities
  * updateOptions({
  *   capabilities: { shuffleMode: false },
