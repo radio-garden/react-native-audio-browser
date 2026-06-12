@@ -79,7 +79,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `renders track fields by default`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
 
     updater.render()
 
@@ -90,7 +90,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `override wins per-field over the track`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
 
     updater.updateNowPlaying(update(title = "Song"))
 
@@ -102,7 +102,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `flash outranks the override and getNowPlaying reflects it`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.updateNowPlaying(update(title = "Song"))
 
     updater.flashNowPlaying(update(title = "Premium required"), durationMs = 3000.0)
@@ -125,7 +125,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `identical fields are not re-stamped`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
 
     updater.render()
     updater.render()
@@ -137,7 +137,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `a new track with identical text still publishes`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Same", src = "https://s/1.mp3") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.render()
 
     surface.currentTrack = track("Same", src = "https://s/2.mp3")
@@ -151,7 +151,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `flash reverts after its duration and re-renders the live fields`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
 
     updater.flashNowPlaying(update(title = "Flash!"), durationMs = 300.0)
     runCurrent()
@@ -160,13 +160,13 @@ class NowPlayingUpdaterTest {
     advanceTimeBy(301)
     runCurrent()
     assertEquals("Station", surface.stamps.last().title)
-    assertNull(updater.getNowPlaying()?.title?.takeIf { it == "Flash!" })
+    assertEquals("Station", updater.getNowPlaying()?.title)
   }
 
   @Test
   fun `clearNowPlayingFlash reverts immediately`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.flashNowPlaying(update(title = "Flash!"), durationMs = 60_000.0)
     runCurrent()
 
@@ -180,7 +180,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `formatter result customizes the fields after the default stamp`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station", artist = "Place") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.formatter = { update(title = "Live Song") }
 
     updater.render()
@@ -200,7 +200,7 @@ class NowPlayingUpdaterTest {
         isRebuffering = true
         playWhenReady = false
       }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.formatter = { params ->
       seen = params
       null
@@ -216,7 +216,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `a stale formatter result is dropped after a newer render`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     val gate = CompletableDeferred<Unit>()
     updater.formatter = {
       gate.await()
@@ -234,9 +234,27 @@ class NowPlayingUpdaterTest {
   }
 
   @Test
+  fun `the formatter is not invoked while a flash is active`() = runTest {
+    val surface = FakeSurface().apply { currentTrack = track("Station") }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    var invocations = 0
+    updater.formatter = {
+      invocations += 1
+      null
+    }
+    updater.flashNowPlaying(update(title = "Flash!"), durationMs = 60_000.0)
+    runCurrent()
+
+    updater.render() // e.g. a playback-state change mid-flash
+    runCurrent()
+
+    assertEquals(0, invocations)
+  }
+
+  @Test
   fun `a formatter result for a previous track is dropped`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("A", src = "https://s/a.mp3") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     val gate = CompletableDeferred<Unit>()
     updater.formatter = {
       gate.await()
@@ -254,7 +272,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `a throwing formatter leaves the default fields`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.formatter = { error("boom") }
 
     updater.render()
@@ -268,7 +286,7 @@ class NowPlayingUpdaterTest {
   @Test
   fun `timed metadata re-runs the formatter and clears on track change`() = runTest {
     val surface = FakeSurface().apply { currentTrack = track("Station") }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     val seenTimed = mutableListOf<String?>()
     updater.formatter = { params ->
       seenTimed.add(params.timedMetadata?.title)
@@ -303,7 +321,7 @@ class NowPlayingUpdaterTest {
         hasNowPlayingArtworkConfig = true
         artworkResult = "https://img/abc.png"
       }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
 
     updater.render()
     runCurrent()
@@ -322,7 +340,7 @@ class NowPlayingUpdaterTest {
         hasNowPlayingArtworkConfig = true
         artworkResult = "https://img/a.png"
       }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
     updater.render()
     runCurrent()
 
@@ -338,6 +356,30 @@ class NowPlayingUpdaterTest {
   }
 
   @Test
+  fun `artwork keying resets when the config disappears so the same track re-resolves later`() =
+    runTest {
+      val surface =
+        FakeSurface().apply {
+          currentTrack = track("A", id = "a")
+          hasNowPlayingArtworkConfig = true
+          artworkResult = "https://img/a.png"
+        }
+      val updater = NowPlayingUpdater(surface, backgroundScope)
+      updater.render()
+      runCurrent()
+      assertEquals(1, surface.artworkResolveCount)
+
+      surface.hasNowPlayingArtworkConfig = false
+      updater.updateNowPlaying(update(title = "x")) // re-render without config resets the keying
+      runCurrent()
+
+      surface.hasNowPlayingArtworkConfig = true
+      updater.updateNowPlaying(update(title = "y"))
+      runCurrent()
+      assertEquals(2, surface.artworkResolveCount)
+    }
+
+  @Test
   fun `a stale artwork result is not stamped after a track change`() = runTest {
     val surface =
       FakeSurface().apply {
@@ -345,7 +387,7 @@ class NowPlayingUpdaterTest {
         hasNowPlayingArtworkConfig = true
         artworkResult = "https://img/a.png"
       }
-    val updater = NowPlayingUpdater(surface, backgroundScope).apply { enabled = true }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
 
     updater.render() // schedules the artwork resolve
     surface.currentTrack = track("B", id = "b", src = "https://s/b.mp3") // skip before it lands

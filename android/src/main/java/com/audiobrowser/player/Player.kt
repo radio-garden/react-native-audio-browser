@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.HeartRating
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -478,7 +479,7 @@ class Player(internal val context: Context) {
 
     // Recreate forwarding player with new ExoPlayer
     forwardingPlayer =
-      InterceptingPlayer(exoPlayer, { callbacks }, { options }, { keepSessionAliveOnError })
+      InterceptingPlayer(exoPlayer, { callbacks }, { options }, keepSessionAliveOnError)
 
     if (isInitialSetup) {
       // Initial setup - create player listener and emit initial state
@@ -788,7 +789,7 @@ class Player(internal val context: Context) {
           get() = exoPlayer.playWhenReady
 
         override val isRebuffering
-          get() = ::loadControl.isInitialized && loadControl.isRebuffering
+          get() = loadControl.isRebuffering
 
         override val hasNowPlayingArtworkConfig
           get() = browser?.browserManager?.config?.nowPlayingArtwork != null
@@ -799,12 +800,9 @@ class Player(internal val context: Context) {
           title: String?,
           secondaryLine: String?,
           album: String?,
-        ) {
-          val currentMediaItem = exoPlayer.getMediaItemAt(index)
-          val updatedMetadata =
-            currentMediaItem.mediaMetadata
-              .buildUpon()
-              .setTitle(title)
+        ) =
+          restampMediaItem(index, track) {
+            setTitle(title)
               .setDisplayTitle(title)
               .setArtist(secondaryLine)
               // Android Auto reads DISPLAY_SUBTITLE (not ARTIST) once DISPLAY_TITLE is set, so
@@ -812,30 +810,10 @@ class Player(internal val context: Context) {
               // notification.
               .setSubtitle(secondaryLine)
               .setAlbumTitle(album)
-              .build()
-          val updatedMediaItem =
-            currentMediaItem
-              .buildUpon()
-              .setUri(currentMediaItem.localConfiguration?.uri)
-              .setMediaMetadata(updatedMetadata)
-              .setTag(track)
-              .build()
-          exoPlayer.replaceMediaItem(index, updatedMediaItem)
-        }
+          }
 
-        override fun stampArtwork(index: Int, track: Track, uri: String) {
-          val currentMediaItem = exoPlayer.getMediaItemAt(index)
-          val updatedMetadata =
-            currentMediaItem.mediaMetadata.buildUpon().setArtworkUri(uri.toUri()).build()
-          val updatedMediaItem =
-            currentMediaItem
-              .buildUpon()
-              .setUri(currentMediaItem.localConfiguration?.uri)
-              .setMediaMetadata(updatedMetadata)
-              .setTag(track)
-              .build()
-          exoPlayer.replaceMediaItem(index, updatedMediaItem)
-        }
+        override fun stampArtwork(index: Int, track: Track, uri: String) =
+          restampMediaItem(index, track) { setArtworkUri(uri.toUri()) }
 
         override suspend fun resolveNowPlayingArtwork(track: Track, sizePx: Double): String? {
           val browserManager = browser?.browserManager ?: return null
@@ -861,6 +839,23 @@ class Player(internal val context: Context) {
       },
       MainScope(),
     )
+
+  /** Republishes the item at [index] with mutated metadata, preserving uri and Track tag. */
+  private fun restampMediaItem(
+    index: Int,
+    track: Track,
+    mutate: MediaMetadata.Builder.() -> MediaMetadata.Builder,
+  ) {
+    val currentMediaItem = exoPlayer.getMediaItemAt(index)
+    val updatedMediaItem =
+      currentMediaItem
+        .buildUpon()
+        .setUri(currentMediaItem.localConfiguration?.uri)
+        .setMediaMetadata(currentMediaItem.mediaMetadata.buildUpon().mutate().build())
+        .setTag(track)
+        .build()
+    exoPlayer.replaceMediaItem(index, updatedMediaItem)
+  }
 
   /**
    * Resets the retry timer when track changes. Called from PlayerListener.onMediaItemTransition.

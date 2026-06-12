@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
+import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
@@ -23,7 +24,14 @@ interface NowPlayingSurface {
   val currentIndex: Int?
   val currentTrack: Track?
   val playbackState: PlaybackState
-  val playbackError: com.margelo.nitro.audiobrowser.PlaybackError?
+  val playbackError: PlaybackError?
+
+  /**
+   * MUST be the real play/pause intent read from the underlying ExoPlayer — not the
+   * InterceptingPlayer-masked value, which can report false through a masked terminal error to keep
+   * the session paused-but-alive. The formatter receives this; feeding it the masked value breaks
+   * its output exactly in the error case the mask exists for.
+   */
   val playWhenReady: Boolean
   val isRebuffering: Boolean
   val hasNowPlayingArtworkConfig: Boolean
@@ -188,21 +196,21 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
 
     // Metadata source. When metadata is disabled, use the raw track (ignore override + formatter);
     // otherwise the imperative `updateNowPlaying` override wins over the track's own fields.
-    val override = if (enabled) override else null
-    val defaultTitle = override?.title ?: track.title
-    val defaultSecondary = override?.artist ?: track.artist
-    val defaultAlbum = override?.album ?: track.album
+    val activeOverride = if (enabled) override else null
+    val defaultTitle = activeOverride?.title ?: track.title
+    val defaultSecondary = activeOverride?.artist ?: track.artist
+    val defaultAlbum = activeOverride?.album ?: track.album
 
     // A flash outranks both the formatter and the override; while one is active the formatter pass
     // is skipped entirely so its async result can't land on top.
-    val flash = if (enabled) flash else null
-    if (flash != null) {
+    val activeFlash = if (enabled) flash else null
+    if (activeFlash != null) {
       applyFields(
         index,
         track,
-        flash.title ?: defaultTitle,
-        flash.artist ?: defaultSecondary,
-        flash.album ?: defaultAlbum,
+        activeFlash.title ?: defaultTitle,
+        activeFlash.artist ?: defaultSecondary,
+        activeFlash.album ?: defaultAlbum,
       )
       return
     }
@@ -212,8 +220,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
 
     // If a formatter is configured, let it customize the fields asynchronously. Falls back to the
     // default on null/throw.
-    val formatter = if (enabled) formatter else null
-    if (formatter != null) {
+    val activeFormatter = if (enabled) formatter else null
+    if (activeFormatter != null) {
       val capturedId = track.src ?: track.url
       // Gate the raw load-control signal to the buffering state so `stalled` is correct on its
       // own: ExoPlayer's rebuffering flag is polled on a different cadence than state transitions
@@ -230,7 +238,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       scope.launch {
         val formatted =
           try {
-            formatter(params)
+            activeFormatter(params)
           } catch (e: Exception) {
             Timber.e(e, "NowPlaying formatter threw; using default")
             null

@@ -2,7 +2,6 @@ package com.audiobrowser.player
 
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player as MediaPlayer
-import androidx.media3.exoplayer.ExoPlayer
 import com.audiobrowser.Callbacks
 import com.audiobrowser.model.PlayerUpdateOptions
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
@@ -32,11 +31,11 @@ internal object SessionErrorMask {
  * still surfaces via `onPlaybackError` and `playbackState`.
  */
 internal class InterceptingPlayer(
-  private val exoPlayer: ExoPlayer,
+  player: MediaPlayer,
   private val callbacksProvider: () -> Callbacks?,
   private val optionsProvider: () -> PlayerUpdateOptions,
-  private val keepSessionAliveOnError: () -> Boolean,
-) : ForwardingPlayer(exoPlayer) {
+  private val keepSessionAliveOnError: Boolean,
+) : ForwardingPlayer(player) {
 
   // Hide playback errors from the platform session. Media3 builds the legacy PlaybackStateCompat
   // from player.getPlayerError() (-> STATE_ERROR), which Android Auto and the notification render
@@ -50,7 +49,7 @@ internal class InterceptingPlayer(
     SessionErrorMask.playbackState(
       super.getPlaybackState(),
       hasError = super.getPlayerError() != null,
-      keepAlive = keepSessionAliveOnError(),
+      keepAlive = keepSessionAliveOnError,
     )
 
   override fun getPlayWhenReady(): Boolean =
@@ -58,7 +57,7 @@ internal class InterceptingPlayer(
       super.getPlayWhenReady(),
       super.getPlaybackState(),
       hasError = super.getPlayerError() != null,
-      keepAlive = keepSessionAliveOnError(),
+      keepAlive = keepSessionAliveOnError,
     )
 
   /**
@@ -69,8 +68,9 @@ internal class InterceptingPlayer(
    * instead of doing nothing.
    */
   private fun recoverFromErrorIfNeeded() {
-    if (keepSessionAliveOnError() && super.getPlayerError() != null) {
-      exoPlayer.prepare()
+    if (keepSessionAliveOnError && super.getPlayerError() != null) {
+      // Through the forwarding chain (no override exists), reaching the wrapped player.
+      prepare()
     }
   }
 
