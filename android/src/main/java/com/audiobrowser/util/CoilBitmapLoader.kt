@@ -13,16 +13,9 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.svg.SvgDecoder
 import coil3.toBitmap
-import com.audiobrowser.http.RequestConfigBuilder
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
-import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
-import com.margelo.nitro.audiobrowser.MediaTransformParams
-import com.margelo.nitro.audiobrowser.RequestConfig
-import com.margelo.nitro.audiobrowser.Track
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,7 +33,9 @@ import timber.log.Timber
  *
  * @param context Android context
  * @param imageLoader Coil ImageLoader instance (should be shared app-wide)
- * @param getArtworkConfig Callback to get artwork configuration for URL transformation
+ * @param resolveDisplayArtwork Track-first display-time artwork resolution (see
+ *   Player.resolveDisplayArtwork). Returns the fetchable ImageSource for a URI Media3 hands us, or
+ *   null when the URI is not ours to transform (it is then fetched as-is).
  * @param getArtworkSizeHint Callback to get the recommended artwork size in pixels from the media
  *   browser (e.g., Android Auto)
  */
@@ -48,7 +43,7 @@ import timber.log.Timber
 class CoilBitmapLoader(
   private val context: Context,
   private val imageLoader: ImageLoader,
-  private val getArtworkConfig: suspend () -> ArtworkConfig?,
+  private val resolveDisplayArtwork: suspend (uri: String, sizeHintPixels: Int?) -> ImageSource?,
   private val getArtworkSizeHint: () -> Int? = { null },
 ) : BitmapLoader {
 
@@ -59,12 +54,6 @@ class CoilBitmapLoader(
    * controls are ~128dp, at 4x density (xxxhdpi) = 512px.
    */
   private val defaultArtworkSizePixels = 512
-
-  /** Configuration for artwork requests including headers and URL transformation. */
-  data class ArtworkConfig(
-    val requestConfig: TransformableRequestConfig?,
-    val artworkConfig: ArtworkRequestConfig?,
-  )
 
   override fun supportsMimeType(mimeType: String): Boolean {
     return mimeType.startsWith("image/") ||
@@ -92,11 +81,22 @@ class CoilBitmapLoader(
 
     scope.launch {
       try {
-        val artworkUrl = uri.toString()
+        val originalUrl = uri.toString()
         // Use hint from media browser (Android Auto), or fall back to screen-based size
         val sizeHint = getArtworkSizeHint() ?: defaultArtworkSizePixels
 
-        val (finalUrl, headers) = transformArtworkUrl(artworkUrl, sizeHint)
+        // Track-first resolution (registry / queue lookup). Null → the URI was not
+        // produced by us (or predates the registry): fetch it as-is, never
+        // re-transform a URL we cannot attribute.
+        val source =
+          try {
+            resolveDisplayArtwork(originalUrl, sizeHint)
+          } catch (e: Exception) {
+            Timber.e(e, "Display artwork resolution failed for $originalUrl")
+            null
+          }
+        val finalUrl = source?.uri ?: originalUrl
+        val headers = source?.headers?.toMap() ?: emptyMap()
 
         // Check if this is an SVG that needs special decoding
         val isSvg = SvgArtworkRenderer.isSvgUrl(finalUrl)
@@ -137,80 +137,5 @@ class CoilBitmapLoader(
     }
 
     return future
-  }
-
-  /**
-   * Transforms an artwork URL using the configured artwork request config.
-   *
-   * Applies:
-   * - Base URL transformation
-   * - Custom headers (e.g., Authorization, API keys)
-   * - Query parameters (e.g., signed tokens)
-   * - Size query parameters from imageQueryParams config (if sizeHintPixels provided)
-   *
-   * @param originalUrl The original artwork URL from track metadata
-   * @param sizeHintPixels Optional size hint in pixels from Android Auto
-   * @return Pair of (transformedUrl, headers)
-   */
-  private suspend fun transformArtworkUrl(
-    originalUrl: String,
-    sizeHintPixels: Int? = null,
-  ): Pair<String, Map<String, String>> {
-    val config = getArtworkConfig()
-
-    // No config - return original URL with no headers
-    if (config == null || config.artworkConfig == null) {
-      return originalUrl to emptyMap()
-    }
-
-    return try {
-      val artworkConfig = config.artworkConfig
-
-      // Base via the shared request layer (its transform runs for artwork too),
-      // with the original URL as path.
-      var mergedBaseConfig = RequestConfig(null, originalUrl, null, null, null, null, null, null)
-      config.requestConfig?.let {
-        mergedBaseConfig = RequestConfigBuilder.mergeConfig(mergedBaseConfig, it, emptyMap())
-      }
-
-      // Create ImageContext from size hint if available
-      val imageContext =
-        sizeHintPixels?.takeIf { it > 0 }?.let { ImageContext(it.toDouble(), it.toDouble()) }
-
-      // Apply image query params BEFORE transform (so transform can override)
-      val queryParams = artworkConfig.imageQueryParams
-      if (imageContext != null && queryParams != null) {
-        val contextQuery = mutableMapOf<String, String>()
-        queryParams.width?.let { key ->
-          imageContext.width?.let { contextQuery[key] = it.toInt().toString() }
-        }
-        queryParams.height?.let { key ->
-          imageContext.height?.let { contextQuery[key] = it.toInt().toString() }
-        }
-
-        if (contextQuery.isNotEmpty()) {
-          Timber.d("Adding image query params: $contextQuery")
-          val existingQuery = mergedBaseConfig.query?.toMutableMap() ?: mutableMapOf()
-          existingQuery.putAll(contextQuery)
-          mergedBaseConfig = mergedBaseConfig.copy(query = existingQuery)
-        }
-      }
-
-      // Apply artwork transformation (transform can override imageQueryParams)
-      val finalConfig =
-        RequestConfigBuilder.mergeConfig(mergedBaseConfig, artworkConfig, imageContext)
-
-      // Build final URL
-      val finalUrl =
-        RequestConfigBuilder.buildUrl(RequestConfigBuilder.toRequestConfig(finalConfig))
-
-      // Extract headers
-      val headers = finalConfig.headers?.toMap() ?: emptyMap()
-
-      finalUrl to headers
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to transform artwork URL: $originalUrl")
-      originalUrl to emptyMap()
-    }
   }
 }

@@ -138,6 +138,12 @@ class BrowserManager {
     get() = resolvedBrowseLayer
 
   /**
+   * Maps produced artwork URIs back to (Track, artwork-config kind) so display-time bitmap loading
+   * can re-resolve Track-first. See [ArtworkResolutionRegistry].
+   */
+  val artworkResolutions = ArtworkResolutionRegistry()
+
+  /**
    * Sets the favorited track identifiers. Tracks will have their favorited field hydrated based on
    * this list during browsing.
    */
@@ -554,6 +560,9 @@ class BrowserManager {
         // resolve returned ImageSource → set artworkSource
         else -> {
           Timber.d("[$path] Child[$index] '${track.title}': artworkSource set: ${imageSource.uri}")
+          // Remember how this URI was produced so display-time loading (which only
+          // gets a URI from Media3) can re-resolve Track-first with a size hint.
+          artworkResolutions.register(imageSource.uri, track, artworkConfig)
           track.copy(artworkSource = imageSource)
         }
       }

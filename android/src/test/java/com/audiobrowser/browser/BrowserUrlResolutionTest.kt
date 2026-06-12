@@ -182,4 +182,27 @@ class BrowserUrlResolutionTest {
     assertTrue(source!!.uri.contains("w=256"))
     assertTrue(source.uri.contains("h=256"))
   }
+
+  @Test
+  fun `displayArtworkSource re-resolves a registered uri with the size hint`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request = requestLayer("https://api.example.com"),
+        artwork =
+          staticArtworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h")),
+      )
+    val t = track(artwork = "/art/1.png")
+    val browseTime = bm.resolveArtworkUrl(t) // no size at browse time
+    bm.artworkResolutions.register(browseTime!!.uri, t, null)
+
+    val displayTime = bm.displayArtworkSource(browseTime.uri, sizeHintPixels = 512)
+    assertTrue(displayTime!!.uri.contains("w=512"))
+    assertTrue(displayTime.uri.contains("h=512"))
+  }
+
+  @Test
+  fun `displayArtworkSource returns null for an unknown uri`() = runTest {
+    bm.config = BrowserConfig()
+    assertNull(bm.displayArtworkSource("https://img/unknown.png", 512))
+  }
 }

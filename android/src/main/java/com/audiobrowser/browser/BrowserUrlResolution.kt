@@ -197,6 +197,19 @@ suspend fun BrowserManager.resolveArtworkUrl(
   }
 }
 
+/**
+ * Display-time artwork resolution by URI (Media3's BitmapLoader only receives a
+ * URI). A registry hit re-resolves Track-first with the real [sizeHintPixels] —
+ * never re-transforming an already-transformed URL. Returns null for unknown
+ * URIs; the caller decides the fallback (fetch as-is).
+ */
+suspend fun BrowserManager.displayArtworkSource(uri: String, sizeHintPixels: Int?): ImageSource? {
+  val entry = artworkResolutions.lookup(uri) ?: return null
+  val imageContext =
+    sizeHintPixels?.takeIf { it > 0 }?.let { ImageContext(it.toDouble(), it.toDouble()) }
+  return resolveArtworkUrl(entry.track, entry.perRouteConfig, imageContext)
+}
+
 /** Folds [imageContext] width/height into the query under the configured param names. */
 private fun applyImageQueryParams(
   config: RequestConfig,

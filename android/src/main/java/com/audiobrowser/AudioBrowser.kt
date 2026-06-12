@@ -28,7 +28,6 @@ import com.audiobrowser.model.PlayerUpdateOptions
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
-import com.audiobrowser.util.CoilBitmapLoader
 import com.audiobrowser.util.SystemVolumeMonitor
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
@@ -260,28 +259,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       singleTrack = _configuration.singleTrack ?: false,
       androidControllerOfflineError = _configuration.androidControllerOfflineError ?: true,
     )
-  }
-
-  /**
-   * Returns the artwork configuration for use by CoilBitmapLoader. This provides access to the base
-   * request config and artwork-specific config.
-   */
-  suspend fun getArtworkConfig(): CoilBitmapLoader.ArtworkConfig? {
-    val artworkConfig = _configuration.artwork
-    // Provide the config when EITHER an artwork config or the shared request layer is set.
-    // The request layer counts as present when a static `request` OR a `requestResolver` is set —
-    // a resolver-only consumer still needs its baseUrl/headers/transform applied to artwork.
-    // now-playing artwork comes in via `perRouteConfig` (not `artwork`), so we must still expose
-    // the request layer here — otherwise a relative `nowPlayingArtwork` path (e.g. `/artwork/{id}`)
-    // never gets `baseUrl` prepended. (Browse-list artwork with no artwork config still
-    // early-returns
-    // its absolute `track.artwork` in CoilBitmapLoader, so it's unaffected.)
-    val hasRequestLayer = _configuration.request != null || _configuration.requestResolver != null
-    if (artworkConfig == null && !hasRequestLayer) return null
-    // Resolve the request layer (resolver thunk result, or the static request) so its transform
-    // runs for artwork too, applied as the shared layer in CoilBitmapLoader.
-    val requestConfig = browserManager.resolvedRequestConfig()
-    return CoilBitmapLoader.ArtworkConfig(requestConfig, artworkConfig)
   }
 
   /**
