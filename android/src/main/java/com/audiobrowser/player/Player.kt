@@ -1017,6 +1017,13 @@ class Player(internal val context: Context) {
   private var nowPlayingFlash: NowPlayingUpdate? = null
   private var nowPlayingFlashRevert: Job? = null
 
+  /**
+   * Monotonic stamp for now-playing renders. All renders happen on the main thread (MainScope);
+   * an async formatter result applies only when no newer render — notably a flash — has
+   * superseded the one that launched it.
+   */
+  private var nowPlayingRenderGeneration = 0L
+
   fun flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) {
     nowPlayingFlashRevert?.cancel()
     nowPlayingFlash = update
@@ -1098,6 +1105,8 @@ class Player(internal val context: Context) {
   internal fun applyNowPlayingMetadata() {
     val index = currentIndex ?: return
     val track = currentTrack ?: return
+    nowPlayingRenderGeneration += 1
+    val generation = nowPlayingRenderGeneration
 
     // Metadata source. When metadata is disabled, use the raw track (ignore override + formatter);
     // otherwise the imperative `updateNowPlaying` override wins over the track's own fields.
@@ -1147,14 +1156,17 @@ class Player(internal val context: Context) {
             null
           }
         // Apply only if still the same track (a fast skip must not be overwritten by a stale
-        // result).
+        // result) AND no newer render superseded this one — without the generation check, a
+        // formatter round-trip in flight when a flash starts lands a beat later and overwrites
+        // the flash (mirrors the iOS renderGeneration guard).
         val current = currentTrack
         val currentIdx = currentIndex
         if (
           formatted != null &&
             current != null &&
             currentIdx != null &&
-            (current.src ?: current.url) == capturedId
+            (current.src ?: current.url) == capturedId &&
+            nowPlayingRenderGeneration == generation
         ) {
           applyNowPlayingFields(
             currentIdx,
