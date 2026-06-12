@@ -17,16 +17,17 @@ final class NowPlayingUpdater {
   var artworkUrlResolver: ((Track, ImageContext?) async -> ImageSource?)?
   /// Invoked when the published title/artist actually change, so the owner can emit the JS
   /// `onNowPlayingChanged` event (which it shapes with elapsed time / artwork / etc.).
-  var onChanged: (@MainActor (_ track: Track, _ title: String, _ artist: String?) -> Void)?
+  var onChanged: (@MainActor (_ track: Track, _ title: String, _ artist: String?, _ album: String?) -> Void)?
 
   private var artworkLoadTask: Task<Void, Never>?
   private var artworkGeneration: UInt = 0
 
-  /// Last published title/artist line, to dedupe redundant writes (render runs on every transition).
+  /// Last published text lines, to dedupe redundant writes (render runs on every transition).
   private struct Published: Equatable {
     let trackId: String?
     let title: String?
     let artist: String?
+    let album: String?
   }
 
   private var lastPublished: Published?
@@ -40,22 +41,23 @@ final class NowPlayingUpdater {
     self.nowPlayingInfoController = nowPlayingInfoController
   }
 
-  /// Publishes the static, per-track fields + artwork on a track change. The title/artist line is
-  /// owned by `render` (routed through `applyFields` here so it dedupes against later renders).
+  /// Publishes the static, per-track fields + artwork on a track change. The title/artist/album
+  /// lines are owned by `render` (routed through `applyFields` here so it dedupes against later
+  /// renders).
   func loadMetaValues(for track: Track) {
     nowPlayingInfoController.set(keyValues: [
-      MediaItemProperty.albumTitle(track.album),
       NowPlayingInfoProperty.isLiveStream(track.live),
     ])
-    applyFields(track: track, title: track.title, artist: track.artist)
+    applyFields(track: track, title: track.title, artist: track.artist, album: track.album)
     loadArtwork(for: track)
   }
 
-  /// Renders the now-playing title/artist line: the default (`override ?? track`) immediately, then —
-  /// when a formatter is configured — its async result overlaid (each field falling back to the
-  /// default). A `flash` (transient line, e.g. feedback for a refused remote command) outranks both:
-  /// while one is active the formatter pass is skipped entirely, so its async result can't land on
-  /// top. Safe to call on every playback transition; redundant writes are deduped.
+  /// Renders the now-playing text lines (title, artist, album): the default (`override ?? track`)
+  /// immediately, then — when a formatter is configured — its async result overlaid (each field
+  /// falling back to the default). A `flash` (transient line, e.g. feedback for a refused remote
+  /// command) outranks both: while one is active the formatter pass is skipped entirely, so its
+  /// async result can't land on top. Safe to call on every playback transition; redundant writes
+  /// are deduped.
   func render(
     track: Track,
     timedMetadata: TimedMetadata?,
@@ -71,17 +73,19 @@ final class NowPlayingUpdater {
 
     let defaultTitle = override?.title ?? track.title
     let defaultSecondary = override?.artist ?? track.artist
+    let defaultAlbum = override?.album ?? track.album
 
     if let flash {
       applyFields(
         track: track,
         title: flash.title ?? defaultTitle,
         artist: flash.artist ?? defaultSecondary,
+        album: flash.album ?? defaultAlbum,
       )
       return
     }
 
-    applyFields(track: track, title: defaultTitle, artist: defaultSecondary)
+    applyFields(track: track, title: defaultTitle, artist: defaultSecondary, album: defaultAlbum)
 
     guard let formatter else { return }
     let params = FormatNowPlayingParams(
@@ -105,6 +109,7 @@ final class NowPlayingUpdater {
             track: track,
             title: formatted.title ?? defaultTitle,
             artist: formatted.artist ?? defaultSecondary,
+            album: formatted.album ?? defaultAlbum,
           )
         }
       }
@@ -118,15 +123,17 @@ final class NowPlayingUpdater {
 
   // MARK: - Private
 
-  /// Stamps the title/artist (each falling back to the track's own) onto NowPlayingInfoCenter,
-  /// deduped against the last publish, and notifies `onChanged`.
-  private func applyFields(track: Track, title: String?, artist: String?) {
+  /// Stamps the title/artist/album (each falling back to the track's own) onto
+  /// NowPlayingInfoCenter, deduped against the last publish, and notifies `onChanged`.
+  private func applyFields(track: Track, title: String?, artist: String?, album: String?) {
     let resolvedTitle = title ?? track.title
     let resolvedArtist = artist ?? track.artist
+    let resolvedAlbum = album ?? track.album
     let published = Published(
       trackId: track.src ?? track.url,
       title: resolvedTitle,
       artist: resolvedArtist,
+      album: resolvedAlbum,
     )
     guard published != lastPublished else { return }
     lastPublished = published
@@ -134,8 +141,9 @@ final class NowPlayingUpdater {
     nowPlayingInfoController.set(keyValues: [
       MediaItemProperty.title(resolvedTitle),
       MediaItemProperty.artist(resolvedArtist),
+      MediaItemProperty.albumTitle(resolvedAlbum),
     ])
-    onChanged?(track, resolvedTitle, resolvedArtist)
+    onChanged?(track, resolvedTitle, resolvedArtist, resolvedAlbum)
   }
 
   private func loadArtwork(for track: Track) {

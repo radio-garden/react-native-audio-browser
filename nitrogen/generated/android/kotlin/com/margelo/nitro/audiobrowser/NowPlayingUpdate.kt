@@ -22,7 +22,10 @@ data class NowPlayingUpdate(
   val title: String?,
   @DoNotStrip
   @Keep
-  val artist: String?
+  val artist: String?,
+  @DoNotStrip
+  @Keep
+  val album: String?
 ) {
   /* primary constructor */
 
@@ -34,8 +37,8 @@ data class NowPlayingUpdate(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(title: String?, artist: String?): NowPlayingUpdate {
-      return NowPlayingUpdate(title, artist)
+    private fun fromCpp(title: String?, artist: String?, album: String?): NowPlayingUpdate {
+      return NowPlayingUpdate(title, artist, album)
     }
   }
 }

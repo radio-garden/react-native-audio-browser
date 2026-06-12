@@ -33,7 +33,7 @@ export class NowPlayingManager {
       ? {
           title: update.title ?? currentTrack.title,
           artist: update.artist ?? currentTrack.artist,
-          album: currentTrack.album,
+          album: update.album ?? currentTrack.album,
           artwork: currentTrack.artwork,
           description: currentTrack.description,
           mediaId: currentTrack.src ?? currentTrack.url,

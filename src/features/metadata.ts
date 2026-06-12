@@ -48,6 +48,12 @@ export type NowPlayingUpdate = {
   title?: string
   /** Artist shown in notification */
   artist?: string
+  /**
+   * Album line, on surfaces that render one (CarPlay's third line, some
+   * Bluetooth head units). Never shown on the iOS lock screen or the Android
+   * notification.
+   */
+  album?: string
 }
 
 /**

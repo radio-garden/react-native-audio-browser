@@ -583,11 +583,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           return await browserManager.resolveArtworkUrl(track: track, perRouteConfig: perRoute, imageContext: imageContext)
         }
 
-        // Emit the JS `onNowPlayingChanged` event when the rendered title/artist change. The updater
+        // Emit the JS `onNowPlayingChanged` event when the rendered text lines change. The updater
         // owns the system now-playing write; this shapes the JS metadata (elapsed time / artwork).
-        player?.nowPlayingUpdater.onChanged = { [weak self] track, title, artist in
+        player?.nowPlayingUpdater.onChanged = { [weak self] track, title, artist, album in
           guard let self else { return }
-          self.onNowPlayingChanged(self.makeNowPlayingMetadata(track: track, title: title, artist: artist))
+          self.onNowPlayingChanged(
+            self.makeNowPlayingMetadata(track: track, title: title, artist: artist, album: album))
         }
 
         // Configure sleep timer callback
@@ -985,6 +986,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         track: track,
         title: flash?.title ?? override?.title ?? track.title,
         artist: flash?.artist ?? override?.artist ?? track.artist,
+        album: flash?.album ?? override?.album ?? track.album,
       )
     }
   }
@@ -998,13 +1000,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
   }
 
-  /// Builds the JS-facing now-playing metadata for the given rendered title/artist line.
+  /// Builds the JS-facing now-playing metadata for the given rendered text lines.
   @MainActor
-  private func makeNowPlayingMetadata(track: Track, title: String, artist: String?) -> NowPlayingMetadata {
+  private func makeNowPlayingMetadata(
+    track: Track, title: String, artist: String?, album: String?,
+  ) -> NowPlayingMetadata {
     NowPlayingMetadata(
       elapsedTime: player?.currentTime,
       title: title,
-      album: track.album,
+      album: album,
       artist: artist,
       duration: track.duration,
       artwork: nowPlayingArtwork(for: track),

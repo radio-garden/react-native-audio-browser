@@ -470,6 +470,7 @@ class Player(internal val context: Context) {
     val trackId: String?,
     val title: String?,
     val secondaryLine: String?,
+    val album: String?,
   )
 
   private var lastPublishedNowPlaying: PublishedNowPlaying? = null
@@ -1059,7 +1060,7 @@ class Player(internal val context: Context) {
     return NowPlayingMetadata(
       elapsedTime = null,
       title = flash?.title ?: override?.title ?: track.title,
-      album = track.album,
+      album = flash?.album ?: override?.album ?: track.album,
       artist = flash?.artist ?: override?.artist ?: track.artist,
       duration = track.duration,
       artwork = track.artwork,
@@ -1114,16 +1115,24 @@ class Player(internal val context: Context) {
     val defaultTitle = override?.title ?: track.title
     val defaultSecondary = override?.artist ?: track.artist
 
+    val defaultAlbum = override?.album ?: track.album
+
     // A flash outranks both the formatter and the override; while one is active the formatter pass
     // is skipped entirely so its async result can't land on top.
     val flash = if (nowPlayingMetadataEnabled) nowPlayingFlash else null
     if (flash != null) {
-      applyNowPlayingFields(index, track, flash.title ?: defaultTitle, flash.artist ?: defaultSecondary)
+      applyNowPlayingFields(
+        index,
+        track,
+        flash.title ?: defaultTitle,
+        flash.artist ?: defaultSecondary,
+        flash.album ?: defaultAlbum,
+      )
       return
     }
 
     // Apply the default immediately so the now-playing never lags a track/status change.
-    applyNowPlayingFields(index, track, defaultTitle, defaultSecondary)
+    applyNowPlayingFields(index, track, defaultTitle, defaultSecondary, defaultAlbum)
 
     // If a formatter is configured, let it customize the fields asynchronously (mirrors the
     // navigation-error formatter pattern). Falls back to the default on null/throw.
@@ -1173,6 +1182,7 @@ class Player(internal val context: Context) {
             current,
             formatted.title ?: defaultTitle,
             formatted.artist ?: defaultSecondary,
+            formatted.album ?: defaultAlbum,
           )
         }
       }
@@ -1185,6 +1195,7 @@ class Player(internal val context: Context) {
     track: Track,
     title: String?,
     secondaryLine: String?,
+    album: String? = track.album,
   ) {
     val currentMediaItem = exoPlayer.getMediaItemAt(index)
 
@@ -1193,7 +1204,7 @@ class Player(internal val context: Context) {
     // churn
     // the MediaSession (and flicker Android Auto / now-playing) for no visible change. Keyed on the
     // track identity so a new track with a coincidentally identical line still publishes.
-    val published = PublishedNowPlaying(index, track.src ?: track.url, title, secondaryLine)
+    val published = PublishedNowPlaying(index, track.src ?: track.url, title, secondaryLine, album)
     if (published == lastPublishedNowPlaying) return
     lastPublishedNowPlaying = published
 
@@ -1206,6 +1217,7 @@ class Player(internal val context: Context) {
         // Android Auto reads DISPLAY_SUBTITLE (not ARTIST) once DISPLAY_TITLE is set, so mirror the
         // line into `subtitle`; `artist` still drives the lock screen / notification.
         .setSubtitle(secondaryLine)
+        .setAlbumTitle(album)
         .build()
 
     val updatedMediaItem =
