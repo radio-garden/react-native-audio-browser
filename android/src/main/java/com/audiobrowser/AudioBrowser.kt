@@ -96,6 +96,13 @@ import timber.log.Timber
 @Keep
 @DoNotStrip
 class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
+
+  /** Called by Nitro when the JS object is destroyed (incl. JS runtime reloads). */
+  override fun dispose() {
+    systemVolumeMonitor.destroy()
+    super.dispose()
+  }
+
   private val mainScope = MainScope()
   private var navigationJob: Job? = null
   private val handler = Handler(Looper.getMainLooper())

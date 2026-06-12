@@ -48,4 +48,17 @@ class SystemVolumeMonitor(private val context: Context) {
   init {
     context.registerReceiver(volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
   }
+
+  /**
+   * Unregisters the volume receiver. Must be called when the owner is torn down
+   * (AudioBrowser.dispose) — without it the receiver leaks across JS runtime
+   * reloads. Safe to call more than once.
+   */
+  fun destroy() {
+    try {
+      context.unregisterReceiver(volumeReceiver)
+    } catch (_: IllegalArgumentException) {
+      // already unregistered
+    }
+  }
 }
