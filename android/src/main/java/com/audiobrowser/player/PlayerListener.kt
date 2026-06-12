@@ -174,56 +174,30 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Note that it is necessary to set `playerState` in order, since each mutation fires an
     // event.
     for (i in 0 until events.size()) {
-      when (events[i]) {
-        MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED -> {
-          // Read the real ExoPlayer state, not the forwarding player's — the InterceptingPlayer
-          // masks STATE_IDLE→READY on a terminal error to keep the session alive, and that mask
-          // must not feed back into our own state machine (it would clear the ERROR
-          // state/subtitle).
-          val state =
-            when (player.exoPlayer.playbackState) {
-              MediaPlayer.STATE_BUFFERING -> PlaybackState.BUFFERING
-              MediaPlayer.STATE_READY -> PlaybackState.READY
-              MediaPlayer.STATE_IDLE ->
-                // Avoid transitioning to idle from error or stopped
-                if (
-                  player.playbackState == PlaybackState.ERROR ||
-                    player.playbackState == PlaybackState.STOPPED
-                )
-                  null
-                else PlaybackState.NONE
-              MediaPlayer.STATE_ENDED ->
-                if (media3Player.mediaItemCount > 0) PlaybackState.ENDED else PlaybackState.NONE
-              else -> null // noop
-            }
-          if (state != null && state != player.playbackState) {
-            // Clear error when recovering from ERROR state to a successful state
-            if (player.playbackState == PlaybackState.ERROR) {
-              player.playbackError = null
-            }
-            player.setPlaybackState(state)
+      val event =
+        when (events[i]) {
+          MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED ->
+            // Read the real ExoPlayer state, not the forwarding player's — the InterceptingPlayer
+            // masks STATE_IDLE→READY on a terminal error, and that mask must not feed back into
+            // our own state machine (it would clear the ERROR state/subtitle).
+            PlaybackEvent.ExoPlaybackStateChanged(
+              player.exoPlayer.playbackState,
+              media3Player.mediaItemCount,
+            )
+          MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION -> {
+            // A new item clears any prior error even when no state transition follows (e.g. the
+            // queue was emptied) — silently, matching the previous behavior.
+            player.playbackError = null
+            PlaybackEvent.MediaItemTransition(player.currentTrack != null, player.isPlaying)
           }
-        }
-        MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION -> {
-          player.playbackError = null
-          if (player.currentTrack != null) {
-            player.setPlaybackState(PlaybackState.LOADING)
-            if (player.isPlaying) {
-              player.setPlaybackState(PlaybackState.READY)
-              player.setPlaybackState(PlaybackState.PLAYING)
-            }
-          }
-        }
-        MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED -> {
-          if (!player.playWhenReady && player.playbackState != PlaybackState.STOPPED) {
-            player.setPlaybackState(PlaybackState.PAUSED)
-          }
-        }
-        MediaPlayer.EVENT_IS_PLAYING_CHANGED -> {
-          if (player.isPlaying) {
-            player.setPlaybackState(PlaybackState.PLAYING)
-          }
-        }
+          MediaPlayer.EVENT_PLAY_WHEN_READY_CHANGED ->
+            PlaybackEvent.PlayWhenReadyChanged(player.playWhenReady)
+          MediaPlayer.EVENT_IS_PLAYING_CHANGED -> PlaybackEvent.IsPlayingChanged(player.isPlaying)
+          else -> null
+        } ?: continue
+
+      for (state in PlaybackStateMachine.transitions(player.playbackState, event)) {
+        player.setPlaybackState(state)
       }
     }
   }
