@@ -5,9 +5,7 @@ import android.content.Context
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.HeartRating
-import androidx.media3.common.MediaItem
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -46,9 +44,6 @@ import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.RatingType
-import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
-import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
-import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.SleepTimer as NitroSleepTimer
@@ -196,180 +191,6 @@ class Player(internal val context: Context) {
         Timber.e("Timed out waiting for browser registration (10s)")
         throw e
       }
-
-  /**
-   * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
-   *
-   * This class blocks all external media item modifications to delegate control to RNAB. These
-   * overrides prevent media controllers (like Android Auto, notifications) from directly modifying
-   * the queue, ensuring all queue changes go through the RNAB API for proper state management and
-   * event handling.
-   */
-  private inner class InterceptingPlayer(player: ExoPlayer) : ForwardingPlayer(player) {
-
-    // Hide playback errors from the platform session. Media3 builds the legacy PlaybackStateCompat
-    // from player.getPlayerError() (-> STATE_ERROR), which Android Auto and the notification render
-    // as a disruptive error. The error still surfaces via the onPlaybackError JS callback and
-    // `playbackState`, so a now-playing formatter can render it; playback context is preserved.
-    override fun getPlayerError(): androidx.media3.common.PlaybackException? = null
-
-    // A terminal load error idles ExoPlayer, which the platform session renders as STATE_NONE —
-    // Android Auto reads that as "nothing playing" and tears down the now-playing screen, losing
-    // the next/previous buttons. Keep the session alive by reporting a paused-but-ready state while
-    // the (suppressed) error is present, so the user can still skip to a working station. Based on
-    // the real underlying error (super.getPlayerError()) so it's race-free with state-change
-    // listeners.
-    override fun getPlaybackState(): Int {
-      val state = super.getPlaybackState()
-      return if (
-        keepSessionAliveOnError &&
-          state == androidx.media3.common.Player.STATE_IDLE &&
-          super.getPlayerError() != null
-      ) {
-        androidx.media3.common.Player.STATE_READY
-      } else {
-        state
-      }
-    }
-
-    override fun getPlayWhenReady(): Boolean {
-      return if (
-        keepSessionAliveOnError &&
-          super.getPlaybackState() == androidx.media3.common.Player.STATE_IDLE &&
-          super.getPlayerError() != null
-      ) {
-        false
-      } else {
-        super.getPlayWhenReady()
-      }
-    }
-
-    override fun setMediaItems(mediaItems: MutableList<MediaItem>, resetPosition: Boolean) {
-      return super.setMediaItems(mediaItems, resetPosition)
-    }
-
-    override fun addMediaItems(mediaItems: MutableList<MediaItem>) {
-      return super.addMediaItems(mediaItems)
-    }
-
-    override fun addMediaItems(index: Int, mediaItems: MutableList<MediaItem>) {
-      return super.addMediaItems(index, mediaItems)
-    }
-
-    override fun setMediaItems(
-      mediaItems: MutableList<MediaItem>,
-      startIndex: Int,
-      startPositionMs: Long,
-    ) {
-      return super.setMediaItems(mediaItems, startIndex, startPositionMs)
-    }
-
-    override fun setMediaItems(mediaItems: MutableList<MediaItem>) {
-      return super.setMediaItems(mediaItems)
-    }
-
-    // A terminal error leaves ExoPlayer idle; the default transport controls (super.play() /
-    // super.seekToNext()) then flip playWhenReady or move the queue index but never restart a
-    // stopped player. prepare() recovers it (and early-returns when not idle, so it's a no-op
-    // during normal playback) — so next/previous/play resume on the selected station from the
-    // masked error state instead of doing nothing.
-    private fun recoverFromErrorIfNeeded() {
-      if (keepSessionAliveOnError && super.getPlayerError() != null) {
-        exoPlayer.prepare()
-      }
-    }
-
-    // Intercept playback controls and dispatch to callbacks or fall back to default behavior
-    override fun play() {
-      if (callbacks?.handleRemotePlay() != true) {
-        super.play()
-        recoverFromErrorIfNeeded()
-      }
-    }
-
-    override fun pause() {
-      if (callbacks?.handleRemotePause() != true) {
-        super.pause()
-      }
-    }
-
-    override fun seekToNext() {
-      Timber.Forest.d("InterceptingPlayer.seekToNext() called")
-      if (callbacks?.handleRemoteNext() != true) {
-        super.seekToNext()
-        recoverFromErrorIfNeeded()
-      }
-    }
-
-    override fun seekToNextMediaItem() {
-      Timber.Forest.d("InterceptingPlayer.seekToNextMediaItem() called")
-      if (callbacks?.handleRemoteNext() != true) {
-        super.seekToNextMediaItem()
-        recoverFromErrorIfNeeded()
-      }
-    }
-
-    override fun seekToPrevious() {
-      Timber.Forest.d("InterceptingPlayer.seekToPrevious() called")
-      if (callbacks?.handleRemotePrevious() != true) {
-        super.seekToPrevious()
-        recoverFromErrorIfNeeded()
-      }
-    }
-
-    override fun seekToPreviousMediaItem() {
-      Timber.Forest.d("InterceptingPlayer.seekToPreviousMediaItem() called")
-      if (callbacks?.handleRemotePrevious() != true) {
-        super.seekToPreviousMediaItem()
-        recoverFromErrorIfNeeded()
-      }
-    }
-
-    override fun seekForward() {
-      Timber.Forest.d("InterceptingPlayer.seekForward() called")
-      if (
-        callbacks?.handleRemoteJumpForward(
-          RemoteJumpForwardEvent(interval = options.forwardJumpInterval)
-        ) != true
-      ) {
-        super.seekForward()
-      }
-    }
-
-    override fun seekBack() {
-      if (
-        callbacks?.handleRemoteJumpBackward(
-          RemoteJumpBackwardEvent(interval = options.backwardJumpInterval)
-        ) != true
-      ) {
-        super.seekBack()
-      }
-    }
-
-    override fun stop() {
-      if (callbacks?.handleRemoteStop() != true) {
-        super.stop()
-      }
-    }
-
-    override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
-      if (
-        callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) !=
-          true
-      ) {
-        super.seekTo(mediaItemIndex, positionMs)
-      }
-    }
-
-    override fun seekTo(positionMs: Long) {
-      if (
-        callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) !=
-          true
-      ) {
-        super.seekTo(positionMs)
-      }
-    }
-  }
 
   private lateinit var playerListener: PlayerListener
   private var cache: SimpleCache? = null
@@ -656,7 +477,8 @@ class Player(internal val context: Context) {
     }
 
     // Recreate forwarding player with new ExoPlayer
-    forwardingPlayer = InterceptingPlayer(exoPlayer)
+    forwardingPlayer =
+      InterceptingPlayer(exoPlayer, { callbacks }, { options }, { keepSessionAliveOnError })
 
     if (isInitialSetup) {
       // Initial setup - create player listener and emit initial state
