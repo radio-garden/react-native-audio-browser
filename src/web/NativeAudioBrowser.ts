@@ -204,7 +204,7 @@ export class NativeAudioBrowser
   onSystemVolumeChanged: (volume: number) => void = () => {}
   onIosOutputChanged: (output: IosOutput) => void = () => {}
   onBrowseGateButtonPressed: () => void = () => {}
-  onCarPlayConnectedChanged: (connected: boolean) => void = () => {}
+  onCarConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers
   handleRemoteBookmark: (() => void) | undefined = undefined
@@ -965,8 +965,8 @@ export class NativeAudioBrowser
     return this.browseGate
   }
 
-  // MARK: CarPlay (not applicable on web)
-  isCarPlayConnected(): boolean {
+  // MARK: Car connection (not applicable on web)
+  isCarConnected(): boolean {
     return false
   }
 

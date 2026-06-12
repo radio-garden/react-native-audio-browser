@@ -129,18 +129,18 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onBrowseGateButtonPressed = value
     }
   
-  abstract var onCarPlayConnectedChanged: (connected: Boolean) -> Unit
+  abstract var onCarConnectedChanged: (connected: Boolean) -> Unit
   
-  private var onCarPlayConnectedChanged_cxx: Func_void_bool
+  private var onCarConnectedChanged_cxx: Func_void_bool
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_bool_java(onCarPlayConnectedChanged)
+      return Func_void_bool_java(onCarConnectedChanged)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onCarPlayConnectedChanged = value
+      onCarConnectedChanged = value
     }
   
   abstract var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit
@@ -936,7 +936,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun isCarPlayConnected(): Boolean
+  abstract fun isCarConnected(): Boolean
   
   @DoNotStrip
   @Keep

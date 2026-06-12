@@ -318,17 +318,17 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onCarPlayConnectedChanged: bridge.Func_void_bool {
+  public final var onCarConnectedChanged: bridge.Func_void_bool {
     @inline(__always)
     get {
       return { () -> bridge.Func_void_bool in
-        let __closureWrapper = Func_void_bool(self.__implementation.onCarPlayConnectedChanged)
+        let __closureWrapper = Func_void_bool(self.__implementation.onCarConnectedChanged)
         return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onCarPlayConnectedChanged = { () -> (Bool) -> Void in
+      self.__implementation.onCarConnectedChanged = { () -> (Bool) -> Void in
         let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
         return { (__connected: Bool) -> Void in
           __wrappedFunction.call(__connected)
@@ -1729,9 +1729,9 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func isCarPlayConnected() -> bridge.Result_bool_ {
+  public final func isCarConnected() -> bridge.Result_bool_ {
     do {
-      let __result = try self.__implementation.isCarPlayConnected()
+      let __result = try self.__implementation.isCarConnected()
       let __resultCpp = __result
       return bridge.create_Result_bool_(__resultCpp)
     } catch (let __error) {

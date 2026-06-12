@@ -618,8 +618,8 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onBrowseGateButtonPressed */)>("setOnBrowseGateButtonPressed_cxx");
     method(_javaPart, JFunc_void_cxx::fromCpp(onBrowseGateButtonPressed));
   }
-  std::function<void(bool /* connected */)> JHybridAudioBrowserSpec::getOnCarPlayConnectedChanged() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnCarPlayConnectedChanged_cxx");
+  std::function<void(bool /* connected */)> JHybridAudioBrowserSpec::getOnCarConnectedChanged() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnCarConnectedChanged_cxx");
     auto __result = method(_javaPart);
     return [&]() -> std::function<void(bool /* connected */)> {
       if (__result->isInstanceOf(JFunc_void_bool_cxx::javaClassStatic())) [[likely]] {
@@ -631,9 +631,9 @@ namespace margelo::nitro::audiobrowser {
       }
     }();
   }
-  void JHybridAudioBrowserSpec::setOnCarPlayConnectedChanged(const std::function<void(bool /* connected */)>& onCarPlayConnectedChanged) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onCarPlayConnectedChanged */)>("setOnCarPlayConnectedChanged_cxx");
-    method(_javaPart, JFunc_void_bool_cxx::fromCpp(onCarPlayConnectedChanged));
+  void JHybridAudioBrowserSpec::setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_bool::javaobject> /* onCarConnectedChanged */)>("setOnCarConnectedChanged_cxx");
+    method(_javaPart, JFunc_void_bool_cxx::fromCpp(onCarConnectedChanged));
   }
   std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> JHybridAudioBrowserSpec::getOnChapterMetadata() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_std__vector_ChapterMetadata_::javaobject>()>("getOnChapterMetadata_cxx");
@@ -1620,8 +1620,8 @@ namespace margelo::nitro::audiobrowser {
     auto __result = method(_javaPart);
     return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  bool JHybridAudioBrowserSpec::isCarPlayConnected() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("isCarPlayConnected");
+  bool JHybridAudioBrowserSpec::isCarConnected() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("isCarConnected");
     auto __result = method(_javaPart);
     return static_cast<bool>(__result);
   }

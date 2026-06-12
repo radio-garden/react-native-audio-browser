@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <!-- Lets the CarConnection query reach the car system app's content
+         provider under Android 11+ package-visibility rules -->
+    <queries>
+        <provider android:authorities="androidx.car.app.connection" />
+    </queries>
+
     <application>
         <!-- Audio Browser Service -->
         <service android:name="com.audiobrowser.Service" android:enabled="true" android:exported="true" android:foregroundServiceType="mediaPlayback">

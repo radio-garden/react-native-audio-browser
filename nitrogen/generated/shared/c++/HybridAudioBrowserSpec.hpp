@@ -193,8 +193,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setConfiguration(const NativeBrowserConfiguration& configuration) = 0;
       virtual std::function<void()> getOnBrowseGateButtonPressed() = 0;
       virtual void setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) = 0;
-      virtual std::function<void(bool /* connected */)> getOnCarPlayConnectedChanged() = 0;
-      virtual void setOnCarPlayConnectedChanged(const std::function<void(bool /* connected */)>& onCarPlayConnectedChanged) = 0;
+      virtual std::function<void(bool /* connected */)> getOnCarConnectedChanged() = 0;
+      virtual void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) = 0;
       virtual std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() = 0;
       virtual void setOnChapterMetadata(const std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>& onChapterMetadata) = 0;
       virtual std::function<void(const TrackMetadata& /* metadata */)> getOnTrackMetadata() = 0;
@@ -316,7 +316,7 @@ namespace margelo::nitro::audiobrowser {
       virtual void setBrowseGate(const NativeBrowseGate& gate) = 0;
       virtual void clearBrowseGate() = 0;
       virtual std::optional<NativeBrowseGate> getBrowseGate() = 0;
-      virtual bool isCarPlayConnected() = 0;
+      virtual bool isCarConnected() = 0;
       virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;
       virtual UpdateOptions getOptions() = 0;

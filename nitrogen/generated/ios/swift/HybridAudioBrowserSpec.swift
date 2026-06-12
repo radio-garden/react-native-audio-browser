@@ -19,7 +19,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onFormattedNavigationError: (_ formattedError: FormattedNavigationError?) -> Void { get set }
   var configuration: NativeBrowserConfiguration { get set }
   var onBrowseGateButtonPressed: () -> Void { get set }
-  var onCarPlayConnectedChanged: (_ connected: Bool) -> Void { get set }
+  var onCarConnectedChanged: (_ connected: Bool) -> Void { get set }
   var onChapterMetadata: (_ chapters: [ChapterMetadata]) -> Void { get set }
   var onTrackMetadata: (_ metadata: TrackMetadata) -> Void { get set }
   var onTimedMetadata: (_ metadata: TimedMetadata) -> Void { get set }
@@ -87,7 +87,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func setBrowseGate(gate: NativeBrowseGate) throws -> Void
   func clearBrowseGate() throws -> Void
   func getBrowseGate() throws -> NativeBrowseGate?
-  func isCarPlayConnected() throws -> Bool
+  func isCarConnected() throws -> Bool
   func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
   func updateOptions(options: NativeUpdateOptions) throws -> Void
   func getOptions() throws -> UpdateOptions

@@ -127,17 +127,17 @@ export interface AudioBrowser extends HybridObject<{
   /** Fired when the user taps the gate page's button. */
   onBrowseGateButtonPressed: () => void
 
-  // MARK: CarPlay connection (iOS only)
+  // MARK: car connection
   /**
-   * Whether a CarPlay scene is currently connected.
-   * Always returns false on Android.
+   * Whether a car is currently connected: a CarPlay scene on iOS, an
+   * Android Auto / Android Automotive connection on Android (via the
+   * androidx.car.app CarConnection provider).
    */
-  isCarPlayConnected(): boolean
+  isCarConnected(): boolean
   /**
-   * Called when CarPlay connects or disconnects.
-   * Never fires on Android.
+   * Called when the car connects or disconnects.
    */
-  onCarPlayConnectedChanged: (connected: boolean) => void
+  onCarConnectedChanged: (connected: boolean) => void
 
   // MARK: player init and config
   setupPlayer(options: PartialSetupPlayerOptions): Promise<void>

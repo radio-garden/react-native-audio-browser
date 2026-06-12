@@ -68,8 +68,8 @@ namespace margelo::nitro::audiobrowser {
     void setConfiguration(const NativeBrowserConfiguration& configuration) override;
     std::function<void()> getOnBrowseGateButtonPressed() override;
     void setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) override;
-    std::function<void(bool /* connected */)> getOnCarPlayConnectedChanged() override;
-    void setOnCarPlayConnectedChanged(const std::function<void(bool /* connected */)>& onCarPlayConnectedChanged) override;
+    std::function<void(bool /* connected */)> getOnCarConnectedChanged() override;
+    void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) override;
     std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() override;
     void setOnChapterMetadata(const std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>& onChapterMetadata) override;
     std::function<void(const TrackMetadata& /* metadata */)> getOnTrackMetadata() override;
@@ -191,7 +191,7 @@ namespace margelo::nitro::audiobrowser {
     void setBrowseGate(const NativeBrowseGate& gate) override;
     void clearBrowseGate() override;
     std::optional<NativeBrowseGate> getBrowseGate() override;
-    bool isCarPlayConnected() override;
+    bool isCarConnected() override;
     std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override;
     void updateOptions(const NativeUpdateOptions& options) override;
     UpdateOptions getOptions() override;

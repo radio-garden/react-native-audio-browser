@@ -403,12 +403,12 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) noexcept override {
       _swiftPart.setOnBrowseGateButtonPressed(onBrowseGateButtonPressed);
     }
-    inline std::function<void(bool /* connected */)> getOnCarPlayConnectedChanged() noexcept override {
-      auto __result = _swiftPart.getOnCarPlayConnectedChanged();
+    inline std::function<void(bool /* connected */)> getOnCarConnectedChanged() noexcept override {
+      auto __result = _swiftPart.getOnCarConnectedChanged();
       return __result;
     }
-    inline void setOnCarPlayConnectedChanged(const std::function<void(bool /* connected */)>& onCarPlayConnectedChanged) noexcept override {
-      _swiftPart.setOnCarPlayConnectedChanged(onCarPlayConnectedChanged);
+    inline void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) noexcept override {
+      _swiftPart.setOnCarConnectedChanged(onCarConnectedChanged);
     }
     inline std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() noexcept override {
       auto __result = _swiftPart.getOnChapterMetadata();
@@ -866,8 +866,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline bool isCarPlayConnected() override {
-      auto __result = _swiftPart.isCarPlayConnected();
+    inline bool isCarConnected() override {
+      auto __result = _swiftPart.isCarConnected();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

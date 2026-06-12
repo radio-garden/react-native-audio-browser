@@ -512,7 +512,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onMainActor { browseGate }
   }
 
-  // MARK: - CarPlay Connection
+  // MARK: - Car Connection (CarPlay)
 
   /// Static because the CarPlay scene can connect before the JS runtime
   /// creates the shared instance (cold start in the car).
@@ -524,18 +524,18 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   static func setCarPlayConnected(_ connected: Bool) {
     guard carPlayConnected != connected else { return }
     carPlayConnected = connected
-    shared?.onCarPlayConnectedChanged(connected)
+    shared?.onCarConnectedChanged(connected)
   }
 
-  public func isCarPlayConnected() throws -> Bool {
+  public func isCarConnected() throws -> Bool {
     HybridAudioBrowser.carPlayConnected
   }
 
-  public var onCarPlayConnectedChanged: (Bool) -> Void = { _ in } {
+  public var onCarConnectedChanged: (Bool) -> Void = { _ in } {
     didSet {
       // Immediately notify current state (the scene may have connected before
       // this JS runtime subscribed).
-      onCarPlayConnectedChanged(HybridAudioBrowser.carPlayConnected)
+      onCarConnectedChanged(HybridAudioBrowser.carPlayConnected)
     }
   }
 

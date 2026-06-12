@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.annotation.Keep
+import androidx.car.app.connection.CarConnection
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -240,6 +241,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     // Observe system volume changes
     systemVolumeMonitor.setOnVolumeChanged { volume -> post { onSystemVolumeChanged(volume) } }
+
+    // Observe the car connection (Android Auto / Android Automotive)
+    startCarConnectionObserver(context, handler)
   }
 
   // ============================================================================
@@ -751,11 +755,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override var onBrowseGateButtonPressed: () -> Unit = {}
 
-  // MARK: CarPlay connection (iOS only)
+  // MARK: Car connection (Android Auto / Android Automotive)
 
-  override fun isCarPlayConnected(): Boolean = false
+  override fun isCarConnected(): Boolean = carConnected
 
-  override var onCarPlayConnectedChanged: (Boolean) -> Unit = {}
+  override var onCarConnectedChanged: (Boolean) -> Unit = {}
+    set(value) {
+      field = value
+      carConnectionTarget = value
+      // Immediately notify current state (the car may have connected before
+      // this JS runtime subscribed) — mirrors the iOS behavior.
+      value(carConnected)
+    }
 
   // ============================================================================
   // MARK: Player Setup and Options
@@ -1358,4 +1369,32 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         post { this@AudioBrowser.onSleepTimerChanged(timer) }
       }
     }
+
+  companion object {
+    // Process-wide car-connection state, from the androidx.car.app
+    // CarConnection provider — the documented Android Auto / Automotive
+    // connection signal, served by the car system app. Observed ONCE per
+    // process: AudioBrowser instances are re-created on a JS reload, and a
+    // per-instance observeForever would leak each one. The latest instance's
+    // callback registers as the single notification target (mirrors the iOS
+    // static + shared-instance pattern).
+    @Volatile private var carConnected = false
+    @Volatile private var carConnectionTarget: ((Boolean) -> Unit)? = null
+    private var carConnectionObserverStarted = false
+
+    private fun startCarConnectionObserver(context: Context, handler: Handler) {
+      // Posted to main: LiveData observation is main-thread only, and the
+      // single-start guard is then only ever touched from one thread.
+      handler.post {
+        if (carConnectionObserverStarted) return@post
+        carConnectionObserverStarted = true
+        CarConnection(context.applicationContext).type.observeForever { type ->
+          val connected = type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED
+          if (connected == carConnected) return@observeForever
+          carConnected = connected
+          carConnectionTarget?.invoke(connected)
+        }
+      }
+    }
+  }
 }

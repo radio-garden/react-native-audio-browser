@@ -166,6 +166,8 @@ dependencies {
 
   // Make sure we're using androidx
   implementation "androidx.core:core-ktx:1.13.1"
+  // CarConnection: the documented Android Auto / Automotive connection signal
+  implementation "androidx.car.app:app:1.4.0"
   implementation "androidx.localbroadcastmanager:localbroadcastmanager:1.1.0"
   implementation "androidx.lifecycle:lifecycle-process:2.8.6"
   implementation 'androidx.media:media:1.7.0'
