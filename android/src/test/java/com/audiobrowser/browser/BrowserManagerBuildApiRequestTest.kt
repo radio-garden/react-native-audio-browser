@@ -1,6 +1,6 @@
 package com.audiobrowser.browser
 
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.audiobrowser.TestFixtures.transformableConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -23,35 +23,16 @@ class BrowserManagerBuildApiRequestTest {
     bm = BrowserManager()
   }
 
-  private fun layer(
-    baseUrl: String? = null,
-    path: String? = null,
-    query: Map<String, String>? = null,
-    headers: Map<String, String>? = null,
-  ) =
-    TransformableRequestConfig(
-      transform = null,
-      transformSync = null,
-      method = null,
-      path = path,
-      baseUrl = baseUrl,
-      headers = headers,
-      query = query,
-      body = null,
-      contentType = null,
-      userAgent = null,
-    )
-
   @Test
   fun `layers apply request then kind then route, override-wins`() = runTest {
     bm.config =
       BrowserConfig(
-        request = layer(baseUrl = "https://api.example.com", query = mapOf("a" to "request"))
+        request = transformableConfig(baseUrl = "https://api.example.com", query = mapOf("a" to "request"))
       )
     val request =
       bm.buildApiRequest(
-        kindConfig = layer(query = mapOf("a" to "kind", "b" to "kind")),
-        routeConfig = layer(query = mapOf("b" to "route")),
+        kindConfig = transformableConfig(query = mapOf("a" to "kind", "b" to "kind")),
+        routeConfig = transformableConfig(query = mapOf("b" to "route")),
         path = "/stations",
         params = emptyMap(),
       )
@@ -62,10 +43,10 @@ class BrowserManagerBuildApiRequestTest {
 
   @Test
   fun `initialQuery seeds the base so it reaches the final URL`() = runTest {
-    bm.config = BrowserConfig(request = layer(baseUrl = "https://api.example.com"))
+    bm.config = BrowserConfig(request = transformableConfig(baseUrl = "https://api.example.com"))
     val request =
       bm.buildApiRequest(
-        kindConfig = layer(query = mapOf("extra" to "1")),
+        kindConfig = transformableConfig(query = mapOf("extra" to "1")),
         routeConfig = null,
         // The caller seeds the kind's path onto the base (as search does) — a
         // layer's own static path never applies.
@@ -82,11 +63,11 @@ class BrowserManagerBuildApiRequestTest {
   fun `a layer's static path does not override the base path`() = runTest {
     // Mirrors iOS applyLayer and the web stub: the path is carried from the
     // base through every Request-Config Layer; only a Transform may change it.
-    bm.config = BrowserConfig(request = layer(baseUrl = "https://api.example.com"))
+    bm.config = BrowserConfig(request = transformableConfig(baseUrl = "https://api.example.com"))
     val request =
       bm.buildApiRequest(
-        kindConfig = layer(path = "/kind-path"),
-        routeConfig = layer(path = "/route-path"),
+        kindConfig = transformableConfig(path = "/kind-path"),
+        routeConfig = transformableConfig(path = "/route-path"),
         path = "/stations",
         params = emptyMap(),
       )
@@ -98,14 +79,14 @@ class BrowserManagerBuildApiRequestTest {
     bm.config =
       BrowserConfig(
         request =
-          layer(
+          transformableConfig(
             baseUrl = "https://api.example.com",
             headers = mapOf("x-a" to "request", "x-b" to "request"),
           )
       )
     val request =
       bm.buildApiRequest(
-        kindConfig = layer(headers = mapOf("x-b" to "kind")),
+        kindConfig = transformableConfig(headers = mapOf("x-b" to "kind")),
         routeConfig = null,
         path = "/p",
         params = emptyMap(),
@@ -116,7 +97,7 @@ class BrowserManagerBuildApiRequestTest {
 
   @Test
   fun `missing baseUrl throws ContentNotFoundException`() = runTest {
-    bm.config = BrowserConfig(request = layer(query = mapOf("a" to "1")))
+    bm.config = BrowserConfig(request = transformableConfig(query = mapOf("a" to "1")))
     try {
       bm.buildApiRequest(
         kindConfig = null,

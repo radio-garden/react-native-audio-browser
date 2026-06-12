@@ -1,8 +1,8 @@
 package com.audiobrowser.http
 
+import com.audiobrowser.TestFixtures.mediaConfig
+import com.audiobrowser.TestFixtures.transformableConfig
 import com.margelo.nitro.audiobrowser.HttpMethod
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
-import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.RequestConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -277,21 +277,7 @@ class RequestConfigBuilderTest {
           contentType = null,
           userAgent = "base-ua",
         )
-      val override =
-        MediaRequestConfig(
-          resolve = null,
-          resolveSync = null,
-          transform = null,
-          transformSync = null,
-          method = null,
-          path = null,
-          baseUrl = null,
-          headers = mapOf("x-media" to "2"),
-          query = mapOf("token" to "abc"),
-          body = null,
-          contentType = null,
-          userAgent = null,
-        )
+      val override = mediaConfig(headers = mapOf("x-media" to "2"), query = mapOf("token" to "abc"))
       val merged = RequestConfigBuilder.mergeConfig(base, override)
       assertEquals("/stream.mp3", merged.path)
       assertEquals("https://media.example.com", merged.baseUrl)
@@ -310,19 +296,7 @@ class RequestConfigBuilderTest {
     runTest {
       val base =
         RequestConfig(null, "/navigated", "https://api.example.com", null, null, null, null, null)
-      val layer =
-        TransformableRequestConfig(
-          transform = null,
-          transformSync = null,
-          method = null,
-          path = "/static-layer-path",
-          baseUrl = null,
-          headers = null,
-          query = null,
-          body = null,
-          contentType = null,
-          userAgent = null,
-        )
+      val layer = transformableConfig(path = "/static-layer-path")
       val merged = RequestConfigBuilder.mergeConfig(base, layer, emptyMap())
       assertEquals("/navigated", merged.path)
     }
@@ -330,21 +304,7 @@ class RequestConfigBuilderTest {
   @Test
   fun `mergeConfig MediaRequestConfig carries the base path over a static media path`() = runTest {
     val base = RequestConfig(null, "/stream/123", "https://api.example.com", null, null, null, null, null)
-    val media =
-      MediaRequestConfig(
-        resolve = null,
-        resolveSync = null,
-        transform = null,
-        transformSync = null,
-        method = null,
-        path = "/static-media-path",
-        baseUrl = null,
-        headers = null,
-        query = null,
-        body = null,
-        contentType = null,
-        userAgent = null,
-      )
+    val media = mediaConfig(path = "/static-media-path")
     val merged = RequestConfigBuilder.mergeConfig(base, media)
     assertEquals("/stream/123", merged.path)
   }

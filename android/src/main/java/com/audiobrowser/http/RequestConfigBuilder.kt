@@ -69,30 +69,6 @@ object RequestConfigBuilder {
   /** Awaits a **sync** config callback (`Promise<RequestConfig>` — a single await). */
   suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig = promise.await()
 
-  /**
-   * The single definition of Request-Config Layer application: a transform (async
-   * and/or sync) wins completely — with both set they run as a pipeline, async
-   * first, then sync, each replacing the running config — otherwise the override's
-   * static fields merge over the base, EXCEPT `path`, which is carried from the
-   * base (only a transform may change it; mirrors iOS `applyLayer` and the web
-   * stub). A thrown transform falls back to the base.
-   */
-  private suspend fun applyLayerSemantics(
-    base: RequestConfig,
-    staticOverride: RequestConfig,
-    hasTransform: Boolean,
-    label: String,
-    runTransforms: suspend (RequestConfig) -> RequestConfig,
-  ): RequestConfig {
-    if (!hasTransform) return mergeConfig(base, staticOverride).copy(path = base.path)
-    return try {
-      runTransforms(base)
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to apply $label transform function, using base config")
-      base
-    }
-  }
-
   /** Rebuilds a [MediaRequestConfig] with [c]'s request fields, preserving callbacks. */
   private fun MediaRequestConfig.withRequestFields(c: RequestConfig) =
     MediaRequestConfig(
@@ -117,44 +93,60 @@ object RequestConfigBuilder {
     return mergeConfig(base, override, emptyMap())
   }
 
+  /**
+   * Request-Config Layer application: a transform (async and/or sync) wins
+   * completely — with both set they run as a pipeline, async first, then sync,
+   * each replacing the running config — otherwise the override's static fields
+   * merge over the base, EXCEPT `path`, which is carried from the base (only a
+   * transform may change it; mirrors iOS `applyLayer` and the web stub). A
+   * thrown transform falls back to the base.
+   */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: TransformableRequestConfig,
     routeParams: Map<String, String>? = null,
-  ): RequestConfig =
-    applyLayerSemantics(
-      base,
-      toRequestConfig(override),
-      hasTransform = override.transform != null || override.transformSync != null,
-      label = "request",
-    ) { start ->
+  ): RequestConfig {
+    if (override.transform == null && override.transformSync == null) {
+      return mergeConfig(base, toRequestConfig(override)).copy(path = base.path)
+    }
+    return try {
       // Async first, then sync (each replaces the running config). The bridge await
       // depth is centralised in awaitAsync/SyncConfig.
-      var result = start
+      var result = base
       override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
       override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
       result
+    } catch (e: Exception) {
+      Timber.e(e, "Failed to apply transform function, using base config")
+      base
     }
+  }
 
+  /**
+   * Media-kind layer application. A media config's transform/transformSync have
+   * the same shape as a [TransformableRequestConfig]'s, so this delegates to the
+   * layer overload above and rewraps — the layer semantics live in one place.
+   */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: MediaRequestConfig,
     routeParams: Map<String, String>? = null,
-  ): MediaRequestConfig {
-    val finalConfig =
-      applyLayerSemantics(
-        base,
-        toRequestConfig(override),
-        hasTransform = override.transform != null || override.transformSync != null,
-        label = "media",
-      ) { start ->
-        var result = start
-        override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
-        override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
-        result
-      }
-    return override.withRequestFields(finalConfig)
-  }
+  ): MediaRequestConfig =
+    override.withRequestFields(mergeConfig(base, override.asTransformable(), routeParams))
+
+  private fun MediaRequestConfig.asTransformable() =
+    TransformableRequestConfig(
+      transform = transform,
+      transformSync = transformSync,
+      method = method,
+      path = path,
+      baseUrl = baseUrl,
+      headers = headers,
+      query = query,
+      body = body,
+      contentType = contentType,
+      userAgent = userAgent,
+    )
 
   /**
    * Applies the per-track `media.resolve(track)` callback as the final, most-specific layer over an
