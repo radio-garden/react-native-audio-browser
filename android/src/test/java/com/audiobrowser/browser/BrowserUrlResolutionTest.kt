@@ -1,11 +1,11 @@
 package com.audiobrowser.browser
 
-import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
+import com.audiobrowser.TestFixtures.artworkConfig
+import com.audiobrowser.TestFixtures.mediaConfig
+import com.audiobrowser.TestFixtures.track
+import com.audiobrowser.TestFixtures.transformableConfig
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageQueryParams
-import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.Track
-import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,20 +28,6 @@ class BrowserUrlResolutionTest {
     bm = BrowserManager()
   }
 
-  private fun requestLayer(baseUrl: String) =
-    TransformableRequestConfig(
-      transform = null,
-      transformSync = null,
-      method = null,
-      path = null,
-      baseUrl = baseUrl,
-      headers = null,
-      query = null,
-      body = null,
-      contentType = null,
-      userAgent = null,
-    )
-
   @Test
   fun `resolveMediaUrl returns null when neither media nor request layer is configured`() =
     runTest {
@@ -51,7 +37,7 @@ class BrowserUrlResolutionTest {
 
   @Test
   fun `resolveMediaUrl applies the request layer to a relative src`() = runTest {
-    bm.config = BrowserConfig(request = requestLayer("https://api.example.com"))
+    bm.config = BrowserConfig(request = transformableConfig(baseUrl = "https://api.example.com"))
     val resolved = bm.resolveMediaUrl("/stream/123")
     assertEquals("https://api.example.com", resolved?.baseUrl)
     assertEquals("/stream/123", resolved?.path)
@@ -61,74 +47,14 @@ class BrowserUrlResolutionTest {
   fun `resolveMediaUrl merges static media config over the request layer`() = runTest {
     bm.config =
       BrowserConfig(
-        request = requestLayer("https://api.example.com"),
-        media =
-          MediaRequestConfig(
-            resolve = null,
-            resolveSync = null,
-            transform = null,
-            transformSync = null,
-            method = null,
-            path = null,
-            baseUrl = "https://media.example.com",
-            headers = mapOf("x-token" to "abc"),
-            query = null,
-            body = null,
-            contentType = null,
-            userAgent = null,
-          ),
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        media = mediaConfig(baseUrl = "https://media.example.com", headers = mapOf("x-token" to "abc")),
       )
     val resolved = bm.resolveMediaUrl("/stream/123")
     assertEquals("https://media.example.com", resolved?.baseUrl)
     assertEquals("abc", resolved?.headers?.get("x-token"))
     assertEquals("/stream/123", resolved?.path)
   }
-
-  private fun track(artwork: String?, id: String? = null, src: String? = "https://s/a.mp3") =
-    Track(
-      id = id,
-      url = null,
-      src = src,
-      artwork = artwork,
-      artworkSource = null,
-      request = null,
-      artworkCarPlayTinted = null,
-      title = "T",
-      subtitle = null,
-      artist = null,
-      albumUrl = null,
-      album = null,
-      description = null,
-      genre = null,
-      duration = null,
-      style = null,
-      childrenStyle = null,
-      favorited = null,
-      groupTitle = null,
-      live = null,
-      imageRow = null,
-    )
-
-  private fun staticArtworkConfig(
-    path: String? = null,
-    query: Map<String, String>? = null,
-    imageQueryParams: ImageQueryParams? = null,
-  ) =
-    ArtworkRequestConfig(
-      resolve = null,
-      resolveSync = null,
-      transform = null,
-      transformSync = null,
-      imageQueryParams = imageQueryParams,
-      method = null,
-      path = path,
-      baseUrl = null,
-      headers = null,
-      query = query,
-      body = null,
-      contentType = null,
-      userAgent = null,
-    )
 
   @Test
   fun `resolveArtworkUrl returns original artwork untouched when no artwork config`() = runTest {
@@ -147,8 +73,8 @@ class BrowserUrlResolutionTest {
   fun `resolveArtworkUrl layers request and artwork config over the track artwork`() = runTest {
     bm.config =
       BrowserConfig(
-        request = requestLayer("https://api.example.com"),
-        artwork = staticArtworkConfig(query = mapOf("sig" to "xyz")),
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(query = mapOf("sig" to "xyz")),
       )
     val source = bm.resolveArtworkUrl(track(artwork = "/art/1.png"))
     assertEquals("https://api.example.com/art/1.png?sig=xyz", source?.uri)
@@ -158,8 +84,8 @@ class BrowserUrlResolutionTest {
   fun `resolveArtworkUrl substitutes the id token`() = runTest {
     bm.config =
       BrowserConfig(
-        request = requestLayer("https://api.example.com"),
-        artwork = staticArtworkConfig(path = "/artwork/{id}"),
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(path = "/artwork/{id}"),
       )
     val source = bm.resolveArtworkUrl(track(artwork = null, id = "abc"))
     assertEquals("https://api.example.com/artwork/abc", source?.uri)
@@ -169,9 +95,8 @@ class BrowserUrlResolutionTest {
   fun `resolveArtworkUrl applies image query params from the image context`() = runTest {
     bm.config =
       BrowserConfig(
-        request = requestLayer("https://api.example.com"),
-        artwork =
-          staticArtworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h")),
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h")),
       )
     val source =
       bm.resolveArtworkUrl(
@@ -184,18 +109,17 @@ class BrowserUrlResolutionTest {
   }
 
   @Test
-  fun `displayArtworkSource re-resolves a registered uri with the size hint`() = runTest {
+  fun `displayArtworkSource re-resolves a registered uri with the display size`() = runTest {
     bm.config =
       BrowserConfig(
-        request = requestLayer("https://api.example.com"),
-        artwork =
-          staticArtworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h")),
+        request = transformableConfig(baseUrl = "https://api.example.com"),
+        artwork = artworkConfig(imageQueryParams = ImageQueryParams(width = "w", height = "h")),
       )
     val t = track(artwork = "/art/1.png")
     val browseTime = bm.resolveArtworkUrl(t) // no size at browse time
     bm.artworkResolutions.register(browseTime!!.uri, t, null)
 
-    val displayTime = bm.displayArtworkSource(browseTime.uri, sizeHintPixels = 512)
+    val displayTime = bm.displayArtworkSource(browseTime.uri, ImageContext(512.0, 512.0))
     assertTrue(displayTime!!.uri.contains("w=512"))
     assertTrue(displayTime.uri.contains("h=512"))
   }
@@ -203,6 +127,51 @@ class BrowserUrlResolutionTest {
   @Test
   fun `displayArtworkSource returns null for an unknown uri`() = runTest {
     bm.config = BrowserConfig()
-    assertNull(bm.displayArtworkSource("https://img/unknown.png", 512))
+    assertNull(bm.displayArtworkSource("https://img/unknown.png", ImageContext(512.0, 512.0)))
+  }
+
+  @Test
+  fun `displayArtworkSource entries without a per-route config use the current global config`() =
+    runTest {
+      // Register under config A (entry stores perRouteConfig = null for the global
+      // fallback) and replace the global config: display-time must resolve through
+      // the NEW config, not a pinned old one. Note the config setter clears the
+      // registry, so re-register after the swap as a browse under config B would.
+      bm.config =
+        BrowserConfig(
+          request = transformableConfig(baseUrl = "https://api.example.com"),
+          artwork = artworkConfig(query = mapOf("sig" to "old")),
+        )
+      val t = track(artwork = "/art/1.png")
+      val browseTime = bm.resolveArtworkUrl(t)!!
+
+      bm.config =
+        BrowserConfig(
+          request = transformableConfig(baseUrl = "https://api.example.com"),
+          artwork = artworkConfig(query = mapOf("sig" to "new")),
+        )
+      bm.artworkResolutions.register(browseTime.uri, t, null)
+
+      val displayTime = bm.displayArtworkSource(browseTime.uri, null)
+      assertTrue(displayTime!!.uri, displayTime.uri.contains("sig=new"))
+    }
+
+  @Test
+  fun `unattributedArtworkSource keeps the uri and adds static headers`() = runTest {
+    bm.config =
+      BrowserConfig(
+        request = transformableConfig(headers = mapOf("x-auth" to "key")),
+        artwork = artworkConfig(headers = mapOf("x-art" to "1")),
+      )
+    val source = bm.unattributedArtworkSource("https://img.example.com/a.png?sig=1")
+    assertEquals("https://img.example.com/a.png?sig=1", source?.uri)
+    assertEquals("key", source?.headers?.get("x-auth"))
+    assertEquals("1", source?.headers?.get("x-art"))
+  }
+
+  @Test
+  fun `unattributedArtworkSource returns null when there are no static headers`() = runTest {
+    bm.config = BrowserConfig()
+    assertNull(bm.unattributedArtworkSource("https://img/x.png"))
   }
 }

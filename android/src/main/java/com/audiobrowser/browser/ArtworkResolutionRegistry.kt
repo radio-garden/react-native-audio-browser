@@ -27,4 +27,13 @@ class ArtworkResolutionRegistry(private val maxEntries: Int = 256) {
   }
 
   @Synchronized fun lookup(uri: String): Entry? = entries[uri]
+
+  /**
+   * Drops all entries. Must run whenever the browser config is replaced or content
+   * is invalidated: entries pin Tracks and ArtworkRequestConfigs whose
+   * transform/resolve fields are Nitro handles to JS closures — keeping them past
+   * their config's lifetime both retains dead closures and resolves display-time
+   * artwork through stale callbacks.
+   */
+  @Synchronized fun clear() = entries.clear()
 }

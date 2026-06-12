@@ -22,7 +22,9 @@ import timber.log.Timber
 /**
  * Builds the media request config for [originalUrl]. Returns null only when
  * neither a request layer nor a media config is set (the caller then uses the
- * original URL as-is). Mirrors iOS `resolveMediaUrl`.
+ * original URL as-is). Mirrors the web stub's `resolveMediaUrl` (iOS currently
+ * diverges in its static branch — it drops a media config's static query/method/
+ * body — which is tracked as an iOS bug, not a contract).
  */
 suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestConfig? {
   val mediaConfig = config.media
@@ -84,8 +86,11 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestCon
  * Resolves a Track's artwork into a fetchable [ImageSource]: request layer →
  * artwork config (per-route overrides global) → per-Track `artwork.resolve` →
  * image query params from [imageContext] → artwork transform → `{id}`
- * substitution. Mirrors iOS `resolveArtworkUrl`. Returns null when there is no
- * artwork (or a resolver explicitly produced none).
+ * substitution. Mirrors the web stub's `resolveArtworkUrl` flow. iOS currently
+ * diverges on two axes (it skips the artwork transform at browse time and applies
+ * static artwork fields only when no resolver is configured) — tracked as iOS
+ * alignment work, not mirrored here. Returns null when there is no artwork (or a
+ * resolver explicitly produced none).
  */
 suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
@@ -126,7 +131,7 @@ suspend fun BrowserManager.resolveArtworkUrl(
     }
 
     // Per-track resolution — async `resolve` first, then `resolveSync` merged over
-    // it (sync winning) via the tested helper. Mirrors iOS resolveArtworkUrl.
+    // it (sync winning) via the tested helper. Matches the web stub.
     val asyncResolved =
       effectiveArtworkConfig.resolve?.let { RequestConfigBuilder.awaitAsyncConfig(it.invoke(track)) }
     val syncResolved =
@@ -199,15 +204,48 @@ suspend fun BrowserManager.resolveArtworkUrl(
 
 /**
  * Display-time artwork resolution by URI (Media3's BitmapLoader only receives a
- * URI). A registry hit re-resolves Track-first with the real [sizeHintPixels] —
- * never re-transforming an already-transformed URL. Returns null for unknown
- * URIs; the caller decides the fallback (fetch as-is).
+ * URI). A registry hit re-resolves Track-first with the real display-size
+ * [imageContext] — never re-transforming an already-transformed URL. Returns
+ * null for unknown URIs; the caller decides the fallback.
  */
-suspend fun BrowserManager.displayArtworkSource(uri: String, sizeHintPixels: Int?): ImageSource? {
+suspend fun BrowserManager.displayArtworkSource(
+  uri: String,
+  imageContext: ImageContext?,
+): ImageSource? {
   val entry = artworkResolutions.lookup(uri) ?: return null
-  val imageContext =
-    sizeHintPixels?.takeIf { it > 0 }?.let { ImageContext(it.toDouble(), it.toDouble()) }
   return resolveArtworkUrl(entry.track, entry.perRouteConfig, imageContext)
+}
+
+/**
+ * Header-only fallback for display-time artwork URIs that cannot be attributed to
+ * a Track (registry eviction, process-death restore): the URI is fetched as-is —
+ * never re-transformed — but the *static* request/artwork headers still apply, so
+ * header-authenticated artwork keeps working. Transforms are deliberately not run
+ * (no Track, no trustworthy base config); headers added by a transform rather
+ * than static config are out of reach here, which is the documented limit.
+ * Returns null when there are no headers to add.
+ */
+suspend fun BrowserManager.unattributedArtworkSource(uri: String): ImageSource? {
+  var merged =
+    RequestConfig(
+      method = null,
+      path = null,
+      baseUrl = null,
+      headers = null,
+      query = null,
+      body = null,
+      contentType = null,
+      userAgent = null,
+    )
+  resolvedRequestConfig()?.let {
+    merged = RequestConfigBuilder.mergeConfig(merged, RequestConfigBuilder.toRequestConfig(it))
+  }
+  config.artwork?.let {
+    merged = RequestConfigBuilder.mergeConfig(merged, RequestConfigBuilder.toRequestConfig(it))
+  }
+  val headers = buildHeadersMap(merged.headers?.toMap(), merged.userAgent, merged.contentType)
+  if (headers == null) return null
+  return ImageSource(uri = uri, method = null, headers = headers, body = null)
 }
 
 /** Folds [imageContext] width/height into the query under the configured param names. */

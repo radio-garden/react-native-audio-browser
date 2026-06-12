@@ -1,36 +1,11 @@
 package com.audiobrowser.browser
 
-import com.margelo.nitro.audiobrowser.Track
+import com.audiobrowser.TestFixtures.track
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ArtworkResolutionRegistryTest {
-
-  private fun track(title: String) =
-    Track(
-      id = null,
-      url = null,
-      src = "https://s/$title.mp3",
-      artwork = null,
-      artworkSource = null,
-      request = null,
-      artworkCarPlayTinted = null,
-      title = title,
-      subtitle = null,
-      artist = null,
-      albumUrl = null,
-      album = null,
-      description = null,
-      genre = null,
-      duration = null,
-      style = null,
-      childrenStyle = null,
-      favorited = null,
-      groupTitle = null,
-      live = null,
-      imageRow = null,
-    )
 
   @Test
   fun `lookup returns the registered entry`() {
@@ -56,6 +31,16 @@ class ArtworkResolutionRegistryTest {
     registry.lookup("u1") // touch u1 so u2 is eldest
     registry.register("u3", track("t3"), null)
     assertEquals("t1", registry.lookup("u1")?.track?.title)
+    assertNull(registry.lookup("u2"))
+  }
+
+  @Test
+  fun `clear drops all entries`() {
+    val registry = ArtworkResolutionRegistry()
+    registry.register("u1", track("t1"), null)
+    registry.register("u2", track("t2"), null)
+    registry.clear()
+    assertNull(registry.lookup("u1"))
     assertNull(registry.lookup("u2"))
   }
 }

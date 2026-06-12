@@ -113,6 +113,9 @@ class BrowserManager {
     set(value) {
       field = value
       layerGeneration += 1
+      // Registered artwork resolutions pin configs (and their JS callback handles)
+      // from the previous configuration — never resolve through them again.
+      artworkResolutions.clear()
     }
 
   // Resolver-layer caching. The request/browse layers may be resolver thunks
@@ -445,12 +448,15 @@ class BrowserManager {
     Timber.d("Invalidated content cache for path='$path'")
   }
 
-  /** Clears all cached content. Used when artwork resolver is wired up to force re-fetch. */
+  /** Clears all cached content. */
   fun clearContentCache() {
     contentCache.evictAll()
     // Bump the layer generation so request/browse resolver thunks are re-resolved on the next
     // request (invalidateAllContent → clearContentCache is the documented re-resolve trigger).
     layerGeneration += 1
+    // Invalidated content's artwork resolutions go with it (same staleness rule as the
+    // config setter).
+    artworkResolutions.clear()
     Timber.d("Cleared all content cache")
   }
 
@@ -562,7 +568,13 @@ class BrowserManager {
           Timber.d("[$path] Child[$index] '${track.title}': artworkSource set: ${imageSource.uri}")
           // Remember how this URI was produced so display-time loading (which only
           // gets a URI from Media3) can re-resolve Track-first with a size hint.
-          artworkResolutions.register(imageSource.uri, track, artworkConfig)
+          // Register the per-route config only when it isn't the global fallback,
+          // so display-time resolution reads the *current* config.artwork.
+          artworkResolutions.register(
+            imageSource.uri,
+            track,
+            artworkConfig?.takeIf { it !== config.artwork },
+          )
           track.copy(artworkSource = imageSource)
         }
       }

@@ -20,6 +20,7 @@ import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.browser.displayArtworkSource
 import com.audiobrowser.browser.resolveArtworkUrl
+import com.audiobrowser.browser.unattributedArtworkSource
 import com.audiobrowser.Callbacks
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
@@ -1280,18 +1281,21 @@ class Player(internal val context: Context) {
 
   /**
    * Track-first display-time artwork resolution for [CoilBitmapLoader]: registry hit
-   * (browse/now-playing-resolved URIs) → queue-tag lookup (app-supplied tracks with raw artwork).
+   * (browse/now-playing-resolved URIs) → queue-tag lookup (app-supplied tracks with raw artwork) →
+   * header-only fallback for unattributable URIs (registry eviction / process-death restore).
    * Null means "fetch the URI as-is".
    */
   suspend fun resolveDisplayArtwork(uri: String, sizeHintPixels: Int?): ImageSource? {
     val browserManager = browser?.browserManager ?: return null
-    browserManager.displayArtworkSource(uri, sizeHintPixels)?.let {
-      return it
-    }
-    val track = withContext(Dispatchers.Main) { findQueueTrackByArtworkUri(uri) } ?: return null
     val imageContext =
       sizeHintPixels?.takeIf { it > 0 }?.let { ImageContext(it.toDouble(), it.toDouble()) }
-    return browserManager.resolveArtworkUrl(track, null, imageContext)
+    browserManager.displayArtworkSource(uri, imageContext)?.let {
+      return it
+    }
+    withContext(Dispatchers.Main) { findQueueTrackByArtworkUri(uri) }?.let { track ->
+      return browserManager.resolveArtworkUrl(track, null, imageContext)
+    }
+    return browserManager.unattributedArtworkSource(uri)
   }
 
   /**
