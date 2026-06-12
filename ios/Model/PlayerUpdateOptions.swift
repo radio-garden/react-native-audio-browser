@@ -23,9 +23,6 @@ class PlayerUpdateOptions {
     shuffleMode: nil, repeatMode: nil, playbackRate: nil,
   )
 
-  /// Repeat mode
-  var repeatMode: RepeatMode = .off
-
   /// Supported playback rates for the playback-rate capability
   var playbackRates: [Double] = [0.5, 1.0, 1.5, 2.0]
 
@@ -66,27 +63,12 @@ class PlayerUpdateOptions {
     }
   }
 
-  /// Convert to Nitro Options struct (full options with all required fields)
+  /// The resolved options in their wire shape (what getOptions/onOptionsChanged report).
   func toOptions() -> Options {
     // Convert Double? to Variant_NullType_Double?
     let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
 
     return Options(
-      android: nil,
-      forwardJumpInterval: forwardJumpInterval,
-      backwardJumpInterval: backwardJumpInterval,
-      progressUpdateEventInterval: progressInterval,
-      capabilities: capabilities,
-      repeatMode: repeatMode,
-    )
-  }
-
-  /// Convert to Nitro UpdateOptions struct (partial options for getOptions())
-  func toUpdateOptions() -> UpdateOptions {
-    // Convert Double? to Variant_NullType_Double?
-    let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
-
-    return UpdateOptions(
       android: nil,
       forwardJumpInterval: forwardJumpInterval,
       backwardJumpInterval: backwardJumpInterval,

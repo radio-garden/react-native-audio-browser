@@ -25,7 +25,7 @@ What actually renders is decided by a fixed priority order. Each layer only over
 | Priority | Layer | API | Lifetime |
 | --- | --- | --- | --- |
 | 1 (highest) | **Flash** | `flashNowPlaying(update, durationMs)` | `durationMs`, on a native timer |
-| 2 | **Formatter** | `setupPlayer({ autoUpdateNowPlaying })` | as long as it's configured |
+| 2 | **Formatter** | `setupPlayer({ nowPlaying })` | as long as it's configured |
 | 3 | **Override** | `updateNowPlaying(update)` | until cleared or the track changes |
 | 4 (baseline) | **Track fields** | `Track.title` / `artist` / `album` / … | the track's time as the active track |
 
@@ -35,11 +35,11 @@ With nothing else configured, the active track's own fields are published as-is.
 
 ### The formatter — derived, continuous
 
-`autoUpdateNowPlaying` hands you the now-playing text lines outright, re-invoked whenever they could change: on track change, on every timed-metadata update, and on every playback-state change. It's the right layer for anything *derived from playback state* — the live song from ICY/ID3 metadata, a "Reconnecting…" line during a stall, an error message:
+`nowPlaying` hands you the now-playing text lines outright, re-invoked whenever they could change: on track change, on every timed-metadata update, and on every playback-state change. It's the right layer for anything *derived from playback state* — the live song from ICY/ID3 metadata, a "Reconnecting…" line during a stall, an error message:
 
 ```ts
 setupPlayer({
-  autoUpdateNowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
+  nowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
     if (error) return { artist: error.message }
     if (stalled) return { artist: 'Reconnecting…' }
     // The live song, only while actually playing — a paused stream's last

@@ -1,6 +1,5 @@
 import type { FavoriteConfig } from '../../types'
 import type { RatingType } from '../metadata'
-import type { RepeatMode } from '../queue/repeatMode'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -9,7 +8,8 @@ import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
 /**
  * Player capabilities control which media controls are available to the user.
- * All capabilities are enabled by default - only specify ones you want to disable.
+ * Most capabilities are enabled by default - only specify the ones you want to change.
+ * Exceptions that default to off: `jumpForward`, `jumpBackward`, and `favorite`.
  *
  * @example
  * ```typescript
@@ -193,10 +193,9 @@ export type AppKilledPlaybackBehavior =
  * @example
  * ```typescript
  * const options = getOptions();
- * console.log(options.repeatMode); // 'off'
+ * console.log(options.forwardJumpInterval); // 15
  * console.log(options.capabilities); // { shuffleMode: false } - only disabled caps shown
  * console.log(options.android?.skipSilence); // true (Android only)
- * console.log(options.ios?.likeOptions); // { isActive: false, title: 'Like' } (iOS only)
  * ```
  */
 export interface Options {
@@ -224,23 +223,15 @@ export interface Options {
 
   /**
    * The capabilities that the player has.
-   * All capabilities are enabled by default - this shows which ones are disabled.
+   * Most capabilities are enabled by default - this shows which ones are disabled.
    */
   capabilities: PlayerCapabilities
 
   /**
-   * The current repeat mode of the player.
-   * @default RepeatMode.Off
+   * Supported playback rates for the playback-rate capability (only present on iOS).
+   * @default [0.5, 1.0, 1.5, 2.0]
    */
-  repeatMode: RepeatMode
-}
-
-export interface FeedbackOptions {
-  /** Marks wether the option should be marked as active or "done" */
-  isActive: boolean
-
-  /** The title to give the action (relevant for iOS) */
-  title: string
+  iosPlaybackRates?: number[]
 }
 
 export interface AndroidOptions {
@@ -260,18 +251,10 @@ export interface AndroidOptions {
   skipSilence: boolean
 
   /**
-   * Whether shuffle mode is enabled for queue playback.
-   * When enabled, tracks will be played in random order.
-   *
-   * @default false
-   */
-  shuffle: boolean
-
-  /**
-   * The rating type to use for ratings.
+   * The rating type to use for ratings, when one has been set.
    * Determines how star ratings and thumbs up/down are handled.
    */
-  ratingType: RatingType
+  ratingType?: RatingType
 
   /**
    * Slot-based button layout for Android notifications.
@@ -301,14 +284,6 @@ export interface AndroidUpdateOptions {
   skipSilence?: boolean
 
   /**
-   * Whether shuffle mode is enabled for queue playback.
-   * When enabled, tracks will be played in random order.
-   *
-   * @default false
-   */
-  shuffle?: boolean
-
-  /**
    * The rating type to use for ratings.
    * Determines how star ratings and thumbs up/down are handled.
    */
@@ -328,7 +303,6 @@ export interface AndroidUpdateOptions {
 export interface NitroAndroidUpdateOptions {
   appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
   skipSilence?: boolean
-  shuffle?: boolean
   ratingType?: RatingType
   notificationButtons?: NotificationButtonLayout | null
 }
@@ -352,8 +326,7 @@ export interface NitroAndroidUpdateOptions {
  *
  * // Platform-specific options
  * updateOptions({
- *   android: { skipSilence: true },
- *   ios: { likeOptions: { isActive: true, title: 'Love' } }
+ *   android: { skipSilence: true }
  * });
  * ```
  */
@@ -475,7 +448,7 @@ export function updateOptions(options: UpdateOptions): void {
  * ```
  */
 export function getOptions(): Options {
-  return nativeBrowser.getOptions() as Options
+  return nativeBrowser.getOptions()
 }
 
 // MARK: - Event Callbacks

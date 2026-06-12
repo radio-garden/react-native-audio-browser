@@ -44,7 +44,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Customizes the now-playing title/subtitle from the track + live timed metadata + playback state.
   private var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
   /// Keep the media session controllable through a terminal error (see `keepSessionAliveOnError`).
-  private var keepSessionAliveOnError = false
+  private var keepSessionAliveOnError = true
+  /// Initial player state staged before the player exists — from setup options or the imperative
+  /// setters called pre-setup. Strict last-write-wins; consumed when the player comes up.
+  private var pendingPlayWhenReady: Bool?
+  private var pendingRepeatMode: RepeatMode?
   /// Latest live timed (ICY/ID3) metadata, passed to the formatter. Cleared on track change.
   private var latestTimedMetadata: TimedMetadata?
   private let playerOptions = PlayerUpdateOptions()
@@ -551,7 +555,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Player Setup
 
-  public func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void> {
+  public func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void> {
     Promise.async {
       // Configure audio session
       let session = AVAudioSession.sharedInstance()
@@ -615,14 +619,41 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // (never cleared on error), and next/previous stay enabled (gated on queue position, not
         // state). So the session stays controllable through errors by default — the behavior Android
         // achieves via InterceptingPlayer is already the iOS norm.
-        keepSessionAliveOnError = options.keepSessionAliveOnError ?? false
+        keepSessionAliveOnError = options.keepSessionAliveOnError ?? true
 
-        // Apply default remote commands (play, pause, next, previous, seekTo)
-        applyRemoteCommands()
+        // The bundled runtime options and initial state are part of the atomic launch
+        // description. Stage the state first so setup options and earlier pre-setup setter
+        // calls resolve by strict last-write-wins, then apply everything to the live player.
+        if let bundled = options.options {
+          updateOptions(options: bundled)
+        } else {
+          // updateOptions applies remote commands itself; without bundled options, apply the
+          // defaults (play, pause, next, previous, seekTo) here.
+          applyRemoteCommands()
+        }
+        if let mode = options.repeatMode { pendingRepeatMode = mode }
+        if let intent = options.playWhenReady { pendingPlayWhenReady = intent }
+        applyPendingPlayerState()
 
         // Notify listeners that player is ready (e.g., CarPlay)
         playerAndConfiguredBrowser.check()
       }
+    }
+  }
+
+  /// Applies initial player state staged before the player existed — from setup options or the
+  /// imperative setters called pre-setup. Consumed on apply so a later re-setup doesn't replay
+  /// stale state.
+  @MainActor
+  private func applyPendingPlayerState() {
+    guard let player else { return }
+    if let mode = pendingRepeatMode {
+      player.repeatMode = mode
+      pendingRepeatMode = nil
+    }
+    if let intent = pendingPlayWhenReady {
+      player.playWhenReady = intent
+      pendingPlayWhenReady = nil
     }
   }
 
@@ -644,6 +675,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       if playerOptions.progressUpdateEventInterval != previousInterval {
         player?.setProgressUpdateInterval(playerOptions.progressUpdateEventInterval)
       }
+
+      onOptionsChanged(playerOptions.toOptions())
     }
   }
 
@@ -661,8 +694,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     player.remoteCommands = remoteCommands
   }
 
-  public func getOptions() throws -> UpdateOptions {
-    playerOptions.toUpdateOptions()
+  public func getOptions() throws -> Options {
+    playerOptions.toOptions()
   }
 
   public func setPlaybackIntervalEnabled(enabled: Bool) {
@@ -701,11 +734,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func setPlayWhenReady(playWhenReady: Bool) throws {
-    onMainActor { player?.playWhenReady = playWhenReady }
+    onMainActor {
+      // Pre-setup this stages the intent for the player to come up with — never a no-op.
+      if let player { player.playWhenReady = playWhenReady }
+      else { pendingPlayWhenReady = playWhenReady }
+    }
   }
 
   public func getPlayWhenReady() throws -> Bool {
-    onMainActor { player?.playWhenReady ?? false }
+    onMainActor { player?.playWhenReady ?? pendingPlayWhenReady ?? false }
   }
 
   public func seekTo(position: Double) throws {
@@ -757,11 +794,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getRepeatMode() throws -> RepeatMode {
-    onMainActor { player?.repeatMode ?? .off }
+    onMainActor { player?.repeatMode ?? pendingRepeatMode ?? .off }
   }
 
   public func setRepeatMode(mode: RepeatMode) throws {
-    onMainActor { player?.repeatMode = mode }
+    onMainActor {
+      // Pre-setup this stages the mode for the player to come up with — never a no-op.
+      if let player { player.repeatMode = mode }
+      else { pendingRepeatMode = mode }
+    }
   }
 
   public func getShuffleEnabled() throws -> Bool {

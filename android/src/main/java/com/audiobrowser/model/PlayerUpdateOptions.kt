@@ -1,12 +1,12 @@
 package com.audiobrowser.model
 
-import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
+import com.margelo.nitro.audiobrowser.AndroidOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
+import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
-import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
 import com.margelo.nitro.audiobrowser.Variant_NullType_NotificationButtonLayout
 
@@ -46,7 +46,6 @@ data class PlayerUpdateOptions(
   var appKilledPlaybackBehavior: AppKilledPlaybackBehavior =
     AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION,
   var skipSilence: Boolean = false,
-  var shuffle: Boolean = false,
 ) {
   fun updateFromBridge(options: NativeUpdateOptions) {
     options.forwardJumpInterval?.let { forwardJumpInterval = it }
@@ -72,7 +71,6 @@ data class PlayerUpdateOptions(
       // Update boolean options
       androidOptions.skipSilence?.let { skipSilence = it }
 
-      androidOptions.shuffle?.let { shuffle = it }
 
       // Handle notificationButtons - variant allows distinguishing undefined from null
       androidOptions.notificationButtons?.let { variant ->
@@ -85,20 +83,17 @@ data class PlayerUpdateOptions(
     }
   }
 
-  fun toNitro(): UpdateOptions {
-    // Create Android options
-    val androidOptions =
-      AndroidUpdateOptions(
-        appKilledPlaybackBehavior = appKilledPlaybackBehavior,
-        skipSilence = skipSilence,
-        shuffle = shuffle,
-        ratingType = ratingType,
-        notificationButtons =
-          notificationButtons?.let { Variant_NullType_NotificationButtonLayout.create(it) },
-      )
-
-    return UpdateOptions(
-      android = androidOptions,
+  /** The resolved options in their wire shape (what getOptions/onOptionsChanged report). */
+  fun toNitro(): Options {
+    return Options(
+      android =
+        AndroidOptions(
+          appKilledPlaybackBehavior = appKilledPlaybackBehavior,
+          skipSilence = skipSilence,
+          ratingType = ratingType,
+          notificationButtons =
+            notificationButtons?.let { Variant_NullType_NotificationButtonLayout.create(it) },
+        ),
       forwardJumpInterval = forwardJumpInterval,
       backwardJumpInterval = backwardJumpInterval,
       progressUpdateEventInterval =

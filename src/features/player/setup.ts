@@ -4,9 +4,12 @@ import { nativeBrowser } from '../../native'
 import type { Track } from '../../types'
 import type { PlaybackError } from '../errors'
 import type { NowPlayingUpdate, TimedMetadata } from '../metadata'
-import { setPlayWhenReady } from '../playback/playWhenReady'
-import { setRepeatMode, type RepeatMode } from '../queue/repeatMode'
-import { updateOptions, type UpdateOptions } from './options'
+import type { RepeatMode } from '../queue/repeatMode'
+import type {
+  AndroidUpdateOptions,
+  NativeUpdateOptions,
+  UpdateOptions
+} from './options'
 
 /**
  * Parameters passed to the {@link FormatNowPlayingCallback}.
@@ -38,7 +41,7 @@ export type FormatNowPlayingParams = {
  * Customizes what's rendered on the now-playing surface — lock screen, notification, Control Center,
  * CarPlay, and Android Auto — for the currently playing track.
  *
- * Configure it via {@link SetupPlayerOptions.autoUpdateNowPlaying}. Where the default behavior
+ * Configure it via {@link SetupPlayerOptions.nowPlaying}. Where the default behavior
  * simply publishes the track's own `title` / `artist`, the formatter hands you the two now-playing
  * text lines outright: render the live timed metadata (the ICY / ID3 "now playing song"), surface a
  * transient status line ("Reconnecting…", an error message), drop the song while paused — anything
@@ -72,7 +75,7 @@ export type FormatNowPlayingParams = {
  * @example
  * ```ts
  * setupPlayer({
- *   autoUpdateNowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
+ *   nowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
  *     if (error)   return { artist: getOnline() ? error.message : 'Offline' }
  *     if (stalled) return { artist: 'Reconnecting…' }
  *     // Show the live song only while actually playing; otherwise fall back to the track default.
@@ -88,7 +91,7 @@ export type FormatNowPlayingParams = {
  *
  * @see {@link FormatNowPlayingParams} - the per-invocation signals passed in
  * @see {@link NowPlayingUpdate} - the shape returned
- * @see {@link SetupPlayerOptions.autoUpdateNowPlaying} - where the callback is configured
+ * @see {@link SetupPlayerOptions.nowPlaying} - where the callback is configured
  */
 export type FormatNowPlayingCallback = (
   params: FormatNowPlayingParams
@@ -254,9 +257,10 @@ export interface AndroidAudioOffloadSettings {
  */
 export type RetryConfig = {
   /**
-   * Maximum number of retry attempts before giving up.
+   * Maximum number of retry attempts before giving up. Omit to retry without an attempt
+   * limit, bounded only by `maxRetryDurationMs`.
    */
-  maxRetries: number
+  maxRetries?: number
 
   /**
    * Maximum duration in milliseconds to keep retrying before giving up.
@@ -280,7 +284,7 @@ export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 /**
  * Android-specific player setup options.
  */
-export type PartialAndroidSetupPlayerOptions = {
+export type NativeAndroidSetupOptions = {
   /**
    * Minimum duration of media that the player will attempt to buffer in ms.
    *
@@ -386,7 +390,7 @@ export type PartialAndroidSetupPlayerOptions = {
   wakeMode?: AndroidPlayerWakeMode
 }
 
-export interface PartialIOSSetupPlayerOptions {
+export interface NativeIOSSetupOptions {
   /**
    * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
    * chooses an appropriate level of buffering automatically.
@@ -429,16 +433,38 @@ export interface PartialIOSSetupPlayerOptions {
   categoryPolicy?: IOSCategoryPolicy
 }
 
-export interface PartialSetupPlayerOptions {
+export interface NativeSetupPlayerOptions {
   /** Android-specific configuration options for setup */
-  android?: PartialAndroidSetupPlayerOptions
+  android?: NativeAndroidSetupOptions
   /** iOS-specific configuration options for setup */
-  ios?: PartialIOSSetupPlayerOptions
+  ios?: NativeIOSSetupOptions
+
   /**
-   * @deprecated Never implemented natively (no-op). Use `autoUpdateNowPlaying` (its `metadata`
-   * field) instead. Will be removed in a future release.
+   * The initial play/pause intent, applied natively as soon as the player exists. Set it to
+   * `true` so the first queued track starts playing the moment it loads.
+   *
+   * Interleaves with {@link setPlayWhenReady} by strict last-write-wins, whether or not the
+   * player exists yet.
+   *
+   * @default false
    */
-  autoUpdateMetadata?: boolean
+  playWhenReady?: boolean
+
+  /**
+   * The initial repeat mode, applied natively as soon as the player exists. Interleaves with
+   * {@link setRepeatMode} by strict last-write-wins, whether or not the player exists yet.
+   *
+   * @default 'off'
+   */
+  repeatMode?: RepeatMode
+
+  /**
+   * Player options to apply atomically with setup. They're stored before the player is
+   * constructed, so e.g. Android's media session derives its notification buttons from
+   * `capabilities` the moment the service connects — no window with default controls.
+   * Normalized from the flat fields on {@link SetupPlayerOptions}.
+   */
+  options?: NativeUpdateOptions
 
   /**
    * Retry policy for load errors (network failures, timeouts, etc.)
@@ -458,21 +484,23 @@ export interface PartialSetupPlayerOptions {
    * stream), so external controllers (Android Auto / CarPlay) keep their transport controls
    * (next / previous) instead of tearing the session down. The error is still reported via
    * `onPlaybackError` / `playbackState`; this only affects what the OS media session observes.
-   * Applies on Android. On iOS the media session already stays controllable through errors (the
-   * player resolves a terminal error to paused and retains the now-playing), so this is a no-op.
-   * @default false
+   *
+   * Only Android can tear the session down, so this is the Android opt-out; on iOS the media
+   * session always stays controllable through errors (the player resolves a terminal error to
+   * paused and retains the now-playing).
+   * @default true
    */
   keepSessionAliveOnError?: boolean
 
   /**
-   * @internal Normalized from the public `autoUpdateNowPlaying` option. Whether the player
+   * @internal Normalized from the public `nowPlaying` option. Whether the player
    * publishes/refreshes track metadata on the now-playing surface.
    * @default true
    */
   autoUpdateNowPlayingMetadata?: boolean
 
   /**
-   * @internal Normalized from `autoUpdateNowPlaying` when it's a function. Customizes what's
+   * @internal Normalized from `nowPlaying` when it's a function. Customizes what's
    * rendered on the now-playing surface.
    */
   nowPlayingMetadataFormatter?: FormatNowPlayingCallback
@@ -481,49 +509,52 @@ export interface PartialSetupPlayerOptions {
 // MARK: - Lifecycle
 
 /**
- * The launch-config options {@link setupPlayer} accepts on top of the native setup fields:
- * the {@link UpdateOptions} that have a natural home at setup time, plus the initial
- * playback intent and repeat mode. All of these can still be changed later through their
- * imperative counterparts ({@link updateOptions} / {@link setPlayWhenReady} /
- * {@link setRepeatMode}); accepting them here just spares consumers the call ordering
- * (options before setup, player commands after).
+ * Android setup options: the engine-construction fields plus the Android runtime options
+ * ({@link AndroidUpdateOptions} — `notificationButtons`, `skipSilence`, …), all expressible at
+ * launch. The consumer never has to know which is which; `setupPlayer` routes each field to
+ * where it's applied.
  */
-type SetupLaunchOptions = Pick<
-  UpdateOptions,
-  | 'capabilities'
-  | 'forwardJumpInterval'
-  | 'backwardJumpInterval'
-  | 'progressUpdateEventInterval'
-  | 'iosPlaybackRates'
-> & {
-  /**
-   * The initial play/pause intent, applied once setup completes. Set it to `true` so the first
-   * queued track starts playing as soon as it loads.
-   *
-   * Equivalent to calling {@link setPlayWhenReady} after `setupPlayer` resolves.
-   */
-  playWhenReady?: boolean
+export type AndroidSetupOptions = NativeAndroidSetupOptions &
+  AndroidUpdateOptions
 
+/** iOS setup options: the audio-session fields plus the iOS runtime options. */
+export type IOSSetupOptions = NativeIOSSetupOptions & {
   /**
-   * The initial repeat mode, applied once setup completes.
-   *
-   * Equivalent to calling {@link setRepeatMode} after `setupPlayer` resolves.
-   *
-   * @default 'off'
+   * Supported playback rates for the playback-rate capability.
+   * Used by CarPlay and lock screen rate controls.
+   * @default [0.5, 1.0, 1.5, 2.0]
    */
-  repeatMode?: RepeatMode
+  playbackRates?: number[]
 }
 
 /**
- * Public setup options. Mirrors {@link PartialSetupPlayerOptions} but exposes the ergonomic
- * `autoUpdateNowPlaying` option instead of the normalized native field(s), and accepts the
- * {@link SetupLaunchOptions} so a player can be fully described in one call.
+ * Public setup options: the full launch description of a player in one bag — engine
+ * construction, runtime options (`capabilities`, jump intervals, …), and initial player state
+ * (`playWhenReady`, `repeatMode`). Everything is applied natively in one atomic setup; there
+ * is no call ordering to get right. Mirrors {@link NativeSetupPlayerOptions} but exposes the
+ * ergonomic `nowPlaying` option instead of the normalized native field(s) and merges the
+ * runtime options (which the wire nests under `options`) into the flat bag and the platform
+ * bags.
  */
 export type SetupPlayerOptions = Omit<
-  PartialSetupPlayerOptions,
-  'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter' | 'autoUpdateMetadata'
+  NativeSetupPlayerOptions,
+  | 'autoUpdateNowPlayingMetadata'
+  | 'nowPlayingMetadataFormatter'
+  | 'options'
+  | 'android'
+  | 'ios'
 > &
-  SetupLaunchOptions & {
+  Pick<
+    UpdateOptions,
+    | 'capabilities'
+    | 'forwardJumpInterval'
+    | 'backwardJumpInterval'
+    | 'progressUpdateEventInterval'
+  > & {
+    /** Android-specific options: engine construction and runtime, merged. */
+    android?: AndroidSetupOptions
+    /** iOS-specific options: audio session and runtime, merged. */
+    ios?: IOSSetupOptions
     /**
      * Controls what the player renders on the now-playing surface (lock screen / notification /
      * Control Center / CarPlay / Android Auto).
@@ -536,18 +567,18 @@ export type SetupPlayerOptions = Omit<
      *
      * @default true
      */
-    autoUpdateNowPlaying?: boolean | FormatNowPlayingCallback
+    nowPlaying?: boolean | FormatNowPlayingCallback
   }
 
 /** The normalized native now-playing fields, resolved from the public option. */
 type NormalizedNowPlaying = Pick<
-  PartialSetupPlayerOptions,
+  NativeSetupPlayerOptions,
   'autoUpdateNowPlayingMetadata' | 'nowPlayingMetadataFormatter'
 >
 
-/** Resolves the public `autoUpdateNowPlaying` option to the normalized native fields. */
+/** Resolves the public `nowPlaying` option to the normalized native fields. */
 function resolveNowPlaying(
-  value: SetupPlayerOptions['autoUpdateNowPlaying']
+  value: SetupPlayerOptions['nowPlaying']
 ): NormalizedNowPlaying {
   if (typeof value === 'function') {
     return {
@@ -580,13 +611,38 @@ function wrapNowPlayingFormatter(
 }
 
 /**
- * Initializes the player with the specified options.
+ * The object's entries whose values aren't `undefined`. `null` stays: it's meaningful on some
+ * fields (`progressUpdateEventInterval: null` disables progress events, `notificationButtons:
+ * null` empties the layout), so only `undefined` means "not provided".
+ */
+function definedFields<T extends object>(obj: T): Partial<T> {
+  const out: Partial<T> = {}
+  for (const key in obj) {
+    if (obj[key] !== undefined) out[key] = obj[key]
+  }
+  return out
+}
+
+/** Spreads `value` under `key` only when it has at least one field. */
+function nonEmpty<K extends string, T extends object>(
+  key: K,
+  value: T
+): { [P in K]?: T } {
+  return Object.keys(value).length > 0
+    ? ({ [key]: value } as { [P in K]?: T })
+    : {}
+}
+
+/**
+ * Initializes the player with the specified options — the full launch description in one
+ * declarative, atomic call. Runtime options (`capabilities`, jump intervals,
+ * `notificationButtons`, …) and the initial `playWhenReady` / `repeatMode` are applied
+ * natively as part of setup itself, so there is no setup-then-command ordering for consumers
+ * to know about, and no window where the player exists without its options.
  *
- * Besides the native setup fields, this accepts the launch config that would otherwise need
- * its own ordering-sensitive calls: {@link UpdateOptions} fields (`capabilities`, jump
- * intervals, …) are applied *before* the native setup so the player is constructed with them
- * in place, while `playWhenReady` / `repeatMode` are applied *after* it resolves (they need
- * the live player). One declarative call instead of three imperative ones.
+ * Calling it again reconfigures the player in place: newly provided fields are merged over
+ * the previous ones, and the audio engine is rebuilt when construction-bound fields (buffers,
+ * wake mode, …) changed.
  *
  * @param options - The options to initialize the player with.
  *
@@ -597,7 +653,7 @@ function wrapNowPlayingFormatter(
  *   playWhenReady: true,
  *   repeatMode: 'queue',
  *   capabilities: { favorite: true },
- *   android: { audioContentType: 'music' },
+ *   android: { audioContentType: 'music', notificationButtons: { overflow: ['favorite'] } },
  *   ios: { category: 'playback' }
  * })
  * ```
@@ -606,40 +662,50 @@ export async function setupPlayer(
   options: SetupPlayerOptions = {}
 ): Promise<void> {
   const {
-    autoUpdateNowPlaying,
-    playWhenReady,
-    repeatMode,
+    nowPlaying,
     capabilities,
     forwardJumpInterval,
     backwardJumpInterval,
     progressUpdateEventInterval,
-    iosPlaybackRates,
+    android = {},
+    ios = {},
     ...nativeSetup
   } = options
 
-  // Options first — they're stored natively even before the player exists — so the player is
-  // constructed with them already in place (e.g. Android's media session derives its
-  // notification buttons from `capabilities` the moment the service connects). Note
-  // `progressUpdateEventInterval: null` is meaningful (disables progress events), so only
-  // `undefined` means "not provided".
-  const updates: UpdateOptions = {}
-  if (capabilities !== undefined) updates.capabilities = capabilities
-  if (forwardJumpInterval !== undefined)
-    updates.forwardJumpInterval = forwardJumpInterval
-  if (backwardJumpInterval !== undefined)
-    updates.backwardJumpInterval = backwardJumpInterval
-  if (progressUpdateEventInterval !== undefined)
-    updates.progressUpdateEventInterval = progressUpdateEventInterval
-  if (iosPlaybackRates !== undefined)
-    updates.iosPlaybackRates = iosPlaybackRates
-  if (Object.keys(updates).length > 0) updateOptions(updates)
+  // Split the merged public bags back into the wire taxonomy: construction fields stay under
+  // `android` / `ios`, runtime options nest under `options`. The consumer never has to learn
+  // which is which.
+  const {
+    appKilledPlaybackBehavior,
+    skipSilence,
+    ratingType,
+    notificationButtons,
+    ...androidSetup
+  } = android
+  const { playbackRates, ...iosSetup } = ios
 
-  await nativeBrowser.setupPlayer({
-    ...nativeSetup,
-    ...resolveNowPlaying(autoUpdateNowPlaying)
+  const updates: NativeUpdateOptions = definedFields({
+    capabilities,
+    forwardJumpInterval,
+    backwardJumpInterval,
+    progressUpdateEventInterval,
+    iosPlaybackRates: playbackRates,
+    ...nonEmpty(
+      'android',
+      definedFields({
+        appKilledPlaybackBehavior,
+        skipSilence,
+        ratingType,
+        notificationButtons
+      })
+    )
   })
 
-  // These need the live player (on Android, the bound service): apply after setup resolves.
-  if (repeatMode !== undefined) setRepeatMode(repeatMode)
-  if (playWhenReady !== undefined) setPlayWhenReady(playWhenReady)
+  return nativeBrowser.setupPlayer({
+    ...nativeSetup,
+    ...nonEmpty('android', definedFields(androidSetup)),
+    ...nonEmpty('ios', definedFields(iosSetup)),
+    ...resolveNowPlaying(nowPlaying),
+    ...nonEmpty('options', updates)
+  })
 }

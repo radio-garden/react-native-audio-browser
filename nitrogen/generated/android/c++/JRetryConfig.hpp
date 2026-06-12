@@ -31,12 +31,12 @@ namespace margelo::nitro::audiobrowser {
     [[nodiscard]]
     RetryConfig toCpp() const {
       static const auto clazz = javaClassStatic();
-      static const auto fieldMaxRetries = clazz->getField<double>("maxRetries");
-      double maxRetries = this->getFieldValue(fieldMaxRetries);
+      static const auto fieldMaxRetries = clazz->getField<jni::JDouble>("maxRetries");
+      jni::local_ref<jni::JDouble> maxRetries = this->getFieldValue(fieldMaxRetries);
       static const auto fieldMaxRetryDurationMs = clazz->getField<jni::JDouble>("maxRetryDurationMs");
       jni::local_ref<jni::JDouble> maxRetryDurationMs = this->getFieldValue(fieldMaxRetryDurationMs);
       return RetryConfig(
-        maxRetries,
+        maxRetries != nullptr ? std::make_optional(maxRetries->value()) : std::nullopt,
         maxRetryDurationMs != nullptr ? std::make_optional(maxRetryDurationMs->value()) : std::nullopt
       );
     }
@@ -47,12 +47,12 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JRetryConfig::javaobject> fromCpp(const RetryConfig& value) {
-      using JSignature = JRetryConfig(double, jni::alias_ref<jni::JDouble>);
+      using JSignature = JRetryConfig(jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
-        value.maxRetries,
+        value.maxRetries.has_value() ? jni::JDouble::valueOf(value.maxRetries.value()) : nullptr,
         value.maxRetryDurationMs.has_value() ? jni::JDouble::valueOf(value.maxRetryDurationMs.value()) : nullptr
       );
     }

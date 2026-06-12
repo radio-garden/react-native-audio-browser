@@ -81,12 +81,10 @@ namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChanged
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NativeBrowseGate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
-// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
+// Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeSetupPlayerOptions; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
@@ -139,9 +137,8 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include <NitroModules/Promise.hpp>
 #include "NavigationError.hpp"
 #include "NativeBrowseGate.hpp"
-#include "PartialSetupPlayerOptions.hpp"
+#include "NativeSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
-#include "UpdateOptions.hpp"
 #include "Progress.hpp"
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
@@ -317,9 +314,9 @@ namespace margelo::nitro::audiobrowser {
       virtual void clearBrowseGate() = 0;
       virtual std::optional<NativeBrowseGate> getBrowseGate() = 0;
       virtual bool isCarConnected() = 0;
-      virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
+      virtual std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;
-      virtual UpdateOptions getOptions() = 0;
+      virtual Options getOptions() = 0;
       virtual void load(const Track& track) = 0;
       virtual void reset() = 0;
       virtual void play() = 0;

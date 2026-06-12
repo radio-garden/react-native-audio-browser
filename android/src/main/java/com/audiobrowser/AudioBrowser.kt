@@ -25,6 +25,7 @@ import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.audiobrowser.player.Player
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
@@ -52,7 +53,7 @@ import com.margelo.nitro.audiobrowser.NavigationErrorType
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Options
-import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
+import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -76,7 +77,6 @@ import com.margelo.nitro.audiobrowser.SleepTimer
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackMetadata
-import com.margelo.nitro.audiobrowser.UpdateOptions
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -145,6 +145,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var setupOptions = PlayerSetupOptions()
   private var connectedService: Service? = null
   private var setupPromise: ((Unit) -> Unit)? = null
+
+  // Initial player state staged before the player exists — from setup options or the imperative
+  // setters called pre-bind. Strict last-write-wins; consumed when the player comes up.
+  private var pendingPlayWhenReady: Boolean? = null
+  private var pendingRepeatMode: RepeatMode? = null
 
   /** Post callback to main handler for consistent async delivery to JS - avoids deadlocks */
   private fun post(block: () -> Unit) = handler.post(block)
@@ -713,12 +718,20 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: Player Setup and Options
   // ============================================================================
 
-  override fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit> {
+  override fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit> {
     return Promise.async(mainScope) {
       setupOptions.update(options)
+      // The bundled runtime options and initial state are part of the atomic launch
+      // description: stage them here, apply them together with the engine below (or at
+      // service connect). Last-write-wins with their imperative counterparts.
+      options.options?.let { updateOptions.updateFromBridge(it) }
+      options.repeatMode?.let { pendingRepeatMode = it }
+      options.playWhenReady?.let { pendingPlayWhenReady = it }
 
       connectedService?.let {
+        it.player.applyOptions(updateOptions)
         it.player.setup(setupOptions)
+        applyPendingPlayerState(it.player)
         return@async
       }
 
@@ -750,8 +763,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     connectedService?.let { player.applyOptions(updateOptions) }
   }
 
-  override fun getOptions(): UpdateOptions {
-    return player.getOptions().toNitro()
+  override fun getOptions(): Options {
+    // The holder is the source of truth whether or not the player exists yet — updateOptions
+    // merges into it and setup/connect applies it to the player.
+    return updateOptions.toNitro()
   }
 
   // ============================================================================
@@ -777,10 +792,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun stop() = runBlockingOnMain { player.stop() }
 
   override fun setPlayWhenReady(playWhenReady: Boolean) = runBlockingOnMain {
-    player.playWhenReady = playWhenReady
+    // Pre-setup this stages the intent for the player to come up with — never throws.
+    connectedService?.player?.let { it.playWhenReady = playWhenReady }
+      ?: run { pendingPlayWhenReady = playWhenReady }
   }
 
-  override fun getPlayWhenReady(): Boolean = runBlockingOnMain { player.playWhenReady }
+  override fun getPlayWhenReady(): Boolean = runBlockingOnMain {
+    connectedService?.player?.playWhenReady ?: pendingPlayWhenReady ?: false
+  }
 
   override fun seekTo(position: Double) = runBlockingOnMain {
     player.seekTo((position * 1000).toLong(), TimeUnit.MILLISECONDS)
@@ -812,9 +831,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun getPlayingState(): PlayingState = runBlockingOnMain { player.getPlayingState() }
 
-  override fun getRepeatMode(): RepeatMode = runBlockingOnMain { player.repeatMode }
+  override fun getRepeatMode(): RepeatMode = runBlockingOnMain {
+    connectedService?.player?.repeatMode ?: pendingRepeatMode ?: RepeatMode.OFF
+  }
 
-  override fun setRepeatMode(mode: RepeatMode) = runBlockingOnMain { player.repeatMode = mode }
+  override fun setRepeatMode(mode: RepeatMode) = runBlockingOnMain {
+    // Pre-setup this stages the mode for the player to come up with — never throws.
+    connectedService?.player?.let { it.repeatMode = mode } ?: run { pendingRepeatMode = mode }
+  }
 
   override fun getShuffleEnabled(): Boolean = runBlockingOnMain { player.shuffleMode }
 
@@ -1059,6 +1083,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           player.setCallbacks(callbacks)
           player.applyOptions(updateOptions)
           player.setup(setupOptions)
+          applyPendingPlayerState(player)
           // Start observing network connectivity changes
           player.observeNetworkConnectivity(mainScope)
           // Set browser reference for media URL transformation
@@ -1085,6 +1110,21 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       setupPromise?.invoke(Unit)
       setupPromise = null
+    }
+  }
+
+  /**
+   * Applies initial player state staged before the player existed. Consumed on apply so a later
+   * re-setup doesn't replay stale state.
+   */
+  private fun applyPendingPlayerState(player: Player) {
+    pendingRepeatMode?.let {
+      player.repeatMode = it
+      pendingRepeatMode = null
+    }
+    pendingPlayWhenReady?.let {
+      player.playWhenReady = it
+      pendingPlayWhenReady = null
     }
   }
 
@@ -1289,7 +1329,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       }
 
       override fun onOptionsChanged(options: PlayerUpdateOptions) {
-        // Not currently emitted to JS
+        post { this@AudioBrowser.onOptionsChanged(options.toNitro()) }
       }
 
       override fun onFavoriteChanged(event: FavoriteChangedEvent) {

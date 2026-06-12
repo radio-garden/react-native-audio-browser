@@ -18,8 +18,14 @@ public extension RetryConfig {
   /**
    * Create a new instance of `RetryConfig`.
    */
-  init(maxRetries: Double, maxRetryDurationMs: Double?) {
-    self.init(maxRetries, { () -> bridge.std__optional_double_ in
+  init(maxRetries: Double?, maxRetryDurationMs: Double?) {
+    self.init({ () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = maxRetries {
+        return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_double_ in
       if let __unwrappedValue = maxRetryDurationMs {
         return bridge.create_std__optional_double_(__unwrappedValue)
       } else {
@@ -29,8 +35,15 @@ public extension RetryConfig {
   }
 
   @inline(__always)
-  var maxRetries: Double {
-    return self.__maxRetries
+  var maxRetries: Double? {
+    return { () -> Double? in
+      if bridge.has_value_std__optional_double_(self.__maxRetries) {
+        let __unwrapped = bridge.get_std__optional_double_(self.__maxRetries)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)

@@ -7,7 +7,6 @@ import type {
   PlayingState,
   RepeatModeChangedEvent,
   NativeUpdateOptions,
-  UpdateOptions,
   Options,
   Playback,
   PlaybackActiveTrackChangedEvent,
@@ -35,7 +34,7 @@ import type {
   BatteryOptimizationStatus,
   BatteryOptimizationStatusChangedEvent,
   BatteryWarningPendingChangedEvent,
-  PartialSetupPlayerOptions
+  NativeSetupPlayerOptions
 } from '../features'
 import type {
   AudioBrowser as AudioBrowserSpec,
@@ -533,8 +532,15 @@ export class NativeAudioBrowser
   }
 
   // MARK: Player init and config
-  async setupPlayer(options: PartialSetupPlayerOptions): Promise<void> {
+  async setupPlayer(options: NativeSetupPlayerOptions): Promise<void> {
     await super.setupPlayer(options)
+    // Apply the launch options and initial state bundled in setup — same
+    // atomic contract as the native platforms.
+    if (options.options) this.updateOptions(options.options)
+    if (options.repeatMode !== undefined) this.setRepeatMode(options.repeatMode)
+    if (options.playWhenReady !== undefined) {
+      this.setPlayWhenReady(options.playWhenReady)
+    }
   }
 
   updateOptions(options: NativeUpdateOptions): void {
@@ -551,7 +557,7 @@ export class NativeAudioBrowser
     }
   }
 
-  getOptions(): UpdateOptions {
+  getOptions(): Options {
     return this.optionsManager.getOptions()
   }
 

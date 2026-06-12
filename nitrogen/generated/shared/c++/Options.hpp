@@ -32,15 +32,13 @@
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `PlayerCapabilities` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
-// Forward declaration of `RepeatMode` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 
 #include "AndroidOptions.hpp"
 #include <optional>
 #include <NitroModules/Null.hpp>
 #include <variant>
 #include "PlayerCapabilities.hpp"
-#include "RepeatMode.hpp"
+#include <vector>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -54,11 +52,11 @@ namespace margelo::nitro::audiobrowser {
     double backwardJumpInterval     SWIFT_PRIVATE;
     std::optional<std::variant<nitro::NullType, double>> progressUpdateEventInterval     SWIFT_PRIVATE;
     PlayerCapabilities capabilities     SWIFT_PRIVATE;
-    RepeatMode repeatMode     SWIFT_PRIVATE;
+    std::optional<std::vector<double>> iosPlaybackRates     SWIFT_PRIVATE;
 
   public:
     Options() = default;
-    explicit Options(std::optional<AndroidOptions> android, double forwardJumpInterval, double backwardJumpInterval, std::optional<std::variant<nitro::NullType, double>> progressUpdateEventInterval, PlayerCapabilities capabilities, RepeatMode repeatMode): android(android), forwardJumpInterval(forwardJumpInterval), backwardJumpInterval(backwardJumpInterval), progressUpdateEventInterval(progressUpdateEventInterval), capabilities(capabilities), repeatMode(repeatMode) {}
+    explicit Options(std::optional<AndroidOptions> android, double forwardJumpInterval, double backwardJumpInterval, std::optional<std::variant<nitro::NullType, double>> progressUpdateEventInterval, PlayerCapabilities capabilities, std::optional<std::vector<double>> iosPlaybackRates): android(android), forwardJumpInterval(forwardJumpInterval), backwardJumpInterval(backwardJumpInterval), progressUpdateEventInterval(progressUpdateEventInterval), capabilities(capabilities), iosPlaybackRates(iosPlaybackRates) {}
 
   public:
     friend bool operator==(const Options& lhs, const Options& rhs) = default;
@@ -79,7 +77,7 @@ namespace margelo::nitro {
         JSIConverter<double>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "backwardJumpInterval"))),
         JSIConverter<std::optional<std::variant<nitro::NullType, double>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "progressUpdateEventInterval"))),
         JSIConverter<margelo::nitro::audiobrowser::PlayerCapabilities>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "capabilities"))),
-        JSIConverter<margelo::nitro::audiobrowser::RepeatMode>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "repeatMode")))
+        JSIConverter<std::optional<std::vector<double>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "iosPlaybackRates")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::Options& arg) {
@@ -89,7 +87,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "backwardJumpInterval"), JSIConverter<double>::toJSI(runtime, arg.backwardJumpInterval));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "progressUpdateEventInterval"), JSIConverter<std::optional<std::variant<nitro::NullType, double>>>::toJSI(runtime, arg.progressUpdateEventInterval));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "capabilities"), JSIConverter<margelo::nitro::audiobrowser::PlayerCapabilities>::toJSI(runtime, arg.capabilities));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "repeatMode"), JSIConverter<margelo::nitro::audiobrowser::RepeatMode>::toJSI(runtime, arg.repeatMode));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "iosPlaybackRates"), JSIConverter<std::optional<std::vector<double>>>::toJSI(runtime, arg.iosPlaybackRates));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -105,7 +103,7 @@ namespace margelo::nitro {
       if (!JSIConverter<double>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "backwardJumpInterval")))) return false;
       if (!JSIConverter<std::optional<std::variant<nitro::NullType, double>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "progressUpdateEventInterval")))) return false;
       if (!JSIConverter<margelo::nitro::audiobrowser::PlayerCapabilities>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "capabilities")))) return false;
-      if (!JSIConverter<margelo::nitro::audiobrowser::RepeatMode>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "repeatMode")))) return false;
+      if (!JSIConverter<std::optional<std::vector<double>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "iosPlaybackRates")))) return false;
       return true;
     }
   };

@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../native', () => ({
   nativeBrowser: {
-    setupPlayer: vi.fn().mockResolvedValue(undefined),
-    updateOptions: vi.fn(),
-    setRepeatMode: vi.fn(),
-    setPlayWhenReady: vi.fn()
+    setupPlayer: vi.fn().mockResolvedValue(undefined)
   }
 }))
 
@@ -19,97 +16,103 @@ beforeEach(() => {
   native.setupPlayer.mockResolvedValue(undefined)
 })
 
-function orderOf(fn: { mock: { invocationCallOrder: number[] } }): number {
-  expect(fn.mock.invocationCallOrder).toHaveLength(1)
-  return fn.mock.invocationCallOrder[0]!
+function payload() {
+  expect(native.setupPlayer).toHaveBeenCalledTimes(1)
+  return native.setupPlayer.mock.calls[0]![0]
 }
 
-describe('setupPlayer launch options', () => {
-  it('applies update-options before native setup, player state after it', async () => {
+describe('setupPlayer wire regrouping', () => {
+  it('sends the full launch description in a single native call', async () => {
     await setupPlayer({
+      retry: true,
       playWhenReady: true,
       repeatMode: 'queue',
       capabilities: { favorite: true }
     })
 
-    expect(native.updateOptions).toHaveBeenCalledWith({
-      capabilities: { favorite: true }
+    expect(payload()).toEqual({
+      retry: true,
+      playWhenReady: true,
+      repeatMode: 'queue',
+      autoUpdateNowPlayingMetadata: true,
+      nowPlayingMetadataFormatter: undefined,
+      options: { capabilities: { favorite: true } }
     })
-    expect(native.setRepeatMode).toHaveBeenCalledWith('queue')
-    expect(native.setPlayWhenReady).toHaveBeenCalledWith(true)
-
-    // Options land before the player is constructed; commands after it exists.
-    expect(orderOf(native.updateOptions)).toBeLessThan(
-      orderOf(native.setupPlayer)
-    )
-    expect(orderOf(native.setupPlayer)).toBeLessThan(
-      orderOf(native.setRepeatMode)
-    )
-    expect(orderOf(native.setupPlayer)).toBeLessThan(
-      orderOf(native.setPlayWhenReady)
-    )
   })
 
-  it('skips the extra calls when no launch options are given', async () => {
+  it('omits the options bag when no runtime options are given', async () => {
     await setupPlayer({ retry: true })
 
-    expect(native.updateOptions).not.toHaveBeenCalled()
-    expect(native.setRepeatMode).not.toHaveBeenCalled()
-    expect(native.setPlayWhenReady).not.toHaveBeenCalled()
+    expect(payload()).not.toHaveProperty('options')
   })
 
-  it('keeps the launch options out of the native setup payload', async () => {
+  it('splits the merged android bag into construction and runtime fields', async () => {
     await setupPlayer({
-      retry: true,
-      keepSessionAliveOnError: true,
-      playWhenReady: true,
-      repeatMode: 'queue',
-      capabilities: { favorite: true },
-      forwardJumpInterval: 30,
-      android: { audioContentType: 'music' }
+      android: {
+        minBuffer: 50_000,
+        wakeMode: 'network',
+        skipSilence: true,
+        notificationButtons: { overflow: ['favorite'] }
+      }
     })
 
-    expect(native.setupPlayer).toHaveBeenCalledWith({
-      retry: true,
-      keepSessionAliveOnError: true,
-      android: { audioContentType: 'music' },
-      autoUpdateNowPlayingMetadata: true,
-      nowPlayingMetadataFormatter: undefined
-    })
-  })
-
-  it('forwards an explicit progressUpdateEventInterval: null (meaning: disabled)', async () => {
-    await setupPlayer({ progressUpdateEventInterval: null })
-
-    expect(native.updateOptions).toHaveBeenCalledWith({
-      progressUpdateEventInterval: null
+    const sent = payload()
+    expect(sent.android).toEqual({ minBuffer: 50_000, wakeMode: 'network' })
+    expect(sent.options).toEqual({
+      android: {
+        skipSilence: true,
+        notificationButtons: { overflow: ['favorite'] }
+      }
     })
   })
 
-  it('does not apply playWhenReady/repeatMode when native setup fails', async () => {
-    native.setupPlayer.mockRejectedValueOnce(new Error('bind failed'))
+  it('moves ios playbackRates into the runtime options', async () => {
+    await setupPlayer({
+      ios: { category: 'playback', playbackRates: [0.5, 1, 2] }
+    })
 
-    await expect(
-      setupPlayer({ playWhenReady: true, repeatMode: 'queue' })
-    ).rejects.toThrow('bind failed')
+    const sent = payload()
+    expect(sent.ios).toEqual({ category: 'playback' })
+    expect(sent.options).toEqual({ iosPlaybackRates: [0.5, 1, 2] })
+  })
 
-    expect(native.setRepeatMode).not.toHaveBeenCalled()
-    expect(native.setPlayWhenReady).not.toHaveBeenCalled()
+  it('omits a platform bag that only carried runtime fields', async () => {
+    await setupPlayer({ android: { skipSilence: true } })
+
+    expect(payload()).not.toHaveProperty('android')
+  })
+
+  it('forwards meaningful nulls (progress disabled, empty button layout)', async () => {
+    await setupPlayer({
+      progressUpdateEventInterval: null,
+      android: { notificationButtons: null }
+    })
+
+    expect(payload().options).toEqual({
+      progressUpdateEventInterval: null,
+      android: { notificationButtons: null }
+    })
   })
 
   it('normalizes a formatter callback and coalesces its undefined to {}', async () => {
     const formatter = vi.fn(() => undefined)
-    await setupPlayer({ autoUpdateNowPlaying: formatter })
+    await setupPlayer({ nowPlaying: formatter })
 
-    const payload = native.setupPlayer.mock.calls[0]![0]
-    expect(payload.autoUpdateNowPlayingMetadata).toBe(true)
+    const sent = payload()
+    expect(sent.autoUpdateNowPlayingMetadata).toBe(true)
     // The wrapper never lets `undefined` cross the Nitro boundary.
     expect(
-      payload.nowPlayingMetadataFormatter!({
+      sent.nowPlayingMetadataFormatter!({
         track: { title: 'Station' },
         playWhenReady: true,
         stalled: false
       })
     ).toEqual({})
+  })
+
+  it('maps nowPlaying: false to disabled metadata publishing', async () => {
+    await setupPlayer({ nowPlaying: false })
+
+    expect(payload().autoUpdateNowPlayingMetadata).toBe(false)
   })
 })

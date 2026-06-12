@@ -18,8 +18,14 @@ public extension AndroidOptions {
   /**
    * Create a new instance of `AndroidOptions`.
    */
-  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Bool, shuffle: Bool, ratingType: RatingType, notificationButtons: Variant_NullType_NotificationButtonLayout?) {
-    self.init(appKilledPlaybackBehavior, skipSilence, shuffle, ratingType, { () -> bridge.std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ in
+  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Bool, ratingType: RatingType?, notificationButtons: Variant_NullType_NotificationButtonLayout?) {
+    self.init(appKilledPlaybackBehavior, skipSilence, { () -> bridge.std__optional_RatingType_ in
+      if let __unwrappedValue = ratingType {
+        return bridge.create_std__optional_RatingType_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ in
       if let __unwrappedValue = notificationButtons {
         return bridge.create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__({ () -> bridge.std__variant_nitro__NullType__NotificationButtonLayout_ in
           switch __unwrappedValue {
@@ -46,13 +52,8 @@ public extension AndroidOptions {
   }
   
   @inline(__always)
-  var shuffle: Bool {
-    return self.__shuffle
-  }
-  
-  @inline(__always)
-  var ratingType: RatingType {
-    return self.__ratingType
+  var ratingType: RatingType? {
+    return self.__ratingType.value
   }
   
   @inline(__always)

@@ -18,7 +18,7 @@ public extension NitroAndroidUpdateOptions {
   /**
    * Create a new instance of `NitroAndroidUpdateOptions`.
    */
-  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Bool?, shuffle: Bool?, ratingType: RatingType?, notificationButtons: Variant_NullType_NotificationButtonLayout?) {
+  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Bool?, ratingType: RatingType?, notificationButtons: Variant_NullType_NotificationButtonLayout?) {
     self.init({ () -> bridge.std__optional_AppKilledPlaybackBehavior_ in
       if let __unwrappedValue = appKilledPlaybackBehavior {
         return bridge.create_std__optional_AppKilledPlaybackBehavior_(__unwrappedValue)
@@ -27,12 +27,6 @@ public extension NitroAndroidUpdateOptions {
       }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = skipSilence {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = shuffle {
         return bridge.create_std__optional_bool_(__unwrappedValue)
       } else {
         return .init()
@@ -69,18 +63,6 @@ public extension NitroAndroidUpdateOptions {
     return { () -> Bool? in
       if bridge.has_value_std__optional_bool_(self.__skipSilence) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__skipSilence)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var shuffle: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__shuffle) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__shuffle)
         return __unwrapped
       } else {
         return nil

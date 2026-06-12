@@ -245,7 +245,7 @@ Callbacks are set from:
 Async methods return `Promise<T>`:
 
 ```swift
-func setupPlayer(options: PartialSetupPlayerOptions) throws -> Promise<Void>
+func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void>
 ```
 
 Use Nitro's Promise helpers for async operations.

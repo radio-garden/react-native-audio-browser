@@ -51,11 +51,16 @@ class RetryManager {
       maxRetryDuration = Self.defaultMaxRetryDurationMs / 1000
       logger.debug("Retry policy: \(enabled ? "infinite" : "disabled")")
     case let .second(retryConfig):
-      let maxRetries = Int(retryConfig.maxRetries)
-      policy = .limited(maxRetries: maxRetries)
       let durationMs = retryConfig.maxRetryDurationMs ?? Self.defaultMaxRetryDurationMs
       maxRetryDuration = durationMs / 1000
-      logger.debug("Retry policy: limited to \(maxRetries) retries, max duration \(self.maxRetryDuration)s")
+      // No attempt cap = retry indefinitely, bounded only by the duration.
+      if let maxRetries = retryConfig.maxRetries.map(Int.init) {
+        policy = .limited(maxRetries: maxRetries)
+        logger.debug("Retry policy: limited to \(maxRetries) retries, max duration \(self.maxRetryDuration)s")
+      } else {
+        policy = .infinite
+        logger.debug("Retry policy: infinite, max duration \(self.maxRetryDuration)s")
+      }
     }
   }
 

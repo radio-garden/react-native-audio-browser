@@ -48,8 +48,6 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JAppKilledPlaybackBehavior> appKilledPlaybackBehavior = this->getFieldValue(fieldAppKilledPlaybackBehavior);
       static const auto fieldSkipSilence = clazz->getField<jboolean>("skipSilence");
       jboolean skipSilence = this->getFieldValue(fieldSkipSilence);
-      static const auto fieldShuffle = clazz->getField<jboolean>("shuffle");
-      jboolean shuffle = this->getFieldValue(fieldShuffle);
       static const auto fieldRatingType = clazz->getField<JRatingType>("ratingType");
       jni::local_ref<JRatingType> ratingType = this->getFieldValue(fieldRatingType);
       static const auto fieldNotificationButtons = clazz->getField<JVariant_NullType_NotificationButtonLayout>("notificationButtons");
@@ -57,8 +55,7 @@ namespace margelo::nitro::audiobrowser {
       return AndroidOptions(
         appKilledPlaybackBehavior->toCpp(),
         static_cast<bool>(skipSilence),
-        static_cast<bool>(shuffle),
-        ratingType->toCpp(),
+        ratingType != nullptr ? std::make_optional(ratingType->toCpp()) : std::nullopt,
         notificationButtons != nullptr ? std::make_optional(notificationButtons->toCpp()) : std::nullopt
       );
     }
@@ -69,15 +66,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JAndroidOptions::javaobject> fromCpp(const AndroidOptions& value) {
-      using JSignature = JAndroidOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jboolean, jboolean, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_NullType_NotificationButtonLayout>);
+      using JSignature = JAndroidOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jboolean, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_NullType_NotificationButtonLayout>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         JAppKilledPlaybackBehavior::fromCpp(value.appKilledPlaybackBehavior),
         value.skipSilence,
-        value.shuffle,
-        JRatingType::fromCpp(value.ratingType),
+        value.ratingType.has_value() ? JRatingType::fromCpp(value.ratingType.value()) : nullptr,
         value.notificationButtons.has_value() ? JVariant_NullType_NotificationButtonLayout::fromCpp(value.notificationButtons.value()) : nullptr
       );
     }

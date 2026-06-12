@@ -940,7 +940,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setupPlayer(options: PartialSetupPlayerOptions): Promise<Unit>
+  abstract fun setupPlayer(options: NativeSetupPlayerOptions): Promise<Unit>
   
   @DoNotStrip
   @Keep
@@ -948,7 +948,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun getOptions(): UpdateOptions
+  abstract fun getOptions(): Options
   
   @DoNotStrip
   @Keep

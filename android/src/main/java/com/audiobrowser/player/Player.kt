@@ -1023,7 +1023,6 @@ class Player(internal val context: Context) {
     // Check what changed
     val skipSilenceChanged = previousOptions.skipSilence != options.skipSilence
     val ratingTypeChanged = previousOptions.ratingType != options.ratingType
-    val shuffleChanged = previousOptions.shuffle != options.shuffle
     val progressUpdateEventIntervalChanged =
       previousOptions.progressUpdateEventInterval != options.progressUpdateEventInterval
     val forwardJumpIntervalChanged =
@@ -1039,7 +1038,6 @@ class Player(internal val context: Context) {
     val hasChanged =
       skipSilenceChanged ||
         ratingTypeChanged ||
-        shuffleChanged ||
         progressUpdateEventIntervalChanged ||
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged ||
@@ -1054,10 +1052,6 @@ class Player(internal val context: Context) {
 
     if (ratingTypeChanged) {
       options.ratingType?.let { ratingType = it }
-    }
-
-    if (shuffleChanged) {
-      shuffleMode = options.shuffle
     }
 
     if (capabilitiesChanged) {

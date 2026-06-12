@@ -38,8 +38,6 @@
 #include "JFavoriteConfig.hpp"
 #include "FavoritesMatchMode.hpp"
 #include "JFavoritesMatchMode.hpp"
-#include "RepeatMode.hpp"
-#include "JRepeatMode.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

@@ -18,7 +18,7 @@ public extension Options {
   /**
    * Create a new instance of `Options`.
    */
-  init(android: AndroidOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, repeatMode: RepeatMode) {
+  init(android: AndroidOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, iosPlaybackRates: [Double]?) {
     self.init({ () -> bridge.std__optional_AndroidOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_AndroidOptions_(__unwrappedValue)
@@ -38,7 +38,19 @@ public extension Options {
       } else {
         return .init()
       }
-    }(), capabilities, repeatMode)
+    }(), capabilities, { () -> bridge.std__optional_std__vector_double__ in
+      if let __unwrappedValue = iosPlaybackRates {
+        return bridge.create_std__optional_std__vector_double__({ () -> bridge.std__vector_double_ in
+          var __vector = bridge.create_std__vector_double_(__unwrappedValue.count)
+          for __item in __unwrappedValue {
+            __vector.push_back(__item)
+          }
+          return __vector
+        }())
+      } else {
+        return .init()
+      }
+    }())
   }
 
   @inline(__always)
@@ -86,7 +98,14 @@ public extension Options {
   }
   
   @inline(__always)
-  var repeatMode: RepeatMode {
-    return self.__repeatMode
+  var iosPlaybackRates: [Double]? {
+    return { () -> [Double]? in
+      if bridge.has_value_std__optional_std__vector_double__(self.__iosPlaybackRates) {
+        let __unwrapped = bridge.get_std__optional_std__vector_double__(self.__iosPlaybackRates)
+        return __unwrapped.map({ __item in __item })
+      } else {
+        return nil
+      }
+    }()
   }
 }

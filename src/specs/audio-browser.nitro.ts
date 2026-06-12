@@ -27,10 +27,9 @@ import type {
 } from '../features/playback/progress'
 import type { Playback } from '../features/playback/state'
 import type {
+  NativeSetupPlayerOptions,
   NativeUpdateOptions,
-  Options,
-  PartialSetupPlayerOptions,
-  UpdateOptions
+  Options
 } from '../features/player'
 import type { PlaybackActiveTrackChangedEvent } from '../features/queue/activeTrack'
 import type { PlaybackQueueEndedEvent } from '../features/queue/queue'
@@ -140,9 +139,9 @@ export interface AudioBrowser extends HybridObject<{
   onCarConnectedChanged: (connected: boolean) => void
 
   // MARK: player init and config
-  setupPlayer(options: PartialSetupPlayerOptions): Promise<void>
+  setupPlayer(options: NativeSetupPlayerOptions): Promise<void>
   updateOptions(options: NativeUpdateOptions): void
-  getOptions(): UpdateOptions
+  getOptions(): Options
 
   // // MARK: player events
   onChapterMetadata: (chapters: ChapterMetadata[]) => void

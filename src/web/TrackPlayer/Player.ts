@@ -1,7 +1,7 @@
 import type shaka from 'shaka-player/dist/shaka-player.ui'
 import type {
   Progress,
-  PartialSetupPlayerOptions,
+  NativeSetupPlayerOptions,
   Playback,
   PlaybackError
 } from '../../features'
@@ -83,17 +83,12 @@ export class Player {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async setupPlayer(_options: PartialSetupPlayerOptions = {}): Promise<void> {
+  async setupPlayer(_options: NativeSetupPlayerOptions = {}): Promise<void> {
     // shaka only runs in a browser
     if (typeof window === 'undefined') return
-    if (this.hasInitialized === true) {
-      const error: PlaybackError = {
-        code: 'player_already_initialized',
-        message: 'The player has already been initialized via setupPlayer.'
-      }
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw error
-    }
+    // Re-setup reconfigures: web has no construction-bound engine options, so
+    // there's nothing to rebuild — the caller re-applies options/state on top.
+    if (this.hasInitialized === true) return
 
     const shaka = (await import('shaka-player/dist/shaka-player.ui')).default
     // Install built-in polyfills to patch browser incompatibilities.
