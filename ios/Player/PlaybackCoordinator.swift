@@ -55,6 +55,11 @@ class PlaybackCoordinator {
   private(set) var state: PlaybackState = .none
   var playbackError: TrackPlayerError.PlaybackError?
 
+  /// Whether playback should resume when the current audio-session interruption
+  /// ends — set to the play intent captured at interruption start, so we only
+  /// auto-resume if we were actually playing when interrupted.
+  private var shouldResumeAfterInterruption = false
+
   /// Playback rate (1.0 = normal speed).
   var rate: Float = 1.0
 
@@ -332,6 +337,32 @@ class PlaybackCoordinator {
   func stop() {
     transition(.stopped)
     playWhenReady = false
+  }
+
+  // MARK: - Audio Session Interruptions
+
+  /// An audio-session interruption began (a phone call, or another app such as
+  /// Music/Spotify taking over playback). iOS has already paused our AVPlayer,
+  /// but that pause arrives as a `timeControlStatus` change that's swallowed
+  /// while `playWhenReady` is still true — so the state would otherwise stay
+  /// `.playing` and any UI driven by it stays stuck. Drop the play intent and
+  /// force the paused state, independent of notification delivery order.
+  func handleInterruptionBegan() {
+    shouldResumeAfterInterruption = playWhenReady
+    pause()
+    if playbackActive, state != .loading {
+      transition(.avPlayerPaused(hasAsset: effectHandler?.hasLoadedAsset ?? false))
+    }
+  }
+
+  /// An audio-session interruption ended. Resume only if we were playing when it
+  /// began and the system indicates resumption is appropriate (`shouldResume`).
+  func handleInterruptionEnded(shouldResume: Bool) {
+    guard shouldResumeAfterInterruption else { return }
+    shouldResumeAfterInterruption = false
+    if shouldResume {
+      play()
+    }
   }
 
   func getPlayback() -> Playback {

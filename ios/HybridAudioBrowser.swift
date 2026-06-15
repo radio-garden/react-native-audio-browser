@@ -38,6 +38,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private let trackSelector: TrackSelector
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
+  private var interruptionObserver: NSObjectProtocol?
   private var nowPlayingOverride: NowPlayingUpdate?
   /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
   private var nowPlayingMetadataEnabled = true
@@ -582,6 +583,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Wire up network monitor for accelerated retries when connectivity is restored
         player?.networkMonitor = networkMonitor
 
+        // Observe audio-session interruptions so another app taking over audio
+        // (or a phone call) reflects as a real pause rather than a stuck state.
+        setupInterruptionObserver()
+
         // Configure media URL resolver
         player?.mediaLoader.mediaUrlResolver = { [weak self] src, track in
           guard let self else {
@@ -1118,6 +1123,50 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   // MARK: - External Audio Output
+
+  /// Observes audio-session interruptions (phone calls, or another app such as
+  /// Music/Spotify starting playback). iOS pauses our AVPlayer underneath us but
+  /// doesn't update our playback state, so without this the UI stays stuck on
+  /// "playing". On `.began` we reflect a real pause; on `.ended` we resume if we
+  /// were playing and the system says we should.
+  private func setupInterruptionObserver() {
+    if let observer = interruptionObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
+    interruptionObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.interruptionNotification,
+      object: nil,
+      queue: .main,
+    ) { [weak self] notification in
+      self?.handleAudioSessionInterruption(notification)
+    }
+  }
+
+  private func handleAudioSessionInterruption(_ notification: Notification) {
+    guard
+      let info = notification.userInfo,
+      let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+      let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+    else { return }
+
+    switch type {
+    case .began:
+      onMainActor { player?.handleInterruptionBegan() }
+    case .ended:
+      let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt)
+        .map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) }
+        ?? false
+      onMainActor {
+        // The session may have been deactivated during the interruption;
+        // reactivate before resuming so playback actually produces output.
+        if shouldResume { try? AVAudioSession.sharedInstance().setActive(true) }
+        player?.handleInterruptionEnded(shouldResume: shouldResume)
+      }
+    @unknown default:
+      break
+    }
+  }
 
   /// Sets up observer for audio route changes
   private func setupRouteChangeObserver() {

@@ -687,3 +687,86 @@ struct SleepTimerFadeTests {
     #expect(st.clearCallCount == 0)
   }
 }
+
+// MARK: - Audio Session Interruptions
+
+/// Helper to drive the coordinator into an actively-playing state.
+@MainActor
+private func startPlaying(_ c: PlaybackCoordinator, _ eh: MockPlaybackEffectHandler) {
+  loadTrack(c)
+  eh.hasLoadedAsset = true
+  c.playWhenReady = true
+  c.transition(.avPlayerPlaying)
+}
+
+@Suite("PlaybackCoordinator - audio session interruptions")
+struct InterruptionTests {
+  @Test @MainActor
+  func began_whilePlaying_pauses() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    #expect(c.state == .playing)
+
+    c.handleInterruptionBegan()
+
+    #expect(c.state == .paused)
+    #expect(c.playWhenReady == false)
+  }
+
+  /// The bug: iOS pauses the AVPlayer first; that `timeControlStatus → paused`
+  /// is swallowed because `playWhenReady` is still true, so the state stays
+  /// `.playing`. The interruption handler must force the pause regardless.
+  @Test @MainActor
+  func began_afterSwallowedTimeControlPause_stillPauses() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.avPlayerDidChangeTimeControlStatus(.paused)
+    #expect(c.state == .playing) // swallowed — the symptom this fix targets
+
+    c.handleInterruptionBegan()
+
+    #expect(c.state == .paused)
+  }
+
+  @Test @MainActor
+  func ended_shouldResume_resumesWhenWasPlaying() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    #expect(c.playWhenReady == false)
+    eh.startPlaybackCallCount = 0
+
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == true)
+    #expect(eh.startPlaybackCallCount == 1)
+  }
+
+  @Test @MainActor
+  func ended_withoutShouldResume_staysPaused() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.handleInterruptionEnded(shouldResume: false)
+
+    #expect(c.state == .paused)
+    #expect(c.playWhenReady == false)
+  }
+
+  @Test @MainActor
+  func ended_doesNotResume_whenNotPlayingBeforeInterruption() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    // Pause before the interruption (e.g. user already paused).
+    c.playWhenReady = false
+    c.avPlayerDidChangeTimeControlStatus(.paused)
+    #expect(c.state == .paused)
+
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false) // never resumes — we weren't playing
+  }
+}

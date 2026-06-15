@@ -305,6 +305,11 @@ class TrackPlayer {
   func pause() { coordinator.pause() }
   func togglePlayback() { coordinator.togglePlayback() }
 
+  func handleInterruptionBegan() { coordinator.handleInterruptionBegan() }
+  func handleInterruptionEnded(shouldResume: Bool) {
+    coordinator.handleInterruptionEnded(shouldResume: shouldResume)
+  }
+
   func stop() {
     coordinator.stop()
     if currentTrack?.live != true {
