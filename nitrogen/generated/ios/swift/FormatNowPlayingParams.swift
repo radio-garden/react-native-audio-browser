@@ -18,14 +18,20 @@ public extension FormatNowPlayingParams {
   /**
    * Create a new instance of `FormatNowPlayingParams`.
    */
-  init(track: Track, timedMetadata: TimedMetadata?, playWhenReady: Bool, stalled: Bool, error: PlaybackError?) {
+  init(track: Track, timedMetadata: TimedMetadata?, playWhenReady: Bool, stalled: StallReason?, error: PlaybackError?) {
     self.init(track, { () -> bridge.std__optional_TimedMetadata_ in
       if let __unwrappedValue = timedMetadata {
         return bridge.create_std__optional_TimedMetadata_(__unwrappedValue)
       } else {
         return .init()
       }
-    }(), playWhenReady, stalled, { () -> bridge.std__optional_PlaybackError_ in
+    }(), playWhenReady, { () -> bridge.std__optional_StallReason_ in
+      if let __unwrappedValue = stalled {
+        return bridge.create_std__optional_StallReason_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_PlaybackError_ in
       if let __unwrappedValue = error {
         return bridge.create_std__optional_PlaybackError_(__unwrappedValue)
       } else {
@@ -50,8 +56,8 @@ public extension FormatNowPlayingParams {
   }
   
   @inline(__always)
-  var stalled: Bool {
-    return self.__stalled
+  var stalled: StallReason? {
+    return self.__stalled.value
   }
   
   @inline(__always)

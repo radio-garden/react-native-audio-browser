@@ -62,7 +62,7 @@ final class NowPlayingUpdater {
     track: Track,
     timedMetadata: TimedMetadata?,
     playWhenReady: Bool,
-    stalled: Bool,
+    stalled: StallReason?,
     error: PlaybackError?,
     flash: NowPlayingUpdate? = nil,
     override: NowPlayingUpdate?,

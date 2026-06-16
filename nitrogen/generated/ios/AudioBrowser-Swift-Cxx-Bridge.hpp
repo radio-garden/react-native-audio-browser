@@ -166,6 +166,8 @@ namespace margelo::nitro::audiobrowser { struct SearchParams; }
 namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 // Forward declaration of `SleepTimerTime` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
+// Forward declaration of `StallReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StallReason; }
 // Forward declaration of `StarRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct StarRating; }
 // Forward declaration of `ThumbsRating` to properly resolve imports.
@@ -269,6 +271,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "SearchParams.hpp"
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"
+#include "StallReason.hpp"
 #include "StarRating.hpp"
 #include "ThumbsRating.hpp"
 #include "TimedMetadata.hpp"
@@ -2367,6 +2370,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline TimedMetadata get_std__optional_TimedMetadata_(const std::optional<TimedMetadata>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<StallReason>
+  /**
+   * Specialized version of `std::optional<StallReason>`.
+   */
+  using std__optional_StallReason_ = std::optional<StallReason>;
+  inline std::optional<StallReason> create_std__optional_StallReason_(const StallReason& value) noexcept {
+    return std::optional<StallReason>(value);
+  }
+  inline bool has_value_std__optional_StallReason_(const std::optional<StallReason>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline StallReason get_std__optional_StallReason_(const std::optional<StallReason>& optional) noexcept {
     return optional.value();
   }
   

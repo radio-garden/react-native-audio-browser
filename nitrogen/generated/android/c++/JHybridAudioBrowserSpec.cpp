@@ -185,6 +185,8 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
+// Forward declaration of `StallReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StallReason; }
 
 #include <string>
 #include <optional>
@@ -432,6 +434,8 @@ namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 #include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
 #include "JNowPlayingUpdate.hpp"
 #include "JFormatNowPlayingParams.hpp"
+#include "StallReason.hpp"
+#include "JStallReason.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

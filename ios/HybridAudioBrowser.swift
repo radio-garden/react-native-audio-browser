@@ -232,10 +232,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onNowPlayingChanged: (NowPlayingMetadata) -> Void = { _ in }
   public var onOnlineChanged: (Bool) -> Void = { _ in } {
     didSet {
-      networkMonitor.onChanged = { [weak self] isOnline in
-        self?.onOnlineChanged(isOnline)
-      }
-      // Immediately notify current state
+      // The monitor->JS bridge is wired centrally in setupPlayer (so it doesn't depend on a JS
+      // subscription and can also drive the now-playing re-render + player reconnect). Here we only
+      // push the current state to a newly-attached subscriber.
       onOnlineChanged(networkMonitor.isOnline)
     }
   }
@@ -582,6 +581,23 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
         // Wire up network monitor for accelerated retries when connectivity is restored
         player?.networkMonitor = networkMonitor
+
+        // Central fan-out for connectivity changes (wired once here, idempotent on re-setup, and
+        // independent of any JS subscription):
+        //  - bridge to the JS `onOnlineChanged` event (no-op default until JS subscribes);
+        //  - re-render now-playing so the formatter's offline/online label updates immediately on a
+        //    connectivity change, not only on the next playback transition (fixes the stall-entry
+        //    race where the device goes offline after the buffering line was already rendered);
+        //  - reconnect a stalled stream when connectivity returns (see TrackPlayer.handleNetworkRestored).
+        // The monitor only mutates state on the main thread, so this fires main-isolated.
+        networkMonitor.onChanged = { [weak self] isOnline in
+          MainActor.assumeIsolated {
+            guard let self else { return }
+            self.onOnlineChanged(isOnline)
+            self.applyNowPlayingMetadata()
+            if isOnline { self.player?.handleNetworkRestored() }
+          }
+        }
 
         // Observe audio-session interruptions so another app taking over audio
         // (or a phone call) reflects as a real pause rather than a stuck state.
@@ -1080,11 +1096,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   @MainActor
   private func applyNowPlayingMetadata() {
     guard let player, let track = player.currentTrack else { return }
+    // Classify a stall by connectivity so the formatter can show "No internet connection" vs
+    // "Reconnecting…" without a separate read. nil while not stalled.
+    let stalled: StallReason? =
+      player.isStalled ? (networkMonitor.getOnline() ? .buffering : .offline) : nil
     player.nowPlayingUpdater.render(
       track: track,
       timedMetadata: latestTimedMetadata,
       playWhenReady: player.playWhenReady,
-      stalled: player.isStalled,
+      stalled: stalled,
       error: player.coordinator.playbackError?.toNitroError(),
       flash: nowPlayingFlash,
       override: nowPlayingMetadataEnabled ? nowPlayingOverride : nil,

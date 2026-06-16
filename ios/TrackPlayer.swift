@@ -332,6 +332,27 @@ class TrackPlayer {
     }
   }
 
+  /// Re-establish a stalled stream when connectivity is restored.
+  ///
+  /// AVPlayer doesn't reliably surface a mid-stream connectivity loss on a live stream as an item
+  /// failure — it sits in `.waitingToPlayAtSpecifiedRate` (a buffering stall) with no error, so the
+  /// error-driven `RetryManager` never engages. Without this, the stream stays "reconnecting"
+  /// indefinitely after the network returns. Mirrors Android, where ExoPlayer surfaces the drop as a
+  /// retryable load error and re-prepares on restore.
+  ///
+  /// Guards: reload only while actually stalled (`.buffering`) with play intent — so a user-initiated
+  /// pause, or a retry that already gave up (`.error`, past the max retry duration) isn't surprisingly
+  /// resumed. Skipped when `RetryManager` is already parked waiting for the network: an error *did*
+  /// schedule a retry that owns its own reload, so we'd otherwise load twice.
+  func handleNetworkRestored() {
+    guard playWhenReady,
+          coordinator.state == .buffering,
+          !retryManager.isWaitingForNetwork
+    else { return }
+    logger.info("Connectivity restored while stalled — reloading to reconnect")
+    reload(startFromCurrentTime: true)
+  }
+
   /// Jump to the live edge. No-op for non-live tracks. Live with a seekable
   /// window (HLS) seeks to the window end; live without one (non-seekable, e.g.
   /// ICY) has no window to seek within, so reconnect to rejoin live.

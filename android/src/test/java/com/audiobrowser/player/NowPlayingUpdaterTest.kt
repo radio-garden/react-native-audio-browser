@@ -2,6 +2,7 @@ package com.audiobrowser.player
 
 import com.audiobrowser.TestFixtures.track
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
+import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -31,6 +32,7 @@ class NowPlayingUpdaterTest {
     override var playbackError: PlaybackError? = null
     override var playWhenReady: Boolean = true
     override var isRebuffering: Boolean = false
+    override var isOnline: Boolean = true
     override var hasNowPlayingArtworkConfig: Boolean = false
 
     data class Stamp(
@@ -210,7 +212,49 @@ class NowPlayingUpdaterTest {
     runCurrent()
 
     assertEquals(false, seen?.playWhenReady)
-    assertEquals(true, seen?.stalled)
+    assertEquals(StallReason.BUFFERING, seen?.stalled)
+  }
+
+  @Test
+  fun `a stall while offline is classified as offline`() = runTest {
+    var seen: FormatNowPlayingParams? = null
+    val surface =
+      FakeSurface().apply {
+        currentTrack = track("Station")
+        playbackState = PlaybackState.BUFFERING
+        isRebuffering = true
+        isOnline = false
+      }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.formatter = { params ->
+      seen = params
+      null
+    }
+
+    updater.render()
+    runCurrent()
+
+    assertEquals(StallReason.OFFLINE, seen?.stalled)
+  }
+
+  @Test
+  fun `no stall when not rebuffering`() = runTest {
+    var seen: FormatNowPlayingParams? = null
+    val surface =
+      FakeSurface().apply {
+        currentTrack = track("Station")
+        playbackState = PlaybackState.PLAYING
+      }
+    val updater = NowPlayingUpdater(surface, backgroundScope)
+    updater.formatter = { params ->
+      seen = params
+      null
+    }
+
+    updater.render()
+    runCurrent()
+
+    assertEquals(null, seen?.stalled)
   }
 
   @Test

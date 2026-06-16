@@ -437,6 +437,10 @@ class Player(internal val context: Context) {
     networkMonitor.observeOnline(scope) { isOnline ->
       callbacks?.onOnlineChanged(isOnline)
 
+      // Re-render now-playing so the formatter's stall classification (buffering vs offline) tracks
+      // connectivity immediately, not only on the next playback transition.
+      nowPlaying.render()
+
       // Accelerate pending network retry when connectivity is restored
       if (isOnline && pendingNetworkRetry) {
         Timber.d("Network restored with pending retry, triggering immediate retry")
@@ -695,6 +699,9 @@ class Player(internal val context: Context) {
 
         override val isRebuffering
           get() = loadControl.isRebuffering
+
+        override val isOnline
+          get() = networkMonitor.getOnline()
 
         override val hasNowPlayingArtworkConfig
           get() = browser?.browserManager?.config?.nowPlayingArtwork != null

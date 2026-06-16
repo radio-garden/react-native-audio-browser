@@ -21,7 +21,9 @@ final class NetworkMonitor: @unchecked Sendable {
     }
   }
 
-  /// Callback invoked when network state changes
+  /// Invoked on every connectivity change. Wired centrally in `HybridAudioBrowser.setupPlayer` and
+  /// fans out to the JS event bridge, the now-playing re-render (so the offline/online label tracks
+  /// connectivity), and the player's reconnect-reload.
   var onChanged: ((Bool) -> Void)?
 
   // MARK: - Initialization

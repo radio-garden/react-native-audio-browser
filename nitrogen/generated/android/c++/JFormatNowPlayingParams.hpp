@@ -17,11 +17,13 @@
 #include "JImageRowItem.hpp"
 #include "JImageSource.hpp"
 #include "JPlaybackError.hpp"
+#include "JStallReason.hpp"
 #include "JTimedMetadata.hpp"
 #include "JTrack.hpp"
 #include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "PlaybackError.hpp"
+#include "StallReason.hpp"
 #include "TimedMetadata.hpp"
 #include "Track.hpp"
 #include "TrackRequest.hpp"
@@ -56,15 +58,15 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JTimedMetadata> timedMetadata = this->getFieldValue(fieldTimedMetadata);
       static const auto fieldPlayWhenReady = clazz->getField<jboolean>("playWhenReady");
       jboolean playWhenReady = this->getFieldValue(fieldPlayWhenReady);
-      static const auto fieldStalled = clazz->getField<jboolean>("stalled");
-      jboolean stalled = this->getFieldValue(fieldStalled);
+      static const auto fieldStalled = clazz->getField<JStallReason>("stalled");
+      jni::local_ref<JStallReason> stalled = this->getFieldValue(fieldStalled);
       static const auto fieldError = clazz->getField<JPlaybackError>("error");
       jni::local_ref<JPlaybackError> error = this->getFieldValue(fieldError);
       return FormatNowPlayingParams(
         track->toCpp(),
         timedMetadata != nullptr ? std::make_optional(timedMetadata->toCpp()) : std::nullopt,
         static_cast<bool>(playWhenReady),
-        static_cast<bool>(stalled),
+        stalled != nullptr ? std::make_optional(stalled->toCpp()) : std::nullopt,
         error != nullptr ? std::make_optional(error->toCpp()) : std::nullopt
       );
     }
@@ -75,7 +77,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JFormatNowPlayingParams::javaobject> fromCpp(const FormatNowPlayingParams& value) {
-      using JSignature = JFormatNowPlayingParams(jni::alias_ref<JTrack>, jni::alias_ref<JTimedMetadata>, jboolean, jboolean, jni::alias_ref<JPlaybackError>);
+      using JSignature = JFormatNowPlayingParams(jni::alias_ref<JTrack>, jni::alias_ref<JTimedMetadata>, jboolean, jni::alias_ref<JStallReason>, jni::alias_ref<JPlaybackError>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -83,7 +85,7 @@ namespace margelo::nitro::audiobrowser {
         JTrack::fromCpp(value.track),
         value.timedMetadata.has_value() ? JTimedMetadata::fromCpp(value.timedMetadata.value()) : nullptr,
         value.playWhenReady,
-        value.stalled,
+        value.stalled.has_value() ? JStallReason::fromCpp(value.stalled.value()) : nullptr,
         value.error.has_value() ? JPlaybackError::fromCpp(value.error.value()) : nullptr
       );
     }

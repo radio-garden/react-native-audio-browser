@@ -28,7 +28,10 @@ class RetryManager {
   private var firstRetryTime: Date?
 
   weak var networkMonitor: NetworkMonitor?
-  private var isWaitingForNetwork = false
+  /// True only while a scheduled retry is parked polling for connectivity to return. Exposed so the
+  /// player's stall-driven reconnect can defer to an in-flight error retry (which owns its own
+  /// reload) and avoid a double load.
+  private(set) var isWaitingForNetwork = false
   /// Invalidates in-flight retries when reset() is called (e.g. track change)
   private var generation: Int = 0
 

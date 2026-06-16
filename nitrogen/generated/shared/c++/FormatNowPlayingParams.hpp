@@ -32,12 +32,15 @@
 namespace margelo::nitro::audiobrowser { struct Track; }
 // Forward declaration of `TimedMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
+// Forward declaration of `StallReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StallReason; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 
 #include "Track.hpp"
 #include "TimedMetadata.hpp"
 #include <optional>
+#include "StallReason.hpp"
 #include "PlaybackError.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -50,12 +53,12 @@ namespace margelo::nitro::audiobrowser {
     Track track     SWIFT_PRIVATE;
     std::optional<TimedMetadata> timedMetadata     SWIFT_PRIVATE;
     bool playWhenReady     SWIFT_PRIVATE;
-    bool stalled     SWIFT_PRIVATE;
+    std::optional<StallReason> stalled     SWIFT_PRIVATE;
     std::optional<PlaybackError> error     SWIFT_PRIVATE;
 
   public:
     FormatNowPlayingParams() = default;
-    explicit FormatNowPlayingParams(Track track, std::optional<TimedMetadata> timedMetadata, bool playWhenReady, bool stalled, std::optional<PlaybackError> error): track(track), timedMetadata(timedMetadata), playWhenReady(playWhenReady), stalled(stalled), error(error) {}
+    explicit FormatNowPlayingParams(Track track, std::optional<TimedMetadata> timedMetadata, bool playWhenReady, std::optional<StallReason> stalled, std::optional<PlaybackError> error): track(track), timedMetadata(timedMetadata), playWhenReady(playWhenReady), stalled(stalled), error(error) {}
 
   public:
     friend bool operator==(const FormatNowPlayingParams& lhs, const FormatNowPlayingParams& rhs) = default;
@@ -74,7 +77,7 @@ namespace margelo::nitro {
         JSIConverter<margelo::nitro::audiobrowser::Track>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "track"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::TimedMetadata>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "timedMetadata"))),
         JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playWhenReady"))),
-        JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "stalled"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::StallReason>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "stalled"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackError>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "error")))
       );
     }
@@ -83,7 +86,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "track"), JSIConverter<margelo::nitro::audiobrowser::Track>::toJSI(runtime, arg.track));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "timedMetadata"), JSIConverter<std::optional<margelo::nitro::audiobrowser::TimedMetadata>>::toJSI(runtime, arg.timedMetadata));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "playWhenReady"), JSIConverter<bool>::toJSI(runtime, arg.playWhenReady));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "stalled"), JSIConverter<bool>::toJSI(runtime, arg.stalled));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "stalled"), JSIConverter<std::optional<margelo::nitro::audiobrowser::StallReason>>::toJSI(runtime, arg.stalled));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "error"), JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackError>>::toJSI(runtime, arg.error));
       return obj;
     }
@@ -98,7 +101,7 @@ namespace margelo::nitro {
       if (!JSIConverter<margelo::nitro::audiobrowser::Track>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "track")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TimedMetadata>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "timedMetadata")))) return false;
       if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playWhenReady")))) return false;
-      if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "stalled")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::StallReason>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "stalled")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::PlaybackError>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "error")))) return false;
       return true;
     }

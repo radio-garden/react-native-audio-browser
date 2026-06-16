@@ -17,8 +17,8 @@ import type {
  * The formatter owns every line shown on the now-playing surface — the track text, the live song,
  * *and* any transient status (reconnecting / error). The library no longer renders status copy
  * itself, so these fields give you what you need to render (and localize) it yourself. The formatter
- * is re-invoked on track change, each timed-metadata update, and play/pause + error/rebuffer
- * transitions. (Device network state isn't passed — read it on demand with `getOnline()`.)
+ * is re-invoked on track change, each timed-metadata update, play/pause + error/rebuffer
+ * transitions, and device connectivity changes.
  */
 export type FormatNowPlayingParams = {
   /** The currently playing track. */
@@ -28,14 +28,25 @@ export type FormatNowPlayingParams = {
   /** The play/pause intent — `false` while paused. Stays `true` through buffers, so the song line won't flicker. */
   playWhenReady: boolean
   /**
-   * True only while ongoing playback has stalled waiting for data — a mid-stream halt from buffer
-   * depletion, never an initial connect or a seek. Safe to use on its own (e.g. `if (stalled)`) to
-   * show a "Reconnecting…/Buffering…" line; it won't flash on track start or bleed into playback.
+   * Present (truthy) only while ongoing playback has stalled waiting for data — a mid-stream halt,
+   * never an initial connect or a seek (it won't flash on track start or bleed into playback). The
+   * value classifies *why*, so a "Reconnecting…" vs "No internet connection" line needs no separate
+   * connectivity read:
+   *  - `'buffering'` — the stream is rebuffering while the device is online (rejoining the live edge);
+   *  - `'offline'` — the device has no connectivity.
+   * Safe to use on its own (`if (stalled)`); compare the value (`stalled === 'offline'`) for the reason.
    */
-  stalled: boolean
+  stalled?: StallReason
   /** The current playback error, if playback has failed. */
   error?: PlaybackError
 }
+
+/**
+ * Why ongoing playback has stalled, surfaced via {@link FormatNowPlayingParams.stalled}:
+ * - `'buffering'` — rebuffering while online (the live stream is rejoining the live edge);
+ * - `'offline'` — the device has no network connectivity.
+ */
+export type StallReason = 'buffering' | 'offline'
 
 /**
  * Customizes what's rendered on the now-playing surface — lock screen, notification, Control Center,
@@ -67,8 +78,8 @@ export type FormatNowPlayingParams = {
  * default entirely (the track's own `title` / `artist`).
  *
  * @param params - The current track, latest timed metadata, and playback signals for this moment
- *   ({@link FormatNowPlayingParams}). Ambient device state is intentionally not included — read
- *   network connectivity on demand with {@link getOnline}.
+ *   ({@link FormatNowPlayingParams}), including a {@link StallReason} that already classifies an
+ *   offline stall — no separate connectivity read needed for the now-playing line.
  * @returns The now-playing fields to display, or `undefined` to fall back to the track's own
  *   `title` / `artist`.
  *
@@ -76,8 +87,8 @@ export type FormatNowPlayingParams = {
  * ```ts
  * setupPlayer({
  *   nowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
- *     if (error)   return { artist: getOnline() ? error.message : 'Offline' }
- *     if (stalled) return { artist: 'Reconnecting…' }
+ *     if (error)   return { artist: error.message ?? 'Playback error' }
+ *     if (stalled) return { artist: stalled === 'offline' ? 'No internet connection' : 'Reconnecting…' }
  *     // Show the live song only while actually playing; otherwise fall back to the track default.
  *     if (!playWhenReady || !timedMetadata?.title) return
  *     return {

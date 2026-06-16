@@ -28,7 +28,7 @@ data class FormatNowPlayingParams(
   val playWhenReady: Boolean,
   @DoNotStrip
   @Keep
-  val stalled: Boolean,
+  val stalled: StallReason?,
   @DoNotStrip
   @Keep
   val error: PlaybackError?
@@ -43,7 +43,7 @@ data class FormatNowPlayingParams(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(track: Track, timedMetadata: TimedMetadata?, playWhenReady: Boolean, stalled: Boolean, error: PlaybackError?): FormatNowPlayingParams {
+    private fun fromCpp(track: Track, timedMetadata: TimedMetadata?, playWhenReady: Boolean, stalled: StallReason?, error: PlaybackError?): FormatNowPlayingParams {
       return FormatNowPlayingParams(track, timedMetadata, playWhenReady, stalled, error)
     }
   }

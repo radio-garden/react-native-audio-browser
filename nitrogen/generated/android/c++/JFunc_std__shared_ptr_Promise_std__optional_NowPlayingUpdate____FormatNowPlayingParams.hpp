@@ -36,6 +36,8 @@
 #include "JImageRowItem.hpp"
 #include "TimedMetadata.hpp"
 #include "JTimedMetadata.hpp"
+#include "StallReason.hpp"
+#include "JStallReason.hpp"
 #include "PlaybackError.hpp"
 #include "JPlaybackError.hpp"
 
