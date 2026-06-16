@@ -78,6 +78,23 @@ class MediaSessionCommandManager {
   private var currentSearchAvailable: Boolean = false
   private var currentFavorited: Boolean? = null
 
+  /**
+   * The Media3 player command behind each Capability-gated control (FAVORITE is a session command).
+   */
+  private val controlPlayerCommands: Map<Control, @MediaPlayer.Command Int> =
+    mapOf(
+      Control.PLAY_PAUSE to MediaPlayer.COMMAND_PLAY_PAUSE,
+      Control.STOP to MediaPlayer.COMMAND_STOP,
+      Control.SEEK_TO to MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+      Control.SKIP_TO_NEXT to MediaPlayer.COMMAND_SEEK_TO_NEXT,
+      Control.SKIP_TO_PREVIOUS to MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
+      Control.JUMP_FORWARD to MediaPlayer.COMMAND_SEEK_FORWARD,
+      Control.JUMP_BACKWARD to MediaPlayer.COMMAND_SEEK_BACK,
+    )
+
+  // Declared above `init` deliberately: `init` calls `buildPlayerCommands`, which reads
+  // `controlPlayerCommands`. Kotlin initializes properties in textual order, so this val must
+  // precede the init block or it would still be null when the constructor runs (NPE).
   init {
     // Initialize with defaults matching PlayerUpdateOptions (all capabilities enabled)
     val defaultCapabilities = currentCapabilities
@@ -236,20 +253,6 @@ class MediaSessionCommandManager {
       }
     }
   }
-
-  /**
-   * The Media3 player command behind each Capability-gated control (FAVORITE is a session command).
-   */
-  private val controlPlayerCommands: Map<Control, @MediaPlayer.Command Int> =
-    mapOf(
-      Control.PLAY_PAUSE to MediaPlayer.COMMAND_PLAY_PAUSE,
-      Control.STOP to MediaPlayer.COMMAND_STOP,
-      Control.SEEK_TO to MediaPlayer.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-      Control.SKIP_TO_NEXT to MediaPlayer.COMMAND_SEEK_TO_NEXT,
-      Control.SKIP_TO_PREVIOUS to MediaPlayer.COMMAND_SEEK_TO_PREVIOUS,
-      Control.JUMP_FORWARD to MediaPlayer.COMMAND_SEEK_FORWARD,
-      Control.JUMP_BACKWARD to MediaPlayer.COMMAND_SEEK_BACK,
-    )
 
   private fun buildPlayerCommands(capabilities: PlayerCapabilities): MediaPlayer.Commands {
     val playerCommandsBuilder = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
