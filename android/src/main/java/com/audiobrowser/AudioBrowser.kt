@@ -295,10 +295,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     return _configuration.routes?.any { it.path != BrowserManager.SEARCH_ROUTE_PATH } == true
   }
 
-  private fun getDefaultPath(): String? {
+  // Suspending on purpose: queryTabs() resolves tabs by invoking JS callbacks,
+  // which can only run on the JS thread. Callers MUST invoke this from a
+  // coroutine (off the JS thread) — never via runBlocking on a synchronous Nitro
+  // setter, which runs on the JS thread and would deadlock (the JS thread blocks
+  // waiting for callbacks that need that same thread to run).
+  private suspend fun getDefaultPath(): String? {
     return try {
       browserManager.config = buildConfig()
-      val tabs = runBlocking { browserManager.queryTabs() }
+      val tabs = browserManager.queryTabs()
       if (tabs.isNotEmpty()) {
         Timber.d("Using first tab as default path: ${tabs[0].url}")
         tabs[0].url
@@ -306,6 +311,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         Timber.d("Using root path as default: /")
         "/"
       }
+    } catch (e: CancellationException) {
+      throw e // Rethrow so cooperative cancellation isn't swallowed
     } catch (e: Exception) {
       Timber.e(e, "Failed to get default path, falling back to /")
       "/"
@@ -321,23 +328,25 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     set(value) {
       if (hasValidConfiguration()) {
         browserManager.config = buildConfig()
-        (value ?: getDefaultPath())?.let { path ->
-          clearNavigationError()
+        clearNavigationError()
 
-          // Cancel previous navigation to avoid race conditions
-          navigationJob?.cancel()
+        // Cancel previous navigation to avoid race conditions
+        navigationJob?.cancel()
 
-          navigationJob =
-            mainScope.launch {
-              try {
-                browserManager.navigate(path)
-              } catch (e: CancellationException) {
-                throw e // Rethrow to properly cancel
-              } catch (e: Exception) {
-                handleBrowserException(e, path, "setting path: $path")
-              }
+        // Resolve the default path inside the coroutine (getDefaultPath queries
+        // tabs via JS callbacks) so it never blocks the JS thread this setter
+        // runs on.
+        navigationJob =
+          mainScope.launch {
+            val path = value ?: getDefaultPath() ?: return@launch
+            try {
+              browserManager.navigate(path)
+            } catch (e: CancellationException) {
+              throw e // Rethrow to properly cancel
+            } catch (e: Exception) {
+              handleBrowserException(e, path, "setting path: $path")
             }
-        }
+          }
       }
     }
 
@@ -355,24 +364,27 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // This allows Android Auto to start browsing content
       connectedService?.player?.notifyBrowserConfigurationReady()
 
-      // Navigate to initial path or default to first tab
-      (value.path ?: getDefaultPath())?.let { path ->
-        clearNavigationError()
+      clearNavigationError()
 
-        // Cancel previous navigation to avoid race conditions
-        navigationJob?.cancel()
+      // Cancel previous navigation to avoid race conditions
+      navigationJob?.cancel()
 
-        navigationJob =
-          mainScope.launch {
-            try {
-              browserManager.navigate(path)
-            } catch (e: CancellationException) {
-              throw e // Rethrow to properly cancel
-            } catch (e: Exception) {
-              handleBrowserException(e, path, "setting configuration path: $path")
-            }
+      // Navigate to the initial path, or default to the first tab. The default
+      // path is resolved inside the coroutine (getDefaultPath queries tabs via
+      // JS callbacks) so it never blocks the JS thread this setter runs on —
+      // doing it synchronously here via runBlocking deadlocked: the JS callbacks
+      // can't run because the JS thread is blocked waiting for them.
+      navigationJob =
+        mainScope.launch {
+          val path = value.path ?: getDefaultPath() ?: return@launch
+          try {
+            browserManager.navigate(path)
+          } catch (e: CancellationException) {
+            throw e // Rethrow to properly cancel
+          } catch (e: Exception) {
+            handleBrowserException(e, path, "setting configuration path: $path")
           }
-      }
+        }
     }
 
   private var navigationError: NavigationError? = null
