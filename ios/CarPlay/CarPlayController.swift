@@ -331,6 +331,17 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.queueChangedEmitter.removeListener(queueToken)
     }
 
+    // A voice media intent started playback — surface Now Playing so the user
+    // lands on the playing station (Up Next holds the rest of the results).
+    let showNowPlayingToken = audioBrowser.showNowPlayingRequestedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.nowPlayingManager.showNowPlaying()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.showNowPlayingRequestedEmitter.removeListener(showNowPlayingToken)
+    }
+
     // Subscribe to navigation errors (from browser layer)
     let navErrorToken = audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
       Task { @MainActor in
@@ -540,7 +551,11 @@ public final class RNABCarPlayController: NSObject {
     do {
       let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
       watchdog.cancel()
-      if resolved.children?.isEmpty ?? true {
+      // A page carrying an assistant cell (carPlaySiriListButton) is meaningful
+      // even with no rows — the "Ask Siri to Play" cell IS its content — so it
+      // renders rather than falling through to the empty-content state.
+      let hasAssistantCell = resolved.carPlaySiriListButton != nil
+      if (resolved.children?.isEmpty ?? true) && !hasAssistantCell {
         // Empty is modeled as a navigation error (code .emptyContent) so it goes
         // through the same path-aware formatter as failures — letting an app give
         // an empty Favorites tab different copy than an empty search. ADR 0001.

@@ -85,6 +85,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public let shuffleChangedEmitter = Emitter<Bool>()
   public let externalContentChangedEmitter = Emitter<String>()
   public let browseGateChangedEmitter = Emitter<NativeBrowseGate?>()
+  /// Fired when a voice media intent (`handlePlayMediaIntent`) successfully
+  /// starts playback. CarPlay surfaces the Now Playing template in response, so
+  /// the user lands on the playing station (with the rest of the results in Up
+  /// Next) rather than the screen they invoked Siri from. No-op where unobserved.
+  public let showNowPlayingRequestedEmitter = Emitter<Void>()
 
   // MARK: - Thread Safety
 
@@ -1601,6 +1606,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           return
         }
         player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
+        // Ask CarPlay to surface Now Playing — the spoken result plays and the
+        // remaining matches sit in Up Next, instead of leaving the user on the
+        // screen they triggered Siri from.
+        showNowPlayingRequestedEmitter.emit(())
         completion(true)
       } catch {
         self.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")
