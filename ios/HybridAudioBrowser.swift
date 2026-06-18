@@ -1570,46 +1570,38 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     }
   }
 
-  /// Handles an INPlayMediaIntent by searching for the given term and starting playback.
-  ///
-  /// Host apps should call this from their `INPlayMediaIntentHandling` implementation.
-  /// Uses the browser's search route to find tracks, then queues and plays them.
-  ///
-  /// - Parameters:
-  ///   - searchTerm: The search query from Siri.
-  ///   - completion: Called with `true` if tracks were found and queued, `false` otherwise.
-  public func handlePlayMediaIntent(searchTerm: String, completion: @escaping @Sendable (Bool) -> Void) {
+  public func handlePlayMediaIntent(criteria: MediaIntentCriteria, completion: @escaping @Sendable (Bool) -> Void) {
     Task { @MainActor in
-      // A cold Siri launch delivers the intent while JS may still be configuring
-      // the browser — wait for readiness like CarPlay does, but bounded so Siri
-      // always gets an answer. The resolved pair is also the *live* instance,
-      // where `self` could be a stale pre-reload one.
-      guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(10)) else {
-        self.logger.error("handlePlayMediaIntent: browser/player not ready within timeout")
+      guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(8)) else {
+        self.logger.error("handlePlayMediaIntent: browser/player not ready within budget")
         completion(false)
         return
       }
-      // A Browse Gate blocks external-surface search too — otherwise voice
-      // search is a way around the gate.
       guard browser.browseGate == nil else {
         self.logger.info("handlePlayMediaIntent: refused — browse gate is set")
         completion(false)
         return
       }
-      do {
-        let resolved = try await browser.browserManager.search(searchTerm)
-        // Search results can include browse-only nodes (url, no src); only
-        // playable tracks belong in the queue.
-        let tracks = (resolved.children ?? []).filter { $0.src != nil }
-        guard !tracks.isEmpty else {
+
+      // No-criteria intent ("play «app»") → resume.
+      if criteria.isResume {
+        if player.currentTrack != nil {
+          player.play()
+          self.showNowPlayingRequestedEmitter.emit(())
+          completion(true)
+        } else {
+          // Cold start: nothing loaded yet. Task 5 restores from PlaybackStateStore here.
           completion(false)
-          return
         }
+        return
+      }
+
+      do {
+        let resolved = try await browser.browserManager.search(criteria.query)
+        let tracks = (resolved.children ?? []).filter { $0.src != nil }
+        guard !tracks.isEmpty else { completion(false); return }
         player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
-        // Ask CarPlay to surface Now Playing — the spoken result plays and the
-        // remaining matches sit in Up Next, instead of leaving the user on the
-        // screen they triggered Siri from.
-        showNowPlayingRequestedEmitter.emit(())
+        self.showNowPlayingRequestedEmitter.emit(())
         completion(true)
       } catch {
         self.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")

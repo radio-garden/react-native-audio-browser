@@ -41,20 +41,21 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
   // MARK: - INPlayMediaIntentHandling
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
-    let searchTerm = intent.mediaSearch?.mediaName ?? ""
-    Self.logger.info("Handling play media intent with search term: \(searchTerm)")
+    let s = intent.mediaSearch
+    let criteria = MediaIntentCriteria(
+      query: s?.mediaName ?? "",
+      hasReference: (s?.reference ?? .unknown) != .unknown,
+      hasGenres: !((s?.genreNames ?? []).isEmpty),
+      hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
+    )
+    Self.logger.info("Play media intent — query=\(criteria.query) resume=\(criteria.isResume)")
 
     guard let browser = HybridAudioBrowser.shared else {
-      Self.logger.error("HybridAudioBrowser.shared is nil — app may not be initialized yet")
       completion(INPlayMediaIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil))
       return
     }
-
-    browser.handlePlayMediaIntent(searchTerm: searchTerm) { success in
-      completion(INPlayMediaIntentResponse(
-        code: success ? .success : .failure,
-        userActivity: nil,
-      ))
+    browser.handlePlayMediaIntent(criteria: criteria) { success in
+      completion(INPlayMediaIntentResponse(code: success ? .success : .failure, userActivity: nil))
     }
   }
 }
