@@ -575,7 +575,7 @@ class TrackPlayer {
 extension TrackPlayer {
   /// Snapshot the current player state to UserDefaults so a cold-start resume
   /// can restore it without the JS runtime. Live streams persist `positionMs = nil`.
-  func persistPlaybackState() {
+  private func persistPlaybackState() {
     guard let track = currentTrack else { return }
     let positionMs: Double? = (track.live == true) ? nil : (currentTime * 1000)
     playbackStateStore.save(
@@ -591,9 +591,9 @@ extension TrackPlayer {
 
   /// Start a 5 s repeating save while playback is active. A previous task is
   /// cancelled first so there is never more than one running at a time.
-  func startPeriodicSave() {
+  private func startPeriodicSave() {
     periodicSaveTask?.cancel()
-    periodicSaveTask = Task { [weak self] in
+    periodicSaveTask = Task { @MainActor [weak self] in
       while !Task.isCancelled {
         try? await Task.sleep(nanoseconds: 5_000_000_000)
         guard !Task.isCancelled else { return }
@@ -602,7 +602,7 @@ extension TrackPlayer {
     }
   }
 
-  func stopPeriodicSave() {
+  private func stopPeriodicSave() {
     periodicSaveTask?.cancel()
     periodicSaveTask = nil
   }
