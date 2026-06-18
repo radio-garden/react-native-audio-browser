@@ -4,7 +4,7 @@ import Foundation
 /// Deliberately free of `Intents` types so the core (`HybridAudioBrowser`)
 /// never imports the Intents framework — the mapping lives in the ObjC-adjacent
 /// `RNABMediaIntentHandler`.
-public struct MediaIntentCriteria {
+public struct MediaIntentCriteria: Sendable {
   let query: String
   let hasReference: Bool
   let hasGenres: Bool
