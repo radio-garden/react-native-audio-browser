@@ -173,19 +173,25 @@ enum BrowserPathHelper {
       return path
     }
 
-    // Ensure baseUrl ends with / and path doesn't start with /
+    // Strip trailing slashes from the base and leading slashes from the path so
+    // they join with exactly one separator.
     var normalizedBase = baseUrl
     while normalizedBase.hasSuffix("/") {
       normalizedBase.removeLast()
     }
-    normalizedBase += "/"
 
     var normalizedPath = path
     while normalizedPath.hasPrefix("/") {
       normalizedPath.removeFirst()
     }
 
-    return "\(normalizedBase)\(normalizedPath)"
+    // Empty path → the base IS the full URL (e.g. a search endpoint whose
+    // baseUrl already includes the path); don't leave a dangling trailing slash.
+    if normalizedPath.isEmpty {
+      return normalizedBase
+    }
+
+    return "\(normalizedBase)/\(normalizedPath)"
   }
 
   /// True if `segment` appears in `path` as a complete path segment — bounded on

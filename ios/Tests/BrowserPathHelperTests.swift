@@ -29,6 +29,14 @@ import Testing
   #expect(result == "http://example.com/api")
 }
 
+@Test func buildUrlEmptyPathReturnsBaseWithoutTrailingSlash() {
+  // An endpoint whose baseUrl already includes the full path (e.g. search,
+  // `https://host/api/search`) passes an empty path — the base IS the URL, and
+  // must not gain a dangling trailing slash.
+  let result = BrowserPathHelper.buildUrl(baseUrl: "http://example.com/api/search", path: "")
+  #expect(result == "http://example.com/api/search")
+}
+
 // MARK: - appendQuery
 
 @Test func appendQueryAddsParamsWithQuestionMark() {

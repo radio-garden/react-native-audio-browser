@@ -661,7 +661,7 @@ final class BrowserManager {
       // path never applies (carried from the base; only a transform may change
       // it). Matches the web stub's fetchSearchResults and Android.
       let request = try await buildApiRequest(
-        kind: nil, searchConfig, path: searchConfig.path ?? "/__search", params: ["q": query],
+        kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": query],
         initialQuery: ["q": query],
       )
       logger.debug("Searching via API: \(request.url)")
