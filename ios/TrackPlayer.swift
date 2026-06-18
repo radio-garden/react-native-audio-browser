@@ -17,6 +17,12 @@ class TrackPlayer {
   let nowPlayingInfoController: NowPlayingInfoController
   let remoteCommandController: RemoteCommandController
   private let retryManager = RetryManager()
+  private let playbackStateStore = PlaybackStateStore()
+
+  // MARK: - Periodic Persist
+
+  /// Cancelled when playback stops; recreated when it starts.
+  private var periodicSaveTask: Task<Void, Never>?
 
   /// Retry configuration for load errors (network failures, timeouts, etc.)
   var retryConfig: Variant_Bool_RetryConfig? {
@@ -564,6 +570,55 @@ class TrackPlayer {
   }
 }
 
+// MARK: - Playback State Persistence
+
+extension TrackPlayer {
+  /// Snapshot the current player state to UserDefaults so a cold-start resume
+  /// can restore it without the JS runtime. Live streams persist `positionMs = nil`.
+  func persistPlaybackState() {
+    guard let track = currentTrack else { return }
+    let positionMs: Double? = (track.live == true) ? nil : (currentTime * 1000)
+    playbackStateStore.save(
+      PersistedPlaybackState(
+        track: JsonTrack(from: track),
+        positionMs: positionMs,
+        repeatMode: repeatMode.persistedString,
+        shuffleEnabled: shuffleEnabled,
+        playbackSpeed: rate,
+      )
+    )
+  }
+
+  /// Start a 5 s repeating save while playback is active. A previous task is
+  /// cancelled first so there is never more than one running at a time.
+  func startPeriodicSave() {
+    periodicSaveTask?.cancel()
+    periodicSaveTask = Task { [weak self] in
+      while !Task.isCancelled {
+        try? await Task.sleep(nanoseconds: 5_000_000_000)
+        guard !Task.isCancelled else { return }
+        self?.persistPlaybackState()
+      }
+    }
+  }
+
+  func stopPeriodicSave() {
+    periodicSaveTask?.cancel()
+    periodicSaveTask = nil
+  }
+}
+
+private extension RepeatMode {
+  /// String representation stored in `PersistedPlaybackState.repeatMode`.
+  var persistedString: String {
+    switch self {
+    case .off: "off"
+    case .track: "track"
+    case .queue: "queue"
+    }
+  }
+}
+
 // MARK: - PlaybackEffectHandler
 
 extension TrackPlayer: PlaybackEffectHandler {
@@ -607,10 +662,17 @@ extension TrackPlayer: PlaybackEffectHandler {
 
   func updateNowPlayingState(playWhenReady: Bool) {
     nowPlayingInfoController.setPlaybackState(playing: playWhenReady)
+    if playWhenReady {
+      startPeriodicSave()
+    } else {
+      stopPeriodicSave()
+      persistPlaybackState()
+    }
   }
 
   func loadNowPlayingMetadata(for track: Track) {
     nowPlayingUpdater.loadMetaValues(for: track)
+    persistPlaybackState()
   }
 
   func clearNowPlaying() {
