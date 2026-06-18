@@ -1593,7 +1593,15 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         } else if let state = self.playbackStateStore.load() {
           let track = state.track.toNitro()
           let startMs = (track.live == true) ? nil : state.positionMs
-          player.setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
+          // Match Android resume: re-expand the full queue from the track's contextual
+          // URL (parent container → siblings + selected index). Fall back to the single
+          // track when the url isn't contextual or expansion fails.
+          if let url = state.track.url,
+             let expanded = try? await browser.browserManager.expandQueueFromContextualUrl(url) {
+            player.setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
+          } else {
+            player.setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
+          }
           self.showNowPlayingRequestedEmitter.emit(())
           completion(true)
         } else {
