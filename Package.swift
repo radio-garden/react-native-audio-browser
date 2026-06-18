@@ -34,6 +34,7 @@ let package = Package(
         "Model/TrackPlayerError.swift",
         "Player/MediaIntentCriteria.swift",
         "Player/PersistedPlaybackState.swift",
+        "Player/PlaybackStateStore.swift",
         "Model/NitroTypeStubs.swift",
         "PlaybackEvent.swift",
         "TrackSelector.swift",
