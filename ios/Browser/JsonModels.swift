@@ -160,6 +160,73 @@ struct JsonTrack: Codable {
   }
 }
 
+// MARK: - Snapshot live Nitro types back to JSON models (for persistence)
+
+#if canImport(NitroModules)
+
+  extension JsonTrackRequest {
+    /// Snapshot a live TrackRequest back to its JSON model.
+    init(from request: TrackRequest) {
+      self.init(userAgent: request.userAgent, headers: request.headers, query: request.query)
+    }
+  }
+
+  extension JsonTrack {
+    /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
+    init(from track: Track) {
+      self.init(
+        id: track.id,
+        url: track.url,
+        title: track.title,
+        subtitle: track.subtitle,
+        artwork: track.artwork,
+        artist: track.artist,
+        albumUrl: track.albumUrl,
+        album: track.album,
+        description: track.description,
+        genre: track.genre,
+        duration: track.duration,
+        src: track.src,
+        request: track.request.map(JsonTrackRequest.init(from:)),
+        style: nil,
+        childrenStyle: nil,
+        groupTitle: track.groupTitle,
+        live: track.live,
+        imageRow: nil,
+      )
+    }
+  }
+
+#else
+
+  extension JsonTrackRequest {
+    /// Snapshot a live TrackRequest back to its JSON model (SPM test-target stub).
+    init(from request: TrackRequest) {
+      self.init(userAgent: request.userAgent, headers: request.headers, query: request.query)
+    }
+  }
+
+  extension JsonTrack {
+    /// Snapshot the persistable subset of a live Track (inverse of `toNitro()`).
+    /// SPM test-target stub — only fields present on the minimal `Track` stub.
+    init(from track: Track) {
+      self.init(
+        id: track.id,
+        url: track.url,
+        title: track.title,
+        artwork: track.artwork,
+        artist: track.artist,
+        albumUrl: track.albumUrl,
+        album: track.album,
+        src: track.src,
+        request: track.request.map(JsonTrackRequest.init(from:)),
+        live: track.live,
+      )
+    }
+  }
+
+#endif
+
 // MARK: - Convert JSON models to Nitro types
 
 #if canImport(NitroModules)
