@@ -34,6 +34,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
+  private let playbackStateStore = PlaybackStateStore()
   let browserManager = BrowserManager()
   private let trackSelector: TrackSelector
   private var volumeObservation: NSKeyValueObservation?
@@ -1589,9 +1590,14 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           player.play()
           self.showNowPlayingRequestedEmitter.emit(())
           completion(true)
+        } else if let state = self.playbackStateStore.load() {
+          let track = state.track.toNitro()
+          let startMs = (track.live == true) ? nil : state.positionMs
+          player.setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
+          self.showNowPlayingRequestedEmitter.emit(())
+          completion(true)
         } else {
-          // Cold start: nothing loaded yet. Task 5 restores from PlaybackStateStore here.
-          completion(false)
+          completion(false)   // nothing playing and nothing persisted
         }
         return
       }
