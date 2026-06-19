@@ -1596,7 +1596,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           browser.showNowPlayingRequestedEmitter.emit(())
           completion(true)
         } else if let state = browser.playbackStateStore.load() {
-          browser.logger.info("resume: cold — restoring persisted track url=\(state.track.url ?? "nil")")
+          browser.logger.info("resume: cold — restoring persisted track")
           let track = state.track.toNitro()
           let startMs = (track.live == true) ? nil : state.positionMs
           // Match Android resume: re-expand the full queue from the track's contextual

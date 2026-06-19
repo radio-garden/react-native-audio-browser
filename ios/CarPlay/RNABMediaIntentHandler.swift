@@ -13,18 +13,36 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
     let s = intent.mediaSearch
+    let query = s?.mediaName ?? ""
     let criteria = MediaIntentCriteria(
-      query: s?.mediaName ?? "",
+      query: query,
       hasReference: (s?.reference ?? .unknown) != .unknown,
       hasGenres: !((s?.genreNames ?? []).isEmpty),
       hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
+      matchesAppName: Self.queryNamesHostApp(query),
     )
-    Self.logger.info("Play media intent — query=\(criteria.query) resume=\(criteria.isResume)")
+    Self.logger.info("Play media intent — query=\(criteria.query) matchesApp=\(criteria.matchesAppName) resume=\(criteria.isResume)")
 
     // Static + gate-waiting, so it works even before the shared instance exists
     // (background intent launch, RN not booted yet).
     HybridAudioBrowser.handlePlayMediaIntent(criteria: criteria) { success in
       completion(INPlayMediaIntentResponse(code: success ? .success : .failure, userActivity: nil))
     }
+  }
+
+  /// Whether `query` is effectively the host app's own name — so "Play «app»"
+  /// (which Siri delivers as a search for a word from the app name) is treated
+  /// as resume rather than a station search. Uses the host bundle's display name.
+  private static func queryNamesHostApp(_ query: String) -> Bool {
+    let info = Bundle.main.infoDictionary
+    guard let appName = (info?["CFBundleDisplayName"] as? String)
+            ?? (info?["CFBundleName"] as? String) else { return false }
+    let normalize: (String) -> String = {
+      $0.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    let q = normalize(query), a = normalize(appName)
+    guard !q.isEmpty, !a.isEmpty else { return false }
+    return a.contains(q) || q.contains(a)
   }
 }
