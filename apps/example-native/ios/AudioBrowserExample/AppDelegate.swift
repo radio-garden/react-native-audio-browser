@@ -61,13 +61,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   // MARK: - Siri Media Intent
 
-  // Called when the Intents Extension returns .handleInApp
+  // iOS 14+ in-app handling: Siri delivers the INPlayMediaIntent straight here
+  // (no Intents Extension). The intent can launch us into the background with no
+  // scene, so boot React Native first; the library's handler then resolves the
+  // intent (resume or search) and starts playback.
   func application(
     _ application: UIApplication,
-    handle intent: INIntent,
-    completionHandler: @escaping (INIntentResponse) -> Void
-  ) {
-    RNABAudioBrowser.handleMediaIntent(intent, completionHandler: completionHandler)
+    handlerFor intent: INIntent
+  ) -> Any? {
+    startReactNativeHeadless()
+    return RNABAudioBrowser.handler(for: intent)
   }
 
   // MARK: - CarPlay Scene Configuration
