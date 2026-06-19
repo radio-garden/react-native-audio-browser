@@ -39,3 +39,62 @@ struct MediaIntentCriteriaTests {
     #expect(!MediaIntentCriteria(query: "jazz", hasReference: false, hasGenres: false, hasMediaType: false, matchesAppName: false).isResume)
   }
 }
+
+// Exercises the full Siri-phrase → search decision via the pure factory,
+// standing in for what `INMediaSearch` would deliver for each spoken command.
+@Suite("MediaIntentCriteria.from")
+struct MediaIntentCriteriaFromTests {
+  private let appName = "Radio Garden"
+
+  // "Play Radio Garden" → Siri sends mediaName "Garden" (+ radio mediaType).
+  @Test func playAppName_resumes() {
+    let c = MediaIntentCriteria.from(mediaName: "Garden", genreNames: [], hasReference: false, hasMediaType: true, appName: appName)
+    #expect(c.query == "Garden")
+    #expect(c.matchesAppName)
+    #expect(c.isResume)
+  }
+
+  // Bare "Play Radio Garden" where Siri sends nothing actionable.
+  @Test func emptyIntent_resumes() {
+    let c = MediaIntentCriteria.from(mediaName: nil, genreNames: [], hasReference: false, hasMediaType: false, appName: appName)
+    #expect(c.query == "")
+    #expect(c.isResume)
+  }
+
+  // "Play jazz on Radio Garden" → genre, not mediaName. The genre becomes the query.
+  @Test func genre_becomesQuery_andSearches() {
+    let c = MediaIntentCriteria.from(mediaName: nil, genreNames: ["jazz"], hasReference: false, hasMediaType: true, appName: appName)
+    #expect(c.query == "jazz")
+    #expect(c.hasGenres)
+    #expect(!c.isResume)
+  }
+
+  // Multi-word genres are joined into the query.
+  @Test func multiWordGenre_joined() {
+    let c = MediaIntentCriteria.from(mediaName: "   ", genreNames: ["classic", "rock"], hasReference: false, hasMediaType: false, appName: appName)
+    #expect(c.query == "classic rock")
+    #expect(!c.isResume)
+  }
+
+  // "Play KCRW on Radio Garden" → a real station search, not resume.
+  @Test func stationName_searches() {
+    let c = MediaIntentCriteria.from(mediaName: "KCRW", genreNames: [], hasReference: false, hasMediaType: false, appName: appName)
+    #expect(c.query == "KCRW")
+    #expect(!c.matchesAppName)
+    #expect(!c.isResume)
+  }
+
+  // App-name match ignores case and diacritics.
+  @Test func appNameMatch_caseAndDiacriticInsensitive() {
+    let c = MediaIntentCriteria.from(mediaName: "gärden", genreNames: [], hasReference: false, hasMediaType: false, appName: appName)
+    #expect(c.matchesAppName)
+    #expect(c.isResume)
+  }
+
+  // Without a known app name, an app-name-ish query is just a search.
+  @Test func nilAppName_searches() {
+    let c = MediaIntentCriteria.from(mediaName: "Garden", genreNames: [], hasReference: false, hasMediaType: false, appName: nil)
+    #expect(!c.matchesAppName)
+    #expect(!c.isResume)
+  }
+}
