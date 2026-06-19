@@ -6,8 +6,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RNABAudioBrowser : NSObject
 
 /// Return this from your AppDelegate's `application:handlerForIntent:` (iOS 14+
-/// in-app handling). For `INPlayMediaIntent` it vends a handler that searches,
-/// queues, and plays; nil for unsupported intents.
+/// in-app handling). Vends the library's handler for supported intents —
+/// `INPlayMediaIntent` (search / resume / play) and `INUpdateMediaAffinityIntent`
+/// (like / dislike the current track) — or nil for unsupported intents. Register
+/// the ones you want in `INIntentsSupported`.
 ///
 /// @code
 /// func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any? {
