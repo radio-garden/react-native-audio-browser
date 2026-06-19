@@ -1618,9 +1618,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       }
 
       do {
-        let resolved = try await browser.browserManager.search(criteria.query)
-        let tracks = (resolved.children ?? []).filter { $0.src != nil }
-        guard !tracks.isEmpty else { completion(false); return }
+        guard let tracks = try await browser.browserManager.searchPlayable(criteria.query) else {
+          completion(false)
+          return
+        }
         player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
         browser.showNowPlayingRequestedEmitter.emit(())
         completion(true)

@@ -684,6 +684,18 @@ final class BrowserManager {
     return makeSearchResult(query: query, results: hydratedResults)
   }
 
+  /// Search and return playable tracks for "play «X»" voice intents, drilling
+  /// into a browsable-only first result (place/genre page) so we play its first
+  /// station. Decision in `SearchDrillIn.playable`; mirrors Android's
+  /// `searchPlayable`.
+  func searchPlayable(_ query: String) async throws -> [Track]? {
+    let children = (try await search(query).children) ?? []
+    return try await SearchDrillIn.playable(from: children) { [self] url in
+      logger.debug("First search result is browsable-only, resolving: \(url)")
+      return (try await resolve(url).children) ?? []
+    }
+  }
+
   private func makeSearchResult(query: String, results: [Track]) -> ResolvedTrack {
     ResolvedTrack(
       url: BrowserPathHelper.createSearchPath(query),
