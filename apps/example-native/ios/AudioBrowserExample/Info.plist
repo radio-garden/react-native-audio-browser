@@ -28,6 +28,7 @@
 	<array>
 		<string>INPlayMediaIntent</string>
 		<string>INUpdateMediaAffinityIntent</string>
+		<string>INAddMediaIntent</string>
 	</array>
 	<key>INSupportedMediaCategories</key>
 	<array>

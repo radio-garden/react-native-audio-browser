@@ -10,6 +10,8 @@
         handlerClassName = @"RNABMediaIntentHandler";
     } else if ([intent isKindOfClass:[INUpdateMediaAffinityIntent class]]) {
         handlerClassName = @"RNABMediaAffinityHandler";
+    } else if ([intent isKindOfClass:[INAddMediaIntent class]]) {
+        handlerClassName = @"RNABMediaAddHandler";
     }
     if (!handlerClassName) {
         return nil;
