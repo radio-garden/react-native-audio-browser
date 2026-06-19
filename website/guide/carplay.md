@@ -115,7 +115,7 @@ configureBrowser({
 
 The `carPlaySiriListButton` property accepts `'top'` or `'bottom'` to control where the system assistant cell appears. It only affects CarPlay — it has no effect on the phone UI.
 
-To complete the setup, your app also needs an Intents Extension, a bridging header, and a one-line handler in your AppDelegate.
+To complete the setup, your app needs the Siri entitlement, a couple of Info.plist keys, a bridging header, and a one-line handler in your AppDelegate. Media intents are handled in-app: Siri delivers the `INPlayMediaIntent` straight to your `AppDelegate` (iOS 14+).
 
 ### 1. Entitlements
 
@@ -133,74 +133,19 @@ Add Siri usage description and supported media categories to your app's Info.pli
 ```xml
 <key>NSSiriUsageDescription</key>
 <string>Siri is used for voice-controlled media playback via CarPlay.</string>
+<key>INIntentsSupported</key>
+<array>
+    <string>INPlayMediaIntent</string>
+</array>
 <key>INSupportedMediaCategories</key>
 <array>
     <string>INMediaCategoryMusic</string>
 </array>
 ```
 
-### 3. Intents Extension
+`INIntentsSupported` registers your app to handle `INPlayMediaIntent`.
 
-The Siri search button requires an **Intents Extension** target. The extension receives the Siri intent, resolves media items, and forwards it to the main app for playback.
-
-Add an Intents Extension target to your Xcode project (File > New > Target > Intents Extension). The extension's bundle identifier must be a child of the main app's (e.g. `com.myapp.SiriIntentExtension`), and it must be embedded in the app via the "Embed App Extensions" build phase.
-
-The extension needs two files:
-
-**IntentHandler.swift** — resolves media items and forwards to the main app:
-
-```swift
-import Intents
-
-class IntentHandler: INExtension, INPlayMediaIntentHandling {
-
-  func resolveMediaItems(for intent: INPlayMediaIntent, with completion: @escaping ([INPlayMediaMediaItemResolutionResult]) -> Void) {
-    // Create a pass-through media item carrying the search term.
-    // Actual search/playback is handled by the main app after .handleInApp.
-    let searchTerm = intent.mediaSearch?.mediaName ?? ""
-    let mediaItem = INMediaItem(
-      identifier: searchTerm,
-      title: searchTerm,
-      type: .song,
-      artwork: nil
-    )
-    completion([.success(with: mediaItem)])
-  }
-
-  func handle(intent: INPlayMediaIntent, completion: @escaping (INPlayMediaIntentResponse) -> Void) {
-    completion(INPlayMediaIntentResponse(code: .handleInApp, userActivity: nil))
-  }
-}
-```
-
-**Info.plist** — declares `INPlayMediaIntent` support:
-
-```xml
-<key>NSExtension</key>
-<dict>
-    <key>NSExtensionAttributes</key>
-    <dict>
-        <key>IntentsRestrictedWhileLocked</key>
-        <array/>
-        <key>IntentsRestrictedWhileProtectedDataUnavailable</key>
-        <array/>
-        <key>IntentsSupported</key>
-        <array>
-            <string>INPlayMediaIntent</string>
-        </array>
-        <key>SupportedMediaCategories</key>
-        <array>
-            <string>INMediaCategoryMusic</string>
-        </array>
-    </dict>
-    <key>NSExtensionPointIdentifier</key>
-    <string>com.apple.intents-service</string>
-    <key>NSExtensionPrincipalClass</key>
-    <string>$(PRODUCT_MODULE_NAME).IntentHandler</string>
-</dict>
-```
-
-### 4. Bridging Header
+### 3. Bridging Header
 
 Create a bridging header to access the library's intent handling API from Swift:
 
@@ -212,7 +157,7 @@ Create a bridging header to access the library's intent handling API from Swift:
 
 Set `SWIFT_OBJC_BRIDGING_HEADER` in your target's build settings to point to this file.
 
-### 5. AppDelegate
+### 4. AppDelegate
 
 For iOS 14+ in-app intent handling, implement `application(_:handlerForIntent:)` on your `AppDelegate` and return the library's handler object:
 
@@ -235,11 +180,10 @@ The library searches using your configured browser search route, queues the resu
 
 1. User taps the search button on a CarPlay tab
 2. Siri activates and listens for a voice query
-3. iOS creates an `INPlayMediaIntent` with the transcribed search term
-4. The Intents Extension resolves a pass-through media item and responds with `.handleInApp`
-5. The system asks the main app for a handler via `application(_:handlerForIntent:)` and drives the intent against it
-6. The library searches your content and starts playback
-7. CarPlay's Now Playing screen updates automatically
+3. iOS creates an `INPlayMediaIntent` carrying the parsed query
+4. The system asks your app for a handler via `application(_:handlerForIntent:)` and drives the intent against it
+5. The library resolves the request and starts playback — **resuming** the last session when the user just said your app's name, otherwise **searching** your content (genre/artist/album/etc. are forwarded as structured search params)
+6. CarPlay's Now Playing screen updates automatically
 
 ## Headless Mode
 
@@ -251,4 +195,4 @@ Siri cannot be tested in the iOS Simulator or CarPlay Simulator. You must test o
 
 ## Reference
 
-See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native/ios/AudioBrowserExample) for a complete working implementation including the Intents Extension.
+See the [example app](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native/ios/AudioBrowserExample) for a complete working implementation.
