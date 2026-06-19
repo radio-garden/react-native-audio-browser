@@ -13,11 +13,16 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
     let s = intent.mediaSearch
-    let query = s?.mediaName ?? ""
+    let mediaName = (s?.mediaName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    let genres = s?.genreNames ?? []
+    // Siri routes a genre ("jazz", "classical") into genreNames, not mediaName.
+    // Fall back to the genre text so "Play jazz on …" actually searches for it
+    // rather than firing an empty query.
+    let query = mediaName.isEmpty ? genres.joined(separator: " ") : mediaName
     let criteria = MediaIntentCriteria(
       query: query,
       hasReference: (s?.reference ?? .unknown) != .unknown,
-      hasGenres: !((s?.genreNames ?? []).isEmpty),
+      hasGenres: !genres.isEmpty,
       hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
       matchesAppName: Self.queryNamesHostApp(query),
     )
