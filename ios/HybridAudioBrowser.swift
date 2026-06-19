@@ -1571,15 +1571,19 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     }
   }
 
-  public func handlePlayMediaIntent(criteria: MediaIntentCriteria, completion: @escaping @Sendable (Bool) -> Void) {
+  /// Static so the Siri intent handler can call it before the shared instance
+  /// exists: it waits on the `playerAndConfiguredBrowser` gate, which resolves
+  /// once RN boots. Uses the resolved `browser`, never `self`.
+  static func handlePlayMediaIntent(criteria: MediaIntentCriteria, completion: @escaping @Sendable (Bool) -> Void) {
     Task { @MainActor in
       guard let (browser, player) = await playerAndConfiguredBrowser.wait(timeout: .seconds(8)) else {
-        self.logger.error("handlePlayMediaIntent: browser/player not ready within budget")
+        Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
+          .error("handlePlayMediaIntent: browser/player not ready within budget")
         completion(false)
         return
       }
       guard browser.browseGate == nil else {
-        self.logger.info("handlePlayMediaIntent: refused — browse gate is set")
+        browser.logger.info("handlePlayMediaIntent: refused — browse gate is set")
         completion(false)
         return
       }
@@ -1587,10 +1591,12 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       // No-criteria intent ("play «app»") → resume.
       if criteria.isResume {
         if player.currentTrack != nil {
+          browser.logger.info("resume: warm — playing current track")
           player.play()
-          self.showNowPlayingRequestedEmitter.emit(())
+          browser.showNowPlayingRequestedEmitter.emit(())
           completion(true)
-        } else if let state = self.playbackStateStore.load() {
+        } else if let state = browser.playbackStateStore.load() {
+          browser.logger.info("resume: cold — restoring persisted track url=\(state.track.url ?? "nil")")
           let track = state.track.toNitro()
           let startMs = (track.live == true) ? nil : state.positionMs
           // Match Android resume: re-expand the full queue from the track's contextual
@@ -1602,9 +1608,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           } else {
             player.setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
           }
-          self.showNowPlayingRequestedEmitter.emit(())
+          browser.showNowPlayingRequestedEmitter.emit(())
           completion(true)
         } else {
+          browser.logger.error("resume: nothing playing and nothing persisted → no-op")
           completion(false)   // nothing playing and nothing persisted
         }
         return
@@ -1615,10 +1622,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         let tracks = (resolved.children ?? []).filter { $0.src != nil }
         guard !tracks.isEmpty else { completion(false); return }
         player.setQueue(tracks, initialIndex: 0, playWhenReady: true)
-        self.showNowPlayingRequestedEmitter.emit(())
+        browser.showNowPlayingRequestedEmitter.emit(())
         completion(true)
       } catch {
-        self.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")
+        browser.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")
         completion(false)
       }
     }

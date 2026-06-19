@@ -2,7 +2,7 @@
 
 **Status:** accepted
 
-Siri media intents (`INPlayMediaIntent`, and later `INAddMediaIntent` / `INUpdateMediaAffinityIntent`) and consumer-authored App Intents are handled in the **main app process** — via `application(_:handle:)` and `AppIntent.perform()` — never in an Intents app extension. Both entry points funnel through one native path: resolve → queue → play → surface Now Playing, guarded by the existing player-readiness gate. The consumer supplies the intent→tracks mapping through a `resolvePlayMedia` config callback (cross-platform) and authors their own App Shortcuts against native `AudioBrowserCommand` primitives; the library never ships pre-baked shortcuts.
+Siri media intents (`INPlayMediaIntent`, and later `INAddMediaIntent` / `INUpdateMediaAffinityIntent`) and consumer-authored App Intents are handled in the **main app process** — via `application(_:handlerForIntent:)` and `AppIntent.perform()` — never in an Intents app extension. Both entry points funnel through one native path: resolve → queue → play → surface Now Playing, guarded by the existing player-readiness gate. The consumer supplies the intent→tracks mapping through a `resolvePlayMedia` config callback (cross-platform) and authors their own App Shortcuts against native `AudioBrowserCommand` primitives; the library never ships pre-baked shortcuts.
 
 ## Considered options
 

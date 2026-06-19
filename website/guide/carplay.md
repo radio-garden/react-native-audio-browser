@@ -214,21 +214,22 @@ Set `SWIFT_OBJC_BRIDGING_HEADER` in your target's build settings to point to thi
 
 ### 5. AppDelegate
 
-When the extension forwards the intent via `.handleInApp`, the system calls `application(_:handle:completionHandler:)` on your `AppDelegate`. Delegate to the library:
+For iOS 14+ in-app intent handling, implement `application(_:handlerForIntent:)` on your `AppDelegate` and return the library's handler object:
 
 ```swift
 import Intents
 
 func application(
   _ application: UIApplication,
-  handle intent: INIntent,
-  completionHandler: @escaping (INIntentResponse) -> Void
-) {
-  RNABAudioBrowser.handleMediaIntent(intent, completionHandler: completionHandler)
+  handlerFor intent: INIntent
+) -> Any? {
+  RNABAudioBrowser.handler(for: intent)
 }
 ```
 
 The library searches using your configured browser search route, queues the results, and starts playback automatically.
+
+> **Why a handler object, not `application(_:handle:completionHandler:)`?** The latter is not a real `UIApplicationDelegate` method, so iOS never calls it. With no in-app handler registered, the system falls back to a `UISIntentForwardingAction`, which crashes in `-[INHandleIntentForwardingActionResponse isSuccess]`. Returning a handler from `application(_:handlerForIntent:)` keeps iOS on the in-app path.
 
 ### How It Works
 
@@ -236,7 +237,7 @@ The library searches using your configured browser search route, queues the resu
 2. Siri activates and listens for a voice query
 3. iOS creates an `INPlayMediaIntent` with the transcribed search term
 4. The Intents Extension resolves a pass-through media item and responds with `.handleInApp`
-5. The system forwards the intent to the main app via `application(_:handle:completionHandler:)`
+5. The system asks the main app for a handler via `application(_:handlerForIntent:)` and drives the intent against it
 6. The library searches your content and starts playback
 7. CarPlay's Now Playing screen updates automatically
 
