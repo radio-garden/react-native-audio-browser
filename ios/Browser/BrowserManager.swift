@@ -621,7 +621,19 @@ final class BrowserManager {
   // MARK: - Search
 
   /// Execute a search query.
+  /// Plain free-text search — wraps the structured overload with no mode/filters.
   func search(_ query: String) async throws -> ResolvedTrack {
+    try await search(
+      SearchParams(mode: nil, query: query, genre: nil, artist: nil, album: nil, title: nil, playlist: nil)
+    )
+  }
+
+  /// Structured search. Emits `q` plus any of `mode`/`genre`/`artist`/`album`/
+  /// `title`/`playlist` that are set, mirroring Android's `executeSearchApiRequest`
+  /// and the web stub. Cached by `query`.
+  func search(_ params: SearchParams) async throws -> ResolvedTrack {
+    let query = params.query
+
     // Check cache - re-hydrate favorites since they may have changed
     if query == lastSearchQuery, let results = lastSearchResults {
       let hydratedResults = results.map { hydrateFavorite($0) }
@@ -636,20 +648,10 @@ final class BrowserManager {
       throw BrowserError.contentNotFound(path: Self.searchRoutePath)
     }
 
-    let searchParams = SearchParams(
-      mode: nil,
-      query: query,
-      genre: nil,
-      artist: nil,
-      album: nil,
-      title: nil,
-      playlist: nil,
-    )
-
     var results: [Track]
 
     if let callback = searchEntry.searchCallback {
-      let outerPromise = callback(searchParams)
+      let outerPromise = callback(params)
       let innerPromise = try await outerPromise.await()
       results = try await innerPromise.await()
     } else if let searchConfig = searchEntry.searchConfig {
@@ -660,9 +662,17 @@ final class BrowserManager {
       // Seed the search config's static path onto the base — a layer's static
       // path never applies (carried from the base; only a transform may change
       // it). Matches the web stub's fetchSearchResults and Android.
+      var queryParams: [String: String] = ["q": query]
+      if let mode = params.mode { queryParams["mode"] = mode.stringValue }
+      if let genre = params.genre { queryParams["genre"] = genre }
+      if let artist = params.artist { queryParams["artist"] = artist }
+      if let album = params.album { queryParams["album"] = album }
+      if let title = params.title { queryParams["title"] = title }
+      if let playlist = params.playlist { queryParams["playlist"] = playlist }
+
       let request = try await buildApiRequest(
         kind: nil, searchConfig, path: searchConfig.path ?? "", params: ["q": query],
-        initialQuery: ["q": query],
+        initialQuery: queryParams,
       )
       logger.debug("Searching via API: \(request.url)")
       let jsonTracks: [JsonTrack] = try await httpClient.requestJson(request, as: [JsonTrack].self)
@@ -688,8 +698,8 @@ final class BrowserManager {
   /// into a browsable-only first result (place/genre page) so we play its first
   /// station. Decision in `SearchDrillIn.playable`; mirrors Android's
   /// `searchPlayable`.
-  func searchPlayable(_ query: String) async throws -> [Track]? {
-    let children = (try await search(query).children) ?? []
+  func searchPlayable(_ params: SearchParams) async throws -> [Track]? {
+    let children = (try await search(params).children) ?? []
     return try await SearchDrillIn.playable(from: children) { [self] url in
       logger.debug("First search result is browsable-only, resolving: \(url)")
       return (try await resolve(url).children) ?? []

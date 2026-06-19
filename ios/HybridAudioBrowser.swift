@@ -1618,7 +1618,19 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
       }
 
       do {
-        guard let tracks = try await browser.browserManager.searchPlayable(criteria.query) else {
+        // Assemble the Nitro SearchParams here (MainActor) from the criteria's
+        // Sendable fields, so the structured mode/genre/… reach the request like
+        // Android. Today the API still text-searches `q`; the rest is forward-compat.
+        let params = SearchParams(
+          mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
+          query: criteria.query,
+          genre: criteria.genre,
+          artist: criteria.artist,
+          album: criteria.album,
+          title: criteria.title,
+          playlist: criteria.playlist
+        )
+        guard let tracks = try await browser.browserManager.searchPlayable(params) else {
           completion(false)
           return
         }

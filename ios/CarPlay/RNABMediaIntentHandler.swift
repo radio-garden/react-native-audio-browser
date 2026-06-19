@@ -13,9 +13,20 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
     let s = intent.mediaSearch
+    // iOS expresses song/playlist via `mediaType` + `mediaName` rather than
+    // dedicated fields; distil just those two (others don't map to a SearchMode).
+    let mediaTypeKind: String? =
+      switch s?.mediaType {
+      case .some(.song): "song"
+      case .some(.playlist): "playlist"
+      default: nil
+      }
     let criteria = MediaIntentCriteria.from(
       mediaName: s?.mediaName,
       genreNames: s?.genreNames ?? [],
+      artistName: s?.artistName,
+      albumName: s?.albumName,
+      mediaTypeKind: mediaTypeKind,
       hasReference: (s?.reference ?? .unknown) != .unknown,
       hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
       appName: Self.hostAppName()

@@ -15,6 +15,45 @@ public struct MediaIntentCriteria: Sendable {
   /// app-open/resume, not a station search.
   let matchesAppName: Bool
 
+  // Structured search payload for the search branch, mirroring the shared
+  // `SearchParams`. Kept as plain Sendable strings so this type stays in the
+  // unit-testable target; the Nitro `SearchParams` is assembled in the funnel.
+  /// `SearchMode` name — "genre"/"artist"/"album"/"song"/"playlist", or nil.
+  let searchMode: String?
+  let genre: String?
+  let artist: String?
+  let album: String?
+  let title: String?
+  let playlist: String?
+
+  /// New search fields default to nil so existing call sites (and the resume
+  /// branch, which ignores them) stay unaffected.
+  init(
+    query: String,
+    hasReference: Bool,
+    hasGenres: Bool,
+    hasMediaType: Bool,
+    matchesAppName: Bool,
+    searchMode: String? = nil,
+    genre: String? = nil,
+    artist: String? = nil,
+    album: String? = nil,
+    title: String? = nil,
+    playlist: String? = nil
+  ) {
+    self.query = query
+    self.hasReference = hasReference
+    self.hasGenres = hasGenres
+    self.hasMediaType = hasMediaType
+    self.matchesAppName = matchesAppName
+    self.searchMode = searchMode
+    self.genre = genre
+    self.artist = artist
+    self.album = album
+    self.title = title
+    self.playlist = playlist
+  }
+
   var isResume: Bool {
     let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
     // "Play «app»": no search term and no other filter.
@@ -26,26 +65,60 @@ public struct MediaIntentCriteria: Sendable {
   }
 
   /// Builds criteria from the raw fields of a media-search intent. Pure (no
-  /// `Intents`/`Bundle` dependency) so the whole Siri-phrase → search decision
-  /// is unit-testable. `appName` is the host app's display name (nil if unknown).
+  /// `Intents`/`Bundle` dependency) so the whole Siri-phrase → search decision —
+  /// including the structured `mode`/`genre`/… mapping — is unit-testable.
+  ///
+  /// `mediaTypeKind` is the `INMediaItemType` distilled to "song"/"playlist"
+  /// (the two types iOS expresses via `mediaType` + `mediaName` rather than a
+  /// dedicated field); other types map to nil. `appName` is the host's display
+  /// name (nil if unknown).
   static func from(
     mediaName: String?,
     genreNames: [String],
+    artistName: String?,
+    albumName: String?,
+    mediaTypeKind: String?,
     hasReference: Bool,
     hasMediaType: Bool,
     appName: String?
   ) -> MediaIntentCriteria {
     let name = (mediaName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    // Siri routes a genre ("jazz", "classical") into genreNames, not mediaName.
-    // Fall back to the genre text so "Play jazz on …" searches for it instead of
-    // firing an empty query.
-    let query = name.isEmpty ? genreNames.joined(separator: " ") : name
+    let trimmedNonEmpty: (String?) -> String? = {
+      let t = ($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+      return t.isEmpty ? nil : t
+    }
+
+    let genre = genreNames.isEmpty ? nil : genreNames.joined(separator: " ")
+    let artist = trimmedNonEmpty(artistName)
+    let album = trimmedNonEmpty(albumName)
+    let title = mediaTypeKind == "song" ? (name.isEmpty ? nil : name) : nil
+    let playlist = mediaTypeKind == "playlist" ? (name.isEmpty ? nil : name) : nil
+
+    // `q` is always populated so search works even before the API honours
+    // `mode`: prefer the spoken name, else fall back to the structured value.
+    let query = name.isEmpty ? (genre ?? artist ?? album ?? title ?? playlist ?? "") : name
+
+    // The structured focus, if any. Genre wins (the dominant radio case), then
+    // album (more specific than artist), then artist, then song/playlist.
+    let searchMode: String? =
+      genre != nil ? "genre"
+      : album != nil ? "album"
+      : artist != nil ? "artist"
+      : (mediaTypeKind == "song" || mediaTypeKind == "playlist") ? mediaTypeKind
+      : nil
+
     return MediaIntentCriteria(
       query: query,
       hasReference: hasReference,
       hasGenres: !genreNames.isEmpty,
       hasMediaType: hasMediaType,
-      matchesAppName: queryMatchesAppName(query, appName: appName)
+      matchesAppName: queryMatchesAppName(query, appName: appName),
+      searchMode: searchMode,
+      genre: genre,
+      artist: artist,
+      album: album,
+      title: title,
+      playlist: playlist
     )
   }
 
