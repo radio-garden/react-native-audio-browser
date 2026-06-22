@@ -148,6 +148,12 @@ export interface SearchParams {
    * Media-reference axis. `'my'` = resolve against the user's own collection
    * ("play my favorites"); `'unknown'` = no reference (the default). Android
    * always emits `'unknown'`.
+   *
+   * Resolve it however your collection lives: a `SearchSourceCallback` can read
+   * `params.reference` and return the matching tracks directly, or — when using
+   * an HTTP `TransformableRequestConfig` — branch in `transform` on
+   * `request.query.reference === 'my'` to rewrite the request toward a
+   * favorites endpoint (e.g. injecting locally-stored identifiers into the body).
    */
   reference: MediaReference
 }
