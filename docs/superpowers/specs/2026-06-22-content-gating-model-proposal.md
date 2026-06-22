@@ -1,6 +1,6 @@
-# Proposal: Content Gating as a Returnable Result
+# Proposal: Content Gating
 
-**Status:** proposal (seeking review)
+**Status:** reviewed → tracked in [#61](https://github.com/radio-garden/react-native-audio-browser/issues/61) (`onBrowseGate` event) and [#62](https://github.com/radio-garden/react-native-audio-browser/issues/62) (gate-API: `configureBrowseGate` / `setBrowseGateEnabled` / `throw BrowseGateError`). Resume over-block fix: landed.
 **Library:** react-native-audio-browser
 
 ## Problem
