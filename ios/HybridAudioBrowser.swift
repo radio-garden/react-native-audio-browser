@@ -1036,6 +1036,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var nowPlayingFlash: NowPlayingUpdate?
   private var nowPlayingFlashRevert: DispatchWorkItem?
 
+  /// Pending debounced audio-session release (see `playerShouldReleaseSession`).
+  private var sessionReleaseWork: DispatchWorkItem?
+
   public func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
     onMainActor {
       nowPlayingFlashRevert?.cancel()
@@ -1401,6 +1404,8 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
   }
 
   public func playerDidChangePlayWhenReady(_ playWhenReady: Bool) {
+    // Intent to play again is the earliest cancel signal for a pending session release.
+    if playWhenReady { cancelSessionRelease() }
     onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(playWhenReady: playWhenReady))
   }
 
@@ -1414,10 +1419,35 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     // `setActive(true)` is a no-op when the session is already active.
     if state.playing || state.buffering {
       try? AVAudioSession.sharedInstance().setActive(true)
+      // Output resumed — cancel any pending release armed by an earlier stop.
+      cancelSessionRelease()
     }
     // Re-render so the formatter reacts to a stall starting or recovering (`stalled`) — a buffering
     // flag change that may not transition the coordinator state.
     applyNowPlayingMetadata()
+  }
+
+  public func playerShouldReleaseSession() {
+    // Release the audio session so other apps' audio (Spotify, a podcast) can resume — debounced,
+    // because iOS dislikes deactivating while our audio is still trailing off, and a quick
+    // pause→resume shouldn't thrash the session. The coordinator only requests this on a genuine
+    // stop (not an interruption, not mid-retry); a re-activation cancels it (see
+    // `playerDidChangePlayWhenReady` and the activation above). Mirrors the now-playing flash timer.
+    sessionReleaseWork?.cancel()
+    let release = DispatchWorkItem { [weak self] in
+      guard let self, self.player?.playWhenReady == false else { return }
+      self.sessionReleaseWork = nil
+      // `.notifyOthersOnDeactivation` signals other apps they may resume; without it the session
+      // is released but nobody is told, so the user's audio would not come back.
+      try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+    sessionReleaseWork = release
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
+  }
+
+  private func cancelSessionRelease() {
+    sessionReleaseWork?.cancel()
+    sessionReleaseWork = nil
   }
 
   public func playerDidEndQueue(_ event: PlaybackQueueEndedEvent) {

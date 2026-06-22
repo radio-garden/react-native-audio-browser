@@ -127,6 +127,7 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
   var shuffleEnabledChanges: [Bool] = []
   var errorEvents: [PlaybackErrorEvent] = []
   var playbackIntervalFiredCount = 0
+  var releaseSessionCount = 0
 
   func playerDidChangePlayback(_ playback: Playback) {
     playbackChanges.append(playback)
@@ -170,6 +171,10 @@ final class MockPlaybackCoordinatorCallbacks: PlaybackCoordinatorCallbacks {
 
   func playerDidError(_ event: PlaybackErrorEvent) {
     errorEvents.append(event)
+  }
+
+  func playerShouldReleaseSession() {
+    releaseSessionCount += 1
   }
 }
 

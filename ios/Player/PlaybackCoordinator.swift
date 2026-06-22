@@ -146,6 +146,7 @@ class PlaybackCoordinator {
         if playbackActive {
           effectHandler?.updateNowPlayingState(playWhenReady: playWhenReady)
         }
+        evaluateSessionRelease()
       }
     }
   }
@@ -362,7 +363,23 @@ class PlaybackCoordinator {
     shouldResumeAfterInterruption = false
     if shouldResume {
       play()
+    } else {
+      // Interruption ended and we're staying paused: the session can be released now.
+      evaluateSessionRelease()
     }
+  }
+
+  /// Requests an audio-session release when playback is deliberately stopped: play intent is off,
+  /// it isn't an interruption-driven pause (those resume — `shouldResumeAfterInterruption` is set
+  /// before the interruption's `pause()`, so this skips it), and no retry is pending (a live-stream
+  /// reconnect keeps `playWhenReady` true and must keep the session). The host debounces and cancels
+  /// on the next activation, so a quick pause→resume never actually releases.
+  private func evaluateSessionRelease() {
+    guard !playWhenReady,
+          !shouldResumeAfterInterruption,
+          errorHandler.pendingRetryTask == nil
+    else { return }
+    callbacks?.playerShouldReleaseSession()
   }
 
   func getPlayback() -> Playback {

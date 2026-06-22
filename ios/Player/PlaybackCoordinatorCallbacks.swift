@@ -17,4 +17,8 @@
   func playerDidChangeRepeatMode(_ event: RepeatModeChangedEvent)
   func playerDidChangeShuffleEnabled(_ enabled: Bool)
   func playerDidError(_ event: PlaybackErrorEvent)
+  /// Playback is deliberately stopped — play intent is off, it isn't an interruption-driven pause
+  /// (those resume), and no retry is pending (a live-stream reconnect must keep the session). The
+  /// host may release the audio session (debounced) so other apps' audio can resume.
+  func playerShouldReleaseSession()
 }

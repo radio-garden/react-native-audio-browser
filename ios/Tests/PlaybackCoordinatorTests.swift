@@ -770,3 +770,55 @@ struct InterruptionTests {
     #expect(c.playWhenReady == false) // never resumes — we weren't playing
   }
 }
+
+// MARK: - Audio session release (#60)
+
+@Suite("PlaybackCoordinator - audio session release")
+struct SessionReleaseTests {
+  @Test @MainActor
+  func deliberatePause_requestsRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    callbacks.releaseSessionCount = 0
+    c.pause()
+    #expect(callbacks.releaseSessionCount == 1)
+  }
+
+  @Test @MainActor
+  func play_doesNotRequestRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    #expect(callbacks.releaseSessionCount == 0)
+  }
+
+  @Test @MainActor
+  func interruptionBegan_doesNotRequestRelease() {
+    // A phone call pauses (playWhenReady → false) but is meant to resume, so the session must be
+    // held — the exact race the intent-gating design exists to avoid.
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    callbacks.releaseSessionCount = 0
+    c.handleInterruptionBegan()
+    #expect(callbacks.releaseSessionCount == 0)
+  }
+
+  @Test @MainActor
+  func interruptionEnded_withResume_doesNotRequestRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    callbacks.releaseSessionCount = 0
+    c.handleInterruptionEnded(shouldResume: true)
+    #expect(callbacks.releaseSessionCount == 0)
+  }
+
+  @Test @MainActor
+  func interruptionEnded_withoutResume_requestsRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    callbacks.releaseSessionCount = 0
+    c.handleInterruptionEnded(shouldResume: false)
+    #expect(callbacks.releaseSessionCount == 1)
+  }
+}
