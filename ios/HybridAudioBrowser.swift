@@ -1602,13 +1602,9 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         completion(false)
         return
       }
-      guard browser.browseGate == nil else {
-        browser.logger.info("handlePlayMediaIntent: refused — browse gate is set")
-        completion(false)
-        return
-      }
-
-      // No-criteria intent ("play «app»") → resume.
+      // No-criteria intent ("play «app»") → resume. A Browse Gate must NOT block
+      // this: the gate blocks *finding* content, never *hearing* the active or
+      // persisted track. The gate is checked below, for the search branch only.
       if criteria.isResume {
         if player.currentTrack != nil {
           browser.logger.info("resume: warm — playing current track")
@@ -1634,6 +1630,14 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           browser.logger.error("resume: nothing playing and nothing persisted → no-op")
           completion(false)   // nothing playing and nothing persisted
         }
+        return
+      }
+
+      // Search is *finding* new content — refused while a Browse Gate is set
+      // (resume above is unaffected: the gate never blocks hearing).
+      guard browser.browseGate == nil else {
+        browser.logger.info("handlePlayMediaIntent: search refused — browse gate is set")
+        completion(false)
         return
       }
 
