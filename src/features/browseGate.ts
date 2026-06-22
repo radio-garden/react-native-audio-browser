@@ -10,37 +10,40 @@ export type NativeBrowseGate = {
   /** Headline shown on the gate page. */
   title: string
   /**
-   * Body copy shown below the title. On CarPlay with a button the page is a
-   * row-less list whose enhanced section header carries the message in large
-   * type: a newline splits it into the header's title and subtitle lines.
-   * Without a button the message renders as the centered empty view, where
-   * newlines collapse to spaces.
+   * The explanatory copy under the title. How it lays out on CarPlay depends
+   * on whether there's a button:
+   * - **with a button** → it sits in the page's header, and a single newline
+   *   splits it into a bold line and a lighter line beneath.
+   * - **without a button** → it's the centered message on an otherwise empty
+   *   page, and newlines just become spaces.
    */
   message?: string
   /**
-   * Title of the action button — and the switch between CarPlay's two gate
-   * layouts: **present** → a row-less list whose section header carries the
-   * title/message with this button beside it; **omitted** → the centered
-   * empty-view page with no button (and `onButtonPressed` is never invoked).
-   * See `message` for how the body copy renders in each. iOS/CarPlay only —
-   * Android Auto has no button or full-page surface.
+   * The label on the gate's action button (e.g. "Go Premium"). It also picks
+   * the CarPlay layout: include it and you get a page with the button beside
+   * the message; leave it out and you get a plain centered message with no
+   * button (and `onButtonPressed` never fires). See `message` for how the copy
+   * renders in each.
+   *
+   * iOS/CarPlay only — Android Auto can't show a button or a full-page message.
    */
   buttonTitle?: string
 }
 
 /**
- * An app-imposed block on browsing from external surfaces (CarPlay,
- * Android Auto), set and cleared at runtime. While gated, tabs stay visible
- * but every tab's content — and external-surface search — is replaced by a
- * single message: a full-page centered view on CarPlay, a non-playable list
- * tile on Android Auto (the only in-browse signal its UI renders — buttons
- * and full-page messages don't exist there, so `buttonTitle` is iOS-only).
- * Voice-initiated search/play is refused on both platforms. Playback, the
- * queue, and now-playing are unaffected: a gate blocks finding content,
- * never hearing it.
+ * A block you put on browsing from the car surfaces (CarPlay, Android Auto),
+ * which you set and clear at runtime — a subscription wall, a login prompt, a
+ * region block, whatever you need (it's generic by design).
  *
- * Generic by design: subscription, login, and region blocks are all
- * browse gates.
+ * While it's up, the tabs stay where they are, but every tab's content — and
+ * any voice or manual *search* — shows your single gate message instead:
+ * - **CarPlay**: a full-page message, with an optional button.
+ * - **Android Auto**: one non-playable list tile (no button or full page, so
+ *   `buttonTitle` is iOS-only).
+ *
+ * It only blocks *finding* new content, never *hearing* it: whatever's
+ * playing keeps playing, "resume" / "play this" still work by voice, and the
+ * queue and now-playing are left alone.
  */
 export type BrowseGate = NativeBrowseGate & {
   /** Invoked when the user taps the gate page's button. */
@@ -55,10 +58,9 @@ nativeBrowser.onBrowseGateButtonPressed = () => buttonHandler?.()
 // MARK: - Getters and Setters
 
 /**
- * Sets (or replaces) the browse gate. Calling this while a gate is already
- * set updates the page in place — no navigation reset, the selected tab is
- * kept. A gate set before an external surface connects renders immediately
- * at connect.
+ * Raises the gate, or updates it if one's already up. Updating is seamless —
+ * the page changes in place, with no navigation reset and the current tab kept.
+ * Set it before the car connects and it'll be there the moment it does.
  */
 export function setBrowseGate(gate: BrowseGate): void {
   const { onButtonPressed, ...nativeGate } = gate
@@ -67,7 +69,7 @@ export function setBrowseGate(gate: BrowseGate): void {
 }
 
 /**
- * Clears the browse gate. Tab content is restored and the selected tab is
+ * Drops the gate — the tabs' real content comes back, and the current tab is
  * kept.
  */
 export function clearBrowseGate(): void {
@@ -76,7 +78,7 @@ export function clearBrowseGate(): void {
 }
 
 /**
- * Gets the current browse gate, or undefined when not gated.
+ * The gate that's currently up, or `undefined` if there isn't one.
  */
 export function getBrowseGate(): NativeBrowseGate | undefined {
   return nativeBrowser.getBrowseGate()
