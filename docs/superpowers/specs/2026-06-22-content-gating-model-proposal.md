@@ -1,6 +1,6 @@
 # Proposal: Content Gating
 
-**Status:** reviewed → tracked in [#61](https://github.com/radio-garden/react-native-audio-browser/issues/61) (`onBrowseGate` event) and [#62](https://github.com/radio-garden/react-native-audio-browser/issues/62) (gate-API: `configureBrowseGate` / `setBrowseGateEnabled` / `throw BrowseGateError`). Resume over-block fix: landed.
+**Status:** reviewed → tracked in [#62](https://github.com/radio-garden/react-native-audio-browser/issues/62) — Part 1: `onBrowseGate` gate-hit event (non-breaking, ship-now); Part 2: gate-API redesign (`configureBrowseGate` / `setBrowseGateEnabled` / `throw BrowseGateError`, breaking, parked). Resume over-block fix: landed.
 **Library:** react-native-audio-browser
 
 ## Problem
