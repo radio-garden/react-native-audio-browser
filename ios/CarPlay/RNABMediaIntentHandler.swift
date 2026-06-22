@@ -13,21 +13,13 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
     let s = intent.mediaSearch
-    // iOS expresses song/playlist via `mediaType` + `mediaName` rather than
-    // dedicated fields; distil just those two (others don't map to a SearchMode).
-    let mediaTypeKind: String? =
-      switch s?.mediaType {
-      case .some(.song): "song"
-      case .some(.playlist): "playlist"
-      default: nil
-      }
     let criteria = MediaIntentCriteria.from(
       mediaName: s?.mediaName,
       genreNames: s?.genreNames ?? [],
       artistName: s?.artistName,
       albumName: s?.albumName,
-      mediaTypeKind: mediaTypeKind,
-      hasReference: (s?.reference ?? .unknown) != .unknown,
+      mediaTypeMode: Self.mediaTypeMode(s?.mediaType ?? .unknown),
+      reference: Self.reference(s?.reference ?? .unknown),
       hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
       appName: Self.hostAppName()
     )
@@ -37,6 +29,36 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
     // (background intent launch, RN not booted yet).
     HybridAudioBrowser.handlePlayMediaIntent(criteria: criteria) { success in
       completion(INPlayMediaIntentResponse(code: success ? .success : .failure, userActivity: nil))
+    }
+  }
+
+  /// Collapse `INMediaItemType` to a `SearchMode` string (the container
+  /// vertical), or nil for filter-only / unclassified types. `genre`/`artist`/
+  /// `album` are filters, not verticals — they yield no mode.
+  private static func mediaTypeMode(_ type: INMediaItemType) -> String? {
+    switch type {
+    case .station, .radioStation, .algorithmicRadioStation, .musicStation: return "station"
+    case .podcastShow, .podcastEpisode, .podcastPlaylist, .podcastStation:  return "podcast"
+    case .audioBook:       return "audiobook"
+    case .news:            return "news"
+    case .music:           return "music"
+    case .song:            return "song"
+    case .playlist:        return "playlist"
+    case .musicVideo:      return "music-video"
+    case .movie:           return "movie"
+    case .tvShow:          return "tv-show"
+    case .tvShowEpisode:   return "tv-show-episode"
+    default:               return nil   // album/artist/genre/unknown
+    }
+  }
+
+  /// Map the SiriKit reference to the pure criteria enum. `.currentlyPlaying`
+  /// routes to native resume; `.my` to the consumer; everything else is unknown.
+  private static func reference(_ ref: INMediaReference) -> MediaIntentCriteria.Reference {
+    switch ref {
+    case .currentlyPlaying: return .currentlyPlaying
+    case .my:               return .my
+    default:                return .unknown
     }
   }
 

@@ -1641,7 +1641,9 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           artist: criteria.artist,
           album: criteria.album,
           title: criteria.title,
-          playlist: criteria.playlist
+          playlist: criteria.playlist,
+          // .currentlyPlaying can't reach here — isResume routed it to resume.
+          reference: criteria.reference == .my ? .my : .unknown
         )
         guard let tracks = try await browser.browserManager.searchPlayable(params) else {
           completion(false)

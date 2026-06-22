@@ -624,7 +624,7 @@ final class BrowserManager {
   /// Plain free-text search — wraps the structured overload with no mode/filters.
   func search(_ query: String) async throws -> ResolvedTrack {
     try await search(
-      SearchParams(mode: nil, query: query, genre: nil, artist: nil, album: nil, title: nil, playlist: nil)
+      SearchParams(mode: nil, query: query, genre: nil, artist: nil, album: nil, title: nil, playlist: nil, reference: .unknown)
     )
   }
 
@@ -664,6 +664,7 @@ final class BrowserManager {
       // it). Matches the web stub's fetchSearchResults and Android.
       var queryParams: [String: String] = ["q": query]
       if let mode = params.mode { queryParams["mode"] = mode.stringValue }
+      if params.reference == .my { queryParams["reference"] = "my" }
       if let genre = params.genre { queryParams["genre"] = genre }
       if let artist = params.artist { queryParams["artist"] = artist }
       if let album = params.album { queryParams["album"] = album }
