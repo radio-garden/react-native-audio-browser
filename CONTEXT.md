@@ -35,8 +35,8 @@ A top-level navigation entry shown in the tab bar of the browser UI.
 _Avoid_: Section, category.
 
 **Search**:
-The voice- and text-driven query subsystem. Receives structured `SearchParams` (derived from Android voice intents) and returns a `Track[]`.
-_Avoid_: Query, lookup.
+The voice- and text-driven query subsystem. Receives structured `SearchParams` — one cross-platform shape normalized from both iOS (SiriKit `INMediaSearch`) and Android (`MEDIA_PLAY_FROM_SEARCH`) voice/text intents — and returns a `Track[]`. The per-platform parsers absorb the wire differences; the `SearchParams` they emit is identical. Within it, **`mode`** is the *container vertical* (what kind of result: station / podcast / song / …), orthogonal to the *filter* props (`genre` / `artist` / `album`); **`reference`** is the media-reference axis (`'my'` = the user's own collection, routed to Search; "currently playing" is resolved natively and never reaches Search).
+_Avoid_: Query, lookup. For `mode`, avoid conflating the vertical with the filter props.
 
 **BrowserSource**:
 Anything that can produce children for a path — the value on the right-hand side of a **Route**, or of `browse:` / `tabs:` / `search:`. Comes in three shapes, all producing a `ResolvedTrack`: a static `ResolvedTrack` with its children declared inline, a callback that returns one, or a `TransformableRequestConfig` that points at a JSON `ResolvedTrack`-shaped endpoint.
