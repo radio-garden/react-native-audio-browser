@@ -563,14 +563,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void> {
     Promise.async {
-      // Configure the audio session category up front, but do NOT activate it here. Activating a
+      // Configure the audio session from the iOS setup options (category, mode, route policy, and
+      // options like `allowBluetooth` / `allowAirPlay`), but do NOT activate it here. Activating a
       // non-mixable `.playback` session interrupts other apps' audio — so activating at setup
       // pauses whatever the user is listening to (Safari, Spotify, a podcast) the instant our app
       // launches, before they play anything. Setting the category is silent; only activation
       // interrupts. The session is activated lazily when playback actually starts producing output
       // (see `playerDidChangePlayingState`) and re-activated on interruption-end. Best-effort: a
       // category-config failure must never brick setup.
-      try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+      let session = AVAudioSession.sharedInstance()
+      if let iosOptions = options.ios {
+        let cfg = iosOptions.resolveAudioSessionConfig()
+        try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
+      } else {
+        try? session.setCategory(.playback, mode: .default)
+      }
 
       // Create player and configure on main actor
       await MainActor.run { [weak self] in

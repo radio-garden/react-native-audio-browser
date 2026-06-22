@@ -89,3 +89,34 @@ enum SessionCategoryOptions: String {
     }
   }
 }
+
+extension NativeIOSSetupOptions {
+  /// The resolved `AVAudioSession` category configuration from the iOS setup options. Each field
+  /// falls back to a playback default when it's absent or unrecognised, so a consumer's
+  /// `categoryOptions` (e.g. `allowBluetooth` / `allowAirPlay`), `mode`, and route `policy` are
+  /// actually honoured at setup instead of being dropped.
+  func resolveAudioSessionConfig() -> (
+    category: AVAudioSession.Category,
+    mode: AVAudioSession.Mode,
+    policy: AVAudioSession.RouteSharingPolicy,
+    options: AVAudioSession.CategoryOptions
+  ) {
+    let category = self.category
+      .flatMap { SessionCategory(rawValue: $0.stringValue) }?
+      .mapConfigToAVAudioSessionCategory() ?? .playback
+    let mode = self.categoryMode
+      .flatMap { SessionCategoryMode(rawValue: $0.stringValue) }?
+      .mapConfigToAVAudioSessionCategoryMode() ?? .default
+    let policy = self.categoryPolicy
+      .flatMap { SessionCategoryPolicy(rawValue: $0.stringValue) }?
+      .toRouteSharingPolicy() ?? .default
+    let options = (self.categoryOptions ?? [])
+      .reduce(into: AVAudioSession.CategoryOptions()) { acc, option in
+        if let mapped = SessionCategoryOptions(rawValue: option.stringValue)?
+          .mapConfigToAVAudioSessionCategoryOptions() {
+          acc.insert(mapped)
+        }
+      }
+    return (category, mode, policy, options)
+  }
+}
