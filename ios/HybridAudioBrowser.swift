@@ -563,10 +563,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void> {
     Promise.async {
-      // Configure audio session
-      let session = AVAudioSession.sharedInstance()
-      try session.setCategory(.playback, mode: .default)
-      try session.setActive(true)
+      // Configure the audio session category up front, but do NOT activate it here. Activating a
+      // non-mixable `.playback` session interrupts other apps' audio — so activating at setup
+      // pauses whatever the user is listening to (Safari, Spotify, a podcast) the instant our app
+      // launches, before they play anything. Setting the category is silent; only activation
+      // interrupts. The session is activated lazily when playback actually starts producing output
+      // (see `playerDidChangePlayingState`) and re-activated on interruption-end. Best-effort: a
+      // category-config failure must never brick setup.
+      try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
 
       // Create player and configure on main actor
       await MainActor.run { [weak self] in
@@ -1395,6 +1399,15 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func playerDidChangePlayingState(_ state: PlayingState) {
     onPlaybackPlayingState(state)
+    // Lazily activate the audio session the moment playback actually produces — or is buffering to
+    // produce — output. This (not setup) is where we grab the session, so launching the app never
+    // interrupts other apps' audio; the interruption only happens when the user truly starts
+    // playback, which is correct. Keyed off play *state*, not `playWhenReady`, because the intent
+    // can be set at setup (before any track) while output only begins here. Idempotent:
+    // `setActive(true)` is a no-op when the session is already active.
+    if state.playing || state.buffering {
+      try? AVAudioSession.sharedInstance().setActive(true)
+    }
     // Re-render so the formatter reacts to a stall starting or recovering (`stalled`) — a buffering
     // flag change that may not transition the coordinator state.
     applyNowPlayingMetadata()
