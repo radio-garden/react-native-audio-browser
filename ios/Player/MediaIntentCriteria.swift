@@ -2,23 +2,29 @@ import Foundation
 
 /// Normalized "what did the user ask to play", derived from a media intent.
 /// Deliberately free of `Intents` types so the core (`HybridAudioBrowser`)
-/// never imports the Intents framework — the mapping lives in the ObjC-adjacent
-/// `RNABMediaIntentHandler`.
+/// never imports the Intents framework — the mapping lives in the
+/// `Intents`-aware `RNABMediaIntentHandler`.
 public struct MediaIntentCriteria: Sendable {
+  /// Media-reference axis (mirrors `INMediaReference`). `currentlyPlaying`
+  /// routes to native resume and never reaches the consumer; `my` routes to
+  /// the search source; `unknown` is the default.
+  public enum Reference: Sendable { case my, currentlyPlaying, unknown }
+
   let query: String
-  let hasReference: Bool
+  let reference: Reference
   let hasGenres: Bool
   let hasMediaType: Bool
   /// True when `query` is effectively the host app's own name. Siri turns
   /// "Play «app»" into a search for a word in the app name — e.g. "Play Radio
-  /// Garden" arrives as mediaName "Garden" (+ mediaType radio). That's an
+  /// Garden" arrives as mediaName "Garden" (+ radio mediaType). That's an
   /// app-open/resume, not a station search.
   let matchesAppName: Bool
 
-  // Structured search payload for the search branch, mirroring the shared
-  // `SearchParams`. Kept as plain Sendable strings so this type stays in the
-  // unit-testable target; the Nitro `SearchParams` is assembled in the funnel.
-  /// `SearchMode` name — "genre"/"artist"/"album"/"song"/"playlist", or nil.
+  // Structured search payload, mirroring the shared `SearchParams`. Plain
+  // Sendable strings so this type stays in the unit-testable target; the Nitro
+  // `SearchParams` is assembled in the funnel.
+  /// The container-vertical `SearchMode` name, or nil. Comes ONLY from the
+  /// intent's media type — never derived from which filter field is set.
   let searchMode: String?
   let genre: String?
   let artist: String?
@@ -26,11 +32,9 @@ public struct MediaIntentCriteria: Sendable {
   let title: String?
   let playlist: String?
 
-  /// New search fields default to nil so existing call sites (and the resume
-  /// branch, which ignores them) stay unaffected.
   init(
     query: String,
-    hasReference: Bool,
+    reference: Reference,
     hasGenres: Bool,
     hasMediaType: Bool,
     matchesAppName: Bool,
@@ -42,7 +46,7 @@ public struct MediaIntentCriteria: Sendable {
     playlist: String? = nil
   ) {
     self.query = query
-    self.hasReference = hasReference
+    self.reference = reference
     self.hasGenres = hasGenres
     self.hasMediaType = hasMediaType
     self.matchesAppName = matchesAppName
@@ -54,31 +58,37 @@ public struct MediaIntentCriteria: Sendable {
     self.playlist = playlist
   }
 
+  /// Resume vs search, by reference:
+  /// - `currentlyPlaying` → always resume ("play this" plays the active track)
+  /// - `my` → always search ("play my favorites" goes to the consumer)
+  /// - `unknown` → the no-criteria / app-name heuristic
   var isResume: Bool {
-    let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-    // "Play «app»": no search term and no other filter.
-    if q.isEmpty { return !hasReference && !hasGenres && !hasMediaType }
-    // "Play «app-name»": resume — unless there's a real filter (genre/reference)
-    // that signals an actual search. mediaType is ignored here because the app
-    // name itself ("Radio …") is what made Siri attach a radio media type.
-    return matchesAppName && !hasReference && !hasGenres
+    switch reference {
+    case .currentlyPlaying: return true
+    case .my: return false
+    case .unknown:
+      let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+      // "Play «app»": no search term and no other filter → resume.
+      if q.isEmpty { return !hasGenres && !hasMediaType }
+      // "Play «app-name»": resume — unless a real filter signals a search.
+      return matchesAppName && !hasGenres
+    }
   }
 
   /// Builds criteria from the raw fields of a media-search intent. Pure (no
-  /// `Intents`/`Bundle` dependency) so the whole Siri-phrase → search decision —
-  /// including the structured `mode`/`genre`/… mapping — is unit-testable.
+  /// `Intents`/`Bundle` dependency) so the whole Siri-phrase → search decision
+  /// is unit-testable.
   ///
-  /// `mediaTypeKind` is the `INMediaItemType` distilled to "song"/"playlist"
-  /// (the two types iOS expresses via `mediaType` + `mediaName` rather than a
-  /// dedicated field); other types map to nil. `appName` is the host's display
-  /// name (nil if unknown).
+  /// `mediaTypeMode` is the already-collapsed `SearchMode` string for the
+  /// intent's container vertical (e.g. "station"/"podcast"/"song"), or nil for
+  /// a filter-only / unclassified type. `reference` is the mapped axis.
   static func from(
     mediaName: String?,
     genreNames: [String],
     artistName: String?,
     albumName: String?,
-    mediaTypeKind: String?,
-    hasReference: Bool,
+    mediaTypeMode: String?,
+    reference: Reference,
     hasMediaType: Bool,
     appName: String?
   ) -> MediaIntentCriteria {
@@ -91,29 +101,21 @@ public struct MediaIntentCriteria: Sendable {
     let genre = genreNames.isEmpty ? nil : genreNames.joined(separator: " ")
     let artist = trimmedNonEmpty(artistName)
     let album = trimmedNonEmpty(albumName)
-    let title = mediaTypeKind == "song" ? (name.isEmpty ? nil : name) : nil
-    let playlist = mediaTypeKind == "playlist" ? (name.isEmpty ? nil : name) : nil
+    // song/playlist carry their spoken name into a dedicated field.
+    let title = mediaTypeMode == "song" ? (name.isEmpty ? nil : name) : nil
+    let playlist = mediaTypeMode == "playlist" ? (name.isEmpty ? nil : name) : nil
 
-    // `q` is always populated so search works even before the API honours
-    // `mode`: prefer the spoken name, else fall back to the structured value.
+    // `query` is always populated so search works even before the API honours
+    // `mode`: prefer the spoken name, else fall back to a structured value.
     let query = name.isEmpty ? (genre ?? artist ?? album ?? title ?? playlist ?? "") : name
-
-    // The structured focus, if any. Genre wins (the dominant radio case), then
-    // album (more specific than artist), then artist, then song/playlist.
-    let searchMode: String? =
-      genre != nil ? "genre"
-      : album != nil ? "album"
-      : artist != nil ? "artist"
-      : (mediaTypeKind == "song" || mediaTypeKind == "playlist") ? mediaTypeKind
-      : nil
 
     return MediaIntentCriteria(
       query: query,
-      hasReference: hasReference,
+      reference: reference,
       hasGenres: !genreNames.isEmpty,
       hasMediaType: hasMediaType,
       matchesAppName: queryMatchesAppName(query, appName: appName),
-      searchMode: searchMode,
+      searchMode: mediaTypeMode,   // mode is the vertical, verbatim — no derivation
       genre: genre,
       artist: artist,
       album: album,
@@ -122,9 +124,8 @@ public struct MediaIntentCriteria: Sendable {
     )
   }
 
-  /// Whether `query` is effectively the host app's own name — so "Play «app»"
-  /// (which Siri delivers as a search for a word from the app name) is treated
-  /// as resume rather than a station search. Case- and diacritic-insensitive.
+  /// Whether `query` is effectively the host app's own name. Case- and
+  /// diacritic-insensitive.
   private static func queryMatchesAppName(_ query: String, appName: String?) -> Bool {
     guard let appName else { return false }
     let normalize: (String) -> String = {
