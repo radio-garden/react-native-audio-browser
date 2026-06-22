@@ -26,6 +26,7 @@ import com.audiobrowser.player.Player
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.SearchMode
 import com.margelo.nitro.audiobrowser.SearchParams
 import kotlinx.coroutines.MainScope
@@ -183,19 +184,17 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Get the media focus type (what kind of media to search for)
     val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
 
-    // Determine search mode based on media focus type
+    // Determine search mode (container vertical) from the media focus. Genre/
+    // artist/album focuses are FILTERS, not verticals — they yield no mode; the
+    // extras below carry them. Android has no station/podcast/etc. focus, so
+    // those verticals are iOS-only.
     val mode =
       when (mediaFocus) {
-        "vnd.android.cursor.item/*" -> {
-          // Generic audio content - could be "play music" or unstructured search
+        "vnd.android.cursor.item/*" ->
           if (query.isEmpty()) SearchMode.ANY else null
-        }
-        MediaStore.Audio.Genres.ENTRY_CONTENT_TYPE -> SearchMode.GENRE
-        MediaStore.Audio.Artists.ENTRY_CONTENT_TYPE -> SearchMode.ARTIST
-        MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE -> SearchMode.ALBUM
         "vnd.android.cursor.item/audio" -> SearchMode.SONG
         MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
-        else -> null // No media focus or unknown - unstructured search
+        else -> null // genre/artist/album/unknown focus → no vertical
       }
 
     // Extract structured metadata fields
@@ -213,6 +212,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       album = album,
       title = title,
       playlist = playlist,
+      reference = MediaReference.UNKNOWN,
     )
   }
 

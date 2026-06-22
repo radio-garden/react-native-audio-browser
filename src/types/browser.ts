@@ -818,6 +818,8 @@ export type BrowserConfiguration = {
    *   - q: search query string (always present)
    *   - mode: container vertical (any/song/playlist/station/podcast/audiobook/news/music/
    *     music-video/movie/tv-show/tv-show-episode) - omitted for unstructured search
+   *   - reference: 'my' when the user asked for their own collection ("play my
+   *     favorites"); omitted otherwise
    *   - artist, album, genre, title, playlist: filters, included when present
    *
    * These query-param keys are fixed (not configurable). If your endpoint

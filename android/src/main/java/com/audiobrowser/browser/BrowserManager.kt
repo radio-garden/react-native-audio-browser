@@ -12,6 +12,7 @@ import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.FavoritesMatchMode
 import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____
 import com.margelo.nitro.audiobrowser.ImageContext
+import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.RequestConfig
@@ -726,6 +727,7 @@ class BrowserManager {
         album = null,
         title = null,
         playlist = null,
+        reference = MediaReference.UNKNOWN,
       )
     )
   }
@@ -782,6 +784,7 @@ class BrowserManager {
         album = null,
         title = null,
         playlist = null,
+        reference = MediaReference.UNKNOWN,
       )
     )
   }
@@ -1245,6 +1248,7 @@ class BrowserManager {
         val searchQueryParams = buildMap {
           put("q", params.query)
           params.mode?.let { put("mode", it.toString().lowercase()) }
+          if (params.reference == MediaReference.MY) put("reference", "my")
           params.genre?.let { put("genre", it) }
           params.artist?.let { put("artist", it) }
           params.album?.let { put("album", it) }

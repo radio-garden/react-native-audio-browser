@@ -39,6 +39,7 @@ export class SearchManager {
         q: params.query
       }
       if (params.mode) searchQueryParams.mode = params.mode
+      if (params.reference === 'my') searchQueryParams.reference = 'my'
       if (params.genre) searchQueryParams.genre = params.genre
       if (params.artist) searchQueryParams.artist = params.artist
       if (params.album) searchQueryParams.album = params.album
