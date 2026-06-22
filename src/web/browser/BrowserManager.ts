@@ -346,7 +346,7 @@ export class BrowserManager {
 
     // Handle callback-based search
     if (searchRoute.searchCallback) {
-      searchResults = await searchRoute.searchCallback({ query })
+      searchResults = await searchRoute.searchCallback({ query, reference: 'unknown' })
     }
     // Handle request config-based search via the shared layered fetch.
     else if (searchRoute.searchConfig) {

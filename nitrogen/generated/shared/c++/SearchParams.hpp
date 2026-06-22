@@ -30,10 +30,13 @@
 
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
+// Forward declaration of `MediaReference` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 
 #include "SearchMode.hpp"
 #include <optional>
 #include <string>
+#include "MediaReference.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -49,10 +52,11 @@ namespace margelo::nitro::audiobrowser {
     std::optional<std::string> album     SWIFT_PRIVATE;
     std::optional<std::string> title     SWIFT_PRIVATE;
     std::optional<std::string> playlist     SWIFT_PRIVATE;
+    MediaReference reference     SWIFT_PRIVATE;
 
   public:
     SearchParams() = default;
-    explicit SearchParams(std::optional<SearchMode> mode, std::string query, std::optional<std::string> genre, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> title, std::optional<std::string> playlist): mode(mode), query(query), genre(genre), artist(artist), album(album), title(title), playlist(playlist) {}
+    explicit SearchParams(std::optional<SearchMode> mode, std::string query, std::optional<std::string> genre, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> title, std::optional<std::string> playlist, MediaReference reference): mode(mode), query(query), genre(genre), artist(artist), album(album), title(title), playlist(playlist), reference(reference) {}
 
   public:
     friend bool operator==(const SearchParams& lhs, const SearchParams& rhs) = default;
@@ -74,7 +78,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artist"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "album"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playlist")))
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playlist"))),
+        JSIConverter<margelo::nitro::audiobrowser::MediaReference>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "reference")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::SearchParams& arg) {
@@ -86,6 +91,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "album"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.album));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "title"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "playlist"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.playlist));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "reference"), JSIConverter<margelo::nitro::audiobrowser::MediaReference>::toJSI(runtime, arg.reference));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -103,6 +109,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "album")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "playlist")))) return false;
+      if (!JSIConverter<margelo::nitro::audiobrowser::MediaReference>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "reference")))) return false;
       return true;
     }
   };

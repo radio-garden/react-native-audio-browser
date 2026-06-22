@@ -30,10 +30,10 @@ namespace margelo::nitro::audiobrowser {
    */
   enum class AndroidAudioContentType {
     MUSIC      SWIFT_NAME(music) = 0,
-    SPEECH      SWIFT_NAME(speech) = 1,
-    SONIFICATION      SWIFT_NAME(sonification) = 2,
-    MOVIE      SWIFT_NAME(movie) = 3,
-    UNKNOWN      SWIFT_NAME(unknown) = 4,
+    MOVIE      SWIFT_NAME(movie) = 1,
+    UNKNOWN      SWIFT_NAME(unknown) = 2,
+    SPEECH      SWIFT_NAME(speech) = 3,
+    SONIFICATION      SWIFT_NAME(sonification) = 4,
   } CLOSED_ENUM;
 
 } // namespace margelo::nitro::audiobrowser
@@ -47,10 +47,10 @@ namespace margelo::nitro {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("music"): return margelo::nitro::audiobrowser::AndroidAudioContentType::MUSIC;
-        case hashString("speech"): return margelo::nitro::audiobrowser::AndroidAudioContentType::SPEECH;
-        case hashString("sonification"): return margelo::nitro::audiobrowser::AndroidAudioContentType::SONIFICATION;
         case hashString("movie"): return margelo::nitro::audiobrowser::AndroidAudioContentType::MOVIE;
         case hashString("unknown"): return margelo::nitro::audiobrowser::AndroidAudioContentType::UNKNOWN;
+        case hashString("speech"): return margelo::nitro::audiobrowser::AndroidAudioContentType::SPEECH;
+        case hashString("sonification"): return margelo::nitro::audiobrowser::AndroidAudioContentType::SONIFICATION;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum AndroidAudioContentType - invalid value!");
       }
@@ -58,10 +58,10 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::AndroidAudioContentType arg) {
       switch (arg) {
         case margelo::nitro::audiobrowser::AndroidAudioContentType::MUSIC: return JSIConverter<std::string>::toJSI(runtime, "music");
-        case margelo::nitro::audiobrowser::AndroidAudioContentType::SPEECH: return JSIConverter<std::string>::toJSI(runtime, "speech");
-        case margelo::nitro::audiobrowser::AndroidAudioContentType::SONIFICATION: return JSIConverter<std::string>::toJSI(runtime, "sonification");
         case margelo::nitro::audiobrowser::AndroidAudioContentType::MOVIE: return JSIConverter<std::string>::toJSI(runtime, "movie");
         case margelo::nitro::audiobrowser::AndroidAudioContentType::UNKNOWN: return JSIConverter<std::string>::toJSI(runtime, "unknown");
+        case margelo::nitro::audiobrowser::AndroidAudioContentType::SPEECH: return JSIConverter<std::string>::toJSI(runtime, "speech");
+        case margelo::nitro::audiobrowser::AndroidAudioContentType::SONIFICATION: return JSIConverter<std::string>::toJSI(runtime, "sonification");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert AndroidAudioContentType to JS - invalid value: "
                                     + std::to_string(static_cast<int>(arg)) + "!");
@@ -74,10 +74,10 @@ namespace margelo::nitro {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
         case hashString("music"):
-        case hashString("speech"):
-        case hashString("sonification"):
         case hashString("movie"):
         case hashString("unknown"):
+        case hashString("speech"):
+        case hashString("sonification"):
           return true;
         default:
           return false;

@@ -504,7 +504,7 @@ export class NativeAudioBrowser
 
   async onSearch(query: string): Promise<Track[]> {
     // Wrap query string in SearchParams (matches Android's search(query: String) overload)
-    return this.searchManager.search({ query })
+    return this.searchManager.search({ query, reference: 'unknown' })
   }
 
   getContent(): ResolvedTrack | undefined {

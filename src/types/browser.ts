@@ -59,56 +59,97 @@ export type BrowserSourceCallback = (
 ) => BrowseResult | Promise<BrowseResult>
 
 /**
- * Search mode types for structured voice search.
+ * Search mode — the *container vertical*: what KIND of result the user asked
+ * for. Orthogonal to the filter props (`genre`/`artist`/`album`/`title`/
+ * `playlist`), which say *which* item. `mode` is optional: when absent, the
+ * request is unstructured (text-search `query`) or unclassified.
  *
- * - `any`: Play any content - smart shuffle or last playlist (query will be empty string)
- * - `genre`: Search by genre
- * - `artist`: Search by artist
- * - `album`: Search by album
- * - `song`: Search by song/track title
- * - `playlist`: Search by playlist name
+ * - `any`: play anything sensible — "play something" / smart shuffle (query
+ *   empty). Android also maps its generic "play music" focus here, since it
+ *   can't isolate the music vertical the way iOS can.
+ * - `song`: an individual track
+ * - `playlist`: a named playlist / mix
+ * - `station`: a live radio station / channel
+ * - `podcast`: a podcast (series, episode, or station)
+ * - `audiobook`: an audiobook
+ * - `news`: news content
+ * - `music`: the music vertical, as opposed to talk/podcasts/audiobooks
+ *   ("play music" on iOS, via the music media type)
+ * - `music-video` / `movie` / `tv-show` / `tv-show-episode`: video kinds
+ *   (an audio app cannot play these; surfaced so consumers may special-case —
+ *   ignoring them degrades to an unstructured search)
+ *
+ * NOTE: there is intentionally no `genre`/`artist`/`album` member — those are
+ * filters, not result shapes. Read them from `SearchParams.genre`/`.artist`/
+ * `.album` directly.
  *
  * @see BrowserConfiguration.search
  * @see SearchParams
  */
 export type SearchMode =
   | 'any'
-  | 'genre'
-  | 'artist'
-  | 'album'
   | 'song'
   | 'playlist'
+  | 'station'
+  | 'podcast'
+  | 'audiobook'
+  | 'news'
+  | 'music'
+  | 'music-video'
+  | 'movie'
+  | 'tv-show'
+  | 'tv-show-episode'
 
 /**
- * Structured search parameters from voice commands.
+ * The media-reference axis from a voice intent.
  *
- * Voice commands are parsed by Android into structured parameters:
- * - "play something" → mode=null, query="something"
- * - "play music" → mode='any', query=""
- * - "play jazz" → mode='genre', genre="jazz", query="jazz"
- * - "play michael jackson" → mode='artist', artist="michael jackson", query="michael jackson"
- * - "play thriller by michael jackson" → mode='album', album="thriller", artist="michael jackson"
- * - "play billie jean" → mode='song', title="billie jean", query="billie jean"
+ * - `my`: the user's own collection ("play my favorites") — routed to the
+ *   `search` source so the consumer resolves it against their library.
+ * - `unknown`: no reference (the default; Android always emits this).
+ *
+ * NOTE: "currently playing" ("play this") is resolved natively (resume) and
+ * never reaches the consumer, so it is not a value here.
+ */
+export type MediaReference = 'my' | 'unknown'
+
+/**
+ * Structured search parameters normalized from a voice/search intent — one
+ * cross-platform shape (iOS SiriKit + Android MediaSession). `mode` is the
+ * container vertical; the remaining fields are filters. Example mappings:
+ * - "play something"              → mode='any', query="" (smart shuffle)
+ * - "play music"                  → mode='music' (iOS) / 'any' (Android), query=""
+ * - "play jazz"                   → genre="jazz", query="jazz" (mode undefined)
+ * - "play michael jackson"        → artist="michael jackson", query="michael jackson"
+ * - "play thriller by m. jackson" → album="thriller", artist="michael jackson"
+ * - "play billie jean"            → mode='song', title="billie jean", query="billie jean"
+ * - "play my favorites"           → reference='my', query=""
+ * - "play a jazz podcast"         → mode='podcast', genre="jazz"
  */
 export interface SearchParams {
-  /** The search mode indicating what type of search is being performed, or null for unstructured search */
+  /** Container vertical, or undefined for an unstructured / unclassified search. */
   mode?: SearchMode
   /**
    * The original search query string (always present, but may be empty string "").
-   * When mode='any' with empty string query, return any content you think the user would like
+   * With mode='any' and empty query, return any content the user would like
    * (e.g., recently played, favorites, or smart shuffle).
    */
   query: string
-  /** Genre name for genre-specific search */
+  /** Genre filter, when the intent named one. */
   genre?: string
-  /** Artist name for artist/album/song search */
+  /** Artist filter (artist / album / song intents). */
   artist?: string
-  /** Album name for album-specific search */
+  /** Album filter. */
   album?: string
-  /** Song title for song-specific search */
+  /** Track title, for a song intent. */
   title?: string
-  /** Playlist name for playlist-specific search */
+  /** Playlist name, for a playlist intent. */
   playlist?: string
+  /**
+   * Media-reference axis. `'my'` = resolve against the user's own collection
+   * ("play my favorites"); `'unknown'` = no reference (the default). Android
+   * always emits `'unknown'`.
+   */
+  reference: MediaReference
 }
 
 export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
@@ -763,18 +804,21 @@ export type BrowserConfiguration = {
    * Required for Android Auto/CarPlay voice search integration with support for structured voice commands.
    *
    * Search receives structured parameters from voice commands like:
-   * - "play music" → mode='any', query=""
-   * - "play jazz" → mode='genre', genre="jazz", query="jazz"
-   * - "play michael jackson" → mode='artist', artist="michael jackson", query="michael jackson"
-   * - "play thriller by michael jackson" → mode='album', album="thriller", artist="michael jackson"
-   * - "play billie jean" → mode='song', title="billie jean", query="billie jean"
+   * - "play something"          → mode='any', query="" (smart shuffle)
+   * - "play music"              → mode='music' (iOS) / 'any' (Android), query=""
+   * - "play jazz"               → genre="jazz", query="jazz" (genre is a filter, no mode)
+   * - "play michael jackson"    → artist="michael jackson", query="michael jackson"
+   * - "play billie jean"        → mode='song', title="billie jean", query="billie jean"
+   * - "play my favorites"       → reference='my', query=""
    *
    * Can be either:
-   * - SearchSourceCallback: Receives SearchParams with query, and optional mode/artist/album/genre/title/playlist fields
-   * - TransformableRequestConfig: API endpoint where all search parameters are automatically added to request.query:
+   * - SearchSourceCallback: Receives SearchParams with query + reference, plus the
+   *   optional container-vertical `mode` and the genre/artist/album/title/playlist filters
+   * - TransformableRequestConfig: API endpoint where search parameters are automatically added to request.query:
    *   - q: search query string (always present)
-   *   - mode: search mode (any/genre/artist/album/song/playlist) - omitted for unstructured search
-   *   - artist, album, genre, title, playlist: included when present
+   *   - mode: container vertical (any/song/playlist/station/podcast/audiobook/news/music/
+   *     music-video/movie/tv-show/tv-show-episode) - omitted for unstructured search
+   *   - artist, album, genre, title, playlist: filters, included when present
    *
    * These query-param keys are fixed (not configurable). If your endpoint
    * expects different names, rename them in `transform` — it receives the params
@@ -787,14 +831,18 @@ export type BrowserConfiguration = {
    * ```typescript
    * // Callback approach - direct access to structured parameters
    * search: async (params) => {
-   *   // Use structured fields for precise searches
-   *   if (params.mode === 'artist' && params.artist) {
-   *     return await db.query('SELECT * FROM tracks WHERE artist = ?', [params.artist]);
-   *   }
-   *   if (params.mode === 'album' && params.album && params.artist) {
+   *   // "play my favorites" → resolve against the user's own collection
+   *   if (params.reference === 'my') return await getFavorites();
+   *   // Filters are read directly from their props (not derived from `mode`)
+   *   if (params.album && params.artist) {
    *     return await db.query('SELECT * FROM tracks WHERE album = ? AND artist = ?',
    *       [params.album, params.artist]);
    *   }
+   *   if (params.artist) {
+   *     return await db.query('SELECT * FROM tracks WHERE artist = ?', [params.artist]);
+   *   }
+   *   // `mode` is the container vertical — narrow by it when present
+   *   if (params.mode === 'podcast') return await searchPodcasts(params.query);
    *   // Fall back to full-text search
    *   return await searchByQuery(params.query);
    * }

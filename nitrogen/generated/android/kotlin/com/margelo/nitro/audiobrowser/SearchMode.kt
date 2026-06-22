@@ -16,12 +16,18 @@ import com.facebook.proguard.annotations.DoNotStrip
 @DoNotStrip
 @Keep
 enum class SearchMode(@DoNotStrip @Keep val value: Int) {
-  ARTIST(0),
-  ALBUM(1),
-  GENRE(2),
-  ANY(3),
-  SONG(4),
-  PLAYLIST(5);
+  ANY(0),
+  SONG(1),
+  PLAYLIST(2),
+  STATION(3),
+  PODCAST(4),
+  AUDIOBOOK(5),
+  NEWS(6),
+  MUSIC(7),
+  MUSIC_VIDEO(8),
+  MOVIE(9),
+  TV_SHOW(10),
+  TV_SHOW_EPISODE(11);
 
   companion object
 }

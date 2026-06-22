@@ -34,6 +34,8 @@
 #include "JSearchParams.hpp"
 #include "SearchMode.hpp"
 #include "JSearchMode.hpp"
+#include "MediaReference.hpp"
+#include "JMediaReference.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

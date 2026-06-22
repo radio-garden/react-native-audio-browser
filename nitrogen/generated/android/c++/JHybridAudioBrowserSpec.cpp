@@ -57,6 +57,8 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
+// Forward declaration of `MediaReference` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `TrackLoadEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 // Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
@@ -263,6 +265,8 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JSearchParams.hpp"
 #include "SearchMode.hpp"
 #include "JSearchMode.hpp"
+#include "MediaReference.hpp"
+#include "JMediaReference.hpp"
 #include "TrackLoadEvent.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
 #include <NitroModules/JUnit.hpp>

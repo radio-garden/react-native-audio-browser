@@ -76,6 +76,8 @@ namespace margelo::nitro::audiobrowser { struct ImageSource; }
 namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
 // Forward declaration of `IosOutput` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IosOutput; }
+// Forward declaration of `MediaReference` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `MediaTransformParams` to properly resolve imports.
@@ -226,6 +228,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "ImageSource.hpp"
 #include "IosOutput.hpp"
 #include "IosOutputType.hpp"
+#include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeAndroidSetupOptions.hpp"
