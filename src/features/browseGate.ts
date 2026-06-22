@@ -18,9 +18,12 @@ export type NativeBrowseGate = {
    */
   message?: string
   /**
-   * Title of the action button. On CarPlay it renders as the gate page's
-   * header button, beside the message. Omit for a page without a button
-   * (the `onButtonPressed` callback is then never invoked).
+   * Title of the action button — and the switch between CarPlay's two gate
+   * layouts: **present** → a row-less list whose section header carries the
+   * title/message with this button beside it; **omitted** → the centered
+   * empty-view page with no button (and `onButtonPressed` is never invoked).
+   * See `message` for how the body copy renders in each. iOS/CarPlay only —
+   * Android Auto has no button or full-page surface.
    */
   buttonTitle?: string
 }
