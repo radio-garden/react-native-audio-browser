@@ -186,3 +186,22 @@ Fixes applied on `feature-fry-gate` in response to the findings above.
 
 ### Verify
 `swift test --disable-sandbox` from the worktree root: **431 tests in 80 suites passed** (0 failures; the pre-existing `PlaybackStateMachineTests` failures did not reproduce in this run). Gate code compiles.
+
+---
+
+## iOS fix wave B
+
+Follow-on after the TS+spec+web step landed (commit `447363e`): the gate **button was removed** — codegen regenerated `NativeGate` to `{ title, message? }` (no `buttonTitle`) and dropped `onGateButtonPressed` from the spec, so the hand-written Swift no longer conformed. Plus two parity findings from `review-parity.md` (C1, I1). iOS-only.
+
+### Button removal — conform to the button-less spec
+- `ios/HybridAudioBrowser.swift`: removed the `onGateButtonPressed` callback property (the regenerated `HybridAudioBrowserSpec` no longer declares it). Updated `builtInGate` to `NativeGate(title:message:)` (no `buttonTitle:`).
+- `ios/CarPlay/CarPlayController.swift`: `makeGateTemplate` now renders a **plain centered message** — `title` as the empty-view title, `message` as its subtitle. Removed the enhanced-section-header branch, the transparent-placeholder `CPButton`, and the `onGateButtonPressed()` invocation. `NativeGate` is now consumed as just `{ title, message? }`. `rg -n "buttonTitle|onGateButtonPressed|onButtonPressed" ios/` → **clean**.
+
+### review-parity C1 — init-window default `resolveGate` fails CLOSED (FIXED)
+`ios/HybridAudioBrowser.swift` default `resolveGate` flipped from `GateDecision(gated: false)` to `gated: true`. This default is only consulted in the JS-reload / instance-churn window where `hasResolver` was already recorded true but JS hasn't re-bound the real resolver yet; serving content there was a fail-open leak while Android served the gate. Now matches Android's fixed default (`AudioBrowser.kt:174`); added a "fail closed" doc comment. (A gated decision with no chrome already resolves to the stored default / built-in downstream in `gateDecision`, same as the error path — no change needed there.)
+
+### review-parity I1 / review-ios I2 — `gateBuildGeneration` now covers clear-vs-gated (FIXED)
+The token was bumped/checked only inside `showGatedTabBar`, so a `clearGate` running the **non-gated** `showTabBar` didn't invalidate an in-flight gated build → a gated build could paint a gate page over just-cleared content. Moved the bump+capture to the top of `showTabBar` (before the `if isGated` split) so a single shared token covers both build paths; `showGatedTabBar` now takes `generation` as a parameter. Both paths bail on a stale generation before `setRootTemplate` / `updateTemplates`: the non-gated path re-checks after building its shells, the gated path after each per-tab `gateDecision` await. A clear→build or build→clear interleave can no longer leave a stale gate page or clobber the root template.
+
+### Verify
+`swift test --disable-sandbox` from the worktree root: **431 tests in 80 suites passed** (0 failures; the pre-existing `PlaybackStateMachineTests` failures did not reproduce). Gate code compiles.

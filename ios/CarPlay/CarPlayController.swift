@@ -51,12 +51,18 @@ public final class RNABCarPlayController: NSObject {
   /// set before the scene connects renders at connect.
   private var isGated = false
 
-  /// Drops a stale gated tab-bar build when the gate changed while the build's
-  /// per-tab `gateDecision` round-trips were in flight (latest-build-wins).
-  /// Rapid gate changes / JS-reload churn can interleave two `showGatedTabBar`
-  /// tasks; without this they'd both reach `setRootTemplate` and the
-  /// later-finishing one would win with chrome captured against stale gate
-  /// state. Mirrors `albumArtistGeneration` in `CarPlayNowPlayingManager`.
+  /// Drops a stale tab-bar build when a newer build supersedes it
+  /// (latest-build-wins). Shared across BOTH the gated and non-gated `showTabBar`
+  /// paths: each bumps and captures this at entry and bails before any
+  /// `setRootTemplate` / `updateTemplates` once it's been bumped past their
+  /// captured value. A build suspends the main actor at its `await` points
+  /// (per-tab `gateDecision` when gated, first-tab `loadContent` when not), so a
+  /// gate change can interleave a build of the opposite kind — most importantly a
+  /// `clearGate` kicking the non-gated build while a gated build is mid-await.
+  /// Covering both paths with one token means that clear-vs-gated interleave is
+  /// caught too (not just gated-vs-gated), so a stale gated build can't paint a
+  /// gate page over just-cleared content. Mirrors `albumArtistGeneration` in
+  /// `CarPlayNowPlayingManager`.
   private var gateBuildGeneration: UInt = 0
 
   /// How long a browse resolve may run before the destination's loading spinner
@@ -429,12 +435,25 @@ public final class RNABCarPlayController: NSObject {
 
   @MainActor
   private func showTabBar(tabs: [Track]) async {
+    // Serialize concurrent tab-bar builds across BOTH the gated and non-gated
+    // paths with one shared generation token: bump at entry, capture, and bail
+    // before any template mutation once a newer build supersedes us. Both paths
+    // suspend the main actor at `await` points (per-tab `gateDecision` when
+    // gated, first-tab `loadContent` when not), so a gate change can interleave
+    // a build of the opposite kind — a `clearGate` kicking the non-gated build
+    // while a gated build is mid-await, or vice versa. A single token covers the
+    // clear-vs-gated interleave too, not just gated-vs-gated: the superseding
+    // build bumps it, and the in-flight build bails before painting (preventing
+    // a stale gate page over just-cleared content, or a clobbered root template).
+    gateBuildGeneration &+= 1
+    let generation = gateBuildGeneration
+
     // While gated, each tab path is resolved per-request: a gated tab renders
     // the gate page with that request's chrome; an allowed tab shows real
     // content. This generalizes the old "all tabs show the gate" — a path the
     // resolver allows now shows real content.
     if isGated {
-      await showGatedTabBar(tabs: tabs)
+      await showGatedTabBar(tabs: tabs, generation: generation)
       return
     }
 
@@ -446,6 +465,10 @@ public final class RNABCarPlayController: NSObject {
     let tabTemplates: [CPListTemplate] = tabs.prefix(maxTabs).map { tab in
       createTabTemplate(for: tab)
     }
+
+    // A newer build (e.g. a gate raised mid-clear) superseded us — don't clobber
+    // its root template.
+    guard gateBuildGeneration == generation else { return }
 
     // Set the tab bar immediately so UI appears fast
     logger.info("Setting tab bar root template with \(tabTemplates.count) templates")
@@ -463,18 +486,13 @@ public final class RNABCarPlayController: NSObject {
   /// gate page carrying that decision's chrome (and fires `onGate`); an allowed
   /// tab becomes a normal content shell that lazy-loads. With a static gate (no
   /// resolver) every tab is gated with the default chrome — today's behaviour.
+  ///
+  /// `generation` is the shared `gateBuildGeneration` captured by the calling
+  /// `showTabBar`; we bail before any template mutation once a newer build (of
+  /// either kind) bumps it past `generation`.
   @MainActor
-  private func showGatedTabBar(tabs: [Track]) async {
+  private func showGatedTabBar(tabs: [Track], generation: UInt) async {
     guard let audioBrowser else { return }
-
-    // Serialize concurrent gated builds: bump a generation at entry and bail
-    // before any template mutation once a newer build supersedes us. The per-tab
-    // `gateDecision` awaits below suspend the main actor, so a rapid gate change
-    // (set→clear, in-place chrome update, JS-reload re-seed) can start a second
-    // build mid-flight; without this both would race to `setRootTemplate` and
-    // the later finisher would paint chrome captured against stale gate state.
-    gateBuildGeneration &+= 1
-    let generation = gateBuildGeneration
 
     guard !tabs.isEmpty else {
       // Tabs unknown (config not loaded yet, or none) — resolve the root path
@@ -1112,51 +1130,24 @@ public final class RNABCarPlayController: NSObject {
   /// CPTabBarTemplate throws an unhandled ObjC exception (crash at init).
   ///
   /// Within a list, tab children never show navigation-bar buttons (the tab
-  /// bar owns that chrome), and the centered empty view renders only when
-  /// the list has NO rows. The page-with-button look first-party audio apps
-  /// use is the iOS 15 *enhanced section header*: a row-less section whose
-  /// header carries the message in large type (a newline in the message
-  /// splits header and subtitle) plus a titled CPButton. A buttonless gate
-  /// gets the centered empty view instead, where newlines collapse to
-  /// spaces (the "variants" are width alternatives, not lines).
+  /// bar owns that chrome), and the centered empty view renders only when the
+  /// list has NO rows. The gate is a plain centered message — `title` as the
+  /// empty-view title and `message` as its subtitle, where newlines collapse
+  /// to spaces (the "variants" are width alternatives, not lines). No action
+  /// button: a gate withholds content; the consumer surfaces any "subscribe"
+  /// affordance in its own UI, not on the car surface.
   private func makeGateTemplate(gate gateChrome: NativeGate?, tab: Track?) -> CPListTemplate {
     // A gated decision with neither an override nor a stored default chrome
     // (resolver-only `true`) falls back to the built-in minimal gate.
     let gate = gateChrome ?? HybridAudioBrowser.builtInGate
-    let template: CPListTemplate
-    if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
-      // CPButton's initializer demands an image, but the header button
-      // should be a text-only pill (the first-party look) — feed it a
-      // transparent 1pt placeholder so only the title renders.
-      let clearImage = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
-        .image { _ in }
-      let button = CPButton(image: clearImage) { [weak self] _ in
-        self?.audioBrowser?.onGateButtonPressed()
-      }
-      button.title = buttonTitle
-      let lines = (gate.message ?? "")
-        .split(separator: "\n", maxSplits: 1)
-        .map(String.init)
-        .filter { !$0.isEmpty }
-      let section = CPListSection(
-        items: [],
-        header: lines.first ?? gate.title,
-        headerSubtitle: lines.count > 1 ? lines[1] : nil,
-        headerImage: nil,
-        headerButton: button,
-        sectionIndexTitle: nil,
-      )
-      template = CPListTemplate(title: gate.title, sections: [section])
-    } else {
-      template = CPListTemplate(title: gate.title, sections: [])
-      // Set at creation — the timing CarPlay renders the empty view reliably
-      // (see replaceWithMessage).
-      template.emptyViewTitleVariants = [gate.title]
-      if let message = gate.message, !message.isEmpty {
-        template.emptyViewSubtitleVariants = [
-          message.replacingOccurrences(of: "\n", with: " "),
-        ]
-      }
+    let template = CPListTemplate(title: gate.title, sections: [])
+    // Set at creation — the timing CarPlay renders the empty view reliably
+    // (see replaceWithMessage).
+    template.emptyViewTitleVariants = [gate.title]
+    if let message = gate.message, !message.isEmpty {
+      template.emptyViewSubtitleVariants = [
+        message.replacingOccurrences(of: "\n", with: " "),
+      ]
     }
     // Marks the page as a gate (vs. a content tab, which carries a `path`),
     // so the lazy-loader and refresh paths never try to fill it.

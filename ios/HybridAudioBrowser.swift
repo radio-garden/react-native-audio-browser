@@ -179,16 +179,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onTabsChanged: ([Track]) -> Void = { _ in }
   public var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
   public var onFormattedNavigationError: (FormattedNavigationError?) -> Void = { _ in }
-  public var onGateButtonPressed: () -> Void = {}
 
   /// Per-request gate decision, set by JS. Native calls it at a serve site to
   /// learn whether a browse path / search interaction should be gated and with
   /// what chrome. The double `Promise` mirrors every other native→JS
   /// value-returning callback (e.g. `searchCallback`): the outer resolves to the
-  /// JS-side Promise, the inner to the decision. Defaults to "allow everything"
-  /// until JS installs a resolver.
+  /// JS-side Promise, the inner to the decision.
+  ///
+  /// Default fails CLOSED (`gated: true`). This default is only consulted in the
+  /// init window where `hasResolver` was already recorded true but JS hasn't
+  /// (re)bound the real resolver yet (JS reload / instance churn re-seeding gate
+  /// state, e.g. CarPlay re-seeding `isGated` at scene connect). Serving content
+  /// in that window would be a fail-open leak — same direction as the
+  /// resolver-error path in `gateDecision`. Matches Android's default.
   public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = { _ in
-    Promise.resolved(withResult: Promise.resolved(withResult: GateDecision(gated: false, gate: nil)))
+    Promise.resolved(withResult: Promise.resolved(withResult: GateDecision(gated: true, gate: nil)))
   }
 
   /// Fired when a request is gated (served the gate). Set by JS.
@@ -541,7 +546,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// The minimal built-in gate served when a request is gated but neither a
   /// per-request override nor a stored default chrome exists (resolver-only
   /// gate returning `true`).
-  static let builtInGate = NativeGate(title: "Unavailable", message: nil, buttonTitle: nil)
+  static let builtInGate = NativeGate(title: "Unavailable", message: nil)
 
   /// The outcome of a single gate decision: whether to gate, and (if so) the
   /// chrome to render.
