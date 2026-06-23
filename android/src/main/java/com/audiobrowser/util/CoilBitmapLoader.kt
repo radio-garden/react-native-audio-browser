@@ -7,12 +7,6 @@ import android.net.Uri
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import coil3.ImageLoader
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
-import coil3.svg.SvgDecoder
-import coil3.toBitmap
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.margelo.nitro.audiobrowser.ImageSource
@@ -54,6 +48,8 @@ class CoilBitmapLoader(
    * controls are ~128dp, at 4x density (xxxhdpi) = 512px.
    */
   private val defaultArtworkSizePixels = 512
+
+  private val core = CoilArtworkLoader(context, imageLoader, defaultArtworkSizePixels)
 
   override fun supportsMimeType(mimeType: String): Boolean {
     return mimeType.startsWith("image/") ||
@@ -103,33 +99,9 @@ class CoilBitmapLoader(
 
         Timber.d("Loading artwork: $finalUrl (headers: ${headers.keys}, svg: $isSvg)")
 
-        val requestBuilder =
-          ImageRequest.Builder(context)
-            .data(finalUrl)
-            .allowHardware(false) // Required for Media3 notification compatibility
-
-        // Add custom headers if present
-        if (headers.isNotEmpty()) {
-          val networkHeaders = NetworkHeaders.Builder()
-          headers.forEach { (key, value) -> networkHeaders.add(key, value) }
-          requestBuilder.httpHeaders(networkHeaders.build())
-        }
-
-        // Force SVG decoder for .svg URLs (Coil's auto-detection can fail with some CDNs)
-        if (isSvg) {
-          requestBuilder.decoderFactory { result, options, _ -> SvgDecoder(result.source, options) }
-        }
-
-        val result = imageLoader.execute(requestBuilder.build())
-        val bitmap = result.image?.toBitmap()
-
-        if (bitmap != null) {
-          Timber.d("Loaded bitmap: ${bitmap.width}x${bitmap.height} from $finalUrl")
-          future.set(bitmap)
-        } else {
-          Timber.e("Failed to decode image from $finalUrl - result.image was null")
-          future.setException(IllegalStateException("Failed to load bitmap from $finalUrl"))
-        }
+        val bitmap = core.load(finalUrl, headers, sizeHint, isSvg)
+        Timber.d("Loaded bitmap: ${bitmap.width}x${bitmap.height} from $finalUrl")
+        future.set(bitmap)
       } catch (e: Exception) {
         Timber.e(e, "Exception loading artwork from $uri")
         future.setException(e)
