@@ -8,7 +8,7 @@
 
 Rename **Browse Gate → Gate**. Keep the gate global and imperative. Add two things:
 
-1. A per-request **`shouldGate`** predicate so a gate can apply to *some* browse paths / search interactions and not others (surface-independent).
+1. A per-request **`GateResolver`** so a gate can apply to *some* browse paths / search interactions and not others (surface-independent).
 2. An **`onGate`** notification event so a consumer can record a gate-hit and act later (e.g. a deferred upsell on a surface that can run a purchase flow).
 
 Defer all per-*surface* divergence (different content/result per surface) — it isn't needed while the library is the car/system-integration layer and the app renders its own browse UI ("Setup A").
@@ -23,8 +23,6 @@ type GateRequest =
 type Gate = {
   title: string
   message?: string
-  buttonTitle?: string                              // iOS/CarPlay only; presence also picks the layout
-  onButtonPressed?: () => void                      // stays in JS, stripped before crossing the bridge
 }
 
 // Per-request decision:
@@ -96,5 +94,5 @@ The resolver is a **synchronous native→JS call on the serve path**, which has 
 
 - **`throw GateError` abandoned.** A throw unwinds the stack and aborts the whole in-flight load, not one item. Use a serve-site predicate that *returns* instead — which is also the shape the existing gate already has (an imperative substitution, not a throw).
 - **Surface model abandoned for v1.** "Surface" conflates a *location* axis (phone/car) and a *modality* axis (touch/voice) that the platforms don't expose cleanly (a Siri media intent can't reveal CarPlay-vs-phone). A clean surface model is only *needed* for per-surface **content** divergence — which Setup A drops — so building it now would ship an unsolved sub-design half-built. Non-breaking to add later (library unshipped).
-- **per-request ≠ per-surface.** Per-request, surface-*independent* gating (`shouldGate`) is cache-safe and cheap. Per-*surface* divergence is what forces surface-keyed caches. We take the former, defer the latter.
+- **per-request ≠ per-surface.** Per-request, surface-*independent* gating (the `GateResolver`) is cache-safe and cheap. Per-*surface* divergence is what forces surface-keyed caches. We take the former, defer the latter.
 - **Setup A vs B.** A car list usually differs from an app list, but that difference is normally *two content sources* (car via the library, app in the consumer's own UI), not one library pipeline diverging by surface. The library stays the car/system layer (A); driving in-app browse through the library and diverging by surface (B) is the deferred case.
