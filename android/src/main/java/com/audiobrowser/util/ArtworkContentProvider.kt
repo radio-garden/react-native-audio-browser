@@ -75,7 +75,7 @@ class ArtworkContentProvider : ContentProvider() {
       }
 
       artworkDir.mkdirs()
-      val tmp = File(artworkDir, "$token.png.tmp")
+      val tmp = File.createTempFile(token, ".png.tmp", artworkDir)
 
       val bitmap: Bitmap =
         try {
