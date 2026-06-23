@@ -12,13 +12,16 @@ import Foundation
 
   private let onDidPlayToEndTime: @MainActor () -> Void
   private let onFailedToPlayToEndTime: @MainActor (Error?) -> Void
+  private let onPlaybackStalled: @MainActor () -> Void
 
   init(
     onDidPlayToEndTime: @escaping @MainActor () -> Void,
     onFailedToPlayToEndTime: @escaping @MainActor (Error?) -> Void,
+    onPlaybackStalled: @escaping @MainActor () -> Void,
   ) {
     self.onDidPlayToEndTime = onDidPlayToEndTime
     self.onFailedToPlayToEndTime = onFailedToPlayToEndTime
+    self.onPlaybackStalled = onPlaybackStalled
   }
 
   /**
@@ -43,6 +46,12 @@ import Foundation
       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
       object: avItem,
     )
+    notificationCenter.addObserver(
+      self,
+      selector: #selector(avItemPlaybackStalled),
+      name: NSNotification.Name.AVPlayerItemPlaybackStalled,
+      object: avItem,
+    )
   }
 
   /**
@@ -62,6 +71,11 @@ import Foundation
       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
       object: observingAVItem,
     )
+    notificationCenter.removeObserver(
+      self,
+      name: NSNotification.Name.AVPlayerItemPlaybackStalled,
+      object: observingAVItem,
+    )
     self.observingAVItem = nil
     isObserving = false
   }
@@ -75,5 +89,12 @@ import Foundation
     // AVPlayerItemFailedToPlayToEndTimeErrorKey contains the actual error
     let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
     Task { @MainActor in self.onFailedToPlayToEndTime(error) }
+  }
+
+  // Fired when the item's buffer empties mid-playback. iOS exposes no
+  // rebuffer-vs-initial signal otherwise, and AVPlayer can stay parked in
+  // `.waitingToPlayAtSpecifiedRate` after data returns — the listener nudges it.
+  @objc private nonisolated func avItemPlaybackStalled() {
+    Task { @MainActor in self.onPlaybackStalled() }
   }
 }

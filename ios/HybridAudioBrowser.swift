@@ -40,6 +40,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
   private var interruptionObserver: NSObjectProtocol?
+  private var mediaServicesResetObserver: NSObjectProtocol?
+  /// Re-applies our resolved audio-session category. Captured at setup so a
+  /// media-services reset (which clears the category) can restore it.
+  private var applyAudioSessionCategory: () -> Void = {}
   private var nowPlayingOverride: NowPlayingUpdate?
   /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
   private var nowPlayingMetadataEnabled = true
@@ -639,16 +643,24 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // (see `playerDidChangePlayingState`) and re-activated on interruption-end. Best-effort: a
       // category-config failure must never brick setup.
       let session = AVAudioSession.sharedInstance()
-      if let iosOptions = options.ios {
-        let cfg = iosOptions.resolveAudioSessionConfig()
+      let cfg: (
+        category: AVAudioSession.Category,
+        mode: AVAudioSession.Mode,
+        policy: AVAudioSession.RouteSharingPolicy,
+        options: AVAudioSession.CategoryOptions
+      ) = options.ios?.resolveAudioSessionConfig()
+        ?? (category: .playback, mode: .default, policy: .default, options: [])
+      // Capture category application once so a media-services reset (which
+      // clears the category) can restore the exact same config later.
+      let applyCategory: () -> Void = {
         try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
-      } else {
-        try? session.setCategory(.playback, mode: .default)
       }
+      applyCategory()
 
       // Create player and configure on main actor
       await MainActor.run { [weak self] in
         guard let self else { return }
+        self.applyAudioSessionCategory = applyCategory
 
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)
@@ -686,6 +698,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Observe audio-session interruptions so another app taking over audio
         // (or a phone call) reflects as a real pause rather than a stuck state.
         setupInterruptionObserver()
+
+        // Observe media-server resets so a long-running stream recovers instead
+        // of going permanently silent.
+        setupMediaServicesResetObserver()
 
         // Configure media URL resolver
         player?.mediaLoader.mediaUrlResolver = { [weak self] src, track in
@@ -1259,6 +1275,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     switch type {
     case .began:
+      // iOS 17+ fires a `.began` (with no matching `.ended`) when an output
+      // route such as headphones disappears. Reflecting a pause here would
+      // strand resume-intent state with nothing to clear it, and the
+      // route-change observer already handles the output change — so ignore it.
+      if #available(iOS 17.0, *),
+         let reasonValue = info[AVAudioSessionInterruptionReasonKey] as? UInt,
+         AVAudioSession.InterruptionReason(rawValue: reasonValue) == .routeDisconnected
+      {
+        return
+      }
       onMainActor { player?.handleInterruptionBegan() }
     case .ended:
       let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt)
@@ -1285,9 +1311,42 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       forName: AVAudioSession.routeChangeNotification,
       object: nil,
       queue: .main,
+    ) { [weak self] notification in
+      guard let self else { return }
+      // The previous output disappeared (headphones unplugged, a Bluetooth
+      // speaker powered off). Pause rather than abruptly resume out of the
+      // built-in speaker — the platform convention every media app follows.
+      // A deliberate pause (clears play intent), not an interruption: the user
+      // restarts playback themselves once they want it.
+      if let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+         AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable
+      {
+        self.onMainActor { self.player?.pause() }
+      }
+      if let output = self.getCurrentOutput() {
+        self.onIosOutputChanged(output)
+      }
+    }
+  }
+
+  /// Observes audio-server (`mediaserverd`) resets. When it fires, the session
+  /// category is cleared and every AVPlayer/session handle is invalid — a
+  /// long-running stream would otherwise go permanently silent until the app
+  /// restarts.
+  private func setupMediaServicesResetObserver() {
+    if let observer = mediaServicesResetObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    mediaServicesResetObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.mediaServicesWereResetNotification,
+      object: nil,
+      queue: .main,
     ) { [weak self] _ in
-      guard let self, let output = self.getCurrentOutput() else { return }
-      self.onIosOutputChanged(output)
+      guard let self else { return }
+      // Re-apply our category (the reset cleared it), then have the player
+      // recreate itself and reconnect the current stream.
+      self.applyAudioSessionCategory()
+      self.onMainActor { self.player?.handleMediaServicesReset() }
     }
   }
 

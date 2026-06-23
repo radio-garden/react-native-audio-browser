@@ -7,6 +7,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import java.io.IOException
 import timber.log.Timber
 
 /**
@@ -34,27 +35,26 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
   override fun open(dataSpec: DataSpec): Long {
     val originalUrl = dataSpec.uri.toString()
 
-    // Check if the Factory already has a cached transform result.
-    // The first DataSource to open() resolves the transform and caches it.
-    // All subsequent opens (segments, keys, replays) reuse the cached
-    // headers/user-agent but keep their original URLs.
+    // The first open() resolves the transform and caches it on the Factory; subsequent opens
+    // (segments, keys, replays) reuse the cached headers/user-agent but keep their own URLs.
     val cached = factory.cachedTransform
     val (finalUrl, headers, userAgent) =
       when {
-        cached == null -> {
-          val resolved = resolveRequestConfig(originalUrl)
-          factory.cachedTransform = resolved
-          factory.cachedOriginalUrl = originalUrl
-          Timber.d("TransformingDataSource: resolved $originalUrl -> ${resolved.first}")
-          resolved
-        }
-        // Re-open of the same media URL — e.g. a progressive-stream retry after a network drop.
-        // Reuse the resolved URL: falling back to the original would re-emit a schemeless/relative
-        // path (e.g. "/listen/<id>/channel.mp3"), which DefaultDataSource routes to the file data
-        // source -> FileNotFoundException, killing playback instead of retrying the stream.
-        originalUrl == factory.cachedOriginalUrl -> cached
-        // A different URL (e.g. an already-absolute HLS segment or key): reuse the cached
-        // headers/user-agent but keep its own URL.
+        cached == null -> resolveAndCache(originalUrl)
+        // Re-open of the same media URL (e.g. a retry after a network drop). By default reuse the
+        // resolved URL: re-emitting the schemeless original ("/listen/<id>/x.mp3") would hit the
+        // file data source -> FileNotFoundException. But if the previous media-URL load failed,
+        // re-resolve once (see the catch below): the URL/token may be stale. The fresh URL is still
+        // absolute, so that hazard stays avoided.
+        originalUrl == factory.cachedOriginalUrl ->
+          if (factory.reresolveOnNextMediaOpen) {
+            factory.reresolveOnNextMediaOpen = false
+            resolveAndCache(originalUrl)
+          } else {
+            cached
+          }
+        // A different URL (already-absolute HLS segment or key): reuse the cached headers but keep
+        // its own URL.
         else -> Triple(originalUrl, cached.second, cached.third)
       }
 
@@ -72,7 +72,27 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
       dataSpec.buildUpon().setUri(finalUrl.toUri()).setHttpRequestHeaders(mergedHeaders).build()
 
     resolvedUri = transformedSpec.uri
-    return upstream.open(transformedSpec)
+    return try {
+      upstream.open(transformedSpec)
+    } catch (e: IOException) {
+      // The media-URL load failed: if ExoPlayer retries, re-resolve so a stale URL/token is
+      // refreshed instead of replayed. Scoped to the media URL (segment/key failures keep their own
+      // URL). The flag lives on this item's Factory, so it stays correct when several tracks'
+      // factories are alive at once (a queue).
+      if (originalUrl == factory.cachedOriginalUrl) {
+        factory.reresolveOnNextMediaOpen = true
+      }
+      throw e
+    }
+  }
+
+  /** Resolves the transform for [originalUrl] and caches the result on the [Factory]. */
+  private fun resolveAndCache(originalUrl: String): Triple<String, Map<String, String>, String> {
+    val resolved = resolveRequestConfig(originalUrl)
+    factory.cachedTransform = resolved
+    factory.cachedOriginalUrl = originalUrl
+    Timber.d("TransformingDataSource: resolved $originalUrl -> ${resolved.first}")
+    return resolved
   }
 
   override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -162,6 +182,13 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
      * raw original.
      */
     @Volatile internal var cachedOriginalUrl: String? = null
+
+    /**
+     * Set when a media-URL load fails so the next media-URL open re-runs the transform instead of
+     * replaying [cachedTransform] — recovers an expired short-lived URL/token across a retry.
+     * Self-clearing: consumed by the first re-resolve.
+     */
+    @Volatile internal var reresolveOnNextMediaOpen: Boolean = false
 
     override fun createDataSource(): DataSource {
       return TransformingDataSource(upstream = upstreamFactory.createDataSource(), factory = this)
