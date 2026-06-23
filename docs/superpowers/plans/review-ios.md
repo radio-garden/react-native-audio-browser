@@ -159,3 +159,30 @@ Renamed for consistency; it's documentary (`getPath` keys on `"path"`, and gate 
 5. **M1:** if fail-open is kept, log the swallowed resolver rejection (today it's invisible).
 
 No force-unwraps, data races, or product-name leaks found in the new gate code. Double-`.await().await()` is the correct unwrap for the generated `Promise<Promise<GateDecision>>` type.
+
+---
+
+## iOS fix wave
+
+Fixes applied on `feature-fry-gate` in response to the findings above.
+
+### C1 — fail CLOSED on resolver error (FIXED)
+`ios/HybridAudioBrowser.swift` `gateDecision(for:)`. A resolver error (thrown/rejected predicate, or a rejection at either `.await()` layer from bridge tear-down / JS reload / serialization) now **gates** with the stored default / built-in chrome instead of falling through to "allow". A *successful* resolver returning `gated: false` still allows. The `!hasResolver` static path also resolves `defaultChrome ?? builtInGate` (belt-and-suspenders; `defaultChrome` is always set on that path). Doc comment updated to state errors fail closed by design. Design doc `2026-06-23-gate-design.md` gained an explicit "Resolver errors fail CLOSED" paragraph under the implementation note. (Android peer `AudioBrowser.kt:754` still fails open — left for a matched cross-platform change; called out below.)
+
+### I2 — serialize gated tab-bar builds (FIXED)
+`ios/CarPlay/CarPlayController.swift`. Added `gateBuildGeneration: UInt` mirroring `albumArtistGeneration`. `showGatedTabBar` bumps it at entry, captures the value, and bails (`guard gateBuildGeneration == generation else { return }`) after each per-tab `gateDecision` await — before any `setRootTemplate` / `updateTemplates`. A newer build (rapid set→clear, in-place chrome update, JS-reload re-seed) now supersedes an in-flight one, preventing the stale/duplicate root-template set.
+
+### I1 / M3 docs (FIXED)
+- `src/features/gate.ts`: `GateEvent` JSDoc now states `onGate` fires **once per gated serve**, not once per user action — on car surfaces one action (tab-bar build) fires one event per gated tab; consumer debounces.
+- `src/features/gate.ts`: `setGate` JSDoc no longer claims fully "seamless / no navigation reset"; it states that on CarPlay any gate change pops pushed navigation to root.
+- `docs/.../2026-06-23-gate-design.md`: `onGate` "per gated serve" line expanded to spell out the per-tab fan-out.
+
+### Deferred (with reason)
+- **I1 part 2 — add `path?`/`search?` to `GateEvent`:** deferred. The design explicitly left this as an additive-later seam; adding it now is a product/consumer call, not a low-risk correctness fix. Documented the coarseness instead.
+- **I3 — per-slot identity check on the `updateTemplates` swap + regression test:** deferred. The count-only swap is a real weakness, but tightening it to per-slot `url`/gated-ness identity is a behavioural change with its own edge cases (selected-index preservation), not a clearly-correct one-liner. Review itself rates the mis-swap "low-probability". The eager `loadContent` loop it depends on already has a load-bearing comment in place. Worth its own focused change + manual test.
+- **M1 — log the swallowed resolver rejection:** moot. C1 now fails closed on rejection, so a resolver crash visibly gates rather than vanishing; an explicit error log on the gate path is a nice-to-have but no longer masks a content leak. Left out to avoid noise on benign reload-time rejections.
+- **M3 — actually preserve pushed navigation on a chrome-only update:** deferred (doc corrected instead, per the task). `handleGateChanged` still pops to root on every gate change; special-casing "still gated, chrome only" to re-render in place is a behavioural change beyond this wave's scope.
+- **Android fail-open (C1 cross-platform):** deferred to a matched Android change — out of scope for an iOS-only wave; flagged so it isn't lost.
+
+### Verify
+`swift test --disable-sandbox` from the worktree root: **431 tests in 80 suites passed** (0 failures; the pre-existing `PlaybackStateMachineTests` failures did not reproduce in this run). Gate code compiles.

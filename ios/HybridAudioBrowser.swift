@@ -572,15 +572,25 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// The single choke point for every gate enforcement site. Asks whether
   /// `request` should be gated and, if so, with what chrome (override → stored
   /// default → built-in). When no resolver is installed the gate is static and
-  /// resolves without a JS hop. `try?` keeps a thrown/rejected resolver from
-  /// ever breaking the serve path — a failed decision falls through to "allow".
+  /// resolves without a JS hop.
+  ///
+  /// Resolver errors **fail CLOSED by design**: a thrown/rejected resolver, or a
+  /// rejection at either `.await()` layer (bridge tear-down on JS reload, the JS
+  /// runtime mid-reload, a serialization error) cannot prove the request is
+  /// allowed — and a gate exists to withhold content, so serving on error would
+  /// be a content leak (a paywall bypass). On error we gate with the stored
+  /// default / built-in chrome so the user still sees a coherent gate page. A
+  /// *successful* resolver returning `gated: false` still allows the request.
   @MainActor
   func gateDecision(for request: NativeGateRequest) async -> GateOutcome {
     guard isGateActive else { return GateOutcome(gated: false, chrome: nil) }
-    if !hasResolver { return GateOutcome(gated: true, chrome: defaultChrome) }
-    guard let decision = try? await resolveGate(request).await().await(), decision.gated else {
-      return GateOutcome(gated: false, chrome: nil)
+    if !hasResolver { return GateOutcome(gated: true, chrome: defaultChrome ?? Self.builtInGate) }
+    guard let decision = try? await resolveGate(request).await().await() else {
+      // Resolver error: fail CLOSED (see doc comment) — gate with the default /
+      // built-in so the gate page still renders rather than leaking content.
+      return GateOutcome(gated: true, chrome: defaultChrome ?? Self.builtInGate)
     }
+    guard decision.gated else { return GateOutcome(gated: false, chrome: nil) }  // explicit allow
     return GateOutcome(gated: true, chrome: decision.gate ?? defaultChrome ?? Self.builtInGate)
   }
 

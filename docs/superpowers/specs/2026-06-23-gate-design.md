@@ -82,7 +82,9 @@ The resolver is **surface-independent**: the same `(request)` yields the same de
 
 The resolver is a **synchronous native→JS call on the serve path**, which has watchdogs (CarPlay ~15s; Android `awaitBrowser` timeout). It must be synchronous and fast — no network in the resolver. Nitro/JSI supports sync callbacks; this is a different bridge pattern from the async, fire-and-forget `onButtonPressed`.
 
-`onGate` fires **per gated serve** with no library-side dedup — a consumer that wants "once per session" debounces on its side. `GateEvent` is a struct (not a bare enum arg) so `path?` / `search?` / `surface?` can be added later without a breaking change.
+**Resolver errors fail CLOSED.** If the resolver throws/rejects, or the native→JS hop rejects for an infrastructure reason (bridge tear-down on a JS reload, the JS runtime mid-reload, a serialization error), the serve site **gates** the request with the stored default / built-in chrome rather than serving content. A gate exists to withhold content, so "I can't decide" must withhold, not leak — serving on error would be a content/paywall bypass. This matches the no-resolver static path, which already gates by default. A *successful* resolver returning `false` still allows the request. Consumers needing advisory/upsell semantics that must never block on error should treat the gate as enforcing and not rely on fail-open.
+
+`onGate` fires **once per gated serve** with no library-side dedup — i.e. each time the gate chrome is rendered for a request, **not** once per user action. On CarPlay a single action can serve the gate for several requests at once: building the tab bar resolves and serves each gated tab, so one tab-bar (re)build emits one `onGate` per gated tab (up to one per tab). A consumer that wants "once per session" debounces on its side. `GateEvent` is a struct (not a bare enum arg) so `path?` / `search?` / `surface?` can be added later without a breaking change.
 
 ## Cut / deferred — with the seams left open
 

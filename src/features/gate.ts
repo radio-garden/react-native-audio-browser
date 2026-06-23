@@ -48,7 +48,14 @@ export type NativeGateRequest = {
 /** Wire form of a resolver result (native awaits this from JS). */
 export type GateDecision = { gated: boolean; gate?: NativeGate }
 
-/** Fired when a request is gated (the gate was served). */
+/**
+ * Fired once per gated serve (each time the gate chrome is rendered for a
+ * request). This is **not** once per user action: on car surfaces a single
+ * action can serve the gate for several requests at once — e.g. building the
+ * tab bar resolves and serves each gated tab, firing one event per gated tab.
+ * There is no library-side dedup; debounce on the consumer side (e.g. record a
+ * gate-hit at most once per session).
+ */
 export type GateEvent = { reason: GateReason }
 
 // MARK: - Public types (consumer-facing)
@@ -116,9 +123,11 @@ nativeBrowser.resolveGate = async (
 
 /**
  * Raises the gate with default chrome, optionally with a per-request resolver.
- * Updating is seamless — the page changes in place, with no navigation reset
- * and the current tab kept. Set it before the car connects and it'll be there
- * the moment it does.
+ * Calling it again while a gate is already up updates the chrome in place,
+ * keeping the current tab. Note this is **not** fully navigation-preserving: on
+ * some surfaces (CarPlay) any gate change pops pushed navigation back to root,
+ * so a page the user had drilled into is reset to the tab root. Set the gate
+ * before the car connects and it'll be there the moment it does.
  */
 export function setGate(gate: Gate, resolve?: GateResolver): void
 /**

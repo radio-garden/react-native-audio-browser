@@ -51,6 +51,14 @@ public final class RNABCarPlayController: NSObject {
   /// set before the scene connects renders at connect.
   private var isGated = false
 
+  /// Drops a stale gated tab-bar build when the gate changed while the build's
+  /// per-tab `gateDecision` round-trips were in flight (latest-build-wins).
+  /// Rapid gate changes / JS-reload churn can interleave two `showGatedTabBar`
+  /// tasks; without this they'd both reach `setRootTemplate` and the
+  /// later-finishing one would win with chrome captured against stale gate
+  /// state. Mirrors `albumArtistGeneration` in `CarPlayNowPlayingManager`.
+  private var gateBuildGeneration: UInt = 0
+
   /// How long a browse resolve may run before the destination's loading spinner
   /// is replaced with an error state. The selection completion is fired
   /// immediately (so CarPlay never blocks the list — per Apple's async handler
@@ -459,6 +467,15 @@ public final class RNABCarPlayController: NSObject {
   private func showGatedTabBar(tabs: [Track]) async {
     guard let audioBrowser else { return }
 
+    // Serialize concurrent gated builds: bump a generation at entry and bail
+    // before any template mutation once a newer build supersedes us. The per-tab
+    // `gateDecision` awaits below suspend the main actor, so a rapid gate change
+    // (set→clear, in-place chrome update, JS-reload re-seed) can start a second
+    // build mid-flight; without this both would race to `setRootTemplate` and
+    // the later finisher would paint chrome captured against stale gate state.
+    gateBuildGeneration &+= 1
+    let generation = gateBuildGeneration
+
     guard !tabs.isEmpty else {
       // Tabs unknown (config not loaded yet, or none) — resolve the root path
       // and show a single gate page (or, if allowed, fall back to a normal
@@ -466,6 +483,7 @@ public final class RNABCarPlayController: NSObject {
       let outcome = await audioBrowser.gateDecision(
         for: NativeGateRequest(reason: .browse, path: nil, search: nil)
       )
+      guard gateBuildGeneration == generation else { return }  // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
         interfaceController.setRootTemplate(
@@ -481,6 +499,7 @@ public final class RNABCarPlayController: NSObject {
       let outcome = await audioBrowser.gateDecision(
         for: NativeGateRequest(reason: .browse, path: tab.url, search: nil)
       )
+      guard gateBuildGeneration == generation else { return }  // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
         templates.append(makeGateTemplate(gate: outcome.chrome, tab: tab))
