@@ -132,6 +132,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
         artworkSizeHint = { player.artworkSizeHintPixels },
       )
     CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
+    // Best-effort: clear stale artwork cache from previous process so the disk doesn't grow
+    // unboundedly across restarts. Fresh files will be re-fetched on demand.
+    runCatching {
+      java.io.File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
+        .deleteRecursively()
+    }
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {

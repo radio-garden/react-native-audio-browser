@@ -11,12 +11,14 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class ArtworkContentProviderTest {
@@ -27,6 +29,10 @@ class ArtworkContentProviderTest {
     provider = Robolectric.setupContentProvider(ArtworkContentProvider::class.java)
     registry = BrowseArtworkRegistry()
     val context = RuntimeEnvironment.getApplication()
+
+    // Delete on-disk cache so tests don't bleed into each other via cached files.
+    File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR).deleteRecursively()
+
     val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
     val loader = CoilArtworkLoader(context, FakeImageLoader(context, fakeBitmap) {})
     CoilArtworkLoaderHolder.set(
@@ -36,6 +42,9 @@ class ArtworkContentProviderTest {
 
   @After fun tearDown() {
     CoilArtworkLoaderHolder.get()?.let { CoilArtworkLoaderHolder.clearIf(it) }
+    // Clean up any files written during the test.
+    val context = RuntimeEnvironment.getApplication()
+    File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR).deleteRecursively()
   }
 
   private fun uri(token: String) =
@@ -52,6 +61,18 @@ class ArtworkContentProviderTest {
     assertNotNull(pfd)
     val bytes = java.io.FileInputStream(pfd!!.fileDescriptor).readBytes()
     assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size)) // valid image
+  }
+
+  // Prove E-mitigation: file FD has a real stat size (non-negative); a pipe FD would return -1.
+  @Test fun `openFile returns a file-backed seekable FD (statSize non-negative)`() {
+    val token = ArtworkUris.tokenFor("https://cdn/seekable.png")
+    registry.register(token, ResolvedArtwork("https://cdn/seekable.png", null, isSvg = false))
+    val pfd = provider.openFile(uri(token), "r")
+    assertNotNull(pfd)
+    assertTrue(
+      "Expected statSize >= 0 for a file FD, got ${pfd!!.statSize}",
+      pfd.statSize >= 0
+    )
   }
 
   @Test fun `openFile returns null for an unknown token`() {
@@ -71,9 +92,9 @@ class ArtworkContentProviderTest {
     assertNull(provider.openFile(uri(token), "r"))
   }
 
-  // LRU anti-flicker regression test: two openFile calls for the same token both return valid PNGs.
-  // The second call should hit the LRU cache (no re-decode needed).
-  @Test fun `openFile LRU cache hit returns valid PNG on second call`() {
+  // Prove D-fix: two openFile calls for the same token → loadCount == 1.
+  // The second call is served from the on-disk file without re-decoding.
+  @Test fun `openFile serves second request from disk cache without re-decoding`() {
     var loadCount = 0
     val context = RuntimeEnvironment.getApplication()
     val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
@@ -88,19 +109,18 @@ class ArtworkContentProviderTest {
     val token = ArtworkUris.tokenFor("https://cdn/b.png")
     registry.register(token, ResolvedArtwork("https://cdn/b.png", null, isSvg = false))
 
-    // First call
+    // First call — decode + write to disk.
     val pfd1 = provider.openFile(uri(token), "r")
     assertNotNull(pfd1)
     val bytes1 = java.io.FileInputStream(pfd1!!.fileDescriptor).readBytes()
     assertNotNull(BitmapFactory.decodeByteArray(bytes1, 0, bytes1.size))
 
-    // Second call — should use LRU cache
+    // Second call — must come from disk, no second decode.
     val pfd2 = provider.openFile(uri(token), "r")
     assertNotNull(pfd2)
     val bytes2 = java.io.FileInputStream(pfd2!!.fileDescriptor).readBytes()
     assertNotNull(BitmapFactory.decodeByteArray(bytes2, 0, bytes2.size))
 
-    // Loader should have been called only once (cache hit on second call)
-    assertEquals(1, loadCount)
+    assertEquals("Expected exactly one decode; second call should be served from disk", 1, loadCount)
   }
 }
