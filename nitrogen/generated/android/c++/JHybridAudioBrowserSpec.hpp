@@ -70,8 +70,6 @@ namespace margelo::nitro::audiobrowser {
     void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) override;
     std::function<void(const GateEvent& /* event */)> getOnGate() override;
     void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) override;
-    std::function<void()> getOnGateButtonPressed() override;
-    void setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) override;
     std::function<void(bool /* connected */)> getOnCarConnectedChanged() override;
     void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) override;
     std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() override;

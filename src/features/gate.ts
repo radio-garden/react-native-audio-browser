@@ -9,30 +9,17 @@ export type GateReason = 'browse' | 'search'
 
 /**
  * The wire shape of the gate chrome — what crosses the bridge.
- * The button callback stays in JS (see {@link Gate}).
+ * Renders as a plain centered message on CarPlay; Android Auto shows one
+ * non-playable list tile. No button is shown on either platform.
  */
 export type NativeGate = {
   /** Headline shown on the gate page. */
   title: string
   /**
-   * The explanatory copy under the title. How it lays out on CarPlay depends
-   * on whether there's a button:
-   * - **with a button** → it sits in the page's header, and a single newline
-   *   splits it into a bold line and a lighter line beneath.
-   * - **without a button** → it's the centered message on an otherwise empty
-   *   page, and newlines just become spaces.
+   * The explanatory copy under the title. On CarPlay this is the centered
+   * message body; newlines become spaces. Android Auto does not display it.
    */
   message?: string
-  /**
-   * The label on the gate's action button. It also picks the CarPlay layout:
-   * include it and you get a page with the button beside the message; leave it
-   * out and you get a plain centered message with no button (and
-   * `onButtonPressed` never fires). See `message` for how the copy renders in
-   * each.
-   *
-   * iOS/CarPlay only — Android Auto can't show a button or a full-page message.
-   */
-  buttonTitle?: string
 }
 
 /**
@@ -61,20 +48,16 @@ export type GateEvent = { reason: GateReason }
 // MARK: - Public types (consumer-facing)
 
 /**
- * A gate's chrome plus its JS-only button handler.
+ * A gate's chrome (title and optional message).
  *
  * While the gate is active, every browse or search request on car surfaces
  * (CarPlay, Android Auto) shows this page instead of the real content.
  * Playback, the queue, and now-playing are unaffected.
  *
- * - **CarPlay**: full-page message, with an optional button.
- * - **Android Auto**: one non-playable list tile (no button or full page, so
- *   `buttonTitle` is iOS-only).
+ * - **CarPlay**: plain centered message page.
+ * - **Android Auto**: one non-playable list tile (message not shown).
  */
-export type Gate = NativeGate & {
-  /** Invoked when the user taps the gate page's button. */
-  onButtonPressed?: () => void
-}
+export type Gate = NativeGate
 
 /**
  * Describes the request being decided by a {@link GateResolver}.
@@ -95,15 +78,23 @@ export type GateResolver = (request: GateRequest) => Gate | boolean
 
 // MARK: - Internal state
 
-let buttonHandler: (() => void) | undefined
 let resolver: GateResolver | undefined
 
-nativeBrowser.onGateButtonPressed = () => buttonHandler?.()
-
 function toPublicRequest(req: NativeGateRequest): GateRequest {
-  return req.reason === 'browse'
-    ? { kind: 'browse', path: req.path ?? '' }
-    : { kind: 'search', params: (req.search ?? {}) as SearchParams }
+  switch (req.reason) {
+    case 'browse':
+      return { kind: 'browse', path: req.path ?? '' }
+    case 'search':
+      // req.search is always present on a well-formed search request — the
+      // native wire contract guarantees it for reason:'search'. Assert the
+      // native contract with `!` so we never hand consumer code a SearchParams
+      // with its required `query` field missing.
+      return { kind: 'search', params: req.search! }
+    default: {
+      const _exhaustive: never = req.reason
+      throw new Error(`Unhandled GateReason: ${_exhaustive}`)
+    }
+  }
 }
 
 // Native awaits this per request at a serve site.
@@ -114,9 +105,7 @@ nativeBrowser.resolveGate = async (
   const result = resolver ? resolver(toPublicRequest(req)) : true
   if (result === false) return { gated: false }
   if (result === true) return { gated: true }
-  const { onButtonPressed, ...nativeGate } = result // per-request chrome override
-  buttonHandler = onButtonPressed
-  return { gated: true, gate: nativeGate }
+  return { gated: true, gate: result }
 }
 
 // MARK: - Public API
@@ -138,14 +127,11 @@ export function setGate(gate: Gate, resolve?: GateResolver): void
 export function setGate(resolve: GateResolver): void
 export function setGate(a: Gate | GateResolver, b?: GateResolver): void {
   if (typeof a === 'function') {
-    buttonHandler = undefined
     resolver = a
     nativeBrowser.setGate(undefined, true)
   } else {
-    const { onButtonPressed, ...nativeGate } = a
-    buttonHandler = onButtonPressed
     resolver = b
-    nativeBrowser.setGate(nativeGate, b != null)
+    nativeBrowser.setGate(a, b != null)
   }
 }
 
@@ -153,7 +139,6 @@ export function setGate(a: Gate | GateResolver, b?: GateResolver): void {
  * Drops the gate — the real content comes back, and the current tab is kept.
  */
 export function clearGate(): void {
-  buttonHandler = undefined
   resolver = undefined
   nativeBrowser.clearGate()
 }

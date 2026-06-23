@@ -422,13 +422,6 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) noexcept override {
       _swiftPart.setOnGate(onGate);
     }
-    inline std::function<void()> getOnGateButtonPressed() noexcept override {
-      auto __result = _swiftPart.getOnGateButtonPressed();
-      return __result;
-    }
-    inline void setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) noexcept override {
-      _swiftPart.setOnGateButtonPressed(onGateButtonPressed);
-    }
     inline std::function<void(bool /* connected */)> getOnCarConnectedChanged() noexcept override {
       auto __result = _swiftPart.getOnCarConnectedChanged();
       return __result;

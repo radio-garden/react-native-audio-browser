@@ -358,25 +358,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onGateButtonPressed: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onGateButtonPressed)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onGateButtonPressed = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
   public final var onCarConnectedChanged: bridge.Func_void_bool {
     @inline(__always)
     get {

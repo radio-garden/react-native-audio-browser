@@ -34,8 +34,6 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("resolveGate", &HybridAudioBrowserSpec::setResolveGate);
       prototype.registerHybridGetter("onGate", &HybridAudioBrowserSpec::getOnGate);
       prototype.registerHybridSetter("onGate", &HybridAudioBrowserSpec::setOnGate);
-      prototype.registerHybridGetter("onGateButtonPressed", &HybridAudioBrowserSpec::getOnGateButtonPressed);
-      prototype.registerHybridSetter("onGateButtonPressed", &HybridAudioBrowserSpec::setOnGateButtonPressed);
       prototype.registerHybridGetter("onCarConnectedChanged", &HybridAudioBrowserSpec::getOnCarConnectedChanged);
       prototype.registerHybridSetter("onCarConnectedChanged", &HybridAudioBrowserSpec::setOnCarConnectedChanged);
       prototype.registerHybridGetter("onChapterMetadata", &HybridAudioBrowserSpec::getOnChapterMetadata);

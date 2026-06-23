@@ -1,0 +1,1811 @@
+### COMMITS (feature-fry..HEAD)
+288ff2f test(gate): add clearGate test; fix unused import
+db10834 android(gate): rename + per-request resolver decision + onGate at Android Auto sites
+f1e8498 docs(gate): task reports (2-3, 4, 6)
+58e1359 ios(gate): rename + per-request resolver decision + onGate at CarPlay/Siri sites
+2038a3b web(gate): renamed gate surface (no-op stub) + codegen
+6c8e81c feat(gate): nitro spec + gate.ts (overloads, resolver mapping, onGate, built-in fallback)
+8e39fbf plan(gate): lock resolver bridge form + wire types
+
+### DIFF STAT
+ .../src/main/java/com/audiobrowser/AudioBrowser.kt |  67 ++++--
+ .../audiobrowser/player/MediaSessionCallback.kt    | 105 ++++++++--
+ .../main/java/com/audiobrowser/player/Player.kt    |  17 +-
+ .../audiobrowser/player/TransformingDataSource.kt  |  65 ++----
+ .../player/TransformingDataSourceTest.kt           |  77 -------
+ ios/CarPlay/CarPlayController.swift                | 226 +++++++++++----------
+ ios/CarPlay/CarPlayNowPlayingManager.swift         |   4 +-
+ ios/HybridAudioBrowser.swift                       | 142 ++++++++-----
+ ios/Observer/PlayerItemNotificationObserver.swift  |  21 --
+ ios/Player/EndOfTrackJudgement.swift               |  32 ---
+ ios/Tests/EndOfTrackJudgementTests.swift           |  35 ----
+ ios/TrackPlayer.swift                              |  88 ++------
+ src/features/browseGate.ts                         |  85 --------
+ src/features/gate.test.ts                          |  72 +++++++
+ src/features/gate.ts                               | 158 ++++++++++++++
+ src/features/index.ts                              |   2 +-
+ src/specs/audio-browser.nitro.ts                   |  25 ++-
+ src/web/NativeAudioBrowser.ts                      |  26 +--
+ 18 files changed, 657 insertions(+), 590 deletions(-)
+
+### FULL DIFF (src/ios/android, excl generated)
+diff --git a/android/src/main/java/com/audiobrowser/AudioBrowser.kt b/android/src/main/java/com/audiobrowser/AudioBrowser.kt
+index f863b3b..e8e9fc6 100755
+--- a/android/src/main/java/com/audiobrowser/AudioBrowser.kt
++++ b/android/src/main/java/com/audiobrowser/AudioBrowser.kt
+@@ -43,8 +43,11 @@ import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
+ import com.margelo.nitro.audiobrowser.FormattedNavigationError
+ import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
+ import com.margelo.nitro.audiobrowser.IosOutput
++import com.margelo.nitro.audiobrowser.GateDecision
++import com.margelo.nitro.audiobrowser.GateEvent
+ import com.margelo.nitro.audiobrowser.MediaRequestConfig
+-import com.margelo.nitro.audiobrowser.NativeBrowseGate
++import com.margelo.nitro.audiobrowser.NativeGate
++import com.margelo.nitro.audiobrowser.NativeGateRequest
+ import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
+ import com.margelo.nitro.audiobrowser.NativeUpdateOptions
+ import com.margelo.nitro.audiobrowser.NavigationError
+@@ -161,6 +164,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
+   override var onNavigationError: (NavigationErrorEvent) -> Unit = {}
+   override var onFormattedNavigationError: (FormattedNavigationError?) -> Unit = {}
+ 
++  // MARK: Gate callbacks (native→JS; set from JS, native CALLS them)
++  // Default resolver allows everything until JS installs one; the static-gate
++  // fast path skips it anyway (see [gateDecision]).
++  override var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>> = {
++    Promise.resolved(Promise.resolved(GateDecision(gated = false, gate = null)))
++  }
++  override var onGate: (event: GateEvent) -> Unit = {}
++
+   // MARK: Player callbacks
+   override var onPlaybackChanged: (data: Playback) -> Unit = {}
+   override var onRemoteBookmark: () -> Unit = {}
+@@ -689,29 +700,61 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
+     browserManager.setFavorites(favorites.toList())
+   }
+ 
+-  // MARK: Browse gate
++  // MARK: Gate
++
++  /** A gate decision for one request: whether to gate, and which chrome to render. */
++  data class GateOutcome(val gated: Boolean, val chrome: NativeGate?)
++
++  // The minimal chrome rendered when a gate is active but no override or stored
++  // default chrome exists (the resolver-only setGate overload). Matches the
++  // generated NativeGate constructor arg order (title, message, buttonTitle).
++  private val builtInGate = NativeGate("Unavailable", null, null)
+ 
+-  // Written from the JS thread, read from the Media3 application thread
+-  // (MediaSessionCallback serves the gate tile from it) — hence @Volatile.
+-  @Volatile private var browseGate: NativeBrowseGate? = null
++  // Gate state. Written from the JS thread, read from the Media3 application
++  // thread (the enforcement sites in MediaSessionCallback consult it) — hence
++  // @Volatile.
++  @Volatile private var defaultChrome: NativeGate? = null
++  @Volatile private var hasResolver: Boolean = false
++  @Volatile private var isGateActive: Boolean = false
+ 
+-  override fun setBrowseGate(gate: NativeBrowseGate) {
+-    browseGate = gate
++  override fun setGate(gate: NativeGate?, hasResolver: Boolean) {
++    defaultChrome = gate
++    this.hasResolver = hasResolver
++    isGateActive = true
+     // Re-query every subscribed parent so a connected controller (Android
+     // Auto) swaps its lists for the gate tile without reconnecting. Notify
+     // only — the content cache stays warm for when the gate clears.
+     connectedService?.player?.invalidateAllContent()
+   }
+ 
+-  override fun clearBrowseGate() {
+-    if (browseGate == null) return
+-    browseGate = null
++  override fun clearGate() {
++    if (!isGateActive) return
++    isGateActive = false
++    defaultChrome = null
++    hasResolver = false
+     connectedService?.player?.invalidateAllContent()
+   }
+ 
+-  override fun getBrowseGate(): NativeBrowseGate? = browseGate
++  override var onGateButtonPressed: () -> Unit = {}
+ 
+-  override var onBrowseGateButtonPressed: () -> Unit = {}
++  /**
++   * The single gate choke point. Each enforcement site (browse / search) calls this for the current
++   * request and serves the gate chrome when [GateOutcome.gated] is true. Mirrors the iOS
++   * `gateDecision(for:)` helper.
++   *
++   * - No active gate → allow.
++   * - Active gate, no resolver → static fast path: gate with the stored default chrome, no JS hop.
++   * - Active gate with a resolver → ask JS per request; a rejected/failed resolver never breaks the
++   *   serve path (falls through to allow). Chrome order on a gated decision: override → stored
++   *   default → built-in.
++   */
++  suspend fun gateDecision(request: NativeGateRequest): GateOutcome {
++    if (!isGateActive) return GateOutcome(false, null)
++    if (!hasResolver) return GateOutcome(true, defaultChrome)
++    val decision = runCatching { resolveGate(request).await().await() }.getOrNull()
++    if (decision == null || !decision.gated) return GateOutcome(false, null)
++    return GateOutcome(true, decision.gate ?: defaultChrome ?: builtInGate)
++  }
+ 
+   // MARK: Car connection (Android Auto / Android Automotive)
+ 
+diff --git a/android/src/main/java/com/audiobrowser/player/MediaSessionCallback.kt b/android/src/main/java/com/audiobrowser/player/MediaSessionCallback.kt
+index 853f460..629c6f9 100644
+--- a/android/src/main/java/com/audiobrowser/player/MediaSessionCallback.kt
++++ b/android/src/main/java/com/audiobrowser/player/MediaSessionCallback.kt
+@@ -20,8 +20,13 @@ import com.audiobrowser.util.TrackFactory
+ import com.google.common.collect.ImmutableList
+ import com.google.common.util.concurrent.Futures
+ import com.google.common.util.concurrent.ListenableFuture
+-import com.margelo.nitro.audiobrowser.NativeBrowseGate
++import com.margelo.nitro.audiobrowser.GateEvent
++import com.margelo.nitro.audiobrowser.GateReason
++import com.margelo.nitro.audiobrowser.MediaReference
++import com.margelo.nitro.audiobrowser.NativeGate
++import com.margelo.nitro.audiobrowser.NativeGateRequest
+ import com.margelo.nitro.audiobrowser.NotificationButtonLayout
++import com.margelo.nitro.audiobrowser.SearchParams
+ import com.margelo.nitro.audiobrowser.PlayerCapabilities
+ import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
+ import com.margelo.nitro.audiobrowser.Track
+@@ -112,13 +117,31 @@ class MediaSessionCallback(private val player: Player) :
+       .build()
+ 
+   /**
+-   * Builds the Browse Gate tile: while a gate is set, tabs stay visible but every non-root level
+-   * serves this single tile (see the gate check in [onGetChildren]). Same shape as the error tiles
+-   * — non-browsable, non-playable — and deliberately NOT accompanied by a SessionError: a gate is
+-   * deliberate app state, not a failure. The message renders as the tile's subtitle (newlines
+-   * collapse to spaces — list rows are single-line).
++   * Builds the gate tile from a per-request chrome: while a gate is active, tabs stay visible but a
++   * gated browse/search level serves this single tile (see the gate checks in [onGetChildren] /
++   * [onGetSearchResult]). Same shape as the error tiles — non-browsable, non-playable — and
++   * deliberately NOT accompanied by a SessionError: a gate is deliberate app state, not a failure.
++   * The message renders as the tile's subtitle (newlines collapse to spaces — list rows are
++   * single-line).
+    */
+-  private fun createGateMediaItem(gate: NativeBrowseGate): MediaItem =
++  /**
++   * Wraps a raw external-search query string into the structured [SearchParams] the gate request
++   * carries. The car search surfaces only give a free-text query, so the other fields stay null —
++   * mirrors BrowserManager's query→SearchParams construction.
++   */
++  private fun searchParams(query: String): SearchParams =
++    SearchParams(
++      mode = null,
++      query = query,
++      genre = null,
++      artist = null,
++      album = null,
++      title = null,
++      playlist = null,
++      reference = MediaReference.UNKNOWN,
++    )
++
++  private fun createGateMediaItem(gate: NativeGate): MediaItem =
+     createErrorMediaItem(
+       mediaId = BrowserPathHelper.GATE_PATH,
+       title = gate.title,
+@@ -262,15 +285,23 @@ class MediaSessionCallback(private val player: Player) :
+         player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
+       val browserManager = audioBrowser.browserManager
+ 
+-      // While a Browse Gate is set, tabs stay visible (the root keeps serving them below) but
+-      // every other level — including re-queries of the gate tile's own sentinel path — serves
+-      // the single gate tile, so drilling into it re-shows the message instead of dead-ending
+-      // in "No items". Checked before the offline guard: gated content isn't coming back with
++      // While a gate is active, tabs stay visible (the root keeps serving them below) but each
++      // non-root level is resolved per request: a gated path — including re-queries of the gate
++      // tile's own sentinel path — serves the single gate tile, so drilling into it re-shows the
++      // message instead of dead-ending in "No items"; an allowed path falls through to real
++      // children. Checked before the offline guard: gated content isn't coming back with
+       // connectivity, so the gate copy is the truer message.
+-      audioBrowser.getBrowseGate()?.let { gate ->
+-        if (parentId != BrowserPathHelper.ROOT_PATH) {
++      if (parentId != BrowserPathHelper.ROOT_PATH) {
++        val outcome =
++          audioBrowser.gateDecision(
++            NativeGateRequest(reason = GateReason.BROWSE, path = parentId, search = null)
++          )
++        if (outcome.gated) {
++          audioBrowser.onGate(GateEvent(GateReason.BROWSE))
++          // gateDecision guarantees non-null chrome on a gated decision (override → default →
++          // built-in).
+           return@future LibraryResult.ofItemList(
+-            ImmutableList.of(createGateMediaItem(gate)),
++            ImmutableList.of(createGateMediaItem(outcome.chrome!!)),
+             params,
+           )
+         }
+@@ -410,10 +441,21 @@ class MediaSessionCallback(private val player: Player) :
+       }
+ 
+       if (mediaId == BrowserPathHelper.GATE_PATH) {
+-        val gate =
+-          player.awaitBrowser().getBrowseGate()
+-            ?: return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+-        return@future LibraryResult.ofItem(createGateMediaItem(gate), null)
++        // A direct fetch of the gate tile's own sentinel (a controller re-reading the item it was
++        // served). Resolve the chrome for the gate path but do NOT emit onGate — that fires at the
++        // browse/search serve sites, not on an item lookup.
++        val outcome =
++          player
++            .awaitBrowser()
++            .gateDecision(
++              NativeGateRequest(
++                reason = GateReason.BROWSE,
++                path = BrowserPathHelper.GATE_PATH,
++                search = null,
++              )
++            )
++        if (!outcome.gated) return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
++        return@future LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
+       }
+ 
+       if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {
+@@ -562,7 +604,16 @@ class MediaSessionCallback(private val player: Player) :
+ 
+       // External-surface search is gated with the rest of the browse tree — otherwise search is
+       // a way around the gate. One "result": the gate tile (see onGetSearchResult).
+-      if (audioBrowser.getBrowseGate() != null) {
++      val searchOutcome =
++        audioBrowser.gateDecision(
++          NativeGateRequest(
++            reason = GateReason.SEARCH,
++            path = null,
++            search = searchParams(query),
++          )
++        )
++      if (searchOutcome.gated) {
++        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
+         session.notifySearchResultChanged(browser, query, 1, params)
+         return@future LibraryResult.ofVoid()
+       }
+@@ -614,8 +665,20 @@ class MediaSessionCallback(private val player: Player) :
+       val browserManager = audioBrowser.browserManager
+ 
+       // Gated: the single search "result" is the gate tile (paired with onSearch's count of 1).
+-      audioBrowser.getBrowseGate()?.let { gate ->
+-        return@future LibraryResult.ofItemList(ImmutableList.of(createGateMediaItem(gate)), params)
++      val searchOutcome =
++        audioBrowser.gateDecision(
++          NativeGateRequest(
++            reason = GateReason.SEARCH,
++            path = null,
++            search = searchParams(query),
++          )
++        )
++      if (searchOutcome.gated) {
++        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
++        return@future LibraryResult.ofItemList(
++          ImmutableList.of(createGateMediaItem(searchOutcome.chrome!!)),
++          params,
++        )
+       }
+ 
+       try {
+diff --git a/android/src/main/java/com/audiobrowser/player/Player.kt b/android/src/main/java/com/audiobrowser/player/Player.kt
+index 04aff93..0e93124 100644
+--- a/android/src/main/java/com/audiobrowser/player/Player.kt
++++ b/android/src/main/java/com/audiobrowser/player/Player.kt
+@@ -27,8 +27,11 @@ import com.audiobrowser.util.RepeatModeFactory
+ import com.audiobrowser.util.TrackFactory
+ import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+ import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
++import com.margelo.nitro.audiobrowser.GateEvent
++import com.margelo.nitro.audiobrowser.GateReason
+ import com.margelo.nitro.audiobrowser.ImageContext
+ import com.margelo.nitro.audiobrowser.ImageSource
++import com.margelo.nitro.audiobrowser.NativeGateRequest
+ import com.margelo.nitro.audiobrowser.NowPlayingMetadata
+ import com.margelo.nitro.audiobrowser.Playback
+ import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
+@@ -858,10 +861,16 @@ class Player(internal val context: Context) {
+   suspend fun playFromSearch(params: SearchParams): Boolean {
+     return try {
+       val audioBrowser = awaitBrowser()
+-      // A Browse Gate blocks external-surface search too — otherwise voice search is a way
+-      // around the gate (mirrors the iOS play-media intent guard).
+-      if (audioBrowser.getBrowseGate() != null) {
+-        Timber.i("playFromSearch refused — browse gate is set")
++      // A gate blocks external-surface "play" search too — otherwise voice search is a way around
++      // the gate (mirrors the iOS play-media intent guard). Resolved per request; a gated decision
++      // fires onGate(search) and refuses.
++      val gateOutcome =
++        audioBrowser.gateDecision(
++          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)
++        )
++      if (gateOutcome.gated) {
++        Timber.i("playFromSearch refused — request is gated")
++        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
+         return false
+       }
+       val browserManager = audioBrowser.browserManager
+diff --git a/android/src/main/java/com/audiobrowser/player/TransformingDataSource.kt b/android/src/main/java/com/audiobrowser/player/TransformingDataSource.kt
+index d8820d6..f01a851 100644
+--- a/android/src/main/java/com/audiobrowser/player/TransformingDataSource.kt
++++ b/android/src/main/java/com/audiobrowser/player/TransformingDataSource.kt
+@@ -7,7 +7,6 @@ import androidx.media3.datasource.DataSpec
+ import androidx.media3.datasource.TransferListener
+ import com.audiobrowser.util.BrowserPathHelper
+ import com.margelo.nitro.audiobrowser.MediaRequestConfig
+-import java.io.IOException
+ import timber.log.Timber
+ 
+ /**
+@@ -35,26 +34,27 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
+   override fun open(dataSpec: DataSpec): Long {
+     val originalUrl = dataSpec.uri.toString()
+ 
+-    // The first open() resolves the transform and caches it on the Factory; subsequent opens
+-    // (segments, keys, replays) reuse the cached headers/user-agent but keep their own URLs.
++    // Check if the Factory already has a cached transform result.
++    // The first DataSource to open() resolves the transform and caches it.
++    // All subsequent opens (segments, keys, replays) reuse the cached
++    // headers/user-agent but keep their original URLs.
+     val cached = factory.cachedTransform
+     val (finalUrl, headers, userAgent) =
+       when {
+-        cached == null -> resolveAndCache(originalUrl)
+-        // Re-open of the same media URL (e.g. a retry after a network drop). By default reuse the
+-        // resolved URL: re-emitting the schemeless original ("/listen/<id>/x.mp3") would hit the
+-        // file data source -> FileNotFoundException. But if the previous media-URL load failed,
+-        // re-resolve once (see the catch below): the URL/token may be stale. The fresh URL is still
+-        // absolute, so that hazard stays avoided.
+-        originalUrl == factory.cachedOriginalUrl ->
+-          if (factory.reresolveOnNextMediaOpen) {
+-            factory.reresolveOnNextMediaOpen = false
+-            resolveAndCache(originalUrl)
+-          } else {
+-            cached
+-          }
+-        // A different URL (already-absolute HLS segment or key): reuse the cached headers but keep
+-        // its own URL.
++        cached == null -> {
++          val resolved = resolveRequestConfig(originalUrl)
++          factory.cachedTransform = resolved
++          factory.cachedOriginalUrl = originalUrl
++          Timber.d("TransformingDataSource: resolved $originalUrl -> ${resolved.first}")
++          resolved
++        }
++        // Re-open of the same media URL — e.g. a progressive-stream retry after a network drop.
++        // Reuse the resolved URL: falling back to the original would re-emit a schemeless/relative
++        // path (e.g. "/listen/<id>/channel.mp3"), which DefaultDataSource routes to the file data
++        // source -> FileNotFoundException, killing playback instead of retrying the stream.
++        originalUrl == factory.cachedOriginalUrl -> cached
++        // A different URL (e.g. an already-absolute HLS segment or key): reuse the cached
++        // headers/user-agent but keep its own URL.
+         else -> Triple(originalUrl, cached.second, cached.third)
+       }
+ 
+@@ -72,27 +72,7 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
+       dataSpec.buildUpon().setUri(finalUrl.toUri()).setHttpRequestHeaders(mergedHeaders).build()
+ 
+     resolvedUri = transformedSpec.uri
+-    return try {
+-      upstream.open(transformedSpec)
+-    } catch (e: IOException) {
+-      // The media-URL load failed: if ExoPlayer retries, re-resolve so a stale URL/token is
+-      // refreshed instead of replayed. Scoped to the media URL (segment/key failures keep their own
+-      // URL). The flag lives on this item's Factory, so it stays correct when several tracks'
+-      // factories are alive at once (a queue).
+-      if (originalUrl == factory.cachedOriginalUrl) {
+-        factory.reresolveOnNextMediaOpen = true
+-      }
+-      throw e
+-    }
+-  }
+-
+-  /** Resolves the transform for [originalUrl] and caches the result on the [Factory]. */
+-  private fun resolveAndCache(originalUrl: String): Triple<String, Map<String, String>, String> {
+-    val resolved = resolveRequestConfig(originalUrl)
+-    factory.cachedTransform = resolved
+-    factory.cachedOriginalUrl = originalUrl
+-    Timber.d("TransformingDataSource: resolved $originalUrl -> ${resolved.first}")
+-    return resolved
++    return upstream.open(transformedSpec)
+   }
+ 
+   override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+@@ -183,13 +163,6 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
+      */
+     @Volatile internal var cachedOriginalUrl: String? = null
+ 
+-    /**
+-     * Set when a media-URL load fails so the next media-URL open re-runs the transform instead of
+-     * replaying [cachedTransform] — recovers an expired short-lived URL/token across a retry.
+-     * Self-clearing: consumed by the first re-resolve.
+-     */
+-    @Volatile internal var reresolveOnNextMediaOpen: Boolean = false
+-
+     override fun createDataSource(): DataSource {
+       return TransformingDataSource(upstream = upstreamFactory.createDataSource(), factory = this)
+     }
+diff --git a/android/src/test/java/com/audiobrowser/player/TransformingDataSourceTest.kt b/android/src/test/java/com/audiobrowser/player/TransformingDataSourceTest.kt
+index 63d9fa9..9c638b0 100644
+--- a/android/src/test/java/com/audiobrowser/player/TransformingDataSourceTest.kt
++++ b/android/src/test/java/com/audiobrowser/player/TransformingDataSourceTest.kt
+@@ -7,7 +7,6 @@ import androidx.media3.datasource.DataSource
+ import androidx.media3.datasource.DataSpec
+ import androidx.media3.datasource.TransferListener
+ import com.margelo.nitro.audiobrowser.MediaRequestConfig
+-import java.io.IOException
+ import org.junit.Assert.assertEquals
+ import org.junit.Assert.assertTrue
+ import org.junit.Test
+@@ -20,18 +19,11 @@ class TransformingDataSourceTest {
+   // Records the URL each upstream DataSource is actually opened with.
+   private val openedUrls = mutableListOf<String>()
+ 
+-  // When set, the next upstream open() records its URL and then throws (simulating a failed load).
+-  private var failNextOpen = false
+-
+   private inner class RecordingDataSource(
+     private val responseHeaders: Map<String, List<String>> = emptyMap()
+   ) : DataSource {
+     override fun open(dataSpec: DataSpec): Long {
+       openedUrls.add(dataSpec.uri.toString())
+-      if (failNextOpen) {
+-        failNextOpen = false
+-        throw IOException("simulated load failure")
+-      }
+       return C.LENGTH_UNSET.toLong()
+     }
+ 
+@@ -64,75 +56,6 @@ class TransformingDataSourceTest {
+       userAgent = null,
+     )
+ 
+-  private fun tokenConfig(token: Int) =
+-    MediaRequestConfig(
+-      resolve = null,
+-      resolveSync = null,
+-      transform = null,
+-      transformSync = null,
+-      method = null,
+-      path = "/s.mp3",
+-      baseUrl = "https://cdn.example.com",
+-      headers = null,
+-      query = mapOf("token" to token.toString()),
+-      body = null,
+-      contentType = null,
+-      userAgent = null,
+-    )
+-
+-  @Test
+-  fun `a failed media-url load re-resolves the url on the retry (fresh token)`() {
+-    // A consumer whose transform mints a short-lived token: each resolve yields a new token. If the
+-    // media-URL load fails (e.g. the token expired during a network outage), ExoPlayer's retry must
+-    // re-resolve to a fresh token rather than replay the stale cached URL.
+-    var resolves = 0
+-    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+-    val spec = DataSpec("/listen/abc/channel.mp3".toUri())
+-
+-    // First open records token=1, then fails (simulating an expired URL).
+-    failNextOpen = true
+-    try {
+-      factory.createDataSource().open(spec)
+-    } catch (_: IOException) {}
+-    // The retry re-opens the same media URL — it must re-resolve to a fresh token.
+-    factory.createDataSource().open(spec)
+-    // A further re-open without a failure reuses token=2 (the flag is single-shot).
+-    factory.createDataSource().open(spec)
+-
+-    assertEquals(3, openedUrls.size)
+-    assertTrue("first open uses token=1, got ${openedUrls[0]}", openedUrls[0].contains("token=1"))
+-    assertTrue(
+-      "retry re-resolves to token=2, got ${openedUrls[1]}",
+-      openedUrls[1].contains("token=2"),
+-    )
+-    assertTrue(
+-      "subsequent open reuses token=2, got ${openedUrls[2]}",
+-      openedUrls[2].contains("token=2"),
+-    )
+-  }
+-
+-  @Test
+-  fun `a failed segment load does not trigger a media re-resolve`() {
+-    // A segment/key failure (a different, already-absolute URL) must not refresh the media URL: the
+-    // media URL is fine, only a segment hiccuped.
+-    var resolves = 0
+-    val factory = TransformingDataSource.Factory(upstreamFactory) { tokenConfig(++resolves) }
+-
+-    val mediaUrl = "/listen/abc/playlist.m3u8".toUri()
+-    factory.createDataSource().open(DataSpec(mediaUrl)) // media -> token=1
+-    failNextOpen = true
+-    try {
+-      factory.createDataSource().open(DataSpec("https://cdn.example.com/seg-1.ts".toUri()))
+-    } catch (_: IOException) {}
+-    // Re-open the media URL: it must still reuse token=1 (the segment failure left it valid).
+-    factory.createDataSource().open(DataSpec(mediaUrl))
+-
+-    assertTrue(
+-      "media url stays token=1, got ${openedUrls.last()}",
+-      openedUrls.last().contains("token=1"),
+-    )
+-  }
+-
+   @Test
+   fun `re-open of the media url reuses the resolved url, not the relative original`() {
+     // radio.garden's MediaItem URI is a relative path; the transform resolves it to an absolute
+diff --git a/ios/CarPlay/CarPlayController.swift b/ios/CarPlay/CarPlayController.swift
+index 5774075..9da36a9 100644
+--- a/ios/CarPlay/CarPlayController.swift
++++ b/ios/CarPlay/CarPlayController.swift
+@@ -44,12 +44,12 @@ public final class RNABCarPlayController: NSObject {
+   /// so the rebuild is deferred until the user is back at the tab bar.
+   private var pendingTabs: [Track]?
+ 
+-  /// The active Browse Gate. While set, tabs keep their tab-bar entries but
+-  /// render the gate page (a CPInformationTemplate) instead of content, and
+-  /// navigation/selection is blocked. Mirrors `audioBrowser.browseGate`;
+-  /// seeded in start() so a gate set before the scene connects renders at
+-  /// connect.
+-  private var activeGate: NativeBrowseGate?
++  /// Whether a gate is active. While set, tabs keep their tab-bar entries but
++  /// each path is resolved per-request via `gateDecision(for:)`: a gated path
++  /// renders the gate page instead of content; an allowed path shows real
++  /// content. Mirrors `audioBrowser.isGateActive`; seeded in start() so a gate
++  /// set before the scene connects renders at connect.
++  private var isGated = false
+ 
+   /// How long a browse resolve may run before the destination's loading spinner
+   /// is replaced with an error state. The selection completion is fired
+@@ -93,7 +93,7 @@ public final class RNABCarPlayController: NSObject {
+         ?? CPListItem(text: track.title, detailText: nil)
+     }
+     nowPlayingManager.navigateToUrl = { [weak self] url, title in
+-      self?.navigateToUrl(url, title: title)
++      Task { @MainActor in await self?.navigateToUrl(url, title: title) }
+     }
+   }
+ 
+@@ -141,7 +141,7 @@ public final class RNABCarPlayController: NSObject {
+       guard self.isStarted else { return }
+       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
+       self.audioBrowser = browser
+-      self.activeGate = browser.browseGate
++      self.isGated = browser.isGateActive
+       self.trackSelector = TrackSelector(browserManager: browser.browserManager)
+ 
+       // Create image loader with CarPlay display traits
+@@ -301,14 +301,14 @@ public final class RNABCarPlayController: NSObject {
+       audioBrowser?.externalContentChangedEmitter.removeListener(externalContentToken)
+     }
+ 
+-    // Subscribe to browse gate changes (set / in-place update / clear)
+-    let gateToken = audioBrowser.browseGateChangedEmitter.addListener { [weak self] gate in
++    // Subscribe to gate changes (set / in-place update / clear)
++    let gateToken = audioBrowser.gateChangedEmitter.addListener { [weak self] active in
+       Task { @MainActor in
+-        self?.handleBrowseGateChanged(gate)
++        self?.handleGateChanged(active)
+       }
+     }
+     listenerRemovals.append { [weak audioBrowser] in
+-      audioBrowser?.browseGateChangedEmitter.removeListener(gateToken)
++      audioBrowser?.gateChangedEmitter.removeListener(gateToken)
+     }
+ 
+     // Subscribe to active track changes (for playing indicator in lists)
+@@ -421,9 +421,12 @@ public final class RNABCarPlayController: NSObject {
+ 
+   @MainActor
+   private func showTabBar(tabs: [Track]) async {
+-    // While gated, tabs stay visible but every tab renders the gate page.
+-    if let gate = activeGate {
+-      showGateTabBar(tabs: tabs, gate: gate)
++    // While gated, each tab path is resolved per-request: a gated tab renders
++    // the gate page with that request's chrome; an allowed tab shows real
++    // content. This generalizes the old "all tabs show the gate" — a path the
++    // resolver allows now shows real content.
++    if isGated {
++      await showGatedTabBar(tabs: tabs)
+       return
+     }
+ 
+@@ -447,6 +450,65 @@ public final class RNABCarPlayController: NSObject {
+     }
+   }
+ 
++  /// Builds the tab bar while a gate is active. Each tab's path is run through
++  /// the single gate choke point (`gateDecision(for:)`): a gated tab becomes a
++  /// gate page carrying that decision's chrome (and fires `onGate`); an allowed
++  /// tab becomes a normal content shell that lazy-loads. With a static gate (no
++  /// resolver) every tab is gated with the default chrome — today's behaviour.
++  @MainActor
++  private func showGatedTabBar(tabs: [Track]) async {
++    guard let audioBrowser else { return }
++
++    guard !tabs.isEmpty else {
++      // Tabs unknown (config not loaded yet, or none) — resolve the root path
++      // and show a single gate page (or, if allowed, fall back to a normal
++      // build once tabs arrive).
++      let outcome = await audioBrowser.gateDecision(
++        for: NativeGateRequest(reason: .browse, path: nil, search: nil)
++      )
++      if outcome.gated {
++        audioBrowser.onGate(GateEvent(reason: .browse))
++        interfaceController.setRootTemplate(
++          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true, completion: nil,
++        )
++      }
++      return
++    }
++
++    let limitedTabs = Array(tabs.prefix(CPTabBarTemplate.maximumTabCount))
++    var templates: [CPListTemplate] = []
++    for tab in limitedTabs {
++      let outcome = await audioBrowser.gateDecision(
++        for: NativeGateRequest(reason: .browse, path: tab.url, search: nil)
++      )
++      if outcome.gated {
++        audioBrowser.onGate(GateEvent(reason: .browse))
++        templates.append(makeGateTemplate(gate: outcome.chrome, tab: tab))
++      } else {
++        // This path is allowed even though a gate is active — show real content.
++        templates.append(createTabTemplate(for: tab))
++      }
++    }
++
++    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
++       tabBar.templates.count == templates.count
++    {
++      // Equal-count in-place swap keeps the selected tab index.
++      tabBar.updateTemplates(templates)
++    } else {
++      interfaceController.setRootTemplate(
++        CPTabBarTemplate(templates: templates), animated: true, completion: nil,
++      )
++    }
++
++    // Eagerly fill any allowed (content) tabs: templateDidAppear isn't
++    // guaranteed to re-fire for templates swapped in via updateTemplates.
++    for (tab, template) in zip(limitedTabs, templates) {
++      guard getPath(from: template) != nil, let url = tab.url else { continue }
++      await loadContent(for: url, into: template)
++    }
++  }
++
+   /// Creates a tab template shell without loading content (synchronous).
+   /// The shell carries the loading state (spinner / `carPlayLoadingTitle`)
+   /// until its content lazy-loads on first appearance.
+@@ -664,7 +726,7 @@ public final class RNABCarPlayController: NSObject {
+       case .intercepted:
+         self.nowPlayingManager.showNowPlaying()
+       case let .browse(url):
+-        self.navigateToUrl(url, title: track.title)
++        await self.navigateToUrl(url, title: track.title)
+       case .none:
+         break
+       }
+@@ -687,10 +749,25 @@ public final class RNABCarPlayController: NSObject {
+   /// filled by `templateDidAppear` → `loadContentIfNeeded` → `loadContent`, which
+   /// runs once the template is on screen (the timing CarPlay needs: updates made
+   /// right after a push are dropped). Backing out and re-tapping retries.
+-  private func navigateToUrl(_ url: String, title: String) {
+-    // While gated there is nothing to browse into (tab content is the gate
+-    // page); this also blocks indirect entries like the Now Playing album line.
+-    guard activeGate == nil else { return }
++  @MainActor
++  private func navigateToUrl(_ url: String, title: String) async {
++    // The gate is resolved per-request: a gated path pushes the gate page
++    // (with this request's chrome) instead of browsing into content; this also
++    // blocks indirect entries like the Now Playing album line. An allowed path
++    // browses normally even while a gate is active.
++    if isGated, let audioBrowser {
++      let outcome = await audioBrowser.gateDecision(
++        for: NativeGateRequest(reason: .browse, path: url, search: nil)
++      )
++      if outcome.gated {
++        audioBrowser.onGate(GateEvent(reason: .browse))
++        if let top = interfaceController.topTemplate, getPath(from: top) == url { return }
++        interfaceController.pushTemplate(
++          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true, completion: nil,
++        )
++        return
++      }
++    }
+     // Avoid pushing a duplicate if the top template already shows this path.
+     if let top = interfaceController.topTemplate, getPath(from: top) == url {
+       return
+@@ -790,7 +867,7 @@ public final class RNABCarPlayController: NSObject {
+     // (e.g. titles after a locale switch): restamp them in place. No rebuild,
+     // so the selected tab and any pushed navigation stack survive. (Gate
+     // templates carry no path, so a gated tab bar never matches here.)
+-    if activeGate == nil,
++    if !isGated,
+        let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+        tabBar.templates.count == min(tabs.count, CPTabBarTemplate.maximumTabCount),
+        zip(tabBar.templates, tabs).allSatisfy({ getPath(from: $0) == $1.url })
+@@ -982,95 +1059,29 @@ public final class RNABCarPlayController: NSObject {
+     }
+   }
+ 
+-  // MARK: - Browse Gate
+-
+-  /// Applies a Browse Gate change: set, in-place update, or clear. Custom
+-  /// Now Playing buttons (e.g. favorite) hide while gated and return on clear.
+-  @MainActor
+-  private func handleBrowseGateChanged(_ gate: NativeBrowseGate?) {
+-    activeGate = gate
+-    if let gate {
+-      applyGate(gate)
+-    } else {
+-      removeGate()
+-    }
+-    nowPlayingManager.setupNowPlayingButtons()
+-    nowPlayingManager.updateNowPlayingButtonStates()
+-  }
+-
+-  @MainActor
+-  private func applyGate(_ gate: NativeBrowseGate) {
+-    // Tear down any pushed navigation — content must not stay reachable
+-    // behind the gate. (No-op when already at the root.)
+-    interfaceController.popToRootTemplate(animated: false, completion: nil)
+-    // Gate pages render their message as the list empty view, which is only
+-    // reliable as a template's *initial* state — so a re-set (e.g. the
+-    // re-check button's "not found" copy) rebuilds the templates rather than
+-    // mutating them; the equal-count updateTemplates swap in showGateTabBar
+-    // keeps the selected tab.
+-    showGateTabBar(tabs: audioBrowser?.browserManager.getTabs() ?? [], gate: gate)
+-  }
++  // MARK: - Gate
+ 
+-  /// Shows the gate inside the existing tab bar when possible (keeping the
+-  /// selected tab), or as a fresh tab bar / single root page otherwise.
++  /// Applies a gate state change: set or clear. The per-request chrome is
++  /// obtained at render time via `gateDecision(for:)`, so this just tears down
++  /// any pushed navigation and rebuilds the tab bar — `showTabBar` routes to the
++  /// gated build while a gate is active and to the normal build once cleared.
++  /// Custom Now Playing buttons (e.g. favorite) hide while gated and return on
++  /// clear.
+   @MainActor
+-  private func showGateTabBar(tabs: [Track], gate: NativeBrowseGate) {
+-    guard !tabs.isEmpty else {
+-      // Tabs unknown (config not loaded yet, or none) — single gate page root.
+-      interfaceController.setRootTemplate(
+-        makeGateTemplate(gate: gate, tab: nil), animated: true, completion: nil,
+-      )
+-      return
+-    }
+-
+-    let gateTemplates = tabs.prefix(CPTabBarTemplate.maximumTabCount).map {
+-      makeGateTemplate(gate: gate, tab: $0)
+-    }
+-    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+-       tabBar.templates.count == gateTemplates.count
+-    {
+-      // Equal-count in-place swap keeps the selected tab index.
+-      tabBar.updateTemplates(gateTemplates)
+-    } else {
+-      interfaceController.setRootTemplate(
+-        CPTabBarTemplate(templates: gateTemplates), animated: true, completion: nil,
+-      )
+-    }
+-  }
+-
+-  /// Restores normal tab content after the gate clears, keeping the selected
+-  /// tab when the tab bar is already up.
+-  @MainActor
+-  private func removeGate() {
++  private func handleGateChanged(_ active: Bool) {
++    isGated = active
+     let tabs = audioBrowser?.browserManager.getTabs() ?? []
+-    guard !tabs.isEmpty else {
++    if tabs.isEmpty, !active {
+       // Never had tabs (gate was up since before config) — full initial build.
+       Task { await buildInitialInterface() }
+-      return
+-    }
+-
+-    let tabTemplates = tabs.prefix(CPTabBarTemplate.maximumTabCount).map {
+-      createTabTemplate(for: $0)
+-    }
+-    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+-       tabBar.templates.count == tabTemplates.count
+-    {
+-      // Equal-count in-place swap keeps the selected tab index.
+-      tabBar.updateTemplates(tabTemplates)
+     } else {
+-      interfaceController.setRootTemplate(
+-        CPTabBarTemplate(templates: tabTemplates), animated: true, completion: nil,
+-      )
+-    }
+-    // Fill all tabs eagerly: templateDidAppear isn't guaranteed to re-fire
+-    // for templates swapped in via updateTemplates, and ≤4 resolves is cheap
+-    // next to leaving the just-unlocked UI on a spinner.
+-    Task { @MainActor in
+-      for (tab, template) in zip(tabs, tabTemplates) {
+-        guard let url = tab.url else { continue }
+-        await loadContent(for: url, into: template)
+-      }
++      // Tear down any pushed navigation — gated content must not stay reachable
++      // behind the gate, and on clear we return to the root. (No-op at root.)
++      interfaceController.popToRootTemplate(animated: false, completion: nil)
++      Task { await showTabBar(tabs: tabs) }
+     }
++    nowPlayingManager.setupNowPlayingButtons()
++    nowPlayingManager.updateNowPlayingButtonStates()
+   }
+ 
+   /// Builds the gate page for one tab-bar slot, carrying the tab's entry so
+@@ -1089,7 +1100,10 @@ public final class RNABCarPlayController: NSObject {
+   /// splits header and subtitle) plus a titled CPButton. A buttonless gate
+   /// gets the centered empty view instead, where newlines collapse to
+   /// spaces (the "variants" are width alternatives, not lines).
+-  private func makeGateTemplate(gate: NativeBrowseGate, tab: Track?) -> CPListTemplate {
++  private func makeGateTemplate(gate gateChrome: NativeGate?, tab: Track?) -> CPListTemplate {
++    // A gated decision with neither an override nor a stored default chrome
++    // (resolver-only `true`) falls back to the built-in minimal gate.
++    let gate = gateChrome ?? HybridAudioBrowser.builtInGate
+     let template: CPListTemplate
+     if let buttonTitle = gate.buttonTitle, !buttonTitle.isEmpty {
+       // CPButton's initializer demands an image, but the header button
+@@ -1098,7 +1112,7 @@ public final class RNABCarPlayController: NSObject {
+       let clearImage = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+         .image { _ in }
+       let button = CPButton(image: clearImage) { [weak self] _ in
+-        self?.audioBrowser?.onBrowseGateButtonPressed()
++        self?.audioBrowser?.onGateButtonPressed()
+       }
+       button.title = buttonTitle
+       let lines = (gate.message ?? "")
+@@ -1127,7 +1141,7 @@ public final class RNABCarPlayController: NSObject {
+     }
+     // Marks the page as a gate (vs. a content tab, which carries a `path`),
+     // so the lazy-loader and refresh paths never try to fill it.
+-    template.userInfo = ["browseGate": true] as [String: Any]
++    template.userInfo = ["gate": true] as [String: Any]
+     if let tab {
+       applyTabBarEntry(to: template, for: tab)
+     }
+diff --git a/ios/CarPlay/CarPlayNowPlayingManager.swift b/ios/CarPlay/CarPlayNowPlayingManager.swift
+index d2c2cfe..5df905e 100644
+--- a/ios/CarPlay/CarPlayNowPlayingManager.swift
++++ b/ios/CarPlay/CarPlayNowPlayingManager.swift
+@@ -108,9 +108,9 @@ final class CarPlayNowPlayingManager {
+   /// Sets up custom Now Playing buttons based on configuration and current
+   /// player state, skipping the rebuild when nothing the row renders changed.
+   func setupNowPlayingButtons() {
+-    // While a Browse Gate is set, custom buttons (favorite etc.) are hidden;
++    // While a gate is active, custom buttons (favorite etc.) are hidden;
+     // the system transport controls stay — a gate never blocks playback.
+-    let buttons = audioBrowser?.browseGate == nil ? config.carPlayNowPlayingButtons : []
++    let buttons = (audioBrowser?.isGateActive ?? false) ? [] : config.carPlayNowPlayingButtons
+     let player = audioBrowser?.getPlayer()
+     let row = BuiltButtonRow(
+       types: buttons,
+diff --git a/ios/HybridAudioBrowser.swift b/ios/HybridAudioBrowser.swift
+index ebb15e3..0569435 100755
+--- a/ios/HybridAudioBrowser.swift
++++ b/ios/HybridAudioBrowser.swift
+@@ -85,7 +85,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
+   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
+   public let shuffleChangedEmitter = Emitter<Bool>()
+   public let externalContentChangedEmitter = Emitter<String>()
+-  public let browseGateChangedEmitter = Emitter<NativeBrowseGate?>()
++  /// Signals that the gate's active state changed (set or cleared). Carries
++  /// the active flag; per-request chrome is obtained at each serve site via
++  /// `gateDecision(for:)`, so the emitter only tells surfaces to re-render.
++  public let gateChangedEmitter = Emitter<Bool>()
+   /// Fired when a voice media intent (`handlePlayMediaIntent`) successfully
+   /// starts playback. CarPlay surfaces the Now Playing template in response, so
+   /// the user lands on the playing station (with the rest of the results in Up
+@@ -176,7 +179,20 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
+   public var onTabsChanged: ([Track]) -> Void = { _ in }
+   public var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
+   public var onFormattedNavigationError: (FormattedNavigationError?) -> Void = { _ in }
+-  public var onBrowseGateButtonPressed: () -> Void = {}
++  public var onGateButtonPressed: () -> Void = {}
++
++  /// Per-request gate decision, set by JS. Native calls it at a serve site to
++  /// learn whether a browse path / search interaction should be gated and with
++  /// what chrome. The double `Promise` mirrors every other native→JS
++  /// value-returning callback (e.g. `searchCallback`): the outer resolves to the
++  /// JS-side Promise, the inner to the decision. Defaults to "allow everything"
++  /// until JS installs a resolver.
++  public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = { _ in
++    Promise.resolved(withResult: Promise.resolved(withResult: GateDecision(gated: false, gate: nil)))
++  }
++
++  /// Fired when a request is gated (served the gate). Set by JS.
++  public var onGate: (GateEvent) -> Void = { _ in }
+ 
+   // MARK: - Player Callbacks
+ 
+@@ -504,32 +520,68 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
+     onMainActor { browserManager.setFavorites(favorites) }
+   }
+ 
+-  // MARK: - Browse Gate
++  // MARK: - Gate
++
++  /// The gate's default chrome, if one was set. Served when the resolver
++  /// returns a gated decision with no per-request override, and for the static
++  /// gate (no resolver). May be nil for a resolver-only gate.
++  private(set) var defaultChrome: NativeGate?
+ 
+-  /// The current Browse Gate, if set. While set, external surfaces (CarPlay)
+-  /// keep their tabs visible but render this full-page message as every tab's
+-  /// content, and external-surface search is refused. Playback, the queue and
+-  /// Now Playing are unaffected — a gate blocks finding content, never
+-  /// hearing it.
+-  private(set) var browseGate: NativeBrowseGate?
++  /// Whether JS installed a per-request resolver. When false the gate is static
++  /// — every request is gated with `defaultChrome` and the JS hop is skipped.
++  private(set) var hasResolver = false
++
++  /// True once `setGate` runs, until `clearGate`. While active, external
++  /// surfaces (CarPlay) keep their tabs visible but consult `gateDecision(for:)`
++  /// per request, rendering the gate chrome where gated and refusing
++  /// external-surface search. Playback, the queue and Now Playing are
++  /// unaffected — a gate blocks finding content, never hearing it.
++  private(set) var isGateActive = false
++
++  /// The minimal built-in gate served when a request is gated but neither a
++  /// per-request override nor a stored default chrome exists (resolver-only
++  /// gate returning `true`).
++  static let builtInGate = NativeGate(title: "Unavailable", message: nil, buttonTitle: nil)
++
++  /// The outcome of a single gate decision: whether to gate, and (if so) the
++  /// chrome to render.
++  struct GateOutcome {
++    let gated: Bool
++    let chrome: NativeGate?
++  }
+ 
+-  public func setBrowseGate(gate: NativeBrowseGate) throws {
++  public func setGate(gate: NativeGate?, hasResolver: Bool) throws {
+     onMainActor {
+-      browseGate = gate
+-      browseGateChangedEmitter.emit(gate)
++      defaultChrome = gate
++      self.hasResolver = hasResolver
++      isGateActive = true
++      gateChangedEmitter.emit(true)
+     }
+   }
+ 
+-  public func clearBrowseGate() throws {
++  public func clearGate() throws {
+     onMainActor {
+-      guard browseGate != nil else { return }
+-      browseGate = nil
+-      browseGateChangedEmitter.emit(nil)
++      guard isGateActive else { return }
++      defaultChrome = nil
++      hasResolver = false
++      isGateActive = false
++      gateChangedEmitter.emit(false)
+     }
+   }
+ 
+-  public func getBrowseGate() throws -> NativeBrowseGate? {
+-    onMainActor { browseGate }
++  /// The single choke point for every gate enforcement site. Asks whether
++  /// `request` should be gated and, if so, with what chrome (override → stored
++  /// default → built-in). When no resolver is installed the gate is static and
++  /// resolves without a JS hop. `try?` keeps a thrown/rejected resolver from
++  /// ever breaking the serve path — a failed decision falls through to "allow".
++  @MainActor
++  func gateDecision(for request: NativeGateRequest) async -> GateOutcome {
++    guard isGateActive else { return GateOutcome(gated: false, chrome: nil) }
++    if !hasResolver { return GateOutcome(gated: true, chrome: defaultChrome) }
++    guard let decision = try? await resolveGate(request).await().await(), decision.gated else {
++      return GateOutcome(gated: false, chrome: nil)
++    }
++    return GateOutcome(gated: true, chrome: decision.gate ?? defaultChrome ?? Self.builtInGate)
+   }
+ 
+   // MARK: - Car Connection (CarPlay)
+@@ -1192,16 +1244,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
+ 
+     switch type {
+     case .began:
+-      // iOS 17+ fires a `.began` (with no matching `.ended`) when an output
+-      // route such as headphones disappears. Reflecting a pause here would
+-      // strand resume-intent state with nothing to clear it, and the
+-      // route-change observer already handles the output change — so ignore it.
+-      if #available(iOS 17.0, *),
+-         let reasonValue = info[AVAudioSessionInterruptionReasonKey] as? UInt,
+-         AVAudioSession.InterruptionReason(rawValue: reasonValue) == .routeDisconnected
+-      {
+-        return
+-      }
+       onMainActor { player?.handleInterruptionBegan() }
+     case .ended:
+       let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt)
+@@ -1642,7 +1684,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
+         completion(false)
+         return
+       }
+-      // No-criteria intent ("play «app»") → resume. A Browse Gate must NOT block
++      // No-criteria intent ("play «app»") → resume. The gate must NOT block
+       // this: the gate blocks *finding* content, never *hearing* the active or
+       // persisted track. The gate is checked below, for the search branch only.
+       if criteria.isResume {
+@@ -1673,29 +1715,35 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
+         return
+       }
+ 
+-      // Search is *finding* new content — refused while a Browse Gate is set
+-      // (resume above is unaffected: the gate never blocks hearing).
+-      guard browser.browseGate == nil else {
+-        browser.logger.info("handlePlayMediaIntent: search refused — browse gate is set")
++      // Assemble the Nitro SearchParams here (MainActor) from the criteria's
++      // Sendable fields, so the structured mode/genre/… reach the request like
++      // Android. Today the API still text-searches `q`; the rest is forward-compat.
++      let params = SearchParams(
++        mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
++        query: criteria.query,
++        genre: criteria.genre,
++        artist: criteria.artist,
++        album: criteria.album,
++        title: criteria.title,
++        playlist: criteria.playlist,
++        // .currentlyPlaying can't reach here — isResume routed it to resume.
++        reference: criteria.reference == .my ? .my : .unknown
++      )
++
++      // Search is *finding* new content — refused when the gate decides this
++      // request is gated (resume above is unaffected: the gate never blocks
++      // hearing, and the gate check stays after the resume check).
++      let outcome = await browser.gateDecision(
++        for: NativeGateRequest(reason: .search, path: nil, search: params)
++      )
++      guard !outcome.gated else {
++        browser.logger.info("handlePlayMediaIntent: search refused — gated")
++        browser.onGate(GateEvent(reason: .search))
+         completion(false)
+         return
+       }
+ 
+       do {
+-        // Assemble the Nitro SearchParams here (MainActor) from the criteria's
+-        // Sendable fields, so the structured mode/genre/… reach the request like
+-        // Android. Today the API still text-searches `q`; the rest is forward-compat.
+-        let params = SearchParams(
+-          mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
+-          query: criteria.query,
+-          genre: criteria.genre,
+-          artist: criteria.artist,
+-          album: criteria.album,
+-          title: criteria.title,
+-          playlist: criteria.playlist,
+-          // .currentlyPlaying can't reach here — isResume routed it to resume.
+-          reference: criteria.reference == .my ? .my : .unknown
+-        )
+         guard let tracks = try await browser.browserManager.searchPlayable(params) else {
+           completion(false)
+           return
+diff --git a/ios/Observer/PlayerItemNotificationObserver.swift b/ios/Observer/PlayerItemNotificationObserver.swift
+index e344062..cbdf630 100644
+--- a/ios/Observer/PlayerItemNotificationObserver.swift
++++ b/ios/Observer/PlayerItemNotificationObserver.swift
+@@ -12,16 +12,13 @@ import Foundation
+ 
+   private let onDidPlayToEndTime: @MainActor () -> Void
+   private let onFailedToPlayToEndTime: @MainActor (Error?) -> Void
+-  private let onPlaybackStalled: @MainActor () -> Void
+ 
+   init(
+     onDidPlayToEndTime: @escaping @MainActor () -> Void,
+     onFailedToPlayToEndTime: @escaping @MainActor (Error?) -> Void,
+-    onPlaybackStalled: @escaping @MainActor () -> Void,
+   ) {
+     self.onDidPlayToEndTime = onDidPlayToEndTime
+     self.onFailedToPlayToEndTime = onFailedToPlayToEndTime
+-    self.onPlaybackStalled = onPlaybackStalled
+   }
+ 
+   /**
+@@ -46,12 +43,6 @@ import Foundation
+       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
+       object: avItem,
+     )
+-    notificationCenter.addObserver(
+-      self,
+-      selector: #selector(avItemPlaybackStalled),
+-      name: NSNotification.Name.AVPlayerItemPlaybackStalled,
+-      object: avItem,
+-    )
+   }
+ 
+   /**
+@@ -71,11 +62,6 @@ import Foundation
+       name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
+       object: observingAVItem,
+     )
+-    notificationCenter.removeObserver(
+-      self,
+-      name: NSNotification.Name.AVPlayerItemPlaybackStalled,
+-      object: observingAVItem,
+-    )
+     self.observingAVItem = nil
+     isObserving = false
+   }
+@@ -90,11 +76,4 @@ import Foundation
+     let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+     Task { @MainActor in self.onFailedToPlayToEndTime(error) }
+   }
+-
+-  // Fired when the item's buffer empties mid-playback. iOS exposes no
+-  // rebuffer-vs-initial signal otherwise, and AVPlayer can stay parked in
+-  // `.waitingToPlayAtSpecifiedRate` after data returns — the listener nudges it.
+-  @objc private nonisolated func avItemPlaybackStalled() {
+-    Task { @MainActor in self.onPlaybackStalled() }
+-  }
+ }
+diff --git a/ios/Player/EndOfTrackJudgement.swift b/ios/Player/EndOfTrackJudgement.swift
+deleted file mode 100644
+index 1862ae7..0000000
+--- a/ios/Player/EndOfTrackJudgement.swift
++++ /dev/null
+@@ -1,32 +0,0 @@
+-import Foundation
+-
+-/// Whether an `AVPlayerItemDidPlayToEndTime` notification represents a genuine
+-/// end of the track, or a stall masquerading as one.
+-enum EndOfTrackOutcome: Equatable {
+-  /// Genuine end — advance the queue / complete.
+-  case ended
+-  /// Not a real end (a dropped live stream, or a mid-stream buffer exhaustion
+-  /// reported as EOF) — recover instead of advancing.
+-  case stalled
+-}
+-
+-/// Pure decision for how to treat an end-of-item notification, kept free of
+-/// AVFoundation so it can be unit-tested off-device. iOS surfaces a dropped
+-/// connection on a live stream — and sometimes a mid-stream buffer underrun —
+-/// as a "played to end", which would otherwise stop the station or skip the
+-/// track.
+-struct EndOfTrackJudgement {
+-  let isLive: Bool
+-  let currentTime: Double
+-  let duration: Double
+-
+-  var outcome: EndOfTrackOutcome {
+-    // Live streams are infinite; an end-of-item here is a dropped connection.
+-    if isLive { return .stalled }
+-    // Indefinite/unknown duration — can't validate the position, trust iOS.
+-    guard duration.isFinite, duration > 0 else { return .ended }
+-    // More than 5% short of the end → a stall reported as EOF, not a real finish.
+-    if currentTime + duration * 0.05 < duration { return .stalled }
+-    return .ended
+-  }
+-}
+diff --git a/ios/Tests/EndOfTrackJudgementTests.swift b/ios/Tests/EndOfTrackJudgementTests.swift
+deleted file mode 100644
+index ad688b9..0000000
+--- a/ios/Tests/EndOfTrackJudgementTests.swift
++++ /dev/null
+@@ -1,35 +0,0 @@
+-import Testing
+-
+-@testable import AudioBrowserTestable
+-
+-@Suite("EndOfTrackJudgement")
+-struct EndOfTrackJudgementTests {
+-  // Live streams are infinite — an end-of-item is always a dropped connection,
+-  // never a real end, regardless of the reported position/duration.
+-  @Test func live_isAlwaysStalled() {
+-    #expect(EndOfTrackJudgement(isLive: true, currentTime: 0, duration: 0).outcome == .stalled)
+-    #expect(EndOfTrackJudgement(isLive: true, currentTime: 100, duration: 100).outcome == .stalled)
+-    #expect(EndOfTrackJudgement(isLive: true, currentTime: 5, duration: .nan).outcome == .stalled)
+-  }
+-
+-  // On-demand reaching the end is a genuine finish.
+-  @Test func onDemand_atEnd_isEnded() {
+-    #expect(EndOfTrackJudgement(isLive: false, currentTime: 300, duration: 300).outcome == .ended)
+-  }
+-
+-  // Within the 5% tail still counts as a real finish (decoder rarely lands exactly).
+-  @Test func onDemand_withinFivePercentOfEnd_isEnded() {
+-    #expect(EndOfTrackJudgement(isLive: false, currentTime: 291, duration: 300).outcome == .ended)
+-  }
+-
+-  // More than 5% short of the end → a mid-stream stall reported as EOF.
+-  @Test func onDemand_wellShortOfEnd_isStalled() {
+-    #expect(EndOfTrackJudgement(isLive: false, currentTime: 120, duration: 300).outcome == .stalled)
+-  }
+-
+-  // Unknown/indefinite duration can't be validated — trust the notification.
+-  @Test func onDemand_indefiniteDuration_isEnded() {
+-    #expect(EndOfTrackJudgement(isLive: false, currentTime: 0, duration: .nan).outcome == .ended)
+-    #expect(EndOfTrackJudgement(isLive: false, currentTime: 0, duration: 0).outcome == .ended)
+-  }
+-}
+diff --git a/ios/TrackPlayer.swift b/ios/TrackPlayer.swift
+index ceaea17..0f87bc3 100755
+--- a/ios/TrackPlayer.swift
++++ b/ios/TrackPlayer.swift
+@@ -64,14 +64,13 @@ class TrackPlayer {
+   )
+ 
+   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
+-    onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
++    onDidPlayToEndTime: { [weak self] in
++      self?.coordinator.handleTrackDidPlayToEndTime()
++    },
+     onFailedToPlayToEndTime: { [weak self] error in
+       let effectiveError = error ?? self?.avPlayer.currentItem?.error
+       self?.coordinator.errorHandler.handleError(effectiveError, context: .playback)
+     },
+-    // Buffer emptied mid-playback: nudge the player, but don't reconnect — a
+-    // genuine drop is recovered by the retry / network-restore paths.
+-    onPlaybackStalled: { [weak self] in self?.recoverFromStall(reconnectIfLive: false) },
+   )
+ 
+   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
+@@ -267,9 +266,7 @@ class TrackPlayer {
+       self?.playWhenReady ?? false
+     }
+     retryManager.onRetry = { [weak self] startFromCurrentTime in
+-      // Re-resolve rather than replay the cached URL: a retry may be recovering
+-      // from an expired short-lived URL/token that only a fresh resolve fixes.
+-      self?.reloadResolving(startFromCurrentTime: startFromCurrentTime)
++      self?.reload(startFromCurrentTime: startFromCurrentTime)
+     }
+ 
+     // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
+@@ -327,22 +324,20 @@ class TrackPlayer {
+   }
+ 
+   func reload(startFromCurrentTime: Bool) {
+-    let time = startFromCurrentTime ? resumeTime() : nil
++    var time: Double? = nil
++    if startFromCurrentTime {
++      if let currentItem = avPlayer.currentItem {
++        if !currentItem.duration.isIndefinite {
++          time = currentItem.currentTime().seconds
++        }
++      }
++    }
+     loadAVPlayer()
+     if let time {
+       seekTo(time)
+     }
+   }
+ 
+-  /// Playback position to resume from on reload, or nil when there is nothing
+-  /// seekable to resume (no item, or an indefinite/live duration).
+-  private func resumeTime() -> Double? {
+-    guard let currentItem = avPlayer.currentItem, !currentItem.duration.isIndefinite else {
+-      return nil
+-    }
+-    return currentItem.currentTime().seconds
+-  }
+-
+   /// Re-establish a stalled stream when connectivity is restored.
+   ///
+   /// AVPlayer doesn't reliably surface a mid-stream connectivity loss on a live stream as an item
+@@ -508,14 +503,6 @@ class TrackPlayer {
+   }
+ 
+   func loadAVPlayer() {
+-    prepareForReload()
+-    mediaLoader.loadAsset()
+-  }
+-
+-  /// Teardown shared by the two reload paths: recreate the player after a
+-  /// terminal error, otherwise cancel in-flight loading and drop the current
+-  /// asset, then enter the loading state.
+-  private func prepareForReload() {
+     if state == .error {
+       recreateAVPlayer()
+     } else {
+@@ -525,25 +512,7 @@ class TrackPlayer {
+       mediaLoader.clearAsset()
+     }
+     transition(.trackLoading)
+-  }
+-
+-  /// Reload by re-running the resolver (fresh URL / headers / user-agent)
+-  /// instead of recreating the asset from the already-resolved URL. Used by the
+-  /// retry path so consumers whose resolver mints short-lived URLs or auth
+-  /// tokens recover once those expire — a plain `reload()` would replay the
+-  /// stale URL and keep failing. Falls back to `reload()` when there's no track
+-  /// `src` to resolve.
+-  func reloadResolving(startFromCurrentTime: Bool) {
+-    guard let track = currentTrack, let src = track.src else {
+-      reload(startFromCurrentTime: startFromCurrentTime)
+-      return
+-    }
+-    let time = startFromCurrentTime ? resumeTime() : nil
+-    prepareForReload()
+-    mediaLoader.resolveAndLoad(src: src, track: track)
+-    if let time {
+-      seekTo(time)
+-    }
++    mediaLoader.loadAsset()
+   }
+ 
+   func unloadAVPlayer() {
+@@ -553,37 +522,6 @@ class TrackPlayer {
+ 
+   // MARK: - Observer Callbacks (map AVFoundation → coordinator)
+ 
+-  /// Resolve an end-of-item notification: a genuine end advances the queue; a
+-  /// dropped live stream or a mid-stream underrun reported as EOF is recovered
+-  /// instead of advancing/stopping (see `EndOfTrackJudgement`).
+-  private func handleDidPlayToEndTime() {
+-    let judgement = EndOfTrackJudgement(
+-      isLive: currentTrack?.live == true,
+-      currentTime: currentTime,
+-      duration: duration,
+-    )
+-    switch judgement.outcome {
+-    case .ended:
+-      coordinator.handleTrackDidPlayToEndTime()
+-    case .stalled:
+-      recoverFromStall(reconnectIfLive: true)
+-    }
+-  }
+-
+-  /// Recover from a stall while the play intent still holds. A live stream that
+-  /// ran out of data (`reconnectIfLive`) rejoins the edge — reloading when there
+-  /// is no seekable window; otherwise just re-issue play() to un-park AVPlayer
+-  /// from `.waitingToPlayAtSpecifiedRate` (data may resume on the same
+-  /// connection; a genuine drop is handled by the retry / network-restore paths).
+-  private func recoverFromStall(reconnectIfLive: Bool) {
+-    guard playWhenReady else { return }
+-    if reconnectIfLive, currentTrack?.live == true {
+-      seekToLiveEdge()
+-    } else {
+-      startPlayback()
+-    }
+-  }
+-
+   private func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
+     let mapped: PlayerTimeControlStatus
+     switch status {
+diff --git a/src/features/browseGate.ts b/src/features/browseGate.ts
+deleted file mode 100644
+index a902f41..0000000
+--- a/src/features/browseGate.ts
++++ /dev/null
+@@ -1,85 +0,0 @@
+-import { nativeBrowser } from '../native'
+-
+-// MARK: - Types
+-
+-/**
+- * The wire shape of a browse gate — what crosses the bridge and what
+- * `getBrowseGate` returns. The button callback stays in JS (see `BrowseGate`).
+- */
+-export type NativeBrowseGate = {
+-  /** Headline shown on the gate page. */
+-  title: string
+-  /**
+-   * The explanatory copy under the title. How it lays out on CarPlay depends
+-   * on whether there's a button:
+-   * - **with a button** → it sits in the page's header, and a single newline
+-   *   splits it into a bold line and a lighter line beneath.
+-   * - **without a button** → it's the centered message on an otherwise empty
+-   *   page, and newlines just become spaces.
+-   */
+-  message?: string
+-  /**
+-   * The label on the gate's action button (e.g. "Go Premium"). It also picks
+-   * the CarPlay layout: include it and you get a page with the button beside
+-   * the message; leave it out and you get a plain centered message with no
+-   * button (and `onButtonPressed` never fires). See `message` for how the copy
+-   * renders in each.
+-   *
+-   * iOS/CarPlay only — Android Auto can't show a button or a full-page message.
+-   */
+-  buttonTitle?: string
+-}
+-
+-/**
+- * A block you put on browsing from the car surfaces (CarPlay, Android Auto),
+- * which you set and clear at runtime — a subscription wall, a login prompt, a
+- * region block, whatever you need (it's generic by design).
+- *
+- * While it's up, the tabs stay where they are, but every tab's content — and
+- * any voice or manual *search* — shows your single gate message instead:
+- * - **CarPlay**: a full-page message, with an optional button.
+- * - **Android Auto**: one non-playable list tile (no button or full page, so
+- *   `buttonTitle` is iOS-only).
+- *
+- * It only blocks *finding* new content, never *hearing* it: whatever's
+- * playing keeps playing, "resume" / "play this" still work by voice, and the
+- * queue and now-playing are left alone.
+- */
+-export type BrowseGate = NativeBrowseGate & {
+-  /** Invoked when the user taps the gate page's button. */
+-  onButtonPressed?: () => void
+-}
+-
+-// MARK: - Internal wiring
+-
+-let buttonHandler: (() => void) | undefined
+-nativeBrowser.onBrowseGateButtonPressed = () => buttonHandler?.()
+-
+-// MARK: - Getters and Setters
+-
+-/**
+- * Raises the gate, or updates it if one's already up. Updating is seamless —
+- * the page changes in place, with no navigation reset and the current tab kept.
+- * Set it before the car connects and it'll be there the moment it does.
+- */
+-export function setBrowseGate(gate: BrowseGate): void {
+-  const { onButtonPressed, ...nativeGate } = gate
+-  buttonHandler = onButtonPressed
+-  nativeBrowser.setBrowseGate(nativeGate)
+-}
+-
+-/**
+- * Drops the gate — the tabs' real content comes back, and the current tab is
+- * kept.
+- */
+-export function clearBrowseGate(): void {
+-  buttonHandler = undefined
+-  nativeBrowser.clearBrowseGate()
+-}
+-
+-/**
+- * The gate that's currently up, or `undefined` if there isn't one.
+- */
+-export function getBrowseGate(): NativeBrowseGate | undefined {
+-  return nativeBrowser.getBrowseGate()
+-}
+diff --git a/src/features/gate.test.ts b/src/features/gate.test.ts
+new file mode 100644
+index 0000000..ac196df
+--- /dev/null
++++ b/src/features/gate.test.ts
+@@ -0,0 +1,72 @@
++import { describe, test, expect, vi, beforeEach } from 'vitest'
++
++vi.mock('../native', () => ({ nativeBrowser: {} }))
++
++import { setGate, clearGate } from './gate'
++import { nativeBrowser } from '../native'
++
++const chrome = { title: 'T', message: 'M' }
++
++beforeEach(() => {
++  ;(nativeBrowser as any).setGate = vi.fn()
++  ;(nativeBrowser as any).clearGate = vi.fn()
++})
++
++describe('setGate', () => {
++  test('setGate(gate) → chrome + hasResolver false', () => {
++    setGate(chrome)
++    expect(nativeBrowser.setGate).toHaveBeenCalledWith(chrome, false)
++  })
++
++  test('setGate(gate, resolve) → chrome + hasResolver true', () => {
++    setGate(chrome, () => true)
++    expect(nativeBrowser.setGate).toHaveBeenCalledWith(chrome, true)
++  })
++
++  test('setGate(resolve) → undefined chrome + hasResolver true', () => {
++    setGate(() => false)
++    expect(nativeBrowser.setGate).toHaveBeenCalledWith(undefined, true)
++  })
++})
++
++describe('resolveGate (native→JS bridge)', () => {
++  test('resolver true → gated, no override', async () => {
++    setGate(chrome, () => true)
++    expect(
++      await (nativeBrowser as any).resolveGate({ reason: 'browse', path: '/x' })
++    ).toEqual({ gated: true })
++  })
++
++  test('resolver false → not gated', async () => {
++    setGate(chrome, () => false)
++    expect(
++      await (nativeBrowser as any).resolveGate({ reason: 'browse', path: '/x' })
++    ).toEqual({ gated: false })
++  })
++
++  test('resolver Gate → gated + override chrome', async () => {
++    const override = { title: 'O' }
++    setGate(chrome, () => override)
++    expect(
++      await (nativeBrowser as any).resolveGate({
++        reason: 'search',
++        search: { query: 'q' },
++      })
++    ).toEqual({ gated: true, gate: override })
++  })
++
++  test('no resolver (static) → every request gated', async () => {
++    setGate(chrome)
++    expect(
++      await (nativeBrowser as any).resolveGate({ reason: 'browse', path: '/x' })
++    ).toEqual({ gated: true })
++  })
++})
++
++describe('clearGate', () => {
++  test('clears native gate state', () => {
++    setGate(chrome, () => false)
++    clearGate()
++    expect(nativeBrowser.clearGate).toHaveBeenCalled()
++  })
++})
+diff --git a/src/features/gate.ts b/src/features/gate.ts
+new file mode 100644
+index 0000000..9eface2
+--- /dev/null
++++ b/src/features/gate.ts
+@@ -0,0 +1,158 @@
++import { nativeBrowser } from '../native'
++import type { SearchParams } from '../types/browser'
++import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
++
++// MARK: - Wire types (cross the Nitro bridge; native↔JS)
++
++/** Discriminant for gate requests and events. */
++export type GateReason = 'browse' | 'search'
++
++/**
++ * The wire shape of the gate chrome — what crosses the bridge.
++ * The button callback stays in JS (see {@link Gate}).
++ */
++export type NativeGate = {
++  /** Headline shown on the gate page. */
++  title: string
++  /**
++   * The explanatory copy under the title. How it lays out on CarPlay depends
++   * on whether there's a button:
++   * - **with a button** → it sits in the page's header, and a single newline
++   *   splits it into a bold line and a lighter line beneath.
++   * - **without a button** → it's the centered message on an otherwise empty
++   *   page, and newlines just become spaces.
++   */
++  message?: string
++  /**
++   * The label on the gate's action button. It also picks the CarPlay layout:
++   * include it and you get a page with the button beside the message; leave it
++   * out and you get a plain centered message with no button (and
++   * `onButtonPressed` never fires). See `message` for how the copy renders in
++   * each.
++   *
++   * iOS/CarPlay only — Android Auto can't show a button or a full-page message.
++   */
++  buttonTitle?: string
++}
++
++/**
++ * Flat wire struct for a gate request (crosses the Nitro bridge).
++ * Use {@link GateRequest} in consumer-facing code; `gate.ts` converts between them.
++ */
++export type NativeGateRequest = {
++  reason: GateReason
++  path?: string
++  search?: SearchParams
++}
++
++/** Wire form of a resolver result (native awaits this from JS). */
++export type GateDecision = { gated: boolean; gate?: NativeGate }
++
++/** Fired when a request is gated (the gate was served). */
++export type GateEvent = { reason: GateReason }
++
++// MARK: - Public types (consumer-facing)
++
++/**
++ * A gate's chrome plus its JS-only button handler.
++ *
++ * While the gate is active, every browse or search request on car surfaces
++ * (CarPlay, Android Auto) shows this page instead of the real content.
++ * Playback, the queue, and now-playing are unaffected.
++ *
++ * - **CarPlay**: full-page message, with an optional button.
++ * - **Android Auto**: one non-playable list tile (no button or full page, so
++ *   `buttonTitle` is iOS-only).
++ */
++export type Gate = NativeGate & {
++  /** Invoked when the user taps the gate page's button. */
++  onButtonPressed?: () => void
++}
++
++/**
++ * Describes the request being decided by a {@link GateResolver}.
++ * Discriminated by `kind`: `'browse'` for content navigation, `'search'` for
++ * voice/manual search queries.
++ */
++export type GateRequest =
++  | { kind: 'browse'; path: string }
++  | { kind: 'search'; params: SearchParams }
++
++/**
++ * Decides per request whether to gate.
++ * - Return a {@link Gate} to gate with specific chrome for this request.
++ * - Return `true` to gate using the default chrome (or the built-in fallback).
++ * - Return `false` to allow the request through.
++ */
++export type GateResolver = (request: GateRequest) => Gate | boolean
++
++// MARK: - Internal state
++
++let buttonHandler: (() => void) | undefined
++let resolver: GateResolver | undefined
++
++nativeBrowser.onGateButtonPressed = () => buttonHandler?.()
++
++function toPublicRequest(req: NativeGateRequest): GateRequest {
++  return req.reason === 'browse'
++    ? { kind: 'browse', path: req.path ?? '' }
++    : { kind: 'search', params: (req.search ?? {}) as SearchParams }
++}
++
++// Native awaits this per request at a serve site.
++// No resolver → static gate → every request is gated (native applies stored default / built-in).
++nativeBrowser.resolveGate = async (
++  req: NativeGateRequest
++): Promise<GateDecision> => {
++  const result = resolver ? resolver(toPublicRequest(req)) : true
++  if (result === false) return { gated: false }
++  if (result === true) return { gated: true }
++  const { onButtonPressed, ...nativeGate } = result // per-request chrome override
++  buttonHandler = onButtonPressed
++  return { gated: true, gate: nativeGate }
++}
++
++// MARK: - Public API
++
++/**
++ * Raises the gate with default chrome, optionally with a per-request resolver.
++ * Updating is seamless — the page changes in place, with no navigation reset
++ * and the current tab kept. Set it before the car connects and it'll be there
++ * the moment it does.
++ */
++export function setGate(gate: Gate, resolve?: GateResolver): void
++/**
++ * Raises the gate with a resolver only (no default chrome).
++ * The resolver must return a {@link Gate} or `true` for gated requests;
++ * native uses the built-in fallback chrome when `true` and no default is set.
++ */
++export function setGate(resolve: GateResolver): void
++export function setGate(a: Gate | GateResolver, b?: GateResolver): void {
++  if (typeof a === 'function') {
++    buttonHandler = undefined
++    resolver = a
++    nativeBrowser.setGate(undefined, true)
++  } else {
++    const { onButtonPressed, ...nativeGate } = a
++    buttonHandler = onButtonPressed
++    resolver = b
++    nativeBrowser.setGate(nativeGate, b != null)
++  }
++}
++
++/**
++ * Drops the gate — the real content comes back, and the current tab is kept.
++ */
++export function clearGate(): void {
++  buttonHandler = undefined
++  resolver = undefined
++  nativeBrowser.clearGate()
++}
++
++/**
++ * Subscribes to gate events (fired when a request is gated).
++ * @returns Cleanup function to unsubscribe.
++ */
++export const onGate = LazyNativeEmitter.emitterize<GateEvent>(
++  (cb) => (nativeBrowser.onGate = cb)
++)
+diff --git a/src/features/index.ts b/src/features/index.ts
+index 31544d5..2c50a97 100644
+--- a/src/features/index.ts
++++ b/src/features/index.ts
+@@ -12,7 +12,7 @@ export * from './playback'
+ export * from './player'
+ export * from './queue'
+ export * from './battery'
+-export * from './browseGate'
++export * from './gate'
+ export * from './browser'
+ export * from './carConnection'
+ export * from './equalizer'
+diff --git a/src/specs/audio-browser.nitro.ts b/src/specs/audio-browser.nitro.ts
+index c32c6b9..17b8c99 100755
+--- a/src/specs/audio-browser.nitro.ts
++++ b/src/specs/audio-browser.nitro.ts
+@@ -46,7 +46,7 @@ import type {
+   RemoteSetRatingEvent,
+   RemoteSkipEvent
+ } from '../features/remoteControls'
+-import type { NativeBrowseGate } from '../features/browseGate'
++import type { NativeGate, NativeGateRequest, GateDecision, GateEvent } from '../features/gate'
+ import type { SleepTimer, SleepTimerChangedEvent } from '../features/sleepTimer'
+ import type { ResolvedTrack, Track } from '../types'
+ import type { NativeBrowserConfiguration } from '../types/browser-native'
+@@ -112,19 +112,22 @@ export interface AudioBrowser extends HybridObject<{
+   setFavorites(favorites: string[]): void
+   configuration: NativeBrowserConfiguration
+ 
+-  // MARK: browse gate
++  // MARK: gate
+   /**
+-   * Sets (or replaces, updating the page in place) the browse gate: while
+-   * set, external-surface tabs keep their tab-bar entries but their content
+-   * — and external-surface search — render this full-page message instead.
+-   * Playback, the queue, and now-playing are unaffected.
++   * Records the gate's default chrome (undefined for resolver-only) and whether
++   * a per-request resolver is active. While a gate is set, the four car
++   * enforcement sites consult `resolveGate` per request (skipping the JS hop
++   * when `hasResolver` is false — every request is gated with the default).
+    */
+-  setBrowseGate(gate: NativeBrowseGate): void
+-  /** Clears the browse gate, restoring tab content and keeping selection. */
+-  clearBrowseGate(): void
+-  getBrowseGate(): NativeBrowseGate | undefined
++  setGate(gate: NativeGate | undefined, hasResolver: boolean): void
++  /** Clears the gate, restoring tab content and keeping selection. */
++  clearGate(): void
++  /** Per-request decision, set by JS; native awaits it at a serve site. */
++  resolveGate: (request: NativeGateRequest) => Promise<GateDecision>
++  /** Fired when a request is gated (the gate was served). */
++  onGate: (event: GateEvent) => void
+   /** Fired when the user taps the gate page's button. */
+-  onBrowseGateButtonPressed: () => void
++  onGateButtonPressed: () => void
+ 
+   // MARK: car connection
+   /**
+diff --git a/src/web/NativeAudioBrowser.ts b/src/web/NativeAudioBrowser.ts
+index e7a781e..4df2a23 100644
+--- a/src/web/NativeAudioBrowser.ts
++++ b/src/web/NativeAudioBrowser.ts
+@@ -24,7 +24,10 @@ import type {
+   SleepTimer,
+   SleepTimerChangedEvent,
+   FavoriteChangedEvent,
+-  NativeBrowseGate,
++  NativeGate,
++  NativeGateRequest,
++  GateDecision,
++  GateEvent,
+   NavigationError,
+   NavigationErrorEvent,
+   FormattedNavigationError,
+@@ -202,7 +205,9 @@ export class NativeAudioBrowser
+   ) => void = () => {}
+   onSystemVolumeChanged: (volume: number) => void = () => {}
+   onIosOutputChanged: (output: IosOutput) => void = () => {}
+-  onBrowseGateButtonPressed: () => void = () => {}
++  onGateButtonPressed: () => void = () => {}
++  onGate: (event: GateEvent) => void = () => {}
++  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> = async () => ({ gated: false })
+   onCarConnectedChanged: (connected: boolean) => void = () => {}
+ 
+   // MARK: Remote handlers
+@@ -956,20 +961,11 @@ export class NativeAudioBrowser
+     // No-op on web - browsers can't set system volume
+   }
+ 
+-  // MARK: Browse gate (stored only — web has no external browse surfaces)
+-  private browseGate: NativeBrowseGate | undefined
+-
+-  setBrowseGate(gate: NativeBrowseGate): void {
+-    this.browseGate = gate
+-  }
+-
+-  clearBrowseGate(): void {
+-    this.browseGate = undefined
+-  }
++  // MARK: Gate (no-op — web has no external browse surfaces)
++  // eslint-disable-next-line @typescript-eslint/no-unused-vars
++  setGate(_gate: NativeGate | undefined, _hasResolver: boolean): void {}
+ 
+-  getBrowseGate(): NativeBrowseGate | undefined {
+-    return this.browseGate
+-  }
++  clearGate(): void {}
+ 
+   // MARK: Car connection (not applicable on web)
+   isCarConnected(): boolean {

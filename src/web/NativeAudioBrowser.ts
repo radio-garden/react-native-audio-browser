@@ -205,9 +205,11 @@ export class NativeAudioBrowser
   ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
   onIosOutputChanged: (output: IosOutput) => void = () => {}
-  onGateButtonPressed: () => void = () => {}
   onGate: (event: GateEvent) => void = () => {}
-  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> = async () => ({ gated: false })
+  // Fail closed by default: only reachable in the init window before gate.ts
+  // re-binds resolveGate. Web has no serve sites, so this is never called in
+  // practice, but the default must agree with the fail-closed contract.
+  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> = async () => ({ gated: true })
   onCarConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers

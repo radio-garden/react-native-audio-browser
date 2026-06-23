@@ -22,10 +22,7 @@ data class NativeGate(
   val title: String,
   @DoNotStrip
   @Keep
-  val message: String?,
-  @DoNotStrip
-  @Keep
-  val buttonTitle: String?
+  val message: String?
 ) {
   /* primary constructor */
 
@@ -37,8 +34,8 @@ data class NativeGate(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(title: String, message: String?, buttonTitle: String?): NativeGate {
-      return NativeGate(title, message, buttonTitle)
+    private fun fromCpp(title: String, message: String?): NativeGate {
+      return NativeGate(title, message)
     }
   }
 }

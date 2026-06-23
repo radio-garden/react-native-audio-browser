@@ -42,11 +42,10 @@ namespace margelo::nitro::audiobrowser {
   public:
     std::string title     SWIFT_PRIVATE;
     std::optional<std::string> message     SWIFT_PRIVATE;
-    std::optional<std::string> buttonTitle     SWIFT_PRIVATE;
 
   public:
     NativeGate() = default;
-    explicit NativeGate(std::string title, std::optional<std::string> message, std::optional<std::string> buttonTitle): title(title), message(message), buttonTitle(buttonTitle) {}
+    explicit NativeGate(std::string title, std::optional<std::string> message): title(title), message(message) {}
 
   public:
     friend bool operator==(const NativeGate& lhs, const NativeGate& rhs) = default;
@@ -63,15 +62,13 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::NativeGate(
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message"))),
-        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "buttonTitle")))
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NativeGate& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "title"), JSIConverter<std::string>::toJSI(runtime, arg.title));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "message"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.message));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "buttonTitle"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.buttonTitle));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -84,7 +81,6 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message")))) return false;
-      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "buttonTitle")))) return false;
       return true;
     }
   };

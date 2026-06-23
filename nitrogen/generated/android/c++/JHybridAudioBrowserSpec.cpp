@@ -297,7 +297,6 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "GateEvent.hpp"
 #include "JFunc_void_GateEvent.hpp"
 #include "JGateEvent.hpp"
-#include "JFunc_void.hpp"
 #include "JFunc_void_bool.hpp"
 #include "ChapterMetadata.hpp"
 #include "JFunc_void_std__vector_ChapterMetadata_.hpp"
@@ -325,6 +324,7 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
 #include "JPlaybackProgressUpdatedEvent.hpp"
+#include "JFunc_void.hpp"
 #include "PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JPlaybackQueueEndedEvent.hpp"
@@ -652,23 +652,6 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_GateEvent::javaobject> /* onGate */)>("setOnGate_cxx");
     method(_javaPart, JFunc_void_GateEvent_cxx::fromCpp(onGate));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnGateButtonPressed() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnGateButtonPressed_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onGateButtonPressed */)>("setOnGateButtonPressed_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onGateButtonPressed));
   }
   std::function<void(bool /* connected */)> JHybridAudioBrowserSpec::getOnCarConnectedChanged() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnCarConnectedChanged_cxx");

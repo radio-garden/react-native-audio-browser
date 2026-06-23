@@ -143,20 +143,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onGate = value
     }
   
-  abstract var onGateButtonPressed: () -> Unit
-  
-  private var onGateButtonPressed_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onGateButtonPressed)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onGateButtonPressed = value
-    }
-  
   abstract var onCarConnectedChanged: (connected: Boolean) -> Unit
   
   private var onCarConnectedChanged_cxx: Func_void_bool

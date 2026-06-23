@@ -126,8 +126,6 @@ export interface AudioBrowser extends HybridObject<{
   resolveGate: (request: NativeGateRequest) => Promise<GateDecision>
   /** Fired when a request is gated (the gate was served). */
   onGate: (event: GateEvent) => void
-  /** Fired when the user taps the gate page's button. */
-  onGateButtonPressed: () => void
 
   // MARK: car connection
   /**

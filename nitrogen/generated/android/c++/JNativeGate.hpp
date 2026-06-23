@@ -36,12 +36,9 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldMessage = clazz->getField<jni::JString>("message");
       jni::local_ref<jni::JString> message = this->getFieldValue(fieldMessage);
-      static const auto fieldButtonTitle = clazz->getField<jni::JString>("buttonTitle");
-      jni::local_ref<jni::JString> buttonTitle = this->getFieldValue(fieldButtonTitle);
       return NativeGate(
         title->toStdString(),
-        message != nullptr ? std::make_optional(message->toStdString()) : std::nullopt,
-        buttonTitle != nullptr ? std::make_optional(buttonTitle->toStdString()) : std::nullopt
+        message != nullptr ? std::make_optional(message->toStdString()) : std::nullopt
       );
     }
 
@@ -51,14 +48,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeGate::javaobject> fromCpp(const NativeGate& value) {
-      using JSignature = JNativeGate(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JNativeGate(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         jni::make_jstring(value.title),
-        value.message.has_value() ? jni::make_jstring(value.message.value()) : nullptr,
-        value.buttonTitle.has_value() ? jni::make_jstring(value.buttonTitle.value()) : nullptr
+        value.message.has_value() ? jni::make_jstring(value.message.value()) : nullptr
       );
     }
   };

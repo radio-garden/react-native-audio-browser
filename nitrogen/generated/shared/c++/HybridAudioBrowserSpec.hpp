@@ -201,8 +201,6 @@ namespace margelo::nitro::audiobrowser {
       virtual void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) = 0;
       virtual std::function<void(const GateEvent& /* event */)> getOnGate() = 0;
       virtual void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) = 0;
-      virtual std::function<void()> getOnGateButtonPressed() = 0;
-      virtual void setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) = 0;
       virtual std::function<void(bool /* connected */)> getOnCarConnectedChanged() = 0;
       virtual void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) = 0;
       virtual std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() = 0;

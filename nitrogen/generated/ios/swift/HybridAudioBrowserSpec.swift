@@ -20,7 +20,6 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var configuration: NativeBrowserConfiguration { get set }
   var resolveGate: (_ request: NativeGateRequest) -> Promise<Promise<GateDecision>> { get set }
   var onGate: (_ event: GateEvent) -> Void { get set }
-  var onGateButtonPressed: () -> Void { get set }
   var onCarConnectedChanged: (_ connected: Bool) -> Void { get set }
   var onChapterMetadata: (_ chapters: [ChapterMetadata]) -> Void { get set }
   var onTrackMetadata: (_ metadata: TrackMetadata) -> Void { get set }

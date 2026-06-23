@@ -18,15 +18,9 @@ public extension NativeGate {
   /**
    * Create a new instance of `NativeGate`.
    */
-  init(title: String, message: String?, buttonTitle: String?) {
+  init(title: String, message: String?) {
     self.init(std.string(title), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = message {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = buttonTitle {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -44,18 +38,6 @@ public extension NativeGate {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__message) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__message)
-        return String(__unwrapped)
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var buttonTitle: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__buttonTitle) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__buttonTitle)
         return String(__unwrapped)
       } else {
         return nil
