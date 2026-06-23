@@ -92,6 +92,31 @@ class ArtworkContentProviderTest {
     assertNull(provider.openFile(uri(token), "r"))
   }
 
+  // Fix 2: artwork dir must not grow beyond MAX_CACHE_FILES after producing many distinct tokens.
+  // We override the cap to 5 so the test stays fast (rather than producing 512+ real files).
+  @Test fun `openFile prunes cache to MAX_CACHE_FILES after producing excess entries`() {
+    val testCap = 5
+    ArtworkContentProvider.maxCacheFilesOverride = testCap
+    try {
+      val context = RuntimeEnvironment.getApplication()
+      val artworkDir = File(context.cacheDir, ArtworkContentProvider.ARTWORK_SUBDIR)
+      val produce = testCap + 3 // 8 entries total; should be pruned back to 5
+      repeat(produce) { i ->
+        val url = "https://cdn/prune-$i.png"
+        val token = ArtworkUris.tokenFor(url)
+        registry.register(token, ResolvedArtwork(url, null, isSvg = false))
+        provider.openFile(uri(token), "r")
+      }
+      val pngCount = artworkDir.listFiles { f -> f.isFile && f.name.endsWith(".png") }?.size ?: 0
+      assertTrue(
+        "Expected at most $testCap .png files after producing $produce; got $pngCount",
+        pngCount <= testCap
+      )
+    } finally {
+      ArtworkContentProvider.maxCacheFilesOverride = null
+    }
+  }
+
   // Prove D-fix: two openFile calls for the same token → loadCount == 1.
   // The second call is served from the on-disk file without re-decoding.
   @Test fun `openFile serves second request from disk cache without re-decoding`() {

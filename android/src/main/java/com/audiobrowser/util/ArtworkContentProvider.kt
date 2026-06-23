@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.audiobrowser.browser.ResolvedArtwork
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
@@ -91,14 +92,16 @@ class ArtworkContentProvider : ContentProvider() {
         }
 
       try {
-        tmp.outputStream().use { out ->
+        val ok = tmp.outputStream().use { out ->
           bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
+        if (!ok) throw IOException("PNG encode failed for token=$token")
         if (!tmp.renameTo(file)) {
           Timber.w("Artwork rename failed for token=$token")
           tmp.delete()
           return null
         }
+        pruneCache(artworkDir)
       } catch (e: Throwable) {
         Timber.w(e, "Artwork write failed for token=$token")
         tmp.delete()
@@ -133,7 +136,19 @@ class ArtworkContentProvider : ContentProvider() {
   companion object {
     private const val MAX_CONCURRENT = 6
     private const val GATE_TIMEOUT_SECONDS = 5L
-    private const val LOAD_TIMEOUT_MS = 15_000L
+    private const val LOAD_TIMEOUT_MS = 8_000L
     internal const val ARTWORK_SUBDIR = "audiobrowser-artwork"
+    const val MAX_CACHE_FILES = 512
+    /** Overridable in tests only. Production code must not change this. */
+    @JvmField internal var maxCacheFilesOverride: Int? = null
+  }
+
+  private fun pruneCache(dir: File) {
+    val limit = maxCacheFilesOverride ?: MAX_CACHE_FILES
+    val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".png") } ?: return
+    if (files.size <= limit) return
+    files.sortedBy { it.lastModified() }
+      .take(files.size - limit)
+      .forEach { runCatching { it.delete() } }
   }
 }
