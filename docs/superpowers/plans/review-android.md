@@ -173,3 +173,20 @@ Applied on `feature-fry-gate` (Android only — `ios/` and `src/` owned by a par
 ### Compile result
 
 `:react-native-audio-browser:compileDebugKotlin` → **BUILD SUCCESSFUL** (ran from `apps/example-native/android` with `ANDROID_HOME` set).
+
+## Android fix wave C
+
+**Scope:** Conform Android Kotlin to the button-less `NativeGate` spec landed in commit `447363e` (TS+spec+web step).
+
+**Changes (android/ only):**
+
+- `AudioBrowser.kt`: Removed `override var onGateButtonPressed: () -> Unit = {}` — the regenerated `HybridAudioBrowserSpec` no longer declares this property; keeping the override was a compile error.
+- `AudioBrowser.kt`: Updated `builtInGate` constructor from `NativeGate("Unavailable", null, null)` (three args: `title, message, buttonTitle`) to `NativeGate("Unavailable", null)` (two args: `title, message`) to match the regenerated two-field data class.
+- `AudioBrowser.kt`: Removed stale comment referencing `buttonTitle` as the third constructor arg.
+- `player/MediaSessionCallback.kt`: No change needed — `createGateMediaItem` already only read `gate.title` and `gate.message`; it never referenced `buttonTitle`.
+
+**Fail-closed init-window default (confirmed, no change needed):** The default `resolveGate` at `AudioBrowser.kt` returns `GateDecision(gated = true, gate = null)` — already fail-closed from a prior fix wave. No change required.
+
+**Verification:** `rg -n "buttonTitle|onGateButtonPressed|onButtonPressed" android/` → clean (no output).
+
+**Compile result:** `:react-native-audio-browser:compileDebugKotlin` → **BUILD SUCCESSFUL** in 1s (32 tasks up-to-date).

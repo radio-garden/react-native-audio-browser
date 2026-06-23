@@ -709,9 +709,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   data class GateOutcome(val gated: Boolean, val chrome: NativeGate?)
 
   // The minimal chrome rendered when a gate is active but no override or stored
-  // default chrome exists (the resolver-only setGate overload). Matches the
-  // generated NativeGate constructor arg order (title, message, buttonTitle).
-  private val builtInGate = NativeGate("Unavailable", null, null)
+  // default chrome exists (the resolver-only setGate overload).
+  private val builtInGate = NativeGate("Unavailable", null)
 
   /**
    * The three gate fields as one immutable triple so [gateDecision] reads them as a unit. Written
@@ -743,8 +742,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     gateState = GateState(active = false, chrome = null, hasResolver = false)
     connectedService?.player?.invalidateAllContent()
   }
-
-  override var onGateButtonPressed: () -> Unit = {}
 
   /**
    * The single gate choke point. Each enforcement site (browse / search) calls this for the current
