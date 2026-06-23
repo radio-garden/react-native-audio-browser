@@ -2,6 +2,7 @@ package com.audiobrowser
 
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
@@ -83,6 +84,41 @@ object TestFixtures {
       body = null,
       contentType = null,
       userAgent = null,
+    )
+
+  /**
+   * Builds a minimal browse-only Track (no src → browsable, not playable). Pass [artworkSource]
+   * for a pre-resolved HTTP artwork URL or [artwork] for a raw resource/file URI; omit both for
+   * no artwork.
+   */
+  fun browseTrack(
+    title: String = "T",
+    url: String = "https://api.example.com/channel/abc",
+    artwork: String? = null,
+    artworkSource: ImageSource? = null,
+  ) =
+    Track(
+      id = null,
+      url = url,
+      src = null, // browsable, not playable
+      artwork = artwork,
+      artworkSource = artworkSource,
+      request = null,
+      artworkCarPlayTinted = null,
+      title = title,
+      subtitle = null,
+      artist = null,
+      albumUrl = null,
+      album = null,
+      description = null,
+      genre = null,
+      duration = null,
+      style = null,
+      childrenStyle = null,
+      favorited = null,
+      groupTitle = null,
+      live = null,
+      imageRow = null,
     )
 
   fun artworkConfig(

@@ -1,11 +1,14 @@
 package com.audiobrowser.util
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import coil3.ImageLoader
+import com.audiobrowser.browser.BrowseArtworkRegistry
+import com.audiobrowser.browser.ResolvedArtwork
 import com.margelo.nitro.audiobrowser.Track
 
 /**
@@ -63,6 +66,35 @@ object TrackFactory {
     imageLoader: ImageLoader,
   ): List<MediaItem> {
     return tracks.map { toMedia3WithSvgSupport(it, context, imageLoader) }
+  }
+
+  /**
+   * Browse-surface conversion. Routes http(s) artwork through the content:// provider (so headers +
+   * SVG apply in our process, and no bytes cross the Binder), registering it in [registry]. Non-http
+   * artwork (android.resource:// tab icons, file://) passes through to setArtworkUri unchanged so
+   * vector/category icons survive. Plain toMedia3 (queue/now-playing) is unaffected.
+   */
+  fun toBrowseMediaItem(
+    track: Track,
+    sizeHintPixels: Int?,
+    registry: BrowseArtworkRegistry,
+    authority: String,
+  ): MediaItem {
+    val rawUrl = artworkUri(track) // artworkSource.uri ?: artwork
+    val scheme = rawUrl?.let { Uri.parse(it).scheme?.lowercase() }
+    val builder = metadataBuilder(track)
+    if (rawUrl != null && (scheme == "http" || scheme == "https")) {
+      val isSvg = SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork)
+      val token = ArtworkUris.tokenFor(rawUrl)
+      registry.register(
+        token,
+        ResolvedArtwork(rawUrl, track.artworkSource?.headers, isSvg),
+      )
+      builder.setArtworkUri(ArtworkUris.contentUri(authority, token).toUri())
+    } else if (rawUrl != null) {
+      builder.setArtworkUri(rawUrl.toUri())
+    }
+    return buildMediaItem(track, builder.build())
   }
 
   /** The transformed artworkSource wins over the raw artwork field. */
