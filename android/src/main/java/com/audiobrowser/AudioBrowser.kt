@@ -43,8 +43,11 @@ import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.IosOutput
+import com.margelo.nitro.audiobrowser.GateDecision
+import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.NativeBrowseGate
+import com.margelo.nitro.audiobrowser.NativeGate
+import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NavigationError
@@ -160,6 +163,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onTabsChanged: (Array<Track>) -> Unit = {}
   override var onNavigationError: (NavigationErrorEvent) -> Unit = {}
   override var onFormattedNavigationError: (FormattedNavigationError?) -> Unit = {}
+
+  // MARK: Gate callbacks (native→JS; set from JS, native CALLS them)
+  // Default resolver allows everything until JS installs one; the static-gate
+  // fast path skips it anyway (see [gateDecision]).
+  override var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>> = {
+    Promise.resolved(Promise.resolved(GateDecision(gated = false, gate = null)))
+  }
+  override var onGate: (event: GateEvent) -> Unit = {}
 
   // MARK: Player callbacks
   override var onPlaybackChanged: (data: Playback) -> Unit = {}
@@ -689,29 +700,61 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     browserManager.setFavorites(favorites.toList())
   }
 
-  // MARK: Browse gate
+  // MARK: Gate
 
-  // Written from the JS thread, read from the Media3 application thread
-  // (MediaSessionCallback serves the gate tile from it) — hence @Volatile.
-  @Volatile private var browseGate: NativeBrowseGate? = null
+  /** A gate decision for one request: whether to gate, and which chrome to render. */
+  data class GateOutcome(val gated: Boolean, val chrome: NativeGate?)
 
-  override fun setBrowseGate(gate: NativeBrowseGate) {
-    browseGate = gate
+  // The minimal chrome rendered when a gate is active but no override or stored
+  // default chrome exists (the resolver-only setGate overload). Matches the
+  // generated NativeGate constructor arg order (title, message, buttonTitle).
+  private val builtInGate = NativeGate("Unavailable", null, null)
+
+  // Gate state. Written from the JS thread, read from the Media3 application
+  // thread (the enforcement sites in MediaSessionCallback consult it) — hence
+  // @Volatile.
+  @Volatile private var defaultChrome: NativeGate? = null
+  @Volatile private var hasResolver: Boolean = false
+  @Volatile private var isGateActive: Boolean = false
+
+  override fun setGate(gate: NativeGate?, hasResolver: Boolean) {
+    defaultChrome = gate
+    this.hasResolver = hasResolver
+    isGateActive = true
     // Re-query every subscribed parent so a connected controller (Android
     // Auto) swaps its lists for the gate tile without reconnecting. Notify
     // only — the content cache stays warm for when the gate clears.
     connectedService?.player?.invalidateAllContent()
   }
 
-  override fun clearBrowseGate() {
-    if (browseGate == null) return
-    browseGate = null
+  override fun clearGate() {
+    if (!isGateActive) return
+    isGateActive = false
+    defaultChrome = null
+    hasResolver = false
     connectedService?.player?.invalidateAllContent()
   }
 
-  override fun getBrowseGate(): NativeBrowseGate? = browseGate
+  override var onGateButtonPressed: () -> Unit = {}
 
-  override var onBrowseGateButtonPressed: () -> Unit = {}
+  /**
+   * The single gate choke point. Each enforcement site (browse / search) calls this for the current
+   * request and serves the gate chrome when [GateOutcome.gated] is true. Mirrors the iOS
+   * `gateDecision(for:)` helper.
+   *
+   * - No active gate → allow.
+   * - Active gate, no resolver → static fast path: gate with the stored default chrome, no JS hop.
+   * - Active gate with a resolver → ask JS per request; a rejected/failed resolver never breaks the
+   *   serve path (falls through to allow). Chrome order on a gated decision: override → stored
+   *   default → built-in.
+   */
+  suspend fun gateDecision(request: NativeGateRequest): GateOutcome {
+    if (!isGateActive) return GateOutcome(false, null)
+    if (!hasResolver) return GateOutcome(true, defaultChrome)
+    val decision = runCatching { resolveGate(request).await().await() }.getOrNull()
+    if (decision == null || !decision.gated) return GateOutcome(false, null)
+    return GateOutcome(true, decision.gate ?: defaultChrome ?: builtInGate)
+  }
 
   // MARK: Car connection (Android Auto / Android Automotive)
 

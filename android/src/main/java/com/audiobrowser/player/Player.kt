@@ -27,8 +27,11 @@ import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.GateEvent
+import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageSource
+import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
@@ -858,10 +861,16 @@ class Player(internal val context: Context) {
   suspend fun playFromSearch(params: SearchParams): Boolean {
     return try {
       val audioBrowser = awaitBrowser()
-      // A Browse Gate blocks external-surface search too — otherwise voice search is a way
-      // around the gate (mirrors the iOS play-media intent guard).
-      if (audioBrowser.getBrowseGate() != null) {
-        Timber.i("playFromSearch refused — browse gate is set")
+      // A gate blocks external-surface "play" search too — otherwise voice search is a way around
+      // the gate (mirrors the iOS play-media intent guard). Resolved per request; a gated decision
+      // fires onGate(search) and refuses.
+      val gateOutcome =
+        audioBrowser.gateDecision(
+          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)
+        )
+      if (gateOutcome.gated) {
+        Timber.i("playFromSearch refused — request is gated")
+        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
         return false
       }
       val browserManager = audioBrowser.browserManager

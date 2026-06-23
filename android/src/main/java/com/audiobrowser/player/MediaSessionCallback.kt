@@ -20,8 +20,13 @@ import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.margelo.nitro.audiobrowser.NativeBrowseGate
+import com.margelo.nitro.audiobrowser.GateEvent
+import com.margelo.nitro.audiobrowser.GateReason
+import com.margelo.nitro.audiobrowser.MediaReference
+import com.margelo.nitro.audiobrowser.NativeGate
+import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.Track
@@ -112,13 +117,31 @@ class MediaSessionCallback(private val player: Player) :
       .build()
 
   /**
-   * Builds the Browse Gate tile: while a gate is set, tabs stay visible but every non-root level
-   * serves this single tile (see the gate check in [onGetChildren]). Same shape as the error tiles
-   * — non-browsable, non-playable — and deliberately NOT accompanied by a SessionError: a gate is
-   * deliberate app state, not a failure. The message renders as the tile's subtitle (newlines
-   * collapse to spaces — list rows are single-line).
+   * Builds the gate tile from a per-request chrome: while a gate is active, tabs stay visible but a
+   * gated browse/search level serves this single tile (see the gate checks in [onGetChildren] /
+   * [onGetSearchResult]). Same shape as the error tiles — non-browsable, non-playable — and
+   * deliberately NOT accompanied by a SessionError: a gate is deliberate app state, not a failure.
+   * The message renders as the tile's subtitle (newlines collapse to spaces — list rows are
+   * single-line).
    */
-  private fun createGateMediaItem(gate: NativeBrowseGate): MediaItem =
+  /**
+   * Wraps a raw external-search query string into the structured [SearchParams] the gate request
+   * carries. The car search surfaces only give a free-text query, so the other fields stay null —
+   * mirrors BrowserManager's query→SearchParams construction.
+   */
+  private fun searchParams(query: String): SearchParams =
+    SearchParams(
+      mode = null,
+      query = query,
+      genre = null,
+      artist = null,
+      album = null,
+      title = null,
+      playlist = null,
+      reference = MediaReference.UNKNOWN,
+    )
+
+  private fun createGateMediaItem(gate: NativeGate): MediaItem =
     createErrorMediaItem(
       mediaId = BrowserPathHelper.GATE_PATH,
       title = gate.title,
@@ -262,15 +285,23 @@ class MediaSessionCallback(private val player: Player) :
         player.awaitBrowser().also { Timber.d("Browser ready, proceeding with onGetChildren") }
       val browserManager = audioBrowser.browserManager
 
-      // While a Browse Gate is set, tabs stay visible (the root keeps serving them below) but
-      // every other level — including re-queries of the gate tile's own sentinel path — serves
-      // the single gate tile, so drilling into it re-shows the message instead of dead-ending
-      // in "No items". Checked before the offline guard: gated content isn't coming back with
+      // While a gate is active, tabs stay visible (the root keeps serving them below) but each
+      // non-root level is resolved per request: a gated path — including re-queries of the gate
+      // tile's own sentinel path — serves the single gate tile, so drilling into it re-shows the
+      // message instead of dead-ending in "No items"; an allowed path falls through to real
+      // children. Checked before the offline guard: gated content isn't coming back with
       // connectivity, so the gate copy is the truer message.
-      audioBrowser.getBrowseGate()?.let { gate ->
-        if (parentId != BrowserPathHelper.ROOT_PATH) {
+      if (parentId != BrowserPathHelper.ROOT_PATH) {
+        val outcome =
+          audioBrowser.gateDecision(
+            NativeGateRequest(reason = GateReason.BROWSE, path = parentId, search = null)
+          )
+        if (outcome.gated) {
+          audioBrowser.onGate(GateEvent(GateReason.BROWSE))
+          // gateDecision guarantees non-null chrome on a gated decision (override → default →
+          // built-in).
           return@future LibraryResult.ofItemList(
-            ImmutableList.of(createGateMediaItem(gate)),
+            ImmutableList.of(createGateMediaItem(outcome.chrome!!)),
             params,
           )
         }
@@ -410,10 +441,21 @@ class MediaSessionCallback(private val player: Player) :
       }
 
       if (mediaId == BrowserPathHelper.GATE_PATH) {
-        val gate =
-          player.awaitBrowser().getBrowseGate()
-            ?: return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
-        return@future LibraryResult.ofItem(createGateMediaItem(gate), null)
+        // A direct fetch of the gate tile's own sentinel (a controller re-reading the item it was
+        // served). Resolve the chrome for the gate path but do NOT emit onGate — that fires at the
+        // browse/search serve sites, not on an item lookup.
+        val outcome =
+          player
+            .awaitBrowser()
+            .gateDecision(
+              NativeGateRequest(
+                reason = GateReason.BROWSE,
+                path = BrowserPathHelper.GATE_PATH,
+                search = null,
+              )
+            )
+        if (!outcome.gated) return@future LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+        return@future LibraryResult.ofItem(createGateMediaItem(outcome.chrome!!), null)
       }
 
       if (mediaId == BrowserPathHelper.ROOT_PATH || mediaId == BrowserPathHelper.RECENT_PATH) {
@@ -562,7 +604,16 @@ class MediaSessionCallback(private val player: Player) :
 
       // External-surface search is gated with the rest of the browse tree — otherwise search is
       // a way around the gate. One "result": the gate tile (see onGetSearchResult).
-      if (audioBrowser.getBrowseGate() != null) {
+      val searchOutcome =
+        audioBrowser.gateDecision(
+          NativeGateRequest(
+            reason = GateReason.SEARCH,
+            path = null,
+            search = searchParams(query),
+          )
+        )
+      if (searchOutcome.gated) {
+        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
         session.notifySearchResultChanged(browser, query, 1, params)
         return@future LibraryResult.ofVoid()
       }
@@ -614,8 +665,20 @@ class MediaSessionCallback(private val player: Player) :
       val browserManager = audioBrowser.browserManager
 
       // Gated: the single search "result" is the gate tile (paired with onSearch's count of 1).
-      audioBrowser.getBrowseGate()?.let { gate ->
-        return@future LibraryResult.ofItemList(ImmutableList.of(createGateMediaItem(gate)), params)
+      val searchOutcome =
+        audioBrowser.gateDecision(
+          NativeGateRequest(
+            reason = GateReason.SEARCH,
+            path = null,
+            search = searchParams(query),
+          )
+        )
+      if (searchOutcome.gated) {
+        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
+        return@future LibraryResult.ofItemList(
+          ImmutableList.of(createGateMediaItem(searchOutcome.chrome!!)),
+          params,
+        )
       }
 
       try {
