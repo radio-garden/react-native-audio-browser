@@ -62,3 +62,11 @@ describe('resolveGate (native→JS bridge)', () => {
     ).toEqual({ gated: true })
   })
 })
+
+describe('clearGate', () => {
+  test('clears native gate state', () => {
+    setGate(chrome, () => false)
+    clearGate()
+    expect(nativeBrowser.clearGate).toHaveBeenCalled()
+  })
+})
