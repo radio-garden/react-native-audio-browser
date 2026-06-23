@@ -108,9 +108,9 @@ final class CarPlayNowPlayingManager {
   /// Sets up custom Now Playing buttons based on configuration and current
   /// player state, skipping the rebuild when nothing the row renders changed.
   func setupNowPlayingButtons() {
-    // While a Browse Gate is set, custom buttons (favorite etc.) are hidden;
+    // While a gate is active, custom buttons (favorite etc.) are hidden;
     // the system transport controls stay — a gate never blocks playback.
-    let buttons = audioBrowser?.browseGate == nil ? config.carPlayNowPlayingButtons : []
+    let buttons = (audioBrowser?.isGateActive ?? false) ? [] : config.carPlayNowPlayingButtons
     let player = audioBrowser?.getPlayer()
     let row = BuiltButtonRow(
       types: buttons,

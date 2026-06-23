@@ -85,7 +85,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public let repeatModeChangedEmitter = Emitter<RepeatModeChangedEvent>()
   public let shuffleChangedEmitter = Emitter<Bool>()
   public let externalContentChangedEmitter = Emitter<String>()
-  public let browseGateChangedEmitter = Emitter<NativeBrowseGate?>()
+  /// Signals that the gate's active state changed (set or cleared). Carries
+  /// the active flag; per-request chrome is obtained at each serve site via
+  /// `gateDecision(for:)`, so the emitter only tells surfaces to re-render.
+  public let gateChangedEmitter = Emitter<Bool>()
   /// Fired when a voice media intent (`handlePlayMediaIntent`) successfully
   /// starts playback. CarPlay surfaces the Now Playing template in response, so
   /// the user lands on the playing station (with the rest of the results in Up
@@ -176,7 +179,20 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onTabsChanged: ([Track]) -> Void = { _ in }
   public var onNavigationError: (NavigationErrorEvent) -> Void = { _ in }
   public var onFormattedNavigationError: (FormattedNavigationError?) -> Void = { _ in }
-  public var onBrowseGateButtonPressed: () -> Void = {}
+  public var onGateButtonPressed: () -> Void = {}
+
+  /// Per-request gate decision, set by JS. Native calls it at a serve site to
+  /// learn whether a browse path / search interaction should be gated and with
+  /// what chrome. The double `Promise` mirrors every other native→JS
+  /// value-returning callback (e.g. `searchCallback`): the outer resolves to the
+  /// JS-side Promise, the inner to the decision. Defaults to "allow everything"
+  /// until JS installs a resolver.
+  public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = { _ in
+    Promise.resolved(withResult: Promise.resolved(withResult: GateDecision(gated: false, gate: nil)))
+  }
+
+  /// Fired when a request is gated (served the gate). Set by JS.
+  public var onGate: (GateEvent) -> Void = { _ in }
 
   // MARK: - Player Callbacks
 
@@ -504,32 +520,68 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     onMainActor { browserManager.setFavorites(favorites) }
   }
 
-  // MARK: - Browse Gate
+  // MARK: - Gate
 
-  /// The current Browse Gate, if set. While set, external surfaces (CarPlay)
-  /// keep their tabs visible but render this full-page message as every tab's
-  /// content, and external-surface search is refused. Playback, the queue and
-  /// Now Playing are unaffected — a gate blocks finding content, never
-  /// hearing it.
-  private(set) var browseGate: NativeBrowseGate?
+  /// The gate's default chrome, if one was set. Served when the resolver
+  /// returns a gated decision with no per-request override, and for the static
+  /// gate (no resolver). May be nil for a resolver-only gate.
+  private(set) var defaultChrome: NativeGate?
 
-  public func setBrowseGate(gate: NativeBrowseGate) throws {
+  /// Whether JS installed a per-request resolver. When false the gate is static
+  /// — every request is gated with `defaultChrome` and the JS hop is skipped.
+  private(set) var hasResolver = false
+
+  /// True once `setGate` runs, until `clearGate`. While active, external
+  /// surfaces (CarPlay) keep their tabs visible but consult `gateDecision(for:)`
+  /// per request, rendering the gate chrome where gated and refusing
+  /// external-surface search. Playback, the queue and Now Playing are
+  /// unaffected — a gate blocks finding content, never hearing it.
+  private(set) var isGateActive = false
+
+  /// The minimal built-in gate served when a request is gated but neither a
+  /// per-request override nor a stored default chrome exists (resolver-only
+  /// gate returning `true`).
+  static let builtInGate = NativeGate(title: "Unavailable", message: nil, buttonTitle: nil)
+
+  /// The outcome of a single gate decision: whether to gate, and (if so) the
+  /// chrome to render.
+  struct GateOutcome {
+    let gated: Bool
+    let chrome: NativeGate?
+  }
+
+  public func setGate(gate: NativeGate?, hasResolver: Bool) throws {
     onMainActor {
-      browseGate = gate
-      browseGateChangedEmitter.emit(gate)
+      defaultChrome = gate
+      self.hasResolver = hasResolver
+      isGateActive = true
+      gateChangedEmitter.emit(true)
     }
   }
 
-  public func clearBrowseGate() throws {
+  public func clearGate() throws {
     onMainActor {
-      guard browseGate != nil else { return }
-      browseGate = nil
-      browseGateChangedEmitter.emit(nil)
+      guard isGateActive else { return }
+      defaultChrome = nil
+      hasResolver = false
+      isGateActive = false
+      gateChangedEmitter.emit(false)
     }
   }
 
-  public func getBrowseGate() throws -> NativeBrowseGate? {
-    onMainActor { browseGate }
+  /// The single choke point for every gate enforcement site. Asks whether
+  /// `request` should be gated and, if so, with what chrome (override → stored
+  /// default → built-in). When no resolver is installed the gate is static and
+  /// resolves without a JS hop. `try?` keeps a thrown/rejected resolver from
+  /// ever breaking the serve path — a failed decision falls through to "allow".
+  @MainActor
+  func gateDecision(for request: NativeGateRequest) async -> GateOutcome {
+    guard isGateActive else { return GateOutcome(gated: false, chrome: nil) }
+    if !hasResolver { return GateOutcome(gated: true, chrome: defaultChrome) }
+    guard let decision = try? await resolveGate(request).await().await(), decision.gated else {
+      return GateOutcome(gated: false, chrome: nil)
+    }
+    return GateOutcome(gated: true, chrome: decision.gate ?? defaultChrome ?? Self.builtInGate)
   }
 
   // MARK: - Car Connection (CarPlay)
@@ -1632,7 +1684,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         completion(false)
         return
       }
-      // No-criteria intent ("play «app»") → resume. A Browse Gate must NOT block
+      // No-criteria intent ("play «app»") → resume. The gate must NOT block
       // this: the gate blocks *finding* content, never *hearing* the active or
       // persisted track. The gate is checked below, for the search branch only.
       if criteria.isResume {
@@ -1663,29 +1715,35 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         return
       }
 
-      // Search is *finding* new content — refused while a Browse Gate is set
-      // (resume above is unaffected: the gate never blocks hearing).
-      guard browser.browseGate == nil else {
-        browser.logger.info("handlePlayMediaIntent: search refused — browse gate is set")
+      // Assemble the Nitro SearchParams here (MainActor) from the criteria's
+      // Sendable fields, so the structured mode/genre/… reach the request like
+      // Android. Today the API still text-searches `q`; the rest is forward-compat.
+      let params = SearchParams(
+        mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
+        query: criteria.query,
+        genre: criteria.genre,
+        artist: criteria.artist,
+        album: criteria.album,
+        title: criteria.title,
+        playlist: criteria.playlist,
+        // .currentlyPlaying can't reach here — isResume routed it to resume.
+        reference: criteria.reference == .my ? .my : .unknown
+      )
+
+      // Search is *finding* new content — refused when the gate decides this
+      // request is gated (resume above is unaffected: the gate never blocks
+      // hearing, and the gate check stays after the resume check).
+      let outcome = await browser.gateDecision(
+        for: NativeGateRequest(reason: .search, path: nil, search: params)
+      )
+      guard !outcome.gated else {
+        browser.logger.info("handlePlayMediaIntent: search refused — gated")
+        browser.onGate(GateEvent(reason: .search))
         completion(false)
         return
       }
 
       do {
-        // Assemble the Nitro SearchParams here (MainActor) from the criteria's
-        // Sendable fields, so the structured mode/genre/… reach the request like
-        // Android. Today the API still text-searches `q`; the rest is forward-compat.
-        let params = SearchParams(
-          mode: criteria.searchMode.flatMap { SearchMode(fromString: $0) },
-          query: criteria.query,
-          genre: criteria.genre,
-          artist: criteria.artist,
-          album: criteria.album,
-          title: criteria.title,
-          playlist: criteria.playlist,
-          // .currentlyPlaying can't reach here — isResume routed it to resume.
-          reference: criteria.reference == .my ? .my : .unknown
-        )
         guard let tracks = try await browser.browserManager.searchPlayable(params) else {
           completion(false)
           return
