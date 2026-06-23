@@ -613,25 +613,28 @@ class TrackPlayer {
     case .playing: mapped = .playing
     @unknown default: return
     }
+    recoverIfAirPlayStalled(transitioningTo: mapped)
+    coordinator.avPlayerDidChangeTimeControlStatus(mapped)
+  }
 
-    // AirPlay can silently strand us in .paused after a .noItemToPlay wait while
-    // we still intend to play — re-issue play() on exactly that transition.
-    let airPlayStall = AirPlayStallJudgement(
+  /// AVPlayer can silently strand us in .paused after a `.noItemToPlay` wait
+  /// over AirPlay while we still intend to play — re-issue play() on exactly
+  /// that transition. Also records this transition for the next comparison.
+  private func recoverIfAirPlayStalled(transitioningTo current: PlayerTimeControlStatus) {
+    let stalled = AirPlayStallJudgement(
       previous: previousTimeControlStatus,
-      current: mapped,
+      current: current,
       previousWaitingReasonWasNoItemToPlay: previousWaitingReasonWasNoItemToPlay,
       isAirPlay: isAirPlayRoute,
       playWhenReady: playWhenReady,
-    )
-    previousTimeControlStatus = mapped
+    ).shouldNudge
+    previousTimeControlStatus = current
     previousWaitingReasonWasNoItemToPlay =
-      mapped == .waitingToPlayAtSpecifiedRate && avPlayer.reasonForWaitingToPlay == .noItemToPlay
-    if airPlayStall.shouldNudge {
+      current == .waitingToPlayAtSpecifiedRate && avPlayer.reasonForWaitingToPlay == .noItemToPlay
+    if stalled {
       logger.info("AirPlay waiting→paused stall detected — nudging play()")
       startPlayback()
     }
-
-    coordinator.avPlayerDidChangeTimeControlStatus(mapped)
   }
 
   private func avPlayerStatusDidChange(_ status: AVPlayer.Status) {

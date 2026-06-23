@@ -41,14 +41,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var routeChangeObserver: NSObjectProtocol?
   private var interruptionObserver: NSObjectProtocol?
   private var mediaServicesResetObserver: NSObjectProtocol?
-  /// Resolved audio-session category config, retained so it can be re-applied
-  /// after a media-services reset (which clears the session category).
-  private var audioSessionConfig: (
-    category: AVAudioSession.Category,
-    mode: AVAudioSession.Mode,
-    policy: AVAudioSession.RouteSharingPolicy,
-    options: AVAudioSession.CategoryOptions
-  )?
+  /// Re-applies our resolved audio-session category. Captured at setup so a
+  /// media-services reset (which clears the category) can restore it.
+  private var applyAudioSessionCategory: () -> Void = {}
   private var nowPlayingOverride: NowPlayingUpdate?
   /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
   private var nowPlayingMetadataEnabled = true
@@ -588,13 +583,17 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         options: AVAudioSession.CategoryOptions
       ) = options.ios?.resolveAudioSessionConfig()
         ?? (category: .playback, mode: .default, policy: .default, options: [])
-      try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
+      // Capture category application once so a media-services reset (which
+      // clears the category) can restore the exact same config later.
+      let applyCategory: () -> Void = {
+        try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
+      }
+      applyCategory()
 
       // Create player and configure on main actor
       await MainActor.run { [weak self] in
         guard let self else { return }
-        // Retain the resolved config so a media-services reset can re-apply it.
-        self.audioSessionConfig = cfg
+        self.applyAudioSessionCategory = applyCategory
 
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)
@@ -1279,10 +1278,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       guard let self else { return }
       // Re-apply our category (the reset cleared it), then have the player
       // recreate itself and reconnect the current stream.
-      if let cfg = self.audioSessionConfig {
-        try? AVAudioSession.sharedInstance().setCategory(
-          cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
-      }
+      self.applyAudioSessionCategory()
       self.onMainActor { self.player?.handleMediaServicesReset() }
     }
   }
