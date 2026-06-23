@@ -8,6 +8,7 @@ data class ArtworkProviderDeps(
   val loader: CoilArtworkLoader,
   val registry: BrowseArtworkRegistry,
   val scope: CoroutineScope,
+  val artworkSizeHint: () -> Int? = { null },
 )
 
 /**

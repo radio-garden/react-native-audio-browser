@@ -30,6 +30,15 @@
             </intent-filter>
         </service>
 
+        <!-- Exported, token-gated content provider serving browse artwork to Android Auto / AAOS.
+             Exported is required: AAOS runs in a different uid and no URI grant is issued by Media3.
+             The authority placeholder is replaced by the app's package name at build time. -->
+        <provider
+            android:name="com.audiobrowser.util.ArtworkContentProvider"
+            android:authorities="${applicationId}.audiobrowser.artwork"
+            android:exported="true"
+            android:grantUriPermissions="false" />
+
         <!-- Headless Task Service for background JS execution -->
         <service android:name="com.audiobrowser.HeadlessTaskService" android:enabled="true" android:exported="false" />
         <!-- Media button receiver for playback resumption -->
