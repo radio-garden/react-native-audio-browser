@@ -284,6 +284,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
             }
             player.clear()
             player.stop()
+            tearDownArtworkProvider()
             player.destroy()
             scope.cancel()
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -334,6 +335,19 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     onBatteryWarningPendingChanged?.invoke(true)
   }
 
+  /**
+   * Cancels the artwork-provider coroutine scope and clears the Coil loader holder. Idempotent —
+   * safe to call more than once; the second call is a no-op because the field is null after the
+   * first.  Must be called BEFORE player.destroy() on every teardown path.
+   */
+  private fun tearDownArtworkProvider() {
+    artworkProviderDeps?.let {
+      it.scope.cancel()
+      CoilArtworkLoaderHolder.clearIf(it)
+    }
+    artworkProviderDeps = null
+  }
+
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
@@ -346,11 +360,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
     // Tear down artwork provider deps before player is destroyed so no in-flight
     // coroutine can deref a torn-down player.
-    artworkProviderDeps?.let {
-      it.scope.cancel()
-      CoilArtworkLoaderHolder.clearIf(it)
-    }
-    artworkProviderDeps = null
+    tearDownArtworkProvider()
 
     Timber.d("Releasing media session and destroying player")
     if (::mediaSession.isInitialized) {
