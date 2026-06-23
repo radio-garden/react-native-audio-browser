@@ -29,9 +29,9 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (CarPlayNowPlayingButton).
    */
   enum class CarPlayNowPlayingButton {
-    SHUFFLE      SWIFT_NAME(shuffle) = 0,
-    REPEAT      SWIFT_NAME(repeat) = 1,
-    FAVORITE      SWIFT_NAME(favorite) = 2,
+    FAVORITE      SWIFT_NAME(favorite) = 0,
+    SHUFFLE      SWIFT_NAME(shuffle) = 1,
+    REPEAT      SWIFT_NAME(repeat) = 2,
     PLAYBACK_RATE      SWIFT_NAME(playbackRate) = 3,
   } CLOSED_ENUM;
 
@@ -45,9 +45,9 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::CarPlayNowPlayingButton fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("favorite"): return margelo::nitro::audiobrowser::CarPlayNowPlayingButton::FAVORITE;
         case hashString("shuffle"): return margelo::nitro::audiobrowser::CarPlayNowPlayingButton::SHUFFLE;
         case hashString("repeat"): return margelo::nitro::audiobrowser::CarPlayNowPlayingButton::REPEAT;
-        case hashString("favorite"): return margelo::nitro::audiobrowser::CarPlayNowPlayingButton::FAVORITE;
         case hashString("playback-rate"): return margelo::nitro::audiobrowser::CarPlayNowPlayingButton::PLAYBACK_RATE;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum CarPlayNowPlayingButton - invalid value!");
@@ -55,9 +55,9 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::CarPlayNowPlayingButton arg) {
       switch (arg) {
+        case margelo::nitro::audiobrowser::CarPlayNowPlayingButton::FAVORITE: return JSIConverter<std::string>::toJSI(runtime, "favorite");
         case margelo::nitro::audiobrowser::CarPlayNowPlayingButton::SHUFFLE: return JSIConverter<std::string>::toJSI(runtime, "shuffle");
         case margelo::nitro::audiobrowser::CarPlayNowPlayingButton::REPEAT: return JSIConverter<std::string>::toJSI(runtime, "repeat");
-        case margelo::nitro::audiobrowser::CarPlayNowPlayingButton::FAVORITE: return JSIConverter<std::string>::toJSI(runtime, "favorite");
         case margelo::nitro::audiobrowser::CarPlayNowPlayingButton::PLAYBACK_RATE: return JSIConverter<std::string>::toJSI(runtime, "playback-rate");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert CarPlayNowPlayingButton to JS - invalid value: "
@@ -70,9 +70,9 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
+        case hashString("favorite"):
         case hashString("shuffle"):
         case hashString("repeat"):
-        case hashString("favorite"):
         case hashString("playback-rate"):
           return true;
         default:

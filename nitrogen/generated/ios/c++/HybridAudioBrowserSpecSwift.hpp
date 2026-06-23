@@ -66,8 +66,6 @@ namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `TrackLoadEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
-// Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 // Forward declaration of `GateDecision` to properly resolve imports.
@@ -152,6 +150,10 @@ namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
 // Forward declaration of `FavoritesMatchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
+// Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
@@ -192,6 +194,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
 // Forward declaration of `RetryConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
@@ -237,7 +241,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "SearchMode.hpp"
 #include "MediaReference.hpp"
 #include "TrackLoadEvent.hpp"
-#include "CarPlayNowPlayingButton.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "GateDecision.hpp"
 #include "NativeGateRequest.hpp"
@@ -281,6 +284,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "PlayerCapabilities.hpp"
 #include "FavoriteConfig.hpp"
 #include "FavoritesMatchMode.hpp"
+#include "IOSOptions.hpp"
+#include "CarPlayNowPlayingButton.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "IosOutput.hpp"
@@ -301,6 +306,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "IOSCategoryPolicy.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NitroIOSUpdateOptions.hpp"
 #include "RetryConfig.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "FormatNowPlayingParams.hpp"

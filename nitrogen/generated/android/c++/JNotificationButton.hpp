@@ -42,9 +42,6 @@ namespace margelo::nitro::audiobrowser {
     static jni::alias_ref<JNotificationButton> fromCpp(NotificationButton value) {
       static const auto clazz = javaClassStatic();
       switch (value) {
-        case NotificationButton::FAVORITE:
-          static const auto fieldFAVORITE = clazz->getStaticField<JNotificationButton>("FAVORITE");
-          return clazz->getStaticFieldValue(fieldFAVORITE);
         case NotificationButton::SKIP_TO_PREVIOUS:
           static const auto fieldSKIP_TO_PREVIOUS = clazz->getStaticField<JNotificationButton>("SKIP_TO_PREVIOUS");
           return clazz->getStaticFieldValue(fieldSKIP_TO_PREVIOUS);
@@ -57,6 +54,9 @@ namespace margelo::nitro::audiobrowser {
         case NotificationButton::JUMP_FORWARD:
           static const auto fieldJUMP_FORWARD = clazz->getStaticField<JNotificationButton>("JUMP_FORWARD");
           return clazz->getStaticFieldValue(fieldJUMP_FORWARD);
+        case NotificationButton::FAVORITE:
+          static const auto fieldFAVORITE = clazz->getStaticField<JNotificationButton>("FAVORITE");
+          return clazz->getStaticFieldValue(fieldFAVORITE);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

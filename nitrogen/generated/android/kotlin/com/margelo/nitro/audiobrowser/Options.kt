@@ -34,7 +34,7 @@ data class Options(
   val capabilities: PlayerCapabilities,
   @DoNotStrip
   @Keep
-  val iosPlaybackRates: DoubleArray?
+  val ios: IOSOptions?
 ) {
   /* primary constructor */
 
@@ -46,8 +46,8 @@ data class Options(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: AndroidOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, iosPlaybackRates: DoubleArray?): Options {
-      return Options(android, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, iosPlaybackRates)
+    private fun fromCpp(android: AndroidOptions?, forwardJumpInterval: Double, backwardJumpInterval: Double, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities, ios: IOSOptions?): Options {
+      return Options(android, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, ios)
     }
   }
 }

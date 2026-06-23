@@ -43,12 +43,6 @@ struct BrowserConfig {
 
   // MARK: - CarPlay Options
 
-  /// Enable the "Up Next" button on CarPlay Now Playing screen
-  let carPlayUpNextButton: Bool
-
-  /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
-  let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
-
   /// App-localized title for CarPlay loading screens (shown as the centered
   /// empty state while content resolves; nil leaves them blank)
   let carPlayLoadingTitle: String?
@@ -77,8 +71,6 @@ struct BrowserConfig {
     singleTrack: Bool = false,
     handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)? = nil,
     androidControllerOfflineError: Bool = true,
-    carPlayUpNextButton: Bool = true,
-    carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
     carPlayLoadingTitle: String? = nil,
     resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)? = nil,
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
@@ -94,8 +86,6 @@ struct BrowserConfig {
     self.singleTrack = singleTrack
     self.handleTrackLoad = handleTrackLoad
     self.androidControllerOfflineError = androidControllerOfflineError
-    self.carPlayUpNextButton = carPlayUpNextButton
-    self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
     self.carPlayLoadingTitle = carPlayLoadingTitle
     self.resolveAlbumUrl = resolveAlbumUrl
     self.formatNavigationError = formatNavigationError
@@ -114,8 +104,6 @@ struct BrowserConfig {
     singleTrack = config.singleTrack ?? false
     handleTrackLoad = config.handleTrackLoad
     androidControllerOfflineError = config.androidControllerOfflineError ?? true
-    carPlayUpNextButton = config.carPlayUpNextButton ?? true
-    carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
     carPlayLoadingTitle = config.carPlayLoadingTitle
     resolveAlbumUrl = config.resolveAlbumUrl
     formatNavigationError = config.formatNavigationError

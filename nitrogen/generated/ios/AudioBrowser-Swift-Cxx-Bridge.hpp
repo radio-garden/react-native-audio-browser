@@ -70,6 +70,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 // Forward declaration of `IOSCategory` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `ImageContext` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageContext; }
 // Forward declaration of `ImageQueryParams` to properly resolve imports.
@@ -108,6 +110,8 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NotificationButton` to properly resolve imports.
@@ -233,6 +237,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "IOSOptions.hpp"
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
 #include "ImageRowItem.hpp"
@@ -252,6 +257,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NitroIOSUpdateOptions.hpp"
 #include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
@@ -1593,32 +1599,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::optional<std::vector<CarPlayNowPlayingButton>>
-  /**
-   * Specialized version of `std::optional<std::vector<CarPlayNowPlayingButton>>`.
-   */
-  using std__optional_std__vector_CarPlayNowPlayingButton__ = std::optional<std::vector<CarPlayNowPlayingButton>>;
-  inline std::optional<std::vector<CarPlayNowPlayingButton>> create_std__optional_std__vector_CarPlayNowPlayingButton__(const std::vector<CarPlayNowPlayingButton>& value) noexcept {
-    return std::optional<std::vector<CarPlayNowPlayingButton>>(value);
-  }
-  inline bool has_value_std__optional_std__vector_CarPlayNowPlayingButton__(const std::optional<std::vector<CarPlayNowPlayingButton>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::vector<CarPlayNowPlayingButton> get_std__optional_std__vector_CarPlayNowPlayingButton__(const std::optional<std::vector<CarPlayNowPlayingButton>>& optional) noexcept {
-    return optional.value();
-  }
-  
-  // pragma MARK: std::vector<CarPlayNowPlayingButton>
-  /**
-   * Specialized version of `std::vector<CarPlayNowPlayingButton>`.
-   */
-  using std__vector_CarPlayNowPlayingButton_ = std::vector<CarPlayNowPlayingButton>;
-  inline std::vector<CarPlayNowPlayingButton> create_std__vector_CarPlayNowPlayingButton_(size_t size) noexcept {
-    std::vector<CarPlayNowPlayingButton> vector;
-    vector.reserve(size);
-    return vector;
-  }
-  
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)>>
   /**
    * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& / * track * /)>>`.
@@ -2285,6 +2265,73 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return vector;
   }
   
+  // pragma MARK: std::optional<NitroIOSUpdateOptions>
+  /**
+   * Specialized version of `std::optional<NitroIOSUpdateOptions>`.
+   */
+  using std__optional_NitroIOSUpdateOptions_ = std::optional<NitroIOSUpdateOptions>;
+  inline std::optional<NitroIOSUpdateOptions> create_std__optional_NitroIOSUpdateOptions_(const NitroIOSUpdateOptions& value) noexcept {
+    return std::optional<NitroIOSUpdateOptions>(value);
+  }
+  inline bool has_value_std__optional_NitroIOSUpdateOptions_(const std::optional<NitroIOSUpdateOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NitroIOSUpdateOptions get_std__optional_NitroIOSUpdateOptions_(const std::optional<NitroIOSUpdateOptions>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<std::vector<double>>
+  /**
+   * Specialized version of `std::optional<std::vector<double>>`.
+   */
+  using std__optional_std__vector_double__ = std::optional<std::vector<double>>;
+  inline std::optional<std::vector<double>> create_std__optional_std__vector_double__(const std::vector<double>& value) noexcept {
+    return std::optional<std::vector<double>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<double> get_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::vector<double>
+  /**
+   * Specialized version of `std::vector<double>`.
+   */
+  using std__vector_double_ = std::vector<double>;
+  inline std::vector<double> create_std__vector_double_(size_t size) noexcept {
+    std::vector<double> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::optional<std::vector<CarPlayNowPlayingButton>>
+  /**
+   * Specialized version of `std::optional<std::vector<CarPlayNowPlayingButton>>`.
+   */
+  using std__optional_std__vector_CarPlayNowPlayingButton__ = std::optional<std::vector<CarPlayNowPlayingButton>>;
+  inline std::optional<std::vector<CarPlayNowPlayingButton>> create_std__optional_std__vector_CarPlayNowPlayingButton__(const std::vector<CarPlayNowPlayingButton>& value) noexcept {
+    return std::optional<std::vector<CarPlayNowPlayingButton>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_CarPlayNowPlayingButton__(const std::optional<std::vector<CarPlayNowPlayingButton>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<CarPlayNowPlayingButton> get_std__optional_std__vector_CarPlayNowPlayingButton__(const std::optional<std::vector<CarPlayNowPlayingButton>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::vector<CarPlayNowPlayingButton>
+  /**
+   * Specialized version of `std::vector<CarPlayNowPlayingButton>`.
+   */
+  using std__vector_CarPlayNowPlayingButton_ = std::vector<CarPlayNowPlayingButton>;
+  inline std::vector<CarPlayNowPlayingButton> create_std__vector_CarPlayNowPlayingButton_(size_t size) noexcept {
+    std::vector<CarPlayNowPlayingButton> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
   // pragma MARK: std::optional<PlayerCapabilities>
   /**
    * Specialized version of `std::optional<PlayerCapabilities>`.
@@ -2342,32 +2389,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std__variant_bool__FavoriteConfig_ create_std__variant_bool__FavoriteConfig_(const FavoriteConfig& value) noexcept {
     return std__variant_bool__FavoriteConfig_(value);
-  }
-  
-  // pragma MARK: std::optional<std::vector<double>>
-  /**
-   * Specialized version of `std::optional<std::vector<double>>`.
-   */
-  using std__optional_std__vector_double__ = std::optional<std::vector<double>>;
-  inline std::optional<std::vector<double>> create_std__optional_std__vector_double__(const std::vector<double>& value) noexcept {
-    return std::optional<std::vector<double>>(value);
-  }
-  inline bool has_value_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::vector<double> get_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
-    return optional.value();
-  }
-  
-  // pragma MARK: std::vector<double>
-  /**
-   * Specialized version of `std::vector<double>`.
-   */
-  using std__vector_double_ = std::vector<double>;
-  inline std::vector<double> create_std__vector_double_(size_t size) noexcept {
-    std::vector<double> vector;
-    vector.reserve(size);
-    return vector;
   }
   
   // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
@@ -2558,6 +2579,21 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.has_value();
   }
   inline AndroidOptions get_std__optional_AndroidOptions_(const std::optional<AndroidOptions>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<IOSOptions>
+  /**
+   * Specialized version of `std::optional<IOSOptions>`.
+   */
+  using std__optional_IOSOptions_ = std::optional<IOSOptions>;
+  inline std::optional<IOSOptions> create_std__optional_IOSOptions_(const IOSOptions& value) noexcept {
+    return std::optional<IOSOptions>(value);
+  }
+  inline bool has_value_std__optional_IOSOptions_(const std::optional<IOSOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline IOSOptions get_std__optional_IOSOptions_(const std::optional<IOSOptions>& optional) noexcept {
     return optional.value();
   }
   

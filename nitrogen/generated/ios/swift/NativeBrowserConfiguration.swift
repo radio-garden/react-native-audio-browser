@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayUpNextButton: Bool?, carPlayNowPlayingButtons: [CarPlayNowPlayingButton]?, carPlayLoadingTitle: String?, resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayLoadingTitle: String?, resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -103,24 +103,6 @@ public extension NativeBrowserConfiguration {
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = androidControllerOfflineError {
         return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = carPlayUpNextButton {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__vector_CarPlayNowPlayingButton__ in
-      if let __unwrappedValue = carPlayNowPlayingButtons {
-        return bridge.create_std__optional_std__vector_CarPlayNowPlayingButton__({ () -> bridge.std__vector_CarPlayNowPlayingButton_ in
-          var __vector = bridge.create_std__vector_CarPlayNowPlayingButton_(__unwrappedValue.count)
-          for __item in __unwrappedValue {
-            __vector.push_back(__item)
-          }
-          return __vector
-        }())
       } else {
         return .init()
       }
@@ -332,30 +314,6 @@ public extension NativeBrowserConfiguration {
       if bridge.has_value_std__optional_bool_(self.__androidControllerOfflineError) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__androidControllerOfflineError)
         return __unwrapped
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var carPlayUpNextButton: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__carPlayUpNextButton) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__carPlayUpNextButton)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var carPlayNowPlayingButtons: [CarPlayNowPlayingButton]? {
-    return { () -> [CarPlayNowPlayingButton]? in
-      if bridge.has_value_std__optional_std__vector_CarPlayNowPlayingButton__(self.__carPlayNowPlayingButtons) {
-        let __unwrapped = bridge.get_std__optional_std__vector_CarPlayNowPlayingButton__(self.__carPlayNowPlayingButtons)
-        return __unwrapped.map({ __item in __item })
       } else {
         return nil
       }

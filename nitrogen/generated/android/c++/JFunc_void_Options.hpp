@@ -38,6 +38,10 @@
 #include "JFavoriteConfig.hpp"
 #include "FavoritesMatchMode.hpp"
 #include "JFavoritesMatchMode.hpp"
+#include "IOSOptions.hpp"
+#include "JIOSOptions.hpp"
+#include "CarPlayNowPlayingButton.hpp"
+#include "JCarPlayNowPlayingButton.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

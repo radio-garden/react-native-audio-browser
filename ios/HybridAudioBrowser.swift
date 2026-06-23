@@ -61,6 +61,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
   var playbackRates: [Double] { playerOptions.playbackRates }
+  var carPlayUpNextButton: Bool { playerOptions.carPlayUpNextButton }
+  var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] { playerOptions.carPlayNowPlayingButtons }
   private var lastNavigationError: NavigationError? {
     didSet {
       // Skip if both nil (no real change)
@@ -147,8 +149,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, requestResolver: nil, browse: nil, browseResolver: nil, media: nil, artwork: nil, nowPlayingArtwork: nil, routes: nil,
     singleTrack: nil, handleTrackLoad: nil,
-    androidControllerOfflineError: nil, carPlayUpNextButton: nil,
-    carPlayNowPlayingButtons: nil, carPlayLoadingTitle: nil, resolveAlbumUrl: nil, formatNavigationError: nil,
+    androidControllerOfflineError: nil, carPlayLoadingTitle: nil, resolveAlbumUrl: nil, formatNavigationError: nil,
   ) {
     didSet {
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }

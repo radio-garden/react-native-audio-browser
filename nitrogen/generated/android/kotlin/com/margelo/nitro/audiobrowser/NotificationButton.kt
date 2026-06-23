@@ -16,11 +16,11 @@ import com.facebook.proguard.annotations.DoNotStrip
 @DoNotStrip
 @Keep
 enum class NotificationButton(@DoNotStrip @Keep val value: Int) {
-  FAVORITE(0),
-  SKIP_TO_PREVIOUS(1),
-  SKIP_TO_NEXT(2),
-  JUMP_BACKWARD(3),
-  JUMP_FORWARD(4);
+  SKIP_TO_PREVIOUS(0),
+  SKIP_TO_NEXT(1),
+  JUMP_BACKWARD(2),
+  JUMP_FORWARD(3),
+  FAVORITE(4);
 
   companion object
 }

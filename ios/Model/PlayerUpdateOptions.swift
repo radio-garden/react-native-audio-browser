@@ -26,6 +26,12 @@ class PlayerUpdateOptions {
   /// Supported playback rates for the playback-rate capability
   var playbackRates: [Double] = [0.5, 1.0, 1.5, 2.0]
 
+  /// Enable the "Up Next" button on the CarPlay Now Playing screen
+  var carPlayUpNextButton: Bool = true
+
+  /// Custom buttons for the CarPlay Now Playing screen
+  var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = []
+
   // MARK: - Initialization
 
   init() {}
@@ -57,9 +63,17 @@ class PlayerUpdateOptions {
       capabilities = mergeCapabilities(existing: capabilities, incoming: caps)
     }
 
-    // Update playback rates
-    if let rates = options.iosPlaybackRates {
-      playbackRates = rates
+    // Update iOS player-UI options (nested under `ios` on the wire)
+    if let ios = options.ios {
+      if let rates = ios.playbackRates {
+        playbackRates = rates
+      }
+      if let upNext = ios.carPlayUpNextButton {
+        carPlayUpNextButton = upNext
+      }
+      if let buttons = ios.carPlayNowPlayingButtons {
+        carPlayNowPlayingButtons = buttons
+      }
     }
   }
 
@@ -74,7 +88,11 @@ class PlayerUpdateOptions {
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      iosPlaybackRates: playbackRates,
+      ios: IOSOptions(
+        playbackRates: playbackRates,
+        carPlayUpNextButton: carPlayUpNextButton,
+        carPlayNowPlayingButtons: carPlayNowPlayingButtons,
+      ),
     )
   }
 

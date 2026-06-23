@@ -42,15 +42,15 @@ namespace margelo::nitro::audiobrowser {
     static jni::alias_ref<JCarPlayNowPlayingButton> fromCpp(CarPlayNowPlayingButton value) {
       static const auto clazz = javaClassStatic();
       switch (value) {
+        case CarPlayNowPlayingButton::FAVORITE:
+          static const auto fieldFAVORITE = clazz->getStaticField<JCarPlayNowPlayingButton>("FAVORITE");
+          return clazz->getStaticFieldValue(fieldFAVORITE);
         case CarPlayNowPlayingButton::SHUFFLE:
           static const auto fieldSHUFFLE = clazz->getStaticField<JCarPlayNowPlayingButton>("SHUFFLE");
           return clazz->getStaticFieldValue(fieldSHUFFLE);
         case CarPlayNowPlayingButton::REPEAT:
           static const auto fieldREPEAT = clazz->getStaticField<JCarPlayNowPlayingButton>("REPEAT");
           return clazz->getStaticFieldValue(fieldREPEAT);
-        case CarPlayNowPlayingButton::FAVORITE:
-          static const auto fieldFAVORITE = clazz->getStaticField<JCarPlayNowPlayingButton>("FAVORITE");
-          return clazz->getStaticFieldValue(fieldFAVORITE);
         case CarPlayNowPlayingButton::PLAYBACK_RATE:
           static const auto fieldPLAYBACK_RATE = clazz->getStaticField<JCarPlayNowPlayingButton>("PLAYBACK_RATE");
           return clazz->getStaticFieldValue(fieldPLAYBACK_RATE);

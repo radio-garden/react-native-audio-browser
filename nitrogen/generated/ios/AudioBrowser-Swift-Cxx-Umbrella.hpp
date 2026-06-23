@@ -70,6 +70,8 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
 // Forward declaration of `IOSCategory` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 // Forward declaration of `ImageContext` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageContext; }
 // Forward declaration of `ImageQueryParams` to properly resolve imports.
@@ -112,6 +114,8 @@ namespace margelo::nitro::audiobrowser { enum class NavigationErrorType; }
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
+// Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NotificationButton` to properly resolve imports.
@@ -233,6 +237,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
+#include "IOSOptions.hpp"
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
 #include "ImageRowItem.hpp"
@@ -254,6 +259,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "NavigationErrorEvent.hpp"
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
+#include "NitroIOSUpdateOptions.hpp"
 #include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
