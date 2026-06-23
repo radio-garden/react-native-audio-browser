@@ -76,7 +76,6 @@ object TrackFactory {
    */
   fun toBrowseMediaItem(
     track: Track,
-    sizeHintPixels: Int?,
     registry: BrowseArtworkRegistry,
     authority: String,
   ): MediaItem {

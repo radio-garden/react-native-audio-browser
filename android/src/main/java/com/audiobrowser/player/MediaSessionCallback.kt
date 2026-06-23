@@ -411,8 +411,7 @@ class MediaSessionCallback(private val player: Player) :
   private fun toMediaItems(tracks: List<Track>): List<MediaItem> {
     val registry = player.browseArtworkRegistry
     val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
-    val sizeHint = player.artworkSizeHintPixels
-    return tracks.map { TrackFactory.toBrowseMediaItem(it, sizeHint, registry, authority) }
+    return tracks.map { TrackFactory.toBrowseMediaItem(it, registry, authority) }
   }
 
   override fun onGetItem(
@@ -472,7 +471,7 @@ class MediaSessionCallback(private val player: Player) :
       val browseAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
       browserManager.getCachedTrack(mediaId)?.let { track ->
         return@future LibraryResult.ofItem(
-          TrackFactory.toBrowseMediaItem(track, player.artworkSizeHintPixels, player.browseArtworkRegistry, browseAuthority),
+          TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, browseAuthority),
           null,
         )
       }
@@ -483,7 +482,7 @@ class MediaSessionCallback(private val player: Player) :
         // to the cached-track path above (list line from subtitle, favorited heart)
         // and the item's tag is a Track, as fromMedia3 expects.
         LibraryResult.ofItem(
-          TrackFactory.toBrowseMediaItem(resolvedTrack.toTrack(), player.artworkSizeHintPixels, player.browseArtworkRegistry, browseAuthority),
+          TrackFactory.toBrowseMediaItem(resolvedTrack.toTrack(), player.browseArtworkRegistry, browseAuthority),
           null,
         )
       } catch (e: Exception) {
@@ -689,7 +688,7 @@ class MediaSessionCallback(private val player: Player) :
           val mediaItems =
             tracks.map { track ->
               Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")
-              TrackFactory.toBrowseMediaItem(track, player.artworkSizeHintPixels, player.browseArtworkRegistry, searchAuthority)
+              TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, searchAuthority)
             }
 
           val paginatedItems = mediaItems.paginate(page, pageSize)

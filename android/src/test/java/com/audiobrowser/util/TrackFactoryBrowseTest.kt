@@ -4,7 +4,6 @@ import android.net.Uri
 import com.audiobrowser.TestFixtures
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.margelo.nitro.audiobrowser.ImageSource
-import com.margelo.nitro.audiobrowser.Track
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -25,7 +24,7 @@ class TrackFactoryBrowseTest {
         body = null,
       )
     )
-    val item = TrackFactory.toBrowseMediaItem(track, 256, reg, authority)
+    val item = TrackFactory.toBrowseMediaItem(track, reg, authority)
 
     val artUri = Uri.parse(item.mediaMetadata.artworkUri.toString())
     assertEquals("content", artUri.scheme)
@@ -41,7 +40,7 @@ class TrackFactoryBrowseTest {
     val reg = BrowseArtworkRegistry()
     val resUri = "android.resource://com.test/drawable/ic_folder"
     val track = TestFixtures.browseTrack(artwork = resUri, artworkSource = null)
-    val item = TrackFactory.toBrowseMediaItem(track, 256, reg, authority)
+    val item = TrackFactory.toBrowseMediaItem(track, reg, authority)
     assertEquals(resUri, item.mediaMetadata.artworkUri.toString())
   }
 }
