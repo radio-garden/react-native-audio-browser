@@ -25,9 +25,10 @@ describe('setQueue wrapper', () => {
     expect(calls[0]).toEqual(['setQueue', tracks, 1, undefined])
   })
 
-  it('starts playback after the queue is set (order matters)', () => {
+  it('only sets the queue and does not start playback', () => {
     setQueue([{ src: 'a' }] as any, 0)
-    // play() must run AFTER setQueue so it targets the applied index.
-    expect(calls.map(c => c[0])).toEqual(['setQueue', 'play'])
+    // setQueue no longer auto-plays — it preserves the current play/pause
+    // state; callers start playback explicitly with play().
+    expect(calls.map(c => c[0])).toEqual(['setQueue'])
   })
 })

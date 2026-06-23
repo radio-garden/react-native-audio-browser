@@ -115,10 +115,15 @@ export function skipToPrevious(initialPosition?: number): void {
 }
 
 /**
- * Sets the queue and starts playback.
+ * Sets (replaces) the queue.
+ *
+ * This does not change the play/pause state: the player keeps playing if it was
+ * playing and stays paused if it was paused. Call {@link play} explicitly to
+ * start playback.
+ *
  * @param tracks - The tracks to set as the queue.
- * @param startIndex - (Optional) The index of the track to start playback from.
- * @param startPositionMs - (Optional) The position in milliseconds to start playback from.
+ * @param startIndex - (Optional) The index of the track to make active.
+ * @param startPositionMs - (Optional) The position in milliseconds to start the active track from.
  */
 export function setQueue(
   tracks: Track[],
@@ -126,7 +131,6 @@ export function setQueue(
   startPositionMs?: number
 ): void {
   nativeBrowser.setQueue(tracks, startIndex, startPositionMs)
-  nativeBrowser.play()
 }
 
 // MARK: - Getters
