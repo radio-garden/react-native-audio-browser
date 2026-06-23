@@ -40,6 +40,15 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
   private var interruptionObserver: NSObjectProtocol?
+  private var mediaServicesResetObserver: NSObjectProtocol?
+  /// Resolved audio-session category config, retained so it can be re-applied
+  /// after a media-services reset (which clears the session category).
+  private var audioSessionConfig: (
+    category: AVAudioSession.Category,
+    mode: AVAudioSession.Mode,
+    policy: AVAudioSession.RouteSharingPolicy,
+    options: AVAudioSession.CategoryOptions
+  )?
   private var nowPlayingOverride: NowPlayingUpdate?
   /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
   private var nowPlayingMetadataEnabled = true
@@ -572,16 +581,20 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // (see `playerDidChangePlayingState`) and re-activated on interruption-end. Best-effort: a
       // category-config failure must never brick setup.
       let session = AVAudioSession.sharedInstance()
-      if let iosOptions = options.ios {
-        let cfg = iosOptions.resolveAudioSessionConfig()
-        try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
-      } else {
-        try? session.setCategory(.playback, mode: .default)
-      }
+      let cfg: (
+        category: AVAudioSession.Category,
+        mode: AVAudioSession.Mode,
+        policy: AVAudioSession.RouteSharingPolicy,
+        options: AVAudioSession.CategoryOptions
+      ) = options.ios?.resolveAudioSessionConfig()
+        ?? (category: .playback, mode: .default, policy: .default, options: [])
+      try? session.setCategory(cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
 
       // Create player and configure on main actor
       await MainActor.run { [weak self] in
         guard let self else { return }
+        // Retain the resolved config so a media-services reset can re-apply it.
+        self.audioSessionConfig = cfg
 
         // Create player with self as callbacks delegate
         player = TrackPlayer(callbacks: self)
@@ -619,6 +632,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Observe audio-session interruptions so another app taking over audio
         // (or a phone call) reflects as a real pause rather than a stuck state.
         setupInterruptionObserver()
+
+        // Observe media-server resets so a long-running stream recovers instead
+        // of going permanently silent.
+        setupMediaServicesResetObserver()
 
         // Configure media URL resolver
         player?.mediaLoader.mediaUrlResolver = { [weak self] src, track in
@@ -1238,11 +1255,35 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       if let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
          AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable
       {
-        self.player?.pause()
+        self.onMainActor { self.player?.pause() }
       }
       if let output = self.getCurrentOutput() {
         self.onIosOutputChanged(output)
       }
+    }
+  }
+
+  /// Observes audio-server (`mediaserverd`) resets. When it fires, the session
+  /// category is cleared and every AVPlayer/session handle is invalid — a
+  /// long-running stream would otherwise go permanently silent until the app
+  /// restarts.
+  private func setupMediaServicesResetObserver() {
+    if let observer = mediaServicesResetObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    mediaServicesResetObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.mediaServicesWereResetNotification,
+      object: nil,
+      queue: .main,
+    ) { [weak self] _ in
+      guard let self else { return }
+      // Re-apply our category (the reset cleared it), then have the player
+      // recreate itself and reconnect the current stream.
+      if let cfg = self.audioSessionConfig {
+        try? AVAudioSession.sharedInstance().setCategory(
+          cfg.category, mode: cfg.mode, policy: cfg.policy, options: cfg.options)
+      }
+      self.onMainActor { self.player?.handleMediaServicesReset() }
     }
   }
 

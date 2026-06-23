@@ -25,6 +25,7 @@ let package = Package(
         "Player/PlaybackStateMachine.swift",
         "Player/PlayerStatusTypes.swift",
         "Player/EndOfTrackJudgement.swift",
+        "Player/AirPlayStallJudgement.swift",
         "Player/PlaybackEffectHandler.swift",
         "Player/PlaybackCoordinatorCallbacks.swift",
         "Player/PlaybackCoordinator.swift",

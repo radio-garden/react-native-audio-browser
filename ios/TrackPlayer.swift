@@ -489,6 +489,17 @@ class TrackPlayer {
     setupAVPlayer()
   }
 
+  /// Recover from a media-services reset (`mediaserverd` crashed/reset): every
+  /// AVPlayer/session handle is invalid, so recreate the player and reload the
+  /// current track, preserving play intent, so a live stream reconnects instead
+  /// of going permanently silent. No-op when nothing is loaded.
+  func handleMediaServicesReset() {
+    guard currentTrack != nil else { return }
+    logger.info("Media services were reset — recreating player and reloading current track")
+    recreateAVPlayer()
+    reloadResolving(startFromCurrentTime: false)
+  }
+
   private func setupAVPlayer() {
     avPlayer.allowsExternalPlayback = false
 
@@ -584,6 +595,16 @@ class TrackPlayer {
     }
   }
 
+  /// Previous time-control transition + whether its wait reason was
+  /// `.noItemToPlay`, retained to detect the AirPlay waiting→paused stall.
+  private var previousTimeControlStatus: PlayerTimeControlStatus?
+  private var previousWaitingReasonWasNoItemToPlay = false
+
+  /// True when the active audio route is AirPlay.
+  private var isAirPlayRoute: Bool {
+    AVAudioSession.sharedInstance().currentRoute.outputs.contains { $0.portType == .airPlay }
+  }
+
   private func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
     let mapped: PlayerTimeControlStatus
     switch status {
@@ -592,6 +613,24 @@ class TrackPlayer {
     case .playing: mapped = .playing
     @unknown default: return
     }
+
+    // AirPlay can silently strand us in .paused after a .noItemToPlay wait while
+    // we still intend to play — re-issue play() on exactly that transition.
+    let airPlayStall = AirPlayStallJudgement(
+      previous: previousTimeControlStatus,
+      current: mapped,
+      previousWaitingReasonWasNoItemToPlay: previousWaitingReasonWasNoItemToPlay,
+      isAirPlay: isAirPlayRoute,
+      playWhenReady: playWhenReady,
+    )
+    previousTimeControlStatus = mapped
+    previousWaitingReasonWasNoItemToPlay =
+      mapped == .waitingToPlayAtSpecifiedRate && avPlayer.reasonForWaitingToPlay == .noItemToPlay
+    if airPlayStall.shouldNudge {
+      logger.info("AirPlay waiting→paused stall detected — nudging play()")
+      startPlayback()
+    }
+
     coordinator.avPlayerDidChangeTimeControlStatus(mapped)
   }
 
