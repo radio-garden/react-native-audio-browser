@@ -46,7 +46,7 @@ import type {
   RemoteSetRatingEvent,
   RemoteSkipEvent
 } from '../features/remoteControls'
-import type { NativeBrowseGate } from '../features/browseGate'
+import type { NativeGate, NativeGateRequest, GateDecision, GateEvent } from '../features/gate'
 import type { SleepTimer, SleepTimerChangedEvent } from '../features/sleepTimer'
 import type { ResolvedTrack, Track } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
@@ -112,19 +112,22 @@ export interface AudioBrowser extends HybridObject<{
   setFavorites(favorites: string[]): void
   configuration: NativeBrowserConfiguration
 
-  // MARK: browse gate
+  // MARK: gate
   /**
-   * Sets (or replaces, updating the page in place) the browse gate: while
-   * set, external-surface tabs keep their tab-bar entries but their content
-   * — and external-surface search — render this full-page message instead.
-   * Playback, the queue, and now-playing are unaffected.
+   * Records the gate's default chrome (undefined for resolver-only) and whether
+   * a per-request resolver is active. While a gate is set, the four car
+   * enforcement sites consult `resolveGate` per request (skipping the JS hop
+   * when `hasResolver` is false — every request is gated with the default).
    */
-  setBrowseGate(gate: NativeBrowseGate): void
-  /** Clears the browse gate, restoring tab content and keeping selection. */
-  clearBrowseGate(): void
-  getBrowseGate(): NativeBrowseGate | undefined
+  setGate(gate: NativeGate | undefined, hasResolver: boolean): void
+  /** Clears the gate, restoring tab content and keeping selection. */
+  clearGate(): void
+  /** Per-request decision, set by JS; native awaits it at a serve site. */
+  resolveGate: (request: NativeGateRequest) => Promise<GateDecision>
+  /** Fired when a request is gated (the gate was served). */
+  onGate: (event: GateEvent) => void
   /** Fired when the user taps the gate page's button. */
-  onBrowseGateButtonPressed: () => void
+  onGateButtonPressed: () => void
 
   // MARK: car connection
   /**
