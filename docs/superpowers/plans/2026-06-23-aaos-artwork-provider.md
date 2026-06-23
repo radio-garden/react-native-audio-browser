@@ -19,9 +19,9 @@
 - No `runBlocking` on the binder thread: `openFile` returns the pipe FD immediately; resolve/decode/encode happen on a bounded background scope; the write FD is closed in `finally` on every path (success, null bitmap, cancellation, broken pipe).
 - No TS / Nitro-spec changes. No consumer-app code changes beyond the same-process constraint.
 - Do NOT delete `toMedia3WithSvgSupport` / `SvgArtworkRenderer.applyArtwork` / `renderSvgToBytes` until the DHU verification task (Task 9) passes — removing them earlier regresses SVG browse art to blank.
-- **Android unit tests** run via the example app's Gradle against the library module:
-  `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest`
-  (If the wrapper path differs in your checkout, use whatever invocation runs the existing `android/src/test` suite — those tests prove a working command exists. Append `--tests "com.audiobrowser.…ClassName"` to scope to one class.)
+- **Android unit tests** run via the example app's Gradle against the library module (verified working in this checkout — existing suite builds green in ~8s):
+  `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest`
+  Append `--tests "com.audiobrowser.…ClassName"` to scope to one class. `ANDROID_HOME` must be exported (it is unset in a fresh shell). The module Gradle path is `:react-native-audio-browser`.
 - Commit after every task with the shown message.
 
 ## File Structure
@@ -98,7 +98,7 @@ class ArtworkUrisTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkUrisTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkUrisTest"`
 Expected: FAIL — `ArtworkUris` unresolved.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -136,7 +136,7 @@ object ArtworkUris {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkUrisTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkUrisTest"`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -209,7 +209,7 @@ class BrowseArtworkRegistryTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.browser.BrowseArtworkRegistryTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.browser.BrowseArtworkRegistryTest"`
 Expected: FAIL — `BrowseArtworkRegistry` unresolved.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -251,7 +251,7 @@ data class ResolvedArtwork(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.browser.BrowseArtworkRegistryTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.browser.BrowseArtworkRegistryTest"`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -335,7 +335,7 @@ class CoilArtworkLoaderTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderTest"`
 Expected: FAIL — `CoilArtworkLoader` unresolved.
 
 - [ ] **Step 3: Write the implementation**
@@ -411,9 +411,9 @@ Leave `decodeBitmap`, `supportsMimeType`, and the `resolveDisplayArtwork`/`getAr
 
 - [ ] **Step 5: Run tests to verify pass (new + existing CoilBitmapLoader behavior)**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderTest"`
 Expected: PASS. Then run the full util test package to confirm no regression:
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.*"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.*"`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -484,7 +484,7 @@ class CoilArtworkLoaderHolderTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderHolderTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderHolderTest"`
 Expected: FAIL — `CoilArtworkLoaderHolder` unresolved.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -526,7 +526,7 @@ object CoilArtworkLoaderHolder {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderHolderTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.CoilArtworkLoaderHolderTest"`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -633,7 +633,7 @@ class ArtworkContentProviderTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkContentProviderTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkContentProviderTest"`
 Expected: FAIL — `ArtworkContentProvider` unresolved.
 
 - [ ] **Step 3: Write the implementation**
@@ -719,7 +719,7 @@ class ArtworkContentProvider : ContentProvider() {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkContentProviderTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.ArtworkContentProviderTest"`
 Expected: PASS.
 
 - [ ] **Step 5: Add the encoded-bytes LRU (anti-flicker) and a regression test**
@@ -802,7 +802,7 @@ class TrackFactoryBrowseTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.TrackFactoryBrowseTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.TrackFactoryBrowseTest"`
 Expected: FAIL — `toBrowseMediaItem` unresolved.
 
 - [ ] **Step 3: Write the implementation** (add to `TrackFactory`, reusing existing private `metadataBuilder`, `buildMediaItem`, `artworkUri`)
@@ -842,7 +842,7 @@ Add imports: `com.audiobrowser.browser.BrowseArtworkRegistry`, `com.audiobrowser
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.TrackFactoryBrowseTest"`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest --tests "com.audiobrowser.util.TrackFactoryBrowseTest"`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -885,7 +885,7 @@ Switch the three browse callbacks to the new converter. The queue / now-playing 
 
 - [ ] **Step 4: Verify it compiles + existing callback tests pass**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:testDebugUnitTest`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:testDebugUnitTest`
 Expected: PASS (full suite). If a `MediaSessionCallback` test asserted the old `toMedia3WithSvgSupport` artwork shape, update it to expect a `content://` artworkUri for http art.
 
 - [ ] **Step 5: Commit**
@@ -955,7 +955,7 @@ Add a field `private var artworkProviderDeps: ArtworkProviderDeps? = null` and t
 
 - [ ] **Step 5: Build the whole module + run the full unit suite**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:assembleDebug :react-native-audio-browser:testDebugUnitTest`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:assembleDebug :react-native-audio-browser:testDebugUnitTest`
 Expected: BUILD SUCCESSFUL, tests PASS.
 
 - [ ] **Step 6: Commit**
@@ -997,7 +997,7 @@ The provider is now live end-to-end. Verify on a real head unit BEFORE deleting 
 
 - [ ] **Step 6: Build + full unit suite**
 
-Run: `cd example/android && ./gradlew :react-native-audio-browser:assembleDebug :react-native-audio-browser:testDebugUnitTest`
+Run: `cd apps/example-native/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :react-native-audio-browser:assembleDebug :react-native-audio-browser:testDebugUnitTest`
 Expected: BUILD SUCCESSFUL, tests PASS.
 
 - [ ] **Step 7: Commit**
