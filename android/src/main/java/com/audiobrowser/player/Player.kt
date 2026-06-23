@@ -100,6 +100,9 @@ class Player(internal val context: Context) {
    */
   var imageLoader: coil3.ImageLoader? = null
 
+  /** Registry that maps content:// tokens to artwork URLs for the browse content provider. */
+  val browseArtworkRegistry = com.audiobrowser.browser.BrowseArtworkRegistry()
+
   /**
    * Set the CoilBitmapLoader for display-time bitmap loading. Called from Service after creation.
    */

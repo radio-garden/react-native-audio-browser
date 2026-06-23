@@ -35,10 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -408,18 +405,14 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Converts tracks to MediaItems, pre-rendering SVG artwork when an ImageLoader is available. SVG
-   * renders can hit the network, so they run concurrently — a long list of distinct SVG artworks
-   * would otherwise fetch one at a time and stall the browse response.
+   * Converts tracks to MediaItems for browse delivery, routing http(s) artwork through the
+   * content:// provider so Android Auto can load it via the ArtworkContentProvider.
    */
-  private suspend fun toMediaItems(tracks: List<Track>): List<MediaItem> {
-    val imageLoader = player.imageLoader ?: return tracks.map { TrackFactory.toMedia3(it) }
-    val context = player.context
-    return coroutineScope {
-      tracks
-        .map { track -> async { TrackFactory.toMedia3WithSvgSupport(track, context, imageLoader) } }
-        .awaitAll()
-    }
+  private fun toMediaItems(tracks: List<Track>): List<MediaItem> {
+    val registry = player.browseArtworkRegistry
+    val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
+    val sizeHint = player.artworkSizeHintPixels
+    return tracks.map { TrackFactory.toBrowseMediaItem(it, sizeHint, registry, authority) }
   }
 
   override fun onGetItem(
@@ -476,8 +469,12 @@ class MediaSessionCallback(private val player: Player) :
       // Serve tracks from the track cache first (keyed by url and src). Besides avoiding an HTTP
       // resolve, this keeps item identity correct for contextual mediaIds: resolve() strips
       // __trackId and would return the *parent container's* metadata as the item.
+      val browseAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
       browserManager.getCachedTrack(mediaId)?.let { track ->
-        return@future LibraryResult.ofItem(TrackFactory.toMedia3(track), null)
+        return@future LibraryResult.ofItem(
+          TrackFactory.toBrowseMediaItem(track, player.artworkSizeHintPixels, player.browseArtworkRegistry, browseAuthority),
+          null,
+        )
       }
 
       try {
@@ -485,7 +482,10 @@ class MediaSessionCallback(private val player: Player) :
         // Through the one Track conversion, so the resolve path renders identically
         // to the cached-track path above (list line from subtitle, favorited heart)
         // and the item's tag is a Track, as fromMedia3 expects.
-        LibraryResult.ofItem(TrackFactory.toMedia3(resolvedTrack.toTrack()), null)
+        LibraryResult.ofItem(
+          TrackFactory.toBrowseMediaItem(resolvedTrack.toTrack(), player.artworkSizeHintPixels, player.browseArtworkRegistry, browseAuthority),
+          null,
+        )
       } catch (e: Exception) {
         if (e is CancellationException && e !is TimeoutCancellationException) throw e
         Timber.e(e, "Error getting item for mediaId: $mediaId")
@@ -685,10 +685,11 @@ class MediaSessionCallback(private val player: Player) :
         // Get cached search results from BrowserManager
         browserManager.getCachedSearchResults(query)?.let { tracks ->
           // Convert to MediaItems
+          val searchAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
           val mediaItems =
             tracks.map { track ->
               Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")
-              TrackFactory.toMedia3(track)
+              TrackFactory.toBrowseMediaItem(track, player.artworkSizeHintPixels, player.browseArtworkRegistry, searchAuthority)
             }
 
           val paginatedItems = mediaItems.paginate(page, pageSize)
