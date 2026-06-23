@@ -9,7 +9,6 @@
 import type {
   ArtworkRequestConfig,
   BrowserSourceCallback,
-  CarPlayNowPlayingButton,
   ResolveAlbumUrlCallback,
   FormatNavigationErrorCallback,
   HandleTrackLoadCallback,
@@ -76,8 +75,6 @@ export interface NativeBrowserConfiguration {
   androidControllerOfflineError?: boolean
 
   // CarPlay options
-  carPlayUpNextButton?: boolean
-  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
   carPlayLoadingTitle?: string
   resolveAlbumUrl?: ResolveAlbumUrlCallback
   formatNavigationError?: FormatNavigationErrorCallback

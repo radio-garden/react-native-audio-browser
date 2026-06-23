@@ -73,8 +73,7 @@ describe('validateBrowserConfiguration', () => {
       tabs: [
         { title: 'Home', url: '/' },
         { title: 'Search', url: '/search' }
-      ],
-      carPlayNowPlayingButtons: ['shuffle', 'repeat']
+      ]
     })
     expect(warnings).toEqual([])
   })
@@ -109,17 +108,4 @@ describe('validateBrowserConfiguration', () => {
     expect(warnings.some((w) => w.includes('at most 4'))).toBe(true)
   })
 
-  it('warns on more than 5 CarPlay now-playing buttons', () => {
-    validateBrowserConfiguration({
-      carPlayNowPlayingButtons: [
-        'shuffle',
-        'repeat',
-        'favorite',
-        'playback-rate',
-        'shuffle',
-        'repeat'
-      ]
-    })
-    expect(warnings.some((w) => w.includes('at most 5'))).toBe(true)
-  })
 })

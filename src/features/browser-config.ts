@@ -219,9 +219,6 @@ function flattenRoutes(
 /** Android Auto / CarPlay display at most this many tabs. */
 const MAX_TABS = 4
 
-/** CarPlay supports at most this many now-playing buttons. */
-const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
-
 /**
  * Dev-only sanity checks for a BrowserConfiguration. Warns (never throws) on
  * mistakes the type system cannot catch: reserved route keys, route values
@@ -269,14 +266,6 @@ export function validateBrowserConfiguration(
         `display at most ${MAX_TABS} — extra tabs will not be shown.`
     )
   }
-
-  const buttons = config.carPlayNowPlayingButtons
-  if (buttons && buttons.length > MAX_CARPLAY_NOW_PLAYING_BUTTONS) {
-    warn(
-      `${buttons.length} CarPlay now-playing buttons configured; CarPlay ` +
-        `shows at most ${MAX_CARPLAY_NOW_PLAYING_BUTTONS}.`
-    )
-  }
 }
 
 export function toNativeConfig(
@@ -297,8 +286,6 @@ export function toNativeConfig(
     singleTrack: config.singleTrack,
     handleTrackLoad: config.handleTrackLoad,
     androidControllerOfflineError: config.androidControllerOfflineError,
-    carPlayUpNextButton: config.carPlayUpNextButton,
-    carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
     carPlayLoadingTitle: config.carPlayLoadingTitle,
     resolveAlbumUrl: config.resolveAlbumUrl,
     formatNavigationError: config.formatNavigationError

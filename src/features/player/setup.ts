@@ -7,9 +7,11 @@ import type { NowPlayingUpdate, TimedMetadata } from '../metadata'
 import type { RepeatMode } from '../queue/repeatMode'
 import type {
   AndroidUpdateOptions,
+  IOSUpdateOptions,
   NativeUpdateOptions,
   UpdateOptions
 } from './options'
+import { validateIOSUpdateOptions } from './options'
 
 /**
  * Parameters passed to the {@link FormatNowPlayingCallback}.
@@ -529,14 +531,7 @@ export type AndroidSetupOptions = NativeAndroidSetupOptions &
   AndroidUpdateOptions
 
 /** iOS setup options: the audio-session fields plus the iOS runtime options. */
-export type IOSSetupOptions = NativeIOSSetupOptions & {
-  /**
-   * Supported playback rates for the playback-rate capability.
-   * Used by CarPlay and lock screen rate controls.
-   * @default [0.5, 1.0, 1.5, 2.0]
-   */
-  playbackRates?: number[]
-}
+export type IOSSetupOptions = NativeIOSSetupOptions & IOSUpdateOptions
 
 /**
  * Public setup options: the full launch description of a player in one bag — engine
@@ -693,14 +688,24 @@ export async function setupPlayer(
     notificationButtons,
     ...androidSetup
   } = android
-  const { playbackRates, ...iosSetup } = ios
+  const {
+    playbackRates,
+    carPlayUpNextButton,
+    carPlayNowPlayingButtons,
+    ...iosSetup
+  } = ios
+  const iosUpdate = definedFields({
+    playbackRates,
+    carPlayUpNextButton,
+    carPlayNowPlayingButtons
+  })
+  validateIOSUpdateOptions(iosUpdate)
 
   const updates: NativeUpdateOptions = definedFields({
     capabilities,
     forwardJumpInterval,
     backwardJumpInterval,
     progressUpdateEventInterval,
-    iosPlaybackRates: playbackRates,
     ...nonEmpty(
       'android',
       definedFields({
@@ -709,7 +714,8 @@ export async function setupPlayer(
         ratingType,
         notificationButtons
       })
-    )
+    ),
+    ...nonEmpty('ios', iosUpdate)
   })
 
   return nativeBrowser.setupPlayer({

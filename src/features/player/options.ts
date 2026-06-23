@@ -1,4 +1,5 @@
 import type { FavoriteConfig } from '../../types'
+import type { CarPlayNowPlayingButton } from '../../types/browser'
 import type { RatingType } from '../metadata'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
@@ -227,11 +228,33 @@ export interface Options {
    */
   capabilities: PlayerCapabilities
 
+  /** iOS-specific player options with resolved defaults (only present on iOS). */
+  ios?: IOSOptions
+}
+
+/**
+ * iOS-specific player options with resolved defaults (from {@link getOptions}).
+ * Only present on iOS.
+ */
+export interface IOSOptions {
   /**
-   * Supported playback rates for the playback-rate capability (only present on iOS).
+   * Supported playback rates for the playback-rate capability.
+   * Used by CarPlay and lock screen rate controls.
    * @default [0.5, 1.0, 1.5, 2.0]
    */
-  iosPlaybackRates?: number[]
+  playbackRates: number[]
+
+  /**
+   * Whether the "Up Next" button is enabled on the CarPlay Now Playing screen.
+   * @default true
+   */
+  carPlayUpNextButton: boolean
+
+  /**
+   * Buttons shown on the CarPlay Now Playing screen (left-to-right, up to 5).
+   * @default []
+   */
+  carPlayNowPlayingButtons: CarPlayNowPlayingButton[]
 }
 
 export interface AndroidOptions {
@@ -308,6 +331,44 @@ export interface NitroAndroidUpdateOptions {
 }
 
 /**
+ * iOS-specific player options that can be changed at runtime via {@link updateOptions}.
+ * @platform ios
+ */
+export interface IOSUpdateOptions {
+  /**
+   * Supported playback rates for the playback-rate capability.
+   * Used by CarPlay and lock screen rate controls.
+   * @default [0.5, 1.0, 1.5, 2.0]
+   */
+  playbackRates?: number[]
+
+  /**
+   * Enable the "Up Next" button on the CarPlay Now Playing screen. The button is
+   * automatically hidden when the queue has only one track.
+   * @default true
+   */
+  carPlayUpNextButton?: boolean
+
+  /**
+   * Configure up to 5 buttons on the CarPlay Now Playing screen, arranged in
+   * array order (left to right).
+   *
+   * @example
+   * ```typescript
+   * updateOptions({ ios: { carPlayNowPlayingButtons: ['repeat'] } })
+   * ```
+   * @default []
+   */
+  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+}
+
+export interface NitroIOSUpdateOptions {
+  playbackRates?: number[]
+  carPlayUpNextButton?: boolean
+  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+}
+
+/**
  * Partial options for updating player configuration.
  * Only specify the properties you want to change - all properties are optional.
  * Use null to reset properties to their defaults.
@@ -333,6 +394,9 @@ export interface NitroAndroidUpdateOptions {
 export interface UpdateOptions {
   /** Android-specific configuration options */
   android?: AndroidUpdateOptions
+
+  /** iOS-specific configuration options */
+  ios?: IOSUpdateOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
@@ -369,19 +433,14 @@ export interface UpdateOptions {
    * ```
    */
   capabilities?: PlayerCapabilities
-
-  /**
-   * Supported playback rates for the playback-rate capability.
-   * Used by CarPlay and lock screen rate controls.
-   * @platform ios
-   * @default [0.5, 1.0, 1.5, 2.0]
-   */
-  iosPlaybackRates?: number[]
 }
 
 export interface NativeUpdateOptions {
   /** Android-specific configuration options */
   android?: NitroAndroidUpdateOptions
+
+  /** iOS-specific configuration options */
+  ios?: NitroIOSUpdateOptions
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
@@ -403,15 +462,25 @@ export interface NativeUpdateOptions {
   progressUpdateEventInterval?: number | null
 
   capabilities?: PlayerCapabilities
-
-  /**
-   * Supported playback rates for the playback-rate capability.
-   * @platform ios
-   */
-  iosPlaybackRates?: number[]
 }
 
 // MARK: - Functions
+
+const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
+
+/**
+ * Warns when more CarPlay now-playing buttons are configured than CarPlay renders.
+ * Shared by {@link updateOptions} and `setupPlayer` (both can carry `ios` options).
+ */
+export function validateIOSUpdateOptions(ios?: IOSUpdateOptions): void {
+  const buttons = ios?.carPlayNowPlayingButtons
+  if (buttons && buttons.length > MAX_CARPLAY_NOW_PLAYING_BUTTONS) {
+    console.warn(
+      `[react-native-audio-browser] ${buttons.length} CarPlay now-playing ` +
+        `buttons configured; CarPlay shows at most ${MAX_CARPLAY_NOW_PLAYING_BUTTONS}.`
+    )
+  }
+}
 
 /**
  * Updates the configuration for the components.
@@ -429,6 +498,7 @@ export interface NativeUpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
+  validateIOSUpdateOptions(options.ios)
   nativeBrowser.updateOptions(options)
 }
 

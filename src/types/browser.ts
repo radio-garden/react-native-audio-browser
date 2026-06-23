@@ -964,35 +964,6 @@ export type BrowserConfiguration = {
    */
   androidControllerOfflineError?: boolean
 
-  // ─── CarPlay Options ──────────────────────────────────────────────────────────
-
-  /**
-   * Enable the "Up Next" button on the CarPlay Now Playing screen.
-   *
-   * When enabled, tapping "Up Next" shows the current playback queue,
-   * allowing users to see upcoming tracks and jump to a specific position.
-   *
-   * The button is automatically hidden when the queue has only one track.
-   *
-   * @default true
-   * @platform ios
-   */
-  carPlayUpNextButton?: boolean
-
-  /**
-   * Configure up to 5 buttons on the CarPlay Now Playing screen. These buttons
-   * are arranged using the array order from left to right.
-   *
-   * @example
-   * ```typescript
-   * carPlayNowPlayingButtons: ['repeat']
-   * ```
-   *
-   * @default []
-   * @platform ios
-   */
-  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
-
   /**
    * Title shown (as the list's centered empty state) on CarPlay screens whose
    * content is still loading — browse destinations while they resolve, and the

@@ -73,7 +73,7 @@ describe('setupPlayer wire regrouping', () => {
 
     const sent = payload()
     expect(sent.ios).toEqual({ category: 'playback' })
-    expect(sent.options).toEqual({ iosPlaybackRates: [0.5, 1, 2] })
+    expect(sent.options).toEqual({ ios: { playbackRates: [0.5, 1, 2] } })
   })
 
   it('omits a platform bag that only carried runtime fields', async () => {
@@ -104,8 +104,7 @@ describe('setupPlayer wire regrouping', () => {
     expect(
       sent.nowPlayingMetadataFormatter!({
         track: { title: 'Station' },
-        playWhenReady: true,
-        stalled: false
+        playWhenReady: true
       })
     ).toEqual({})
   })
