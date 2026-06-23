@@ -806,6 +806,9 @@ export type BrowserConfiguration = {
    * Configuration for search functionality.
    * Enables search capabilities in the media browser, typically accessed through voice commands or search UI.
    *
+   * See the [Search guide](https://audiobrowser.dev/guide/search) for a walkthrough of
+   * modes, filters, the `reference` axis, and mixed audio/video.
+   *
    * Optional - if not provided, search functionality will be disabled.
    * Required for Android Auto/CarPlay voice search integration with support for structured voice commands.
    *
