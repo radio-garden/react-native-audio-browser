@@ -23,13 +23,19 @@ import coil3.disk.directory
 import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.ArtworkProviderDeps
 import com.audiobrowser.util.BatteryWarningStore
+import com.audiobrowser.util.CoilArtworkLoader
+import com.audiobrowser.util.CoilArtworkLoaderHolder
 import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.SearchMode
 import com.margelo.nitro.audiobrowser.SearchParams
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -52,6 +58,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
 
   // Callback for battery warning events to notify JS layer
   var onBatteryWarningPendingChanged: ((Boolean) -> Unit)? = null
+
+  private var artworkProviderDeps: ArtworkProviderDeps? = null
 
   // Headless service binding
   private var headlessBound = false
@@ -112,6 +120,18 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Store references in Player for artwork URL transformation and SVG pre-rendering
     player.coilBitmapLoader = coilBitmapLoader
     player.imageLoader = imageLoader
+
+    // Populate the artwork content provider holder so ArtworkContentProvider can serve
+    // browse artwork to Android Auto / AAOS over content:// URIs.
+    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    artworkProviderDeps =
+      ArtworkProviderDeps(
+        loader = CoilArtworkLoader(this, imageLoader),
+        registry = player.browseArtworkRegistry,
+        scope = artworkScope,
+        artworkSizeHint = { player.artworkSizeHintPixels },
+      )
+    CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
@@ -323,6 +343,14 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       unbindService(headlessConnection)
       headlessBound = false
     }
+
+    // Tear down artwork provider deps before player is destroyed so no in-flight
+    // coroutine can deref a torn-down player.
+    artworkProviderDeps?.let {
+      it.scope.cancel()
+      CoilArtworkLoaderHolder.clearIf(it)
+    }
+    artworkProviderDeps = null
 
     Timber.d("Releasing media session and destroying player")
     if (::mediaSession.isInitialized) {

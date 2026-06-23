@@ -48,6 +48,7 @@ class BrowserManager {
   private var onPathChanged: ((String) -> Unit)? = null
   private var onContentChanged: ((ResolvedTrack?) -> Unit)? = null
   private var onTabsChanged: ((Array<Track>) -> Unit)? = null
+  private var onArtworkRegistriesCleared: (() -> Unit)? = null
 
   private var path: String = "/"
     set(value) {
@@ -116,6 +117,7 @@ class BrowserManager {
       // Registered artwork resolutions pin configs (and their JS callback handles)
       // from the previous configuration — never resolve through them again.
       artworkResolutions.clear()
+      onArtworkRegistriesCleared?.invoke()
     }
 
   // Resolver-layer caching. The request/browse layers may be resolver thunks
@@ -457,6 +459,7 @@ class BrowserManager {
     // Invalidated content's artwork resolutions go with it (same staleness rule as the
     // config setter).
     artworkResolutions.clear()
+    onArtworkRegistriesCleared?.invoke()
     Timber.d("Cleared all content cache")
   }
 
@@ -930,6 +933,15 @@ class BrowserManager {
   /** Set callback for tabs changes. */
   fun setOnTabsChanged(callback: (Array<Track>) -> Unit) {
     onTabsChanged = callback
+  }
+
+  /**
+   * Set callback invoked whenever both [artworkResolutions] and the browse-artwork registry are
+   * cleared (config swap or content invalidation). The caller should clear any parallel
+   * [com.audiobrowser.browser.BrowseArtworkRegistry] instance it owns.
+   */
+  fun setOnArtworkRegistriesCleared(callback: () -> Unit) {
+    onArtworkRegistriesCleared = callback
   }
 
   /**

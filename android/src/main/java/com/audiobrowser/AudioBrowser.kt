@@ -138,6 +138,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       setOnPathChanged { path -> onPathChanged(path) }
       setOnContentChanged { content -> onContentChanged(content) }
       setOnTabsChanged { tabs -> onTabsChanged(tabs) }
+      setOnArtworkRegistriesCleared { connectedService?.player?.browseArtworkRegistry?.clear() }
     }
 
   private val systemVolumeMonitor = SystemVolumeMonitor(context)
