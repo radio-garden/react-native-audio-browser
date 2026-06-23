@@ -1228,9 +1228,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       forName: AVAudioSession.routeChangeNotification,
       object: nil,
       queue: .main,
-    ) { [weak self] _ in
-      guard let self, let output = self.getCurrentOutput() else { return }
-      self.onIosOutputChanged(output)
+    ) { [weak self] notification in
+      guard let self else { return }
+      // The previous output disappeared (headphones unplugged, a Bluetooth
+      // speaker powered off). Pause rather than abruptly resume out of the
+      // built-in speaker — the platform convention every media app follows.
+      // A deliberate pause (clears play intent), not an interruption: the user
+      // restarts playback themselves once they want it.
+      if let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+         AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable
+      {
+        self.player?.pause()
+      }
+      if let output = self.getCurrentOutput() {
+        self.onIosOutputChanged(output)
+      }
     }
   }
 
