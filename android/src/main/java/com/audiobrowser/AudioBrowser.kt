@@ -165,10 +165,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onFormattedNavigationError: (FormattedNavigationError?) -> Unit = {}
 
   // MARK: Gate callbacks (native→JS; set from JS, native CALLS them)
-  // Default resolver allows everything until JS installs one; the static-gate
-  // fast path skips it anyway (see [gateDecision]).
+  // Default resolver: only reachable in the init window where the native side has recorded
+  // hasResolver=true but JS hasn't yet assigned the real `resolveGate` slot. It DENIES by default
+  // (gated=true) so an active gate never serves content during that window — same fail-closed
+  // direction as the resolver-error path in [gateDecision]. The static-gate fast path skips it
+  // entirely once a resolver-less gate is set.
   override var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>> = {
-    Promise.resolved(Promise.resolved(GateDecision(gated = false, gate = null)))
+    Promise.resolved(Promise.resolved(GateDecision(gated = true, gate = null)))
   }
   override var onGate: (event: GateEvent) -> Unit = {}
 
@@ -710,17 +713,24 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // generated NativeGate constructor arg order (title, message, buttonTitle).
   private val builtInGate = NativeGate("Unavailable", null, null)
 
-  // Gate state. Written from the JS thread, read from the Media3 application
-  // thread (the enforcement sites in MediaSessionCallback consult it) — hence
-  // @Volatile.
-  @Volatile private var defaultChrome: NativeGate? = null
-  @Volatile private var hasResolver: Boolean = false
-  @Volatile private var isGateActive: Boolean = false
+  /**
+   * The three gate fields as one immutable triple so [gateDecision] reads them as a unit. Written
+   * from the JS thread, read from the Media3 application thread (the enforcement sites in
+   * MediaSessionCallback consult it) — hence the single field is @Volatile.
+   *
+   * Folding the three former @Volatile fields into one reference is what makes the read atomic:
+   * @Volatile gives per-field visibility but NO atomicity across a compound read, so reading three
+   * separate volatiles in [gateDecision] could interleave with a concurrent [clearGate] and yield a
+   * torn `(active=true, chrome=null)` state that crashed the force-unwrap at the serve sites. One
+   * volatile reference read once cannot tear.
+   */
+  private data class GateState(val active: Boolean, val chrome: NativeGate?, val hasResolver: Boolean)
+
+  @Volatile private var gateState = GateState(active = false, chrome = null, hasResolver = false)
 
   override fun setGate(gate: NativeGate?, hasResolver: Boolean) {
-    defaultChrome = gate
-    this.hasResolver = hasResolver
-    isGateActive = true
+    // Single atomic assignment — readers never see a half-updated triple.
+    gateState = GateState(active = true, chrome = gate, hasResolver = hasResolver)
     // Re-query every subscribed parent so a connected controller (Android
     // Auto) swaps its lists for the gate tile without reconnecting. Notify
     // only — the content cache stays warm for when the gate clears.
@@ -728,10 +738,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   override fun clearGate() {
-    if (!isGateActive) return
-    isGateActive = false
-    defaultChrome = null
-    hasResolver = false
+    if (!gateState.active) return
+    // Single atomic assignment — readers never see a half-cleared triple.
+    gateState = GateState(active = false, chrome = null, hasResolver = false)
     connectedService?.player?.invalidateAllContent()
   }
 
@@ -739,21 +748,33 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   /**
    * The single gate choke point. Each enforcement site (browse / search) calls this for the current
-   * request and serves the gate chrome when [GateOutcome.gated] is true. Mirrors the iOS
-   * `gateDecision(for:)` helper.
+   * request and serves the gate chrome when [GateOutcome.gated] is true. Structurally similar to the
+   * iOS `gateDecision(for:)` helper, but note the concurrency model differs: iOS confines gate state
+   * to `@MainActor`; here the consistent read comes from snapshotting the single [gateState]
+   * reference once (see [GateState]).
    *
    * - No active gate → allow.
-   * - Active gate, no resolver → static fast path: gate with the stored default chrome, no JS hop.
-   * - Active gate with a resolver → ask JS per request; a rejected/failed resolver never breaks the
-   *   serve path (falls through to allow). Chrome order on a gated decision: override → stored
-   *   default → built-in.
+   * - Active gate, no resolver → static fast path: gate with the stored default chrome (or built-in
+   *   if none), no JS hop.
+   * - Active gate with a resolver → ask JS per request. A resolver that throws / rejects / times out
+   *   FAILS CLOSED by design: while a gate is active the consumer has declared content blocked, so
+   *   the only safe fallback when we cannot compute the per-request decision is the gate's own
+   *   chrome — never the content. A *successful* `gated:false` still allows. Chrome order on a gated
+   *   decision: override → stored default → built-in.
+   *
+   * Every gated return guards chrome against null (`?: builtInGate`) so a gated outcome always
+   * carries a renderable chrome — the serve sites force-unwrap it.
    */
   suspend fun gateDecision(request: NativeGateRequest): GateOutcome {
-    if (!isGateActive) return GateOutcome(false, null)
-    if (!hasResolver) return GateOutcome(true, defaultChrome)
-    val decision = runCatching { resolveGate(request).await().await() }.getOrNull()
-    if (decision == null || !decision.gated) return GateOutcome(false, null)
-    return GateOutcome(true, decision.gate ?: defaultChrome ?: builtInGate)
+    // Read the whole gate triple once; a single volatile reference can't tear (see [GateState]).
+    val s = gateState
+    if (!s.active) return GateOutcome(false, null)
+    if (!s.hasResolver) return GateOutcome(true, s.chrome ?: builtInGate) // static fast path
+    val decision =
+      runCatching { resolveGate(request).await().await() }.getOrNull()
+        ?: return GateOutcome(true, s.chrome ?: builtInGate) // fail CLOSED on resolver error
+    if (!decision.gated) return GateOutcome(false, null) // explicit allow
+    return GateOutcome(true, decision.gate ?: s.chrome ?: builtInGate)
   }
 
   // MARK: Car connection (Android Auto / Android Automotive)

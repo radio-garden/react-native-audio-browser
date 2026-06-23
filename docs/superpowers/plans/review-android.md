@@ -148,3 +148,28 @@ This default returns *not gated*. It's only reachable when `hasResolver == true`
 
 ## Most important finding
 **C2** — the `@Volatile` compound read lets a concurrent `clearGate()` produce `GateOutcome(gated = true, chrome = null)` on the static fast path (`AudioBrowser.kt:753`), which crashes at `createGateMediaItem(outcome.chrome!!)` (`MediaSessionCallback.kt:304/458/679`). It is both a crash and a refutation of the implementer's stated "chrome is non-null whenever gated" invariant. Fix: make the static path `defaultChrome ?: builtInGate` **and** snapshot the three gate fields atomically (fold into one `@Volatile` reference). C1 (fail-open leak) is the most important *design* question and must be resolved jointly with iOS.
+
+---
+
+## Android fix wave
+
+Applied on `feature-fry-gate` (Android only — `ios/` and `src/` owned by a parallel agent and untouched).
+
+**C2 — atomic gate-state snapshot + guarded static path (FIXED).** Folded the three `@Volatile` fields (`defaultChrome` / `hasResolver` / `isGateActive`) into one `@Volatile private var gateState: GateState` (`data class GateState(active, chrome, hasResolver)`). `setGate` / `clearGate` now each do a single atomic assignment, so a reader can never see a torn triple. `gateDecision` snapshots `val s = gateState` once and reads only `s`. Every gated return guards chrome with `?: builtInGate` (`s.chrome ?: builtInGate`), removing the one path (the old static fast path returning raw `defaultChrome`) that could yield `gated=true, chrome=null`. The force-unwraps at the serve sites (`MediaSessionCallback.kt`, `Player.kt`) are now safe under the restored invariant and were left as-is.
+
+**C1 — fail CLOSED on resolver error (FIXED).** In `gateDecision`, a resolver that throws / rejects / times out (`runCatching{…}.getOrNull()` → null) now returns `GateOutcome(true, s.chrome ?: builtInGate)` instead of falling through to allow. A *successful* `gated:false` still allows. Added a comment that resolver errors fail closed by design while a gate is active. This removes the paywall-bypass on the resolver error path (browse, search, and `playFromSearch` voice-play all flow through this one helper, so M2 is covered too).
+
+**I4 — init-window default resolver flipped to deny (FIXED, low-risk).** The default `resolveGate` (reachable only in the JS-reload init window where `hasResolver=true` but the real slot isn't assigned yet) now returns `GateDecision(gated = true, …)` instead of `gated = false`, matching C1's fail-closed direction. One-line change, same leak direction as C1, clearly correct.
+
+**M4 — parity comment corrected (FIXED, incidental).** The `gateDecision` doc comment no longer claims it "mirrors" iOS; it now states the concurrency models differ (iOS `@MainActor`; Android relies on the single-reference snapshot).
+
+### Deferred
+
+- **I1 (no dispatcher confinement)** — root-caused C2; the single-volatile-reference snapshot is the lighter fix the review itself recommended (option 2), so the substantive concern is resolved. No `withContext(Dispatchers.Main)` added — would be redundant and heavier.
+- **I2 (invalidateAllContent × onGate fan-out)** — review says "no code change required if the volume is accepted"; it's a documentation / capacity-planning note, not a defect. Deferred to the design owner.
+- **I3 (onGate on GATE_PATH re-drill in `onGetChildren`)** — the review presents two valid options (suppress vs. document) and flags it as a consistency judgment call that should be decided with the design/iOS owner. Suppressing would be a behavior change, not a clearly-correct low-risk fix, so deferred rather than over-reaching.
+- **M1, M3 (search-surface structured-field loss; `GATE_PATH` item lookup always uses `BROWSE` reason)** — flag-only items the review itself marks "acceptable / document"; no code change warranted. Deferred.
+
+### Compile result
+
+`:react-native-audio-browser:compileDebugKotlin` → **BUILD SUCCESSFUL** (ran from `apps/example-native/android` with `ANDROID_HOME` set).
