@@ -360,8 +360,13 @@ class TrackPlayer {
           coordinator.state == .buffering,
           !retryManager.isWaitingForNetwork
     else { return }
-    logger.info("Connectivity restored while stalled — reloading to reconnect")
-    reload(startFromCurrentTime: true)
+    logger.info("Connectivity restored while stalled — re-resolving to reconnect")
+    // Re-resolve rather than replay the cached URL: a resolver that mints a short-lived URL/token
+    // may have had it expire during the offline gap, so reconnecting with the stale URL would just
+    // fail (then recover only via the error path). Matches the error-retry path here, and Android,
+    // which re-resolves on its network-error reconnect. `reloadResolving` falls back to a plain
+    // reload when there's no track `src` to resolve.
+    reloadResolving(startFromCurrentTime: true)
   }
 
   /// Jump to the live edge. No-op for non-live tracks. Live with a seekable
