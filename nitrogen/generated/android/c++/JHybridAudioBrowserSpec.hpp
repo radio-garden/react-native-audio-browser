@@ -66,8 +66,12 @@ namespace margelo::nitro::audiobrowser {
     void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) override;
     NativeBrowserConfiguration getConfiguration() override;
     void setConfiguration(const NativeBrowserConfiguration& configuration) override;
-    std::function<void()> getOnBrowseGateButtonPressed() override;
-    void setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) override;
+    std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> getResolveGate() override;
+    void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) override;
+    std::function<void(const GateEvent& /* event */)> getOnGate() override;
+    void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) override;
+    std::function<void()> getOnGateButtonPressed() override;
+    void setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) override;
     std::function<void(bool /* connected */)> getOnCarConnectedChanged() override;
     void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) override;
     std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() override;
@@ -188,9 +192,8 @@ namespace margelo::nitro::audiobrowser {
     void notifyContentChanged(const std::string& path) override;
     void invalidateAllContent() override;
     void setFavorites(const std::vector<std::string>& favorites) override;
-    void setBrowseGate(const NativeBrowseGate& gate) override;
-    void clearBrowseGate() override;
-    std::optional<NativeBrowseGate> getBrowseGate() override;
+    void setGate(const std::optional<NativeGate>& gate, bool hasResolver) override;
+    void clearGate() override;
     bool isCarConnected() override;
     std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) override;
     void updateOptions(const NativeUpdateOptions& options) override;

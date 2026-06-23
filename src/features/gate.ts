@@ -4,6 +4,9 @@ import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 
 // MARK: - Wire types (cross the Nitro bridge; native↔JS)
 
+/** Discriminant for gate requests and events. */
+export type GateReason = 'browse' | 'search'
+
 /**
  * The wire shape of the gate chrome — what crosses the bridge.
  * The button callback stays in JS (see {@link Gate}).
@@ -37,7 +40,7 @@ export type NativeGate = {
  * Use {@link GateRequest} in consumer-facing code; `gate.ts` converts between them.
  */
 export type NativeGateRequest = {
-  reason: 'browse' | 'search'
+  reason: GateReason
   path?: string
   search?: SearchParams
 }
@@ -46,7 +49,7 @@ export type NativeGateRequest = {
 export type GateDecision = { gated: boolean; gate?: NativeGate }
 
 /** Fired when a request is gated (the gate was served). */
-export type GateEvent = { reason: 'browse' | 'search' }
+export type GateEvent = { reason: GateReason }
 
 // MARK: - Public types (consumer-facing)
 

@@ -299,17 +299,76 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onBrowseGateButtonPressed: bridge.Func_void {
+  public final var resolveGate: bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest in
+        let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(self.__implementation.resolveGate)
+        return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.resolveGate = { () -> (NativeGateRequest) -> Promise<Promise<GateDecision>> in
+        let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(newValue)
+        return { (__request: NativeGateRequest) -> Promise<Promise<GateDecision>> in
+          let __result = __wrappedFunction.call(__request)
+          return { () -> Promise<Promise<GateDecision>> in
+            let __promise = Promise<Promise<GateDecision>>()
+            let __resolver = { (__result: Promise<GateDecision>) in
+              __promise.resolve(withResult: __result)
+            }
+            let __rejecter = { (__error: Error) in
+              __promise.reject(withError: __error)
+            }
+            let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_GateDecision__ in
+              let __closureWrapper = Func_void_std__shared_ptr_Promise_GateDecision__(__resolver)
+              return bridge.create_Func_void_std__shared_ptr_Promise_GateDecision__(__closureWrapper.toUnsafe())
+            }()
+            let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+              let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+              return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+            }()
+            let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision____(__result)
+            __promiseHolder.addOnResolvedListener(__resolverCpp)
+            __promiseHolder.addOnRejectedListener(__rejecterCpp)
+            return __promise
+          }()
+        }
+      }()
+    }
+  }
+  
+  public final var onGate: bridge.Func_void_GateEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_GateEvent in
+        let __closureWrapper = Func_void_GateEvent(self.__implementation.onGate)
+        return bridge.create_Func_void_GateEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onGate = { () -> (GateEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_GateEvent(newValue)
+        return { (__event: GateEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
+  
+  public final var onGateButtonPressed: bridge.Func_void {
     @inline(__always)
     get {
       return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onBrowseGateButtonPressed)
+        let __closureWrapper = Func_void(self.__implementation.onGateButtonPressed)
         return bridge.create_Func_void(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onBrowseGateButtonPressed = { () -> () -> Void in
+      self.__implementation.onGateButtonPressed = { () -> () -> Void in
         let __wrappedFunction = bridge.wrap_Func_void(newValue)
         return { () -> Void in
           __wrappedFunction.call()
@@ -1689,9 +1748,9 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setBrowseGate(gate: NativeBrowseGate) -> bridge.Result_void_ {
+  public final func setGate(gate: bridge.std__optional_NativeGate_, hasResolver: Bool) -> bridge.Result_void_ {
     do {
-      try self.__implementation.setBrowseGate(gate: gate)
+      try self.__implementation.setGate(gate: gate.value, hasResolver: hasResolver)
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
@@ -1700,31 +1759,13 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func clearBrowseGate() -> bridge.Result_void_ {
+  public final func clearGate() -> bridge.Result_void_ {
     do {
-      try self.__implementation.clearBrowseGate()
+      try self.__implementation.clearGate()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_void_(__exceptionPtr)
-    }
-  }
-  
-  @inline(__always)
-  public final func getBrowseGate() -> bridge.Result_std__optional_NativeBrowseGate__ {
-    do {
-      let __result = try self.__implementation.getBrowseGate()
-      let __resultCpp = { () -> bridge.std__optional_NativeBrowseGate_ in
-        if let __unwrappedValue = __result {
-          return bridge.create_std__optional_NativeBrowseGate_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-      return bridge.create_Result_std__optional_NativeBrowseGate__(__resultCpp)
-    } catch (let __error) {
-      let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_NativeBrowseGate__(__exceptionPtr)
     }
   }
   

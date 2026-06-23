@@ -30,8 +30,12 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onFormattedNavigationError", &HybridAudioBrowserSpec::setOnFormattedNavigationError);
       prototype.registerHybridGetter("configuration", &HybridAudioBrowserSpec::getConfiguration);
       prototype.registerHybridSetter("configuration", &HybridAudioBrowserSpec::setConfiguration);
-      prototype.registerHybridGetter("onBrowseGateButtonPressed", &HybridAudioBrowserSpec::getOnBrowseGateButtonPressed);
-      prototype.registerHybridSetter("onBrowseGateButtonPressed", &HybridAudioBrowserSpec::setOnBrowseGateButtonPressed);
+      prototype.registerHybridGetter("resolveGate", &HybridAudioBrowserSpec::getResolveGate);
+      prototype.registerHybridSetter("resolveGate", &HybridAudioBrowserSpec::setResolveGate);
+      prototype.registerHybridGetter("onGate", &HybridAudioBrowserSpec::getOnGate);
+      prototype.registerHybridSetter("onGate", &HybridAudioBrowserSpec::setOnGate);
+      prototype.registerHybridGetter("onGateButtonPressed", &HybridAudioBrowserSpec::getOnGateButtonPressed);
+      prototype.registerHybridSetter("onGateButtonPressed", &HybridAudioBrowserSpec::setOnGateButtonPressed);
       prototype.registerHybridGetter("onCarConnectedChanged", &HybridAudioBrowserSpec::getOnCarConnectedChanged);
       prototype.registerHybridSetter("onCarConnectedChanged", &HybridAudioBrowserSpec::setOnCarConnectedChanged);
       prototype.registerHybridGetter("onChapterMetadata", &HybridAudioBrowserSpec::getOnChapterMetadata);
@@ -149,9 +153,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("notifyContentChanged", &HybridAudioBrowserSpec::notifyContentChanged);
       prototype.registerHybridMethod("invalidateAllContent", &HybridAudioBrowserSpec::invalidateAllContent);
       prototype.registerHybridMethod("setFavorites", &HybridAudioBrowserSpec::setFavorites);
-      prototype.registerHybridMethod("setBrowseGate", &HybridAudioBrowserSpec::setBrowseGate);
-      prototype.registerHybridMethod("clearBrowseGate", &HybridAudioBrowserSpec::clearBrowseGate);
-      prototype.registerHybridMethod("getBrowseGate", &HybridAudioBrowserSpec::getBrowseGate);
+      prototype.registerHybridMethod("setGate", &HybridAudioBrowserSpec::setGate);
+      prototype.registerHybridMethod("clearGate", &HybridAudioBrowserSpec::clearGate);
       prototype.registerHybridMethod("isCarConnected", &HybridAudioBrowserSpec::isCarConnected);
       prototype.registerHybridMethod("setupPlayer", &HybridAudioBrowserSpec::setupPlayer);
       prototype.registerHybridMethod("updateOptions", &HybridAudioBrowserSpec::updateOptions);

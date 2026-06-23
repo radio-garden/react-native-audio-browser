@@ -24,7 +24,10 @@ import type {
   SleepTimer,
   SleepTimerChangedEvent,
   FavoriteChangedEvent,
-  NativeBrowseGate,
+  NativeGate,
+  NativeGateRequest,
+  GateDecision,
+  GateEvent,
   NavigationError,
   NavigationErrorEvent,
   FormattedNavigationError,
@@ -202,7 +205,9 @@ export class NativeAudioBrowser
   ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
   onIosOutputChanged: (output: IosOutput) => void = () => {}
-  onBrowseGateButtonPressed: () => void = () => {}
+  onGateButtonPressed: () => void = () => {}
+  onGate: (event: GateEvent) => void = () => {}
+  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> = async () => ({ gated: false })
   onCarConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers
@@ -956,20 +961,11 @@ export class NativeAudioBrowser
     // No-op on web - browsers can't set system volume
   }
 
-  // MARK: Browse gate (stored only — web has no external browse surfaces)
-  private browseGate: NativeBrowseGate | undefined
+  // MARK: Gate (no-op — web has no external browse surfaces)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setGate(_gate: NativeGate | undefined, _hasResolver: boolean): void {}
 
-  setBrowseGate(gate: NativeBrowseGate): void {
-    this.browseGate = gate
-  }
-
-  clearBrowseGate(): void {
-    this.browseGate = undefined
-  }
-
-  getBrowseGate(): NativeBrowseGate | undefined {
-    return this.browseGate
-  }
+  clearGate(): void {}
 
   // MARK: Car connection (not applicable on web)
   isCarConnected(): boolean {

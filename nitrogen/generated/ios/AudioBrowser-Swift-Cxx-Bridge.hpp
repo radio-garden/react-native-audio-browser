@@ -50,6 +50,12 @@ namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
+// Forward declaration of `GateReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GateReason; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
@@ -84,8 +90,10 @@ namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 // Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeAndroidSetupOptions; }
-// Forward declaration of `NativeBrowseGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `NativeGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGate; }
 // Forward declaration of `NativeIOSSetupOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeIOSSetupOptions; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -215,6 +223,9 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "FormatNavigationErrorParams.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"
+#include "GateDecision.hpp"
+#include "GateEvent.hpp"
+#include "GateReason.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
@@ -232,7 +243,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeAndroidSetupOptions.hpp"
-#include "NativeBrowseGate.hpp"
+#include "NativeGate.hpp"
+#include "NativeGateRequest.hpp"
 #include "NativeIOSSetupOptions.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NativeUpdateOptions.hpp"
@@ -1729,19 +1741,147 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return PromiseHolder<std::optional<FormattedNavigationError>>(std::move(promise));
   }
   
-  // pragma MARK: std::optional<NativeBrowseGate>
+  // pragma MARK: std::optional<NativeGate>
   /**
-   * Specialized version of `std::optional<NativeBrowseGate>`.
+   * Specialized version of `std::optional<NativeGate>`.
    */
-  using std__optional_NativeBrowseGate_ = std::optional<NativeBrowseGate>;
-  inline std::optional<NativeBrowseGate> create_std__optional_NativeBrowseGate_(const NativeBrowseGate& value) noexcept {
-    return std::optional<NativeBrowseGate>(value);
+  using std__optional_NativeGate_ = std::optional<NativeGate>;
+  inline std::optional<NativeGate> create_std__optional_NativeGate_(const NativeGate& value) noexcept {
+    return std::optional<NativeGate>(value);
   }
-  inline bool has_value_std__optional_NativeBrowseGate_(const std::optional<NativeBrowseGate>& optional) noexcept {
+  inline bool has_value_std__optional_NativeGate_(const std::optional<NativeGate>& optional) noexcept {
     return optional.has_value();
   }
-  inline NativeBrowseGate get_std__optional_NativeBrowseGate_(const std::optional<NativeBrowseGate>& optional) noexcept {
+  inline NativeGate get_std__optional_NativeGate_(const std::optional<NativeGate>& optional) noexcept {
     return optional.value();
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<GateDecision>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<GateDecision>>`.
+   */
+  using std__shared_ptr_Promise_GateDecision__ = std::shared_ptr<Promise<GateDecision>>;
+  inline std::shared_ptr<Promise<GateDecision>> create_std__shared_ptr_Promise_GateDecision__() noexcept {
+    return Promise<GateDecision>::create();
+  }
+  inline PromiseHolder<GateDecision> wrap_std__shared_ptr_Promise_GateDecision__(std::shared_ptr<Promise<GateDecision>> promise) noexcept {
+    return PromiseHolder<GateDecision>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const GateDecision& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const GateDecision&)>`.
+   */
+  using Func_void_GateDecision = std::function<void(const GateDecision& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const GateDecision& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_GateDecision_Wrapper final {
+  public:
+    explicit Func_void_GateDecision_Wrapper(std::function<void(const GateDecision& /* result */)>&& func): _function(std::make_unique<std::function<void(const GateDecision& /* result */)>>(std::move(func))) {}
+    inline void call(GateDecision result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const GateDecision& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_GateDecision create_Func_void_GateDecision(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_GateDecision_Wrapper wrap_Func_void_GateDecision(Func_void_GateDecision value) noexcept {
+    return Func_void_GateDecision_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<SearchParams>
+  /**
+   * Specialized version of `std::optional<SearchParams>`.
+   */
+  using std__optional_SearchParams_ = std::optional<SearchParams>;
+  inline std::optional<SearchParams> create_std__optional_SearchParams_(const SearchParams& value) noexcept {
+    return std::optional<SearchParams>(value);
+  }
+  inline bool has_value_std__optional_SearchParams_(const std::optional<SearchParams>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline SearchParams get_std__optional_SearchParams_(const std::optional<SearchParams>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>
+  /**
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest&)>`.
+   */
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& / * request * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_Wrapper final {
+  public:
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>> call(NativeGateRequest request) const noexcept {
+      auto __result = _function->operator()(request);
+      return __result;
+    }
+  private:
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>`.
+   */
+  using std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision____ = std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>;
+  inline std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>> create_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision____() noexcept {
+    return Promise<std::shared_ptr<Promise<GateDecision>>>::create();
+  }
+  inline PromiseHolder<std::shared_ptr<Promise<GateDecision>>> wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision____(std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>> promise) noexcept {
+    return PromiseHolder<std::shared_ptr<Promise<GateDecision>>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<GateDecision>>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::shared_ptr<Promise<GateDecision>>&)>`.
+   */
+  using Func_void_std__shared_ptr_Promise_GateDecision__ = std::function<void(const std::shared_ptr<Promise<GateDecision>>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::shared_ptr<Promise<GateDecision>>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__shared_ptr_Promise_GateDecision___Wrapper final {
+  public:
+    explicit Func_void_std__shared_ptr_Promise_GateDecision___Wrapper(std::function<void(const std::shared_ptr<Promise<GateDecision>>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<Promise<GateDecision>>& /* result */)>>(std::move(func))) {}
+    inline void call(std::shared_ptr<Promise<GateDecision>> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::shared_ptr<Promise<GateDecision>>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__shared_ptr_Promise_GateDecision__ create_Func_void_std__shared_ptr_Promise_GateDecision__(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__shared_ptr_Promise_GateDecision___Wrapper wrap_Func_void_std__shared_ptr_Promise_GateDecision__(Func_void_std__shared_ptr_Promise_GateDecision__ value) noexcept {
+    return Func_void_std__shared_ptr_Promise_GateDecision___Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(const GateEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const GateEvent&)>`.
+   */
+  using Func_void_GateEvent = std::function<void(const GateEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const GateEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_GateEvent_Wrapper final {
+  public:
+    explicit Func_void_GateEvent_Wrapper(std::function<void(const GateEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const GateEvent& /* event */)>>(std::move(func))) {}
+    inline void call(GateEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const GateEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_GateEvent create_Func_void_GateEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_GateEvent_Wrapper wrap_Func_void_GateEvent(Func_void_GateEvent value) noexcept {
+    return Func_void_GateEvent_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::function<void(bool /* connected */)>
@@ -3337,15 +3477,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_FormattedNavigationError__ create_Result_std__optional_FormattedNavigationError__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<FormattedNavigationError>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::optional<NativeBrowseGate>>
-  using Result_std__optional_NativeBrowseGate__ = Result<std::optional<NativeBrowseGate>>;
-  inline Result_std__optional_NativeBrowseGate__ create_Result_std__optional_NativeBrowseGate__(const std::optional<NativeBrowseGate>& value) noexcept {
-    return Result<std::optional<NativeBrowseGate>>::withValue(value);
-  }
-  inline Result_std__optional_NativeBrowseGate__ create_Result_std__optional_NativeBrowseGate__(const std::exception_ptr& error) noexcept {
-    return Result<std::optional<NativeBrowseGate>>::withError(error);
   }
   
   // pragma MARK: Result<bool>

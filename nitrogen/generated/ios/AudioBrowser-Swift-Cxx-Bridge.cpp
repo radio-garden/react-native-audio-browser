@@ -250,6 +250,39 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const GateDecision& /* result */)>
+  Func_void_GateDecision create_Func_void_GateDecision(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_GateDecision::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const GateDecision& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const NativeGateRequest& request) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>> {
+      auto __result = swiftClosure.call(request);
+      return __result;
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<Promise<GateDecision>>& /* result */)>
+  Func_void_std__shared_ptr_Promise_GateDecision__ create_Func_void_std__shared_ptr_Promise_GateDecision__(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_std__shared_ptr_Promise_GateDecision__::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<Promise<GateDecision>>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const GateEvent& /* event */)>
+  Func_void_GateEvent create_Func_void_GateEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_GateEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const GateEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
   // pragma MARK: std::function<void(bool /* connected */)>
   Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_bool::fromUnsafe(swiftClosureWrapper);

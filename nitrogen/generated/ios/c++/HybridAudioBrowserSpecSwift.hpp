@@ -70,6 +70,16 @@ namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `NativeGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGate; }
+// Forward declaration of `GateReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GateReason; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
@@ -158,8 +168,6 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
-// Forward declaration of `NativeBrowseGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
 // Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeSetupPlayerOptions; }
 // Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
@@ -231,6 +239,11 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "TrackLoadEvent.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "FormatNavigationErrorParams.hpp"
+#include "GateDecision.hpp"
+#include "NativeGateRequest.hpp"
+#include "NativeGate.hpp"
+#include "GateReason.hpp"
+#include "GateEvent.hpp"
 #include "ChapterMetadata.hpp"
 #include "TrackMetadata.hpp"
 #include "TimedMetadata.hpp"
@@ -276,7 +289,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
-#include "NativeBrowseGate.hpp"
 #include "NativeSetupPlayerOptions.hpp"
 #include "NativeAndroidSetupOptions.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
@@ -396,12 +408,26 @@ namespace margelo::nitro::audiobrowser {
     inline void setConfiguration(const NativeBrowserConfiguration& configuration) noexcept override {
       _swiftPart.setConfiguration(std::forward<decltype(configuration)>(configuration));
     }
-    inline std::function<void()> getOnBrowseGateButtonPressed() noexcept override {
-      auto __result = _swiftPart.getOnBrowseGateButtonPressed();
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> getResolveGate() noexcept override {
+      auto __result = _swiftPart.getResolveGate();
       return __result;
     }
-    inline void setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) noexcept override {
-      _swiftPart.setOnBrowseGateButtonPressed(onBrowseGateButtonPressed);
+    inline void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) noexcept override {
+      _swiftPart.setResolveGate(resolveGate);
+    }
+    inline std::function<void(const GateEvent& /* event */)> getOnGate() noexcept override {
+      auto __result = _swiftPart.getOnGate();
+      return __result;
+    }
+    inline void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) noexcept override {
+      _swiftPart.setOnGate(onGate);
+    }
+    inline std::function<void()> getOnGateButtonPressed() noexcept override {
+      auto __result = _swiftPart.getOnGateButtonPressed();
+      return __result;
+    }
+    inline void setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) noexcept override {
+      _swiftPart.setOnGateButtonPressed(onGateButtonPressed);
     }
     inline std::function<void(bool /* connected */)> getOnCarConnectedChanged() noexcept override {
       auto __result = _swiftPart.getOnCarConnectedChanged();
@@ -846,25 +872,17 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void setBrowseGate(const NativeBrowseGate& gate) override {
-      auto __result = _swiftPart.setBrowseGate(std::forward<decltype(gate)>(gate));
+    inline void setGate(const std::optional<NativeGate>& gate, bool hasResolver) override {
+      auto __result = _swiftPart.setGate(gate, std::forward<decltype(hasResolver)>(hasResolver));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void clearBrowseGate() override {
-      auto __result = _swiftPart.clearBrowseGate();
+    inline void clearGate() override {
+      auto __result = _swiftPart.clearGate();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
-    }
-    inline std::optional<NativeBrowseGate> getBrowseGate() override {
-      auto __result = _swiftPart.getBrowseGate();
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-      auto __value = std::move(__result.value());
-      return __value;
     }
     inline bool isCarConnected() override {
       auto __result = _swiftPart.isCarConnected();

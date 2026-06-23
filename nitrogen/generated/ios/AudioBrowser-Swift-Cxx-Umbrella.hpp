@@ -50,6 +50,12 @@ namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `FormattedNavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
+// Forward declaration of `GateReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GateReason; }
 // Forward declaration of `HeartRating` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
@@ -84,10 +90,12 @@ namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 // Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeAndroidSetupOptions; }
-// Forward declaration of `NativeBrowseGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `NativeGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGate; }
 // Forward declaration of `NativeIOSSetupOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeIOSSetupOptions; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -215,6 +223,9 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "FormatNavigationErrorParams.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"
+#include "GateDecision.hpp"
+#include "GateEvent.hpp"
+#include "GateReason.hpp"
 #include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
@@ -232,8 +243,9 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeAndroidSetupOptions.hpp"
-#include "NativeBrowseGate.hpp"
 #include "NativeBrowserConfiguration.hpp"
+#include "NativeGate.hpp"
+#include "NativeGateRequest.hpp"
 #include "NativeIOSSetupOptions.hpp"
 #include "NativeRouteEntry.hpp"
 #include "NativeSetupPlayerOptions.hpp"

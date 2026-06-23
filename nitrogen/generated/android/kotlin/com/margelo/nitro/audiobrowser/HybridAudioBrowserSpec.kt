@@ -10,8 +10,8 @@ package com.margelo.nitro.audiobrowser
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.Promise
+import com.margelo.nitro.core.NullType
 import com.margelo.nitro.core.HybridObject
 
 /**
@@ -115,18 +115,46 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @set:Keep
   abstract var configuration: NativeBrowserConfiguration
   
-  abstract var onBrowseGateButtonPressed: () -> Unit
+  abstract var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>>
   
-  private var onBrowseGateButtonPressed_cxx: Func_void
+  private var resolveGate_cxx: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest
     @Keep
     @DoNotStrip
     get() {
-      return Func_void_java(onBrowseGateButtonPressed)
+      return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_java(resolveGate)
     }
     @Keep
     @DoNotStrip
     set(value) {
-      onBrowseGateButtonPressed = value
+      resolveGate = value
+    }
+  
+  abstract var onGate: (event: GateEvent) -> Unit
+  
+  private var onGate_cxx: Func_void_GateEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_GateEvent_java(onGate)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onGate = value
+    }
+  
+  abstract var onGateButtonPressed: () -> Unit
+  
+  private var onGateButtonPressed_cxx: Func_void
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_java(onGateButtonPressed)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onGateButtonPressed = value
     }
   
   abstract var onCarConnectedChanged: (connected: Boolean) -> Unit
@@ -924,15 +952,11 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setBrowseGate(gate: NativeBrowseGate): Unit
+  abstract fun setGate(gate: NativeGate?, hasResolver: Boolean): Unit
   
   @DoNotStrip
   @Keep
-  abstract fun clearBrowseGate(): Unit
-  
-  @DoNotStrip
-  @Keep
-  abstract fun getBrowseGate(): NativeBrowseGate?
+  abstract fun clearGate(): Unit
   
   @DoNotStrip
   @Keep

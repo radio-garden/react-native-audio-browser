@@ -65,6 +65,16 @@ namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `NativeGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGate; }
+// Forward declaration of `GateReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GateReason; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
@@ -153,8 +163,6 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
-// Forward declaration of `NativeBrowseGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
@@ -277,6 +285,18 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "FormatNavigationErrorParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
 #include "JFormatNavigationErrorParams.hpp"
+#include "GateDecision.hpp"
+#include "NativeGateRequest.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest.hpp"
+#include "JGateDecision.hpp"
+#include "NativeGate.hpp"
+#include "JNativeGate.hpp"
+#include "JNativeGateRequest.hpp"
+#include "GateReason.hpp"
+#include "JGateReason.hpp"
+#include "GateEvent.hpp"
+#include "JFunc_void_GateEvent.hpp"
+#include "JGateEvent.hpp"
 #include "JFunc_void.hpp"
 #include "JFunc_void_bool.hpp"
 #include "ChapterMetadata.hpp"
@@ -401,8 +421,6 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JBatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
 #include "JBatteryOptimizationStatus.hpp"
-#include "NativeBrowseGate.hpp"
-#include "JNativeBrowseGate.hpp"
 #include "Progress.hpp"
 #include "JProgress.hpp"
 #include "NativeSetupPlayerOptions.hpp"
@@ -601,8 +619,42 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNativeBrowserConfiguration> /* configuration */)>("setConfiguration");
     method(_javaPart, JNativeBrowserConfiguration::fromCpp(configuration));
   }
-  std::function<void()> JHybridAudioBrowserSpec::getOnBrowseGateButtonPressed() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnBrowseGateButtonPressed_cxx");
+  std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> JHybridAudioBrowserSpec::getResolveGate() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest::javaobject>()>("getResolveGate_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> {
+      if (__result->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest, std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(NativeGateRequest)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest::javaobject> /* resolveGate */)>("setResolveGate_cxx");
+    method(_javaPart, JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx::fromCpp(resolveGate));
+  }
+  std::function<void(const GateEvent& /* event */)> JHybridAudioBrowserSpec::getOnGate() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_GateEvent::javaobject>()>("getOnGate_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const GateEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_GateEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_GateEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_GateEvent, void(GateEvent)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_GateEvent::javaobject> /* onGate */)>("setOnGate_cxx");
+    method(_javaPart, JFunc_void_GateEvent_cxx::fromCpp(onGate));
+  }
+  std::function<void()> JHybridAudioBrowserSpec::getOnGateButtonPressed() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnGateButtonPressed_cxx");
     auto __result = method(_javaPart);
     return [&]() -> std::function<void()> {
       if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
@@ -614,9 +666,9 @@ namespace margelo::nitro::audiobrowser {
       }
     }();
   }
-  void JHybridAudioBrowserSpec::setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onBrowseGateButtonPressed */)>("setOnBrowseGateButtonPressed_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onBrowseGateButtonPressed));
+  void JHybridAudioBrowserSpec::setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onGateButtonPressed */)>("setOnGateButtonPressed_cxx");
+    method(_javaPart, JFunc_void_cxx::fromCpp(onGateButtonPressed));
   }
   std::function<void(bool /* connected */)> JHybridAudioBrowserSpec::getOnCarConnectedChanged() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_bool::javaobject>()>("getOnCarConnectedChanged_cxx");
@@ -1607,18 +1659,13 @@ namespace margelo::nitro::audiobrowser {
       return __array;
     }());
   }
-  void JHybridAudioBrowserSpec::setBrowseGate(const NativeBrowseGate& gate) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNativeBrowseGate> /* gate */)>("setBrowseGate");
-    method(_javaPart, JNativeBrowseGate::fromCpp(gate));
+  void JHybridAudioBrowserSpec::setGate(const std::optional<NativeGate>& gate, bool hasResolver) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNativeGate> /* gate */, jboolean /* hasResolver */)>("setGate");
+    method(_javaPart, gate.has_value() ? JNativeGate::fromCpp(gate.value()) : nullptr, hasResolver);
   }
-  void JHybridAudioBrowserSpec::clearBrowseGate() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("clearBrowseGate");
+  void JHybridAudioBrowserSpec::clearGate() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("clearGate");
     method(_javaPart);
-  }
-  std::optional<NativeBrowseGate> JHybridAudioBrowserSpec::getBrowseGate() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JNativeBrowseGate>()>("getBrowseGate");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
   bool JHybridAudioBrowserSpec::isCarConnected() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("isCarConnected");

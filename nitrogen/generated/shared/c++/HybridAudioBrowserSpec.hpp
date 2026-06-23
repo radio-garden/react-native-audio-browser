@@ -23,6 +23,12 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
@@ -79,8 +85,8 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `NavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
-// Forward declaration of `NativeBrowseGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeBrowseGate; }
+// Forward declaration of `NativeGate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGate; }
 // Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeSetupPlayerOptions; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
@@ -105,6 +111,10 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "NavigationErrorEvent.hpp"
 #include "FormattedNavigationError.hpp"
 #include "NativeBrowserConfiguration.hpp"
+#include "GateDecision.hpp"
+#include <NitroModules/Promise.hpp>
+#include "NativeGateRequest.hpp"
+#include "GateEvent.hpp"
 #include "ChapterMetadata.hpp"
 #include "TrackMetadata.hpp"
 #include "TimedMetadata.hpp"
@@ -134,9 +144,8 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
-#include <NitroModules/Promise.hpp>
 #include "NavigationError.hpp"
-#include "NativeBrowseGate.hpp"
+#include "NativeGate.hpp"
 #include "NativeSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "Progress.hpp"
@@ -188,8 +197,12 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) = 0;
       virtual NativeBrowserConfiguration getConfiguration() = 0;
       virtual void setConfiguration(const NativeBrowserConfiguration& configuration) = 0;
-      virtual std::function<void()> getOnBrowseGateButtonPressed() = 0;
-      virtual void setOnBrowseGateButtonPressed(const std::function<void()>& onBrowseGateButtonPressed) = 0;
+      virtual std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> getResolveGate() = 0;
+      virtual void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) = 0;
+      virtual std::function<void(const GateEvent& /* event */)> getOnGate() = 0;
+      virtual void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) = 0;
+      virtual std::function<void()> getOnGateButtonPressed() = 0;
+      virtual void setOnGateButtonPressed(const std::function<void()>& onGateButtonPressed) = 0;
       virtual std::function<void(bool /* connected */)> getOnCarConnectedChanged() = 0;
       virtual void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) = 0;
       virtual std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() = 0;
@@ -310,9 +323,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void notifyContentChanged(const std::string& path) = 0;
       virtual void invalidateAllContent() = 0;
       virtual void setFavorites(const std::vector<std::string>& favorites) = 0;
-      virtual void setBrowseGate(const NativeBrowseGate& gate) = 0;
-      virtual void clearBrowseGate() = 0;
-      virtual std::optional<NativeBrowseGate> getBrowseGate() = 0;
+      virtual void setGate(const std::optional<NativeGate>& gate, bool hasResolver) = 0;
+      virtual void clearGate() = 0;
       virtual bool isCarConnected() = 0;
       virtual std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;
