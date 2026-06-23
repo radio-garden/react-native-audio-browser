@@ -36,10 +36,6 @@ final class CarPlayImageLoader {
     return sfSymbolImageForSize(symbolName, canvasSize: canvasSize, backgroundColor: bg, symbolColor: fg)
   }
 
-  func defaultTabImage() -> UIImage? {
-    sfSymbolImage("music.note.list")
-  }
-
   /// Cached empty placeholder image to reserve space while artwork loads
   lazy var placeholderImage: UIImage? = {
     let size = CPListItem.maximumImageSize
