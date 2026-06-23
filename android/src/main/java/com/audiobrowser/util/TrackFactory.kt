@@ -1,12 +1,10 @@
 package com.audiobrowser.util
 
-import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import coil3.ImageLoader
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
 import com.margelo.nitro.audiobrowser.Track
@@ -27,45 +25,9 @@ object TrackFactory {
     return tracks.map { toMedia3(it) }
   }
 
-  /**
-   * Converts a Track to a Media3 MediaItem.
-   *
-   * Note: This synchronous version uses setArtworkUri() which doesn't support SVG. For Android Auto
-   * browse items with SVG artwork, use [toMedia3WithSvgSupport] instead.
-   */
   fun toMedia3(track: Track): MediaItem {
     val metadata = metadataBuilder(track).setArtworkUri(artworkUri(track)?.toUri()).build()
     return buildMediaItem(track, metadata)
-  }
-
-  /**
-   * Converts a Track to a Media3 MediaItem with SVG artwork support.
-   *
-   * For SVG artwork URLs, this pre-renders the image to PNG and embeds it using setArtworkData().
-   * This is necessary for Android Auto which doesn't support loading SVG images from URLs.
-   *
-   * @param track The track to convert
-   * @param context Android context for image loading
-   * @param imageLoader Coil ImageLoader for SVG rendering
-   * @return MediaItem with embedded artwork for SVGs, or URI-based artwork for other formats
-   */
-  suspend fun toMedia3WithSvgSupport(
-    track: Track,
-    context: Context,
-    imageLoader: ImageLoader,
-  ): MediaItem {
-    val metadataBuilder = metadataBuilder(track)
-    SvgArtworkRenderer.applyArtwork(metadataBuilder, artworkUri(track), context, imageLoader)
-    return buildMediaItem(track, metadataBuilder.build())
-  }
-
-  /** Converts multiple Tracks to Media3 MediaItems with SVG artwork support. */
-  suspend fun toMedia3WithSvgSupport(
-    tracks: Array<Track>,
-    context: Context,
-    imageLoader: ImageLoader,
-  ): List<MediaItem> {
-    return tracks.map { toMedia3WithSvgSupport(it, context, imageLoader) }
   }
 
   /**
@@ -99,7 +61,7 @@ object TrackFactory {
   /** The transformed artworkSource wins over the raw artwork field. */
   private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork
 
-  /** All metadata except artwork, which differs between the sync and SVG paths. */
+  /** All metadata except artwork. */
   private fun metadataBuilder(track: Track): MediaMetadata.Builder =
     MediaMetadata.Builder()
       .setTitle(track.title)
