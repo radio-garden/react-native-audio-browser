@@ -24,6 +24,7 @@ let package = Package(
         "Player/PlaybackErrorHandler.swift",
         "Player/PlaybackStateMachine.swift",
         "Player/PlayerStatusTypes.swift",
+        "Player/EndOfTrackJudgement.swift",
         "Player/PlaybackEffectHandler.swift",
         "Player/PlaybackCoordinatorCallbacks.swift",
         "Player/PlaybackCoordinator.swift",

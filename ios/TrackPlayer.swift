@@ -64,13 +64,14 @@ class TrackPlayer {
   )
 
   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
-    onDidPlayToEndTime: { [weak self] in
-      self?.coordinator.handleTrackDidPlayToEndTime()
-    },
+    onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
     onFailedToPlayToEndTime: { [weak self] error in
       let effectiveError = error ?? self?.avPlayer.currentItem?.error
       self?.coordinator.errorHandler.handleError(effectiveError, context: .playback)
     },
+    // Buffer emptied mid-playback: nudge the player, but don't reconnect — a
+    // genuine drop is recovered by the retry / network-restore paths.
+    onPlaybackStalled: { [weak self] in self?.recoverFromStall(reconnectIfLive: false) },
   )
 
   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
@@ -266,7 +267,9 @@ class TrackPlayer {
       self?.playWhenReady ?? false
     }
     retryManager.onRetry = { [weak self] startFromCurrentTime in
-      self?.reload(startFromCurrentTime: startFromCurrentTime)
+      // Re-resolve rather than replay the cached URL: a retry may be recovering
+      // from an expired short-lived URL/token that only a fresh resolve fixes.
+      self?.reloadResolving(startFromCurrentTime: startFromCurrentTime)
     }
 
     // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
@@ -324,18 +327,20 @@ class TrackPlayer {
   }
 
   func reload(startFromCurrentTime: Bool) {
-    var time: Double? = nil
-    if startFromCurrentTime {
-      if let currentItem = avPlayer.currentItem {
-        if !currentItem.duration.isIndefinite {
-          time = currentItem.currentTime().seconds
-        }
-      }
-    }
+    let time = startFromCurrentTime ? resumeTime() : nil
     loadAVPlayer()
     if let time {
       seekTo(time)
     }
+  }
+
+  /// Playback position to resume from on reload, or nil when there is nothing
+  /// seekable to resume (no item, or an indefinite/live duration).
+  private func resumeTime() -> Double? {
+    guard let currentItem = avPlayer.currentItem, !currentItem.duration.isIndefinite else {
+      return nil
+    }
+    return currentItem.currentTime().seconds
   }
 
   /// Re-establish a stalled stream when connectivity is restored.
@@ -503,6 +508,14 @@ class TrackPlayer {
   }
 
   func loadAVPlayer() {
+    prepareForReload()
+    mediaLoader.loadAsset()
+  }
+
+  /// Teardown shared by the two reload paths: recreate the player after a
+  /// terminal error, otherwise cancel in-flight loading and drop the current
+  /// asset, then enter the loading state.
+  private func prepareForReload() {
     if state == .error {
       recreateAVPlayer()
     } else {
@@ -512,7 +525,25 @@ class TrackPlayer {
       mediaLoader.clearAsset()
     }
     transition(.trackLoading)
-    mediaLoader.loadAsset()
+  }
+
+  /// Reload by re-running the resolver (fresh URL / headers / user-agent)
+  /// instead of recreating the asset from the already-resolved URL. Used by the
+  /// retry path so consumers whose resolver mints short-lived URLs or auth
+  /// tokens recover once those expire — a plain `reload()` would replay the
+  /// stale URL and keep failing. Falls back to `reload()` when there's no track
+  /// `src` to resolve.
+  func reloadResolving(startFromCurrentTime: Bool) {
+    guard let track = currentTrack, let src = track.src else {
+      reload(startFromCurrentTime: startFromCurrentTime)
+      return
+    }
+    let time = startFromCurrentTime ? resumeTime() : nil
+    prepareForReload()
+    mediaLoader.resolveAndLoad(src: src, track: track)
+    if let time {
+      seekTo(time)
+    }
   }
 
   func unloadAVPlayer() {
@@ -521,6 +552,37 @@ class TrackPlayer {
   }
 
   // MARK: - Observer Callbacks (map AVFoundation → coordinator)
+
+  /// Resolve an end-of-item notification: a genuine end advances the queue; a
+  /// dropped live stream or a mid-stream underrun reported as EOF is recovered
+  /// instead of advancing/stopping (see `EndOfTrackJudgement`).
+  private func handleDidPlayToEndTime() {
+    let judgement = EndOfTrackJudgement(
+      isLive: currentTrack?.live == true,
+      currentTime: currentTime,
+      duration: duration,
+    )
+    switch judgement.outcome {
+    case .ended:
+      coordinator.handleTrackDidPlayToEndTime()
+    case .stalled:
+      recoverFromStall(reconnectIfLive: true)
+    }
+  }
+
+  /// Recover from a stall while the play intent still holds. A live stream that
+  /// ran out of data (`reconnectIfLive`) rejoins the edge — reloading when there
+  /// is no seekable window; otherwise just re-issue play() to un-park AVPlayer
+  /// from `.waitingToPlayAtSpecifiedRate` (data may resume on the same
+  /// connection; a genuine drop is handled by the retry / network-restore paths).
+  private func recoverFromStall(reconnectIfLive: Bool) {
+    guard playWhenReady else { return }
+    if reconnectIfLive, currentTrack?.live == true {
+      seekToLiveEdge()
+    } else {
+      startPlayback()
+    }
+  }
 
   private func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
     let mapped: PlayerTimeControlStatus

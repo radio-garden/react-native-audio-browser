@@ -1192,6 +1192,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
     switch type {
     case .began:
+      // iOS 17+ fires a `.began` (with no matching `.ended`) when an output
+      // route such as headphones disappears. Reflecting a pause here would
+      // strand resume-intent state with nothing to clear it, and the
+      // route-change observer already handles the output change — so ignore it.
+      if #available(iOS 17.0, *),
+         let reasonValue = info[AVAudioSessionInterruptionReasonKey] as? UInt,
+         AVAudioSession.InterruptionReason(rawValue: reasonValue) == .routeDisconnected
+      {
+        return
+      }
       onMainActor { player?.handleInterruptionBegan() }
     case .ended:
       let shouldResume = (info[AVAudioSessionInterruptionOptionKey] as? UInt)
