@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-23
 **Issue:** [#63](https://github.com/radio-garden/react-native-audio-browser/issues/63) — browse-list artwork URIs bypass the session `BitmapLoader` on Android Auto/AAOS
-**Status:** Design revised after two-reviewer pass (Android/Media3 correctness + architecture); pending spec review
+**Status:** Design revised after two review rounds (4 reviewers: Media3 correctness, architecture, security/concurrency, real-world AAOS rendering); pending spec review
 
 ## Problem
 
@@ -11,113 +11,126 @@ On Android Auto / Android Automotive OS, browse-list artwork supplied as a
 Media3 1.10.1 source:
 
 - `MediaLibraryServiceLegacyStub` only loads a bitmap for a browse item when
-  `MediaMetadata.artworkData` is set, and it does so via `decodeBitmap(bytes)` —
-  it **never** calls the URI-fetching `BitmapLoader.loadBitmap(uri)` on this path.
-- `LegacyConversions.convertToMediaDescriptionCompat` sets `setIconBitmap` only
-  when bytes were present, and always sets `setIconUri(metadata.artworkUri)`.
+  `MediaMetadata.artworkData` is set, via `decodeBitmap(bytes)` — it **never** calls
+  `BitmapLoader.loadBitmap(uri)` on this path.
+- `LegacyConversions.convertToMediaDescriptionCompat` sets `setIconBitmap` only when
+  bytes were present, and always sets `setIconUri(metadata.artworkUri)`.
 
 So for browse items with only an `artworkUri`, the **car process** fetches the URL
-directly, with its own image loader. Our `CoilBitmapLoader` — which applies custom
-request headers, the SVG decoder, and the Android Auto size hint — is never
-consulted for browse-list artwork. Three failure modes follow:
+directly with its own image loader. Our `CoilBitmapLoader` — custom request headers,
+SVG decoder, Android Auto size hint — is never consulted. Three failure modes:
 
-1. **Headers dropped** — artwork URLs requiring auth/signed/`User-Agent` headers fail.
-2. **SVG unsupported** — the car can't decode SVG; today we work around this by
-   eagerly rasterizing SVGs to PNG bytes and embedding them (`artworkData`).
-3. **`TransactionTooLargeException`** — `onLoadChildren` returns the whole list across
-   a ~1 MB Binder transaction. Embedding PNG bytes per row (the current SVG workaround,
-   and the naive fix for #1) risks blowing the limit on large station lists.
+1. **Headers dropped** — artwork URLs needing auth/signed/`User-Agent` headers fail.
+2. **SVG unsupported** — the car can't decode SVG (today worked around by eagerly
+   rasterizing SVGs to PNG bytes and embedding them via `artworkData`).
+3. **`TransactionTooLargeException`** — `onLoadChildren` returns the whole list across a
+   ~1 MB Binder transaction; embedding PNG bytes per row risks blowing the limit on
+   large station lists.
 
-Artwork renders correctly in-app and on the now-playing/notification surface, because
-those paths *do* use the `BitmapLoader`. Only the browse tree is affected.
+Artwork renders correctly in-app and on the now-playing/notification surface (those use
+the `BitmapLoader`). Only list surfaces delivered through the legacy browser bridge are
+affected. **This includes the browse tree; whether it also includes the car's
+queue/Up-Next list is an open question to confirm on a head unit — see "Queue list".**
 
 ## Decision
 
 Build the standard AOSP/UAMP/Pocket-Casts pattern: a `ContentProvider` that serves
-browse artwork over `content://`, resolving each URL through the **same** Coil path
-the now-playing `BitmapLoader` already uses (headers + SVG + size). Browse `MediaItem`s
-carry a short `content://` URI instead of bytes.
+browse artwork over `content://`. Crucially (security, below), the provider serves
+**only artwork the library pre-attributed at browse-build time** — it never fetches an
+arbitrary caller-supplied URL. Browse `MediaItem`s carry a short `content://` URI
+instead of bytes.
 
-This is **default-on** for browse items on Android (no config flag) and a **general
-library primitive** (no consumer-specific assumptions). It fixes all three failure
-modes at once and lets us retire the eager SVG-byte-embedding special case, making
-browse artwork uniform.
+Default-on for browse items on Android (no config flag), general library primitive.
+Fixes all three failure modes and retires the eager SVG-byte special case.
 
-### Transport / permission model (corrected after review)
+### Transport / permission model
 
 Media3 1.10.1 does **not** grant the connected controller read permission on a
-`content://` URI placed in browse-item metadata — verified: there are zero
-`grantUriPermission` / `FLAG_GRANT_READ_URI_PERMISSION` calls in `libraries/session/`,
-and the legacy bridge passes the bare `iconUri` through. Android Auto / Assistant run
-in a **different uid**, so an `exported="false"` provider would throw
-`SecurityException` on their `openInputStream`.
+`content://` URI in browse metadata — verified: zero `grantUriPermission` /
+`FLAG_GRANT_READ_URI_PERMISSION` in `libraries/session/`; the legacy bridge passes the
+bare `iconUri` through. Android Auto / Assistant run in a **different uid**, so
+`exported="false"` would `SecurityException` on their `openInputStream`.
 
-The canonical fix, used by both Google's UAMP sample and Pocket Casts, is to declare
-the provider **`android:exported="true"`** and have the provider protect itself. We
-have a *smaller* attack surface than those samples because we serve **only remote
-`http(s)` artwork**, never local files — so there is no path-traversal surface to
-canonicalize against. Our self-protection is:
+The canonical fix (Google UAMP, Pocket Casts both verified) is **`android:exported="true"`**
+with the provider protecting itself. Because the provider is reachable by any app on the
+device, self-protection is **mandatory, not optional**:
 
-- Reject any `u=` whose scheme is not `http`/`https` → `null`.
-- (Hardening, recommended) Only serve URLs that are present in the existing
-  display-time resolution registry (`ArtworkResolutionRegistry`) — i.e. URLs we
-  actually handed out — so the provider cannot be used as an open fetch-proxy for
-  arbitrary URLs by other apps on the device. If that registry does not cover every
-  browse URL in practice, fall back to http(s)-only and document the residual
-  open-proxy surface (an unauthenticated GET of an attacker-named public URL from our
-  process — low severity; matches UAMP/Pocket Casts behavior). Decide during
-  implementation based on whether browse URLs are reliably registered.
+- **No arbitrary-URL fetching.** The content URI carries an **opaque token**, not a URL.
+  `openFile` looks the token up in an in-process `BrowseArtworkRegistry`; an unknown
+  token → `null`. The provider therefore cannot be used as a fetch proxy / SSRF vector,
+  cannot harvest the consumer's auth headers (see below), and cannot be steered to
+  internal hosts or its own authority.
+- This is required because the existing display-time resolution attaches the consumer's
+  static request + artwork headers (auth, `User-Agent`) to **any** URI via
+  `BrowserManager.unattributedArtworkSource` (`BrowserUrlResolution.kt:226-247`). Routing
+  attacker input through that path would leak credentials. The token design means the
+  provider never calls that path at all — it only serves entries the library itself
+  registered.
+- http(s)-only is still enforced as defense-in-depth on the registered `finalUrl`.
 
-Note: `resolveDisplayArtwork` only attaches our custom headers to URLs it can attribute
-via the registry; an unattributable `u=` is fetched header-less, so attacker-supplied
-URLs cannot harvest our auth headers.
+### Why a separate `BrowseArtworkRegistry` (not the existing `ArtworkResolutionRegistry`)
 
-Rejected alternatives:
+`ArtworkResolutionRegistry` (`ArtworkResolutionRegistry.kt`) maps display URI → `Track`
++ Nitro config handles, is bounded to **256 entries** to avoid pinning dead JS closures,
+and re-resolves Track-first at display time. Reusing it for the provider has two
+problems: (a) the 256-entry LRU evicts rows in lists larger than 256 — exactly the
+large-list case this feature targets — so a legitimate fetch could miss; (b) it pins
+Nitro closures and re-runs `resolveDisplayArtwork`, which hops to `Dispatchers.Main`
+(`Player.kt:807`) — letting an exported provider schedule main-thread work.
 
-- **Embed bytes for all browse items** (extend the SVG-rasterize path to raster too):
-  tiny change, but inlines a PNG per row → `TransactionTooLargeException` on big lists,
-  eager fetch of off-screen art, larger IPC. This is precisely the failure mode the
-  provider pattern exists to avoid.
-- **Per-controller `grantUriPermission` lifecycle** (export `false`, grant each
-  connected browse controller at subscribe time, revoke later): possible, but
-  materially more logic (track controllers, revoke on disconnect) for no security gain
-  over `exported="true"` + http(s)-only, given we serve no local files. Not chosen.
-- **Opt-in config flag:** adds API surface while leaving the broken behavior as the
-  default for anyone who doesn't know to flip it. Given there is no shipped-app
-  constraint, default-on is preferred. (Cost acknowledged below.)
+Instead, `BrowseArtworkRegistry` stores **plain resolved data** — `token → { finalUrl,
+headers, isSvg }` (an already-resolved `ImageSource` + svg flag, no Nitro handles, no
+closures). It is populated at `toBrowseMediaItem` time (artwork is already resolved there
+via `resolveArtworkUrl`, which yields the `finalUrl` + headers). Because it holds no
+closures it can be sized generously / per-browse-session without the leak hazard, and the
+provider resolves entirely off it — no `Player` deref, no Main hop, no closure
+use-after-free. Cleared on browser-config replacement / content invalidation (same
+triggers as `ArtworkResolutionRegistry.clear()`).
+
+Rejected alternatives: embedding bytes for all rows (`TransactionTooLargeException`);
+per-controller `grantUriPermission` lifecycle (more logic, no gain over exported +
+token); opt-in flag (leaves the broken default for the uninformed).
 
 ### Cost of default-on (acknowledged)
 
-For a consumer whose browse artwork is plain header-less raster URLs that the car could
-fetch directly, routing through our provider adds a per-icon in-process round-trip and a
-PNG re-encode they did not strictly need. We accept this because: the round-trip stays
-inside the app's own process/sandbox; it makes artwork correct for the consumers who
-need headers/SVG; and an opt-out flag would re-introduce broken-by-default for those who
-don't know to flip it. Documented here so a future maintainer fielding "why is browse
-art slower on Auto" has the rationale.
+For consumers whose browse art is plain header-less raster, this adds a per-icon
+in-process round-trip. Accepted: stays within the app's own sandbox, fixes correctness
+for those who need headers/SVG, and an opt-out flag would re-introduce broken-by-default.
 
 ## Architecture
 
-The core insight: `CoilBitmapLoader.loadBitmap()` already turns *"a URI we handed
-out"* into *"a correctly-decoded bitmap"* — applying `resolveDisplayArtwork`
-(registry lookup → headers + transformed URL), the SVG decoder, and the size hint.
-We extract that into a shared core and point two consumers at it: the existing
-now-playing `BitmapLoader`, and a new browse-artwork `ContentProvider`.
+The core insight: `CoilBitmapLoader.loadBitmap()` already turns a URI into a
+correctly-decoded bitmap (headers + SVG decoder + size). We extract a shared core and
+point two consumers at it: the now-playing `BitmapLoader`, and the new provider.
 
 ### Components (all in the library `android/`)
 
 | Component | Kind | Responsibility |
 |---|---|---|
-| `CoilArtworkLoader` | new | `suspend fun load(uri: String, sizeHintPixels: Int?): Bitmap` — the Coil request-building + `resolveDisplayArtwork` + SVG-decoder + header logic, lifted out of `CoilBitmapLoader`. Single source of truth for "URI → bitmap". Preserves the existing ordering: resolve first, then SVG-detect on the **transformed** `finalUrl` (so signed/transformed SVG URLs without a `.svg` suffix still decode). Falls back to 512px when `sizeHintPixels` is null. |
-| `CoilBitmapLoader` | refactor | Thin `BitmapLoader` that delegates `loadBitmap` to `CoilArtworkLoader`. `decodeBitmap` (embedded bytes, used by the now-playing path) stays. |
-| `ArtworkContentProvider` | new | `ContentProvider`. `openFile` returns a `ParcelFileDescriptor` pipe **immediately**; a fire-and-forget writer coroutine on `Dispatchers.IO` resolves the URL via `CoilArtworkLoader`, compresses to PNG, writes to the pipe's `AutoCloseOutputStream`, and closes. No `runBlocking`; the binder thread never blocks on the network. `getType` → `image/png`. |
-| `ArtworkUris` | new | Pure build/parse of `content://<authority>/art?u=<url>&s=<size>` (authority = `<packageName>.audiobrowser.artwork`). Trivially unit-testable. |
-| `CoilArtworkLoaderHolder` | new | Process-wide `@Volatile` holder for the `CoilArtworkLoader`. The system can construct a `ContentProvider` before the player exists, so the provider looks the core up here. (Named for its payload — a loader, not the provider — and kept distinct from the existing `ArtworkResolutionRegistry`, which is the display-time URI→Track map, a different concept.) See "Holder lifecycle" below. |
-| `TrackFactory` | change | **New** `toBrowseMediaItem(track, sizeHintPixels, authority)` that sets `artworkUri = ArtworkUris.contentUri(...)`. The existing `toMedia3(track)` (used by the player queue and now-playing) is **left unchanged**. `toMedia3WithSvgSupport` is removed. |
-| `MediaSessionCallback` | change | The three browse-delivery sites — `toMediaItems` (for `onGetChildren`), `onGetItem`, `onGetSearchResult` — call `toBrowseMediaItem`, passing `player.artworkSizeHintPixels` and the authority. The queue / now-playing / resumption paths keep calling plain `toMedia3`. |
-| `SvgArtworkRenderer` | change | Retire `applyArtwork` and `renderSvgToBytes` (the provider rasterizes SVG via the shared core). Keep `isSvgUrl` (used by `CoilArtworkLoader`). |
-| `Service.kt` / player setup | change | Populate `CoilArtworkLoaderHolder` on create; identity-guarded clear on destroy. |
-| `AndroidManifest.xml` (library) | change | Declare the `<provider>` (`exported="true"`). |
+| `CoilArtworkLoader` | new | `suspend fun load(source: ImageSource, sizeHintPixels: Int?, isSvg: Boolean): Bitmap` — the Coil request build (data + headers + decoder + **`.size(sizeHintPixels ?: 512)`**, which the current raster path does NOT do → real downsample, prevents decode OOM). SVG forced via the `isSvg` flag carried from build time (not re-derived from a possibly-suffixless transformed URL). Single source of truth for "resolved source → bitmap". |
+| `CoilBitmapLoader` | refactor | Thin `BitmapLoader`; `loadBitmap` resolves the URI (existing `displayArtworkSource`/`unattributedArtworkSource` path, unchanged for now-playing) then delegates decode to `CoilArtworkLoader`. `decodeBitmap` (embedded bytes) stays. |
+| `BrowseArtworkRegistry` | new | `@Synchronized` map `token → { finalUrl, headers, isSvg }`. Plain data, no Nitro handles. Generously bounded / cleared on config invalidation. The provider's only data source. |
+| `ArtworkContentProvider` | new | Exported provider. `openFile` looks up the token → miss → `null`; hit (http/https only) → returns a `ParcelFileDescriptor` pipe **immediately**; a bounded writer coroutine resolves+decodes via `CoilArtworkLoader`, serves bytes, closes the FD in `finally`. `getType` → `image/png`. `query/insert/update/delete` → no-op (`null`/`0`). No `runBlocking`. |
+| `ArtworkUris` | new | Pure build/parse of `content://<pkg>.audiobrowser.artwork/art/<token>`. Opaque path segment (UAMP/Pocket-Casts style), not a query param. |
+| `CoilArtworkLoaderHolder` | new | Process-wide `@Volatile` holder for `CoilArtworkLoader` + `BrowseArtworkRegistry` (the provider may be constructed before the player). Identity-guarded clear; provider scope cancelled before `player.destroy()`. |
+| `TrackFactory` | change | New `toBrowseMediaItem(track, sizeHintPixels)`: **if `artwork` is http(s)** → resolve, register in `BrowseArtworkRegistry`, set `artworkUri = ArtworkUris.contentUri(token)`; **otherwise** (`android.resource://`, `file://`, …) → `setArtworkUri(rawUri)` unchanged (so vector/category icons survive). Existing `toMedia3(track)` (queue/now-playing) unchanged; `toMedia3WithSvgSupport` removed. |
+| `MediaSessionCallback` | change | The browse-delivery sites — `toMediaItems` (`onGetChildren`), `onGetItem`, `onGetSearchResult` — call `toBrowseMediaItem` with `player.artworkSizeHintPixels`. Queue/resumption/now-playing keep `toMedia3`. |
+| `SvgArtworkRenderer` | change | Retire `applyArtwork` + `renderSvgToBytes`; keep/relocate `isSvgUrl` (used at build time to set the `isSvg` flag). |
+| `Service.kt` / setup | change | Populate the holder + registry on create; identity-guarded clear and **cancel the provider scope before** `player.destroy()` on destroy. |
+| `AndroidManifest.xml` (library) | change | Declare `<provider exported="true">`. |
+
+### Concurrency & resource safety
+
+- The provider owns a dedicated `CoroutineScope(SupervisorJob() + Dispatchers.IO)` with a
+  **bounded `Semaphore`** (e.g. 4–6 concurrent) gating resolve+decode+encode, so a hostile
+  caller spamming `openInputStream` (or a car opening 50 FDs at once) cannot exhaust
+  threads / the OkHttp pool / memory with N simultaneous full bitmaps.
+- The writer body is wrapped in `try { … } finally { out.close() }`, handling
+  `CancellationException` so the FD is **always** closed (scope torn down, OOM, broken
+  pipe) — never leaking an FD that blocks the car's read forever. The bitmap is released
+  after `compress`.
+- Raster decode is size-bounded (`.size()` above) → no full-resolution decode of a large
+  image.
 
 ### Manifest
 
@@ -128,112 +141,110 @@ now-playing `BitmapLoader`, and a new browse-artwork `ContentProvider`.
     android:exported="true" />
 ```
 
-`${applicationId}` makes the authority unique per consuming app and auto-merges into
-the consumer's manifest — **zero config for consumers**. `exported="true"` is required
-(see transport model). The provider must run in the **same process** as the media
-`Service` (so the `@Volatile` holder is visible); the library declares no
-`android:process`, and consumers running the service in a `:remote` process would break
-this — documented as a constraint, not supported.
-
-### Holder lifecycle
-
-- **Set on create:** `Service.onCreate` / player setup constructs the `CoilArtworkLoader`
-  (closing over `imageLoader` + `resolveDisplayArtwork`) and stores it in
-  `CoilArtworkLoaderHolder`.
-- **Identity-guarded clear on destroy:** `onDestroy` clears the holder **only if** the
-  stored loader is still this instance's (`if (holder === mine) clear()`). This prevents
-  a restarting/second `Service` instance from blanking a loader a newer instance just
-  populated. Clearing releases the JS/Nitro closures the loader pins (same leak hazard
-  `ArtworkResolutionRegistry.clear()` already documents).
+`${applicationId}` → unique authority per app, auto-merged (zero consumer config). The
+provider must run in the **same process** as the media `Service` (the `@Volatile` holder
+must be visible); consumers using a `:remote` service process are unsupported.
+**Consumer-facing note:** this adds a new *exported* component to every consuming app —
+documented for store/privacy/pentest review; it is read-only, token-gated, and serves
+only artwork the app itself produced.
 
 ## Data flow
 
-1. A browse-delivery callback (`onGetChildren`/`onGetItem`/`onGetSearchResult`) converts
-   tracks via `TrackFactory.toBrowseMediaItem`, setting
-   `artworkUri = content://${appId}.audiobrowser.artwork/art?u=<rawUrl>&s=<hint>`, where
-   `<hint>` is `player.artworkSizeHintPixels` (may be absent → provider defaults to 512).
-   No bytes in the `MediaItem` — just a short URI.
-2. Media3's legacy bridge sets that as the browser item's `iconUri`. The car
-   (`exported="true"` provider) opens it directly.
-3. `ArtworkContentProvider.openFile` returns a pipe FD immediately; the writer coroutine
-   resolves `rawUrl` via `CoilArtworkLoader.load(rawUrl, hint)` (headers + SVG + size in
-   *our* process) → PNG → pipe → car.
-4. **Cold start** (provider hit before the holder is populated): return `null`
-   (placeholder); the car re-requests on the next browse refresh once setup completes.
-   In practice this window is essentially closed already, because `onGetChildren` gates
-   on `player.awaitBrowser()` and artwork is only requested *after* a browse list is
-   delivered — so the holder (set in `Service.onCreate`) is set by then. **No header-less
-   fallback fetch** (it would fail exactly the header/SVG cases this feature fixes).
+1. A browse-delivery callback converts tracks via `toBrowseMediaItem`. For http(s)
+   artwork: resolve → register `token → {finalUrl, headers, isSvg}` →
+   `artworkUri = content://${appId}.audiobrowser.artwork/art/<token>`. For non-http(s)
+   artwork: `setArtworkUri(rawUri)` unchanged.
+2. Media3's legacy bridge sets that as the browser item's `iconUri`. The car opens it
+   (exported provider, cross-uid OK).
+3. `ArtworkContentProvider.openFile` looks up the token (miss → `null`), returns a pipe
+   FD immediately; the bounded writer resolves `finalUrl` with the stored headers via
+   `CoilArtworkLoader` (headers + SVG + size in *our* process) → PNG → pipe → car.
+4. **Cold start** (provider hit before holder/registry populated): return `null`; the car
+   re-requests on the next browse refresh. In practice closed already — `onGetChildren`
+   gates on `awaitBrowser()`, and artwork is only requested after a list is delivered, by
+   which point setup ran. **No header-less fallback fetch.**
 
-This kills all three failure modes: headers and SVG always apply (step 3 runs in our
-process), and the Binder/`TransactionTooLargeException` risk is gone because
-`MediaItem`s carry a tiny URI instead of PNG bytes.
+Kills all three failure modes; `MediaItem`s carry a tiny token URI, not bytes.
 
-**Known minor inefficiency:** an in-process *Media3* (non-legacy) browser controller
-would round-trip `content://` back through Coil → our provider. In practice the only
-browse controllers on Android are external (Auto/Assistant/Bluetooth) — the RN app
-renders its own browse UI in JS — so this is negligible and not optimized.
+**Known minor inefficiency:** an in-process Media3 (non-legacy) browser controller would
+round-trip `content://` back through Coil → our provider. Only external controllers
+(Auto/Assistant/Bluetooth) browse on Android (the RN app renders its own browse UI in
+JS), so this is negligible.
+
+## Caching
+
+The car re-requests the same `iconUri` often (scroll in/out, re-subscribe, and this
+codebase fires `notifyChildrenChanged` on every network-state change,
+`MediaSessionCallback.kt:68`). UAMP and Pocket Casts both serve a **disk-cache snapshot
+file** rather than re-encoding per request (UAMP serves the cached file directly; Pocket
+Casts opens an FD on Coil's `diskCache` snapshot). Per-request decode→re-encode causes
+visible pop-in/flicker on a head unit, so this is **in scope, not optional**:
+
+- For raster, serve Coil's disk-cache snapshot FD directly when the cached bytes are a
+  servable image format (no decode/re-encode).
+- For SVG (must rasterize) or when no servable snapshot exists, decode → encode once and
+  cache the encoded bytes (small LRU keyed by `token+size`).
 
 ## Error handling
 
-- Resolve fails / null bitmap → writer closes the pipe with no data; the car shows its
-  placeholder. Logged via Timber. Never throw across the Binder boundary.
-- Malformed/missing `u` param, or non-`http(s)` scheme → `openFile` returns `null`
-  immediately (also a security guard).
-- Pipe closed by the car mid-write (user scrolled away) → the writer coroutine catches
-  the broken-pipe `IOException` and cancels. No crash, no leak.
-- All resolution on `Dispatchers.IO`; `openFile` itself never blocks.
-
-## Performance
-
-- `openFile` decodes (Coil, source-cached on disk) → `Bitmap` → re-`compress(PNG)` per
-  request; Coil caches the *source*, not the re-encoded PNG, so repeated requests for the
-  same row re-encode. **Optional optimization** (implement if DHU shows repeated fetches
-  are costly): a small LRU of encoded bytes keyed by `url+size`. Not required for
-  correctness. PNG (quality 100) is kept for uniformity across raster + SVG; switching
-  opaque raster to JPEG is a possible later refinement but complicates `getType`.
+- Token miss / non-http(s) `finalUrl` / malformed URI → `openFile` returns `null` (car
+  shows its placeholder; matches UAMP/Pocket-Casts).
+- Resolve fails / null bitmap → close pipe with no data; Timber-logged; never throw across
+  Binder.
+- Broken pipe / cancellation → caught; FD closed in `finally`.
 
 ## Security
 
-- `exported="true"` is required for cross-uid car access; self-protection is http(s)-only
-  (no local files → no path-traversal surface) plus the optional registry-membership
-  check (see transport model) to avoid acting as an open fetch-proxy.
-- Our custom headers are only attached to registry-attributable URLs, so an
-  attacker-supplied `u=` cannot harvest them.
+- `exported="true"` (required cross-uid). Self-protection: **token-gated** (no arbitrary
+  URL), serving only library-registered artwork; http(s)-only on `finalUrl` as
+  defense-in-depth; no local-file serving (no path-traversal surface). The provider never
+  calls `unattributedArtworkSource`, so attacker input cannot harvest consumer headers or
+  reach internal hosts.
 
 ## Testing
 
-The library uses JUnit 4 + Mockito + kotlinx-coroutines-test + Robolectric 4.11.1
-(`android/src/test`).
+JUnit 4 + Mockito + kotlinx-coroutines-test + Robolectric 4.11.1 (`android/src/test`).
 
-- **Unit (pure):** `ArtworkUris` round-trip (build → parse), including a `u=` URL that
-  itself carries query params and an encoded `&` (verify it survives); non-`http(s)`
-  rejection.
-- **Robolectric:** `ArtworkContentProvider.openFile` happy path (returns a readable PNG
-  FD) and null cases (missing param, non-http scheme, holder absent), with a fake
-  `CoilArtworkLoader` injected via the holder. Tests share the process-wide holder, so a
-  `@Before`/`@After` resets it to avoid cross-test interference.
-- **Manual on Android Auto DHU** (Desktop Head Unit), added to `manual-testing/`:
-  (a) raster browse art renders, (b) SVG browse art renders, (c) a large station list
-  (50+) browses without `TransactionTooLargeException`, (d) header-requiring art
-  renders. This is the real proof, since the failure mode is cross-process.
+- **Unit (pure):** `ArtworkUris` token round-trip; `BrowseArtworkRegistry` register/lookup
+  + eviction; `toBrowseMediaItem` routing (http(s) → content://; `android.resource://` →
+  passthrough).
+- **Robolectric:** `ArtworkContentProvider.openFile` — happy path (readable PNG FD), token
+  miss → `null`, non-http → `null`, holder absent → `null`, with a fake `CoilArtworkLoader`
+  via the holder. `@Before`/`@After` reset the process-wide holder/registry to avoid
+  cross-test interference.
+- **Manual on Android Auto DHU**, added to `manual-testing/`: (a) raster browse art
+  renders, (b) SVG browse art renders, (c) 50+ list browses without
+  `TransactionTooLargeException`, (d) header-requiring art renders, (e) a tab/folder with
+  an `android.resource://` icon still shows its icon, (f) scroll a long list and back —
+  no art flicker/reload, (g) inspect whether the queue/Up-Next list shows correct art for
+  an SVG/header-requiring track (see below).
+
+## Queue list (open question)
+
+The car's queue/Up-Next list is rendered from session `MediaItem` metadata via the same
+legacy path, and those items come from `toMedia3` (`MediaSessionCallback.kt:671,769,797`),
+which this spec leaves unchanged. So queue-list artwork *may* bypass Coil exactly as
+browse did. This spec does not change the queue path; DHU case (g) determines whether a
+follow-up is needed (apply `toBrowseMediaItem`-style treatment, or document why queue art
+is exempt). The problem statement's "list surfaces" wording reflects this uncertainty.
 
 ## Implementation sequencing
 
-One PR, but ordered so browse artwork never regresses:
+One PR, ordered so artwork never regresses:
 
-1. Add `CoilArtworkLoader` (+ refactor `CoilBitmapLoader` to delegate), `ArtworkUris`,
-   `CoilArtworkLoaderHolder`, `ArtworkContentProvider`, manifest entry, holder
-   population in `Service`.
-2. Switch the three browse-delivery sites to `toBrowseMediaItem`.
-3. **DHU-verify** the provider end-to-end (raster + SVG + large list + headers).
-4. Only after step 3 passes, remove `toMedia3WithSvgSupport` /
-   `SvgArtworkRenderer.applyArtwork` / `renderSvgToBytes`. (Removing the SVG byte path
-   before the provider is proven would regress SVG browse art to blank.)
+1. Add `CoilArtworkLoader` (+ refactor `CoilBitmapLoader`), `ArtworkUris`,
+   `BrowseArtworkRegistry`, `CoilArtworkLoaderHolder`, `ArtworkContentProvider` (bounded
+   scope, finally-close, snapshot serving), manifest entry, holder/registry population in
+   `Service`.
+2. Switch the three browse-delivery sites to `toBrowseMediaItem` (with scheme
+   pass-through).
+3. **DHU-verify** (a)–(g).
+4. Only after (a)–(g) pass, remove `toMedia3WithSvgSupport` /
+   `SvgArtworkRenderer.applyArtwork` / `renderSvgToBytes`.
 
 ## Out of scope
 
-- TS / Nitro-spec changes — none (default-on, no new config field).
-- Consumer-app changes — none (authority is `${applicationId}`-scoped, auto-merged);
-  the only constraint is that the media service runs in the default process.
-- iOS / CarPlay — unaffected; CarPlay artwork already resolves in-process.
+- TS / Nitro-spec changes — none.
+- Consumer-app changes — none beyond the same-process constraint and the
+  exported-component disclosure note.
+- iOS / CarPlay — unaffected (resolves in-process already).
