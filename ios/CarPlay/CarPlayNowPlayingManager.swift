@@ -110,7 +110,7 @@ final class CarPlayNowPlayingManager {
   func setupNowPlayingButtons() {
     // While a gate is active, custom buttons (favorite etc.) are hidden;
     // the system transport controls stay — a gate never blocks playback.
-    let buttons = (audioBrowser?.isGateActive ?? false) ? [] : config.carPlayNowPlayingButtons
+    let buttons = (audioBrowser?.isGateActive ?? false) ? [] : (audioBrowser?.carPlayNowPlayingButtons ?? [])
     let player = audioBrowser?.getPlayer()
     let row = BuiltButtonRow(
       types: buttons,
@@ -348,7 +348,7 @@ final class CarPlayNowPlayingManager {
 
   private func updateNowPlayingUpNextButton() {
     let template = CPNowPlayingTemplate.shared
-    template.isUpNextButtonEnabled = config.carPlayUpNextButton && (audioBrowser?.getPlayer()?.tracks.count ?? 0) > 1
+    template.isUpNextButtonEnabled = (audioBrowser?.carPlayUpNextButton ?? true) && (audioBrowser?.getPlayer()?.tracks.count ?? 0) > 1
   }
 
   fileprivate func handleUpNextButtonTapped() {

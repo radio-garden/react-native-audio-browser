@@ -100,6 +100,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// the user lands on the playing station (with the rest of the results in Up
   /// Next) rather than the screen they invoked Siri from. No-op where unobserved.
   public let showNowPlayingRequestedEmitter = Emitter<Void>()
+  /// Fires after `updateOptions` applies a change, so external-surface managers
+  /// (CarPlay) can refresh UI driven by now-runtime-updatable options
+  /// (now-playing buttons, Up Next).
+  public let playerOptionsChangedEmitter = Emitter<Void>()
 
   // MARK: - Thread Safety
 
@@ -799,6 +803,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       }
 
       onOptionsChanged(playerOptions.toOptions())
+      playerOptionsChangedEmitter.emit(())
     }
   }
 

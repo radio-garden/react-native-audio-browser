@@ -257,6 +257,19 @@ public final class RNABCarPlayController: NSObject {
       }
     }
 
+    // Now-playing buttons + Up Next are runtime-updatable via updateOptions();
+    // refresh them when player options change (configureBrowser is no longer
+    // the only path that can change them).
+    let optionsToken = audioBrowser.playerOptionsChangedEmitter.addListener { [weak self] in
+      Task { @MainActor in
+        self?.nowPlayingManager.setupNowPlayingButtons()
+        self?.nowPlayingManager.updateNowPlayingButtonStates()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.playerOptionsChangedEmitter.removeListener(optionsToken)
+    }
+
     // Refresh the Now Playing heart when favorites change externally (app /
     // webview). The favorite/active-track emitters only fire for the player's
     // own toggles, so without this an in-app favorite leaves the CarPlay heart
