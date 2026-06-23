@@ -72,7 +72,14 @@ class ArtworkContentProvider : ContentProvider() {
     try {
       // Re-check after acquiring — a concurrent producer may have written the file.
       if (file.exists() && file.length() > 0) {
-        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        val fd = try {
+          ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        } catch (e: Throwable) {
+          Timber.w(e, "Artwork cache file vanished before re-check open; producing")
+          null
+        }
+        if (fd != null) return fd
+        // else: file was pruned/deleted concurrently — fall through to produce
       }
 
       artworkDir.mkdirs()
