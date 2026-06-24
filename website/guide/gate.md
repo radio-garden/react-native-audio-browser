@@ -55,14 +55,14 @@ setGate(
 )
 ```
 
-Because the resolver sees the request, you can also gate by path — block one premium folder while the rest stays open — or show a different message per request:
+Because the resolver sees the request, you can also gate by path — block one premium branch while the rest stays open — or show a different message per request:
 
 ```ts
 setGate(
   { title: 'Premium', message: 'Subscribe to unlock.' },
   (request) => {
     if (request.kind === 'search') return false                 // search always allowed
-    if (request.path.startsWith('/premium')) return true        // gate this folder, default message
+    if (request.path.startsWith('/premium')) return true        // gate this branch, default message
     return false                                                // everything else open
   },
 )

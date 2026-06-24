@@ -4,7 +4,7 @@
 
 The audio browser presents content as a navigable tree. This structure is required by Android Auto and CarPlay to display your content, and is also handy for apps to consume directly.
 
-Each node can be **browsable** (a folder you can navigate into) or **playable** (a track you can play).
+Each node can be **browsable** (a node you navigate into for its children) or **playable** (a track you can play).
 
 ```mermaid
 graph TD
@@ -32,7 +32,7 @@ graph TD
 ```
 
 <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.9em;">
-  <span><span style="display: inline-block; width: 12px; height: 12px; background: #e3f2fd; border: 1px solid #1976d2; margin-right: 4px;"></span> Browsable (folder)</span>
+  <span><span style="display: inline-block; width: 12px; height: 12px; background: #e3f2fd; border: 1px solid #1976d2; margin-right: 4px;"></span> Browsable (navigate in)</span>
   <span><span style="display: inline-block; width: 12px; height: 12px; background: #e8f5e9; border: 1px solid #388e3c; margin-right: 4px;"></span> Playable (track)</span>
 </div>
 

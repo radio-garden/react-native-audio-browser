@@ -7,13 +7,13 @@ Full-featured React Native audio for production apps that span app screens, lock
 
 Built by former [react-native-track-player](https://github.com/doublesymmetry/react-native-track-player) maintainers and contributors, and developed for the official [Radio Garden](https://radio.garden) apps. Audio Browser takes that experience in a new direction: a browse-first architecture for the surfaces modern audio apps need.
 
-In the car, audio apps are organized as a browse tree: tabs, nested folders, and playable items, often loaded on demand from your backend. Define the tree in JS, fetch it from your API, or resolve nodes lazily with callbacks. Audio Browser renders it as native CarPlay and Android Auto UI, with playback wired into the lock screen and system controls.
+In the car, audio apps are organized as a browse tree: tabs, nested lists, and playable items, often loaded on demand from your backend. Define the tree in JS, fetch it from your API, or resolve nodes lazily with callbacks. Audio Browser renders it as native CarPlay and Android Auto UI, with playback wired into the lock screen and system controls.
 
 Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto. Either way, [hooks](#hooks) expose playback, queue, and browse state for your own screens.
 
 ## Features
 
-- **Browse-first architecture** — tabs, folders, routes, and playable items resolved from static data, JS callbacks, or your JSON API, then rendered natively on CarPlay and Android Auto.
+- **Browse-first architecture** — tabs, nested lists, routes, and playable items resolved from static data, JS callbacks, or your JSON API, then rendered natively on CarPlay and Android Auto.
 - **Car cold start** — launch directly from CarPlay or Android Auto with the phone app closed. The browse tree and playback come up on the head unit without opening the app first.
 - **Production playback** — queue, background audio, playback rate, interruptions, audio focus, and lock screen, notification, and headset controls.
 - **Built on Nitro** — React Native's New Architecture, synchronous native calls, and no bridge overhead.
@@ -22,7 +22,7 @@ Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto
 - **Live-stream ready** — HLS, ICY/Icecast, and progressive streams, with stall recovery, reconnects, fresh URL resolution, and live-edge seeking. See [Streaming](#streaming).
 - **React hooks** — reactive playback, queue, browse, progress, sleep timer, and car-connection state for your app UI. See [Hooks](#hooks).
 - **Now Playing** — metadata, artwork, timed metadata, chapter metadata, lock screen updates, and media-session integration.
-- **Favorites** — favorite the current track from the Now Playing heart button or by voice, ask Siri to “play my favorites” or search within them, and keep favorited state in sync across surfaces — even when your app stores favorites by ID instead of stream URL.
+- **Favorites** — favorite the current track from the Now Playing heart button or by voice, ask Siri to “play my favorites” or search within them, and keep favorited state in sync across surfaces — even when your app stores favorites by ID instead of stream URL. See [Favorites](https://audiobrowser.dev/guide/favorites).
 - **Voice search** — Siri and Google Assistant route into one structured `search` source, so “play some jazz” can arrive as a genre filter instead of a raw query string.
 - **Access gates** — put browse and search behind a paywall, login, or region wall with per-request resolvers.
 - **Request and artwork control** — rewrite outbound requests, add auth headers, shape URLs, and customize artwork loading.
@@ -69,7 +69,7 @@ AudioBrowser.configureBrowser({
 })
 ```
 
-Each route returns a page of children — a child with a `url` is a folder, one with a `src` is a playable track (plus optional `artist`, `artwork`, …):
+Each route returns a page of children — a child with a `url` is browsable (open it for more), one with a `src` is a playable track (plus optional `artist`, `artwork`, …):
 
 ```jsonc
 // GET https://api.example.com/browse/jazz  →
@@ -77,7 +77,7 @@ Each route returns a page of children — a child with a `url` is a folder, one 
   "url": "/browse/jazz",
   "title": "Jazz",
   "children": [
-    { "title": "Smooth Floret FM", "url": "/browse/jazz/floret-fm" },           // url → open as a folder
+    { "title": "Smooth Floret FM", "url": "/browse/jazz/floret-fm" },           // url → open for children
     { "title": "The Stalk 88.5", "src": "https://stream.example.com/stalk.mp3" } // src → play this stream
   ]
 }

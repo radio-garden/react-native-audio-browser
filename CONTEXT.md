@@ -55,6 +55,7 @@ _Avoid_: Item, Node, MediaItem (those names belong to the platform SDKs).
 **Browsable**:
 A Track that has a `url` and resolves to children when navigated into. A *shape* of Track, not a separate type.
 _Avoid_: Folder, Container, Directory.
+_In prose_: teach it with the verb ("a node you navigate into"), and name concrete instances by what they are — a **Tab**, an album, a station, a category. Don't reach for "folder" (a filesystem metaphor for content that has real names). Reserve "list" for the *screen* a Browsable opens into (matching CarPlay's `CPListItem` / `CPListTemplate`), not for the node itself.
 
 **Playable**:
 A Track that has a `src` and can be streamed by the player. A *shape* of Track, not a separate type. A Track can be both Browsable and Playable (e.g. a radio station with a schedule sub-tree).

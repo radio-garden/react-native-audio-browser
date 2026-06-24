@@ -112,7 +112,7 @@ For ordinary queries ("play jazz", "play «station name»") the two behave ident
 | | iOS (Siri) | Android (Google Assistant) |
 | --- | --- | --- |
 | Delivered as | `INPlayMediaIntent` | `MEDIA_PLAY_FROM_SEARCH` intent |
-| "play my favorites" | `reference: 'my'` → resolves to the user's collection | no collection signal → searched as plain text; reach favorites by **browsing** the Favorites folder instead |
+| "play my favorites" | `reference: 'my'` → resolves to the user's collection | no collection signal → searched as plain text; reach favorites by **browsing** the Favorites tab instead |
 | "play «App»" | recognised as a resume | searched literally (no app-name heuristic) |
 | bare "play" / "resume" | resumes the current/last track | separate resume path (`onPlay`), not a search |
 | "play music" (no query) | may send `mode: 'music'` | `mode: 'any'` → return smart-shuffle / recent content |
