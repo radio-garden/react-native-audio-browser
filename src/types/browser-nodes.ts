@@ -267,10 +267,13 @@ export interface Track {
  *
  * @example
  * ```ts
- * const resolved = await audioBrowser.navigate('albums/abbey-road');
- * console.log(resolved.url); // "albums/abbey-road"
- * console.log(resolved.title); // "Abbey Road"
- * console.log(resolved.children); // Array of tracks in this album
+ * // navigate() is fire-and-forget (returns void); read the resolved page
+ * // from getContent() / useContent() / onContentChanged.
+ * navigate('albums/abbey-road');
+ * const resolved = getContent();
+ * console.log(resolved?.url); // "albums/abbey-road"
+ * console.log(resolved?.title); // "Abbey Road"
+ * console.log(resolved?.children); // Array of tracks in this album
  * ```
  */
 export interface ResolvedTrack extends Track {
@@ -287,7 +290,10 @@ export interface ResolvedTrack extends Track {
 
   /**
    * Shows the "Ask Siri to Play Audio" assistant cell on the CarPlay list template
-   * for this content. Requires an Intents Extension to be configured in the app.
+   * for this content. Requires the Siri entitlement, the `INPlayMediaIntent` keys in
+   * Info.plist, and an in-app intent handler in your `AppDelegate`
+   * (`application(_:handlerFor:)`) — no separate Intents Extension is needed. See the
+   * setup guide for the full wiring.
    *
    * - `'top'`: Shows at the top of the list
    * - `'bottom'`: Shows at the bottom of the list

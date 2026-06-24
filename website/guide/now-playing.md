@@ -1,8 +1,8 @@
 # Now Playing
 
-The now-playing surface is everything that displays the current track *outside your app's own UI*: the iOS lock screen and Control Center, the Android notification, CarPlay and Android Auto's Now Playing screens, and Bluetooth head units. The library publishes one metadata dictionary and the *operating system* renders it — each surface picks different fields, composes them differently, and ignores the rest.
+The now-playing surface is everything that displays the current track on the *system's* surfaces: the iOS lock screen and Control Center, the Android notification, CarPlay and Android Auto's Now Playing screens, and Bluetooth head units. The library publishes one metadata dictionary and the *operating system* renders it — each surface picks different fields, composes them differently, and ignores the rest. The same published metadata is also readable inside your own app — see [Reading now-playing in your own UI](#reading-now-playing-in-your-own-ui).
 
-This guide covers both halves of working with it: **which fields land where** (the static matrix), and **the four layers that decide what those fields contain at any moment** (the dynamic model).
+This guide covers: **which fields land where** (the static matrix), **the four layers that decide what those fields contain at any moment** (the dynamic model), and **reading the result back** in your own UI.
 
 ## Which field shows where
 
@@ -13,10 +13,12 @@ Apple and Google document very little of this; the table below reflects observed
 | `title` | Primary line | Primary line | Primary line | Primary line | Title |
 | `artist` | **Secondary line (sole source — `album` is never used as a fallback)** | Second line | Secondary line | Secondary line | Artist |
 | `album` | Not shown | **Third line — also the tappable album/artist button (see below)** | Not shown | Rarely shown | Album (some head units) |
-| `artwork` / `artworkSource` | Shown | Shown | Shown | Shown | — |
+| `artwork` | Shown | Shown | Shown | Shown | — |
 | `live` | "LIVE" indicator replaces the time scrubber | "LIVE" indicator | — | — | — |
 
 The time scrubber (elapsed, duration, playback rate) is not driven by track fields at all — every surface derives it from the player itself. `Track.duration` is informational metadata for your app (echoed back through now-playing events); it does not affect the scrubber.
+
+`artwork` is the URL you *set* on a track. (`Track.artworkSource` is a separate, output-only `ImageSource` the library populates for you to render in your own `<Image>` — it isn't published to surfaces.) Note that artwork isn't one of the overridable text fields: the formatter, override, and flash layers below carry only `title` / `artist` / `album`. Now-playing artwork comes from the track's `artwork`, optionally resolved through the [`nowPlayingArtwork`](#now-playing-artwork) config.
 
 ## The four metadata layers
 
@@ -35,13 +37,17 @@ With nothing else configured, the active track's own fields are published as-is.
 
 ### The formatter — derived, continuous
 
-`nowPlaying` hands you the now-playing text lines outright, re-invoked whenever they could change: on track change, on every timed-metadata update, and on every playback-state change. It's the right layer for anything *derived from playback state* — the live song from ICY/ID3 metadata, a "Reconnecting…" line during a stall, an error message:
+The [`nowPlaying`](/api/features/player/#formatnowplayingcallback) formatter hands you the now-playing text lines outright, re-invoked whenever they could change: on track change, on every timed-metadata update, on every playback transition (play / pause, a stall starting or recovering, an error), and on connectivity changes. It's the right layer for anything *derived from playback state* — the live song from ICY/ID3 metadata, a "Reconnecting…" line during a stall, an error message:
 
 ```ts
 setupPlayer({
   nowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
-    if (error) return { artist: error.message }
-    if (stalled) return { artist: 'Reconnecting…' }
+    if (error) return { artist: error.message ?? 'Playback error' }
+    if (stalled) {
+      return {
+        artist: stalled === 'offline' ? 'No connection' : 'Reconnecting…'
+      }
+    }
     // The live song, only while actually playing — a paused stream's last
     // song is stale, so fall back to the track default (return undefined).
     if (!playWhenReady || !timedMetadata?.title) return
@@ -50,19 +56,29 @@ setupPlayer({
 })
 ```
 
-The callback is synchronous and should stay cheap — it's a pure formatting function. Returning `undefined` (entirely, or per field) falls back to the layers below.
+The callback receives a single [`FormatNowPlayingParams`](/api/features/player/#formatnowplayingparams) object:
 
-Timed metadata is never auto-applied: the library surfaces ICY (Shoutcast/Icecast) and in-band ID3 (HLS) frames to your code, and the formatter is where you decide what reaches the now-playing line.
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `track` | `Track` | The currently playing track. |
+| `timedMetadata` | `TimedMetadata?` | The ICY / ID3 "now playing song", if any. |
+| `playWhenReady` | `boolean` | Play/pause intent — stays `true` through buffers, so the song line won't flicker. |
+| `stalled` | `StallReason?` | Truthy only during a mid-stream stall: `'buffering'` (rebuffering while online) or `'offline'` (no connectivity). Use `if (stalled)`, compare `=== 'offline'` for the reason. |
+| `error` | `PlaybackError?` | The current playback error, if playback failed. |
+
+It returns a [`NowPlayingUpdate`](/api/features/metadata/#nowplayingupdate) (`{ title?, artist?, album? }`) or `undefined`. The callback is synchronous and should stay cheap — it's a pure formatting function, no I/O. Each returned field falls back **independently** to the track's value when omitted; returning `undefined` (or `{}`) uses the track default entirely. Identical results across a rapid burst of transitions are de-duplicated natively, so they won't flicker the surface.
+
+Timed metadata is never auto-applied: the library surfaces ICY (Shoutcast/Icecast) and in-band ID3 (HLS) frames to your code, and the formatter is where you decide what reaches the now-playing line. (To consume those frames outside the formatter, subscribe to [`onTimedMetadata`](/api/features/metadata/#ontimedmetadata).)
 
 ### The override — imperative, sticky
 
-`updateNowPlaying({ artist: '…' })` pins fields until you pass `null` or the track changes. It predates the formatter and remains useful when you *don't* configure one.
+[`updateNowPlaying({ artist: '…' })`](/api/features/nowPlaying/#updatenowplaying) pins fields until you pass `null` or the track changes. It's the layer to reach for when you *don't* configure a formatter.
 
-**If a formatter is configured, it outranks the override** — the formatter's result is applied on top, falling back per-field to `override ?? track`. Mixing the two is rarely what you want: with a formatter in place, feed it state instead of calling `updateNowPlaying` around it.
+**If a formatter is configured, it outranks the override** — the formatter's result is applied on top, falling back per-field to `override ?? track`. Mixing the two is rarely what you want: with a formatter in place, feed it state instead of calling `updateNowPlaying` around it. (The override predates the formatter; the formatter is the newer, preferred layer for anything derived from playback state.)
 
 ### The flash — transient, top priority
 
-`flashNowPlaying(update, durationMs)` is the toast of the now-playing world: it briefly replaces the fields it sets, then reverts to whatever the lower layers say. External surfaces have no notification primitive, so a transient metadata swap is the only way to give feedback there — the canonical use is answering a refused remote command:
+[`flashNowPlaying(update, durationMs)`](/api/features/nowPlaying/#flashnowplaying) is the toast of the now-playing world: it briefly replaces the fields it sets, then reverts to whatever the lower layers say. External surfaces have no notification primitive, so a transient metadata swap is the only way to give feedback there — the canonical use is answering a refused remote command:
 
 ```ts
 // A radio product with an hourly skip allowance:
@@ -81,7 +97,32 @@ Three properties make it a dedicated layer rather than sugar over `updateNowPlay
 - **The revert runs on a native timer.** A JS `setTimeout` pauses with a backgrounded host on Android — and remote commands from the lock screen arrive exactly when the host is backgrounded. The native timer fires regardless.
 - **A track change clears it early.** A flash is feedback about a moment; it never carries over to a new track.
 
-Repeated calls restart the window. `clearNowPlayingFlash()` cancels one imperatively — for example when the condition the flash complained about resolves mid-window.
+Repeated calls restart the window. [`clearNowPlayingFlash()`](/api/features/nowPlaying/#clearnowplayingflash) cancels one imperatively — for example when the condition the flash complained about resolves mid-window.
+
+## Reading now-playing in your own UI
+
+The metadata you publish is also what your own app should render — a mini-player, a full-screen "now playing" view — so the in-app UI matches the lock screen exactly, formatter and all. Use the [`useNowPlaying`](/api/features/nowPlaying/#usenowplaying) hook:
+
+```tsx
+import { Text } from 'react-native'
+import { useNowPlaying } from 'react-native-audio-browser'
+
+function MiniPlayer() {
+  const nowPlaying = useNowPlaying()
+  if (!nowPlaying) return null
+  return (
+    <Text>
+      {nowPlaying.title} — {nowPlaying.artist}
+    </Text>
+  )
+}
+```
+
+`useNowPlaying` returns the resolved [`NowPlayingMetadata`](/api/features/metadata/#nowplayingmetadata) — the same dictionary the system surfaces see, *after* the four layers are applied — or `undefined` when nothing is playing. It carries `title` / `artist` / `album` / `artwork` (and `elapsedTime`). For the live scrubber position, pair it with [`useProgress`](/guide/playback#progress).
+
+Outside React, [`getNowPlaying()`](/api/features/nowPlaying/#getnowplaying) reads a snapshot and [`onNowPlayingChanged`](/api/features/nowPlaying/#onnowplayingchanged) subscribes to changes (it fires when the override changes or the track changes).
+
+To render artwork, don't use this `artwork` field directly — it's a raw URL string. Use the active track's ready-to-use `artworkSource` instead (`<Image source={track.artworkSource} />`) — see [Track](/guide/track).
 
 ## Gotchas worth knowing
 
@@ -97,4 +138,30 @@ Repeated calls restart the window. `clearNowPlayingFlash()` cancels one imperati
 
 **Browse lists are separate.** `subtitle` drives browse-list rows (CarPlay list detail text, Android Auto list subtitle) and is never shown on now-playing surfaces; `artist` drives now-playing and is never shown in browse lists. Neither falls back to the other.
 
-**Now-playing artwork can resolve differently from list artwork.** The `nowPlayingArtwork` config kind builds the now-playing image from its own request (e.g. `{ path: '/artwork/{id}' }`) without putting thumbnails in browse lists — see `BrowserConfiguration.nowPlayingArtwork`.
+## Now-playing artwork
+
+Artwork is the one surface field the text layers (formatter / override / flash) can't touch — they carry only `title` / `artist` / `album`. The now-playing image comes from the active track's `artwork`.
+
+By default that's the same image as the track's browse-list thumbnail. To resolve it differently — a larger, lock-screen-quality image without bloating list thumbnails — set the `nowPlayingArtwork` config kind, which builds the now-playing image from its own request (e.g. `{ path: '/artwork/{id}' }`):
+
+```ts
+configureBrowser({
+  nowPlayingArtwork: { path: '/artwork/{id}' }
+  // ...tabs, routes
+})
+```
+
+See [`BrowserConfiguration.nowPlayingArtwork`](/api/types/browser/#browserconfiguration).
+
+## API summary
+
+| API | Purpose |
+| --- | --- |
+| `setupPlayer({ nowPlaying })` | Configure the formatter — derived lines from playback state. |
+| `updateNowPlaying(update \| null)` | Imperatively override fields; `null` clears. |
+| `flashNowPlaying(update, durationMs)` | Transient, top-priority swap (refused-command feedback). |
+| `clearNowPlayingFlash()` | Cancel an active flash early. |
+| `useNowPlaying()` / `getNowPlaying()` | Read the resolved metadata in your own UI. |
+| `onNowPlayingChanged` | Subscribe to metadata changes outside React. |
+| `onTimedMetadata` | Subscribe to ICY / ID3 stream metadata directly. |
+| `configureBrowser({ nowPlayingArtwork })` | Resolve now-playing artwork from its own request. |

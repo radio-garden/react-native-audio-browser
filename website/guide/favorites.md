@@ -19,8 +19,8 @@ await AudioBrowser.setupPlayer({
 
 ```ts
 // setFavorites(['abc123']) with track.src = '/stream/jazz-fm/abc123'
-//   match: 'exact'    → 'abc123' !== '/stream/jazz-fm/abc123'   → not favorited
-//   match: 'partial'  → 'abc123' is the last segment of src      → favorited
+//   'exact'   → 'abc123' !== full src → not favorited
+//   'partial' → 'abc123' is the last path segment of src → favorited
 capabilities: { favorite: { match: 'partial' } }
 ```
 
@@ -31,14 +31,19 @@ The library keeps a native cache of which tracks are favorited, so it paints hea
 **Declare them with `setFavorites` (recommended).** Pass your stored favorite ids at launch; the library stamps `favorited` on any track whose `src` matches (see [match modes](#enabling-favorites)). Your content endpoints stay favorites-agnostic — they return the same tracks for everyone, and favorite state lives entirely in your app/user storage.
 
 ```ts
-const favorites = await loadFavoritesFromStorage() // string[] of ids or src URLs
+// string[] of ids or src URLs
+const favorites = await loadFavoritesFromStorage()
 AudioBrowser.setFavorites(favorites)
 ```
 
 **Or embed `favorited` in your responses** — if your API already personalizes per user, return the flag directly and the cache fills as the listener browses:
 
 ```jsonc
-{ "title": "Smooth Jazz FM", "src": "https://stream.example.com/jazz.mp3", "favorited": true }
+{
+  "title": "Smooth Jazz FM",
+  "src": "https://stream.example.com/jazz.mp3",
+  "favorited": true
+}
 ```
 
 You only need `setFavorites` for the initial hydrate. After that, taps on the system heart and calls to [`setActiveTrackFavorited`](#favoriting-from-your-own-ui) update the cache for you.
@@ -93,7 +98,8 @@ AudioBrowser.configureBrowser({
     '/favorites': async () => ({
       url: '/favorites',
       title: 'Favorites',
-      children: await loadFavoriteTracks(), // your stored favorites, as a Track[]
+      // your stored favorites, as a Track[]
+      children: await loadFavoriteTracks(),
     }),
   },
 })
@@ -106,8 +112,10 @@ Resolve it however your collection lives — from local storage, or from your AP
 The library caches each browse route, so the `/favorites` route keeps showing its old contents until you tell it to re-fetch. **Whenever the favorites collection changes** — a system heart tap, your own UI, or a sync from another device — do two things:
 
 ```ts
-AudioBrowser.setFavorites(updatedIds)        // refresh the hearts (favorited flag)
-AudioBrowser.notifyContentChanged('/favorites') // re-fetch the /favorites content
+// refresh the hearts (favorited flag)
+AudioBrowser.setFavorites(updatedIds)
+// re-fetch the /favorites content
+AudioBrowser.notifyContentChanged('/favorites')
 ```
 
 These hit two different caches: `setFavorites` updates the `favorited` flag wherever a track appears, while [`notifyContentChanged(path)`](/api/) re-runs the route handler for that one path and refreshes any surface currently showing it. (Use `invalidateAllContent()` instead only when *everything* should re-fetch — e.g. a locale switch or sign-out.) Driving both from a single place that observes your favorites list — rather than from each individual toggle — keeps every source of change covered.

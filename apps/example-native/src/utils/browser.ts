@@ -64,7 +64,6 @@ const configuration: BrowserConfiguration = {
   async search({ query }) {
     return searchArchive(query)
   },
-  carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate'],
 
   formatNavigationError({ error, defaultFormatted, path }) {
     if (error.code === 'network-error' && path.startsWith('/api')) {
@@ -91,6 +90,9 @@ export const setupBrowser = async () => {
         forward: 'skip-to-next',
         overflow: ['favorite']
       }
+    },
+    ios: {
+      carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate']
     }
   })
 

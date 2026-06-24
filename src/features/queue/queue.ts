@@ -118,7 +118,7 @@ export function skipToPrevious(initialPosition?: number): void {
  * Sets (replaces) the queue.
  *
  * This does not change the play/pause state: the player keeps playing if it was
- * playing and stays paused if it was paused. Call {@link play} explicitly to
+ * playing and stays paused if it was paused. Call `play` explicitly to
  * start playback.
  *
  * @param tracks - The tracks to set as the queue.

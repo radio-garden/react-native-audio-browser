@@ -31,7 +31,7 @@ export function setVolume(level: number): void {
 /**
  * Sets the system volume.
  * @param level - The volume as a number between 0 and 1.
- * @note On iOS this is a no-op as Apple doesn't provide a public API to set system volume.
+ * @remarks On iOS this is a no-op as Apple doesn't provide a public API to set system volume.
  */
 export function setSystemVolume(level: number): void {
   nativeBrowser.setSystemVolume(level)

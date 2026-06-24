@@ -148,7 +148,7 @@ export const onFormattedNavigationError = NativeUpdatedValue.emitterize<
  * Hook that returns the current navigation error formatted for display.
  *
  * Native formats the error using the `formatNavigationError` callback configured
- * in {@link BrowserConfiguration}, or falls back to default English messages.
+ * in `BrowserConfiguration`, or falls back to default English messages.
  *
  * The same formatted error is used by CarPlay and Android Auto error dialogs,
  * ensuring consistent error presentation across your app and external controllers.
@@ -189,7 +189,7 @@ export const onFormattedNavigationError = NativeUpdatedValue.emitterize<
  * })
  * ```
  *
- * @see {@link BrowserConfiguration.formatNavigationError} - Configure custom error formatting
+ * @see `BrowserConfiguration.formatNavigationError` - Configure custom error formatting
  * @see {@link useNavigationError} - Access the raw error with code and status details
  */
 export function useFormattedNavigationError():

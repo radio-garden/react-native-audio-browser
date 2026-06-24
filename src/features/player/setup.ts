@@ -456,7 +456,7 @@ export interface NativeSetupPlayerOptions {
    * The initial play/pause intent, applied natively as soon as the player exists. Set it to
    * `true` so the first queued track starts playing the moment it loads.
    *
-   * Interleaves with {@link setPlayWhenReady} by strict last-write-wins, whether or not the
+   * Interleaves with `setPlayWhenReady` by strict last-write-wins, whether or not the
    * player exists yet.
    *
    * @default false
@@ -465,7 +465,7 @@ export interface NativeSetupPlayerOptions {
 
   /**
    * The initial repeat mode, applied natively as soon as the player exists. Interleaves with
-   * {@link setRepeatMode} by strict last-write-wins, whether or not the player exists yet.
+   * `setRepeatMode` by strict last-write-wins, whether or not the player exists yet.
    *
    * @default 'off'
    */

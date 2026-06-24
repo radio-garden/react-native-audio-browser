@@ -73,9 +73,9 @@ export interface PlayerCapabilities {
    * - Android: notification button slot + Android Auto now-playing, and an
    *   (empty or filled) heart on playable browse rows.
    *
-   * `match` controls how the ids from {@link AudioBrowser.setFavorites} are
+   * `match` controls how the ids from `setFavorites` are
    * compared against a track's `src` to decide its `favorited` state
-   * (see {@link FavoritesMatchMode}); `true` is shorthand for `'exact'`.
+   * (see `FavoritesMatchMode`); `true` is shorthand for `'exact'`.
    *
    * - `false` / omitted: favoriting off everywhere.
    * - `true`: on, with `'exact'` id matching.
@@ -498,8 +498,8 @@ export function updateOptions(options: UpdateOptions): void {
  * @example
  * ```typescript
  * const options = getOptions();
- * if (options.repeatMode === 'track') {
- *   // Handle track repeat mode
+ * if (options.capabilities.shuffleMode === false) {
+ *   // Shuffle is disabled
  * }
  * ```
  */

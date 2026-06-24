@@ -6,7 +6,12 @@
     "../src/types/*.ts"
   ],
   "entryPointStrategy": "expand",
-  "exclude": ["**/features/index.ts"],
+  "exclude": ["**/features/index.ts", "**/*.test.ts", "**/browser-native.ts"],
+  "intentionallyNotExported": [
+    "NativeUpdatedValue",
+    "NativeRequestConfigResolver",
+    "Callback"
+  ],
   "out": "./api",
   "plugin": [
     "typedoc-plugin-markdown",

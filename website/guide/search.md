@@ -27,19 +27,22 @@ The callback can return `Track[]` from anywhere — an in-memory filter as above
 ```ts
 configureBrowser({
   search: async (params) => {
+    // db / toTrack are yours
     const rows = await db.findStations(params.query)
     return rows.map(toTrack)
   }
 })
 ```
 
-**An HTTP endpoint** — a `TransformableRequestConfig`. The library issues the request natively and appends the query parameters for you. The endpoint must return a **page object** — `{ title?, children: Track[] }` — the same shape a browse endpoint returns:
+**An HTTP endpoint** — a `TransformableRequestConfig`. The library issues the request natively and appends the query parameters for you. The endpoint must return a **page object** — `{ title?, children: Track[] }` — the same shape a browse endpoint returns. (iOS and Android require the page object; the web implementation additionally accepts a bare `Track[]` for back-compat, but return the page object so all three platforms work.)
 
 ```ts
 configureBrowser({
   search: {
     baseUrl: 'https://api.example.com/search',
-    // GET https://api.example.com/search?q=jazz&mode=station&genre=jazz
+    // "play jazz" → GET .../search?q=jazz&genre=jazz&limit=20
+    // (q always; genre because the intent carried one; no mode here
+    //  because "play jazz" carries none; limit added by transform below)
     transform(request) {
       return { ...request, query: { ...request.query, limit: '20' } }
     }
@@ -47,7 +50,7 @@ configureBrowser({
 })
 ```
 
-With the HTTP form the library automatically appends `q`, `mode`, the filter fields, and `reference` (see below) to `request.query`.
+With the HTTP form the library appends to `request.query`: `q` (always, even when empty), then `mode`, `reference` (only when it is `'my'` — see below), and the filter fields, each included only when the intent carried it. Query-param order doesn't matter to a server, but that is the order the library writes them in. Note the spoken text is the `query` field in a **callback** (`SearchParams.query`) but is sent as the **`q`** wire param on the **HTTP** form — same value, named `query` in JS and `q` on the URL.
 
 ## SearchParams
 
@@ -63,6 +66,8 @@ Both forms receive the same structured `SearchParams`:
 | `title` | `string?` | Track-title filter (song intents). |
 | `playlist` | `string?` | Playlist-name filter. |
 | `reference` | `'my' \| 'unknown'` | Whether the user asked for *their own* collection. |
+
+`query` and `reference` are **always present** (`reference` defaults to `'unknown'`); the short literals in the tables below omit them for brevity, but a real `SearchParams` always carries both.
 
 ## Search modes are *verticals*, not filters
 
@@ -107,6 +112,10 @@ Write your resolver against the *fields that are present* (`if (params.genre) �
 
 A spoken command — "play jazz on «App»" — funnels to the **same `search` source** on both platforms, then the result is queued and played. Any active **[Gate](/guide/gate)** sees the search first, so voice can't slip past a paywall or region block unless your gate lets it through. You configure `search` once; both assistants use it.
 
+::: tip A browsable first result is drilled into
+For voice playback specifically, the library inspects the **first** result. If it is a browsable-only container — a `url` (a place/genre page) with no `src` of its own — the library resolves that page and queues *its* playable children, so "play jazz" plays the first station *inside* the jazz page rather than the page itself. If the first result is already playable (has a `src`), or the drill-in finds nothing playable, the flat list of results is queued as-is. This applies on both platforms, and only to voice playback — an in-app search UI renders your results and lets the user pick.
+:::
+
 For ordinary queries ("play jazz", "play «station name»") the two behave identically — same resolver, same queue, same playback. The entry point and a few conveniences differ:
 
 | | iOS (Siri) | Android (Google Assistant) |
@@ -128,7 +137,8 @@ When the user says **"play my favorites"**, the intent carries `reference: 'my'`
 ```ts
 configureBrowser({
   search: async (params) => {
-    if (params.reference === 'my') return getFavorites(params)   // local Track[]
+    // getFavorites returns your local Track[]
+    if (params.reference === 'my') return getFavorites(params)
     return searchByQuery(params)
   }
 })
@@ -163,6 +173,8 @@ configureBrowser({
 
 ## Voice phrase → params
 
+These mappings are **illustrative, not guaranteed.** The assistant (Siri / Google Assistant) decides how to parse a spoken phrase, and the same words can arrive structured differently — or as a bare `query` — depending on the platform, locale, and the assistant's own interpretation. Treat the table as *plausible* shapes to handle, and always write your resolver against the fields actually present (see [Cross-platform differences](#cross-platform-differences)) rather than assuming a phrase produces a specific shape.
+
 | Phrase | Resulting `SearchParams` |
 | --- | --- |
 | "play something" | `{ query: 'something' }` |
@@ -177,19 +189,33 @@ configureBrowser({
 
 This is an **audio** library — its player streams audio and has no video surface, and CarPlay / Android Auto forbid video playback while driving. So video is fundamentally an **in-app** concern: a search can *signal* a video request (via the video `mode` values), but the library will not render video.
 
-To play video from your in-app search, intercept the load with [`handleTrackLoad`](/api/). When set, it is called **instead of** the library auto-playing the track — so your handler can route video to your own player and let the library handle audio:
+To play video from your in-app search, intercept the load with [`handleTrackLoad`](/api/types/browser/#handletrackload). It runs whenever a track is loaded through [`navigate(track)`](/api/features/browser/#navigate) (or the library's own browse UI) — so route your in-app search-result taps through `navigate(track)` rather than calling `setQueue` / `play` yourself, or this hook never fires. When set, it is called **instead of** the library auto-playing the track — for **every** such load, not just video — so your handler must either route the track elsewhere or hand it back to the library to play:
 
 ```ts
+import {
+  configureBrowser,
+  setQueue,
+  play,
+  type Track
+} from 'react-native-audio-browser'
+
+// You build the search-result tracks, so encode "this is video" however
+// you like. `src` can be any string you recognise later — here, a scheme
+// prefix your own player understands.
+const isVideo = (track: Track) => track.src?.startsWith('video:') ?? false
+
 configureBrowser({
   handleTrackLoad: async ({ track, queue, startIndex }) => {
     if (isVideo(track)) {
-      openVideoPlayer(track)        // your own video surface
+      openVideoPlayer(track) // your own video surface
       return
     }
-    setQueue(queue, startIndex)    // hand audio back to the library
-    play()
+    setQueue(queue, startIndex) // hand audio back to the library
+    play() // setQueue does not start playback, so play() is required
   }
 })
 ```
 
-The library models media-kind on neither `Track` nor the player, so carry your own "is video" marker on the track (or infer it from `src`) and read it here. On external surfaces (CarPlay / Android Auto), a video request falls back to audio or is declined — there is no video playback path there.
+`setQueue` and `play` are top-level named exports, like `configureBrowser` — not methods on a browser object. `setQueue` only loads the queue; it never changes play/pause state, which is why the audio branch calls `play()` after it.
+
+The `mode` you saw at **search** time (`music-video` / `movie` / …) is not carried onto the `Track`, and `handleTrackLoad` runs at **load** time with no `mode`. The tracks your `search` source returns for a video request are *yours*, though — so tag them with a recognizable `src` (as above) when you build them, and read that tag in `isVideo` here. On external surfaces (CarPlay / Android Auto), a video request falls back to audio or is declined — there is no video playback path there.

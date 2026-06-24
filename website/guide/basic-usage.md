@@ -1,10 +1,13 @@
 # Basic Usage
 
-## Browser Tree Structure
+This guide covers the core idea — the **browse tree** — and the minimal code to set up the player, define some content, and play it. Installation is in [Getting Started](/guide/getting-started).
 
-The audio browser presents content as a navigable tree. This structure is required by Android Auto and CarPlay to display your content, and is also handy for apps to consume directly.
+## The browse tree
 
-Each Track can be **browsable** (has a `url` and opens to children) or **playable** (has a `src` and streams audio).
+The library models all content as one navigable tree of **Tracks**. A single Track is **browsable**, **playable**, or both, depending on which fields you set:
+
+- **Browsable** — has a `url`; navigating into it resolves its children.
+- **Playable** — has a `src`; the player can stream it.
 
 ```mermaid
 graph TD
@@ -36,31 +39,101 @@ graph TD
   <span><span style="display: inline-block; width: 12px; height: 12px; background: #e8f5e9; border: 1px solid #388e3c; margin-right: 4px;"></span> Playable: streams audio</span>
 </div>
 
-## Key Concepts
+One tree powers both your in-app UI and the native browse views on CarPlay and Android Auto.
 
-- **Browsable items** have a `url` that resolves to more children
-- **Playable items** have a `src` (the audio stream URL)
+## Set up the player
 
-## Player & Queue
+Call `setupPlayer()` once at startup to initialize the player:
 
-The player maintains a queue of tracks. When you play a track from the browser, the queue is populated with the playable items from that context — this allows external next/previous buttons to work (Android Auto, CarPlay, headphones, etc.).
+```ts
+import { setupPlayer } from 'react-native-audio-browser'
 
-```mermaid
-graph LR
-    subgraph Queue
-        T1[Fresh Sprout FM]
-        T2[The Seedling 91.2]
-        T3[Baby Greens Radio]
-        T4[Lil Bud 103.5]
-    end
-
-    T2 -.->|currently playing| NP[Now Playing]
-
-    classDef track fill:#f1f8e9,stroke:#388e3c
-    classDef current fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef np fill:#fff3e0,stroke:#f57c00
-
-    class T1,T3,T4 track
-    class T2 current
-    class NP np
+await setupPlayer()
 ```
+
+## Define a browse tree
+
+Describe the tree with `configureBrowser`: **tabs** along the top, and **routes** that resolve each path to its children. The simplest source is static data declared inline:
+
+```ts
+import { configureBrowser } from 'react-native-audio-browser'
+
+configureBrowser({
+  tabs: [{ title: 'Browse', url: '/browse' }],
+  routes: {
+    '/browse': {
+      url: '/browse',
+      title: 'Browse',
+      children: [
+        {
+          title: 'Jazz',
+          // A url makes this browsable — tapping it opens that path.
+          url: '/browse/jazz'
+        },
+        {
+          title: 'Smooth Floret FM',
+          // A src makes this playable — tapping it streams the track.
+          src: 'https://example.com/floret.mp3'
+        },
+      ],
+    },
+    '/browse/jazz': {
+      url: '/browse/jazz',
+      title: 'Jazz',
+      children: [
+        {
+          title: 'The Stalk 88.5',
+          src: 'https://example.com/stalk.mp3'
+        },
+      ],
+    },
+  },
+})
+```
+
+A route value is a [`BrowserSource`](/api/types/browser/#browsersource): the static page object shown above, an **async callback** that returns one (`'/path': async ({ routeParams }) => ({ title, children })`), or an HTTP request config that fetches it from your API — handy for trees too large to declare upfront.
+
+## Play a track
+
+On CarPlay and Android Auto, tapping a playable Track plays it for you. To drive playback from your own UI, set a queue and call `play`:
+
+```ts
+import { setQueue, play } from 'react-native-audio-browser'
+
+setQueue([
+  { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' },
+])
+play()
+```
+
+## The queue
+
+The player works through a **queue** of Tracks. The Track at the current position is the **active track** — it's what plays, and what external next/previous controls (car, headphones, lock screen) move between.
+
+**Now Playing** is the metadata shown on the lock screen, notification, and car surfaces. By default it mirrors the active track; for live streams you can override it as the current song changes — see [Now Playing](/guide/now-playing).
+
+## Read state in your UI
+
+Reactive hooks keep your in-app UI in sync with playback — they re-render automatically as it changes:
+
+```tsx
+import {
+  togglePlayback,
+  usePlayingState,
+  useActiveTrack
+} from 'react-native-audio-browser'
+
+function PlayPauseButton() {
+  const { playing } = usePlayingState()
+  const track = useActiveTrack()
+
+  return (
+    <Button
+      title={playing ? `Pause ${track?.title ?? ''}` : 'Play'}
+      onPress={() => togglePlayback()}
+    />
+  )
+}
+```
+
+See the [API reference](/api/) for the full set of hooks (`useProgress`, `useQueue`, `useNowPlaying`, and more).

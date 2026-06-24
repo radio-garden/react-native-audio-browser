@@ -119,9 +119,9 @@ export type MediaReference = 'my' | 'unknown'
  * - "play something"              → mode='any', query="" (smart shuffle)
  * - "play music"                  → mode='music' (iOS) / 'any' (Android), query=""
  * - "play jazz"                   → genre="jazz", query="jazz" (mode undefined)
- * - "play michael jackson"        → artist="michael jackson", query="michael jackson"
- * - "play thriller by m. jackson" → album="thriller", artist="michael jackson"
- * - "play billie jean"            → mode='song', title="billie jean", query="billie jean"
+ * - "play the radishes"           → artist="the radishes", query="the radishes"
+ * - "play greens by the radishes" → album="greens", artist="the radishes"
+ * - "play sweet pea"              → mode='song', title="sweet pea", query="sweet pea"
  * - "play my favorites"           → reference='my', query=""
  * - "play a jazz podcast"         → mode='podcast', genre="jazz"
  */
@@ -658,7 +658,7 @@ export type TabsSource =
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
 /**
- * How ids passed to {@link AudioBrowser.setFavorites} are matched against a
+ * How ids passed to `setFavorites` are matched against a
  * track's `src` to hydrate its `favorited` flag.
  *
  * - `'exact'`: the id must equal `src`.
@@ -816,8 +816,8 @@ export type BrowserConfiguration = {
    * - "play something"          → mode='any', query="" (smart shuffle)
    * - "play music"              → mode='music' (iOS) / 'any' (Android), query=""
    * - "play jazz"               → genre="jazz", query="jazz" (genre is a filter, no mode)
-   * - "play michael jackson"    → artist="michael jackson", query="michael jackson"
-   * - "play billie jean"        → mode='song', title="billie jean", query="billie jean"
+   * - "play the radishes"       → artist="the radishes", query="the radishes"
+   * - "play sweet pea"          → mode='song', title="sweet pea", query="sweet pea"
    * - "play my favorites"       → reference='my', query=""
    *
    * Can be either:
@@ -861,11 +861,11 @@ export type BrowserConfiguration = {
    * // API configuration - parameters automatically added to query string
    * search: {
    *   baseUrl: 'https://api.example.com/search',
-   *   // GET /search?q=thriller&mode=album&album=thriller&artist=michael+jackson&limit=20
+   *   // GET /search?q=greens&mode=album&album=greens&artist=the+radishes&limit=20
    *   transform(request) {
    *     return {
    *       ...request,
-   *       query: { ...request.query, limit: 20 }
+   *       query: { ...request.query, limit: '20' }
    *     };
    *   }
    * }
@@ -1009,12 +1009,15 @@ export type BrowserConfiguration = {
    *
    * @example
    * ```typescript
-   * formatNavigationError: (error) => ({
-   *   title: t(`error.${error.code}`),
-   *   message: error.code === 'http-error'
-   *     ? t('error.httpMessage', { status: error.statusCode })
-   *     : error.message
-   * })
+   * formatNavigationError: ({ error, defaultFormatted }) => {
+   *   if (error.code === 'http-error') {
+   *     return {
+   *       title: t('error.serverError'),
+   *       message: t('error.httpMessage', { status: error.statusCode })
+   *     }
+   *   }
+   *   return defaultFormatted
+   * }
    * ```
    */
   formatNavigationError?: FormatNavigationErrorCallback

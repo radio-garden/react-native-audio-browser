@@ -34,22 +34,63 @@ export default withMermaid(
             items: [
               { text: 'Getting Started', link: '/guide/getting-started' },
               { text: 'Basic Usage', link: '/guide/basic-usage' },
+              { text: 'Configuration', link: '/guide/configuration' },
+              { text: 'Track', link: '/guide/track' },
+              { text: 'Hooks', link: '/guide/hooks' },
               {
-                text: 'Now Playing',
-                link: '/guide/now-playing'
-              },
-              { text: 'Favorites', link: '/guide/favorites' },
-              { text: 'Search', link: '/guide/search' },
-              { text: 'Gate', link: '/guide/gate' }
+                text: 'From Track Player',
+                link: '/guide/migrating-from-track-player'
+              }
             ]
           },
           {
-            text: 'Platform Setup',
+            text: 'Player',
             items: [
+              { text: 'Artwork', link: '/guide/artwork' },
+              { text: 'Errors', link: '/guide/errors' },
+              { text: 'Metadata', link: '/guide/metadata' },
+              { text: 'Now Playing', link: '/guide/now-playing' },
+              { text: 'Playback', link: '/guide/playback' },
+              { text: 'Queue', link: '/guide/queue' },
+              { text: 'Remote Controls', link: '/guide/remote-controls' }
+            ]
+          },
+          {
+            text: 'Browser',
+            items: [
+              { text: 'Browser', link: '/guide/browser' },
+              { text: 'Favorites', link: '/guide/favorites' },
+              { text: 'Gate', link: '/guide/gate' },
+              { text: 'Search', link: '/guide/search' }
+            ]
+          },
+          {
+            text: 'Extras',
+            items: [
+              { text: 'Audio Output', link: '/guide/audio-output' },
+              { text: 'Battery', link: '/guide/battery' },
+              { text: 'Equalizer', link: '/guide/equalizer' },
+              { text: 'Network', link: '/guide/network' },
+              { text: 'Sleep Timer', link: '/guide/sleep-timer' }
+            ]
+          },
+          {
+            text: 'Automotive',
+            items: [
+              { text: 'Overview', link: '/guide/automotive' },
               { text: 'Android Auto', link: '/guide/android-auto' },
-              { text: 'CarPlay', link: '/guide/carplay' },
+              { text: 'CarPlay', link: '/guide/carplay' }
+            ]
+          },
+          {
+            text: 'Troubleshooting',
+            items: [
               {
-                text: 'Missing Intermediate Certificates',
+                text: 'Networking in native callbacks',
+                link: '/guide/native-callback-fetch'
+              },
+              {
+                text: 'Android SSL / Trust Anchor Errors',
                 link: '/guide/android-certificates'
               }
             ]

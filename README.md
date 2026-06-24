@@ -163,7 +163,7 @@ Full guides at [audiobrowser.dev](https://audiobrowser.dev):
 - [Gate](https://audiobrowser.dev/guide/gate)
 - [API Reference](https://audiobrowser.dev/api/)
 
-The example app in [`apps/example-native`](apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate.
+The example app in [`apps/example-native`](https://github.com/radio-garden/react-native-audio-browser/tree/main/apps/example-native) browses archive.org's audio collection — in-app, on CarPlay, and on Android Auto — with search, favorites, and the gate.
 
 ## Support
 
