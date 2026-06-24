@@ -3,25 +3,31 @@
 [![npm](https://img.shields.io/npm/v/react-native-audio-browser)](https://www.npmjs.com/package/react-native-audio-browser)
 [![license](https://img.shields.io/npm/l/react-native-audio-browser)](LICENSE)
 
-Audio Browser (`react-native-audio-browser`) is a React Native audio library built around dynamic Android Auto and CarPlay navigation trees. From the team that maintained [react-native-track-player](https://github.com/doublesymmetry/react-native-track-player), and developed for [Radio Garden](https://radio.garden)'s official apps.
+Full-featured React Native audio for production apps that span app screens, lock screens, CarPlay, Android Auto, voice controls, and the web, with one shared playback and browse model.
 
-A CarPlay or Android Auto app navigates a browse tree — tabs, folders, and lists, usually lazy-loaded from a backend. This library makes that tree the core primitive: define it as static data, or resolve it on demand from JS callbacks or your JSON API, and it renders and plays natively on CarPlay, Android Auto, and the lock screen.
+Built by former [react-native-track-player](https://github.com/doublesymmetry/react-native-track-player) maintainers and contributors, and developed for the official [Radio Garden](https://radio.garden) apps. Audio Browser takes that experience in a new direction: a browse-first architecture for the surfaces modern audio apps need.
+
+In the car, audio apps are organized as a browse tree: tabs, nested folders, and playable items, often loaded on demand from your backend. Define the tree in JS, fetch it from your API, or resolve nodes lazily with callbacks. Audio Browser renders it as native CarPlay and Android Auto UI, with playback wired into the lock screen and system controls.
+
+Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto. Either way, [hooks](#hooks) expose playback, queue, and browse state for your own screens.
 
 ## Features
 
-- **Dynamic browse tree** — tabs and routes resolved from your JSON API or JS callbacks, rendered natively on CarPlay and Android Auto.
-- **Built on Nitro** — New Architecture, synchronous native calls, no bridge overhead.
-- **Callback-driven** — the library calls *into* your code at decision points (route resolvers, request transforms, gating, track-load interception) and uses what you return. Real native-to-JS callbacks via Nitro — no fire-and-forget event-emitter plumbing.
-- **Full playback** — queue, background audio, playback rate, and lock-screen / notification / headset controls.
-- **Playback resumption** — persists the last session and resumes it after the app is killed: the system play button on Android, "play «App»" via Siri on iOS.
-- **Live-stream ready** — HLS and ICY streams, with stall recovery, reconnection, and live-edge seeking (see [Streaming](#streaming)).
-- **React hooks** — reactive playback, queue, and browse state for your in-app UI (see [Hooks](#hooks)).
-- **Now Playing** — metadata, artwork, and timed & chapter metadata.
-- **Voice search** — Siri and Google Assistant funnel to one `search` source, with structured params: "play some jazz" arrives as a genre filter, not a raw query string.
-- **Gate** — put browse and search behind a paywall, login, or region wall, with a per-request resolver.
-- **Request & artwork control** — rewrite outbound requests (auth headers, URL shaping) with transforms, and control how artwork is fetched.
-- **Web support** — the same `AudioBrowser` API runs on the web (`react-native-web`): playback, browse tree, search, and sleep timer.
-- **Extras** — AirPlay and output routing (iOS), Android battery-resume handling, sleep timer, favorites, and equalizer (Android).
+- **Browse-first architecture** — tabs, folders, routes, and playable items resolved from static data, JS callbacks, or your JSON API, then rendered natively on CarPlay and Android Auto.
+- **Car cold start** — launch directly from CarPlay or Android Auto with the phone app closed. The browse tree and playback come up on the head unit without opening the app first.
+- **Production playback** — queue, background audio, playback rate, interruptions, audio focus, and lock screen, notification, and headset controls.
+- **Built on Nitro** — React Native's New Architecture, synchronous native calls, and no bridge overhead.
+- **Real native-to-JS callbacks** — route resolvers, request transforms, gates, search, and track-load interception call into your JS and use what you return, instead of going through fire-and-forget bridge events.
+- **Playback resumption** — persist the last session and resume after the app is killed, including the Android system play button and “play «App»” via Siri.
+- **Live-stream ready** — HLS, ICY/Icecast, and progressive streams, with stall recovery, reconnects, fresh URL resolution, and live-edge seeking. See [Streaming](#streaming).
+- **React hooks** — reactive playback, queue, browse, progress, sleep timer, and car-connection state for your app UI. See [Hooks](#hooks).
+- **Now Playing** — metadata, artwork, timed metadata, chapter metadata, lock screen updates, and media-session integration.
+- **Favorites** — favorite the current track from the Now Playing heart button or by voice, ask Siri to “play my favorites” or search within them, and keep favorited state in sync across surfaces — even when your app stores favorites by ID instead of stream URL.
+- **Voice search** — Siri and Google Assistant route into one structured `search` source, so “play some jazz” can arrive as a genre filter instead of a raw query string.
+- **Access gates** — put browse and search behind a paywall, login, or region wall with per-request resolvers.
+- **Request and artwork control** — rewrite outbound requests, add auth headers, shape URLs, and customize artwork loading.
+- **Web support** — the same `AudioBrowser` API works with `react-native-web` for playback, browse, search, and sleep timer.
+- **Platform extras** — AirPlay and output routing on iOS, Android battery-resume handling, sleep timer, and Android equalizer support.
 
 ## Requirements
 
