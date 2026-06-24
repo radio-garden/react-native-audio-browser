@@ -21,6 +21,7 @@ object TestFixtures {
     artwork: String? = null,
     artist: String? = null,
     album: String? = null,
+    favorited: Boolean? = null,
   ) =
     Track(
       id = id,
@@ -40,7 +41,7 @@ object TestFixtures {
       duration = null,
       style = null,
       childrenStyle = null,
-      favorited = null,
+      favorited = favorited,
       groupTitle = null,
       live = null,
       imageRow = null,

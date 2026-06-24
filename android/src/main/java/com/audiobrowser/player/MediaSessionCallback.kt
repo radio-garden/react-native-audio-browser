@@ -1,7 +1,6 @@
 package com.audiobrowser.player
 
 import android.os.Bundle
-import androidx.media3.common.HeartRating
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Rating
@@ -15,7 +14,7 @@ import androidx.media3.session.SessionResult
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.extension.toTrack
 import com.audiobrowser.util.BrowserPathHelper
-import com.audiobrowser.util.RatingFactory
+import com.audiobrowser.util.RatingFavorites
 import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -28,7 +27,6 @@ import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -208,15 +206,10 @@ class MediaSessionCallback(private val player: Player) :
     controller: MediaSession.ControllerInfo,
     rating: Rating,
   ): ListenableFuture<SessionResult> {
-    if (rating is HeartRating && rating.isRated) {
-      player.setActiveTrackFavorited(rating.isHeart)
-    }
-
-    // Also emit onRemoteSetRating for listeners
-    RatingFactory.media3ToBridge(rating)?.let {
-      val event = RemoteSetRatingEvent(it)
-      player.callbacks?.onRemoteSetRating(event)
-    }
+    // A heart rating from a controller (e.g. Google Assistant "I like this") toggles the
+    // now-playing favorite. setActiveTrackFavorited fires onFavoriteChanged so the consumer
+    // persists it — the same path as the notification / CarPlay heart button.
+    RatingFavorites.favoritedFor(rating)?.let { player.setActiveTrackFavorited(it) }
     return super.onSetRating(session, controller, rating)
   }
 
