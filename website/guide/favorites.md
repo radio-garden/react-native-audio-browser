@@ -1,6 +1,6 @@
 # Favorites
 
-**Favorites** let a listener mark the playing track with a heart — on the now-playing screen, the notification, CarPlay, and Android Auto — and let you surface a "Favorites" tab and a "play my favorites" voice command. The library tracks favorite *state* (which track is favorited, and keeping the heart in sync everywhere); **your app owns the list** (where favorites are stored and how they persist).
+**Favorites** let a listener mark the active track with a heart — on the now-playing screen, the notification, CarPlay, and Android Auto — and let you surface a "Favorites" tab and a "play my favorites" voice command. The library tracks favorite *state* (which track is favorited, and keeping the heart in sync everywhere); **your app owns the collection** (where favorites are stored and how they persist).
 
 ## Enabling favorites
 
@@ -26,19 +26,19 @@ capabilities: { favorite: { match: 'partial' } }
 
 ## Hydrating favorite state
 
-The library keeps a native cache of which tracks are favorited so it can paint hearts on system surfaces without a round-trip to JS. There are two ways to populate it:
+The library keeps a native cache of which tracks are favorited, so it paints hearts across browse rows and the Now Playing heart without a round-trip to JS — and **without your content API having to know which tracks are favorites**. Declare your favorites once; the library matches them against each track's `src` wherever that track appears.
 
-**1. Include `favorited` on your tracks.** If your API already knows which tracks are favorited, return the flag and the cache populates automatically as the listener browses:
-
-```jsonc
-{ "title": "Smooth Jazz FM", "src": "https://stream.example.com/jazz.mp3", "favorited": true }
-```
-
-**2. Call `setFavorites` on launch.** If your tracks don't carry the flag, hydrate the cache once at startup from your own storage:
+**Declare them with `setFavorites` (recommended).** Pass your stored favorite ids at launch; the library stamps `favorited` on any track whose `src` matches (see [match modes](#enabling-favorites)). Your content endpoints stay favorites-agnostic — they return the same tracks for everyone, and favorite state lives entirely in your app/user storage.
 
 ```ts
 const favorites = await loadFavoritesFromStorage() // string[] of ids or src URLs
 AudioBrowser.setFavorites(favorites)
+```
+
+**Or embed `favorited` in your responses** — if your API already personalizes per user, return the flag directly and the cache fills as the listener browses:
+
+```jsonc
+{ "title": "Smooth Jazz FM", "src": "https://stream.example.com/jazz.mp3", "favorited": true }
 ```
 
 You only need `setFavorites` for the initial hydrate. After that, taps on the system heart and calls to [`setActiveTrackFavorited`](#favoriting-from-your-own-ui) update the cache for you.
@@ -79,9 +79,9 @@ AudioBrowser.toggleActiveTrackFavorited()
 
 These are the programmatic counterpart to a system heart tap — persist the result yourself, the same way you would in `onFavoriteChanged`.
 
-## A Favorites tab
+## Surfacing favorites
 
-Favorites is just another node in your [browse tree](/guide/basic-usage) — add a tab whose route returns the listener's favorited tracks:
+How you surface favorites in your [browse tree](/guide/basic-usage) is up to you — a top-level tab, a nested entry, or a group within a larger list. Whatever the placement, point its route at the listener's favorited tracks:
 
 ```ts
 AudioBrowser.configureBrowser({
@@ -99,15 +99,15 @@ AudioBrowser.configureBrowser({
 })
 ```
 
-Resolve it however your collection lives — from local storage, or from your API (with an HTTP route that posts your stored identifiers). It renders natively on CarPlay and Android Auto like any other tab.
+Resolve it however your collection lives — from local storage, or from your API (with an HTTP route that posts your stored identifiers). It renders natively on CarPlay and Android Auto like any other browse content.
 
 ### Keep it in sync
 
-The library caches each browse route, so the `/favorites` route keeps showing its old contents until you tell it to re-fetch. **Whenever the favorites list changes** — a system heart tap, your own UI, or a sync from another device — do two things:
+The library caches each browse route, so the `/favorites` route keeps showing its old contents until you tell it to re-fetch. **Whenever the favorites collection changes** — a system heart tap, your own UI, or a sync from another device — do two things:
 
 ```ts
 AudioBrowser.setFavorites(updatedIds)        // refresh the hearts (favorited flag)
-AudioBrowser.notifyContentChanged('/favorites') // re-fetch the Favorites tab
+AudioBrowser.notifyContentChanged('/favorites') // re-fetch the /favorites content
 ```
 
 These hit two different caches: `setFavorites` updates the `favorited` flag wherever a track appears, while [`notifyContentChanged(path)`](/api/) re-runs the route handler for that one path and refreshes any surface currently showing it. (Use `invalidateAllContent()` instead only when *everything* should re-fetch — e.g. a locale switch or sign-out.) Driving both from a single place that observes your favorites list — rather than from each individual toggle — keeps every source of change covered.
@@ -125,7 +125,7 @@ Voice intents can target the favorites collection — both "play my favorites" a
 | `track.favorited` | Per-track flag; auto-populates the cache during browse. |
 | `setActiveTrackFavorited(bool)` / `toggleActiveTrackFavorited()` | Favorite the active track from your own UI. |
 | `onFavoriteChanged` | Subscribe to system heart taps to persist the change. |
-| `notifyContentChanged('/favorites')` | Re-fetch the Favorites tab after the list changes. |
+| `notifyContentChanged('/favorites')` | Re-fetch the `/favorites` content after the collection changes. |
 | `android.notificationButtons.overflow: ['favorite']` | Heart in the Android notification. |
 | `ios.carPlayNowPlayingButtons: ['favorite']` | Heart on the CarPlay now-playing screen. |
 | `search` source with `reference: 'my'` | Resolve "play my favorites" / favorites search. |

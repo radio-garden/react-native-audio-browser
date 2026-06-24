@@ -7,7 +7,7 @@ Full-featured React Native audio for production apps that span app screens, lock
 
 Built by former [react-native-track-player](https://github.com/doublesymmetry/react-native-track-player) maintainers and contributors, and developed for the official [Radio Garden](https://radio.garden) apps. Audio Browser takes that experience in a new direction: a browse-first architecture for the surfaces modern audio apps need.
 
-In the car, audio apps are organized as a browse tree: tabs, nested lists, and playable items, often loaded on demand from your backend. Define the tree in JS, fetch it from your API, or resolve nodes lazily with callbacks. Audio Browser renders it as native CarPlay and Android Auto UI, with playback wired into the lock screen and system controls.
+In the car, audio apps are organized as a browse tree: tabs, nested lists, and playable items, often loaded on demand from your backend. Define the tree in JS, fetch it from your API, or resolve it lazily with callbacks. Audio Browser renders it as native CarPlay and Android Auto UI, with playback wired into the lock screen and system controls.
 
 Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto. Either way, [hooks](#hooks) expose playback, queue, and browse state for your own screens.
 
