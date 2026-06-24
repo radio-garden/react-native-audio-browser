@@ -99,7 +99,7 @@ data class PlayerUpdateOptions(
       progressUpdateEventInterval =
         progressUpdateEventInterval?.let { Variant_NullType_Double.create(it) },
       capabilities = capabilities,
-      iosPlaybackRates = null, // iOS-only option
+      ios = null, // iOS-only options
     )
   }
 
