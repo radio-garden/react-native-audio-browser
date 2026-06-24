@@ -1,9 +1,3 @@
-import type {
-  HeartRating,
-  PercentageRating,
-  StarRating,
-  ThumbsRating
-} from './rating'
 import { nativeBrowser } from '../native'
 import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 
@@ -49,13 +43,6 @@ export interface RemotePlaySearchEvent {
 export interface RemoteSeekEvent {
   /** The position to seek to in seconds */
   position: number
-}
-
-/**
- * Remote set rating event.
- */
-export interface RemoteSetRatingEvent {
-  rating: HeartRating | ThumbsRating | StarRating | PercentageRating
 }
 
 /**
@@ -311,16 +298,6 @@ export const onRemotePrevious = LazyNativeEmitter.emitterize<void>(
 export const onRemoteSeek = LazyNativeEmitter.emitterize<RemoteSeekEvent>(
   (cb) => (nativeBrowser.onRemoteSeek = cb)
 )
-
-/**
- * Subscribes to remote set rating events.
- * @param callback - Called when the user changes the rating for the track remotely
- * @returns Cleanup function to unsubscribe
- */
-export const onRemoteSetRating =
-  LazyNativeEmitter.emitterize<RemoteSetRatingEvent>(
-    (cb) => (nativeBrowser.onRemoteSetRating = cb)
-  )
 
 /**
  * Subscribes to remote skip events (Android only).

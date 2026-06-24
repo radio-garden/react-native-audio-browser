@@ -56,8 +56,6 @@ namespace margelo::nitro::audiobrowser { struct GateDecision; }
 namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `GateReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class GateReason; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
@@ -126,8 +124,6 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -150,8 +146,6 @@ namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
 // Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
@@ -162,8 +156,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 // Forward declaration of `RemoteSeekEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `RepeatModeChangedEvent` to properly resolve imports.
@@ -186,10 +178,6 @@ namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 namespace margelo::nitro::audiobrowser { struct SleepTimerTime; }
 // Forward declaration of `StallReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
 // Forward declaration of `TimedMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TimedMetadata; }
 // Forward declaration of `TrackLoadEvent` to properly resolve imports.
@@ -230,7 +218,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "GateDecision.hpp"
 #include "GateEvent.hpp"
 #include "GateReason.hpp"
-#include "HeartRating.hpp"
 #include "HttpMethod.hpp"
 #include "HybridAudioBrowserSpec.hpp"
 #include "IOSCategory.hpp"
@@ -265,7 +252,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
-#include "PercentageRating.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
@@ -277,13 +263,11 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "PlayerCapabilities.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
-#include "RatingType.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "RepeatMode.hpp"
 #include "RepeatModeChangedEvent.hpp"
@@ -295,8 +279,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"
 #include "StallReason.hpp"
-#include "StarRating.hpp"
-#include "ThumbsRating.hpp"
 #include "TimedMetadata.hpp"
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"

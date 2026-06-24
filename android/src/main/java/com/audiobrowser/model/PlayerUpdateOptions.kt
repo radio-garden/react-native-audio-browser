@@ -6,7 +6,6 @@ import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.Options
-import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
 import com.margelo.nitro.audiobrowser.Variant_NullType_NotificationButtonLayout
 
@@ -42,7 +41,6 @@ data class PlayerUpdateOptions(
   var notificationButtons: NotificationButtonLayout? = null,
 
   // Android-specific runtime options (all under android.* in JS)
-  var ratingType: NitroRatingType? = null,
   var appKilledPlaybackBehavior: AppKilledPlaybackBehavior =
     AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION,
   var skipSilence: Boolean = false,
@@ -63,9 +61,6 @@ data class PlayerUpdateOptions(
 
     // Update Android-specific options
     options.android?.let { androidOptions ->
-      // Convert rating type
-      androidOptions.ratingType?.let { ratingType = it }
-
       androidOptions.appKilledPlaybackBehavior?.let { appKilledPlaybackBehavior = it }
 
       // Update boolean options
@@ -90,7 +85,6 @@ data class PlayerUpdateOptions(
         AndroidOptions(
           appKilledPlaybackBehavior = appKilledPlaybackBehavior,
           skipSilence = skipSilence,
-          ratingType = ratingType,
           notificationButtons =
             notificationButtons?.let { Variant_NullType_NotificationButtonLayout.create(it) },
         ),

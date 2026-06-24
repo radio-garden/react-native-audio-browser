@@ -684,7 +684,6 @@ export async function setupPlayer(
   const {
     appKilledPlaybackBehavior,
     skipSilence,
-    ratingType,
     notificationButtons,
     ...androidSetup
   } = android
@@ -711,7 +710,6 @@ export async function setupPlayer(
       definedFields({
         appKilledPlaybackBehavior,
         skipSilence,
-        ratingType,
         notificationButtons
       })
     ),

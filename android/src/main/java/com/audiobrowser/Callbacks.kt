@@ -15,7 +15,6 @@ import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
 import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SleepTimer
 import com.margelo.nitro.audiobrowser.TimedMetadata
@@ -70,9 +69,6 @@ interface Callbacks {
   fun handleRemoteJumpBackward(event: RemoteJumpBackwardEvent): Boolean
 
   fun handleRemoteSeek(event: RemoteSeekEvent): Boolean
-
-  // Rating events (listener only, not handler)
-  fun onRemoteSetRating(event: RemoteSetRatingEvent)
 
   // Configuration events
   fun onOptionsChanged(options: PlayerUpdateOptions)

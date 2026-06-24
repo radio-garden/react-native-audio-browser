@@ -18,7 +18,7 @@ public extension NowPlayingMetadata {
   /**
    * Create a new instance of `NowPlayingMetadata`.
    */
-  init(elapsedTime: Double?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, mediaId: String?, genre: String?, rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?) {
+  init(elapsedTime: Double?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, mediaId: String?, genre: String?) {
     self.init({ () -> bridge.std__optional_double_ in
       if let __unwrappedValue = elapsedTime {
         return bridge.create_std__optional_double_(__unwrappedValue)
@@ -70,23 +70,6 @@ public extension NowPlayingMetadata {
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = genre {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__ in
-      if let __unwrappedValue = rating {
-        return bridge.create_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__({ () -> bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_ in
-          switch __unwrappedValue {
-            case .first(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            case .second(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            case .third(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-            case .fourth(let __value):
-              return bridge.create_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__value)
-          }
-        }().variant)
       } else {
         return .init()
       }
@@ -195,36 +178,6 @@ public extension NowPlayingMetadata {
       if bridge.has_value_std__optional_std__string_(self.__genre) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__genre)
         return String(__unwrapped)
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? {
-    return { () -> Variant_HeartRating_ThumbsRating_StarRating_PercentageRating? in
-      if bridge.has_value_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(self.__rating) {
-        let __unwrapped = bridge.get_std__optional_std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating__(self.__rating)
-        return { () -> Variant_HeartRating_ThumbsRating_StarRating_PercentageRating in
-          let __variant = bridge.std__variant_HeartRating__ThumbsRating__StarRating__PercentageRating_(__unwrapped)
-          switch __variant.index() {
-            case 0:
-              let __actual = __variant.get_0()
-              return .first(__actual)
-            case 1:
-              let __actual = __variant.get_1()
-              return .second(__actual)
-            case 2:
-              let __actual = __variant.get_2()
-              return .third(__actual)
-            case 3:
-              let __actual = __variant.get_3()
-              return .fourth(__actual)
-            default:
-              fatalError("Variant can never have index \(__variant.index())!")
-          }
-        }()
       } else {
         return nil
       }

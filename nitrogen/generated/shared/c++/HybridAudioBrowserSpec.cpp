@@ -84,8 +84,6 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onRemotePrevious", &HybridAudioBrowserSpec::setOnRemotePrevious);
       prototype.registerHybridGetter("onRemoteSeek", &HybridAudioBrowserSpec::getOnRemoteSeek);
       prototype.registerHybridSetter("onRemoteSeek", &HybridAudioBrowserSpec::setOnRemoteSeek);
-      prototype.registerHybridGetter("onRemoteSetRating", &HybridAudioBrowserSpec::getOnRemoteSetRating);
-      prototype.registerHybridSetter("onRemoteSetRating", &HybridAudioBrowserSpec::setOnRemoteSetRating);
       prototype.registerHybridGetter("onRemoteSkip", &HybridAudioBrowserSpec::getOnRemoteSkip);
       prototype.registerHybridSetter("onRemoteSkip", &HybridAudioBrowserSpec::setOnRemoteSkip);
       prototype.registerHybridGetter("onRemoteStop", &HybridAudioBrowserSpec::getOnRemoteStop);

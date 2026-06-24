@@ -19,8 +19,6 @@
 #include "JAndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "RatingType.hpp"
-#include "JRatingType.hpp"
 #include <NitroModules/Null.hpp>
 #include "NotificationButtonLayout.hpp"
 #include <variant>

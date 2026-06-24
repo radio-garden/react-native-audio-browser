@@ -14,11 +14,9 @@
 #include "JAppKilledPlaybackBehavior.hpp"
 #include "JNotificationButton.hpp"
 #include "JNotificationButtonLayout.hpp"
-#include "JRatingType.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
-#include "RatingType.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>
@@ -48,14 +46,11 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JAppKilledPlaybackBehavior> appKilledPlaybackBehavior = this->getFieldValue(fieldAppKilledPlaybackBehavior);
       static const auto fieldSkipSilence = clazz->getField<jni::JBoolean>("skipSilence");
       jni::local_ref<jni::JBoolean> skipSilence = this->getFieldValue(fieldSkipSilence);
-      static const auto fieldRatingType = clazz->getField<JRatingType>("ratingType");
-      jni::local_ref<JRatingType> ratingType = this->getFieldValue(fieldRatingType);
       static const auto fieldNotificationButtons = clazz->getField<JVariant_NullType_NotificationButtonLayout>("notificationButtons");
       jni::local_ref<JVariant_NullType_NotificationButtonLayout> notificationButtons = this->getFieldValue(fieldNotificationButtons);
       return NitroAndroidUpdateOptions(
         appKilledPlaybackBehavior != nullptr ? std::make_optional(appKilledPlaybackBehavior->toCpp()) : std::nullopt,
         skipSilence != nullptr ? std::make_optional(static_cast<bool>(skipSilence->value())) : std::nullopt,
-        ratingType != nullptr ? std::make_optional(ratingType->toCpp()) : std::nullopt,
         notificationButtons != nullptr ? std::make_optional(notificationButtons->toCpp()) : std::nullopt
       );
     }
@@ -66,14 +61,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNitroAndroidUpdateOptions::javaobject> fromCpp(const NitroAndroidUpdateOptions& value) {
-      using JSignature = JNitroAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_NullType_NotificationButtonLayout>);
+      using JSignature = JNitroAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JVariant_NullType_NotificationButtonLayout>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.appKilledPlaybackBehavior.has_value() ? JAppKilledPlaybackBehavior::fromCpp(value.appKilledPlaybackBehavior.value()) : nullptr,
         value.skipSilence.has_value() ? jni::JBoolean::valueOf(value.skipSilence.value()) : nullptr,
-        value.ratingType.has_value() ? JRatingType::fromCpp(value.ratingType.value()) : nullptr,
         value.notificationButtons.has_value() ? JVariant_NullType_NotificationButtonLayout::fromCpp(value.notificationButtons.value()) : nullptr
       );
     }

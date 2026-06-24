@@ -493,20 +493,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onRemoteSeek = value
     }
   
-  abstract var onRemoteSetRating: (event: RemoteSetRatingEvent) -> Unit
-  
-  private var onRemoteSetRating_cxx: Func_void_RemoteSetRatingEvent
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_RemoteSetRatingEvent_java(onRemoteSetRating)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteSetRating = value
-    }
-  
   abstract var onRemoteSkip: (event: RemoteSkipEvent) -> Unit
   
   private var onRemoteSkip_cxx: Func_void_RemoteSkipEvent

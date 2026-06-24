@@ -237,7 +237,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var onRemotePlaySearch: (RemotePlaySearchEvent) -> Void = { _ in }
   public var onRemotePrevious: () -> Void = {}
   public var onRemoteSeek: (RemoteSeekEvent) -> Void = { _ in }
-  public var onRemoteSetRating: (RemoteSetRatingEvent) -> Void = { _ in }
   public var onRemoteSkip: (RemoteSkipEvent) -> Void = { _ in }
   public var onRemoteStop: () -> Void = {}
 
@@ -1723,10 +1722,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
 
   public func remoteChangePlaybackPosition(position: Double) {
     remoteSeek(position: position)
-  }
-
-  public func remoteSetRating(rating _: Any) {
-    // TODO: Convert rating to RemoteSetRatingEvent
   }
 
   public func remotePlayId(id: String, index: Int?) {

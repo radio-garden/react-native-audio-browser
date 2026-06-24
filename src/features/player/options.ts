@@ -1,6 +1,5 @@
 import type { FavoriteConfig } from '../../types'
 import type { CarPlayNowPlayingButton } from '../../types/browser'
-import type { RatingType } from '../metadata'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -274,12 +273,6 @@ export interface AndroidOptions {
   skipSilence: boolean
 
   /**
-   * The rating type to use for ratings, when one has been set.
-   * Determines how star ratings and thumbs up/down are handled.
-   */
-  ratingType?: RatingType
-
-  /**
    * Slot-based button layout for Android notifications.
    * Provides explicit control over which buttons appear in which positions.
    *
@@ -307,12 +300,6 @@ export interface AndroidUpdateOptions {
   skipSilence?: boolean
 
   /**
-   * The rating type to use for ratings.
-   * Determines how star ratings and thumbs up/down are handled.
-   */
-  ratingType?: RatingType
-
-  /**
    * Slot-based button layout for Android notifications.
    * Provides explicit control over which buttons appear in which positions.
    *
@@ -326,7 +313,6 @@ export interface AndroidUpdateOptions {
 export interface NitroAndroidUpdateOptions {
   appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
   skipSilence?: boolean
-  ratingType?: RatingType
   notificationButtons?: NotificationButtonLayout | null
 }
 

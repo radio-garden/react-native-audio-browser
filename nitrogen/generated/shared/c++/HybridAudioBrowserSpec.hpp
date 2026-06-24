@@ -65,8 +65,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 // Forward declaration of `RemoteSeekEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -135,7 +133,6 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -251,8 +248,6 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnRemotePrevious(const std::function<void()>& onRemotePrevious) = 0;
       virtual std::function<void(const RemoteSeekEvent& /* event */)> getOnRemoteSeek() = 0;
       virtual void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) = 0;
-      virtual std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() = 0;
-      virtual void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) = 0;
       virtual std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() = 0;
       virtual void setOnRemoteSkip(const std::function<void(const RemoteSkipEvent& /* event */)>& onRemoteSkip) = 0;
       virtual std::function<void()> getOnRemoteStop() = 0;

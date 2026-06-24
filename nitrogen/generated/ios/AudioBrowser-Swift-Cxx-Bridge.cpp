@@ -444,14 +444,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<void(const RemoteSetRatingEvent& /* event */)>
-  Func_void_RemoteSetRatingEvent create_Func_void_RemoteSetRatingEvent(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_RemoteSetRatingEvent::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const RemoteSetRatingEvent& event) mutable -> void {
-      swiftClosure.call(event);
-    };
-  }
-  
   // pragma MARK: std::function<void(const RemoteSkipEvent& /* event */)>
   Func_void_RemoteSkipEvent create_Func_void_RemoteSkipEvent(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = AudioBrowser::Func_void_RemoteSkipEvent::fromUnsafe(swiftClosureWrapper);

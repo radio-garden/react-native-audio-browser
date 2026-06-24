@@ -120,8 +120,6 @@ namespace margelo::nitro::audiobrowser {
     void setOnRemotePrevious(const std::function<void()>& onRemotePrevious) override;
     std::function<void(const RemoteSeekEvent& /* event */)> getOnRemoteSeek() override;
     void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) override;
-    std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() override;
-    void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) override;
     std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() override;
     void setOnRemoteSkip(const std::function<void(const RemoteSkipEvent& /* event */)>& onRemoteSkip) override;
     std::function<void()> getOnRemoteStop() override;

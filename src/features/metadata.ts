@@ -1,17 +1,7 @@
-import type { Rating } from './rating'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Types
-
-export type RatingType =
-  | 'heart'
-  | 'thumbs-up-down'
-  | 'three-stars'
-  | 'four-stars'
-  | 'five-stars'
-  | 'percentage'
-  | 'none'
 
 export interface TrackMetadataBase {
   /** The track title */
@@ -30,8 +20,6 @@ export interface TrackMetadataBase {
   mediaId?: string
   /** The track genre */
   genre?: string
-  /** The track rating */
-  rating?: Rating
 }
 
 export interface NowPlayingMetadata extends TrackMetadataBase {

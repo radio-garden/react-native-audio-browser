@@ -120,16 +120,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 // Forward declaration of `RemoteSeekEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -138,8 +128,6 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NotificationButton` to properly resolve imports.
@@ -269,16 +257,10 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
-#include "RatingType.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "NotificationButton.hpp"
 #include "PlayerCapabilities.hpp"
@@ -602,13 +584,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) noexcept override {
       _swiftPart.setOnRemoteSeek(onRemoteSeek);
-    }
-    inline std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() noexcept override {
-      auto __result = _swiftPart.getOnRemoteSetRating();
-      return __result;
-    }
-    inline void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) noexcept override {
-      _swiftPart.setOnRemoteSetRating(onRemoteSetRating);
     }
     inline std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() noexcept override {
       auto __result = _swiftPart.getOnRemoteSkip();

@@ -45,7 +45,6 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onRemotePlaySearch: (_ event: RemotePlaySearchEvent) -> Void { get set }
   var onRemotePrevious: () -> Void { get set }
   var onRemoteSeek: (_ event: RemoteSeekEvent) -> Void { get set }
-  var onRemoteSetRating: (_ event: RemoteSetRatingEvent) -> Void { get set }
   var onRemoteSkip: (_ event: RemoteSkipEvent) -> Void { get set }
   var onRemoteStop: () -> Void { get set }
   var onOptionsChanged: (_ event: Options) -> Void { get set }

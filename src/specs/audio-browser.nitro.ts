@@ -43,7 +43,6 @@ import type {
   RemotePlayIdEvent,
   RemotePlaySearchEvent,
   RemoteSeekEvent,
-  RemoteSetRatingEvent,
   RemoteSkipEvent
 } from '../features/remoteControls'
 import type { NativeGate, NativeGateRequest, GateDecision, GateEvent } from '../features/gate'
@@ -177,7 +176,6 @@ export interface AudioBrowser extends HybridObject<{
   onRemotePlaySearch: (event: RemotePlaySearchEvent) => void
   onRemotePrevious: () => void
   onRemoteSeek: (event: RemoteSeekEvent) => void
-  onRemoteSetRating: (event: RemoteSetRatingEvent) => void
   onRemoteSkip: (event: RemoteSkipEvent) => void
   onRemoteStop: () => void
   onOptionsChanged: (event: Options) => void

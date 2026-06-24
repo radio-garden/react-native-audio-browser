@@ -860,25 +860,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onRemoteSetRating: bridge.Func_void_RemoteSetRatingEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteSetRatingEvent in
-        let __closureWrapper = Func_void_RemoteSetRatingEvent(self.__implementation.onRemoteSetRating)
-        return bridge.create_Func_void_RemoteSetRatingEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteSetRating = { () -> (RemoteSetRatingEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteSetRatingEvent(newValue)
-        return { (__event: RemoteSetRatingEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
   public final var onRemoteSkip: bridge.Func_void_RemoteSkipEvent {
     @inline(__always)
     get {

@@ -115,16 +115,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 // Forward declaration of `RemoteSeekEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -133,8 +123,6 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
 // Forward declaration of `NotificationButtonLayout` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
 // Forward declaration of `NotificationButton` to properly resolve imports.
@@ -363,18 +351,6 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "RemoteSeekEvent.hpp"
 #include "JFunc_void_RemoteSeekEvent.hpp"
 #include "JRemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
-#include "JFunc_void_RemoteSetRatingEvent.hpp"
-#include "JRemoteSetRatingEvent.hpp"
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "JHeartRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JStarRating.hpp"
-#include "JPercentageRating.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JRemoteSkipEvent.hpp"
@@ -385,8 +361,6 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JAndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "RatingType.hpp"
-#include "JRatingType.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include "JNotificationButtonLayout.hpp"
@@ -1085,23 +1059,6 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSeekEvent::javaobject> /* onRemoteSeek */)>("setOnRemoteSeek_cxx");
     method(_javaPart, JFunc_void_RemoteSeekEvent_cxx::fromCpp(onRemoteSeek));
-  }
-  std::function<void(const RemoteSetRatingEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteSetRating() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSetRatingEvent::javaobject>()>("getOnRemoteSetRating_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void(const RemoteSetRatingEvent& /* event */)> {
-      if (__result->isInstanceOf(JFunc_void_RemoteSetRatingEvent_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_RemoteSetRatingEvent_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void_RemoteSetRatingEvent, void(RemoteSetRatingEvent)>(std::move(__resultRef));
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteSetRatingEvent::javaobject> /* onRemoteSetRating */)>("setOnRemoteSetRating_cxx");
-    method(_javaPart, JFunc_void_RemoteSetRatingEvent_cxx::fromCpp(onRemoteSetRating));
   }
   std::function<void(const RemoteSkipEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteSkip() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteSkipEvent::javaobject>()>("getOnRemoteSkip_cxx");

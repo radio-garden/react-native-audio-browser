@@ -54,7 +54,6 @@
 #include "JFunc_void_RemotePlayIdEvent.hpp"
 #include "JFunc_void_RemotePlaySearchEvent.hpp"
 #include "JFunc_void_RemoteSeekEvent.hpp"
-#include "JFunc_void_RemoteSetRatingEvent.hpp"
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JFunc_void_Options.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
@@ -128,7 +127,6 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_RemotePlayIdEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemotePlaySearchEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteSeekEvent_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_RemoteSetRatingEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteSkipEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_Options_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_FavoriteChangedEvent_cxx::registerNatives();

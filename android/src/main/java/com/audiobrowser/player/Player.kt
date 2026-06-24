@@ -40,7 +40,6 @@ import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
 import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
-import com.margelo.nitro.audiobrowser.RatingType
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
@@ -263,8 +262,6 @@ class Player(internal val context: Context) {
 
   val isPlaying
     get() = exoPlayer.isPlaying
-
-  var ratingType: RatingType = RatingType.NONE
 
   var repeatMode: RepeatMode
     get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
@@ -1041,7 +1038,6 @@ class Player(internal val context: Context) {
 
     // Check what changed
     val skipSilenceChanged = previousOptions.skipSilence != options.skipSilence
-    val ratingTypeChanged = previousOptions.ratingType != options.ratingType
     val progressUpdateEventIntervalChanged =
       previousOptions.progressUpdateEventInterval != options.progressUpdateEventInterval
     val forwardJumpIntervalChanged =
@@ -1056,7 +1052,6 @@ class Player(internal val context: Context) {
 
     val hasChanged =
       skipSilenceChanged ||
-        ratingTypeChanged ||
         progressUpdateEventIntervalChanged ||
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged ||
@@ -1067,10 +1062,6 @@ class Player(internal val context: Context) {
     // Apply only changed properties
     if (skipSilenceChanged) {
       skipSilence = options.skipSilence
-    }
-
-    if (ratingTypeChanged) {
-      options.ratingType?.let { ratingType = it }
     }
 
     if (capabilitiesChanged) {

@@ -165,7 +165,6 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       description = track.description,
       mediaId = track.src ?: track.url,
       genre = track.genre,
-      rating = null,
     )
   }
 

@@ -64,9 +64,6 @@ protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks {
   /// Called when change playback position is triggered remotely.
   func remoteChangePlaybackPosition(position: Double)
 
-  /// Called when set rating is triggered remotely.
-  func remoteSetRating(rating: Any)
-
   /// Called when play from ID is triggered remotely.
   func remotePlayId(id: String, index: Int?)
 

@@ -71,7 +71,6 @@ import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
 import com.margelo.nitro.audiobrowser.RemotePlayIdEvent
 import com.margelo.nitro.audiobrowser.RemotePlaySearchEvent
 import com.margelo.nitro.audiobrowser.RemoteSeekEvent
-import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent
 import com.margelo.nitro.audiobrowser.RemoteSkipEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.RepeatModeChangedEvent
@@ -199,7 +198,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onRemotePlaySearch: (RemotePlaySearchEvent) -> Unit = {}
   override var onRemotePrevious: () -> Unit = {}
   override var onRemoteSeek: (RemoteSeekEvent) -> Unit = {}
-  override var onRemoteSetRating: (RemoteSetRatingEvent) -> Unit = {}
   override var onRemoteSkip: (RemoteSkipEvent) -> Unit = {}
   override var onRemoteStop: () -> Unit = {}
   override var onOptionsChanged: (Options) -> Unit = {}
@@ -1388,10 +1386,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         post { this@AudioBrowser.onRemoteSeek(event) }
 
         return handled
-      }
-
-      override fun onRemoteSetRating(event: RemoteSetRatingEvent) {
-        post { this@AudioBrowser.onRemoteSetRating(event) }
       }
 
       override fun onOptionsChanged(options: PlayerUpdateOptions) {

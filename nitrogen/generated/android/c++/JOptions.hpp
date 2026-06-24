@@ -25,14 +25,12 @@
 #include "JNotificationButton.hpp"
 #include "JNotificationButtonLayout.hpp"
 #include "JPlayerCapabilities.hpp"
-#include "JRatingType.hpp"
 #include "JVariant_Boolean_FavoriteConfig.hpp"
 #include "JVariant_NullType_Double.hpp"
 #include "JVariant_NullType_NotificationButtonLayout.hpp"
 #include "NotificationButton.hpp"
 #include "NotificationButtonLayout.hpp"
 #include "PlayerCapabilities.hpp"
-#include "RatingType.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>

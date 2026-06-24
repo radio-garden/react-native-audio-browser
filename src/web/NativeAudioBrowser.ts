@@ -19,7 +19,6 @@ import type {
   RemotePlayIdEvent,
   RemotePlaySearchEvent,
   RemoteSeekEvent,
-  RemoteSetRatingEvent,
   RemoteSkipEvent,
   SleepTimer,
   SleepTimerChangedEvent,
@@ -186,7 +185,6 @@ export class NativeAudioBrowser
   onRemotePlaySearch: (event: RemotePlaySearchEvent) => void = () => {}
   onRemotePrevious: () => void = () => {}
   onRemoteSeek: (event: RemoteSeekEvent) => void = () => {}
-  onRemoteSetRating: (event: RemoteSetRatingEvent) => void = () => {}
   onRemoteSkip: (event: RemoteSkipEvent) => void = () => {}
   onRemoteStop: () => void = () => {}
   onOptionsChanged: (event: Options) => void = () => {}
@@ -225,8 +223,6 @@ export class NativeAudioBrowser
     undefined
   handleRemotePrevious: (() => void) | undefined = undefined
   handleRemoteSeek: ((event: RemoteSeekEvent) => void) | undefined = undefined
-  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined =
-    undefined
   handleRemoteSkip: (() => void) | undefined = undefined
   handleRemoteStop: (() => void) | undefined = undefined
 

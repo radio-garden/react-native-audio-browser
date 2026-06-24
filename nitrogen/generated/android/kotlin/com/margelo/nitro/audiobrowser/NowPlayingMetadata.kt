@@ -43,10 +43,7 @@ data class NowPlayingMetadata(
   val mediaId: String?,
   @DoNotStrip
   @Keep
-  val genre: String?,
-  @DoNotStrip
-  @Keep
-  val rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?
+  val genre: String?
 ) {
   /* primary constructor */
 
@@ -58,8 +55,8 @@ data class NowPlayingMetadata(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(elapsedTime: Double?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, mediaId: String?, genre: String?, rating: Variant_HeartRating_ThumbsRating_StarRating_PercentageRating?): NowPlayingMetadata {
-      return NowPlayingMetadata(elapsedTime, title, album, artist, duration, artwork, description, mediaId, genre, rating)
+    private fun fromCpp(elapsedTime: Double?, title: String?, album: String?, artist: String?, duration: Double?, artwork: String?, description: String?, mediaId: String?, genre: String?): NowPlayingMetadata {
+      return NowPlayingMetadata(elapsedTime, title, album, artist, duration, artwork, description, mediaId, genre)
     }
   }
 }
