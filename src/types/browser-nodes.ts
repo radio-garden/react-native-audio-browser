@@ -222,7 +222,7 @@ export interface Track {
   childrenStyle?: TrackStyle
 
   /**
-   * Whether this track is favorited. When the `set-rating` capability is enabled,
+   * Whether this track is favorited. When the `favorite` capability is enabled,
    * displays a filled/empty heart icon in media controllers (notification, Android Auto).
    */
   favorited?: boolean
