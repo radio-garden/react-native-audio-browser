@@ -202,11 +202,6 @@ class RemoteCommandController {
         key: command.key,
         handler: handleSkipBackwardCommand,
       )
-    case let .like(isActive, localizedTitle, localizedShortTitle):
-      center.likeCommand.isActive = isActive
-      center.likeCommand.localizedTitle = localizedTitle
-      center.likeCommand.localizedShortTitle = localizedShortTitle
-      enableRemoteCommand(center.likeCommand, key: command.key, handler: handleLikeCommand)
     case .changeRepeatMode:
       enableRemoteCommand(
         center.changeRepeatModeCommand,
@@ -249,8 +244,6 @@ class RemoteCommandController {
       disableRemoteCommand(center.skipForwardCommand, key: command.key)
     case .skipBackward:
       disableRemoteCommand(center.skipBackwardCommand, key: command.key)
-    case .like:
-      disableRemoteCommand(center.likeCommand, key: command.key)
     case .changeRepeatMode:
       disableRemoteCommand(center.changeRepeatModeCommand, key: command.key)
     case .changeShuffleMode:
@@ -297,7 +290,6 @@ class RemoteCommandController {
   lazy var handleNextTrackCommand: RemoteCommandHandler = handleNextTrackCommandDefault
   lazy var handlePreviousTrackCommand: RemoteCommandHandler =
     handlePreviousTrackCommandDefault
-  lazy var handleLikeCommand: RemoteCommandHandler = handleLikeCommandDefault
   lazy var handleChangeRepeatModeCommand: RemoteCommandHandler =
     handleChangeRepeatModeCommandDefault
   lazy var handleChangeShuffleModeCommand: RemoteCommandHandler =
@@ -380,13 +372,6 @@ class RemoteCommandController {
     -> MPRemoteCommandHandlerStatus
   {
     callbacks?.remotePrevious()
-    return MPRemoteCommandHandlerStatus.success
-  }
-
-  private func handleLikeCommandDefault(event _: MPRemoteCommandEvent)
-    -> MPRemoteCommandHandlerStatus
-  {
-    callbacks?.remoteLike()
     return MPRemoteCommandHandlerStatus.success
   }
 

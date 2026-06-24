@@ -19,8 +19,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   case skipBackward(preferredIntervals: [NSNumber])
 
-  case like(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
-
   case changeRepeatMode
 
   case changeShuffleMode
@@ -38,7 +36,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
     case .changePlaybackPosition: "changePlaybackPosition"
     case .skipForward: "skipForward"
     case .skipBackward: "skipBackward"
-    case .like: "like"
     case .changeRepeatMode: "changeRepeatMode"
     case .changeShuffleMode: "changeShuffleMode"
     case .changePlaybackRate: "changePlaybackRate"
@@ -62,7 +59,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
       .changePlaybackPosition,
       .skipForward(preferredIntervals: []),
       .skipBackward(preferredIntervals: []),
-      .like(isActive: false, localizedTitle: "", localizedShortTitle: ""),
       .changeRepeatMode,
       .changeShuffleMode,
       .changePlaybackRate(supportedPlaybackRates: []),

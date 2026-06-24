@@ -933,40 +933,6 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_Playback::javaobject> /* onPlaybackChanged */)>("setOnPlaybackChanged_cxx");
     method(_javaPart, JFunc_void_Playback_cxx::fromCpp(onPlaybackChanged));
   }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteBookmark() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteBookmark_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteBookmark */)>("setOnRemoteBookmark_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteBookmark));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteDislike() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteDislike_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteDislike(const std::function<void()>& onRemoteDislike) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteDislike */)>("setOnRemoteDislike_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteDislike));
-  }
   std::function<void(const RemoteJumpBackwardEvent& /* event */)> JHybridAudioBrowserSpec::getOnRemoteJumpBackward() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject>()>("getOnRemoteJumpBackward_cxx");
     auto __result = method(_javaPart);
@@ -1000,23 +966,6 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteJumpForwardEvent::javaobject> /* onRemoteJumpForward */)>("setOnRemoteJumpForward_cxx");
     method(_javaPart, JFunc_void_RemoteJumpForwardEvent_cxx::fromCpp(onRemoteJumpForward));
-  }
-  std::function<void()> JHybridAudioBrowserSpec::getOnRemoteLike() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteLike_cxx");
-    auto __result = method(_javaPart);
-    return [&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }();
-  }
-  void JHybridAudioBrowserSpec::setOnRemoteLike(const std::function<void()>& onRemoteLike) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* onRemoteLike */)>("setOnRemoteLike_cxx");
-    method(_javaPart, JFunc_void_cxx::fromCpp(onRemoteLike));
   }
   std::function<void()> JHybridAudioBrowserSpec::getOnRemoteNext() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getOnRemoteNext_cxx");
@@ -1239,40 +1188,6 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_NowPlayingMetadata::javaobject> /* onNowPlayingChanged */)>("setOnNowPlayingChanged_cxx");
     method(_javaPart, JFunc_void_NowPlayingMetadata_cxx::fromCpp(onNowPlayingChanged));
   }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteBookmark() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteBookmark_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteBookmark */)>("setHandleRemoteBookmark_cxx");
-    method(_javaPart, handleRemoteBookmark.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteBookmark.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteDislike() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteDislike_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteDislike */)>("setHandleRemoteDislike_cxx");
-    method(_javaPart, handleRemoteDislike.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteDislike.value()) : nullptr);
-  }
   std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> JHybridAudioBrowserSpec::getHandleRemoteJumpBackward() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RemoteJumpBackwardEvent::javaobject>()>("getHandleRemoteJumpBackward_cxx");
     auto __result = method(_javaPart);
@@ -1306,23 +1221,6 @@ namespace margelo::nitro::audiobrowser {
   void JHybridAudioBrowserSpec::setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_RemoteJumpForwardEvent::javaobject> /* handleRemoteJumpForward */)>("setHandleRemoteJumpForward_cxx");
     method(_javaPart, handleRemoteJumpForward.has_value() ? JFunc_void_RemoteJumpForwardEvent_cxx::fromCpp(handleRemoteJumpForward.value()) : nullptr);
-  }
-  std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteLike() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteLike_cxx");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional([&]() -> std::function<void()> {
-      if (__result->isInstanceOf(JFunc_void_cxx::javaClassStatic())) [[likely]] {
-        auto downcast = jni::static_ref_cast<JFunc_void_cxx::javaobject>(__result);
-        return downcast->cthis()->getFunction();
-      } else {
-        auto __resultRef = jni::make_global(__result);
-        return JNICallable<JFunc_void, void()>(std::move(__resultRef));
-      }
-    }()) : std::nullopt;
-  }
-  void JHybridAudioBrowserSpec::setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void::javaobject> /* handleRemoteLike */)>("setHandleRemoteLike_cxx");
-    method(_javaPart, handleRemoteLike.has_value() ? JFunc_void_cxx::fromCpp(handleRemoteLike.value()) : nullptr);
   }
   std::optional<std::function<void()>> JHybridAudioBrowserSpec::getHandleRemoteNext() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void::javaobject>()>("getHandleRemoteNext_cxx");

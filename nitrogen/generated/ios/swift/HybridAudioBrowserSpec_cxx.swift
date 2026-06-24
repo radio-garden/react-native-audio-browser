@@ -689,44 +689,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onRemoteBookmark: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteBookmark)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteBookmark = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteDislike: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteDislike)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteDislike = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
   public final var onRemoteJumpBackward: bridge.Func_void_RemoteJumpBackwardEvent {
     @inline(__always)
     get {
@@ -760,25 +722,6 @@ open class HybridAudioBrowserSpec_cxx {
         let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpForwardEvent(newValue)
         return { (__event: RemoteJumpForwardEvent) -> Void in
           __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteLike: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteLike)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteLike = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
         }
       }()
     }
@@ -1031,70 +974,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var handleRemoteBookmark: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteBookmark {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteBookmark = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteDislike: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteDislike {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteDislike = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
   public final var handleRemoteJumpBackward: bridge.std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______ {
     @inline(__always)
     get {
@@ -1150,38 +1029,6 @@ open class HybridAudioBrowserSpec_cxx {
             let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpForwardEvent(__unwrapped)
             return { (__event: RemoteJumpForwardEvent) -> Void in
               __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteLike: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteLike {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteLike = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
             }
           }()
         } else {

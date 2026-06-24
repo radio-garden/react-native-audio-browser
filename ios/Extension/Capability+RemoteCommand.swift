@@ -48,15 +48,13 @@ extension PlayerCapabilities {
       ))
     }
 
-    // TODO: Investigate where localizedTitle/localizedShortTitle are displayed
-    // (possibly only for accessibility/VoiceOver). See TODO.md for details.
-    if favoriteEnabled {
-      commands.append(.like(
-        isActive: false,
-        localizedTitle: "Favorite",
-        localizedShortTitle: "Favorite",
-      ))
-    }
+    // NOTE: We deliberately do NOT register MPRemoteCommandCenter.likeCommand for the
+    // `favorite` capability. That MPFeedbackCommand had a single system surface — a
+    // pre-iOS-15 lock-screen menu shown in place of the previous-track button — which
+    // Apple silently removed. On the iOS 16+ target it can never be invoked: CarPlay
+    // uses its own CPNowPlayingButton heart, and Siri "I like this" routes through
+    // INUpdateMediaAffinityIntent. The `favorite` capability still drives the
+    // favorites-match row indicators via setFavoriteMatch. See issues #67 / #71.
 
     // Mode controls
     if shuffleMode != false {

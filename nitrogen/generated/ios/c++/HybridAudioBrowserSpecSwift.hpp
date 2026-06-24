@@ -540,20 +540,6 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) noexcept override {
       _swiftPart.setOnPlaybackChanged(onPlaybackChanged);
     }
-    inline std::function<void()> getOnRemoteBookmark() noexcept override {
-      auto __result = _swiftPart.getOnRemoteBookmark();
-      return __result;
-    }
-    inline void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) noexcept override {
-      _swiftPart.setOnRemoteBookmark(onRemoteBookmark);
-    }
-    inline std::function<void()> getOnRemoteDislike() noexcept override {
-      auto __result = _swiftPart.getOnRemoteDislike();
-      return __result;
-    }
-    inline void setOnRemoteDislike(const std::function<void()>& onRemoteDislike) noexcept override {
-      _swiftPart.setOnRemoteDislike(onRemoteDislike);
-    }
     inline std::function<void(const RemoteJumpBackwardEvent& /* event */)> getOnRemoteJumpBackward() noexcept override {
       auto __result = _swiftPart.getOnRemoteJumpBackward();
       return __result;
@@ -567,13 +553,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) noexcept override {
       _swiftPart.setOnRemoteJumpForward(onRemoteJumpForward);
-    }
-    inline std::function<void()> getOnRemoteLike() noexcept override {
-      auto __result = _swiftPart.getOnRemoteLike();
-      return __result;
-    }
-    inline void setOnRemoteLike(const std::function<void()>& onRemoteLike) noexcept override {
-      _swiftPart.setOnRemoteLike(onRemoteLike);
     }
     inline std::function<void()> getOnRemoteNext() noexcept override {
       auto __result = _swiftPart.getOnRemoteNext();
@@ -666,20 +645,6 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) noexcept override {
       _swiftPart.setOnNowPlayingChanged(onNowPlayingChanged);
     }
-    inline std::optional<std::function<void()>> getHandleRemoteBookmark() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteBookmark();
-      return __result;
-    }
-    inline void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) noexcept override {
-      _swiftPart.setHandleRemoteBookmark(handleRemoteBookmark);
-    }
-    inline std::optional<std::function<void()>> getHandleRemoteDislike() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteDislike();
-      return __result;
-    }
-    inline void setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) noexcept override {
-      _swiftPart.setHandleRemoteDislike(handleRemoteDislike);
-    }
     inline std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> getHandleRemoteJumpBackward() noexcept override {
       auto __result = _swiftPart.getHandleRemoteJumpBackward();
       return __result;
@@ -693,13 +658,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) noexcept override {
       _swiftPart.setHandleRemoteJumpForward(handleRemoteJumpForward);
-    }
-    inline std::optional<std::function<void()>> getHandleRemoteLike() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteLike();
-      return __result;
-    }
-    inline void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) noexcept override {
-      _swiftPart.setHandleRemoteLike(handleRemoteLike);
     }
     inline std::optional<std::function<void()>> getHandleRemoteNext() noexcept override {
       auto __result = _swiftPart.getHandleRemoteNext();

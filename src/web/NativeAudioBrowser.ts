@@ -177,11 +177,8 @@ export class NativeAudioBrowser
   onPlaybackShuffleModeChanged: (enabled: boolean) => void = () => {}
   onSleepTimerChanged: (data: SleepTimerChangedEvent) => void = () => {}
   onPlaybackChanged: (data: Playback) => void = () => {}
-  onRemoteBookmark: () => void = () => {}
-  onRemoteDislike: () => void = () => {}
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void = () => {}
   onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void = () => {}
-  onRemoteLike: () => void = () => {}
   onRemoteNext: () => void = () => {}
   onRemotePause: () => void = () => {}
   onRemotePlay: () => void = () => {}
@@ -213,15 +210,12 @@ export class NativeAudioBrowser
   onCarConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers
-  handleRemoteBookmark: (() => void) | undefined = undefined
-  handleRemoteDislike: (() => void) | undefined = undefined
   handleRemoteJumpBackward:
     | ((event: RemoteJumpBackwardEvent) => void)
     | undefined = undefined
   handleRemoteJumpForward:
     | ((event: RemoteJumpForwardEvent) => void)
     | undefined = undefined
-  handleRemoteLike: (() => void) | undefined = undefined
   handleRemoteNext: (() => void) | undefined = undefined
   handleRemotePause: (() => void) | undefined = undefined
   handleRemotePlay: (() => void) | undefined = undefined

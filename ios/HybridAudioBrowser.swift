@@ -228,11 +228,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Remote Callbacks
 
-  public var onRemoteBookmark: () -> Void = {}
-  public var onRemoteDislike: () -> Void = {}
   public var onRemoteJumpBackward: (RemoteJumpBackwardEvent) -> Void = { _ in }
   public var onRemoteJumpForward: (RemoteJumpForwardEvent) -> Void = { _ in }
-  public var onRemoteLike: () -> Void = {}
   public var onRemoteNext: () -> Void = {}
   public var onRemotePause: () -> Void = {}
   public var onRemotePlay: () -> Void = {}
@@ -246,11 +243,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Remote Handlers (optional overrides from JS)
 
-  public var handleRemoteBookmark: (() -> Void)?
-  public var handleRemoteDislike: (() -> Void)?
   public var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Void)?
   public var handleRemoteJumpForward: ((RemoteJumpForwardEvent) -> Void)?
-  public var handleRemoteLike: (() -> Void)?
   public var handleRemoteNext: (() -> Void)?
   public var handleRemotePause: (() -> Void)?
   public var handleRemotePlay: (() -> Void)?
@@ -1835,30 +1829,6 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         browser.logger.error("handlePlayMediaIntent failed: \(error.localizedDescription)")
         completion(false)
       }
-    }
-  }
-
-  public func remoteLike() {
-    if let handler = handleRemoteLike {
-      handler()
-    } else {
-      onRemoteLike()
-    }
-  }
-
-  public func remoteDislike() {
-    if let handler = handleRemoteDislike {
-      handler()
-    } else {
-      onRemoteDislike()
-    }
-  }
-
-  public func remoteBookmark() {
-    if let handler = handleRemoteBookmark {
-      handler()
-    } else {
-      onRemoteBookmark()
     }
   }
 

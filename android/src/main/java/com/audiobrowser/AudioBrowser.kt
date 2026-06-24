@@ -176,11 +176,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   // MARK: Player callbacks
   override var onPlaybackChanged: (data: Playback) -> Unit = {}
-  override var onRemoteBookmark: () -> Unit = {}
-  override var onRemoteDislike: () -> Unit = {}
   override var onRemoteJumpBackward: (RemoteJumpBackwardEvent) -> Unit = {}
   override var onRemoteJumpForward: (RemoteJumpForwardEvent) -> Unit = {}
-  override var onRemoteLike: () -> Unit = {}
   override var onRemoteNext: () -> Unit = {}
   override var onRemotePause: () -> Unit = {}
   override var onChapterMetadata: (chapters: Array<ChapterMetadata>) -> Unit = {}
@@ -218,11 +215,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onIosOutputChanged: (IosOutput) -> Unit = {}
 
   // MARK: Remote handlers
-  override var handleRemoteBookmark: (() -> Unit)? = null
-  override var handleRemoteDislike: (() -> Unit)? = null
   override var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Unit)? = null
   override var handleRemoteJumpForward: ((RemoteJumpForwardEvent) -> Unit)? = null
-  override var handleRemoteLike: (() -> Unit)? = null
   override var handleRemoteNext: (() -> Unit)? = null
   override var handleRemotePause: (() -> Unit)? = null
   override var handleRemotePlay: (() -> Unit)? = null

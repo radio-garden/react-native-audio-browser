@@ -168,11 +168,8 @@ export interface AudioBrowser extends HybridObject<{
   onPlaybackShuffleModeChanged: (enabled: boolean) => void
   onSleepTimerChanged: (data: SleepTimerChangedEvent) => void
   onPlaybackChanged: (data: Playback) => void
-  onRemoteBookmark: () => void
-  onRemoteDislike: () => void
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void
   onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void
-  onRemoteLike: () => void
   onRemoteNext: () => void
   onRemotePause: () => void
   onRemotePlay: () => void
@@ -188,13 +185,10 @@ export interface AudioBrowser extends HybridObject<{
   onNowPlayingChanged: (metadata: NowPlayingMetadata) => void
 
   // MARK: remote handlers
-  handleRemoteBookmark: (() => void) | undefined
-  handleRemoteDislike: (() => void) | undefined
   handleRemoteJumpBackward:
     | ((event: RemoteJumpBackwardEvent) => void)
     | undefined
   handleRemoteJumpForward: ((event: RemoteJumpForwardEvent) => void) | undefined
-  handleRemoteLike: (() => void) | undefined
   handleRemoteNext: (() => void) | undefined
   handleRemotePause: (() => void) | undefined
   handleRemotePlay: (() => void) | undefined

@@ -367,34 +367,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onPlaybackChanged = value
     }
   
-  abstract var onRemoteBookmark: () -> Unit
-  
-  private var onRemoteBookmark_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onRemoteBookmark)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteBookmark = value
-    }
-  
-  abstract var onRemoteDislike: () -> Unit
-  
-  private var onRemoteDislike_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onRemoteDislike)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteDislike = value
-    }
-  
   abstract var onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) -> Unit
   
   private var onRemoteJumpBackward_cxx: Func_void_RemoteJumpBackwardEvent
@@ -421,20 +393,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
     @DoNotStrip
     set(value) {
       onRemoteJumpForward = value
-    }
-  
-  abstract var onRemoteLike: () -> Unit
-  
-  private var onRemoteLike_cxx: Func_void
-    @Keep
-    @DoNotStrip
-    get() {
-      return Func_void_java(onRemoteLike)
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      onRemoteLike = value
     }
   
   abstract var onRemoteNext: () -> Unit
@@ -619,34 +577,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onNowPlayingChanged = value
     }
   
-  abstract var handleRemoteBookmark: (() -> Unit)?
-  
-  private var handleRemoteBookmark_cxx: Func_void?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteBookmark?.let { Func_void_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteBookmark = value?.let { it }
-    }
-  
-  abstract var handleRemoteDislike: (() -> Unit)?
-  
-  private var handleRemoteDislike_cxx: Func_void?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteDislike?.let { Func_void_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteDislike = value?.let { it }
-    }
-  
   abstract var handleRemoteJumpBackward: ((event: RemoteJumpBackwardEvent) -> Unit)?
   
   private var handleRemoteJumpBackward_cxx: Func_void_RemoteJumpBackwardEvent?
@@ -673,20 +603,6 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
     @DoNotStrip
     set(value) {
       handleRemoteJumpForward = value?.let { it }
-    }
-  
-  abstract var handleRemoteLike: (() -> Unit)?
-  
-  private var handleRemoteLike_cxx: Func_void?
-    @Keep
-    @DoNotStrip
-    get() {
-      return handleRemoteLike?.let { Func_void_java(it) }
-    }
-    @Keep
-    @DoNotStrip
-    set(value) {
-      handleRemoteLike = value?.let { it }
     }
   
   abstract var handleRemoteNext: (() -> Unit)?

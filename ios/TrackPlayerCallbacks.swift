@@ -73,9 +73,6 @@ protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks {
   /// Called when play from search is triggered remotely.
   func remotePlaySearch(query: String)
 
-  /// Called when like is triggered remotely.
-  func remoteLike()
-
   /// Called when repeat mode change is triggered remotely (CarPlay/lock screen).
   func remoteChangeRepeatMode(mode: RepeatMode)
 

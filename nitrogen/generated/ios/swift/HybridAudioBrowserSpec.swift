@@ -36,11 +36,8 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onPlaybackShuffleModeChanged: (_ enabled: Bool) -> Void { get set }
   var onSleepTimerChanged: (_ data: SleepTimer?) -> Void { get set }
   var onPlaybackChanged: (_ data: Playback) -> Void { get set }
-  var onRemoteBookmark: () -> Void { get set }
-  var onRemoteDislike: () -> Void { get set }
   var onRemoteJumpBackward: (_ event: RemoteJumpBackwardEvent) -> Void { get set }
   var onRemoteJumpForward: (_ event: RemoteJumpForwardEvent) -> Void { get set }
-  var onRemoteLike: () -> Void { get set }
   var onRemoteNext: () -> Void { get set }
   var onRemotePause: () -> Void { get set }
   var onRemotePlay: () -> Void { get set }
@@ -54,11 +51,8 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var onOptionsChanged: (_ event: Options) -> Void { get set }
   var onFavoriteChanged: (_ event: FavoriteChangedEvent) -> Void { get set }
   var onNowPlayingChanged: (_ metadata: NowPlayingMetadata) -> Void { get set }
-  var handleRemoteBookmark: (() -> Void)? { get set }
-  var handleRemoteDislike: (() -> Void)? { get set }
   var handleRemoteJumpBackward: ((_ event: RemoteJumpBackwardEvent) -> Void)? { get set }
   var handleRemoteJumpForward: ((_ event: RemoteJumpForwardEvent) -> Void)? { get set }
-  var handleRemoteLike: (() -> Void)? { get set }
   var handleRemoteNext: (() -> Void)? { get set }
   var handleRemotePause: (() -> Void)? { get set }
   var handleRemotePlay: (() -> Void)? { get set }
