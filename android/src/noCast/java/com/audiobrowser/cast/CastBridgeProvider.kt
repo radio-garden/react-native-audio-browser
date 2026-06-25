@@ -27,8 +27,6 @@ private object NoopCastBridge : CastBridge {
 
   override fun isCasting(): Boolean = false
 
-  override fun showPicker() {}
-
   override fun routeSelector(): MediaRouteSelector? = null
 
   override fun endSession() {}

@@ -10,8 +10,9 @@ import java.lang.ref.WeakReference
  * MediaRouter chooser dialog, which needs an Activity-themed context. The library runs from the
  * bound Service and otherwise holds no Activity.
  *
- * Lives in the **main** sourceset (unlike the Cast-only `CastActivityTracker`) so the chooser works
- * for Sonos even in Cast-opt-out builds. Holds only a [WeakReference]; registered process-wide once.
+ * Lives in the **main** sourceset so the chooser works for Sonos even in Cast-opt-out builds (it is
+ * the single Activity tracker for both backends' picker). Holds only a [WeakReference]; registered
+ * process-wide once.
  */
 object DestinationActivityTracker {
   private var currentRef: WeakReference<Activity>? = null

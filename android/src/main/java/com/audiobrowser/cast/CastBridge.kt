@@ -40,13 +40,10 @@ interface CastBridge {
   /** True while a Cast session is connected (audio is on the Cast device). */
   fun isCasting(): Boolean
 
-  /** Presents the system Cast chooser. No-op if Cast is not configured. */
-  fun showPicker()
-
   /**
    * The Cast [MediaRouteSelector] (control category for the configured receiver), or null on the
    * inert bridge / before configure. The `DestinationCoordinator` unions this with the Sonos
-   * selector so one chooser lists both backends' devices.
+   * selector and presents one chooser listing both backends' devices.
    */
   fun routeSelector(): MediaRouteSelector?
 

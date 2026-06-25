@@ -11,16 +11,14 @@ import androidx.media3.session.MediaSession
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.audiobrowser.Callbacks
-import com.audiobrowser.browser.resolveArtworkUrl
-import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.cast.CastDiscoveryLeases
 import com.audiobrowser.cast.CastStateResolver
+import com.audiobrowser.destination.RemoteTrackResolver
 import com.audiobrowser.player.InterceptingPlayer
 import com.audiobrowser.player.Player
 import com.audiobrowser.util.TrackFactory
 import com.margelo.nitro.audiobrowser.CastState
 import com.margelo.nitro.audiobrowser.CastStateChangedEvent
-import com.margelo.nitro.audiobrowser.MediaResolveTarget
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -288,24 +286,11 @@ class SonosBackend(
     }
   }
 
-  /** Resolves the Active Track's media + artwork URLs with target:'cast' and builds a MediaItem. */
+  /** Resolves the Active Track for the speaker (media + artwork, target:'cast') and builds a MediaItem. */
   private suspend fun buildRemoteMediaItem(player: Player, track: Track): MediaItem {
-    val browserManager = player.browser?.browserManager
-    val mediaUri =
-      track.src?.let { src ->
-        runCatching { browserManager?.resolveMediaUrl(src, MediaResolveTarget.CAST) }.getOrNull()?.path
-          ?: src
-      } ?: ""
-    // The speaker fetches artwork itself, so resolve it self-contained (target:'cast') too — a raw
-    // app-process / header-authed artwork URL would 401/404 on the speaker.
-    val artworkTrack =
-      runCatching {
-          val artwork = browserManager?.resolveArtworkUrl(track, null, null, MediaResolveTarget.CAST)
-          if (artwork?.uri?.isNotEmpty() == true) track.copy(artwork = artwork.uri) else track
-        }
-        .getOrDefault(track)
-    val base = TrackFactory.toMedia3(artworkTrack)
-    return base.buildUpon().setUri(Uri.parse(mediaUri)).setTag(artworkTrack).build()
+    val resolved = RemoteTrackResolver.resolve(player, track)
+    val base = TrackFactory.toMedia3(resolved.track)
+    return base.buildUpon().setUri(Uri.parse(resolved.mediaUri)).setTag(resolved.track).build()
   }
 
   // MARK: - Helpers

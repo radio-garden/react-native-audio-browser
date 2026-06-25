@@ -1,6 +1,5 @@
 package com.audiobrowser.cast
 
-import android.app.Application
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -46,7 +45,6 @@ private class RealCastBridge(private val context: Context) : CastBridge {
     CastConfigHolder.configure(receiverApplicationId)
     if (initStarted) return
     initStarted = true
-    (context.applicationContext as? Application)?.let { CastActivityTracker.register(it) }
     // getSharedInstance must run on main AND does heavy first-call I/O — post it so the caller
     // (configureCast on the JS thread) returns immediately and the main thread isn't blocked.
     mainHandler.post {
@@ -78,10 +76,6 @@ private class RealCastBridge(private val context: Context) : CastBridge {
   override fun getDeviceName(): String? = controller?.getDeviceName()
 
   override fun isCasting(): Boolean = controller?.isCasting() ?: false
-
-  override fun showPicker() {
-    controller?.showPicker()
-  }
 
   override fun routeSelector(): MediaRouteSelector? = controller?.currentRouteSelector()
 

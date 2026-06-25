@@ -8,12 +8,10 @@ import androidx.media3.cast.CastPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
-import androidx.mediarouter.app.MediaRouteChooserDialog
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.audiobrowser.Callbacks
-import com.audiobrowser.browser.resolveArtworkUrl
-import com.audiobrowser.browser.resolveMediaUrl
+import com.audiobrowser.destination.RemoteTrackResolver
 import com.audiobrowser.player.InterceptingPlayer
 import com.audiobrowser.player.Player
 import com.google.android.gms.cast.CastMediaControlIntent
@@ -24,7 +22,6 @@ import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.margelo.nitro.audiobrowser.CastState
 import com.margelo.nitro.audiobrowser.CastStateChangedEvent
-import com.margelo.nitro.audiobrowser.MediaResolveTarget
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -170,25 +167,11 @@ class CastSessionController(
 
   fun isCasting(): Boolean = castContext.sessionManager.currentCastSession?.isConnected == true
 
-  /** The Cast route selector, exposed so the DestinationCoordinator can union it with Sonos's. */
+  /**
+   * The Cast route selector, exposed so the DestinationCoordinator can union it with Sonos's and
+   * present one chooser (the coordinator owns picker presentation, not this controller).
+   */
   fun currentRouteSelector(): MediaRouteSelector = routeSelector
-
-  fun showPicker() {
-    // The framework chooser needs an Activity-themed context; the library runs Cast from the bound
-    // Service and holds none of its own. Present on the current RN Activity (tracked via
-    // CastActivityTracker). If no Activity is foregrounded we no-op + log — we never silently pick
-    // a device for the user.
-    runOnMain {
-      val activity = CastActivityTracker.current
-      if (activity == null) {
-        Timber.w("showCastPicker: no foreground Activity to present the Cast chooser; skipping")
-        return@runOnMain
-      }
-      val dialog = MediaRouteChooserDialog(activity)
-      dialog.routeSelector = routeSelector
-      dialog.show()
-    }
-  }
 
   fun endSession() {
     runOnMain { castContext.sessionManager.endCurrentSession(true) }
@@ -298,25 +281,13 @@ class CastSessionController(
   }
 
   /**
-   * Builds one Cast-queue MediaItem for [track]: media URL resolved with target:'cast' (so the
-   * app's media transform emits a self-contained, receiver-fetchable URL) and artwork resolved with
-   * target:'cast'. Falls back to the track's raw fields when no resolver is configured.
+   * Builds one Cast-queue MediaItem for [track]: media + artwork resolved with target:'cast' (a
+   * self-contained, receiver-fetchable URL) via the shared [RemoteTrackResolver], then mapped to a
+   * Cast queue item.
    */
   private suspend fun buildCastMediaItem(player: Player, track: Track): MediaItem {
-    val browserManager = player.browser?.browserManager
-    val mediaUri =
-      track.src?.let { src ->
-        runCatching { browserManager?.resolveMediaUrl(src, MediaResolveTarget.CAST) }
-          .getOrNull()
-          ?.path ?: src
-      } ?: track.src ?: ""
-    val artworkTrack =
-      runCatching {
-          val artwork = browserManager?.resolveArtworkUrl(track, null, null, MediaResolveTarget.CAST)
-          if (artwork?.uri?.isNotEmpty() == true) track.copy(artwork = artwork.uri) else track
-        }
-        .getOrDefault(track)
-    return CastMediaItemConverter.mediaItemFor(artworkTrack, Uri.parse(mediaUri))
+    val resolved = RemoteTrackResolver.resolve(player, track)
+    return CastMediaItemConverter.mediaItemFor(resolved.track, Uri.parse(resolved.mediaUri))
   }
 
   private fun onSessionDisconnected() {
