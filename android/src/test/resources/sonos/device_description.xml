@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:ZonePlayer:1</deviceType>
+    <friendlyName>192.168.1.50 - Sonos One</friendlyName>
+    <manufacturer>Sonos, Inc.</manufacturer>
+    <modelNumber>S13</modelNumber>
+    <modelName>Sonos One</modelName>
+    <roomName>Kitchen</roomName>
+    <UDN>uuid:RINCON_949F3EC213E001400</UDN>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:AlarmClock:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:AlarmClock</serviceId>
+        <controlURL>/AlarmClock/Control</controlURL>
+        <eventSubURL>/AlarmClock/Event</eventSubURL>
+        <SCPDURL>/xml/AlarmClock1.xml</SCPDURL>
+      </service>
+    </serviceList>
+    <deviceList>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
+        <friendlyName>192.168.1.50 - Sonos One Media Server</friendlyName>
+        <manufacturer>Sonos, Inc.</manufacturer>
+        <UDN>uuid:RINCON_949F3EC213E001400_MS</UDN>
+        <serviceList>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:ContentDirectory</serviceId>
+            <controlURL>/MediaServer/ContentDirectory/Control</controlURL>
+            <eventSubURL>/MediaServer/ContentDirectory/Event</eventSubURL>
+            <SCPDURL>/xml/ContentDirectory1.xml</SCPDURL>
+          </service>
+        </serviceList>
+      </device>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+        <friendlyName>192.168.1.50 - Sonos One Media Renderer</friendlyName>
+        <manufacturer>Sonos, Inc.</manufacturer>
+        <UDN>uuid:RINCON_949F3EC213E001400_MR</UDN>
+        <serviceList>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:RenderingControl</serviceId>
+            <controlURL>/MediaRenderer/RenderingControl/Control</controlURL>
+            <eventSubURL>/MediaRenderer/RenderingControl/Event</eventSubURL>
+            <SCPDURL>/xml/RenderingControl1.xml</SCPDURL>
+          </service>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:AVTransport</serviceId>
+            <controlURL>/MediaRenderer/AVTransport/Control</controlURL>
+            <eventSubURL>/MediaRenderer/AVTransport/Event</eventSubURL>
+            <SCPDURL>/xml/AVTransport1.xml</SCPDURL>
+          </service>
+        </serviceList>
+      </device>
+    </deviceList>
+  </device>
+</root>
