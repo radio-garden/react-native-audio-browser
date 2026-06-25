@@ -1278,19 +1278,24 @@ class Player(internal val context: Context) {
    * same `PlaybackStateMachine` is fed from Cast events. The local ExoPlayer is stopped (it keeps
    * the queue for the handoff back) so it stops fetching bytes while audio is on the Cast device.
    */
+  /**
+   * Swaps the session's player to [castPlayer]. Returns false (without doing anything) when a
+   * destination player is already active — so the caller knows its swap did NOT happen and can
+   * release the player it built and not report itself connected.
+   */
   internal fun startCasting(
     castPlayer: androidx.media3.common.Player,
     castInterceptingPlayer: androidx.media3.common.Player,
     castMediaItems: List<MediaItem>,
     snapshot: QueueSnapshot,
-  ) {
+  ): Boolean {
     // Single-active-destination guard: reject a second concurrent swap. Two backends (Google Cast +
     // Sonos) can race to connect on a route change, and MediaRouter does not make the unselect/
     // select ordering atomic; without this guard the second startCasting would overwrite (and leak)
     // the first destination player and repoint the session twice.
     if (this.castPlayer != null) {
       Timber.w("startCasting ignored: a destination player is already active")
-      return
+      return false
     }
 
     // Stop the local engine first (still local at this point) so it releases the network stream.
@@ -1317,6 +1322,7 @@ class Player(internal val context: Context) {
     if (::mediaSession.isInitialized) {
       mediaSession.player = castInterceptingPlayer
     }
+    return true
   }
 
   /**

@@ -255,7 +255,17 @@ class CastSessionController(
             { player.getOptions() },
             keepSessionAliveOnError = false,
           )
-        player.startCasting(cast, intercepting, castMediaItems, snapshot)
+        // startCasting returns false if another destination (Sonos) won the swap concurrently —
+        // then we are NOT casting: release the CastPlayer we built and don't report CONNECTED.
+        if (!player.startCasting(cast, intercepting, castMediaItems, snapshot)) {
+          cast.release()
+          castPlayer = null
+          reSign = null
+          connecting = false
+          connectJob = null
+          emitCurrentState()
+          return@launch
+        }
         reSign?.reset()
 
         // Reactive re-sign: when the receiver lands in IDLE with a load error (a likely stale signed

@@ -231,7 +231,16 @@ class SonosBackend(
                 { player.getOptions() },
                 keepSessionAliveOnError = false,
               )
-            player.startCasting(newPlayer, intercepting, listOf(item), snapshot)
+            // startCasting returns false if another destination won the swap concurrently — then we
+            // are NOT connected: release the player we built and don't report CONNECTED.
+            if (!player.startCasting(newPlayer, intercepting, listOf(item), snapshot)) {
+              newPlayer.release()
+              connecting = false
+              connectJob = null
+              currentDevice = null
+              emitCurrentState()
+              return@launch
+            }
             sonosPlayer = newPlayer
             currentDevice = device
             connecting = false
