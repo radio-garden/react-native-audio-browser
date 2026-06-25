@@ -484,10 +484,10 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<void(const IosOutput& /* output */)>
-  Func_void_IosOutput create_Func_void_IosOutput(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_void_IosOutput::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const IosOutput& output) mutable -> void {
+  // pragma MARK: std::function<void(const Output& /* output */)>
+  Func_void_Output create_Func_void_Output(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_Output::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const Output& output) mutable -> void {
       swiftClosure.call(output);
     };
   }

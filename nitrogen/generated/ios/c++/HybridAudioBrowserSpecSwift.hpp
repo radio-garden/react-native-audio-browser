@@ -146,10 +146,10 @@ namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
-// Forward declaration of `IosOutput` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IosOutput; }
-// Forward declaration of `IosOutputType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
+// Forward declaration of `Output` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Output; }
+// Forward declaration of `OutputType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class OutputType; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -270,8 +270,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "CarPlayNowPlayingButton.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
-#include "IosOutput.hpp"
-#include "IosOutputType.hpp"
+#include "Output.hpp"
+#include "OutputType.hpp"
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
@@ -711,12 +711,12 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) noexcept override {
       _swiftPart.setOnSystemVolumeChanged(onSystemVolumeChanged);
     }
-    inline std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() noexcept override {
-      auto __result = _swiftPart.getOnIosOutputChanged();
+    inline std::function<void(const Output& /* output */)> getOnOutputChanged() noexcept override {
+      auto __result = _swiftPart.getOnOutputChanged();
       return __result;
     }
-    inline void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) noexcept override {
-      _swiftPart.setOnIosOutputChanged(onIosOutputChanged);
+    inline void setOnOutputChanged(const std::function<void(const Output& /* output */)>& onOutputChanged) noexcept override {
+      _swiftPart.setOnOutputChanged(onOutputChanged);
     }
     inline std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() noexcept override {
       auto __result = _swiftPart.getOnEqualizerChanged();
@@ -1182,19 +1182,27 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline std::optional<IosOutput> getIosOutput() override {
-      auto __result = _swiftPart.getIosOutput();
+    inline std::optional<Output> getOutput() override {
+      auto __result = _swiftPart.getOutput();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void openIosOutputPicker() override {
-      auto __result = _swiftPart.openIosOutputPicker();
+    inline void openOutputPicker() override {
+      auto __result = _swiftPart.openOutputPicker();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
+    }
+    inline bool supportsOutputSwitcher() override {
+      auto __result = _swiftPart.supportsOutputSwitcher();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
     }
     inline std::optional<EqualizerSettings> getEqualizerSettings() override {
       auto __result = _swiftPart.getEqualizerSettings();

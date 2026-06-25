@@ -59,7 +59,7 @@
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JFunc_void_double.hpp"
-#include "JFunc_void_IosOutput.hpp"
+#include "JFunc_void_Output.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
 #include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
@@ -132,7 +132,7 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_FavoriteChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_NowPlayingMetadata_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_double_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_IosOutput_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_Output_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryWarningPendingChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::registerNatives();

@@ -277,7 +277,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  public var onIosOutputChanged: (IosOutput) -> Void = { _ in } {
+  public var onOutputChanged: (Output) -> Void = { _ in } {
     didSet {
       setupRouteChangeObserver()
     }
@@ -1323,7 +1323,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         self.onMainActor { self.player?.pause() }
       }
       if let output = self.getCurrentOutput() {
-        self.onIosOutputChanged(output)
+        self.onOutputChanged(output)
       }
     }
   }
@@ -1350,43 +1350,44 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   /// Gets the current audio output info
-  private func getCurrentOutput() -> IosOutput? {
+  private func getCurrentOutput() -> Output? {
     let session = AVAudioSession.sharedInstance()
     guard let output = session.currentRoute.outputs.first else { return nil }
 
-    let (outputType, external): (IosOutputType, Bool) = switch output.portType {
+    let (outputType, external): (OutputType, Bool) = switch output.portType {
     case .builtInSpeaker:
-      (.builtInSpeaker, false)
+      (.speaker, false)
     case .builtInReceiver:
-      (.builtInReceiver, false)
+      (.receiver, false)
     case .airPlay:
       (.airplay, true)
-    case .bluetoothA2DP:
-      (.bluetoothA2dp, true)
-    case .bluetoothHFP:
-      (.bluetoothHfp, true)
-    case .bluetoothLE:
-      (.bluetoothLe, true)
+    case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
+      (.bluetooth, true)
     case .headphones:
       (.headphones, true)
     case .carAudio:
-      (.carAudio, true)
+      (.car, true)
     case .HDMI:
       (.hdmi, true)
     case .usbAudio:
-      (.usbAudio, true)
+      (.usb, true)
     default:
       (.other, true)
     }
 
-    return IosOutput(type: outputType, name: output.portName, external: external)
+    return Output(type: outputType, name: output.portName, external: external)
   }
 
-  public func getIosOutput() throws -> IosOutput? {
+  public func getOutput() throws -> Output? {
     getCurrentOutput()
   }
 
-  public func openIosOutputPicker() throws {
+  public func supportsOutputSwitcher() throws -> Bool {
+    // iOS can always present the system route picker (AVRoutePickerView).
+    return true
+  }
+
+  public func openOutputPicker() throws {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       guard let windowScene = UIApplication.shared.connectedScenes
@@ -1395,7 +1396,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         let window = windowScene.windows.first(where: { $0.isKeyWindow }),
         var topController = window.rootViewController
       else {
-        self.logger.error("openIosOutputPicker: no active window scene / root view controller")
+        self.logger.error("openOutputPicker: no active window scene / root view controller")
         return
       }
 
@@ -1417,13 +1418,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
       let button = Self.firstButton(in: routePicker)
       self.logger.notice(
-        "openIosOutputPicker: hierarchy=\(Self.describeHierarchy(routePicker), privacy: .public), buttonFound=\(button != nil, privacy: .public)",
+        "openOutputPicker: hierarchy=\(Self.describeHierarchy(routePicker), privacy: .public), buttonFound=\(button != nil, privacy: .public)",
       )
 
       if let button {
         button.sendActions(for: .touchUpInside)
       } else {
-        self.logger.error("openIosOutputPicker: no UIButton found inside AVRoutePickerView")
+        self.logger.error("openOutputPicker: no UIButton found inside AVRoutePickerView")
       }
 
       // Keep the source view in the hierarchy long enough for the picker to

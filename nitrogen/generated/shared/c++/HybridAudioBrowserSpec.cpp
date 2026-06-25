@@ -120,8 +120,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onOnlineChanged", &HybridAudioBrowserSpec::setOnOnlineChanged);
       prototype.registerHybridGetter("onSystemVolumeChanged", &HybridAudioBrowserSpec::getOnSystemVolumeChanged);
       prototype.registerHybridSetter("onSystemVolumeChanged", &HybridAudioBrowserSpec::setOnSystemVolumeChanged);
-      prototype.registerHybridGetter("onIosOutputChanged", &HybridAudioBrowserSpec::getOnIosOutputChanged);
-      prototype.registerHybridSetter("onIosOutputChanged", &HybridAudioBrowserSpec::setOnIosOutputChanged);
+      prototype.registerHybridGetter("onOutputChanged", &HybridAudioBrowserSpec::getOnOutputChanged);
+      prototype.registerHybridSetter("onOutputChanged", &HybridAudioBrowserSpec::setOnOutputChanged);
       prototype.registerHybridGetter("onEqualizerChanged", &HybridAudioBrowserSpec::getOnEqualizerChanged);
       prototype.registerHybridSetter("onEqualizerChanged", &HybridAudioBrowserSpec::setOnEqualizerChanged);
       prototype.registerHybridGetter("onBatteryWarningPendingChanged", &HybridAudioBrowserSpec::getOnBatteryWarningPendingChanged);
@@ -193,8 +193,9 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("getOnline", &HybridAudioBrowserSpec::getOnline);
       prototype.registerHybridMethod("getSystemVolume", &HybridAudioBrowserSpec::getSystemVolume);
       prototype.registerHybridMethod("setSystemVolume", &HybridAudioBrowserSpec::setSystemVolume);
-      prototype.registerHybridMethod("getIosOutput", &HybridAudioBrowserSpec::getIosOutput);
-      prototype.registerHybridMethod("openIosOutputPicker", &HybridAudioBrowserSpec::openIosOutputPicker);
+      prototype.registerHybridMethod("getOutput", &HybridAudioBrowserSpec::getOutput);
+      prototype.registerHybridMethod("openOutputPicker", &HybridAudioBrowserSpec::openOutputPicker);
+      prototype.registerHybridMethod("supportsOutputSwitcher", &HybridAudioBrowserSpec::supportsOutputSwitcher);
       prototype.registerHybridMethod("getEqualizerSettings", &HybridAudioBrowserSpec::getEqualizerSettings);
       prototype.registerHybridMethod("setEqualizerEnabled", &HybridAudioBrowserSpec::setEqualizerEnabled);
       prototype.registerHybridMethod("setEqualizerPreset", &HybridAudioBrowserSpec::setEqualizerPreset);

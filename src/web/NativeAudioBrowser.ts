@@ -40,7 +40,7 @@ import type {
 } from '../features'
 import type {
   AudioBrowser as AudioBrowserSpec,
-  IosOutput
+  Output
 } from '../specs/audio-browser.nitro'
 import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
@@ -199,7 +199,7 @@ export class NativeAudioBrowser
     event: BatteryOptimizationStatusChangedEvent
   ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
-  onIosOutputChanged: (output: IosOutput) => void = () => {}
+  onOutputChanged: (output: Output) => void = () => {}
   onGate: (event: GateEvent) => void = () => {}
   // Fail closed by default: only reachable in the init window before gate.ts
   // re-binds resolveGate. Web has no serve sites, so this is never called in
@@ -964,12 +964,16 @@ export class NativeAudioBrowser
     return false
   }
 
-  // MARK: iOS output (not applicable on web)
-  getIosOutput(): IosOutput | undefined {
+  // MARK: audio output (not applicable on web)
+  getOutput(): Output | undefined {
     return undefined
   }
 
-  openIosOutputPicker(): void {
+  openOutputPicker(): void {
     // No-op on web
+  }
+
+  supportsOutputSwitcher(): boolean {
+    return false
   }
 }

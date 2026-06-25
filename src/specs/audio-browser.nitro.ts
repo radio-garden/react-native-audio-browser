@@ -61,26 +61,36 @@ export type EqualizerSettings = {
   upperBandLevelLimit: number
 }
 
-export type IosOutputType =
-  | 'built-in-speaker'
-  | 'built-in-receiver'
-  | 'airplay'
-  | 'bluetooth-a2dp'
-  | 'bluetooth-hfp'
-  | 'bluetooth-le'
-  | 'headphones'
-  | 'car-audio'
+/**
+ * Cross-platform audio output kind. Each platform maps its native ports into
+ * this shared set: iOS's granular Bluetooth ports (`bluetoothA2DP`/`HFP`/`LE`)
+ * all collapse to `'bluetooth'`. Note Android's *reading* (`getOutput`) reports
+ * the active local route only — `'airplay'`/`'cast'` come from iOS / are
+ * reserved for remote destinations and don't appear from Android reads.
+ */
+export type OutputType =
+  | 'speaker' // built-in loudspeaker
+  | 'receiver' // built-in earpiece (iOS)
+  | 'headphones' // wired headphones / headset
+  | 'bluetooth' // any Bluetooth audio
+  | 'airplay' // AirPlay (iOS)
+  | 'car' // car audio (CarPlay / Android Auto / car Bluetooth)
   | 'hdmi'
-  | 'usb-audio'
+  | 'usb'
+  | 'cast' // remote speaker / TV (reserved)
   | 'other'
 
 /**
- * Audio output information (iOS only).
+ * The current audio output. Read via `getOutput()` / `useOutput()` on every
+ * platform: iOS always reports one while a session is active; Android reports the
+ * actively-routed device on all versions (the `type` is accurate on API 33+ and
+ * coarse below that). Only the output *switcher* (`openOutputPicker`) is gated to
+ * Android 11+ — check `supportsOutputSwitcher()`.
  */
-export type IosOutput = {
-  /** The output port type */
-  type: IosOutputType
-  /** Human-readable device name (e.g., "AirPods Pro", "iPhone Speaker") */
+export type Output = {
+  /** The output kind */
+  type: OutputType
+  /** Human-readable device name (e.g., "AirPods Pro", "Kitchen speaker") */
   name: string
   /** Whether this is an external output (false for built-in speaker/receiver) */
   external: boolean
@@ -307,23 +317,38 @@ export interface AudioBrowser extends HybridObject<{
    */
   onSystemVolumeChanged: (volume: number) => void
 
-  // MARK: external audio output (iOS only)
+  // MARK: external audio output
   /**
-   * Gets the current audio output info.
-   * Always returns a value on iOS, undefined on Android.
+   * The current audio output, or undefined when unknown. iOS reports one while a
+   * session is active; Android reports the actively-routed media device via
+   * AudioManager — accurate on API 33+ (reflects manual reroutes); on older
+   * Android the `type` is coarse and can't detect a reroute while a device stays
+   * connected.
    */
-  getIosOutput(): IosOutput | undefined
+  getOutput(): Output | undefined
   /**
-   * Called when audio output changes (iOS only).
-   * Never fires on Android.
+   * Called when the current audio output changes (headphones unplugged, a
+   * Bluetooth speaker connected, AirPlay/route selected). Fires on iOS and
+   * Android; never on web.
    */
-  onIosOutputChanged: (output: IosOutput) => void
+  onOutputChanged: (output: Output) => void
   /**
-   * Opens the system output picker (iOS only).
-   * Allows users to select output device (speaker, AirPlay, Bluetooth, etc.).
-   * No-op on Android.
+   * Presents the system audio output switcher so the listener can move playback
+   * to another output — Bluetooth, AirPlay/Sonos-via-AirPlay, speaker (iOS), or
+   * the Bluetooth / speaker / Cast device list (Android). Cross-platform.
+   *
+   * iOS: the system route picker (always available).
+   * Android: the system Output Switcher (Android 11+); no-op below that — gate
+   * on `supportsOutputSwitcher()`.
+   * Web: no-op.
    */
-  openIosOutputPicker(): void
+  openOutputPicker(): void
+  /**
+   * Whether `openOutputPicker()` can present a system output switcher on this
+   * device — surface the output control in the UI only when this is true.
+   * iOS: true. Android: true on Android 11+ (API 30). Web: false.
+   */
+  supportsOutputSwitcher(): boolean
 
   // MARK: equalizer (Android only)
   getEqualizerSettings(): EqualizerSettings | undefined

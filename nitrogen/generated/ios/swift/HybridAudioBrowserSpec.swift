@@ -63,7 +63,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   var handleRemoteStop: (() -> Void)? { get set }
   var onOnlineChanged: (_ online: Bool) -> Void { get set }
   var onSystemVolumeChanged: (_ volume: Double) -> Void { get set }
-  var onIosOutputChanged: (_ output: IosOutput) -> Void { get set }
+  var onOutputChanged: (_ output: Output) -> Void { get set }
   var onEqualizerChanged: (_ settings: EqualizerSettings) -> Void { get set }
   var onBatteryWarningPendingChanged: (_ event: BatteryWarningPendingChangedEvent) -> Void { get set }
   var onBatteryOptimizationStatusChanged: (_ event: BatteryOptimizationStatusChangedEvent) -> Void { get set }
@@ -134,8 +134,9 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func getOnline() throws -> Bool
   func getSystemVolume() throws -> Double
   func setSystemVolume(volume: Double) throws -> Void
-  func getIosOutput() throws -> IosOutput?
-  func openIosOutputPicker() throws -> Void
+  func getOutput() throws -> Output?
+  func openOutputPicker() throws -> Void
+  func supportsOutputSwitcher() throws -> Bool
   func getEqualizerSettings() throws -> EqualizerSettings?
   func setEqualizerEnabled(enabled: Bool) throws -> Void
   func setEqualizerPreset(preset: String) throws -> Void

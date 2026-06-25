@@ -78,10 +78,6 @@ namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
 namespace margelo::nitro::audiobrowser { struct ImageRowItem; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
-// Forward declaration of `IosOutputType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
-// Forward declaration of `IosOutput` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IosOutput; }
 // Forward declaration of `MediaReference` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
@@ -124,6 +120,10 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `Options` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Options; }
+// Forward declaration of `OutputType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class OutputType; }
+// Forward declaration of `Output` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Output; }
 // Forward declaration of `PlaybackActiveTrackChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
@@ -229,8 +229,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "ImageQueryParams.hpp"
 #include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
-#include "IosOutput.hpp"
-#include "IosOutputType.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
@@ -252,6 +250,8 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
+#include "Output.hpp"
+#include "OutputType.hpp"
 #include "Playback.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"

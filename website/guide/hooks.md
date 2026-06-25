@@ -140,14 +140,14 @@ const timer = useSleepTimer({ updateInterval: 1000 })
 | [`useOnline()`](/api/features/network/#useonline) | `boolean` | network connectivity |
 | [`useCarConnected()`](/api/features/carConnection/#usecarconnected) | `boolean` | CarPlay / Android Auto connected (`false` on web) |
 | [`useSystemVolume()`](/api/features/playback/#usesystemvolume) | `number` | device volume 0–1 |
-| [`useIosOutput()`](/api/features/output/#useiosoutput) | [`IosOutput`](/api/features/output/#iosoutput)` \| undefined` | current audio route — **iOS only** |
+| [`useOutput()`](/api/features/output/#useoutput) | [`Output`](/api/features/output/#output)` \| undefined` | current audio output (iOS + Android) |
 
 ```tsx
-const output = useIosOutput() // { type, name, external } on iOS
-// e.g. output?.type === 'airplay', output?.external === true
+const output = useOutput() // { type, name, external } | undefined
+// e.g. output?.type === 'bluetooth', output?.external === true
 ```
 
-`useIosOutput` updates as routes change (AirPods connect, etc.); it's `undefined` on Android.
+`useOutput` updates as routes change (AirPods connect, a Bluetooth speaker is selected, etc.); it's `undefined` when unknown, and Android reports coarser `type`s. See [Audio Output](/guide/audio-output).
 
 ## Errors
 
@@ -215,7 +215,7 @@ The **Hook** name links to its full API entry; the **Returns** type links to its
 | [`useSleepTimer`](/api/features/sleepTimer/#usesleeptimer) | [`SleepTimerState`](/api/features/sleepTimer/#sleeptimerstate)` \| undefined` | `onSleepTimerChanged` | all |
 | [`useOnline`](/api/features/network/#useonline) | `boolean` | `onOnlineChanged` | all |
 | [`useCarConnected`](/api/features/carConnection/#usecarconnected) | `boolean` | `onCarConnectedChanged` | all (`false` web) |
-| [`useIosOutput`](/api/features/output/#useiosoutput) | [`IosOutput`](/api/features/output/#iosoutput)` \| undefined` | `onIosOutputChanged` | iOS |
+| [`useOutput`](/api/features/output/#useoutput) | [`Output`](/api/features/output/#output)` \| undefined` | `onOutputChanged` | iOS, Android |
 | [`usePlaybackError`](/api/features/errors/#useplaybackerror) | [`PlaybackError`](/api/types/player/#playbackerror)` \| undefined` | `onPlaybackError` | all |
 | [`useNavigationError`](/api/features/errors/#usenavigationerror) | [`NavigationError`](/api/features/errors/#navigationerror)` \| undefined` | `onNavigationError` | all |
 | [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) | `{ title, message } \| undefined` | `onFormattedNavigationError` | all |

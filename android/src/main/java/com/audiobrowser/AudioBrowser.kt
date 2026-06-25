@@ -29,6 +29,8 @@ import com.audiobrowser.player.Player
 import com.audiobrowser.util.BatteryOptimizationHelper
 import com.audiobrowser.util.BatteryWarningStore
 import com.audiobrowser.util.BrowserPathHelper
+import com.audiobrowser.util.OutputMonitor
+import com.audiobrowser.util.OutputSwitcher
 import com.audiobrowser.util.SystemVolumeMonitor
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
@@ -42,7 +44,6 @@ import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
 import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
-import com.margelo.nitro.audiobrowser.IosOutput
 import com.margelo.nitro.audiobrowser.GateDecision
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
@@ -56,6 +57,7 @@ import com.margelo.nitro.audiobrowser.NavigationErrorType
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Options
+import com.margelo.nitro.audiobrowser.Output
 import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
@@ -100,6 +102,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   /** Called by Nitro when the JS object is destroyed (incl. JS runtime reloads). */
   override fun dispose() {
     systemVolumeMonitor.destroy()
+    outputMonitor.destroy()
     super.dispose()
   }
 
@@ -139,6 +142,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
 
   private val systemVolumeMonitor = SystemVolumeMonitor(context)
+  private val outputMonitor = OutputMonitor(context)
 
   // MARK: Player state
   private var updateOptions: PlayerUpdateOptions = PlayerUpdateOptions()
@@ -210,7 +214,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onBatteryOptimizationStatusChanged: (BatteryOptimizationStatusChangedEvent) -> Unit =
     {}
   override var onSystemVolumeChanged: (Double) -> Unit = {}
-  override var onIosOutputChanged: (IosOutput) -> Unit = {}
+  override var onOutputChanged: (Output) -> Unit = {}
 
   // MARK: Remote handlers
   override var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Unit)? = null
@@ -256,6 +260,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
     // Observe system volume changes
     systemVolumeMonitor.setOnVolumeChanged { volume -> post { onSystemVolumeChanged(volume) } }
+
+    // Observe current audio output changes (active media route via AudioManager)
+    outputMonitor.setOnOutputChanged { output -> post { onOutputChanged(output) } }
+    outputMonitor.start()
 
     // Observe the car connection (Android Auto / Android Automotive)
     startCarConnectionObserver(context, handler)
@@ -1026,13 +1034,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override fun setSystemVolume(volume: Double) = systemVolumeMonitor.setVolume(volume)
 
   // ============================================================================
-  // MARK: External Audio Output (iOS only, stub on Android)
+  // MARK: External Audio Output
   // ============================================================================
 
-  override fun getIosOutput(): IosOutput? = null
+  override fun getOutput(): Output? = outputMonitor.current
 
-  override fun openIosOutputPicker() {
-    // No-op on Android
+  override fun supportsOutputSwitcher(): Boolean = OutputSwitcher.isSupported()
+
+  override fun openOutputPicker() {
+    OutputSwitcher.open(context)
   }
 
   // ============================================================================

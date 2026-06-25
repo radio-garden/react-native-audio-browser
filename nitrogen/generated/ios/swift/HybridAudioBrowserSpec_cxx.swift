@@ -1345,19 +1345,19 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onIosOutputChanged: bridge.Func_void_IosOutput {
+  public final var onOutputChanged: bridge.Func_void_Output {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_IosOutput in
-        let __closureWrapper = Func_void_IosOutput(self.__implementation.onIosOutputChanged)
-        return bridge.create_Func_void_IosOutput(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_Output in
+        let __closureWrapper = Func_void_Output(self.__implementation.onOutputChanged)
+        return bridge.create_Func_void_Output(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onIosOutputChanged = { () -> (IosOutput) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_IosOutput(newValue)
-        return { (__output: IosOutput) -> Void in
+      self.__implementation.onOutputChanged = { () -> (Output) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_Output(newValue)
+        return { (__output: Output) -> Void in
           __wrappedFunction.call(__output)
         }
       }()
@@ -2295,31 +2295,43 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func getIosOutput() -> bridge.Result_std__optional_IosOutput__ {
+  public final func getOutput() -> bridge.Result_std__optional_Output__ {
     do {
-      let __result = try self.__implementation.getIosOutput()
-      let __resultCpp = { () -> bridge.std__optional_IosOutput_ in
+      let __result = try self.__implementation.getOutput()
+      let __resultCpp = { () -> bridge.std__optional_Output_ in
         if let __unwrappedValue = __result {
-          return bridge.create_std__optional_IosOutput_(__unwrappedValue)
+          return bridge.create_std__optional_Output_(__unwrappedValue)
         } else {
           return .init()
         }
       }()
-      return bridge.create_Result_std__optional_IosOutput__(__resultCpp)
+      return bridge.create_Result_std__optional_Output__(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_IosOutput__(__exceptionPtr)
+      return bridge.create_Result_std__optional_Output__(__exceptionPtr)
     }
   }
   
   @inline(__always)
-  public final func openIosOutputPicker() -> bridge.Result_void_ {
+  public final func openOutputPicker() -> bridge.Result_void_ {
     do {
-      try self.__implementation.openIosOutputPicker()
+      try self.__implementation.openOutputPicker()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func supportsOutputSwitcher() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.supportsOutputSwitcher()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
   
