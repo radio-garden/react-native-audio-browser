@@ -170,6 +170,9 @@ class CastSessionController(
 
   fun isCasting(): Boolean = castContext.sessionManager.currentCastSession?.isConnected == true
 
+  /** The Cast route selector, exposed so the DestinationCoordinator can union it with Sonos's. */
+  fun currentRouteSelector(): MediaRouteSelector = routeSelector
+
   fun showPicker() {
     // The framework chooser needs an Activity-themed context; the library runs Cast from the bound
     // Service and holds none of its own. Present on the current RN Activity (tracked via

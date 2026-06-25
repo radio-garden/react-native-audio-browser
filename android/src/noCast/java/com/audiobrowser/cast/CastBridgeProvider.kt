@@ -2,6 +2,7 @@ package com.audiobrowser.cast
 
 import android.content.Context
 import androidx.media3.session.MediaSession
+import androidx.mediarouter.media.MediaRouteSelector
 import com.audiobrowser.Callbacks
 import com.audiobrowser.player.Player
 import com.margelo.nitro.audiobrowser.CastState
@@ -27,6 +28,8 @@ private object NoopCastBridge : CastBridge {
   override fun isCasting(): Boolean = false
 
   override fun showPicker() {}
+
+  override fun routeSelector(): MediaRouteSelector? = null
 
   override fun endSession() {}
 

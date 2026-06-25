@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
+import androidx.mediarouter.media.MediaRouteSelector
 import com.audiobrowser.Callbacks
 import com.audiobrowser.player.Player
 import com.google.android.gms.cast.framework.CastContext
@@ -81,6 +82,8 @@ private class RealCastBridge(private val context: Context) : CastBridge {
   override fun showPicker() {
     controller?.showPicker()
   }
+
+  override fun routeSelector(): MediaRouteSelector? = controller?.currentRouteSelector()
 
   override fun endSession() {
     controller?.endSession()

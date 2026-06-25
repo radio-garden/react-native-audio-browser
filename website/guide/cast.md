@@ -16,6 +16,13 @@ self-contained (query-signed, publicly reachable) because request headers do
 **not** cross to the receiver. Keep the two APIs separate; this guide is Cast.
 :::
 
+::: tip Sonos is another destination (Android)
+On Android, a [Sonos](/guide/sonos) speaker is a second playback destination
+behind this same API — it appears in `showCastPicker()` alongside Cast and is
+driven by the same hooks. See the [Sonos guide](/guide/sonos) for the Android
+permission it needs and its live-only constraints.
+:::
+
 Cast is **compiled in by default** and **inert at runtime** until you call
 [`configureCast()`](/api/features/cast/#configurecast) — so enabling it is
 really just a JS call plus (on iOS) two `Info.plist` keys. Until `configureCast()`

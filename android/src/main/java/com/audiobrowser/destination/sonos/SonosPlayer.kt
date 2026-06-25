@@ -40,8 +40,8 @@ class SonosPlayer(
   looper: Looper,
   private val device: SonosDevice,
   private val transport: SonosTransport,
-  private val activeMediaItem: MediaItem,
   private val scope: CoroutineScope,
+  initialMediaItem: MediaItem? = null,
   private val io: CoroutineDispatcher = Dispatchers.IO,
   private val pollIntervalMs: Long = 1500L,
   private val onFatalError: (PlaybackException) -> Unit = {},
@@ -50,7 +50,8 @@ class SonosPlayer(
   private val handler = Handler(looper)
 
   // All of these are read/written only on the looper thread.
-  private var playbackStateInternal: Int = STATE_BUFFERING
+  private var currentItem: MediaItem? = initialMediaItem
+  private var playbackStateInternal: Int = STATE_IDLE
   private var playWhenReadyInternal: Boolean = true
   private var deviceVolumeInternal: Int = 0
   private var pollJob: Job? = null
@@ -76,20 +77,26 @@ class SonosPlayer(
     DeviceInfo.Builder(DeviceInfo.PLAYBACK_TYPE_REMOTE).setMaxVolume(MAX_VOLUME).build()
 
   override fun getState(): State {
-    val item =
-      MediaItemData.Builder(MEDIA_ITEM_UID)
-        .setMediaItem(activeMediaItem)
-        .setMediaMetadata(activeMediaItem.mediaMetadata)
-        .setIsSeekable(false)
-        .setIsDynamic(true) // live: unbounded
-        .setDurationUs(C.TIME_UNSET)
-        .build()
+    val item = currentItem
+    val playlist =
+      if (item == null) {
+        emptyList()
+      } else {
+        listOf(
+          MediaItemData.Builder(MEDIA_ITEM_UID)
+            .setMediaItem(item)
+            .setMediaMetadata(item.mediaMetadata)
+            .setIsSeekable(false)
+            .setIsDynamic(true) // live: unbounded
+            .setDurationUs(C.TIME_UNSET)
+            .build()
+        )
+      }
     return State.Builder()
       .setAvailableCommands(availableCommands)
-      .setPlaybackState(playbackStateInternal)
+      .setPlaybackState(if (item == null) STATE_IDLE else playbackStateInternal)
       .setPlayWhenReady(playWhenReadyInternal, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
-      .setPlaylist(listOf(item))
-      .setCurrentMediaItemIndex(0)
+      .setPlaylist(playlist)
       .setContentPositionMs(0)
       .setDeviceInfo(deviceInfo)
       .setDeviceVolume(deviceVolumeInternal)
@@ -97,9 +104,13 @@ class SonosPlayer(
   }
 
   override fun handlePrepare(): ListenableFuture<*> {
-    playbackStateInternal = STATE_BUFFERING
-    loadAndStart()
-    startPolling()
+    // The swap calls setMediaItems (which loads + starts polling) before prepare; only (re)load here
+    // if nothing has been loaded yet (e.g. prepare called without a preceding setMediaItems).
+    if (currentItem != null && pollJob?.isActive != true) {
+      playbackStateInternal = STATE_BUFFERING
+      loadAndStart()
+      startPolling()
+    }
     return Futures.immediateVoidFuture()
   }
 
@@ -108,9 +119,13 @@ class SonosPlayer(
     startIndex: Int,
     startPositionMs: Long,
   ): ListenableFuture<*> {
-    // A single live item; (re)load whatever is active. We ignore startIndex/position (no seek).
-    loadAndStart()
-    startPolling()
+    // A single live item; take the one at startIndex (the Active Track). Ignore position (no seek).
+    currentItem = mediaItems.getOrNull(startIndex) ?: mediaItems.firstOrNull()
+    if (currentItem != null) {
+      playbackStateInternal = STATE_BUFFERING
+      loadAndStart()
+      startPolling()
+    }
     return Futures.immediateVoidFuture()
   }
 
@@ -143,8 +158,9 @@ class SonosPlayer(
 
   /** Pushes the active stream to the device and reads back its current volume. */
   private fun loadAndStart() {
-    val metadata = activeMediaItem.mediaMetadata
-    val url = activeMediaItem.localConfiguration?.uri?.toString() ?: activeMediaItem.mediaId
+    val item = currentItem ?: return
+    val metadata = item.mediaMetadata
+    val url = item.localConfiguration?.uri?.toString() ?: item.mediaId
     scope.launch(io) {
       try {
         transport.setUriAndPlay(

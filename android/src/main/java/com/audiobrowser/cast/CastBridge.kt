@@ -1,6 +1,7 @@
 package com.audiobrowser.cast
 
 import androidx.media3.session.MediaSession
+import androidx.mediarouter.media.MediaRouteSelector
 import com.audiobrowser.Callbacks
 import com.audiobrowser.player.Player
 import com.margelo.nitro.audiobrowser.CastState
@@ -41,6 +42,13 @@ interface CastBridge {
 
   /** Presents the system Cast chooser. No-op if Cast is not configured. */
   fun showPicker()
+
+  /**
+   * The Cast [MediaRouteSelector] (control category for the configured receiver), or null on the
+   * inert bridge / before configure. The `DestinationCoordinator` unions this with the Sonos
+   * selector so one chooser lists both backends' devices.
+   */
+  fun routeSelector(): MediaRouteSelector?
 
   /** Disconnects the current Cast session, handing playback back to the local player. */
   fun endSession()

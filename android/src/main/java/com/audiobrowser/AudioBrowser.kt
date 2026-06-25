@@ -1,5 +1,6 @@
 package com.audiobrowser
 
+import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -24,6 +25,9 @@ import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.cast.CastBridge
 import com.audiobrowser.cast.CastBridgeProvider
+import com.audiobrowser.destination.DestinationActivityTracker
+import com.audiobrowser.destination.DestinationCoordinator
+import com.audiobrowser.destination.sonos.SonosBackend
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -105,9 +109,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   /** Called by Nitro when the JS object is destroyed (incl. JS runtime reloads). */
   override fun dispose() {
     systemVolumeMonitor.destroy()
-    // Tear down the Cast subsystem so a re-created instance doesn't double-register against the
-    // process-static Cast context. No-op on the inert (no-Cast) bridge.
-    castBridge.release()
+    // Tear down the destination subsystem (Cast + Sonos) so a re-created instance doesn't
+    // double-register against the process-static Cast context or the MediaRouter provider.
+    destinations.release()
     super.dispose()
   }
 
@@ -118,13 +122,22 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     NitroModules.applicationContext
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
 
-  // MARK: Cast bridge
+  // MARK: Playback destinations (Cast + Sonos)
   //
-  // Resolved to whichever variant sourceset is active: the inert NoopCastBridge on the default
-  // (Cast-disabled) build, or the real CastSessionController-backed bridge when
+  // The Cast bridge resolves to whichever variant sourceset is active: the inert NoopCastBridge on
+  // the default (Cast-disabled) build, or the real CastSessionController-backed bridge when
   // AudioBrowser_enableCast=true. The call below references only main-sourceset symbols
   // (CastBridgeProvider is defined with the same FQN in both variants), so this compiles either way.
   private val castBridge: CastBridge = CastBridgeProvider.create(context)
+
+  // The Sonos backend is always compiled (no Cast SDK; UPnP over OkHttp). The coordinator fronts
+  // both backends behind the single destination JS API (getCastState/showCastPicker/leases/…): one
+  // multiplexed state, one MediaRouter chooser listing Cast + Sonos. See the Sonos guide + ADR 0004.
+  private val sonosBackend = SonosBackend(context)
+  private val destinations =
+    DestinationCoordinator(castBridge, sonosBackend).also {
+      (context.applicationContext as? Application)?.let(DestinationActivityTracker::register)
+    }
 
   // MARK: Browser state
   private var _configuration =
@@ -1071,44 +1084,47 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // it would stall the JS thread on that I/O and risk an ANR). The getters/picker/endSession do
   // cheap session-manager reads/dispatch, so they don't block either; the bridge marshals to main.
   override fun configureCast(config: CastConfig) {
-    castBridge.configure(config.receiverApplicationId)
+    destinations.configureCast(config.receiverApplicationId)
     // If the service is already up, attach now (the bridge stashes until its controller is built);
     // otherwise onServiceConnected attaches once the session exists.
     connectedService?.let { attachCastBridge(it.player) }
   }
 
-  override fun getCastState(): CastState = castBridge.getState()
+  // The "Cast" JS API now fronts BOTH backends via the coordinator: getCastState/isCasting reflect
+  // whichever of Cast or Sonos is more connected, showCastPicker lists both, and the discovery
+  // leases drive both. (The naming is retained for cross-platform/back-compat; on Android it covers
+  // Chromecast + Sonos.)
+  override fun getCastState(): CastState = destinations.getState()
 
-  override fun getCastDeviceName(): String? = castBridge.getDeviceName()
+  override fun getCastDeviceName(): String? = destinations.getDeviceName()
 
-  override fun isCasting(): Boolean = castBridge.isCasting()
+  override fun isCasting(): Boolean = destinations.isCasting()
 
   override fun showCastPicker() {
-    castBridge.showPicker()
+    destinations.showPicker()
   }
 
   override fun endCastSession() {
-    castBridge.endSession()
+    destinations.endSession()
   }
 
-  // Discovery leases — JS drives these from mounted useCastState() hooks. The bridge native-ref-
-  // counts them and runs the MediaRouter active scan only while leases > 0. Inert on the no-Cast
-  // build.
+  // Discovery leases — JS drives these from mounted useCastState() hooks. The coordinator native-
+  // ref-counts them on both backends and runs the MediaRouter active scan only while leases > 0.
   override fun retainCastDiscovery() {
-    castBridge.retainDiscovery()
+    destinations.retainDiscovery()
   }
 
   override fun releaseCastDiscovery() {
-    castBridge.releaseDiscovery()
+    destinations.releaseDiscovery()
   }
 
   /**
-   * Hands the Cast bridge the live MediaSession (via the player) + the local player so it can
-   * repoint on connect/disconnect. Idempotent — the bridge/controller attaches once and ignores a
-   * re-attach. No-op on the inert bridge.
+   * Hands both destination backends the live MediaSession (via the player) + the local player so
+   * they can repoint on connect/disconnect. Idempotent — each backend attaches once and ignores a
+   * re-attach. The Cast bridge is inert on the no-Cast build.
    */
   private fun attachCastBridge(player: Player) {
-    castBridge.attach(player.sessionOrNull ?: return, player) { callbacks }
+    destinations.attach(player.sessionOrNull ?: return, player) { callbacks }
   }
 
   // ============================================================================

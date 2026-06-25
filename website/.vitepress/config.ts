@@ -72,7 +72,8 @@ export default withMermaid(
               { text: 'Cast', link: '/guide/cast' },
               { text: 'Equalizer', link: '/guide/equalizer' },
               { text: 'Network', link: '/guide/network' },
-              { text: 'Sleep Timer', link: '/guide/sleep-timer' }
+              { text: 'Sleep Timer', link: '/guide/sleep-timer' },
+              { text: 'Sonos', link: '/guide/sonos' }
             ]
           },
           {
