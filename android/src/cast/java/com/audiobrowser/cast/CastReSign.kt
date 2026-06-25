@@ -90,6 +90,15 @@ class CastReSign(
         .setMetadata(oldInfo?.metadata)
         .setCustomData(oldInfo?.customData)
         .build()
-    return MediaQueueItem.Builder(item).setMedia(newInfo).build()
+    // MediaQueueItem.Builder has no setMedia(): rebuild from the fresh MediaInfo and carry over the
+    // item-level fields. Skip startTime when unset (NaN) — Builder.setStartTime(NaN) throws.
+    return MediaQueueItem.Builder(newInfo)
+      .setAutoplay(item.autoplay)
+      .setPreloadTime(item.preloadTime)
+      .apply {
+        item.customData?.let { setCustomData(it) }
+        if (!item.startTime.isNaN()) setStartTime(item.startTime)
+      }
+      .build()
   }
 }

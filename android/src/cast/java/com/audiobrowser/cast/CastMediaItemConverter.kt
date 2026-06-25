@@ -121,7 +121,8 @@ class CastMediaItemConverter : MediaItemConverter {
 
     /**
      * Infers a concrete MIME content type for the Cast receiver from the resolved URL's extension.
-     * `audio/*` is not a real MIME and confuses some receivers, so map the common stream containers
+     * A bare wildcard `audio` content type is not a real MIME and confuses some receivers, so map
+     * the common stream containers
      * explicitly; default to `audio/mpeg`. Query string is stripped before matching. Shared by the
      * converter and [CastReSign] so a re-signed item keeps a consistent content type.
      */
