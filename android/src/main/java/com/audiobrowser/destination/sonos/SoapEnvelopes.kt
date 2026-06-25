@@ -72,5 +72,5 @@ object SoapEnvelopes {
       .replace("<", "&lt;")
       .replace(">", "&gt;")
       .replace("\"", "&quot;")
-      .replace("'", "&apos;")
+      .replace("'", "&#39;")
 }

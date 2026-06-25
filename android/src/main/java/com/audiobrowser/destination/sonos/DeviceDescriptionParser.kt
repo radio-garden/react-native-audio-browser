@@ -39,17 +39,20 @@ object DeviceDescriptionParser {
         }
         .getOrNull() ?: return null
 
-    val devices = doc.getElementsByTagName("device")
-    if (devices.length == 0) return null
-
-    // Identity + Sonos check + room name come from the root <device>.
-    val root = devices.item(0) as? Element ?: return null
+    // Identity + Sonos check + room name come from the ROOT <device> — the direct child of <root>,
+    // selected by structure rather than blindly taking the first <device> in document order.
+    val docElement = doc.documentElement ?: return null
+    val root = directChildElement(docElement, "device") ?: return null
     if (!childText(root, "manufacturer").equals(SONOS_MANUFACTURER, ignoreCase = true)) return null
     val udn = childText(root, "UDN").ifBlank { return null }
     // Prefer the Sonos room name; fall back to friendlyName.
     val name = childText(root, "roomName").ifBlank { childText(root, "friendlyName") }
 
-    val baseUrl = baseUrlOf(location) ?: return null
+    // UPnP allows an explicit <URLBase>; when present it overrides the retrieval location for
+    // resolving relative control URLs.
+    val baseUrl =
+      childText(docElement, "URLBase").ifBlank { "" }.trimEnd('/').ifBlank { baseUrlOf(location) }
+        ?: return null
     val avControl = findControlUrl(doc, AV_TRANSPORT, baseUrl) ?: return null
     val rcControl = findControlUrl(doc, RENDERING_CONTROL, baseUrl) ?: return null
 
@@ -93,14 +96,16 @@ object DeviceDescriptionParser {
     }
 
   /** Direct-child element text by tag name (first match), or "" — avoids matching nested devices. */
-  private fun childText(parent: Element, tag: String): String {
+  private fun childText(parent: Element, tag: String): String =
+    directChildElement(parent, tag)?.textContent?.trim() ?: ""
+
+  /** The first direct-child [Element] with the given tag name, or null. */
+  private fun directChildElement(parent: Element, tag: String): Element? {
     var node: Node? = parent.firstChild
     while (node != null) {
-      if (node is Element && node.tagName.equals(tag, ignoreCase = true)) {
-        return node.textContent.trim()
-      }
+      if (node is Element && node.tagName.equals(tag, ignoreCase = true)) return node
       node = node.nextSibling
     }
-    return ""
+    return null
   }
 }

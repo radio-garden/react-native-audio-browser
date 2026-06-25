@@ -54,6 +54,11 @@ class SoapResponseParserTest {
   }
 
   @Test
+  fun `volume returns null on a soft fault response`() {
+    assertNull(SoapResponseParser.volume(fault))
+  }
+
+  @Test
   fun `transportState returns null on a fault or garbage`() {
     assertNull(SoapResponseParser.transportState(fault))
     assertNull(SoapResponseParser.transportState("not xml at all"))

@@ -62,6 +62,63 @@ class DeviceDescriptionParserTest {
   }
 
   @Test
+  fun `honours an explicit URLBase over the location for relative control URLs`() {
+    val xml =
+      """
+      <root xmlns="urn:schemas-upnp-org:device-1-0">
+        <URLBase>http://10.0.0.99:1400/</URLBase>
+        <device>
+          <deviceType>urn:schemas-upnp-org:device:ZonePlayer:1</deviceType>
+          <friendlyName>Patio</friendlyName>
+          <manufacturer>Sonos, Inc.</manufacturer>
+          <UDN>uuid:RINCON_BASE</UDN>
+          <serviceList>
+            <service>
+              <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+              <controlURL>/AVT/Control</controlURL>
+            </service>
+            <service>
+              <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+              <controlURL>/RC/Control</controlURL>
+            </service>
+          </serviceList>
+        </device>
+      </root>
+      """
+        .trimIndent()
+    // Description was retrieved from .50 but URLBase points control at .99.
+    val device = DeviceDescriptionParser.parse(xml, location)!!
+    assertEquals("http://10.0.0.99:1400/AVT/Control", device.avTransportControlUrl)
+    assertEquals("http://10.0.0.99:1400/RC/Control", device.renderingControlControlUrl)
+  }
+
+  @Test
+  fun `resolves control URLs against an IPv6 location`() {
+    val xml =
+      """
+      <root xmlns="urn:schemas-upnp-org:device-1-0"><device>
+        <deviceType>urn:schemas-upnp-org:device:ZonePlayer:1</deviceType>
+        <friendlyName>Loft</friendlyName>
+        <manufacturer>Sonos, Inc.</manufacturer>
+        <UDN>uuid:RINCON_V6</UDN>
+        <serviceList>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+            <controlURL>/AVT/Control</controlURL>
+          </service>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <controlURL>/RC/Control</controlURL>
+          </service>
+        </serviceList>
+      </device></root>
+      """
+        .trimIndent()
+    val device = DeviceDescriptionParser.parse(xml, "http://[fe80::1]:1400/xml/device_description.xml")!!
+    assertEquals("http://[fe80::1]:1400/AVT/Control", device.avTransportControlUrl)
+  }
+
+  @Test
   fun `rejects a non-Sonos device`() {
     val xml =
       """

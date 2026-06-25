@@ -15,8 +15,9 @@ class SsdpMessagesTest {
       "M-SEARCH * HTTP/1.1\r\n" +
         "HOST: 239.255.255.250:1900\r\n" +
         "MAN: \"ssdp:discover\"\r\n" +
-        "MX: 1\r\n" +
+        "MX: 2\r\n" +
         "ST: urn:schemas-upnp-org:device:ZonePlayer:1\r\n" +
+        "USER-AGENT: AudioBrowser/1.0 UPnP/1.1\r\n" +
         "\r\n"
     assertEquals(expected, text)
   }

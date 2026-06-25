@@ -19,16 +19,22 @@ object SsdpMessages {
   /** Sonos players answer M-SEARCH for the ZonePlayer device type. */
   const val SONOS_SEARCH_TARGET = "urn:schemas-upnp-org:device:ZonePlayer:1"
 
+  private const val USER_AGENT = "AudioBrowser/1.0 UPnP/1.1"
+
   /**
    * Builds the canonical SSDP `M-SEARCH` request datagram. Header order and CRLF framing are fixed
-   * (some stacks are picky); the body is always terminated by a blank line.
+   * (some stacks are picky); the body is always terminated by a blank line. Includes a `USER-AGENT`
+   * (recommended by UPnP DA 1.1). `MX` defaults to 2 — a wider response-jitter window than 1, which
+   * improves reliability on busy networks; [SsdpDiscovery] sends the datagram several times and
+   * waits accordingly.
    */
-  fun buildMSearch(searchTarget: String = SONOS_SEARCH_TARGET, mx: Int = 1): ByteArray =
+  fun buildMSearch(searchTarget: String = SONOS_SEARCH_TARGET, mx: Int = 2): ByteArray =
     ("M-SEARCH * HTTP/1.1\r\n" +
         "HOST: $MULTICAST_HOST:$MULTICAST_PORT\r\n" +
         "MAN: \"ssdp:discover\"\r\n" +
         "MX: $mx\r\n" +
         "ST: $searchTarget\r\n" +
+        "USER-AGENT: $USER_AGENT\r\n" +
         "\r\n")
       .toByteArray(Charsets.UTF_8)
 
@@ -40,8 +46,10 @@ object SsdpMessages {
   fun parseResponse(raw: String): SsdpResponse? {
     val lines = raw.replace("\r\n", "\n").split("\n")
     val statusLine = lines.firstOrNull()?.trim() ?: return null
-    // Must be a response (HTTP/x 200 ...), not a NOTIFY/M-SEARCH request.
-    if (!statusLine.startsWith("HTTP/") || " 200" !in statusLine) return null
+    // Must be a response status line (HTTP/x 200 ...), not a NOTIFY/M-SEARCH request. Check the
+    // status code as a discrete token, not a loose substring.
+    val statusTokens = statusLine.split(' ')
+    if (!statusLine.startsWith("HTTP/") || statusTokens.getOrNull(1) != "200") return null
 
     val headers = HashMap<String, String>()
     for (line in lines.drop(1)) {

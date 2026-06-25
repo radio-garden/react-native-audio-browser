@@ -44,5 +44,7 @@ object DidlLite {
       .replace("<", "&lt;")
       .replace(">", "&gt;")
       .replace("\"", "&quot;")
-      .replace("'", "&apos;")
+      // &#39; rather than &apos; — the latter is the one predefined entity some legacy XML readers
+      // (incl. older Sonos firmware) have historically mishandled.
+      .replace("'", "&#39;")
 }
