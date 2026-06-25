@@ -11,6 +11,7 @@ import androidx.media3.session.MediaSession
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.audiobrowser.Callbacks
+import com.audiobrowser.browser.resolveArtworkUrl
 import com.audiobrowser.browser.resolveMediaUrl
 import com.audiobrowser.cast.CastDiscoveryLeases
 import com.audiobrowser.cast.CastStateResolver
@@ -31,13 +32,16 @@ import timber.log.Timber
 /**
  * The Sonos playback-destination backend (main sourceset; no Cast SDK). Owns the
  * [SonosMediaRouteProvider] and turns MediaRouter route selection into the same `Player` swap the
- * Cast backend uses: on select it resolves the Active Track's media URL with `target:'cast'` (a
- * self-contained URL the speaker fetches itself), builds a [SonosPlayer], and calls
- * `player.startCasting`; on unselect it calls `player.stopCasting`. Discovery is ref-counted to JS
- * leases exactly like Cast (a MediaRouter active scan drives the provider's SSDP probe).
+ * Cast backend uses: on select it resolves the Active Track's media (and artwork) URL with
+ * `target:'cast'` — a self-contained URL the speaker fetches itself — builds a [SonosPlayer], and
+ * calls `player.startCasting`; on unselect it calls `player.stopCasting` and releases the player.
+ * Discovery is ref-counted to JS leases exactly like Cast (a MediaRouter active scan drives the
+ * provider's SSDP probe); the provider is registered lazily on the first lease so a non-Sonos app
+ * never touches MediaRouter.
  *
  * Emits the existing [CastStateChangedEvent] so the cross-backend destination state in JS reflects
- * Sonos with no new API. All state is confined to the main thread.
+ * Sonos with no new API. All mutable state is confined to the main thread; [getState] reads only
+ * cached fields so it is safe to call from the JS thread (Nitro getters are not marshalled).
  */
 @UnstableApi
 class SonosBackend(
@@ -52,8 +56,12 @@ class SonosBackend(
   private var player: Player? = null
   private var callbacksProvider: () -> Callbacks? = { null }
 
+  // Main-confined. currentDevice is set only once the swap succeeds (so getState never reports
+  // CONNECTED during the async connect). hasDevicesCached is updated from the MediaRouter callback.
   private var currentDevice: SonosDevice? = null
+  private var sonosPlayer: SonosPlayer? = null
   @Volatile private var connecting = false
+  @Volatile private var hasDevicesCached = false
   private var connectJob: Job? = null
 
   private val soapClient = SoapClient(httpClient)
@@ -82,6 +90,7 @@ class SonosBackend(
       onRouteSelected = ::onRouteSelected,
       onRouteUnselected = ::onRouteUnselected,
       onSetRouteVolume = ::onSetRouteVolume,
+      onAdjustRouteVolume = ::onAdjustRouteVolume,
     )
   }
 
@@ -97,11 +106,11 @@ class SonosBackend(
   private var providerAdded = false
   private val routerCallback =
     object : MediaRouter.Callback() {
-      override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) = emitCurrentState()
+      override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) = refreshDevices()
 
-      override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) = emitCurrentState()
+      override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) = refreshDevices()
 
-      override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = emitCurrentState()
+      override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = refreshDevices()
     }
 
   fun attach(mediaSession: MediaSession, player: Player, callbacks: () -> Callbacks?) {
@@ -109,10 +118,8 @@ class SonosBackend(
       this.mediaSession = mediaSession
       this.player = player
       this.callbacksProvider = callbacks
-      if (!providerAdded) {
-        mediaRouter.addProvider(provider)
-        providerAdded = true
-      }
+      // Provider registration is deferred to the first discovery lease (retainDiscovery) so a
+      // non-Sonos app never instantiates MediaRouter or registers a provider.
     }
   }
 
@@ -120,7 +127,7 @@ class SonosBackend(
     CastStateResolver.resolve(
       connected = currentDevice != null,
       connecting = connecting,
-      hasDevices = hasAvailableDevices(),
+      hasDevices = hasDevicesCached,
     )
 
   fun getDeviceName(): String? = currentDevice?.name
@@ -133,10 +140,14 @@ class SonosBackend(
 
   fun retainDiscovery() {
     runOnMain {
+      if (!providerAdded) {
+        mediaRouter.addProvider(provider)
+        providerAdded = true
+      }
       if (leases.retain() && !scanning) {
         scanning = true
         mediaRouter.addCallback(routeSelector, routerCallback, ACTIVE_SCAN_FLAGS)
-        emitCurrentState()
+        refreshDevices()
       }
     }
   }
@@ -146,6 +157,8 @@ class SonosBackend(
       if (leases.release() && scanning) {
         scanning = false
         mediaRouter.removeCallback(routerCallback)
+        hasDevicesCached = false
+        emitCurrentState()
       }
     }
   }
@@ -155,6 +168,8 @@ class SonosBackend(
       connecting = false
       connectJob?.cancel()
       connectJob = null
+      sonosPlayer?.release()
+      sonosPlayer = null
       if (scanning) {
         mediaRouter.removeCallback(routerCallback)
         scanning = false
@@ -165,8 +180,8 @@ class SonosBackend(
         providerAdded = false
       }
       currentDevice = null
+      scope.cancel()
     }
-    scope.cancel()
   }
 
   // MARK: - Route selection -> Player swap
@@ -174,48 +189,61 @@ class SonosBackend(
   private fun onRouteSelected(device: SonosDevice) {
     runOnMain {
       val player = player ?: return@runOnMain
+      // Single-active guard: bail if anything (Cast or Sonos) is already swapped/connecting.
       if (player.castPlayer != null || connecting) return@runOnMain
       connecting = true
-      currentDevice = device
       emitState(CastState.CONNECTING)
       connectJob =
         scope.launch {
           try {
             val snapshot = player.captureQueueState()
-            val active = snapshot.tracks.getOrNull(snapshot.startIndex) ?: snapshot.tracks.firstOrNull()
+            val active =
+              snapshot.tracks.getOrNull(snapshot.startIndex) ?: snapshot.tracks.firstOrNull()
             if (active == null) {
               connecting = false
-              currentDevice = null
+              connectJob = null
               emitCurrentState()
               return@launch
             }
             val item = buildRemoteMediaItem(player, active)
+            // Post-suspension re-check: a fast unselect (or release) may have cancelled us while the
+            // URL resolution above was in flight. Bail before repointing the session at a route the
+            // user just left. (Mirrors CastSessionController.)
+            if (!connecting || player.castPlayer != null) {
+              connecting = false
+              connectJob = null
+              emitCurrentState()
+              return@launch
+            }
             val transport = SonosTransport(device, soapClient)
-            val sonosPlayer =
+            val newPlayer =
               SonosPlayer(
                 looper = Looper.getMainLooper(),
                 device = device,
                 transport = transport,
-                scope = scope,
                 initialMediaItem = item,
                 onFatalError = { Timber.e(it, "Sonos playback error") },
               )
             val intercepting =
               InterceptingPlayer(
-                sonosPlayer,
+                newPlayer,
                 callbacksProvider,
                 { player.getOptions() },
                 keepSessionAliveOnError = false,
               )
-            player.startCasting(sonosPlayer, intercepting, listOf(item), snapshot)
+            player.startCasting(newPlayer, intercepting, listOf(item), snapshot)
+            sonosPlayer = newPlayer
+            currentDevice = device
             connecting = false
             connectJob = null
             emitState(CastState.CONNECTED)
           } catch (t: Throwable) {
             Timber.e(t, "Sonos connect failed")
             connecting = false
-            currentDevice = null
             connectJob = null
+            currentDevice = null
+            sonosPlayer?.release()
+            sonosPlayer = null
             emitCurrentState()
           }
         }
@@ -229,17 +257,29 @@ class SonosBackend(
       connectJob = null
       val player = player
       if (player?.castPlayer != null) player.stopCasting()
+      sonosPlayer?.release()
+      sonosPlayer = null
       currentDevice = null
       emitCurrentState()
     }
   }
 
   private fun onSetRouteVolume(device: SonosDevice, volume: Int) {
-    val player = player ?: return
-    runOnMain { player.activePlayer.setDeviceVolume(volume.coerceIn(0, 100), 0) }
+    runOnMain {
+      val player = player ?: return@runOnMain
+      player.activePlayer.setDeviceVolume(volume.coerceIn(0, 100), 0)
+    }
   }
 
-  /** Resolves the Active Track's media URL with target:'cast' and builds a Media3 MediaItem. */
+  private fun onAdjustRouteVolume(device: SonosDevice, delta: Int) {
+    runOnMain {
+      val player = player ?: return@runOnMain
+      val current = player.activePlayer.deviceVolume
+      player.activePlayer.setDeviceVolume((current + delta).coerceIn(0, 100), 0)
+    }
+  }
+
+  /** Resolves the Active Track's media + artwork URLs with target:'cast' and builds a MediaItem. */
   private suspend fun buildRemoteMediaItem(player: Player, track: Track): MediaItem {
     val browserManager = player.browser?.browserManager
     val mediaUri =
@@ -247,14 +287,25 @@ class SonosBackend(
         runCatching { browserManager?.resolveMediaUrl(src, MediaResolveTarget.CAST) }.getOrNull()?.path
           ?: src
       } ?: ""
-    val base = TrackFactory.toMedia3(track)
-    return base.buildUpon().setUri(Uri.parse(mediaUri)).setTag(track).build()
+    // The speaker fetches artwork itself, so resolve it self-contained (target:'cast') too — a raw
+    // app-process / header-authed artwork URL would 401/404 on the speaker.
+    val artworkTrack =
+      runCatching {
+          val artwork = browserManager?.resolveArtworkUrl(track, null, null, MediaResolveTarget.CAST)
+          if (artwork?.uri?.isNotEmpty() == true) track.copy(artwork = artwork.uri) else track
+        }
+        .getOrDefault(track)
+    val base = TrackFactory.toMedia3(artworkTrack)
+    return base.buildUpon().setUri(Uri.parse(mediaUri)).setTag(artworkTrack).build()
   }
 
   // MARK: - Helpers
 
-  private fun hasAvailableDevices(): Boolean =
-    mediaRouter.routes.any { it.matchesSelector(routeSelector) }
+  /** Recomputes the cached device-availability flag from MediaRouter (main thread only). */
+  private fun refreshDevices() {
+    hasDevicesCached = mediaRouter.routes.any { it.matchesSelector(routeSelector) }
+    emitCurrentState()
+  }
 
   private fun emitCurrentState() = emitState(getState())
 

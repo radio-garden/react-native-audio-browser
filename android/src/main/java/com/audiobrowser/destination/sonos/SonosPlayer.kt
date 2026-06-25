@@ -9,38 +9,42 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.util.UnstableApi
+import com.margelo.nitro.audiobrowser.Track
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 
 /**
  * A Media3 [SimpleBasePlayer] that plays a single live stream on a Sonos speaker over UPnP. It is a
- * thin adapter: all wire control is delegated to the [SonosTransport] (which is itself fully
- * unit-tested), and this class only maps Media3 commands onto transport calls and reflects the
- * polled UPnP transport state back as Media3 player state.
+ * thin adapter: all wire control is delegated to the [SonosTransport] (itself fully unit-tested),
+ * and this class only maps Media3 commands onto transport calls and reflects the polled UPnP
+ * transport state back as Media3 state. Because it is a real Media3 `Player`, the existing
+ * `InterceptingPlayer` wrapping, `PlayerListener`, `NowPlayingUpdater`, and the
+ * `MediaSession.setPlayer` swap all work on it unchanged — exactly like the Cast `CastPlayer`.
  *
- * Because it is a real Media3 `Player`, the existing `InterceptingPlayer` wrapping, `PlayerListener`,
- * `NowPlayingUpdater`, and the `MediaSession.setPlayer` swap all work on it unchanged — exactly like
- * the Cast `CastPlayer`.
- *
- * Scope: **live-only**. One item, no seeking, no duration; transport is limited to play/pause/stop
- * and device volume. State updates and command handling run on the application [Looper] thread; SOAP
- * round-trips run on [io]. Every field mutation is posted back to the looper thread so [getState]
- * (called by the base on that thread) is race-free.
+ * Scope: **live-only** (one item, no seek/duration). Threading: command handling and all field
+ * mutation run on the application [Looper] thread; SOAP round-trips run on [io] and are serialized
+ * by [commandMutex] so `SetAVTransportURI`/`Play`/`Pause`/`Stop` cannot reorder. The player owns its
+ * [playerScope]; [handleRelease] cancels it so the poll loop and in-flight commands die together.
+ * The stream is loaded on [handlePrepare] (after `playWhenReady` is known) and `Play` is issued only
+ * when `playWhenReady` is true, so a paused handoff does not start audio.
  */
 @UnstableApi
 class SonosPlayer(
   looper: Looper,
   private val device: SonosDevice,
   private val transport: SonosTransport,
-  private val scope: CoroutineScope,
   initialMediaItem: MediaItem? = null,
   private val io: CoroutineDispatcher = Dispatchers.IO,
   private val pollIntervalMs: Long = 1500L,
@@ -48,12 +52,16 @@ class SonosPlayer(
 ) : SimpleBasePlayer(looper) {
 
   private val handler = Handler(looper)
+  private val playerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+  private val commandMutex = Mutex()
 
-  // All of these are read/written only on the looper thread.
+  // Read/written only on the looper thread.
   private var currentItem: MediaItem? = initialMediaItem
   private var playbackStateInternal: Int = STATE_IDLE
-  private var playWhenReadyInternal: Boolean = true
+  private var playWhenReadyInternal: Boolean = false
   private var deviceVolumeInternal: Int = 0
+  private var prepared: Boolean = false
+  private var released: Boolean = false
   private var pollJob: Job? = null
 
   private val availableCommands: Player.Commands =
@@ -103,25 +111,20 @@ class SonosPlayer(
       .build()
   }
 
-  override fun handlePrepare(): ListenableFuture<*> {
-    // The swap calls setMediaItems (which loads + starts polling) before prepare; only (re)load here
-    // if nothing has been loaded yet (e.g. prepare called without a preceding setMediaItems).
-    if (currentItem != null && pollJob?.isActive != true) {
-      playbackStateInternal = STATE_BUFFERING
-      loadAndStart()
-      startPolling()
-    }
-    return Futures.immediateVoidFuture()
-  }
-
   override fun handleSetMediaItems(
     mediaItems: List<MediaItem>,
     startIndex: Int,
     startPositionMs: Long,
   ): ListenableFuture<*> {
-    // A single live item; take the one at startIndex (the Active Track). Ignore position (no seek).
     currentItem = mediaItems.getOrNull(startIndex) ?: mediaItems.firstOrNull()
-    if (currentItem != null) {
+    if (currentItem != null) playbackStateInternal = STATE_BUFFERING
+    return Futures.immediateVoidFuture()
+  }
+
+  override fun handlePrepare(): ListenableFuture<*> {
+    // Load on prepare (playWhenReady is known by now), once. Play only if playWhenReady.
+    if (currentItem != null && !prepared) {
+      prepared = true
       playbackStateInternal = STATE_BUFFERING
       loadAndStart()
       startPolling()
@@ -131,8 +134,9 @@ class SonosPlayer(
 
   override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
     playWhenReadyInternal = playWhenReady
-    launchIo {
-      if (playWhenReady) transport.play() else transport.pause()
+    // Before prepare, just record intent; handlePrepare applies it. After prepare, drive transport.
+    if (prepared) {
+      runTransport { if (playWhenReady) transport.play() else transport.pause() }
     }
     return Futures.immediateVoidFuture()
   }
@@ -140,39 +144,46 @@ class SonosPlayer(
   override fun handleStop(): ListenableFuture<*> {
     stopPolling()
     playbackStateInternal = STATE_IDLE
-    launchIo { transport.stop() }
+    runTransport { transport.stop() }
     return Futures.immediateVoidFuture()
   }
 
   override fun handleRelease(): ListenableFuture<*> {
+    released = true
     stopPolling()
+    playerScope.cancel()
     return Futures.immediateVoidFuture()
   }
 
   override fun handleSetDeviceVolume(deviceVolume: Int, flags: Int): ListenableFuture<*> {
     val clamped = deviceVolume.coerceIn(0, MAX_VOLUME)
     deviceVolumeInternal = clamped
-    launchIo { transport.setVolume(clamped) }
+    runTransport { transport.setVolume(clamped) }
     return Futures.immediateVoidFuture()
   }
 
-  /** Pushes the active stream to the device and reads back its current volume. */
+  /** Pushes the active stream to the device (Play only when playWhenReady) and reads volume back. */
   private fun loadAndStart() {
     val item = currentItem ?: return
     val metadata = item.mediaMetadata
     val url = item.localConfiguration?.uri?.toString() ?: item.mediaId
-    scope.launch(io) {
+    val live = (item.localConfiguration?.tag as? Track)?.live != false
+    val shouldPlay = playWhenReadyInternal
+    playerScope.launch(io) {
       try {
-        transport.setUriAndPlay(
-          streamUrl = url,
-          title = metadata.title?.toString() ?: "",
-          artist = metadata.artist?.toString(),
-          album = metadata.albumTitle?.toString(),
-          artworkUri = metadata.artworkUri?.toString(),
-          live = true,
-        )
+        commandMutex.withLock {
+          transport.setUri(
+            streamUrl = url,
+            title = metadata.title?.toString() ?: "",
+            artist = metadata.artist?.toString(),
+            album = metadata.albumTitle?.toString(),
+            artworkUri = metadata.artworkUri?.toString(),
+            live = live,
+          )
+          if (shouldPlay) transport.play()
+        }
         val volume = transport.getVolume()
-        if (volume != null) handler.post { deviceVolumeInternal = volume; invalidateState() }
+        if (volume != null) postIfActive { deviceVolumeInternal = volume }
       } catch (t: Throwable) {
         reportError(t)
       }
@@ -182,14 +193,15 @@ class SonosPlayer(
   private fun startPolling() {
     if (pollJob?.isActive == true) return
     pollJob =
-      scope.launch(io) {
+      playerScope.launch(io) {
         while (isActive) {
           val state = runCatching { transport.getTransportState() }.getOrNull()
+          val volume = runCatching { transport.getVolume() }.getOrNull()
           if (state != null) {
             val mapped = TransportStateMapper.map(state)
-            handler.post {
+            postIfPolling {
               playbackStateInternal = mapped.playbackState
-              invalidateState()
+              if (volume != null) deviceVolumeInternal = volume
             }
           }
           delay(pollIntervalMs)
@@ -202,20 +214,39 @@ class SonosPlayer(
     pollJob = null
   }
 
-  /** Fire-and-forget SOAP command; surfaces failures as a player error on the looper thread. */
-  private fun launchIo(block: suspend () -> Unit) {
-    scope.launch(io) {
+  /** Runs a transport command on IO, serialized so commands cannot reorder; reports failures. */
+  private fun runTransport(block: suspend () -> Unit) {
+    playerScope.launch(io) {
       try {
-        block()
+        commandMutex.withLock { block() }
       } catch (t: Throwable) {
         reportError(t)
       }
     }
   }
 
+  /** Posts a state mutation to the looper, skipping it if the player has been released. */
+  private fun postIfActive(block: () -> Unit) {
+    handler.post {
+      if (released) return@post
+      block()
+      invalidateState()
+    }
+  }
+
+  /** Like [postIfActive] but also skips if polling was stopped (a stale queued poll result). */
+  private fun postIfPolling(block: () -> Unit) {
+    handler.post {
+      if (released || pollJob?.isActive != true) return@post
+      block()
+      invalidateState()
+    }
+  }
+
   private fun reportError(t: Throwable) {
     Timber.e(t, "Sonos control failed")
     handler.post {
+      if (released) return@post
       onFatalError(
         PlaybackException(
           "Sonos control failed: ${t.message}",

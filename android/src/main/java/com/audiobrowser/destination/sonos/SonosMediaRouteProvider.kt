@@ -33,6 +33,7 @@ class SonosMediaRouteProvider(
   private val onRouteSelected: (SonosDevice) -> Unit,
   private val onRouteUnselected: () -> Unit,
   private val onSetRouteVolume: (SonosDevice, Int) -> Unit,
+  private val onAdjustRouteVolume: (SonosDevice, Int) -> Unit,
   private val rescanIntervalMs: Long = 5000L,
 ) : MediaRouteProvider(context) {
 
@@ -96,8 +97,8 @@ class SonosMediaRouteProvider(
     override fun onSetVolume(volume: Int) = onSetRouteVolume(device, volume.coerceIn(0, MAX_VOLUME))
 
     override fun onUpdateVolume(delta: Int) {
-      // We don't cache per-route volume here; the player reads it back. Best-effort relative bump.
-      onSetRouteVolume(device, delta.coerceIn(-MAX_VOLUME, MAX_VOLUME))
+      // Relative change (e.g. a hardware volume key): apply current + delta, NOT delta-as-absolute.
+      onAdjustRouteVolume(device, delta.coerceIn(-MAX_VOLUME, MAX_VOLUME))
     }
   }
 

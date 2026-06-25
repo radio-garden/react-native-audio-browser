@@ -1284,6 +1284,15 @@ class Player(internal val context: Context) {
     castMediaItems: List<MediaItem>,
     snapshot: QueueSnapshot,
   ) {
+    // Single-active-destination guard: reject a second concurrent swap. Two backends (Google Cast +
+    // Sonos) can race to connect on a route change, and MediaRouter does not make the unselect/
+    // select ordering atomic; without this guard the second startCasting would overwrite (and leak)
+    // the first destination player and repoint the session twice.
+    if (this.castPlayer != null) {
+      Timber.w("startCasting ignored: a destination player is already active")
+      return
+    }
+
     // Stop the local engine first (still local at this point) so it releases the network stream.
     exoPlayer.playWhenReady = false
     exoPlayer.stop()

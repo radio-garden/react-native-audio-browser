@@ -10,8 +10,8 @@ class SonosTransport(
   private val device: SonosDevice,
   private val soap: SoapClient,
 ) {
-  /** Loads the stream on the device and starts it: `SetAVTransportURI` then `Play`. */
-  fun setUriAndPlay(
+  /** Loads the stream on the device (`SetAVTransportURI`) without starting playback. */
+  fun setUri(
     streamUrl: String,
     title: String,
     artist: String?,
@@ -30,6 +30,19 @@ class SonosTransport(
         live = live,
       )
     avt(SoapEnvelopes.setAvTransportUri(uri, didl))
+  }
+
+  /** Loads the stream on the device and starts it: `SetAVTransportURI` then `Play`. */
+  fun setUriAndPlay(
+    streamUrl: String,
+    title: String,
+    artist: String?,
+    album: String?,
+    artworkUri: String?,
+    live: Boolean,
+    contentType: String? = null,
+  ) {
+    setUri(streamUrl, title, artist, album, artworkUri, live, contentType)
     avt(SoapEnvelopes.play())
   }
 
