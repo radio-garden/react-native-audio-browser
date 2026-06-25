@@ -75,49 +75,70 @@ The **single-active-session** invariant and the player swap live in a new
 `DestinationCoordinator` (main) that owns both backends and multiplexes their
 state into one `onDestinationStateChanged`.
 
-### What stays backend-specific (the platform forces it)
+### What stays backend-specific (only the transport)
 
-Discovery and device selection genuinely differ and must **not** be forced into
-one shape:
+Discovery, the picker, route selection, and volume routing are **unified through
+AndroidX MediaRouter** (next section): Cast is a `MediaRouteProvider` (registered
+by the Cast SDK) and Sonos is a `MediaRouteProvider` we write. The only thing
+that genuinely differs between backends is the **transport that plays the
+stream** — Cast builds a Media3 `CastPlayer`; Sonos builds a `SonosPlayer` that
+speaks UPnP SOAP. Both are Media3 `Player`s swapped in identically.
 
-- **Google Cast** uses a closed system component (`MediaRouter` +
-  `MediaRouteChooserDialog`). Selection is `showCastPicker()` — an opaque system
-  dialog. We cannot inject Sonos devices into it.
-- **Sonos** has no system picker. The library discovers devices over SSDP and
-  **exposes the list to JS**; the app draws its own chooser and calls
-  `connectSonosDevice(id)`. This matches the library's headless/imperative stance
-  (no native views).
-
-So the backends share *state, leases, re-sign, and the player swap*, but each
-keeps its own *discovery + selection* surface.
+This is a stronger generalization than the first draft of this spec, which gave
+Sonos its own JS device-list API. Routing Sonos through MediaRouter removes that
+surface entirely and is also more consistent with the library's headless stance:
+the app never renders a device list; it opens a system chooser.
 
 ### The Sonos backend (new)
 
 All Sonos code lives in the **`main`** sourceset (package
 `com.audiobrowser.destination.sonos`). Unlike Google Cast it pulls **no heavy
-SDK** — only OkHttp (already a dependency) and Android's built-in XML pull
-parser — so it needs **no build-time gating** (no `noSonos` sourceset). It is
+SDK** — only OkHttp (already a dependency), Android's built-in XML pull parser,
+and the lightweight standard **`androidx.mediarouter`** (small, no Play
+Services) — so it needs **no build-time gating** (no `noSonos` sourceset). It is
 runtime-inert until discovery is retained.
 
+#### Discovery & selection go through AndroidX MediaRouter (not a bespoke JS API)
+
+Google Cast on Android already works by registering an AndroidX
+**`MediaRouteProvider`**; `showCastPicker()` is just a `MediaRouteChooserDialog`
+over the registered providers. Sonos follows the identical pattern: a custom
+**`SonosMediaRouteProvider`** runs SSDP discovery and publishes each speaker as a
+`MediaRoute`. Cast and Sonos therefore share **one** discovery mechanism, **one**
+picker, and **one** route-selection callback — no Sonos-specific device-list JS
+API, and Sonos appears in the same system chooser as Cast and Bluetooth.
+
+When the user selects a Sonos route, the provider's `RouteController.onSelect`
+builds the `SonosPlayer` and triggers the existing `Player` swap; `onUnselect`
+hands back to the phone; `onSetVolume`/`onUpdateVolume` route volume to the
+speaker over UPnP. This mirrors exactly how the Cast SDK drives its own session
+on route selection — the two backends become symmetric.
+
 ```
-DestinationCoordinator (main)
- ├── CastBridge            (sourceset-gated: real when enableCast, else Noop)
- └── SonosBackend (main, always compiled)
-      ├── SsdpDiscovery        — UDP M-SEARCH on 239.255.255.250:1900 +
-      │                          MulticastLock; parses SSDP responses
+DestinationCoordinator (main) — owns MediaRouter, the unified MediaRouteSelector
+ │   (Cast category when enableCast + Sonos category), discovery leases, route
+ │   selection → the singular Player swap, state multiplexing, output picker.
+ ├── Cast: registered by the Cast SDK as a MediaRouteProvider (sourceset-gated)
+ └── Sonos backend (main, always compiled)
+      ├── SonosMediaRouteProvider — AndroidX MediaRouteProvider; runs SSDP scan
+      │                             while MediaRouter actively scans; publishes a
+      │                             MediaRoute per Sonos device; RouteController
+      │                             onSelect/onUnselect/onSetVolume hooks
+      ├── SsdpDiscovery          — UDP M-SEARCH on 239.255.255.250:1900 +
+      │                            MulticastLock; parses SSDP responses
       ├── SonosDeviceDescription — fetch + parse /xml/device_description.xml
       │                            (friendlyName, AVTransport + RenderingControl
       │                            controlURLs, UDN); Sonos filter on
       │                            manufacturer == "Sonos, Inc."
-      ├── SoapClient           — build SOAP envelopes, POST via OkHttp, parse
-      │                          responses (AVTransport + RenderingControl)
-      ├── SonosPlayer          — Media3 SimpleBasePlayer mapping Player commands
-      │                          to SOAP (SetAVTransportURI/Play/Pause/Stop,
-      │                          Get/SetVolume, Get/SetMute); polls
-      │                          GetTransportInfo/GetPositionInfo for state
-      └── SonosSessionController — discovery leases, connect/disconnect, builds
-                                   SonosPlayer, drives the Player swap, emits
-                                   DestinationState, reactive re-sign on stale URL
+      ├── SoapClient             — build SOAP envelopes, POST via OkHttp, parse
+      │                            responses (AVTransport + RenderingControl)
+      ├── SonosPlayer            — Media3 SimpleBasePlayer mapping Player commands
+      │                            to SOAP (SetAVTransportURI/Play/Pause/Stop,
+      │                            Get/SetVolume, Get/SetMute); polls
+      │                            GetTransportInfo for state
+      └── SonosSessionController — builds SonosPlayer on route select, drives the
+                                   Player swap, emits DestinationState, reactive
+                                   re-sign on stale URL
 ```
 
 #### Pure, unit-testable units (no Android/network)
@@ -183,8 +204,12 @@ dead stream surfaces a real error instead of looping. Same philosophy as
 
 ### JS / Nitro API
 
-Generalize the cross-backend concepts to **destination**; keep each backend's
-discovery/selection surface where it diverges.
+Because discovery and selection are unified through MediaRouter, there is **no
+Sonos-specific JS API**. The surface generalizes the existing Cast concepts to
+**destination** and adds nothing per-backend except keeping `configureCast`
+(Cast SDK init has no Sonos equivalent). `showCastPicker()` is renamed
+`showOutputPicker()` — on Android it opens the MediaRouter chooser listing Cast
+**and** Sonos (and Bluetooth); on iOS it presents the Cast dialog.
 
 ```ts
 // Shared destination state (generalizes CastState)
@@ -196,46 +221,40 @@ export type DestinationKind = 'googlecast' | 'sonos'
 export type DestinationChangedEvent = {
   state: DestinationState
   kind: DestinationKind | undefined   // which backend, when connected/connecting
-  deviceName: string | undefined
+  deviceName: string | undefined      // the selected route's name
 }
 
-export type SonosDevice = { id: string; name: string }   // id = UDN
-
 // inside interface AudioBrowser
-// --- shared ---
+// --- shared destination surface (all that the app needs) ---
 getDestinationState(): DestinationState
 getDestinationKind(): DestinationKind | undefined
 getDestinationDeviceName(): string | undefined
 isCasting(): boolean                         // convenience: on any remote destination
+showOutputPicker(): void                     // MediaRouter chooser (Cast + Sonos + BT)
 endDestinationSession(): void                // disconnect → hand back to phone
-retainDestinationDiscovery(): void           // ref-counted; scans BOTH backends
-releaseDestinationDiscovery(): void
+retainDestinationDiscovery(): void           // ref-counted; one MediaRouter scan
+releaseDestinationDiscovery(): void          //   covering every provider
 onDestinationStateChanged: (e: DestinationChangedEvent) => void
-// --- Google Cast (unchanged mechanism) ---
+// --- Google Cast init (no Sonos counterpart) ---
 configureCast(config: CastConfig): void
-showCastPicker(): void
-// --- Sonos (app draws its own chooser) ---
-getSonosDevices(): SonosDevice[]             // snapshot of currently-discovered
-connectSonosDevice(deviceId: string): void   // connect (ends any other session)
-onSonosDevicesChanged: (devices: SonosDevice[]) => void
 ```
 
 The JS feature is split: `src/features/destination.ts` exports the shared
-surface (`getDestinationState`, `onDestinationStateChanged`,
-`endDestinationSession`, `retain/releaseDestinationDiscovery`, and the hooks
+surface (`getDestinationState`, `getDestinationKind`, `getDestinationDeviceName`,
+`isCasting`, `showOutputPicker`, `endDestinationSession`,
+`retain/releaseDestinationDiscovery`, `onDestinationStateChanged`, and the hooks
 `useDestinationState`, `useDestinationDeviceName`, `useIsCasting`);
-`src/features/cast.ts` keeps the Cast-only `configureCast`/`showCastPicker`; a new
-`src/features/sonos.ts` exports `getSonosDevices`, `connectSonosDevice`,
-`onSonosDevicesChanged`, and `useSonosDevices()` (ref-counts discovery while
-mounted, like `useCastState`).
-Web stubs degrade exactly like the Cast stubs: `no-devices`, empty device list,
-no-op connect.
+`src/features/cast.ts` keeps only the Cast-init `configureCast`. There is **no**
+`sonos.ts` — Sonos has no public JS surface of its own; it is just another route
+in the picker. Web stubs degrade exactly like the Cast stubs: `no-devices`,
+no-op picker/session.
 
 ### Build
 
-- **Sonos:** no Gradle flag, no sourceset, no new dependency. Lives in `main`,
-  always compiled, runtime-inert until `retainDestinationDiscovery()` /
-  `connectSonosDevice()`.
+- **Sonos:** no Gradle flag, no sourceset, no heavy SDK. Lives in `main`, always
+  compiled, runtime-inert until `retainDestinationDiscovery()` (which starts the
+  MediaRouter active scan that drives the SSDP probe). Adds one small standard
+  dependency: `androidx.mediarouter:mediarouter` (no Play Services).
 - **Google Cast:** unchanged — still gated by `AudioBrowser_enableCast`
   (cast/noCast sourcesets, Cast SDK deps). The generalized neutral seam and the
   `DestinationCoordinator` live in `main` and reference `CastBridgeProvider.create`
@@ -312,6 +331,12 @@ existing convention).
    `PlayerListener`/`NowPlayingUpdater` across the swap (same risk class as Cast's
    `setPlayer` swap).
 6. Single-active-session hand-off correctness when switching Cast → Sonos.
+7. **Picker surfaces.** The app-presented `MediaRouteChooserDialog` (opened by
+   `showOutputPicker()`) reliably lists a custom `MediaRouteProvider`'s routes.
+   Whether Sonos routes also appear in the **system Output Switcher** (the media
+   notification's switcher, backed by `MediaRouter2`) depends on the AndroidX
+   MediaRouter→MediaRouter2 bridge and is historically finicky — verify on
+   hardware; promise only the app chooser, treat the system switcher as a bonus.
 
 ## File-by-file change list
 
@@ -323,19 +348,25 @@ existing convention).
 - `cast/CastReSignBudget.kt` → `destination/DestinationReSignBudget.kt`
 - `cast/CastBridge.kt` → keep as the Cast backend's interface, implementing a new
   neutral `destination/DestinationBackend` for the shared ops.
-- `Callbacks.kt` — `onCastStateChanged` → `onDestinationStateChanged` (+ new
-  `onSonosDevicesChanged`).
-- Nitro spec + `src/features/*` + web stubs — generalized destination API + Sonos
-  surface; `target: 'cast'` → `'remote'`.
+- `Callbacks.kt` — `onCastStateChanged` → `onDestinationStateChanged`.
+- `AudioBrowser.kt` — `showCastPicker` → `showOutputPicker`; `getCastState` etc. →
+  the `getDestination*` surface; discovery retains drive one MediaRouter scan.
+- Nitro spec + `src/features/*` + web stubs — generalized destination API (no
+  Sonos-specific members); `target: 'cast'` → `'remote'`.
 
 **New (main, `destination/` + `destination/sonos/`):**
-- `destination/DestinationCoordinator.kt`
+- `destination/DestinationCoordinator.kt` — owns MediaRouter + the unified
+  `MediaRouteSelector`, route select/unselect → the singular `Player` swap, state
+  multiplexing, `showOutputPicker`.
+- `destination/sonos/SonosMediaRouteProvider.kt` — AndroidX `MediaRouteProvider`;
+  publishes a route per discovered Sonos; `RouteController` onSelect/onUnselect/
+  onSetVolume.
 - `destination/sonos/SsdpDiscovery.kt`, `SsdpMessages.kt`
 - `destination/sonos/DeviceDescriptionParser.kt`, `SonosDevice.kt`
 - `destination/sonos/SoapClient.kt`, `SoapEnvelopes.kt`, `SoapResponseParser.kt`
 - `destination/sonos/DidlLite.kt`, `TransportStateMapper.kt`
 - `destination/sonos/SonosPlayer.kt`
-- `destination/sonos/SonosSessionController.kt`, `SonosBackend.kt`
+- `destination/sonos/SonosSessionController.kt`
 
 **New tests (`android/src/test/.../destination/`):** one per pure unit above +
 coordinator + a `MockWebServer` SonosPlayer round-trip; fixtures under
