@@ -20,20 +20,57 @@ class PlaybackStateMachineTest {
   // MARK: ExoPlayer state changes
 
   @Test
-  fun `buffering and ready map directly`() {
+  fun `buffering maps directly`() {
     assertEquals(
       listOf(PlaybackState.BUFFERING),
-      on(PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_BUFFERING, mediaItemCount = 1)),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_BUFFERING,
+          mediaItemCount = 1,
+          playWhenReady = true,
+        )
+      ),
     )
+  }
+
+  @Test
+  fun `ready is emitted only while paused, suppressed while playing`() {
+    // Paused (playWhenReady=false): READY is the settled signal consumers need to
+    // clear a spinner from a buffer that finished while paused (mono#3325).
     assertEquals(
       listOf(PlaybackState.READY),
-      on(PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_READY, mediaItemCount = 1)),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_READY,
+          mediaItemCount = 1,
+          playWhenReady = false,
+        ),
+        from = PlaybackState.BUFFERING,
+      ),
+    )
+    // Playing (playWhenReady=true): READY is a transient before PLAYING — suppressed
+    // so consumers don't flash a settled/non-loading state mid-startup.
+    assertEquals(
+      emptyList<PlaybackState>(),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_READY,
+          mediaItemCount = 1,
+          playWhenReady = true,
+        ),
+        from = PlaybackState.BUFFERING,
+      ),
     )
   }
 
   @Test
   fun `idle maps to none except from error or stopped`() {
-    val idle = PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_IDLE, mediaItemCount = 1)
+    val idle =
+      PlaybackEvent.ExoPlaybackStateChanged(
+        MediaPlayer.STATE_IDLE,
+        mediaItemCount = 1,
+        playWhenReady = false,
+      )
     assertEquals(listOf(PlaybackState.NONE), on(idle, from = PlaybackState.PLAYING))
     // A terminal error idles ExoPlayer; transitioning to NONE would clear the ERROR state the
     // session is rendering. Same for an explicit stop.
@@ -45,12 +82,24 @@ class PlaybackStateMachineTest {
   fun `ended maps to ended only while the queue has items`() {
     assertEquals(
       listOf(PlaybackState.ENDED),
-      on(PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_ENDED, mediaItemCount = 3)),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_ENDED,
+          mediaItemCount = 3,
+          playWhenReady = false,
+        )
+      ),
     )
     // An emptied queue also reports STATE_ENDED; that is "nothing loaded", not "played to end".
     assertEquals(
       listOf(PlaybackState.NONE),
-      on(PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_ENDED, mediaItemCount = 0)),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_ENDED,
+          mediaItemCount = 0,
+          playWhenReady = false,
+        )
+      ),
     )
   }
 
@@ -62,14 +111,23 @@ class PlaybackStateMachineTest {
     assertEquals(
       listOf(PlaybackState.BUFFERING),
       on(
-        PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_BUFFERING, mediaItemCount = 1),
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_BUFFERING,
+          mediaItemCount = 1,
+          playWhenReady = true,
+        ),
         from = PlaybackState.ERROR,
       ),
     )
+    // A paused recovery reaching READY (playWhenReady=false) also leaves ERROR.
     assertEquals(
       listOf(PlaybackState.READY),
       on(
-        PlaybackEvent.ExoPlaybackStateChanged(MediaPlayer.STATE_READY, mediaItemCount = 1),
+        PlaybackEvent.ExoPlaybackStateChanged(
+          MediaPlayer.STATE_READY,
+          mediaItemCount = 1,
+          playWhenReady = false,
+        ),
         from = PlaybackState.ERROR,
       ),
     )
@@ -79,7 +137,13 @@ class PlaybackStateMachineTest {
   fun `an unmapped exo state is a no-op`() {
     assertEquals(
       emptyList<PlaybackState>(),
-      on(PlaybackEvent.ExoPlaybackStateChanged(exoState = 99, mediaItemCount = 1)),
+      on(
+        PlaybackEvent.ExoPlaybackStateChanged(
+          exoState = 99,
+          mediaItemCount = 1,
+          playWhenReady = false,
+        )
+      ),
     )
   }
 

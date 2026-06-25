@@ -190,6 +190,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
             PlaybackEvent.ExoPlaybackStateChanged(
               player.exoPlayer.playbackState,
               media3Player.mediaItemCount,
+              player.exoPlayer.playWhenReady,
             )
           MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION ->
             PlaybackEvent.MediaItemTransition(player.currentTrack != null, player.isPlaying)

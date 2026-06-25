@@ -17,6 +17,7 @@ sealed interface PlaybackEvent {
   data class ExoPlaybackStateChanged(
     @get:MediaPlayer.State val exoState: Int,
     val mediaItemCount: Int,
+    val playWhenReady: Boolean,
   ) : PlaybackEvent
 
   /** The active media item changed (auto-advance, skip, queue swap). */
@@ -40,7 +41,13 @@ object PlaybackStateMachine {
       is PlaybackEvent.ExoPlaybackStateChanged ->
         when (event.exoState) {
           MediaPlayer.STATE_BUFFERING -> listOf(PlaybackState.BUFFERING)
-          MediaPlayer.STATE_READY -> listOf(PlaybackState.READY)
+          MediaPlayer.STATE_READY ->
+            // While playing (playWhenReady), READY is a transient before PLAYING —
+            // suppress it so consumers don't flash a settled/non-loading state
+            // mid-startup (none→loading→buffering→playing). When paused it IS the
+            // settled signal a buffer-that-finished-while-paused needs, so consumers
+            // can clear their loading spinner (mono#3325).
+            if (event.playWhenReady) emptyList() else listOf(PlaybackState.READY)
           MediaPlayer.STATE_IDLE ->
             // A terminal error (or an explicit stop) idles ExoPlayer; transitioning to NONE
             // would clear the ERROR/STOPPED state the session is rendering.
