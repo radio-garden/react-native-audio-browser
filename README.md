@@ -29,6 +29,7 @@ Use the same tree in your app UI, or keep it focused on CarPlay and Android Auto
 - **[Access gates](https://audiobrowser.dev/guide/gate)** — put browse and search behind a paywall, login, or region wall with per-request resolvers.
 - **Request and [artwork](https://audiobrowser.dev/guide/artwork) control** — rewrite outbound requests, add auth headers, shape URLs, and customize artwork loading.
 - **[Google Cast](https://audiobrowser.dev/guide/cast)** — move playback onto a Chromecast, Nest speaker, or Google TV; the queue, active track, and Now Playing carry over. On by default; just call `configureCast()` (see the callout below).
+- **[Sonos](https://audiobrowser.dev/guide/sonos)** _(Android)_ — the same playback destination model over UPnP: Sonos speakers appear in the same picker as Cast, the speaker fetches and plays the stream itself, and the phone is the remote. No extra JS API — it rides the Cast/destination surface.
 - **Web support** — the same `AudioBrowser` API works with `react-native-web` for playback, browse, search, and sleep timer.
 - **Platform extras** — [AirPlay and output routing](https://audiobrowser.dev/guide/audio-output) on iOS, [Android battery-resume handling](https://audiobrowser.dev/guide/battery), [sleep timer](https://audiobrowser.dev/guide/sleep-timer), and [Android equalizer support](https://audiobrowser.dev/guide/equalizer).
 

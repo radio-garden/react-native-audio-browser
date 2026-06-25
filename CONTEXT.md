@@ -174,6 +174,10 @@ The opt-in, cross-platform subsystem for routing playback to a **Cast device** (
 An active connection to a **Cast device**. While a Cast session is connected, the **Player**'s audio output is the Cast device instead of the phone; the **Queue**, **Active Track**, and **Now Playing** keep their meaning unchanged — only the *destination* moves. A Cast session can outlive the app process and be re-attached on relaunch.
 *Avoid*: Connection, route (a Cast session is not an audio route).
 
+**Sonos**:
+The second playback **destination** backend (Android only; see ADR 0004). A Sonos speaker plays a live stream it fetches itself over UPnP, while the phone is a remote control — the same destination model as **Cast**, a different mechanism (SSDP discovery + `AVTransport`/`RenderingControl` SOAP, not the Cast SDK). On Android, Cast and Sonos are both AndroidX `MediaRouteProvider`s surfaced through one chooser and one destination state, so the `Cast*` JS API (`showCastPicker`, `useCastState`, …) covers both. Unlike Cast it needs no `configureCast()` and adds no heavy SDK.
+*Avoid*: treating Sonos as Bluetooth/AirPlay (those are local audio *routes*, not destinations — see "Flagged ambiguities"); a separate "Sonos API" (there is none — it rides the destination surface).
+
 **Cast device**:
 The receiver hardware the **Cast session** targets — Chromecast, a Nest speaker, a Google TV. Fetches the media and artwork *itself* over its own network egress, so URLs handed to it must be self-contained and publicly reachable (see the `target: 'cast'` note under **Transform**, and "Flagged ambiguities").
 *Avoid*: Receiver (overloaded with the Cast *receiver app*), speaker, TV.
