@@ -247,6 +247,8 @@ dependencies {
   testImplementation 'org.mockito:mockito-core:5.8.0'
   testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
   testImplementation 'org.robolectric:robolectric:4.11.1'
+  // Sonos UPnP SOAP round-trip tests stand in a local server for a real speaker.
+  testImplementation 'com.squareup.okhttp3:mockwebserver:5.3.0'
 
   api 'com.jakewharton.timber:timber:5.0.1'
 }
