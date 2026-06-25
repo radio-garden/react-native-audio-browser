@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.HeartRating
+import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -63,9 +64,12 @@ class Player(internal val context: Context) {
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
-  internal val equalizer = EqualizerController { settings ->
-    callbacks?.onEqualizerChanged(settings)
-  }
+  internal val equalizer =
+    EqualizerController(
+      onSettingsChanged = { settings -> callbacks?.onEqualizerChanged(settings) },
+      // EQ mutations are inert while casting (local DSP on remote audio); see ADR 0003.
+      isCasting = { !isLocal },
+    )
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(this)
   internal val volumeFader = VolumeFader(getVolume = { volume }, setVolume = { volume = it })
@@ -78,6 +82,40 @@ class Player(internal val context: Context) {
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
+
+  /**
+   * Cast seam (see ADR 0003). [isLocal] is true whenever audio plays on the phone; it flips to
+   * false while a Cast session is connected, at which point [castPlayer] holds the Media3
+   * `CastPlayer` the session has been repointed at. [castPlayer] is typed as the plain Media3
+   * `Player` interface so this main-sourceset file never references the Cast SDK — the cast
+   * sourceset's `CastSessionController` builds the concrete `CastPlayer` and hands it here.
+   *
+   * Local-only subsystems (buffering, EQ, stuck-recovery, retry, `TransformingDataSource`) are
+   * driven by [exoPlayer] and stay attached to it across a swap; they simply go dormant because
+   * the dormant ExoPlayer is paused/stopped while casting. EQ explicitly no-ops via [isLocal].
+   */
+  @Volatile internal var isLocal: Boolean = true
+    private set
+
+  internal var castPlayer: androidx.media3.common.Player? = null
+    private set
+
+  /**
+   * The InterceptingPlayer wrapping [castPlayer] while casting — the player the MediaSession is
+   * repointed at, and (matching the local [forwardingPlayer]) the player the [PlayerListener] is
+   * attached to/detached from. Held so [stopCasting] can detach the listener from the exact
+   * instance it was attached to.
+   */
+  private var castForwardingPlayer: androidx.media3.common.Player? = null
+
+  /**
+   * The player audio currently flows through: the local [exoPlayer] normally, the [castPlayer]
+   * while casting. `NowPlayingUpdater`/timers and the transport facade read transport/position
+   * through this accessor so they follow the active destination across a swap.
+   */
+  val activePlayer: androidx.media3.common.Player
+    get() = if (isLocal) exoPlayer else (castPlayer ?: exoPlayer)
+
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
   private lateinit var mediaFactory: MediaFactory
@@ -193,7 +231,7 @@ class Player(internal val context: Context) {
     private set
 
   val currentTrack: Track?
-    get() = exoPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
+    get() = activePlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
 
   internal var lastTrack: Track? = null
   internal var lastIndex: Int? = null
@@ -229,71 +267,77 @@ class Player(internal val context: Context) {
   }
 
   var playWhenReady: Boolean
-    get() = exoPlayer.playWhenReady
+    get() = activePlayer.playWhenReady
     set(value) {
       playWhenReadyCache = value
-      exoPlayer.playWhenReady = value
+      activePlayer.playWhenReady = value
     }
 
   val duration: Long
-    get() = if (exoPlayer.duration == C.TIME_UNSET) 0 else exoPlayer.duration
+    get() = if (activePlayer.duration == C.TIME_UNSET) 0 else activePlayer.duration
 
   internal var oldPosition = 0L
 
   val position: Long
     get() =
-      if (exoPlayer.currentPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.currentPosition
+      if (activePlayer.currentPosition == C.INDEX_UNSET.toLong()) 0
+      else activePlayer.currentPosition
 
   val bufferedPosition: Long
     get() =
-      if (exoPlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0 else exoPlayer.bufferedPosition
+      if (activePlayer.bufferedPosition == C.INDEX_UNSET.toLong()) 0
+      else activePlayer.bufferedPosition
 
+  /**
+   * Volume routes to whatever destination is active: the local ExoPlayer when local, the Cast
+   * device's volume while casting (CastPlayer maps `setDeviceVolume`/`volume` to the receiver).
+   */
   var volume: Float
-    get() = exoPlayer.volume
+    get() = activePlayer.volume
     set(value) {
-      exoPlayer.volume = value
+      activePlayer.volume = value
     }
 
   var playbackSpeed: Float
-    get() = exoPlayer.playbackParameters.speed
+    get() = activePlayer.playbackParameters.speed
     set(value) {
-      exoPlayer.setPlaybackSpeed(value)
+      activePlayer.setPlaybackSpeed(value)
     }
 
   val isPlaying
-    get() = exoPlayer.isPlaying
+    get() = activePlayer.isPlaying
 
   var repeatMode: RepeatMode
-    get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
+    get() = RepeatModeFactory.fromMedia3(activePlayer.repeatMode)
     internal set(value) {
-      exoPlayer.repeatMode = RepeatModeFactory.toMedia3(value)
+      activePlayer.repeatMode = RepeatModeFactory.toMedia3(value)
     }
 
   val currentIndex: Int?
     get() =
-      if (exoPlayer.currentMediaItemIndex == C.INDEX_UNSET) null
-      else exoPlayer.currentMediaItemIndex
+      if (activePlayer.currentMediaItemIndex == C.INDEX_UNSET) null
+      else activePlayer.currentMediaItemIndex
 
   var shuffleMode: Boolean
-    get() = exoPlayer.shuffleModeEnabled
+    get() = activePlayer.shuffleModeEnabled
     set(value) {
-      exoPlayer.shuffleModeEnabled = value
+      activePlayer.shuffleModeEnabled = value
     }
 
   val trackCount: Int
-    get() = exoPlayer.mediaItemCount
+    get() = activePlayer.mediaItemCount
 
   val isEmpty: Boolean
-    get() = exoPlayer.mediaItemCount == 0
+    get() = activePlayer.mediaItemCount == 0
 
   val tracks: Array<Track>
     get() =
-      (0 until exoPlayer.mediaItemCount)
-        .map { index -> TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index)) }
+      (0 until activePlayer.mediaItemCount)
+        .map { index -> TrackFactory.fromMedia3(activePlayer.getMediaItemAt(index)) }
         .toTypedArray()
 
   val isLastTrack: Boolean
-    get() = exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1
+    get() = activePlayer.currentMediaItemIndex == activePlayer.mediaItemCount - 1
 
   /**
    * The source path from which the current queue was expanded (e.g., from a contextual URL). Used
@@ -309,14 +353,15 @@ class Player(internal val context: Context) {
    * @throws IllegalArgumentException if index is out of bounds.
    */
   fun getTrack(index: Int): Track {
-    if (index < 0 || index >= exoPlayer.mediaItemCount) {
+    if (index < 0 || index >= activePlayer.mediaItemCount) {
       throw IllegalArgumentException(
-        "Track index $index is out of bounds (size: ${exoPlayer.mediaItemCount})"
+        "Track index $index is out of bounds (size: ${activePlayer.mediaItemCount})"
       )
     }
-    return TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index))
+    return TrackFactory.fromMedia3(activePlayer.getMediaItemAt(index))
   }
 
+  // skipSilence is a local-DSP property with no Cast analog — it stays bound to the local ExoPlayer.
   var skipSilence: Boolean
     get() = exoPlayer.skipSilenceEnabled
     internal set(value) {
@@ -397,8 +442,8 @@ class Player(internal val context: Context) {
 
       // Initialize equalizer with audio session ID
       equalizer.initialize(exoPlayer.audioSessionId)
-    } else {
-      // Re-setup - re-add listener and update MediaSession
+    } else if (isLocal) {
+      // Re-setup while LOCAL - re-add listener and update MediaSession.
       forwardingPlayer.addListener(playerListener)
 
       // Update MediaSession with new forwardingPlayer reference if MediaSession exists
@@ -408,6 +453,13 @@ class Player(internal val context: Context) {
       }
 
       setPlaybackState(PlaybackState.NONE)
+    } else {
+      // Re-setup while CASTING - the listener and the MediaSession's player both belong to the cast
+      // player right now, so DON'T attach the listener to the freshly-rebuilt local forwardingPlayer
+      // and DON'T repoint the session (that would strand the live Cast session). The new engine
+      // generation (with the new options) sits dormant; stopCasting() repoints the session at this
+      // (rebuilt) forwardingPlayer and attaches the listener on hand-back. See ADR 0003.
+      Timber.Forest.d("Re-setup while casting — rebuilt local engine left dormant, session untouched")
     }
 
     // Set up automatic buffer management if enabled
@@ -463,13 +515,13 @@ class Player(internal val context: Context) {
    * @param track The [Track] to load.
    */
   fun load(track: Track) {
-    if (exoPlayer.mediaItemCount == 0) {
+    if (activePlayer.mediaItemCount == 0) {
       add(track)
     } else {
-      val index = exoPlayer.currentMediaItemIndex
+      val index = activePlayer.currentMediaItemIndex
       replaceTrack(index, track)
-      exoPlayer.seekTo(index, C.TIME_UNSET)
-      exoPlayer.prepare()
+      activePlayer.seekTo(index, C.TIME_UNSET)
+      activePlayer.prepare()
     }
   }
 
@@ -481,8 +533,8 @@ class Player(internal val context: Context) {
    */
   fun add(track: Track) {
     val mediaItem = TrackFactory.toMedia3(track)
-    exoPlayer.addMediaItem(mediaItem)
-    exoPlayer.prepare()
+    activePlayer.addMediaItem(mediaItem)
+    activePlayer.prepare()
   }
 
   /**
@@ -493,8 +545,8 @@ class Player(internal val context: Context) {
    */
   fun add(tracks: Array<Track>) {
     val mediaItems = TrackFactory.toMedia3(tracks)
-    exoPlayer.addMediaItems(mediaItems.toList())
-    exoPlayer.prepare()
+    activePlayer.addMediaItems(mediaItems.toList())
+    activePlayer.prepare()
   }
 
   /**
@@ -506,10 +558,10 @@ class Player(internal val context: Context) {
    */
   fun add(tracks: Array<Track>, atIndex: Int) {
     validateInsertIndex(atIndex)
-    val index = if (atIndex == -1) exoPlayer.mediaItemCount else atIndex
+    val index = if (atIndex == -1) activePlayer.mediaItemCount else atIndex
     val mediaItems = tracks.map { TrackFactory.toMedia3(it) }
-    exoPlayer.addMediaItems(index, mediaItems)
-    exoPlayer.prepare()
+    activePlayer.addMediaItems(index, mediaItems)
+    activePlayer.prepare()
   }
 
   /**
@@ -520,7 +572,7 @@ class Player(internal val context: Context) {
    */
   fun remove(index: Int) {
     validateIndex(index)
-    exoPlayer.removeMediaItem(index)
+    activePlayer.removeMediaItem(index)
   }
 
   /**
@@ -536,7 +588,7 @@ class Player(internal val context: Context) {
     }
     indexes.forEach { validateIndex(it) }
     val sorted = indexes.sortedDescending()
-    sorted.forEach { exoPlayer.removeMediaItem(it) }
+    sorted.forEach { activePlayer.removeMediaItem(it) }
   }
 
   /**
@@ -544,8 +596,8 @@ class Player(internal val context: Context) {
    * if there is no next track to skip to.
    */
   fun next() {
-    exoPlayer.seekToNextMediaItem()
-    exoPlayer.prepare()
+    activePlayer.seekToNextMediaItem()
+    activePlayer.prepare()
   }
 
   /**
@@ -553,8 +605,8 @@ class Player(internal val context: Context) {
    * nothing if there is no previous track to skip to.
    */
   fun previous() {
-    exoPlayer.seekToPreviousMediaItem()
-    exoPlayer.prepare()
+    activePlayer.seekToPreviousMediaItem()
+    activePlayer.prepare()
   }
 
   /**
@@ -567,7 +619,7 @@ class Player(internal val context: Context) {
    */
   fun move(fromIndex: Int, toIndex: Int) {
     validateIndex(fromIndex)
-    exoPlayer.moveMediaItem(fromIndex, toIndex)
+    activePlayer.moveMediaItem(fromIndex, toIndex)
   }
 
   /**
@@ -578,8 +630,8 @@ class Player(internal val context: Context) {
    */
   fun skipTo(index: Int) {
     validateIndex(index)
-    exoPlayer.seekTo(index, C.TIME_UNSET)
-    exoPlayer.prepare()
+    activePlayer.seekTo(index, C.TIME_UNSET)
+    activePlayer.prepare()
   }
 
   /**
@@ -599,9 +651,9 @@ class Player(internal val context: Context) {
     sourcePath: String? = null,
   ) {
     val mediaItems = TrackFactory.toMedia3(tracks).toMutableList()
-    exoPlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
+    activePlayer.setMediaItems(mediaItems, startIndex, startPositionMs)
     queueSourcePath = sourcePath
-    exoPlayer.prepare()
+    activePlayer.prepare()
   }
 
   /**
@@ -611,7 +663,7 @@ class Player(internal val context: Context) {
    */
   fun replaceTrack(index: Int, track: Track) {
     validateIndex(index)
-    exoPlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
+    activePlayer.replaceMediaItem(index, TrackFactory.toMedia3(track))
   }
 
   /**
@@ -626,7 +678,7 @@ class Player(internal val context: Context) {
     // update (queue tear-down, between-track gaps, etc.).
     currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
 
-    val index = exoPlayer.currentMediaItemIndex
+    val index = activePlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return
 
     // Create updated Track with new favorited state
@@ -635,7 +687,7 @@ class Player(internal val context: Context) {
     // Use buildUpon() on the existing MediaItem to update only the metadata
     // This preserves internal references and avoids playback interruption
     // Note: setTag() requires setUri() to be called, so we must re-set the URI
-    val currentMediaItem = exoPlayer.getMediaItemAt(index)
+    val currentMediaItem = activePlayer.getMediaItemAt(index)
     val updatedMetadata =
       currentMediaItem.mediaMetadata.buildUpon().setUserRating(HeartRating(favorited)).build()
     val updatedMediaItem =
@@ -646,7 +698,7 @@ class Player(internal val context: Context) {
         .setTag(updatedTrack)
         .build()
 
-    exoPlayer.replaceMediaItem(index, updatedMediaItem)
+    activePlayer.replaceMediaItem(index, updatedMediaItem)
 
     // Update the heart button icon in notification/Android Auto
     updateFavoriteButtonState(favorited)
@@ -659,7 +711,7 @@ class Player(internal val context: Context) {
       PlaybackActiveTrackChangedEvent(
         lastIndex = index.toDouble(),
         lastTrack = currentTrack,
-        lastPosition = exoPlayer.currentPosition.toSeconds(),
+        lastPosition = activePlayer.currentPosition.toSeconds(),
         index = index.toDouble(),
         track = updatedTrack,
       )
@@ -698,7 +750,7 @@ class Player(internal val context: Context) {
           get() = this@Player.playbackError
 
         override val playWhenReady
-          get() = exoPlayer.playWhenReady
+          get() = activePlayer.playWhenReady
 
         override val isRebuffering
           get() = loadControl.isRebuffering
@@ -761,7 +813,7 @@ class Player(internal val context: Context) {
     track: Track,
     mutate: MediaMetadata.Builder.() -> MediaMetadata.Builder,
   ) {
-    val currentMediaItem = exoPlayer.getMediaItemAt(index)
+    val currentMediaItem = activePlayer.getMediaItemAt(index)
     val updatedMediaItem =
       currentMediaItem
         .buildUpon()
@@ -769,7 +821,7 @@ class Player(internal val context: Context) {
         .setMediaMetadata(currentMediaItem.mediaMetadata.buildUpon().mutate().build())
         .setTag(track)
         .build()
-    exoPlayer.replaceMediaItem(index, updatedMediaItem)
+    activePlayer.replaceMediaItem(index, updatedMediaItem)
   }
 
   /**
@@ -785,8 +837,8 @@ class Player(internal val context: Context) {
    * resolution registry). Must run on the main thread (ExoPlayer access).
    */
   private fun findQueueTrackByArtworkUri(uri: String): Track? {
-    for (i in 0 until exoPlayer.mediaItemCount) {
-      val item = exoPlayer.getMediaItemAt(i)
+    for (i in 0 until activePlayer.mediaItemCount) {
+      val item = activePlayer.getMediaItemAt(i)
       if (item.mediaMetadata.artworkUri?.toString() == uri) {
         return item.localConfiguration?.tag as? Track
       }
@@ -825,29 +877,29 @@ class Player(internal val context: Context) {
 
   /** Removes all the upcoming tracks, if any (the ones returned by [next]). */
   fun removeUpcomingTracks() {
-    val index = exoPlayer.currentMediaItemIndex
+    val index = activePlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return
-    val lastIndex = exoPlayer.mediaItemCount
+    val lastIndex = activePlayer.mediaItemCount
     val fromIndex = index + 1
 
-    exoPlayer.removeMediaItems(fromIndex, lastIndex)
+    activePlayer.removeMediaItems(fromIndex, lastIndex)
   }
 
   fun play() {
-    exoPlayer.play()
+    activePlayer.play()
     if (currentTrack != null) {
       // No-op unless the player is STATE_IDLE (ExoPlayer.prepare early-returns
       // otherwise), so this only reconnects after a stop() or error and never
       // re-buffers a healthy stream. Reconnecting is also how live streams
       // rejoin the live edge on resume.
-      exoPlayer.prepare()
+      activePlayer.prepare()
     }
   }
 
   /** Jump to the live edge (default position) of a live item; no-op otherwise. */
   fun seekToLiveEdge() {
-    if (exoPlayer.isCurrentMediaItemLive) {
-      exoPlayer.seekToDefaultPosition()
+    if (activePlayer.isCurrentMediaItemLive) {
+      activePlayer.seekToDefaultPosition()
     }
   }
 
@@ -897,16 +949,16 @@ class Player(internal val context: Context) {
 
   fun prepare() {
     if (currentTrack != null) {
-      exoPlayer.prepare()
+      activePlayer.prepare()
     }
   }
 
   fun pause() {
-    exoPlayer.pause()
+    activePlayer.pause()
   }
 
   fun togglePlayback() {
-    if (exoPlayer.playWhenReady) {
+    if (activePlayer.playWhenReady) {
       pause()
     } else {
       play()
@@ -920,12 +972,12 @@ class Player(internal val context: Context) {
    */
   fun stop() {
     playbackState = PlaybackState.STOPPED
-    exoPlayer.playWhenReady = false
-    exoPlayer.stop()
+    activePlayer.playWhenReady = false
+    activePlayer.stop()
   }
 
   fun clear() {
-    exoPlayer.clearMediaItems()
+    activePlayer.clearMediaItems()
     queueSourcePath = null
   }
 
@@ -949,12 +1001,12 @@ class Player(internal val context: Context) {
 
   fun seekTo(duration: Long, unit: TimeUnit) {
     val positionMs = TimeUnit.MILLISECONDS.convert(duration, unit)
-    exoPlayer.seekTo(positionMs)
+    activePlayer.seekTo(positionMs)
   }
 
   fun seekBy(offset: Long, unit: TimeUnit) {
-    val positionMs = exoPlayer.currentPosition + TimeUnit.MILLISECONDS.convert(offset, unit)
-    exoPlayer.seekTo(positionMs)
+    val positionMs = activePlayer.currentPosition + TimeUnit.MILLISECONDS.convert(offset, unit)
+    activePlayer.seekTo(positionMs)
   }
 
   /**
@@ -1131,9 +1183,9 @@ class Player(internal val context: Context) {
    * @throws IllegalArgumentException if index is out of bounds.
    */
   private fun validateIndex(index: Int) {
-    if (index < 0 || index >= exoPlayer.mediaItemCount) {
+    if (index < 0 || index >= activePlayer.mediaItemCount) {
       throw IllegalArgumentException(
-        "Track index $index is out of bounds (size: ${exoPlayer.mediaItemCount})"
+        "Track index $index is out of bounds (size: ${activePlayer.mediaItemCount})"
       )
     }
   }
@@ -1145,9 +1197,9 @@ class Player(internal val context: Context) {
    * @throws IllegalArgumentException if index is out of bounds.
    */
   private fun validateInsertIndex(index: Int) {
-    if (index < -1 || index > exoPlayer.mediaItemCount) {
+    if (index < -1 || index > activePlayer.mediaItemCount) {
       throw IllegalArgumentException(
-        "Insert index $index is out of bounds (size: ${exoPlayer.mediaItemCount}, use -1 to append)"
+        "Insert index $index is out of bounds (size: ${activePlayer.mediaItemCount}, use -1 to append)"
       )
     }
   }
@@ -1184,7 +1236,137 @@ class Player(internal val context: Context) {
 
   /** Returns true if the current media item is a live stream. */
   val isCurrentItemLive: Boolean
-    get() = exoPlayer.isCurrentMediaItemLive
+    get() = activePlayer.isCurrentMediaItemLive
+
+  // ============================================================================
+  // MARK: - Cast handoff (see ADR 0003 + cast/CastSessionController)
+  // ============================================================================
+  //
+  // These hooks are called only by the cast-sourceset CastSessionController. On the default
+  // (no-Cast) build nothing calls them, so the local path is unaffected. The controller drives the
+  // whole swap; Player exposes just the seam: repoint the session, follow the active player with the
+  // listener, and transfer the queue + position.
+
+  /** The live [MediaSession], for the Cast controller to repoint with [MediaSession.setPlayer]. */
+  internal val sessionOrNull: MediaSession?
+    get() = if (::mediaSession.isInitialized) mediaSession else null
+
+  /** A snapshot of the active queue + active index + position, for transfer across a swap. */
+  internal data class QueueSnapshot(
+    val tracks: Array<Track>,
+    val startIndex: Int,
+    val positionMs: Long,
+    val playWhenReady: Boolean,
+  )
+
+  /** Captures the active player's queue/position so it can be replayed on the other destination. */
+  internal fun captureQueueState(): QueueSnapshot =
+    QueueSnapshot(
+      tracks = tracks,
+      startIndex = currentIndex ?: 0,
+      positionMs = position,
+      playWhenReady = playWhenReadyCache,
+    )
+
+  /**
+   * Begins a Cast session: makes [castPlayer] the active destination, loads [castMediaItems] (built
+   * by the controller with `target:'cast'`-resolved, self-contained URLs and stable-Track
+   * customData) onto it at [snapshot]'s index/position, repoints the [MediaSession] at
+   * [castInterceptingPlayer] (the InterceptingPlayer wrapping the CastPlayer), and re-attaches the
+   * [PlayerListener] to [castInterceptingPlayer] (NOT the raw CastPlayer) so it observes the same
+   * wrapped player the session does — symmetric with the local attach to [forwardingPlayer]. The
+   * same `PlaybackStateMachine` is fed from Cast events. The local ExoPlayer is stopped (it keeps
+   * the queue for the handoff back) so it stops fetching bytes while audio is on the Cast device.
+   */
+  internal fun startCasting(
+    castPlayer: androidx.media3.common.Player,
+    castInterceptingPlayer: androidx.media3.common.Player,
+    castMediaItems: List<MediaItem>,
+    snapshot: QueueSnapshot,
+  ) {
+    // Stop the local engine first (still local at this point) so it releases the network stream.
+    exoPlayer.playWhenReady = false
+    exoPlayer.stop()
+
+    if (::playerListener.isInitialized) {
+      forwardingPlayer.removeListener(playerListener)
+    }
+
+    this.castPlayer = castPlayer
+    this.castForwardingPlayer = castInterceptingPlayer
+    isLocal = false
+
+    // Mirror the (cast-resolved) queue + position onto the receiver.
+    castPlayer.setMediaItems(castMediaItems, snapshot.startIndex, snapshot.positionMs)
+    castPlayer.playWhenReady = snapshot.playWhenReady
+    castPlayer.prepare()
+
+    if (::playerListener.isInitialized) {
+      // Attach to the wrapped (intercepting) player, matching the local forwardingPlayer attach.
+      castInterceptingPlayer.addListener(playerListener)
+    }
+    if (::mediaSession.isInitialized) {
+      mediaSession.player = castInterceptingPlayer
+    }
+  }
+
+  /**
+   * Ends a Cast session: hands playback back to the RETAINED local ExoPlayer (its full-fidelity
+   * queue is still loaded — [startCasting] only `stop()`-ed it, never cleared it), repoints the
+   * [MediaSession] at the local [forwardingPlayer] (which may have been rebuilt by a re-`setup()`
+   * mid-cast), and re-attaches the [PlayerListener] there. The CastPlayer is released by the
+   * controller after this returns.
+   */
+  internal fun stopCasting() {
+    // Capture index/position/playWhenReady from the CAST player while isLocal is still false
+    // (captureQueueState reads through activePlayer, which is the cast player until we flip below).
+    val snapshot = captureQueueState()
+
+    // Detach the listener from the SAME (intercepting) player it was attached to in startCasting.
+    castForwardingPlayer?.let { wrapped ->
+      if (::playerListener.isInitialized) wrapped.removeListener(playerListener)
+    }
+    castForwardingPlayer = null
+    castPlayer = null
+    isLocal = true
+
+    if (exoPlayer.mediaItemCount > 0) {
+      // Lossless hand-back: the local queue is intact, so just seek it to where the receiver was —
+      // never rebuild from the lossy customData-derived snapshot tracks.
+      val index = snapshot.startIndex.coerceIn(0, exoPlayer.mediaItemCount - 1)
+      exoPlayer.seekTo(index, snapshot.positionMs)
+    } else {
+      // Unexpected: the local queue was emptied while casting. Re-resolve full Tracks via the
+      // browser's cache (full fidelity — NOT the lossy customData snapshot) so the hand-back queue
+      // keeps its metadata/artwork/request overrides; the media URL itself is re-signed at play
+      // time by TransformingDataSource. Falls back to the snapshot Track only on a cache miss.
+      Timber.w("stopCasting: local queue unexpectedly empty — rehydrating for hand-back")
+      val browserManager = browser?.browserManager
+      val rehydrated =
+        snapshot.tracks.map { track ->
+          val src = track.src
+          if (browserManager != null && src != null) {
+            browserManager.getCachedTrack(src) ?: track
+          } else {
+            track
+          }
+        }
+      exoPlayer.setMediaItems(
+        TrackFactory.toMedia3(rehydrated.toTypedArray()).toList(),
+        snapshot.startIndex,
+        snapshot.positionMs,
+      )
+    }
+    exoPlayer.playWhenReady = snapshot.playWhenReady
+    exoPlayer.prepare()
+
+    if (::playerListener.isInitialized) {
+      forwardingPlayer.addListener(playerListener)
+    }
+    if (::mediaSession.isInitialized) {
+      mediaSession.player = forwardingPlayer
+    }
+  }
 
   // MARK: - Buffer Configuration
 

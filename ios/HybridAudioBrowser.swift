@@ -283,6 +283,48 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
+  // MARK: - Cast
+
+  /// The Cast session manager, created on the first `configureCast()`. Gated:
+  /// only exists in a Cast-enabled build.
+  #if AUDIOBROWSER_ENABLE_CAST
+    private var castSessionManager: CastSessionManager?
+    /// Discovery is **native-ref-counted** via the `retainCastDiscovery()` /
+    /// `releaseCastDiscovery()` spec methods, which JS drives from mounted
+    /// `useCastState` hooks (ADR-0003: no native Cast button). We must NOT tie it
+    /// to the `onCastStateChanged` property: `NativeUpdatedValue.emitterize`
+    /// installs that callback once at module load and never signals unsubscribe,
+    /// so a property-didSet ref-count could never decrement.
+    ///
+    /// This counts retain calls that arrived **before** the manager existed
+    /// (configure not yet run). Once the manager is created, configureCast
+    /// replays the count onto it, then this stays 0 and the manager owns the
+    /// live count.
+    private var pendingDiscoveryRetains = 0
+  #endif
+
+  /// Set once at module load by `NativeUpdatedValue.emitterize` (never
+  /// unsubscribed). Discovery lifetime is therefore NOT derived from this — see
+  /// `retainCastDiscovery` / `releaseCastDiscovery`. On (re)assignment we only
+  /// push the current state so a freshly-bound JS bridge isn't stuck on stale.
+  public var onCastStateChanged: (CastStateChangedEvent) -> Void = { _ in } {
+    didSet {
+      #if AUDIOBROWSER_ENABLE_CAST
+        onMainActor {
+          let manager = castSessionManager
+          onCastStateChanged(CastStateChangedEvent(
+            state: manager?.castState ?? .noDevices,
+            deviceName: manager?.deviceName,
+          ))
+        }
+      #else
+        // Inert: Cast disabled at build time. Emit the disabled default so a
+        // subscriber resolves immediately and never hears another event.
+        onCastStateChanged(CastStateChangedEvent(state: .noDevices, deviceName: nil))
+      #endif
+    }
+  }
+
   // MARK: - Initialization
 
   override public init() {
@@ -295,6 +337,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // its player to prevent two audio streams running simultaneously.
     onMainActor {
       HybridAudioBrowser.shared?.player?.destroy()
+      #if AUDIOBROWSER_ENABLE_CAST
+        // Detach the previous instance's GCK listeners so the Cast singletons
+        // don't keep a strong ref to a dead HybridAudioBrowser across a JS
+        // reload (the Cast session itself keeps running on the device).
+        HybridAudioBrowser.shared?.castSessionManager?.tearDown()
+      #endif
       playerAndConfiguredBrowser.reset()
       HybridAudioBrowser.shared = self
       // Tell connected external controllers (CarPlay) to re-subscribe against
@@ -1449,6 +1497,150 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     let children = view.subviews.map(describeHierarchy).joined(separator: ", ")
     return children.isEmpty ? name : "\(name)[\(children)]"
   }
+
+  // MARK: - Cast (Google Cast)
+
+  #if AUDIOBROWSER_ENABLE_CAST
+
+    public func configureCast(config: CastConfig) throws {
+      onMainActor {
+        guard let player else {
+          logger.error("configureCast: player not initialized — call setupPlayer first")
+          return
+        }
+        if castSessionManager == nil {
+          let manager = CastSessionManager(
+            coordinator: player.coordinator,
+            resolveMediaUrl: { [weak self] src, track in
+              guard let self else {
+                // Fail loud: returning the UNSIGNED src would hand the receiver a
+                // header-auth URL it can't fetch — a silent, hard-to-diagnose
+                // failure. This only happens if the browser was torn down between
+                // session start and resolve; surfacing it is correct.
+                Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
+                  .error("cast resolveMediaUrl: HybridAudioBrowser deallocated — returning unsigned src (receiver fetch will likely fail)")
+                return src
+              }
+              return await browserManager.resolveMediaUrl(src, track: track, target: .cast).url
+            },
+            resolveArtworkUrl: { [weak self] track in
+              guard let self else {
+                Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
+                  .error("cast resolveArtworkUrl: HybridAudioBrowser deallocated — returning raw artwork")
+                return track.artwork
+              }
+              let perRoute = (track.id?.isEmpty == false) ? browserManager.config.nowPlayingArtwork : nil
+              return await browserManager.resolveArtworkUrl(
+                track: track, perRouteConfig: perRoute, imageContext: nil, target: .cast,
+              )?.uri ?? track.artwork
+            },
+          )
+          // Bridge CastState changes to JS.
+          manager.onStateChanged = { [weak self] event in
+            self?.onCastStateChanged(event)
+          }
+          castSessionManager = manager
+          // Replay any discovery retains that arrived before the manager existed
+          // (JS hooks mounted before configureCast). Discovery starts once
+          // configured if the live count is > 0.
+          for _ in 0 ..< pendingDiscoveryRetains { manager.retainDiscovery() }
+          pendingDiscoveryRetains = 0
+        }
+        castSessionManager?.configure(receiverApplicationId: config.receiverApplicationId)
+      }
+    }
+
+    public func getCastState() throws -> CastState {
+      onMainActor { castSessionManager?.castState ?? .noDevices }
+    }
+
+    public func getCastDeviceName() throws -> String? {
+      onMainActor { castSessionManager?.deviceName }
+    }
+
+    public func isCasting() throws -> Bool {
+      onMainActor { castSessionManager?.isCasting ?? false }
+    }
+
+    public func showCastPicker() throws {
+      onMainActor { castSessionManager?.showPicker() }
+    }
+
+    public func endCastSession() throws {
+      onMainActor { castSessionManager?.endSession() }
+    }
+
+    /// Native-ref-counted discovery start (JS calls this from a mounted
+    /// `useCastState` hook). Starts GCK discovery on the 0→1 edge. When the
+    /// manager doesn't exist yet (configure not run), the retain is queued and
+    /// replayed by `configureCast`.
+    public func retainCastDiscovery() throws {
+      onMainActor {
+        if let manager = castSessionManager {
+          manager.retainDiscovery()
+        } else {
+          pendingDiscoveryRetains += 1
+        }
+      }
+    }
+
+    /// Native-ref-counted discovery stop. Stops GCK discovery on the 1→0 edge.
+    public func releaseCastDiscovery() throws {
+      onMainActor {
+        if let manager = castSessionManager {
+          manager.releaseDiscovery()
+        } else if pendingDiscoveryRetains > 0 {
+          pendingDiscoveryRetains -= 1
+        }
+      }
+    }
+
+  #else
+
+    // MARK: Cast disabled at build time — inert no-ops returning disabled defaults.
+    //
+    // The default build defines no `AUDIOBROWSER_ENABLE_CAST`, so these compile
+    // and behave as if no Cast device could ever exist:
+    //   - getCastState() → .noDevices
+    //   - getCastDeviceName() → nil
+    //   - isCasting() → false
+    //   - configureCast / showCastPicker / endCastSession → no-op
+    //   - retainCastDiscovery / releaseCastDiscovery → no-op
+    //   - onCastStateChanged → never fires after its initial .noDevices default
+
+    public func configureCast(config _: CastConfig) throws {
+      logger.debug("configureCast: Cast not enabled at build time (AUDIOBROWSER_ENABLE_CAST) — no-op")
+    }
+
+    public func getCastState() throws -> CastState {
+      .noDevices
+    }
+
+    public func getCastDeviceName() throws -> String? {
+      nil
+    }
+
+    public func isCasting() throws -> Bool {
+      false
+    }
+
+    public func showCastPicker() throws {
+      // No-op: Cast not enabled at build time.
+    }
+
+    public func endCastSession() throws {
+      // No-op: Cast not enabled at build time.
+    }
+
+    public func retainCastDiscovery() throws {
+      // No-op: Cast not enabled at build time.
+    }
+
+    public func releaseCastDiscovery() throws {
+      // No-op: Cast not enabled at build time.
+    }
+
+  #endif
 
   // MARK: - Equalizer (unsupported on iOS)
 

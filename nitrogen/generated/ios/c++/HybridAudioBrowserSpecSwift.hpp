@@ -42,6 +42,8 @@ namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `MediaResolveTarget` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaResolveTarget; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
@@ -150,6 +152,10 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 namespace margelo::nitro::audiobrowser { struct IosOutput; }
 // Forward declaration of `IosOutputType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
+// Forward declaration of `CastStateChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastStateChangedEvent; }
+// Forward declaration of `CastState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CastState; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -194,6 +200,8 @@ namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `CastConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastConfig; }
 
 #include <string>
 #include <optional>
@@ -216,6 +224,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "TransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
+#include "MediaResolveTarget.hpp"
 #include "MediaRequestConfig.hpp"
 #include "ArtworkRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
@@ -272,6 +281,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "NowPlayingMetadata.hpp"
 #include "IosOutput.hpp"
 #include "IosOutputType.hpp"
+#include "CastStateChangedEvent.hpp"
+#include "CastState.hpp"
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
@@ -294,6 +305,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "FormatNowPlayingParams.hpp"
 #include "StallReason.hpp"
 #include "Progress.hpp"
+#include "CastConfig.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -717,6 +729,13 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) noexcept override {
       _swiftPart.setOnIosOutputChanged(onIosOutputChanged);
+    }
+    inline std::function<void(const CastStateChangedEvent& /* event */)> getOnCastStateChanged() noexcept override {
+      auto __result = _swiftPart.getOnCastStateChanged();
+      return __result;
+    }
+    inline void setOnCastStateChanged(const std::function<void(const CastStateChangedEvent& /* event */)>& onCastStateChanged) noexcept override {
+      _swiftPart.setOnCastStateChanged(onCastStateChanged);
     }
     inline std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() noexcept override {
       auto __result = _swiftPart.getOnEqualizerChanged();
@@ -1192,6 +1211,60 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void openIosOutputPicker() override {
       auto __result = _swiftPart.openIosOutputPicker();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void configureCast(const CastConfig& config) override {
+      auto __result = _swiftPart.configureCast(std::forward<decltype(config)>(config));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline CastState getCastState() override {
+      auto __result = _swiftPart.getCastState();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<std::string> getCastDeviceName() override {
+      auto __result = _swiftPart.getCastDeviceName();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline bool isCasting() override {
+      auto __result = _swiftPart.isCasting();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void showCastPicker() override {
+      auto __result = _swiftPart.showCastPicker();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void retainCastDiscovery() override {
+      auto __result = _swiftPart.retainCastDiscovery();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void releaseCastDiscovery() override {
+      auto __result = _swiftPart.releaseCastDiscovery();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void endCastSession() override {
+      auto __result = _swiftPart.endCastSession();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

@@ -22,7 +22,10 @@ data class MediaTransformParams(
   val request: RequestConfig,
   @DoNotStrip
   @Keep
-  val context: ImageContext?
+  val context: ImageContext?,
+  @DoNotStrip
+  @Keep
+  val target: MediaResolveTarget
 ) {
   /* primary constructor */
 
@@ -34,8 +37,8 @@ data class MediaTransformParams(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(request: RequestConfig, context: ImageContext?): MediaTransformParams {
-      return MediaTransformParams(request, context)
+    private fun fromCpp(request: RequestConfig, context: ImageContext?, target: MediaResolveTarget): MediaTransformParams {
+      return MediaTransformParams(request, context, target)
     }
   }
 }

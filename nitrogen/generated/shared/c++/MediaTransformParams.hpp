@@ -32,10 +32,13 @@
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
 // Forward declaration of `ImageContext` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageContext; }
+// Forward declaration of `MediaResolveTarget` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaResolveTarget; }
 
 #include "RequestConfig.hpp"
 #include "ImageContext.hpp"
 #include <optional>
+#include "MediaResolveTarget.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -46,10 +49,11 @@ namespace margelo::nitro::audiobrowser {
   public:
     RequestConfig request     SWIFT_PRIVATE;
     std::optional<ImageContext> context     SWIFT_PRIVATE;
+    MediaResolveTarget target     SWIFT_PRIVATE;
 
   public:
     MediaTransformParams() = default;
-    explicit MediaTransformParams(RequestConfig request, std::optional<ImageContext> context): request(request), context(context) {}
+    explicit MediaTransformParams(RequestConfig request, std::optional<ImageContext> context, MediaResolveTarget target): request(request), context(context), target(target) {}
 
   public:
     friend bool operator==(const MediaTransformParams& lhs, const MediaTransformParams& rhs) = default;
@@ -66,13 +70,15 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::MediaTransformParams(
         JSIConverter<margelo::nitro::audiobrowser::RequestConfig>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "request"))),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageContext>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "context")))
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageContext>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "context"))),
+        JSIConverter<margelo::nitro::audiobrowser::MediaResolveTarget>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "target")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::MediaTransformParams& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "request"), JSIConverter<margelo::nitro::audiobrowser::RequestConfig>::toJSI(runtime, arg.request));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "context"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageContext>>::toJSI(runtime, arg.context));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "target"), JSIConverter<margelo::nitro::audiobrowser::MediaResolveTarget>::toJSI(runtime, arg.target));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -85,6 +91,7 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<margelo::nitro::audiobrowser::RequestConfig>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "request")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageContext>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "context")))) return false;
+      if (!JSIConverter<margelo::nitro::audiobrowser::MediaResolveTarget>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "target")))) return false;
       return true;
     }
   };

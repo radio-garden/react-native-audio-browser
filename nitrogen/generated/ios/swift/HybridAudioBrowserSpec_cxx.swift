@@ -1364,6 +1364,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onCastStateChanged: bridge.Func_void_CastStateChangedEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_CastStateChangedEvent in
+        let __closureWrapper = Func_void_CastStateChangedEvent(self.__implementation.onCastStateChanged)
+        return bridge.create_Func_void_CastStateChangedEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onCastStateChanged = { () -> (CastStateChangedEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_CastStateChangedEvent(newValue)
+        return { (__event: CastStateChangedEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
+  
   public final var onEqualizerChanged: bridge.Func_void_EqualizerSettings {
     @inline(__always)
     get {
@@ -2316,6 +2335,103 @@ open class HybridAudioBrowserSpec_cxx {
   public final func openIosOutputPicker() -> bridge.Result_void_ {
     do {
       try self.__implementation.openIosOutputPicker()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func configureCast(config: CastConfig) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.configureCast(config: config)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getCastState() -> bridge.Result_CastState_ {
+    do {
+      let __result = try self.__implementation.getCastState()
+      let __resultCpp = __result
+      return bridge.create_Result_CastState_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_CastState_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getCastDeviceName() -> bridge.Result_std__optional_std__string__ {
+    do {
+      let __result = try self.__implementation.getCastDeviceName()
+      let __resultCpp = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_std__string__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_std__string__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func isCasting() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.isCasting()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func showCastPicker() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.showCastPicker()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func retainCastDiscovery() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.retainCastDiscovery()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func releaseCastDiscovery() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.releaseCastDiscovery()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func endCastSession() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.endCastSession()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

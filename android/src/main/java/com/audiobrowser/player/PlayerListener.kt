@@ -184,11 +184,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       val event =
         when (events[i]) {
           MediaPlayer.EVENT_PLAYBACK_STATE_CHANGED ->
-            // Read the real ExoPlayer state, not the forwarding player's — the InterceptingPlayer
-            // masks STATE_IDLE→READY on a terminal error, and that mask must not feed back into
-            // our own state machine (it would clear the ERROR state/subtitle).
+            // Read the real active-player state, not the forwarding player's — the
+            // InterceptingPlayer masks STATE_IDLE→READY on a terminal error, and that mask must not
+            // feed back into our own state machine (it would clear the ERROR state/subtitle). While
+            // casting, activePlayer is the CastPlayer, so the same state machine is fed from Cast
+            // events; locally it is the ExoPlayer (unchanged behavior).
             PlaybackEvent.ExoPlaybackStateChanged(
-              player.exoPlayer.playbackState,
+              player.activePlayer.playbackState,
               media3Player.mediaItemCount,
             )
           MediaPlayer.EVENT_MEDIA_ITEM_TRANSITION ->

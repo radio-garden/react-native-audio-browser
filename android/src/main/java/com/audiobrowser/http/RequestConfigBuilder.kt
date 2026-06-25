@@ -3,6 +3,7 @@ package com.audiobrowser.http
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.MediaResolveTarget
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
@@ -99,11 +100,18 @@ object RequestConfigBuilder {
    * otherwise the override's static fields merge over the base, EXCEPT `path`, which is carried
    * from the base (only a transform may change it; mirrors iOS `applyLayer` and the web stub). A
    * thrown transform falls back to the base.
+   *
+   * [target] is the media resolution destination handed to the app's transform as its 3rd arg
+   * ([MediaResolveTarget.CAST] when resolving a self-contained URL for a Cast device);
+   * [MediaResolveTarget.LOCAL] for the default local path and for non-media (route) transforms.
+   * Non-null to match [com.audiobrowser.browser.resolveMediaUrl]'s encoding (the generated
+   * transformer's 3rd arg is nullable, so a non-null value passes through fine).
    */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: TransformableRequestConfig,
     routeParams: Map<String, String>? = null,
+    target: MediaResolveTarget = MediaResolveTarget.LOCAL,
   ): RequestConfig {
     if (override.transform == null && override.transformSync == null) {
       return mergeConfig(base, toRequestConfig(override)).copy(path = base.path)
@@ -112,8 +120,10 @@ object RequestConfigBuilder {
       // Async first, then sync (each replaces the running config). The bridge await
       // depth is centralised in awaitAsync/SyncConfig.
       var result = base
-      override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
-      override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
+      override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams, target)) }
+      override.transformSync?.let {
+        result = awaitSyncConfig(it.invoke(result, routeParams, target))
+      }
       result
     } catch (e: Exception) {
       Timber.e(e, "Failed to apply transform function, using base config")
@@ -124,14 +134,15 @@ object RequestConfigBuilder {
   /**
    * Media-kind layer application. A media config's transform/transformSync have the same shape as a
    * [TransformableRequestConfig]'s, so this delegates to the layer overload above and rewraps — the
-   * layer semantics live in one place.
+   * layer semantics live in one place. [target] flows to the app's media transform as its 3rd arg.
    */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: MediaRequestConfig,
     routeParams: Map<String, String>? = null,
+    target: MediaResolveTarget = MediaResolveTarget.LOCAL,
   ): MediaRequestConfig =
-    override.withRequestFields(mergeConfig(base, override.asTransformable(), routeParams))
+    override.withRequestFields(mergeConfig(base, override.asTransformable(), routeParams, target))
 
   private fun MediaRequestConfig.asTransformable() =
     TransformableRequestConfig(

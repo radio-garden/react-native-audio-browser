@@ -40,6 +40,9 @@ import type {
 } from '../features'
 import type {
   AudioBrowser as AudioBrowserSpec,
+  CastConfig,
+  CastState,
+  CastStateChangedEvent,
   IosOutput
 } from '../specs/audio-browser.nitro'
 import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
@@ -200,6 +203,7 @@ export class NativeAudioBrowser
   ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
   onIosOutputChanged: (output: IosOutput) => void = () => {}
+  onCastStateChanged: (event: CastStateChangedEvent) => void = () => {}
   onGate: (event: GateEvent) => void = () => {}
   // Fail closed by default: only reachable in the init window before gate.ts
   // re-binds resolveGate. Web has no serve sites, so this is never called in
@@ -970,6 +974,39 @@ export class NativeAudioBrowser
   }
 
   openIosOutputPicker(): void {
+    // No-op on web
+  }
+
+  // MARK: Cast (not applicable on web)
+  configureCast(_config: CastConfig): void {
+    // No-op on web
+  }
+
+  getCastState(): CastState {
+    return 'no-devices'
+  }
+
+  getCastDeviceName(): string | undefined {
+    return undefined
+  }
+
+  isCasting(): boolean {
+    return false
+  }
+
+  showCastPicker(): void {
+    // No-op on web
+  }
+
+  retainCastDiscovery(): void {
+    // No-op on web
+  }
+
+  releaseCastDiscovery(): void {
+    // No-op on web
+  }
+
+  endCastSession(): void {
     // No-op on web
   }
 }

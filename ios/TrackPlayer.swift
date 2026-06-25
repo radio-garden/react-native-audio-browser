@@ -178,11 +178,17 @@ class TrackPlayer {
   // MARK: - Getters from AVPlayer
 
   var currentTime: Double {
+    // While casting, the local AVPlayer is suspended — report the Cast device's
+    // position (surfaced from the remote client's status callbacks).
+    if let remote = coordinator.castPosition { return remote }
     let seconds = avPlayer.currentTime().seconds
     return seconds.isNaN ? 0 : seconds
   }
 
   var duration: Double {
+    // While casting, report the Cast media's duration (the local AVPlayer is
+    // suspended and would otherwise report 0 for the whole session).
+    if let remote = coordinator.castDuration { return remote }
     guard let item = avPlayer.currentItem else { return 0.0 }
 
     if !item.asset.duration.seconds.isNaN {
@@ -200,7 +206,11 @@ class TrackPlayer {
   }
 
   var bufferedPosition: Double {
-    avPlayer.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.seconds ?? 0
+    // The Cast SDK doesn't surface a separate buffered-ahead position; while
+    // casting, report the current remote position so JS doesn't read a stale
+    // local AVPlayer value (which is suspended at 0).
+    if let remote = coordinator.castPosition { return remote }
+    return avPlayer.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.seconds ?? 0
   }
 
   var playerState: PlaybackState {
@@ -228,7 +238,13 @@ class TrackPlayer {
 
   var volume: Float {
     get { avPlayer.volume }
-    set { avPlayer.volume = newValue }
+    set {
+      // Route volume to the Cast device while casting (ADR-0003: volume follows
+      // the destination). Always keep the local AVPlayer's value in sync too so
+      // it's correct the instant the session hands playback back.
+      _ = coordinator.castForwardVolume(newValue)
+      avPlayer.volume = newValue
+    }
   }
 
   var isMuted: Bool {
@@ -386,6 +402,12 @@ class TrackPlayer {
   }
 
   func seekTo(_ seconds: TimeInterval, completion: @escaping @MainActor (Bool) -> Void) {
+    // While casting, the seek goes to the Cast device, not the (suspended) local
+    // AVPlayer. The remote client's status callbacks flow position back.
+    if coordinator.castForwardSeek(to: seconds) {
+      completion(true)
+      return
+    }
     if state == .loading {
       loadSeekCoordinator.capture(position: seconds)
       completion(false)

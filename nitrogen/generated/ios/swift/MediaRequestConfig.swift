@@ -18,7 +18,7 @@ public extension MediaRequestConfig {
   /**
    * Create a new instance of `MediaRequestConfig`.
    */
-  init(resolve: ((_ track: Track) -> Promise<Promise<RequestConfig>>)?, resolveSync: ((_ track: Track) -> Promise<RequestConfig>)?, transform: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<Promise<RequestConfig>>)?, transformSync: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<RequestConfig>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
+  init(resolve: ((_ track: Track) -> Promise<Promise<RequestConfig>>)?, resolveSync: ((_ track: Track) -> Promise<RequestConfig>)?, transform: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?, _ target: MediaResolveTarget?) -> Promise<Promise<RequestConfig>>)?, transformSync: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?, _ target: MediaResolveTarget?) -> Promise<RequestConfig>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
     self.init({ () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______ in
       if let __unwrappedValue = resolve {
         return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_Track_____track______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track in
@@ -37,20 +37,20 @@ public extension MediaRequestConfig {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ in
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______ in
       if let __unwrappedValue = transform {
-        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ in
-          let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrappedValue)
-          return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__closureWrapper.toUnsafe())
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ in
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______ in
       if let __unwrappedValue = transformSync {
-        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______({ () -> bridge.Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ in
-          let __closureWrapper = Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrappedValue)
-          return bridge.create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__closureWrapper.toUnsafe())
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______({ () -> bridge.Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ in
+          let __closureWrapper = Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
@@ -195,13 +195,13 @@ public extension MediaRequestConfig {
   }
   
   @inline(__always)
-  var transform: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<Promise<RequestConfig>>)? {
-    return { () -> ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<Promise<RequestConfig>>)? in
-      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(self.__transform) {
-        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(self.__transform)
-        return { () -> (RequestConfig, Dictionary<String, String>?) -> Promise<Promise<RequestConfig>> in
-          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrapped)
-          return { (__request: RequestConfig, __routeParams: Dictionary<String, String>?) -> Promise<Promise<RequestConfig>> in
+  var transform: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?, _ target: MediaResolveTarget?) -> Promise<Promise<RequestConfig>>)? {
+    return { () -> ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?, _ target: MediaResolveTarget?) -> Promise<Promise<RequestConfig>>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(self.__transform) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(self.__transform)
+        return { () -> (RequestConfig, Dictionary<String, String>?, MediaResolveTarget?) -> Promise<Promise<RequestConfig>> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(__unwrapped)
+          return { (__request: RequestConfig, __routeParams: Dictionary<String, String>?, __target: MediaResolveTarget?) -> Promise<Promise<RequestConfig>> in
             let __result = __wrappedFunction.call(__request, { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
               if let __unwrappedValue = __routeParams {
                 return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
@@ -211,6 +211,12 @@ public extension MediaRequestConfig {
                   }
                   return __map
                 }())
+              } else {
+                return .init()
+              }
+            }(), { () -> bridge.std__optional_MediaResolveTarget_ in
+              if let __unwrappedValue = __target {
+                return bridge.create_std__optional_MediaResolveTarget_(__unwrappedValue)
               } else {
                 return .init()
               }
@@ -245,13 +251,13 @@ public extension MediaRequestConfig {
   }
   
   @inline(__always)
-  var transformSync: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<RequestConfig>)? {
-    return { () -> ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<RequestConfig>)? in
-      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(self.__transformSync) {
-        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(self.__transformSync)
-        return { () -> (RequestConfig, Dictionary<String, String>?) -> Promise<RequestConfig> in
-          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrapped)
-          return { (__request: RequestConfig, __routeParams: Dictionary<String, String>?) -> Promise<RequestConfig> in
+  var transformSync: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?, _ target: MediaResolveTarget?) -> Promise<RequestConfig>)? {
+    return { () -> ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?, _ target: MediaResolveTarget?) -> Promise<RequestConfig>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(self.__transformSync) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(self.__transformSync)
+        return { () -> (RequestConfig, Dictionary<String, String>?, MediaResolveTarget?) -> Promise<RequestConfig> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(__unwrapped)
+          return { (__request: RequestConfig, __routeParams: Dictionary<String, String>?, __target: MediaResolveTarget?) -> Promise<RequestConfig> in
             let __result = __wrappedFunction.call(__request, { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
               if let __unwrappedValue = __routeParams {
                 return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
@@ -261,6 +267,12 @@ public extension MediaRequestConfig {
                   }
                   return __map
                 }())
+              } else {
+                return .init()
+              }
+            }(), { () -> bridge.std__optional_MediaResolveTarget_ in
+              if let __unwrappedValue = __target {
+                return bridge.create_std__optional_MediaResolveTarget_(__unwrappedValue)
               } else {
                 return .init()
               }

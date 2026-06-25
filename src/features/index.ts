@@ -7,6 +7,7 @@
  * - React hooks (use*)
  */
 
+export * from './cast'
 export * from './output'
 export * from './playback'
 export * from './player'

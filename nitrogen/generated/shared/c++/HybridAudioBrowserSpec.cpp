@@ -122,6 +122,8 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onSystemVolumeChanged", &HybridAudioBrowserSpec::setOnSystemVolumeChanged);
       prototype.registerHybridGetter("onIosOutputChanged", &HybridAudioBrowserSpec::getOnIosOutputChanged);
       prototype.registerHybridSetter("onIosOutputChanged", &HybridAudioBrowserSpec::setOnIosOutputChanged);
+      prototype.registerHybridGetter("onCastStateChanged", &HybridAudioBrowserSpec::getOnCastStateChanged);
+      prototype.registerHybridSetter("onCastStateChanged", &HybridAudioBrowserSpec::setOnCastStateChanged);
       prototype.registerHybridGetter("onEqualizerChanged", &HybridAudioBrowserSpec::getOnEqualizerChanged);
       prototype.registerHybridSetter("onEqualizerChanged", &HybridAudioBrowserSpec::setOnEqualizerChanged);
       prototype.registerHybridGetter("onBatteryWarningPendingChanged", &HybridAudioBrowserSpec::getOnBatteryWarningPendingChanged);
@@ -195,6 +197,14 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridMethod("setSystemVolume", &HybridAudioBrowserSpec::setSystemVolume);
       prototype.registerHybridMethod("getIosOutput", &HybridAudioBrowserSpec::getIosOutput);
       prototype.registerHybridMethod("openIosOutputPicker", &HybridAudioBrowserSpec::openIosOutputPicker);
+      prototype.registerHybridMethod("configureCast", &HybridAudioBrowserSpec::configureCast);
+      prototype.registerHybridMethod("getCastState", &HybridAudioBrowserSpec::getCastState);
+      prototype.registerHybridMethod("getCastDeviceName", &HybridAudioBrowserSpec::getCastDeviceName);
+      prototype.registerHybridMethod("isCasting", &HybridAudioBrowserSpec::isCasting);
+      prototype.registerHybridMethod("showCastPicker", &HybridAudioBrowserSpec::showCastPicker);
+      prototype.registerHybridMethod("retainCastDiscovery", &HybridAudioBrowserSpec::retainCastDiscovery);
+      prototype.registerHybridMethod("releaseCastDiscovery", &HybridAudioBrowserSpec::releaseCastDiscovery);
+      prototype.registerHybridMethod("endCastSession", &HybridAudioBrowserSpec::endCastSession);
       prototype.registerHybridMethod("getEqualizerSettings", &HybridAudioBrowserSpec::getEqualizerSettings);
       prototype.registerHybridMethod("setEqualizerEnabled", &HybridAudioBrowserSpec::setEqualizerEnabled);
       prototype.registerHybridMethod("setEqualizerPreset", &HybridAudioBrowserSpec::setEqualizerPreset);

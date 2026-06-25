@@ -29,8 +29,8 @@ namespace margelo::nitro::audiobrowser {
    * An enum which can be represented as a JavaScript union (AndroidPlayerWakeMode).
    */
   enum class AndroidPlayerWakeMode {
-    NONE      SWIFT_NAME(none) = 0,
-    LOCAL      SWIFT_NAME(local) = 1,
+    LOCAL      SWIFT_NAME(local) = 0,
+    NONE      SWIFT_NAME(none) = 1,
     NETWORK      SWIFT_NAME(network) = 2,
   } CLOSED_ENUM;
 
@@ -44,8 +44,8 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::AndroidPlayerWakeMode fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, arg);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("none"): return margelo::nitro::audiobrowser::AndroidPlayerWakeMode::NONE;
         case hashString("local"): return margelo::nitro::audiobrowser::AndroidPlayerWakeMode::LOCAL;
+        case hashString("none"): return margelo::nitro::audiobrowser::AndroidPlayerWakeMode::NONE;
         case hashString("network"): return margelo::nitro::audiobrowser::AndroidPlayerWakeMode::NETWORK;
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert \"" + unionValue + "\" to enum AndroidPlayerWakeMode - invalid value!");
@@ -53,8 +53,8 @@ namespace margelo::nitro {
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, margelo::nitro::audiobrowser::AndroidPlayerWakeMode arg) {
       switch (arg) {
-        case margelo::nitro::audiobrowser::AndroidPlayerWakeMode::NONE: return JSIConverter<std::string>::toJSI(runtime, "none");
         case margelo::nitro::audiobrowser::AndroidPlayerWakeMode::LOCAL: return JSIConverter<std::string>::toJSI(runtime, "local");
+        case margelo::nitro::audiobrowser::AndroidPlayerWakeMode::NONE: return JSIConverter<std::string>::toJSI(runtime, "none");
         case margelo::nitro::audiobrowser::AndroidPlayerWakeMode::NETWORK: return JSIConverter<std::string>::toJSI(runtime, "network");
         default: [[unlikely]]
           throw std::invalid_argument("Cannot convert AndroidPlayerWakeMode to JS - invalid value: "
@@ -67,8 +67,8 @@ namespace margelo::nitro {
       }
       std::string unionValue = JSIConverter<std::string>::fromJSI(runtime, value);
       switch (hashString(unionValue.c_str(), unionValue.size())) {
-        case hashString("none"):
         case hashString("local"):
+        case hashString("none"):
         case hashString("network"):
           return true;
         default:

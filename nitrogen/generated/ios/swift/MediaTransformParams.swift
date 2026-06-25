@@ -18,14 +18,14 @@ public extension MediaTransformParams {
   /**
    * Create a new instance of `MediaTransformParams`.
    */
-  init(request: RequestConfig, context: ImageContext?) {
+  init(request: RequestConfig, context: ImageContext?, target: MediaResolveTarget) {
     self.init(request, { () -> bridge.std__optional_ImageContext_ in
       if let __unwrappedValue = context {
         return bridge.create_std__optional_ImageContext_(__unwrappedValue)
       } else {
         return .init()
       }
-    }())
+    }(), target)
   }
 
   @inline(__always)
@@ -36,5 +36,10 @@ public extension MediaTransformParams {
   @inline(__always)
   var context: ImageContext? {
     return self.__context.value
+  }
+  
+  @inline(__always)
+  var target: MediaResolveTarget {
+    return self.__target
   }
 }

@@ -22,6 +22,8 @@ import com.audiobrowser.browser.HttpStatusException
 import com.audiobrowser.browser.NetworkException
 import com.audiobrowser.browser.handleTrackLoad
 import com.audiobrowser.browser.resolveMediaUrl
+import com.audiobrowser.cast.CastBridge
+import com.audiobrowser.cast.CastBridgeProvider
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
@@ -36,6 +38,9 @@ import com.margelo.nitro.NitroModules
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatus
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
 import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
+import com.margelo.nitro.audiobrowser.CastConfig
+import com.margelo.nitro.audiobrowser.CastState
+import com.margelo.nitro.audiobrowser.CastStateChangedEvent
 import com.margelo.nitro.audiobrowser.ChapterMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
@@ -100,6 +105,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   /** Called by Nitro when the JS object is destroyed (incl. JS runtime reloads). */
   override fun dispose() {
     systemVolumeMonitor.destroy()
+    // Tear down the Cast subsystem so a re-created instance doesn't double-register against the
+    // process-static Cast context. No-op on the inert (no-Cast) bridge.
+    castBridge.release()
     super.dispose()
   }
 
@@ -109,6 +117,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private val context =
     NitroModules.applicationContext
       ?: throw IllegalStateException("NitroModules.applicationContext is null")
+
+  // MARK: Cast bridge
+  //
+  // Resolved to whichever variant sourceset is active: the inert NoopCastBridge on the default
+  // (Cast-disabled) build, or the real CastSessionController-backed bridge when
+  // AudioBrowser_enableCast=true. The call below references only main-sourceset symbols
+  // (CastBridgeProvider is defined with the same FQN in both variants), so this compiles either way.
+  private val castBridge: CastBridge = CastBridgeProvider.create(context)
 
   // MARK: Browser state
   private var _configuration =
@@ -211,6 +227,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     {}
   override var onSystemVolumeChanged: (Double) -> Unit = {}
   override var onIosOutputChanged: (IosOutput) -> Unit = {}
+
+  // MARK: Cast (playback destination)
+  //
+  // Plain emitter slot — set once by Nitro at module load. Discovery is NOT ref-counted off this
+  // callback's identity (emitterize never signals unsubscribe); JS drives discovery explicitly via
+  // retainCastDiscovery()/releaseCastDiscovery() from mounted useCastState() hooks.
+  override var onCastStateChanged: (CastStateChangedEvent) -> Unit = {}
 
   // MARK: Remote handlers
   override var handleRemoteJumpBackward: ((RemoteJumpBackwardEvent) -> Unit)? = null
@@ -1036,6 +1059,59 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   }
 
   // ============================================================================
+  // MARK: Cast (playback destination — see ADR 0003)
+  // ============================================================================
+  //
+  // All methods delegate to [castBridge]. On the default (Cast-disabled) build the bridge is inert:
+  // configure/showPicker/endCastSession are no-ops, getCastState() is NO_DEVICES, isCasting() is
+  // false, getCastDeviceName() is null, and onCastStateChanged never fires.
+
+  // configureCast must NOT block: the bridge's heavy CastContext.getSharedInstance first-touch is
+  // posted to the main thread internally, so this call returns immediately (no runBlockingOnMain —
+  // it would stall the JS thread on that I/O and risk an ANR). The getters/picker/endSession do
+  // cheap session-manager reads/dispatch, so they don't block either; the bridge marshals to main.
+  override fun configureCast(config: CastConfig) {
+    castBridge.configure(config.receiverApplicationId)
+    // If the service is already up, attach now (the bridge stashes until its controller is built);
+    // otherwise onServiceConnected attaches once the session exists.
+    connectedService?.let { attachCastBridge(it.player) }
+  }
+
+  override fun getCastState(): CastState = castBridge.getState()
+
+  override fun getCastDeviceName(): String? = castBridge.getDeviceName()
+
+  override fun isCasting(): Boolean = castBridge.isCasting()
+
+  override fun showCastPicker() {
+    castBridge.showPicker()
+  }
+
+  override fun endCastSession() {
+    castBridge.endSession()
+  }
+
+  // Discovery leases — JS drives these from mounted useCastState() hooks. The bridge native-ref-
+  // counts them and runs the MediaRouter active scan only while leases > 0. Inert on the no-Cast
+  // build.
+  override fun retainCastDiscovery() {
+    castBridge.retainDiscovery()
+  }
+
+  override fun releaseCastDiscovery() {
+    castBridge.releaseDiscovery()
+  }
+
+  /**
+   * Hands the Cast bridge the live MediaSession (via the player) + the local player so it can
+   * repoint on connect/disconnect. Idempotent — the bridge/controller attaches once and ignores a
+   * re-attach. No-op on the inert bridge.
+   */
+  private fun attachCastBridge(player: Player) {
+    castBridge.attach(player.sessionOrNull ?: return, player) { callbacks }
+  }
+
+  // ============================================================================
   // MARK: Equalizer (Android only)
   // ============================================================================
 
@@ -1158,6 +1234,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           if (_configuration.routes?.isNotEmpty() == true) {
             player.notifyBrowserConfigurationReady()
           }
+
+          // Hand the Cast bridge the (now-built) MediaSession + local player so it can repoint on
+          // connect/disconnect. No-op on the inert bridge, and idempotent if configureCast() runs
+          // later (it re-attaches; the real bridge ignores a duplicate).
+          attachCastBridge(player)
         }
 
       // Wire up battery warning callback from service
@@ -1410,6 +1491,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
       override fun onSleepTimerChanged(timer: SleepTimer?) {
         post { this@AudioBrowser.onSleepTimerChanged(timer) }
+      }
+
+      override fun onCastStateChanged(event: CastStateChangedEvent) {
+        post { this@AudioBrowser.onCastStateChanged(event) }
       }
     }
 

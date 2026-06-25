@@ -1,0 +1,63 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Cast-enabled library manifest. Used as the `main` sourceset manifest ONLY when
+         AudioBrowser_enableCast=true (a library sourceset takes a single manifest file, so this is
+         a full copy of src/main/AndroidManifest.xml PLUS the Cast OptionsProvider meta-data). The
+         default (Cast-disabled) build keeps using the unchanged src/main/AndroidManifest.xml, so it
+         is byte-for-byte unaffected. Keep this in sync with src/main/AndroidManifest.xml. -->
+
+    <!-- Permissions for audio playback -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- Lets the CarConnection query reach the car system app's content
+         provider under Android 11+ package-visibility rules -->
+    <queries>
+        <provider android:authorities="androidx.car.app.connection" />
+    </queries>
+
+    <application>
+        <!-- Audio Browser Service -->
+        <service android:name="com.audiobrowser.Service" android:enabled="true" android:exported="true" android:foregroundServiceType="mediaPlayback">
+
+            <!-- Intent filters for media browser service -->
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+
+            <!-- For Android Auto support -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <!-- Exported, token-gated content provider serving browse artwork to Android Auto / AAOS.
+             Exported is required: AAOS runs in a different uid and no URI grant is issued by Media3.
+             The authority placeholder is replaced by the app's package name at build time. -->
+        <provider
+            android:name="com.audiobrowser.util.ArtworkContentProvider"
+            android:authorities="${applicationId}.audiobrowser.artwork"
+            android:exported="true"
+            android:grantUriPermissions="false" />
+
+        <!-- Headless Task Service for background JS execution -->
+        <service android:name="com.audiobrowser.HeadlessTaskService" android:enabled="true" android:exported="false" />
+        <!-- Media button receiver for playback resumption -->
+        <receiver android:name="androidx.media3.session.MediaButtonReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Cast OptionsProvider — instantiated reflectively by play-services-cast-framework on the
+             first CastContext.getSharedInstance(). Cast-build-only; kept by consumer-rules.pro. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.audiobrowser.cast.AudioBrowserCastOptionsProvider" />
+    </application>
+</manifest>

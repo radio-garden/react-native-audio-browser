@@ -20,11 +20,13 @@
 #include <string>
 #include <unordered_map>
 #include <optional>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "MediaResolveTarget.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_.hpp"
 #include "JRequestConfig.hpp"
 #include "HttpMethod.hpp"
 #include "JHttpMethod.hpp"
-#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JMediaResolveTarget.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

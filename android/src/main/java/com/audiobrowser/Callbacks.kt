@@ -1,6 +1,7 @@
 package com.audiobrowser
 
 import com.audiobrowser.model.PlayerUpdateOptions
+import com.margelo.nitro.audiobrowser.CastStateChangedEvent
 import com.margelo.nitro.audiobrowser.ChapterMetadata
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
@@ -87,4 +88,7 @@ interface Callbacks {
 
   // Sleep timer events
   fun onSleepTimerChanged(timer: SleepTimer?)
+
+  // Cast (playback destination) events
+  fun onCastStateChanged(event: CastStateChangedEvent)
 }

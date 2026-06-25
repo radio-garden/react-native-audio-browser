@@ -34,6 +34,12 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
+// Forward declaration of `CastConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastConfig; }
+// Forward declaration of `CastStateChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastStateChangedEvent; }
+// Forward declaration of `CastState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CastState; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -86,6 +92,8 @@ namespace margelo::nitro::audiobrowser { struct IosOutput; }
 namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `MediaResolveTarget` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaResolveTarget; }
 // Forward declaration of `MediaTransformParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 // Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
@@ -207,6 +215,9 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "BrowserSourceCallbackParam.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
+#include "CastConfig.hpp"
+#include "CastState.hpp"
+#include "CastStateChangedEvent.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -233,6 +244,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "IosOutputType.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
+#include "MediaResolveTarget.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeAndroidSetupOptions.hpp"
 #include "NativeBrowserConfiguration.hpp"

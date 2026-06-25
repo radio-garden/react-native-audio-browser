@@ -42,12 +42,12 @@ namespace margelo::nitro::audiobrowser {
     static jni::alias_ref<JAndroidPlayerWakeMode> fromCpp(AndroidPlayerWakeMode value) {
       static const auto clazz = javaClassStatic();
       switch (value) {
-        case AndroidPlayerWakeMode::NONE:
-          static const auto fieldNONE = clazz->getStaticField<JAndroidPlayerWakeMode>("NONE");
-          return clazz->getStaticFieldValue(fieldNONE);
         case AndroidPlayerWakeMode::LOCAL:
           static const auto fieldLOCAL = clazz->getStaticField<JAndroidPlayerWakeMode>("LOCAL");
           return clazz->getStaticFieldValue(fieldLOCAL);
+        case AndroidPlayerWakeMode::NONE:
+          static const auto fieldNONE = clazz->getStaticField<JAndroidPlayerWakeMode>("NONE");
+          return clazz->getStaticFieldValue(fieldNONE);
         case AndroidPlayerWakeMode::NETWORK:
           static const auto fieldNETWORK = clazz->getStaticField<JAndroidPlayerWakeMode>("NETWORK");
           return clazz->getStaticFieldValue(fieldNETWORK);

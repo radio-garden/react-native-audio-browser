@@ -16,8 +16,8 @@ import com.facebook.proguard.annotations.DoNotStrip
 @DoNotStrip
 @Keep
 enum class AndroidPlayerWakeMode(@DoNotStrip @Keep val value: Int) {
-  NONE(0),
-  LOCAL(1),
+  LOCAL(0),
+  NONE(1),
   NETWORK(2);
 
   companion object

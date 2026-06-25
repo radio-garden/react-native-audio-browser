@@ -34,6 +34,16 @@
     case queue
   }
 
+  /// Cross-platform Cast destination state (mirrors the generated Nitro enum).
+  /// Stubbed so the ungated Cast pure types (`CastStateResolver`,
+  /// `CastStateCoalescer`) compile and test without NitroModules.
+  enum CastState: Equatable {
+    case noDevices
+    case notConnected
+    case connecting
+    case connected
+  }
+
   enum CarPlaySiriListButtonPosition {
     case top
     case bottom

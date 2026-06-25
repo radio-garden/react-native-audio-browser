@@ -13,6 +13,14 @@ iOS". On iOS it effectively always returns a value while an audio session is
 active — still guard for `undefined` so the same code is safe on Android.
 :::
 
+::: tip Not the same as Cast
+The Output route is a **system audio route**: the phone keeps fetching the
+stream and iOS reroutes the local audio (AirPlay, Bluetooth, the car). Google
+[Cast](/guide/cast) is different — a separate player on a Cast device that
+fetches the stream itself. If you want to move playback onto a Chromecast, Nest
+speaker, or Google TV, that's the [Cast guide](/guide/cast), not this one.
+:::
+
 The UI snippets import `Text` / `Button` from `react-native`; everything else is
 from `react-native-audio-browser`.
 

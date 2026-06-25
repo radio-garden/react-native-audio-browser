@@ -6,6 +6,7 @@ import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.MediaResolveTarget
 import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
 import com.margelo.nitro.audiobrowser.Track
@@ -24,13 +25,23 @@ import timber.log.Timber
  * nor a media config is set (the caller then uses the original URL as-is). Mirrors the web stub's
  * and iOS's `resolveMediaUrl`.
  */
-suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestConfig? {
+suspend fun BrowserManager.resolveMediaUrl(
+  originalUrl: String,
+  target: MediaResolveTarget = MediaResolveTarget.LOCAL,
+): MediaRequestConfig? {
   val mediaConfig = config.media
   // The request layer counts as present when a static `request` OR a `requestResolver`
   // is set — a resolver-only consumer still needs its baseUrl/headers/transform
   // applied to media URLs.
   val hasRequestLayer = config.request != null || config.requestResolver != null
   if (mediaConfig == null && !hasRequestLayer) return null
+
+  // The app's media transform receives [target] as its 3rd arg (the cross-platform contract), so a
+  // target:'cast' resolution lets it branch and emit a self-contained (query-signed),
+  // receiver-fetchable URL. routeParams stays emptyMap() for media — exactly what the previous
+  // 2-arg mergeConfig calls did — so the LOCAL path is byte-for-byte unchanged apart from the
+  // transform now seeing target=LOCAL.
+  val routeParams: Map<String, String> = emptyMap()
 
   // Layered: request (shared, incl. its transform) → media. The request layer runs
   // for media even when no media-specific config is present (so a relative src
@@ -47,10 +58,10 @@ suspend fun BrowserManager.resolveMediaUrl(originalUrl: String): MediaRequestCon
       contentType = null,
       userAgent = null,
     )
-  requestConfig?.let { base = RequestConfigBuilder.mergeConfig(base, it) }
+  requestConfig?.let { base = RequestConfigBuilder.mergeConfig(base, it, routeParams, target) }
   val mediaLayered =
     if (mediaConfig != null) {
-      RequestConfigBuilder.mergeConfig(base, mediaConfig)
+      RequestConfigBuilder.mergeConfig(base, mediaConfig, routeParams, target)
     } else {
       MediaRequestConfig(
         resolve = null,
@@ -91,6 +102,7 @@ suspend fun BrowserManager.resolveArtworkUrl(
   track: Track,
   perRouteConfig: ArtworkRequestConfig? = null,
   imageContext: ImageContext? = null,
+  target: MediaResolveTarget = MediaResolveTarget.LOCAL,
 ): ImageSource? {
   val effectiveArtworkConfig = perRouteConfig ?: config.artwork
   // Treat empty string as null for artwork
@@ -165,13 +177,13 @@ suspend fun BrowserManager.resolveArtworkUrl(
     effectiveArtworkConfig.transform?.let {
       transformedConfig =
         RequestConfigBuilder.awaitAsyncConfig(
-          it.invoke(MediaTransformParams(transformedConfig, imageContext))
+          it.invoke(MediaTransformParams(transformedConfig, imageContext, target))
         )
     }
     effectiveArtworkConfig.transformSync?.let {
       transformedConfig =
         RequestConfigBuilder.awaitSyncConfig(
-          it.invoke(MediaTransformParams(transformedConfig, imageContext))
+          it.invoke(MediaTransformParams(transformedConfig, imageContext, target))
         )
     }
 

@@ -162,6 +162,26 @@ A favorites collection is app-owned/user-owned content. The library tracks **Fav
 An app-imposed block on browsing from External surfaces, set and cleared at runtime. While gated, **Tabs** stay visible but every tab's content is replaced by a single message — rendered as each surface allows (a full-page view on CarPlay, a list tile on Android Auto) — and **Search** from External surfaces resolves to the same message. The **Player**, the **Queue**, and **Now Playing** are unaffected: a gate blocks *finding* content, never *hearing* it. Generic by design — subscription, login, and region blocks are all Browse Gates.
 *Avoid*: Paywall (one app's reason for a gate, not the concept), error page (a gate is deliberate app state, not a **NavigationError**), lock screen (that's an External surface).
 
+### Playback destinations
+
+Where audio actually comes out. Distinct from **External surfaces**, which browse, display **Now Playing**, or send **Remote commands** while audio plays locally — a playback destination *moves where the audio plays*.
+
+**Cast**:
+The opt-in, cross-platform subsystem for routing playback to a **Cast device** (Google Cast). Disabled at build time unless enabled, and inert at runtime until the app calls `configureCast()`.
+*Avoid*: Chromecast (one device family, not the subsystem), AirPlay (a different mechanism — see "Flagged ambiguities"), Output (the iOS audio-route concept).
+
+**Cast session**:
+An active connection to a **Cast device**. While a Cast session is connected, the **Player**'s audio output is the Cast device instead of the phone; the **Queue**, **Active Track**, and **Now Playing** keep their meaning unchanged — only the *destination* moves. A Cast session can outlive the app process and be re-attached on relaunch.
+*Avoid*: Connection, route (a Cast session is not an audio route).
+
+**Cast device**:
+The receiver hardware the **Cast session** targets — Chromecast, a Nest speaker, a Google TV. Fetches the media and artwork *itself* over its own network egress, so URLs handed to it must be self-contained and publicly reachable (see the `target: 'cast'` note under **Transform**, and "Flagged ambiguities").
+*Avoid*: Receiver (overloaded with the Cast *receiver app*), speaker, TV.
+
+**CastState**:
+The connection lifecycle of **Cast**: one of `no-devices`, `not-connected`, `connecting`, `connected`. Orthogonal to **PlaybackState** and **PlayingState** — a connected Cast session can still be paused or buffering.
+*Avoid*: ConnectionState, CastStatus.
+
 ## Relationships
 
 * A **Browser** holds zero or more **Routes**, up to four **Tabs**, and optionally one **Search**.
@@ -174,6 +194,7 @@ An app-imposed block on browsing from External surfaces, set and cleared at runt
 * A **Browse Gate** blocks the **BrowseTree** and **Search** on External surfaces, but never the **Player**, the **Queue**, or **Now Playing**.
 * A Track is **Favorited** independently of being the Active Track — favoriting is set on the Track, not on the Queue.
 * A favorites collection belongs to the app/user; **Favorited** is the per-Track state the library keeps synchronized across surfaces.
+* While a **Cast session** is connected, the **Player** outputs to the **Cast device** instead of the phone; the **Queue**, **Active Track**, and **Now Playing** are unchanged. A Cast device displays **Now Playing** and can emit **Remote commands** (from the Google Home app or TV remote) — but it is a playback *destination*, not an **External surface**.
 
 ## Example dialogue
 
@@ -196,5 +217,7 @@ An app-imposed block on browsing from External surfaces, set and cleared at runt
 * **"Rating" is a platform concept, not a library concept.** Android (`MediaSession.setRatingType`) and iOS (`MPFeedbackCommand`) expose generalised Rating APIs supporting thumbs / stars / percentages / hearts. This library uses only the heart variant and surfaces it as **Favorited**. The `Rating` types in `src/features/rating.ts` exist as platform-bridge plumbing and are not part of the domain vocabulary.
 
 * **Tabs and Search look like Routes internally.** At the native layer, `tabs:` and `search:` (and the top-level `browse:`) are flattened into the same route table as user-declared routes, using magic paths `__tabs__`, `__search__`, and `__default__`. This is an implementation detail — domain-wise a Tab is not a Route; it's a top-bar navigation entry with a 4-entry constraint, and Search is a voice/text query handler. Don't promote the magic paths to the public vocabulary.
+
+* **Cast is not AirPlay, and not the iOS Output route.** Three things sound like "playing somewhere else" but are distinct mechanisms. **AirPlay** and the iOS audio **Output** (`useIosOutput`/`openIosOutputPicker`) are *system audio routes*: `AVPlayer` keeps playing locally and iOS reroutes the bytes — the phone still fetches the stream. **Cast** is a separate *player on another device* (the **Cast device**) that fetches the media and artwork itself. That egress difference is why a Cast URL must be self-contained (query-signed, publicly reachable) while a local/AirPlay URL may rely on request headers. Keep the Output API and the Cast API separate; do not merge them.
 
 * **"Track" is overloaded.** It names the universal content type in the BrowseTree, but in everyday English a track is a song. A Track called "Jazz" with no `src` and 12 children does not behave like a track. This is intentional — Android Auto's `MediaItem` and CarPlay's `CPListItem` both model the browse tree with a single polymorphic type, and aligning with that shape is cheaper than fighting it. Tracked in [#39](https://github.com/radio-garden/react-native-audio-browser/issues/39).

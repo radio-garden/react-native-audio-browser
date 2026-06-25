@@ -158,6 +158,8 @@ namespace margelo::nitro::audiobrowser {
     void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) override;
     std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() override;
     void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) override;
+    std::function<void(const CastStateChangedEvent& /* event */)> getOnCastStateChanged() override;
+    void setOnCastStateChanged(const std::function<void(const CastStateChangedEvent& /* event */)>& onCastStateChanged) override;
     std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() override;
     void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) override;
     std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() override;
@@ -234,6 +236,14 @@ namespace margelo::nitro::audiobrowser {
     void setSystemVolume(double volume) override;
     std::optional<IosOutput> getIosOutput() override;
     void openIosOutputPicker() override;
+    void configureCast(const CastConfig& config) override;
+    CastState getCastState() override;
+    std::optional<std::string> getCastDeviceName() override;
+    bool isCasting() override;
+    void showCastPicker() override;
+    void retainCastDiscovery() override;
+    void releaseCastDiscovery() override;
+    void endCastSession() override;
     std::optional<EqualizerSettings> getEqualizerSettings() override;
     void setEqualizerEnabled(bool enabled) override;
     void setEqualizerPreset(const std::string& preset) override;

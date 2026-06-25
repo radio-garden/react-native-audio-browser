@@ -34,6 +34,10 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
+// Forward declaration of `CastStateChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastStateChangedEvent; }
+// Forward declaration of `CastState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CastState; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
@@ -86,6 +90,8 @@ namespace margelo::nitro::audiobrowser { struct IosOutput; }
 namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
+// Forward declaration of `MediaResolveTarget` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaResolveTarget; }
 // Forward declaration of `MediaTransformParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 // Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
@@ -207,6 +213,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "BrowserSourceCallbackParam.hpp"
 #include "CarPlayNowPlayingButton.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
+#include "CastState.hpp"
+#include "CastStateChangedEvent.hpp"
 #include "ChapterMetadata.hpp"
 #include "EqualizerSettings.hpp"
 #include "FavoriteChangedEvent.hpp"
@@ -233,6 +241,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "IosOutputType.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
+#include "MediaResolveTarget.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeAndroidSetupOptions.hpp"
 #include "NativeGate.hpp"
@@ -730,42 +739,42 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /, std::optional<MediaResolveTarget> / * target * /)>>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(value);
+  using std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______ = std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>> create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
+  inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)> get_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(const std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
+   * Specialized version of `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&, std::optional<MediaResolveTarget>)>`.
    */
-  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>;
+  using Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ = std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>;
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>`, this can be used from Swift.
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /, std::optional<MediaResolveTarget> / * target * /)>`, this can be used from Swift.
    */
-  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper final {
+  class Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
-      auto __result = _function->operator()(request, routeParams);
+    explicit Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper(std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams, std::optional<MediaResolveTarget> target) const noexcept {
+      auto __result = _function->operator()(request, routeParams, target);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ value) noexcept {
-    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ value) noexcept {
+    return Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>
@@ -836,42 +845,57 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_RequestConfig_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>
+  // pragma MARK: std::optional<MediaResolveTarget>
   /**
-   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>>`.
+   * Specialized version of `std::optional<MediaResolveTarget>`.
    */
-  using std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ = std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>;
-  inline std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> create_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>& value) noexcept {
-    return std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(value);
+  using std__optional_MediaResolveTarget_ = std::optional<MediaResolveTarget>;
+  inline std::optional<MediaResolveTarget> create_std__optional_MediaResolveTarget_(const MediaResolveTarget& value) noexcept {
+    return std::optional<MediaResolveTarget>(value);
   }
-  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
+  inline bool has_value_std__optional_MediaResolveTarget_(const std::optional<MediaResolveTarget>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)> get_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(const std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>& optional) noexcept {
+  inline MediaResolveTarget get_std__optional_MediaResolveTarget_(const std::optional<MediaResolveTarget>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
+  // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>
   /**
-   * Specialized version of `std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&)>`.
+   * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /, std::optional<MediaResolveTarget> / * target * /)>>`.
    */
-  using Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ = std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>;
+  using std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______ = std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>;
+  inline std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>> create_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(const std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>& value) noexcept {
+    return std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(const std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)> get_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams_____std__optional_MediaResolveTarget_____target______(const std::optional<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>
   /**
-   * Wrapper class for a `std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /)>`, this can be used from Swift.
+   * Specialized version of `std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig&, const std::optional<std::unordered_map<std::string, std::string>>&, std::optional<MediaResolveTarget>)>`.
    */
-  class Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper final {
+  using Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ = std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>;
+  /**
+   * Wrapper class for a `std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& / * request * /, const std::optional<std::unordered_map<std::string, std::string>>& / * routeParams * /, std::optional<MediaResolveTarget> / * target * /)>`, this can be used from Swift.
+   */
+  class Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper final {
   public:
-    explicit Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>>(std::move(func))) {}
-    inline std::shared_ptr<Promise<RequestConfig>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams) const noexcept {
-      auto __result = _function->operator()(request, routeParams);
+    explicit Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper(std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>&& func): _function(std::make_unique<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>>(std::move(func))) {}
+    inline std::shared_ptr<Promise<RequestConfig>> call(RequestConfig request, std::optional<std::unordered_map<std::string, std::string>> routeParams, std::optional<MediaResolveTarget> target) const noexcept {
+      auto __result = _function->operator()(request, routeParams, target);
       return __result;
     }
   private:
-    std::unique_ptr<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>> _function;
+    std::unique_ptr<std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>> _function;
   } SWIFT_NONCOPYABLE;
-  Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper wrap_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ value) noexcept {
-    return Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___Wrapper(std::move(value));
+  Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper wrap_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ value) noexcept {
+    return Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__Wrapper(std::move(value));
   }
   
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>>
@@ -3266,6 +3290,28 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return Func_void_IosOutput_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::function<void(const CastStateChangedEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const CastStateChangedEvent&)>`.
+   */
+  using Func_void_CastStateChangedEvent = std::function<void(const CastStateChangedEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const CastStateChangedEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_CastStateChangedEvent_Wrapper final {
+  public:
+    explicit Func_void_CastStateChangedEvent_Wrapper(std::function<void(const CastStateChangedEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const CastStateChangedEvent& /* event */)>>(std::move(func))) {}
+    inline void call(CastStateChangedEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const CastStateChangedEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_CastStateChangedEvent create_Func_void_CastStateChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_CastStateChangedEvent_Wrapper wrap_Func_void_CastStateChangedEvent(Func_void_CastStateChangedEvent value) noexcept {
+    return Func_void_CastStateChangedEvent_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::optional<EqualizerSettings>
   /**
    * Specialized version of `std::optional<EqualizerSettings>`.
@@ -3537,6 +3583,24 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline Result_std__optional_IosOutput__ create_Result_std__optional_IosOutput__(const std::exception_ptr& error) noexcept {
     return Result<std::optional<IosOutput>>::withError(error);
+  }
+  
+  // pragma MARK: Result<CastState>
+  using Result_CastState_ = Result<CastState>;
+  inline Result_CastState_ create_Result_CastState_(CastState value) noexcept {
+    return Result<CastState>::withValue(std::move(value));
+  }
+  inline Result_CastState_ create_Result_CastState_(const std::exception_ptr& error) noexcept {
+    return Result<CastState>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<std::string>>
+  using Result_std__optional_std__string__ = Result<std::optional<std::string>>;
+  inline Result_std__optional_std__string__ create_Result_std__optional_std__string__(const std::optional<std::string>& value) noexcept {
+    return Result<std::optional<std::string>>::withValue(value);
+  }
+  inline Result_std__optional_std__string__ create_Result_std__optional_std__string__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<std::string>>::withError(error);
   }
   
   // pragma MARK: Result<std::optional<EqualizerSettings>>

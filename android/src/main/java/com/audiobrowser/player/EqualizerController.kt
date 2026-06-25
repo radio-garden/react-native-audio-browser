@@ -12,7 +12,13 @@ import timber.log.Timber
  * session yet, deferring initialization to the first session change. One create-and-wire definition
  * replaces the three copies Player carried.
  */
-internal class EqualizerController(private val onSettingsChanged: (EqualizerSettings) -> Unit) {
+internal class EqualizerController(
+  private val onSettingsChanged: (EqualizerSettings) -> Unit,
+  // Cast: EQ is local DSP on audio that, while casting, isn't on the phone. Mutations are no-ops
+  // while a Cast session is connected (see ADR 0003). Defaults to "always local" so the equalizer
+  // behaves exactly as before on the no-Cast path and in tests.
+  private val isCasting: () -> Boolean = { false },
+) {
 
   private var manager: EqualizerManager? = null
 
@@ -67,14 +73,17 @@ internal class EqualizerController(private val onSettingsChanged: (EqualizerSett
   fun getSettings(): EqualizerSettings? = manager?.getSettings()
 
   fun setEnabled(enabled: Boolean) {
+    if (isCasting()) return
     manager?.setEnabled(enabled)
   }
 
   fun setPreset(preset: String) {
+    if (isCasting()) return
     manager?.setPreset(preset)
   }
 
   fun setLevels(levels: DoubleArray) {
+    if (isCasting()) return
     manager?.setLevels(levels)
   }
 

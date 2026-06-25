@@ -50,6 +50,13 @@ def getExtOrIntegerDefault(name) {
 
 def kotlin_version = getExtOrDefault("kotlinVersion") ?: "1.9.0"
 
+// Google Cast support — compiled in BY DEFAULT, inert at runtime until configureCast(). When
+// enabled, the `cast` sourceset (real CastBridge impl + Cast SDK deps) compiles; when opted out
+// (AudioBrowser_enableCast=false), the `noCast` sourceset (inert CastBridge) compiles instead and
+// no Cast SDK is linked. Exactly one variant sourceset is ever on the compile path. Size-sensitive
+// apps that never cast can opt out. See docs/adr/0003 and TODO-CAST.md.
+def enableCast = (getExtOrDefault("enableCast") ?: "true").toString().toBoolean()
+
 android {
   namespace "com.audiobrowser"
 
@@ -68,6 +75,11 @@ android {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
     buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+    buildConfigField "boolean", "ENABLE_CAST", enableCast.toString()
+
+    // Keep the reflectively-instantiated Cast OptionsProvider (only matters when Cast is enabled
+    // and the consuming app minifies; harmless otherwise).
+    consumerProguardFiles 'consumer-rules.pro'
 
     externalNativeBuild {
       cmake {
@@ -142,6 +154,22 @@ android {
           "${project.buildDir}/generated/source/codegen/java"
         ]
       }
+
+      // Cast variant sourceset: exactly one of `cast` (real impl + Cast SDK) or `noCast` (inert
+      // CastBridge) is folded into `main` per build, selected by the AudioBrowser_enableCast flag.
+      // Both define com.audiobrowser.cast.CastBridgeProvider with the same FQN, so the core's
+      // unconditional CastBridgeProvider.create(...) resolves to whichever is active.
+      //
+      // The Cast OptionsProvider <meta-data> lives in src/cast/AndroidManifest.xml and is merged
+      // into the library manifest ONLY when Cast is enabled. A library sourceset takes a single
+      // manifest file, so the cast manifest is a complete manifest (main + the extra meta-data);
+      // when disabled, the unchanged src/main/AndroidManifest.xml is used.
+      if (enableCast) {
+        java.srcDirs += ["src/cast/java"]
+        manifest.srcFile "src/cast/AndroidManifest.xml"
+      } else {
+        java.srcDirs += ["src/noCast/java"]
+      }
     }
   }
 }
@@ -189,6 +217,14 @@ dependencies {
   implementation("androidx.media3:media3-exoplayer-dash:${media3Version}")
   implementation("androidx.media3:media3-exoplayer-smoothstreaming:${media3Version}")
   implementation("androidx.media3:media3-common:${media3Version}")
+
+  // Google Cast (playback destination) — only linked when the opt-in flag is set, so the default
+  // build never pulls in the Cast SDK. media3-cast provides the CastPlayer (a Media3 Player);
+  // play-services-cast-framework provides CastContext / SessionManager / MediaRouter.
+  if (enableCast) {
+    implementation "androidx.media3:media3-cast:${media3Version}"
+    implementation "com.google.android.gms:play-services-cast-framework:21.5.0"
+  }
 
   implementation "com.google.guava:guava:33.0.0-android"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0"

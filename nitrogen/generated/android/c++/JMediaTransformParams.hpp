@@ -14,7 +14,9 @@
 #include "ImageContext.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageContext.hpp"
+#include "JMediaResolveTarget.hpp"
 #include "JRequestConfig.hpp"
+#include "MediaResolveTarget.hpp"
 #include "RequestConfig.hpp"
 #include <optional>
 #include <string>
@@ -43,9 +45,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JRequestConfig> request = this->getFieldValue(fieldRequest);
       static const auto fieldContext = clazz->getField<JImageContext>("context");
       jni::local_ref<JImageContext> context = this->getFieldValue(fieldContext);
+      static const auto fieldTarget = clazz->getField<JMediaResolveTarget>("target");
+      jni::local_ref<JMediaResolveTarget> target = this->getFieldValue(fieldTarget);
       return MediaTransformParams(
         request->toCpp(),
-        context != nullptr ? std::make_optional(context->toCpp()) : std::nullopt
+        context != nullptr ? std::make_optional(context->toCpp()) : std::nullopt,
+        target->toCpp()
       );
     }
 
@@ -55,13 +60,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JMediaTransformParams::javaobject> fromCpp(const MediaTransformParams& value) {
-      using JSignature = JMediaTransformParams(jni::alias_ref<JRequestConfig>, jni::alias_ref<JImageContext>);
+      using JSignature = JMediaTransformParams(jni::alias_ref<JRequestConfig>, jni::alias_ref<JImageContext>, jni::alias_ref<JMediaResolveTarget>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         JRequestConfig::fromCpp(value.request),
-        value.context.has_value() ? JImageContext::fromCpp(value.context.value()) : nullptr
+        value.context.has_value() ? JImageContext::fromCpp(value.context.value()) : nullptr,
+        JMediaResolveTarget::fromCpp(value.target)
       );
     }
   };

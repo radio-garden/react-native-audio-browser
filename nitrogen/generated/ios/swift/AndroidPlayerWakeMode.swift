@@ -17,10 +17,10 @@ public extension AndroidPlayerWakeMode {
    */
   init?(fromString string: String) {
     switch string {
-      case "none":
-        self = .none
       case "local":
         self = .local
+      case "none":
+        self = .none
       case "network":
         self = .network
       default:
@@ -33,10 +33,10 @@ public extension AndroidPlayerWakeMode {
    */
   var stringValue: String {
     switch self {
-      case .none:
-        return "none"
       case .local:
         return "local"
+      case .none:
+        return "none"
       case .network:
         return "network"
     }

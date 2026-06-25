@@ -50,6 +50,27 @@ class PlaybackCoordinator {
     self?.callbacks?.playerDidFirePlaybackInterval()
   }
 
+  // MARK: - Cast (remote playback destination)
+
+  /// The active Cast transport while a Cast session is connected, or nil when
+  /// playback is local. Set by `CastSessionManager` on session start/end.
+  ///
+  /// ADR-0003 (iOS): there is no swappable player object. While casting, the
+  /// coordinator keeps its `PlaybackEffectHandler` (TrackPlayer/AVPlayer) but
+  /// **suspends local playback** and forwards transport (play/pause/seek/skip)
+  /// to the remote client through this delegate; position/state come back from
+  /// the remote client's callbacks via `applyRemoteState`. The local AVPlayer is
+  /// paused for the duration so two streams never play at once.
+  ///
+  /// Defined unconditionally (the protocol is non-Cast-SDK), so the local path
+  /// compiles identically whether or not Cast is built — `castTransport` is
+  /// simply always nil in a non-Cast build because nothing sets it.
+  weak var castTransport: CastTransportDelegate?
+
+  /// True while a Cast session owns playback. All local side effects are
+  /// suppressed and transport is forwarded to `castTransport`.
+  var isRemote: Bool { castTransport != nil }
+
   // MARK: - State
 
   private(set) var state: PlaybackState = .none
@@ -119,6 +140,19 @@ class PlaybackCoordinator {
 
   var playWhenReady: Bool = false {
     didSet {
+      // While casting, transport is the remote client's job: don't drive the
+      // local AVPlayer (it stays paused/suspended). Forward the intent to the
+      // Cast device and let its mediaStatus callbacks flow back via
+      // applyRemoteState. The callbacks/state bookkeeping below still runs so JS
+      // and the now-playing surface reflect the play/pause intent immediately.
+      if isRemote {
+        if oldValue != playWhenReady {
+          if playWhenReady { castTransport?.castPlay() } else { castTransport?.castPause() }
+          callbacks?.playerDidChangePlayWhenReady(playWhenReady)
+          playingStateManager.update(playWhenReady: playWhenReady, state: state)
+        }
+        return
+      }
       if playWhenReady == true, state == .error || state == .stopped {
         effectHandler?.reloadTrack(startFromCurrentTime: state == .error)
       }
@@ -510,6 +544,9 @@ class PlaybackCoordinator {
   func clear() {
     let changed = queue.clear()
     if changed { handleCurrentTrackChanged() }
+    // Mirror the local unload onto the receiver — otherwise the Cast device keeps
+    // playing after the queue is cleared.
+    if isRemote { castTransport?.castStop() }
     effectHandler?.unloadTrack()
     effectHandler?.clearNowPlaying()
   }
@@ -528,8 +565,39 @@ class PlaybackCoordinator {
     }
   }
 
-  func handleCurrentTrackChanged() {
+  /// - Parameter remoteOrigin: true when the track change came FROM the receiver
+  ///   (auto-advance / external next-prev), in which case we must NOT forward a
+  ///   transport skip back to it (that would loop). Passed only by
+  ///   `castSyncToRemoteIndex`; every local-origin call uses the default.
+  func handleCurrentTrackChanged(remoteOrigin: Bool = false) {
     sleepTimerManager.onTrackChanged()
+
+    // While casting, the remote client owns the loaded item. Forward a skip to
+    // the current index instead of driving the local AVPlayer, but still emit
+    // the active-track-changed event below so JS / now-playing follow along.
+    if isRemote {
+      let lastPosition = castTransport?.castCurrentTime ?? 0
+      errorHandler.resetRetry()
+      if playbackError != nil { playbackError = nil }
+      // Forward the skip to the receiver UNLESS this change originated from the
+      // receiver itself (auto-advance / external next-prev) — re-issuing it then
+      // would loop.
+      if currentIndex >= 0, !remoteOrigin {
+        castTransport?.castSkipToCurrentIndex()
+      }
+      let eventData = PlaybackActiveTrackChangedEvent(
+        lastIndex: lastIndex == -1 ? nil : Double(lastIndex),
+        lastTrack: lastTrack,
+        lastPosition: lastPosition,
+        index: currentIndex == -1 ? nil : Double(currentIndex),
+        track: currentTrack,
+      )
+      callbacks?.playerDidChangeActiveTrack(eventData)
+      lastTrack = currentTrack
+      lastIndex = currentIndex
+      pushSkipAvailability()
+      return
+    }
 
     effectHandler?.cancelMediaLoading()
     loadSeekCoordinator.reset()

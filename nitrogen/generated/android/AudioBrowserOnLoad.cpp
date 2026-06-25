@@ -21,8 +21,8 @@
 #include "JFunc_void_std__vector_Track_.hpp"
 #include "JFunc_void_NavigationErrorEvent.hpp"
 #include "JFunc_void_std__optional_FormattedNavigationError_.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
-#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___Track.hpp"
@@ -60,6 +60,7 @@
 #include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JFunc_void_double.hpp"
 #include "JFunc_void_IosOutput.hpp"
+#include "JFunc_void_CastStateChangedEvent.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
 #include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
@@ -94,8 +95,8 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_std__vector_Track__cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_NavigationErrorEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__optional_FormattedNavigationError__cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget__cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_RequestConfig___Track_cxx::registerNatives();
@@ -133,6 +134,7 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_NowPlayingMetadata_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_double_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_IosOutput_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_CastStateChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryWarningPendingChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::registerNatives();

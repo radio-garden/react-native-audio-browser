@@ -759,6 +759,20 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
       onIosOutputChanged = value
     }
   
+  abstract var onCastStateChanged: (event: CastStateChangedEvent) -> Unit
+  
+  private var onCastStateChanged_cxx: Func_void_CastStateChangedEvent
+    @Keep
+    @DoNotStrip
+    get() {
+      return Func_void_CastStateChangedEvent_java(onCastStateChanged)
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onCastStateChanged = value
+    }
+  
   abstract var onEqualizerChanged: (settings: EqualizerSettings) -> Unit
   
   private var onEqualizerChanged_cxx: Func_void_EqualizerSettings
@@ -1069,6 +1083,38 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun openIosOutputPicker(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun configureCast(config: CastConfig): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getCastState(): CastState
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getCastDeviceName(): String?
+  
+  @DoNotStrip
+  @Keep
+  abstract fun isCasting(): Boolean
+  
+  @DoNotStrip
+  @Keep
+  abstract fun showCastPicker(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun retainCastDiscovery(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun releaseCastDiscovery(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun endCastSession(): Unit
   
   @DoNotStrip
   @Keep

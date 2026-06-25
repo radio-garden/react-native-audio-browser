@@ -75,6 +75,8 @@ namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `IosOutput` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct IosOutput; }
+// Forward declaration of `CastStateChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastStateChangedEvent; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -97,6 +99,10 @@ namespace margelo::nitro::audiobrowser { enum class RepeatMode; }
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `CastConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastConfig; }
+// Forward declaration of `CastState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CastState; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 
@@ -138,6 +144,7 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "IosOutput.hpp"
+#include "CastStateChangedEvent.hpp"
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
@@ -149,6 +156,8 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
 #include "NowPlayingUpdate.hpp"
+#include "CastConfig.hpp"
+#include "CastState.hpp"
 #include "BatteryOptimizationStatus.hpp"
 
 namespace margelo::nitro::audiobrowser {
@@ -286,6 +295,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) = 0;
       virtual std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() = 0;
       virtual void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) = 0;
+      virtual std::function<void(const CastStateChangedEvent& /* event */)> getOnCastStateChanged() = 0;
+      virtual void setOnCastStateChanged(const std::function<void(const CastStateChangedEvent& /* event */)>& onCastStateChanged) = 0;
       virtual std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() = 0;
       virtual void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) = 0;
       virtual std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() = 0;
@@ -362,6 +373,14 @@ namespace margelo::nitro::audiobrowser {
       virtual void setSystemVolume(double volume) = 0;
       virtual std::optional<IosOutput> getIosOutput() = 0;
       virtual void openIosOutputPicker() = 0;
+      virtual void configureCast(const CastConfig& config) = 0;
+      virtual CastState getCastState() = 0;
+      virtual std::optional<std::string> getCastDeviceName() = 0;
+      virtual bool isCasting() = 0;
+      virtual void showCastPicker() = 0;
+      virtual void retainCastDiscovery() = 0;
+      virtual void releaseCastDiscovery() = 0;
+      virtual void endCastSession() = 0;
       virtual std::optional<EqualizerSettings> getEqualizerSettings() = 0;
       virtual void setEqualizerEnabled(bool enabled) = 0;
       virtual void setEqualizerPreset(const std::string& preset) = 0;

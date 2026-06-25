@@ -86,6 +86,32 @@ export type IosOutput = {
   external: boolean
 }
 
+/**
+ * Google Cast connection lifecycle. Distinct from PlaybackState/PlayingState:
+ * a `connected` Cast session can still be paused or buffering.
+ */
+export type CastState =
+  | 'no-devices' // none discovered on the network (also: non-Cast build / before configureCast)
+  | 'not-connected' // devices available, idle
+  | 'connecting'
+  | 'connected' // audio is on the Cast device
+
+/** Options passed to `configureCast` to initialise Google Cast. */
+export type CastConfig = {
+  /**
+   * Cast receiver application id. Omit to use Google's Default Media Receiver.
+   * Bound at the first `configureCast` for the process lifetime — a later call
+   * with a different id is ignored (the Cast context initialises once).
+   */
+  receiverApplicationId?: string
+}
+
+/** Payload for `onCastStateChanged`. */
+export type CastStateChangedEvent = {
+  state: CastState
+  deviceName: string | undefined
+}
+
 export interface AudioBrowser extends HybridObject<{
   ios: 'swift'
   android: 'kotlin'
@@ -324,6 +350,40 @@ export interface AudioBrowser extends HybridObject<{
    * No-op on Android.
    */
   openIosOutputPicker(): void
+
+  // MARK: cast (Google Cast — opt-in build flag; inert until configureCast)
+  /**
+   * Initialise Google Cast and start wiring discovery/session handling.
+   * Idempotent; the first call inits the Cast SDK with the receiver app id.
+   * No-op on a build without Cast enabled.
+   */
+  configureCast(config: CastConfig): void
+  /**
+   * Current Cast connection state. `no-devices` on a non-Cast build or before
+   * `configureCast`. Distinct from playback state.
+   */
+  getCastState(): CastState
+  /** Human-readable name of the connected Cast device, or undefined. */
+  getCastDeviceName(): string | undefined
+  /** Convenience: whether a Cast session is currently connected. */
+  isCasting(): boolean
+  /** Present the system Cast device chooser. No-op if not configured. */
+  showCastPicker(): void
+  /**
+   * Begin active Cast device discovery. Ref-counted by the JS layer and driven
+   * by mounted Cast hooks; active scanning is what makes `getCastState`
+   * distinguish `no-devices` from `not-connected`. No-op until configured.
+   */
+  retainCastDiscovery(): void
+  /** Release one active-discovery retain; stops scanning when the count hits zero. */
+  releaseCastDiscovery(): void
+  /** Disconnect the current Cast session, handing playback back to the phone. */
+  endCastSession(): void
+  /**
+   * Called when the Cast connection state or connected device changes.
+   * Never fires on a non-Cast build or before `configureCast`.
+   */
+  onCastStateChanged: (event: CastStateChangedEvent) => void
 
   // MARK: equalizer (Android only)
   getEqualizerSettings(): EqualizerSettings | undefined

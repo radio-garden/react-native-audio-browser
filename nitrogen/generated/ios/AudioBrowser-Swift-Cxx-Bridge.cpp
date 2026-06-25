@@ -62,11 +62,11 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
-  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
-      auto __result = swiftClosure.call(request, routeParams);
+  // pragma MARK: std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>
+  Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams, std::optional<MediaResolveTarget> target) mutable -> std::shared_ptr<Promise<std::shared_ptr<Promise<RequestConfig>>>> {
+      auto __result = swiftClosure.call(request, routeParams, target);
       return __result;
     };
   }
@@ -87,11 +87,11 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */)>
-  Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams) mutable -> std::shared_ptr<Promise<RequestConfig>> {
-      auto __result = swiftClosure.call(request, routeParams);
+  // pragma MARK: std::function<std::shared_ptr<Promise<RequestConfig>>(const RequestConfig& /* request */, const std::optional<std::unordered_map<std::string, std::string>>& /* routeParams */, std::optional<MediaResolveTarget> /* target */)>
+  Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_ create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const RequestConfig& request, const std::optional<std::unordered_map<std::string, std::string>>& routeParams, std::optional<MediaResolveTarget> target) mutable -> std::shared_ptr<Promise<RequestConfig>> {
+      auto __result = swiftClosure.call(request, routeParams, target);
       return __result;
     };
   }
@@ -489,6 +489,14 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     auto swiftClosure = AudioBrowser::Func_void_IosOutput::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const IosOutput& output) mutable -> void {
       swiftClosure.call(output);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const CastStateChangedEvent& /* event */)>
+  Func_void_CastStateChangedEvent create_Func_void_CastStateChangedEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = AudioBrowser::Func_void_CastStateChangedEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const CastStateChangedEvent& event) mutable -> void {
+      swiftClosure.call(event);
     };
   }
   

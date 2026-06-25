@@ -69,6 +69,7 @@ export default withMermaid(
             items: [
               { text: 'Audio Output', link: '/guide/audio-output' },
               { text: 'Battery', link: '/guide/battery' },
+              { text: 'Cast', link: '/guide/cast' },
               { text: 'Equalizer', link: '/guide/equalizer' },
               { text: 'Network', link: '/guide/network' },
               { text: 'Sleep Timer', link: '/guide/sleep-timer' }

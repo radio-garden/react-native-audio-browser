@@ -167,11 +167,18 @@ export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
 // no Promise. When both are set they run as a pipeline: async first, then sync.
 export type RequestConfigTransformer = (
   request: RequestConfig,
-  routeParams?: Record<string, string>
+  routeParams?: Record<string, string>,
+  /**
+   * Resolution destination, populated for media requests. `'cast'` means the URL
+   * is for a Google Cast device that fetches it itself — emit a self-contained,
+   * signed URL (request headers do not cross). `'local'`/undefined otherwise.
+   */
+  target?: MediaResolveTarget
 ) => Promise<RequestConfig>
 export type RequestConfigTransformerSync = (
   request: RequestConfig,
-  routeParams?: Record<string, string>
+  routeParams?: Record<string, string>,
+  target?: MediaResolveTarget
 ) => RequestConfig
 
 export type HttpMethod =
@@ -239,11 +246,25 @@ export interface ImageContext {
 /**
  * Parameters for the media request transform callback.
  */
+/**
+ * Resolution destination for a media/artwork request. `'local'` resolves for
+ * in-process playback (request headers are replayed by the DataSource); `'cast'`
+ * resolves for a Google Cast device, which fetches the media/artwork itself, so
+ * the result MUST be self-contained (query-signed) — request headers do not
+ * cross to the receiver.
+ */
+export type MediaResolveTarget = 'local' | 'cast'
+
 export interface MediaTransformParams {
   /** The merged request configuration to transform */
   request: RequestConfig
   /** Optional image context with size hints from Android Auto/CarPlay */
   context?: ImageContext
+  /**
+   * Resolution destination. Defaults to `'local'`. Branch on `'cast'` to emit a
+   * self-contained, signed URL the Cast device can fetch directly.
+   */
+  target: MediaResolveTarget
 }
 
 /**

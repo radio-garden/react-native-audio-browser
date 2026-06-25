@@ -325,13 +325,15 @@ export const RequestConfigBuilder = {
       if (artworkConfig.transform) {
         mergedConfig = await artworkConfig.transform({
           request: mergedConfig,
-          context: imageContext
+          context: imageContext,
+          target: 'local'
         })
       }
       if (artworkConfig.transformSync) {
         mergedConfig = artworkConfig.transformSync({
           request: mergedConfig,
-          context: imageContext
+          context: imageContext,
+          target: 'local'
         })
       }
 

@@ -25,6 +25,8 @@
 #include "JMediaTransformParams.hpp"
 #include "ImageContext.hpp"
 #include "JImageContext.hpp"
+#include "MediaResolveTarget.hpp"
+#include "JMediaResolveTarget.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

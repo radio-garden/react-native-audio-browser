@@ -14,7 +14,15 @@ extension BrowserManager {
   /// `resolve` layer (if configured) is merged last via `mergeRequestConfig`,
   /// so its fields win. The `track` is only used to feed `resolve`; we do NOT
   /// auto-merge `track.request` here.
-  func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
+  ///
+  /// `target` is the resolution destination (`.local` for the on-device
+  /// AVPlayer, `.cast` for a Cast device that fetches the URL itself). It is
+  /// passed as the 3rd argument to the consumer's media `transform` /
+  /// `transformSync` callback (after `request`, `routeParams`), so the consumer
+  /// can branch on it — emitting a self-contained (query-signed) URL for `.cast`
+  /// (request headers do NOT cross to the receiver) vs a header-auth URL for
+  /// `.local`. The Cast layer calls this with `.cast`.
+  func resolveMediaUrl(_ originalUrl: String, track: Track? = nil, target: MediaResolveTarget = .local) async -> MediaResolvedUrl {
     logger.debug("Resolving media URL: \(originalUrl)")
 
     // Apply the shared `request` layer first (its transform runs for media too,
@@ -54,7 +62,7 @@ extension BrowserManager {
     do {
       var merged = baseRequest
       if let mediaConfig = config.media {
-        merged = try await applyMediaLayer(mediaConfig, to: merged)
+        merged = try await applyMediaLayer(mediaConfig, to: merged, target: target)
       }
       merged = applyMediaResolveLayer(base: merged, resolve: resolveLayer)
       let finalUrl = buildUrl(from: merged)
@@ -76,14 +84,18 @@ extension BrowserManager {
   /// media config's static fields merge over the base with `path` carried from the
   /// base (only a transform may change it). The same rule as `applyLayer`; matches
   /// the web stub and Android.
-  private func applyMediaLayer(_ media: MediaRequestConfig, to base: RequestConfig) async throws -> RequestConfig {
+  private func applyMediaLayer(_ media: MediaRequestConfig, to base: RequestConfig, target: MediaResolveTarget) async throws -> RequestConfig {
     if media.transform != nil || media.transformSync != nil {
       var result = base
+      // Pass the resolution destination as the 3rd transform arg so a consumer's
+      // media transform can branch on it — emitting a self-contained, query-signed
+      // URL for `.cast` (the receiver fetches the media itself; request headers do
+      // not cross the boundary) vs a header-auth URL for `.local`.
       if let transform = media.transform {
-        result = try await awaitAsyncConfig(transform(result, nil))
+        result = try await awaitAsyncConfig(transform(result, nil, target))
       }
       if let transformSync = media.transformSync {
-        result = try await awaitSyncConfig(transformSync(result, nil))
+        result = try await awaitSyncConfig(transformSync(result, nil, target))
       }
       return result
     }
@@ -144,8 +156,12 @@ extension BrowserManager {
   ///   - track: The track whose artwork URL should be transformed
   ///   - perRouteConfig: Optional per-route artwork config that overrides global config
   ///   - imageContext: Optional size context for CDN URL generation (nil at browse-time)
+  ///   - target: Resolution destination (`.local` on-device, `.cast` for a Cast
+  ///     device that fetches the artwork itself — so the transform can emit a
+  ///     self-contained, query-signed URL since request headers do not cross to
+  ///     the receiver). Passed into `MediaTransformParams.target`.
   /// - Returns: ImageSource ready for image loading, or nil if no artwork
-  func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
+  func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil, target: MediaResolveTarget = .local) async -> ImageSource? {
     if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
       let canvasSize: CGSize = if let w = imageContext?.width, let h = imageContext?.height {
         CGSize(width: w, height: h)
@@ -255,10 +271,10 @@ extension BrowserManager {
       // consumers; load-time surfaces re-resolve Track-first with the real size,
       // so running it here cannot double-transform.)
       if let transform = artworkConfig.transform {
-        mergedConfig = try await awaitAsyncConfig(transform(MediaTransformParams(request: mergedConfig, context: imageContext)))
+        mergedConfig = try await awaitAsyncConfig(transform(MediaTransformParams(request: mergedConfig, context: imageContext, target: target)))
       }
       if let transformSync = artworkConfig.transformSync {
-        mergedConfig = try await awaitSyncConfig(transformSync(MediaTransformParams(request: mergedConfig, context: imageContext)))
+        mergedConfig = try await awaitSyncConfig(transformSync(MediaTransformParams(request: mergedConfig, context: imageContext, target: target)))
       }
 
       // Substitute the `{id}` template token with the track's id across path/query/header values.

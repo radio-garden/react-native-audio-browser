@@ -37,6 +37,8 @@ namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
 namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 // Forward declaration of `RequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RequestConfig; }
+// Forward declaration of `MediaResolveTarget` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaResolveTarget; }
 // Forward declaration of `MediaRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct MediaRequestConfig; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
@@ -145,6 +147,10 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 namespace margelo::nitro::audiobrowser { struct IosOutput; }
 // Forward declaration of `IosOutputType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
+// Forward declaration of `CastStateChangedEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastStateChangedEvent; }
+// Forward declaration of `CastState` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CastState; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -189,6 +195,8 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `StallReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
+// Forward declaration of `CastConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct CastConfig; }
 
 #include <string>
 #include <optional>
@@ -231,10 +239,12 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JTransformableRequestConfig.hpp"
 #include "RequestConfig.hpp"
 #include <NitroModules/Promise.hpp>
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "MediaResolveTarget.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_.hpp"
 #include <NitroModules/JPromise.hpp>
 #include "JRequestConfig.hpp"
-#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JMediaResolveTarget.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___std__optional_MediaResolveTarget_.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____.hpp"
 #include "MediaRequestConfig.hpp"
 #include "JMediaRequestConfig.hpp"
@@ -390,6 +400,11 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JIosOutput.hpp"
 #include "IosOutputType.hpp"
 #include "JIosOutputType.hpp"
+#include "CastStateChangedEvent.hpp"
+#include "JFunc_void_CastStateChangedEvent.hpp"
+#include "JCastStateChangedEvent.hpp"
+#include "CastState.hpp"
+#include "JCastState.hpp"
 #include "EqualizerSettings.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JEqualizerSettings.hpp"
@@ -440,6 +455,8 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JFormatNowPlayingParams.hpp"
 #include "StallReason.hpp"
 #include "JStallReason.hpp"
+#include "CastConfig.hpp"
+#include "JCastConfig.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -1383,6 +1400,23 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_IosOutput::javaobject> /* onIosOutputChanged */)>("setOnIosOutputChanged_cxx");
     method(_javaPart, JFunc_void_IosOutput_cxx::fromCpp(onIosOutputChanged));
   }
+  std::function<void(const CastStateChangedEvent& /* event */)> JHybridAudioBrowserSpec::getOnCastStateChanged() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_CastStateChangedEvent::javaobject>()>("getOnCastStateChanged_cxx");
+    auto __result = method(_javaPart);
+    return [&]() -> std::function<void(const CastStateChangedEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_CastStateChangedEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_CastStateChangedEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_CastStateChangedEvent, void(CastStateChangedEvent)>(std::move(__resultRef));
+      }
+    }();
+  }
+  void JHybridAudioBrowserSpec::setOnCastStateChanged(const std::function<void(const CastStateChangedEvent& /* event */)>& onCastStateChanged) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_CastStateChangedEvent::javaobject> /* onCastStateChanged */)>("setOnCastStateChanged_cxx");
+    method(_javaPart, JFunc_void_CastStateChangedEvent_cxx::fromCpp(onCastStateChanged));
+  }
   std::function<void(const EqualizerSettings& /* settings */)> JHybridAudioBrowserSpec::getOnEqualizerChanged() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_EqualizerSettings::javaobject>()>("getOnEqualizerChanged_cxx");
     auto __result = method(_javaPart);
@@ -1799,6 +1833,41 @@ namespace margelo::nitro::audiobrowser {
   }
   void JHybridAudioBrowserSpec::openIosOutputPicker() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("openIosOutputPicker");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::configureCast(const CastConfig& config) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JCastConfig> /* config */)>("configureCast");
+    method(_javaPart, JCastConfig::fromCpp(config));
+  }
+  CastState JHybridAudioBrowserSpec::getCastState() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JCastState>()>("getCastState");
+    auto __result = method(_javaPart);
+    return __result->toCpp();
+  }
+  std::optional<std::string> JHybridAudioBrowserSpec::getCastDeviceName() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getCastDeviceName");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toStdString()) : std::nullopt;
+  }
+  bool JHybridAudioBrowserSpec::isCasting() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("isCasting");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
+  void JHybridAudioBrowserSpec::showCastPicker() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("showCastPicker");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::retainCastDiscovery() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("retainCastDiscovery");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::releaseCastDiscovery() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("releaseCastDiscovery");
+    method(_javaPart);
+  }
+  void JHybridAudioBrowserSpec::endCastSession() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("endCastSession");
     method(_javaPart);
   }
   std::optional<EqualizerSettings> JHybridAudioBrowserSpec::getEqualizerSettings() {
