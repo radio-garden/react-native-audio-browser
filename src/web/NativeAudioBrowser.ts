@@ -60,7 +60,7 @@ import {
 } from './TrackPlayer'
 import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
-import { BrowserPathHelper } from './util/BrowserPathHelper'
+import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 
 /**
  * Web implementation of AudioBrowser (unified browser + player)
@@ -368,9 +368,8 @@ export class NativeAudioBrowser
   }
 
   navigateTrack(track: Track): void {
-    const url = track.url
     // Execute async navigation logic without blocking
-    void this.navigateTrackAsync(track, url)
+    void this.navigateTrackAsync(track)
   }
 
   /**
@@ -455,56 +454,52 @@ export class NativeAudioBrowser
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
-  private async navigateTrackAsync(
-    track: Track,
-    url: string | undefined
-  ): Promise<void> {
+  private async navigateTrackAsync(track: Track): Promise<void> {
     try {
-      // Handle contextual URL (playable track with queue context)
-      if (url && BrowserPathHelper.isContextual(url)) {
-        const parentPath = BrowserPathHelper.stripTrackId(url)
-        const trackId = BrowserPathHelper.extractTrackId(url)
-
-        // Optimization: skip to track if already in current queue
-        if (trackId && await this.trySkipToExistingQueueTrack(trackId, parentPath)) {
+      const nav = classifyTrackNavigation(track)
+      switch (nav.kind) {
+        case 'contextual':
+          // Optimization: skip to the track if it's already in the queue.
+          if (
+            nav.trackId &&
+            (await this.trySkipToExistingQueueTrack(
+              nav.trackId,
+              nav.parentPath
+            ))
+          ) {
+            return
+          }
+          // Otherwise expand the queue from the contextual URL, falling back to
+          // loading the single track if expansion yields nothing.
+          if (await this.expandQueueAndPlay(track)) return
+          await this.playSingleTrack(track)
           return
-        }
 
-        // Expand queue from contextual URL
-        if (await this.expandQueueAndPlay(track)) {
+        case 'browse':
+          this.browserManager.navigateTrack(track).catch((error: unknown) => {
+            console.error('Failed to navigate to track:', error)
+          })
           return
-        }
 
-        // Fallback: load single track if expansion fails
-        await this.handleLoad(track, [track], 0, () => {
-          this.load(track)
-          this.play()
-        })
-        return
+        case 'playable':
+          await this.playSingleTrack(track)
+          return
+
+        case 'invalid':
+          throw new Error("Track must have either 'url' or 'src' property")
       }
-
-      // Handle browsable track (has URL but not contextual)
-      if (url) {
-        this.browserManager.navigateTrack(track).catch((error: unknown) => {
-          console.error('Failed to navigate to track:', error)
-        })
-        return
-      }
-
-      // Handle playable track (has src but no URL)
-      if (track.src) {
-        await this.handleLoad(track, [track], 0, () => {
-          this.load(track)
-          this.play()
-        })
-        return
-      }
-
-      throw new Error("Track must have either 'url' or 'src' property")
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.navigationErrorManager.setNavigationError('unknown-error', message)
     }
+  }
+
+  /** Loads a single track as its own queue and starts playback. */
+  private async playSingleTrack(track: Track): Promise<void> {
+    await this.handleLoad(track, [track], 0, () => {
+      this.load(track)
+      this.play()
+    })
   }
 
   async onSearch(query: string): Promise<Track[]> {
