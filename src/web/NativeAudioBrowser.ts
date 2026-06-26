@@ -58,6 +58,7 @@ import {
   SleepTimerManager,
   VolumeFader
 } from './TrackPlayer'
+import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
@@ -98,8 +99,8 @@ export class NativeAudioBrowser
 
   // Player state
   private currentLoadId = 0
-  private progressUpdateEventInterval: NodeJS.Timeout | undefined
-  private playbackIntervalTimer: NodeJS.Timeout | undefined
+  private progressTimer = new PlaybackTimer()
+  private intervalTimer = new PlaybackTimer()
   private _online: boolean =
     typeof navigator !== 'undefined' ? navigator.onLine : true
   private onlineHandler: (() => void) | undefined
@@ -321,43 +322,36 @@ export class NativeAudioBrowser
   }
 
   protected setupProgressUpdates(interval?: number) {
-    this.clearUpdateEventInterval()
-    if (interval) {
-      this.progressUpdateEventInterval = setInterval(() => {
+    // Match Android: emit progress during loading, buffering, and playing.
+    this.progressTimer.start(
+      (interval ?? 0) * 1000,
+      () => {
         const state = this.state.state
-        // Match Android: emit progress during loading, buffering, and playing
-        if (
-          state === 'playing' ||
-          state === 'loading' ||
-          state === 'buffering'
-        ) {
-          const progress = this.getProgress()
-          const event: PlaybackProgressUpdatedEvent = {
-            ...progress,
-            track: this.currentIndex || 0
-          }
-          this.onPlaybackProgressUpdated(event)
-          this.remoteCommands.updateProgress()
-        }
-      }, interval * 1000)
-    }
+        return (
+          state === 'playing' || state === 'loading' || state === 'buffering'
+        )
+      },
+      () => {
+        const progress = this.getProgress()
+        this.onPlaybackProgressUpdated({
+          ...progress,
+          track: this.currentIndex || 0
+        })
+        this.remoteCommands.updateProgress()
+      }
+    )
   }
 
   protected clearUpdateEventInterval() {
-    if (this.progressUpdateEventInterval) {
-      clearInterval(this.progressUpdateEventInterval)
-    }
+    this.progressTimer.stop()
   }
 
   setPlaybackIntervalEnabled(enabled: boolean): void {
-    if (this.playbackIntervalTimer) {
-      clearInterval(this.playbackIntervalTimer)
-      this.playbackIntervalTimer = undefined
-    }
-    if (!enabled) return
-    this.playbackIntervalTimer = setInterval(() => {
-      if (this.state.state === 'playing') this.onPlaybackInterval()
-    }, 1000)
+    this.intervalTimer.start(
+      enabled ? 1000 : 0,
+      () => this.state.state === 'playing',
+      () => this.onPlaybackInterval()
+    )
   }
 
   protected onPlaylistEnded() {
