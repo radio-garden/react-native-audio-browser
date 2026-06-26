@@ -444,7 +444,12 @@ export class NativeAudioBrowser
     }
 
     await this.handleLoad(track, result.tracks, result.startIndex, () => {
+      // setQueue keeps the current play/pause state, so start playback
+      // explicitly — selecting a track is an intent to play (matches the
+      // skip-to-existing-queue-track path). Without this the first track of a
+      // freshly expanded queue loads but stays paused.
       this.setQueue(result.tracks, result.startIndex)
+      this.play()
     })
     return true
   }
@@ -474,7 +479,10 @@ export class NativeAudioBrowser
         }
 
         // Fallback: load single track if expansion fails
-        await this.handleLoad(track, [track], 0, () => this.load(track))
+        await this.handleLoad(track, [track], 0, () => {
+          this.load(track)
+          this.play()
+        })
         return
       }
 
@@ -488,7 +496,10 @@ export class NativeAudioBrowser
 
       // Handle playable track (has src but no URL)
       if (track.src) {
-        await this.handleLoad(track, [track], 0, () => this.load(track))
+        await this.handleLoad(track, [track], 0, () => {
+          this.load(track)
+          this.play()
+        })
         return
       }
 
