@@ -1,4 +1,4 @@
-import type shaka from 'shaka-player/dist/shaka-player.ui'
+import type shaka from 'shaka-player/dist/shaka-player.compiled'
 import type {
   Progress,
   NativeSetupPlayerOptions,
@@ -90,7 +90,8 @@ export class Player {
     // there's nothing to rebuild — the caller re-applies options/state on top.
     if (this.hasInitialized === true) return
 
-    const shaka = (await import('shaka-player/dist/shaka-player.ui')).default
+    const shaka = (await import('shaka-player/dist/shaka-player.compiled'))
+      .default
     // Install built-in polyfills to patch browser incompatibilities.
     shaka.polyfill.installAll()
     // Check to see if the browser supports the basic APIs Shaka needs.
