@@ -52,6 +52,7 @@ import { HttpClient } from './http/HttpClient'
 import { RequestConfigBuilder } from './http/RequestConfigBuilder'
 import { NowPlayingManager } from './player/NowPlayingManager'
 import { OptionsManager } from './player/OptionsManager'
+import { RemoteCommandController } from './player/RemoteCommandController'
 import {
   PlaylistPlayer,
   SleepTimerManager,
@@ -74,6 +75,7 @@ export class NativeAudioBrowser
   dispose() {
     this.clearUpdateEventInterval()
     this.setPlaybackIntervalEnabled(false)
+    this.remoteCommands.dispose()
     // Remove window event listeners to prevent memory leaks
     if (typeof window !== 'undefined' && this.onlineHandler) {
       window.removeEventListener('online', this.onlineHandler)
@@ -91,6 +93,7 @@ export class NativeAudioBrowser
   private searchManager: SearchManager
   private optionsManager: OptionsManager
   private nowPlayingManager: NowPlayingManager
+  private remoteCommands: RemoteCommandController
 
   // Player state
   private currentLoadId = 0
@@ -236,6 +239,7 @@ export class NativeAudioBrowser
     this.navigationErrorManager = new NavigationErrorManager()
     this.optionsManager = new OptionsManager()
     this.nowPlayingManager = new NowPlayingManager()
+    this.remoteCommands = new RemoteCommandController(this)
 
     this.browserManager = new BrowserManager(
       this.httpClient,
@@ -257,7 +261,7 @@ export class NativeAudioBrowser
     this.optionsManager.onOptionsChanged = (options) =>
       this.onOptionsChanged(options)
     this.nowPlayingManager.onNowPlayingChanged = (metadata) =>
-      this.onNowPlayingChanged(metadata)
+      this.publishNowPlaying(metadata)
 
     // Setup online/offline listeners
     if (typeof window !== 'undefined') {
@@ -297,6 +301,7 @@ export class NativeAudioBrowser
     // Call callbacks
     this.onPlaybackChanged(newState)
     this.onPlaybackPlayingState(this.getPlayingStateFromPlayback(newState))
+    this.remoteCommands.syncPlaybackState()
 
     if (newState.state === 'error' && newState.error) {
       this.onPlaybackError({ error: newState.error })
@@ -318,6 +323,15 @@ export class NativeAudioBrowser
     }
   }
 
+  /**
+   * Emits now-playing metadata to JS consumers and mirrors it to the OS media
+   * controls (lockscreen / notification / media keys).
+   */
+  private publishNowPlaying(metadata: NowPlayingMetadata): void {
+    this.onNowPlayingChanged(metadata)
+    this.remoteCommands.setMetadata(metadata)
+  }
+
   protected setupProgressUpdates(interval?: number) {
     this.clearUpdateEventInterval()
     if (interval) {
@@ -335,6 +349,7 @@ export class NativeAudioBrowser
             track: this.currentIndex || 0
           }
           this.onPlaybackProgressUpdated(event)
+          this.remoteCommands.updateProgress()
         }
       }, interval * 1000)
     }
@@ -636,7 +651,7 @@ export class NativeAudioBrowser
         // Update now playing metadata
         const nowPlaying = this.getNowPlaying()
         if (nowPlaying) {
-          this.onNowPlayingChanged(nowPlaying)
+          this.publishNowPlaying(nowPlaying)
         }
 
         // Call the provided callback if any
@@ -671,6 +686,7 @@ export class NativeAudioBrowser
       this.onPlaybackPlayWhenReadyChanged({
         playWhenReady: this._playWhenReady
       })
+      this.remoteCommands.syncPlaybackState()
     }
   }
 
