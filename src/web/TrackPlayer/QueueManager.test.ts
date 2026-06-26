@@ -65,7 +65,7 @@ describe('QueueManager', () => {
     it('only wraps when repeat mode is playlist', () => {
       expect(q.wrapAroundFirstIndex()).toBeUndefined()
       expect(q.wrapAroundLastIndex()).toBeUndefined()
-      q.repeatMode = RepeatMode.Playlist
+      q.repeatMode = RepeatMode.Queue
       expect(q.wrapAroundFirstIndex()).toBe(0)
       expect(q.wrapAroundLastIndex()).toBe(2)
     })

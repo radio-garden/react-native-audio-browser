@@ -13,7 +13,7 @@ import { State } from './State'
  * queue on track end, loading the track when the index changes — while the
  * queue data and index math live in {@link QueueManager}.
  */
-export class PlaylistPlayer extends Player {
+export class QueuePlayer extends Player {
   protected queue = new QueueManager()
 
   protected applyState(state: PlaybackState) {
@@ -33,21 +33,21 @@ export class PlaylistPlayer extends Player {
           this.goToIndex(this.queue.currentIndex)
         }
         break
-      case RepeatMode.Playlist:
+      case RepeatMode.Queue:
         this.skipToNext()
         break
       default:
         if (this.queue.nextIndex() !== undefined) {
           this.skipToNext()
         } else {
-          this.onPlaylistEnded()
+          this.onQueueEnded()
         }
         break
     }
   }
 
-  protected onPlaylistEnded() {
-    console.warn('`onPlaylistEnded` is currently unimplemented')
+  protected onQueueEnded() {
+    console.warn('`onQueueEnded` is currently unimplemented')
   }
 
   protected goToIndex(index: number, initialPosition?: number) {

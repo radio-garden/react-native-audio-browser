@@ -54,7 +54,7 @@ import { NowPlayingManager } from './player/NowPlayingManager'
 import { OptionsManager } from './player/OptionsManager'
 import { RemoteCommandController } from './player/RemoteCommandController'
 import {
-  PlaylistPlayer,
+  QueuePlayer,
   SleepTimerManager,
   VolumeFader
 } from './TrackPlayer'
@@ -66,7 +66,7 @@ import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
  * Web implementation of AudioBrowser (unified browser + player)
  */
 export class NativeAudioBrowser
-  extends PlaylistPlayer
+  extends QueuePlayer
   implements AudioBrowserSpec
 {
   // HybridObject stuff
@@ -354,8 +354,8 @@ export class NativeAudioBrowser
     )
   }
 
-  protected onPlaylistEnded() {
-    super.onPlaylistEnded()
+  protected onQueueEnded() {
+    super.onQueueEnded()
     this.onPlaybackQueueEnded({
       track: this.queue.currentIndex ?? 0,
       position: this.element?.currentTime ?? 0
@@ -845,7 +845,7 @@ export class NativeAudioBrowser
       favorited
     }
 
-    // Replace the track in the playlist
+    // Replace the track in the queue
     this.queue.replaceTrack(index, updatedTrack)
 
     // Emit favorite changed event

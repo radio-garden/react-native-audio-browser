@@ -136,12 +136,12 @@ export class QueueManager {
   }
 
   wrapAroundFirstIndex(): number | undefined {
-    if (this._repeatMode !== RepeatMode.Playlist) return undefined
+    if (this._repeatMode !== RepeatMode.Queue) return undefined
     return this._shuffleEnabled ? this.shuffleOrder[0] : 0
   }
 
   wrapAroundLastIndex(): number | undefined {
-    if (this._repeatMode !== RepeatMode.Playlist) return undefined
+    if (this._repeatMode !== RepeatMode.Queue) return undefined
     return this._shuffleEnabled
       ? this.shuffleOrder[this.shuffleOrder.length - 1]
       : this._tracks.length - 1

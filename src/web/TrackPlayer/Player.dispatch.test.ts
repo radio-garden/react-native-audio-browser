@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Playback, PlaybackState } from '../../features'
 import type { PlaybackEvent } from './PlaybackStateMachine'
 import { Player } from './Player'
-import { PlaylistPlayer } from './PlaylistPlayer'
+import { QueuePlayer } from './QueuePlayer'
 
 // Exercises the integration seam between the element/Shaka events and the state
 // machine — the web-specific behaviour the pure machine test doesn't cover.
@@ -21,7 +21,7 @@ class TestPlayer extends Player {
   }
 }
 
-class TestPlaylistPlayer extends PlaylistPlayer {
+class TestQueuePlayer extends QueuePlayer {
   endedCount = 0
   protected onTrackEnded(): void {
     this.endedCount++
@@ -76,9 +76,9 @@ describe('Player.dispatch', () => {
   })
 })
 
-describe('PlaylistPlayer queue advance', () => {
+describe('QueuePlayer queue advance', () => {
   it('advances the queue when a track ends naturally', () => {
-    const player = new TestPlaylistPlayer()
+    const player = new TestQueuePlayer()
 
     player.emit({ type: 'trackEndedNaturally' })
 
@@ -86,7 +86,7 @@ describe('PlaylistPlayer queue advance', () => {
   })
 
   it('does not advance the queue on an end event while stopped', () => {
-    const player = new TestPlaylistPlayer()
+    const player = new TestQueuePlayer()
     player.forceStopped(true)
 
     player.emit({ type: 'trackEndedNaturally' })

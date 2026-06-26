@@ -174,7 +174,7 @@ export class Player {
 
   /**
    * Applies a machine-decided state. Overridable so subclasses can react to
-   * specific transitions (e.g. PlaylistPlayer advancing the queue on `ended`).
+   * specific transitions (e.g. QueuePlayer advancing the queue on `ended`).
    */
   protected applyState(state: PlaybackState): void {
     this.state = { state }
