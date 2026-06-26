@@ -58,6 +58,7 @@ import {
   SleepTimerManager,
   VolumeFader
 } from './TrackPlayer'
+import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
 import { BrowserPathHelper } from './util/BrowserPathHelper'
 
 /**
@@ -300,26 +301,13 @@ export class NativeAudioBrowser
 
     // Call callbacks
     this.onPlaybackChanged(newState)
-    this.onPlaybackPlayingState(this.getPlayingStateFromPlayback(newState))
+    this.onPlaybackPlayingState(
+      derivePlayingState(this._playWhenReady, newState.state)
+    )
     this.remoteCommands.syncPlaybackState()
 
     if (newState.state === 'error' && newState.error) {
       this.onPlaybackError({ error: newState.error })
-    }
-  }
-
-  /**
-   * Derives PlayingState from playback state and playWhenReady.
-   * Matches Android's PlayingStateFactory.derive() logic.
-   */
-  private getPlayingStateFromPlayback(playback: Playback): PlayingState {
-    const state = playback.state
-    const pwr = this._playWhenReady
-    return {
-      playing:
-        pwr && state !== 'error' && state !== 'ended' && state !== 'none',
-      buffering:
-        pwr && (state === 'loading' || state === 'buffering')
     }
   }
 
@@ -699,7 +687,7 @@ export class NativeAudioBrowser
   }
 
   getPlayingState(): PlayingState {
-    return this.getPlayingStateFromPlayback(this.state)
+    return derivePlayingState(this._playWhenReady, this.state.state)
   }
 
   getRepeatMode(): RepeatModeType {
