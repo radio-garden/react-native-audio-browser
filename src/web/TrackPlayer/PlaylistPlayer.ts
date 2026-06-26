@@ -1,6 +1,8 @@
-import type { RepeatMode as RepeatModeType } from '../../features'
+import type {
+  PlaybackState,
+  RepeatMode as RepeatModeType
+} from '../../features'
 import type { Track } from '../../types'
-import type { State as StateType } from './State'
 import { assertedNotNullish } from '../../utils/validation'
 import { fisherYatesShuffle } from '../util/shuffle'
 import { Player } from './Player'
@@ -16,11 +18,11 @@ export class PlaylistPlayer extends Player {
   protected shuffleEnabled: boolean = false
   protected shuffleOrder: number[] = []
 
-  protected onStateUpdate(state: Exclude<StateType, typeof State.Error>) {
-    super.onStateUpdate(state)
+  protected applyState(state: PlaybackState) {
+    super.applyState(state)
 
-    if (this._isStopped) return
-
+    // dispatch() already gates on _isStopped before reaching applyState, so a
+    // natural end while stopped never advances the queue.
     if (state === State.Ended) {
       this.onTrackEnded()
     }

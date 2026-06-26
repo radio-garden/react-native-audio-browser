@@ -3,10 +3,12 @@ import type {
   Progress,
   NativeSetupPlayerOptions,
   Playback,
-  PlaybackError
+  PlaybackError,
+  PlaybackState
 } from '../../features'
 import type { Track } from '../../types'
-import type { State as StateType } from './State'
+import type { PlaybackEvent } from './PlaybackStateMachine'
+import { nextPlaybackState } from './PlaybackStateMachine'
 import { SetupNotCalledError } from './SetupNotCalledError'
 import { State } from './State'
 
@@ -123,20 +125,28 @@ export class Player {
       this.onError(errorEvent.detail)
     })
 
-    element.addEventListener('ended', () => this.onStateUpdate(State.Ended))
-    element.addEventListener('playing', () => this.onStateUpdate(State.Playing))
-    element.addEventListener('pause', () => this.onStateUpdate(State.Paused))
+    element.addEventListener('ended', () =>
+      this.dispatch({ type: 'trackEndedNaturally' })
+    )
+    element.addEventListener('playing', () => this.dispatch({ type: 'playing' }))
+    element.addEventListener('pause', () =>
+      this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
+    )
 
-    player.addEventListener('loading', () => this.onStateUpdate(State.Loading))
-    player.addEventListener('loaded', () => this.onStateUpdate(State.Ready))
+    player.addEventListener('loading', () =>
+      this.dispatch({ type: 'trackLoading' })
+    )
+    player.addEventListener('loaded', () =>
+      this.dispatch({ type: 'loadSeekCompleted' })
+    )
 
     player.addEventListener('buffering', (event: Event) => {
       const bufferingEvent = event as ShakaBufferingEvent
-      if (bufferingEvent.detail.buffering === true) {
-        this.onStateUpdate(State.Buffering)
-      } else {
-        this.onStateUpdate(State.Ready)
-      }
+      this.dispatch(
+        bufferingEvent.detail.buffering === true
+          ? { type: 'waiting' }
+          : { type: 'bufferingSufficient' }
+      )
     })
 
     // Attach player to the window to make it easy to access in the JS console.
@@ -148,11 +158,25 @@ export class Player {
   }
 
   /**
-   * event handlers
+   * Routes a racy element/Shaka observation through the state machine. The
+   * machine decides the next state (or suppresses the transition); commands
+   * (stop, error) set their terminal state directly instead.
    */
-  protected onStateUpdate(state: Exclude<StateType, typeof State.Error>): void {
-    // Ignore Shaka/element events while stopped (e.g., from unload)
+  protected dispatch(event: PlaybackEvent): void {
+    // Ignore element/Shaka events while stopped. This is broader than the
+    // machine's own stopped guards on purpose: native engines are torn down on
+    // stop so they emit nothing, but Shaka's unload() emits spurious events
+    // (pause, buffering) that would otherwise clobber the stopped state.
     if (this._isStopped) return
+    const next = nextPlaybackState(this.state.state, event)
+    if (next !== null) this.applyState(next)
+  }
+
+  /**
+   * Applies a machine-decided state. Overridable so subclasses can react to
+   * specific transitions (e.g. PlaylistPlayer advancing the queue on `ended`).
+   */
+  protected applyState(state: PlaybackState): void {
     this.state = { state }
   }
 
