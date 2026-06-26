@@ -335,7 +335,7 @@ export class NativeAudioBrowser
         const progress = this.getProgress()
         this.onPlaybackProgressUpdated({
           ...progress,
-          track: this.currentIndex || 0
+          track: this.queue.currentIndex || 0
         })
         this.remoteCommands.updateProgress()
       }
@@ -357,7 +357,7 @@ export class NativeAudioBrowser
   protected onPlaylistEnded() {
     super.onPlaylistEnded()
     this.onPlaybackQueueEnded({
-      track: this.currentIndex ?? 0,
+      track: this.queue.currentIndex ?? 0,
       position: this.element?.currentTime ?? 0
     })
   }
@@ -582,22 +582,22 @@ export class NativeAudioBrowser
 
     // Match Android: load() modifies the queue.
     // If queue is empty, add the track. If queue has items, replace at currentIndex.
-    if (this.playlist.length === 0) {
-      this.playlist = [track]
-      this._currentIndex = 0
-      this.onPlaybackQueueChanged(this.playlist)
+    if (this.queue.length === 0) {
+      this.queue.setTracks([track])
+      this.queue.currentIndex = 0
+      this.onPlaybackQueueChanged(this.queue.tracks)
     } else if (
-      this.currentIndex !== undefined &&
-      this.playlist[this.currentIndex] !== track
+      this.queue.currentIndex !== undefined &&
+      this.queue.getTrack(this.queue.currentIndex) !== track
     ) {
-      this.playlist[this.currentIndex] = track
-      this.onPlaybackQueueChanged(this.playlist)
+      this.queue.replaceTrack(this.queue.currentIndex, track)
+      this.onPlaybackQueueChanged(this.queue.tracks)
     }
 
     const lastTrack = this.current
     const lastPosition = element.currentTime
-    const lastIndex = this.lastIndex
-    const currentIndex = this.currentIndex
+    const lastIndex = this.queue.lastIndex
+    const currentIndex = this.queue.currentIndex
 
     // Set loading flag early so seekTo() calls during async URL resolution
     // are captured as pending seeks rather than silently dropped
@@ -684,7 +684,7 @@ export class NativeAudioBrowser
   }
 
   setRepeatMode(mode: RepeatModeType): void {
-    const didChange = this.repeatMode !== mode
+    const didChange = this.queue.repeatMode !== mode
     super.setRepeatMode(mode)
     this.optionsManager.setRepeatMode(mode)
 
@@ -784,42 +784,43 @@ export class NativeAudioBrowser
     this.stop()
     // Clear stale references from previous queue
     this.current = undefined
-    this._currentIndex = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
     const { request, artwork } = this.browserManager.configuration
-    this.playlist = tracks.map((track) => {
-      try {
-        const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
-        return RequestConfigBuilder.transformTrackArtwork(
-          hydratedTrack,
-          request,
-          artwork
-        )
-      } catch (error) {
-        console.error('Failed to transform track:', error)
-        return track // Use original track as fallback
-      }
-    })
-    this.onPlaybackQueueChanged(this.playlist)
+    this.queue.setTracks(
+      tracks.map((track) => {
+        try {
+          const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
+          return RequestConfigBuilder.transformTrackArtwork(
+            hydratedTrack,
+            request,
+            artwork
+          )
+        } catch (error) {
+          console.error('Failed to transform track:', error)
+          return track // Use original track as fallback
+        }
+      })
+    )
+    this.onPlaybackQueueChanged(this.queue.tracks)
 
     // Regenerate shuffle order when queue is set
-    if (super.getShuffleEnabled()) {
-      super.setShuffleEnabled(true) // Regenerates shuffle order
+    if (this.queue.shuffleEnabled) {
+      this.queue.regenerateShuffleOrder()
     }
 
-    if (startIndex !== undefined && this.playlist[startIndex]) {
+    if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
       this.skip(startIndex, startPositionMs)
     }
   }
 
   getQueue(): Track[] {
-    return this.playlist
+    return this.queue.tracks
   }
 
   getActiveTrackIndex(): number | undefined {
     this.requireElement()
     this.requirePlayer()
-    return this.currentIndex
+    return this.queue.currentIndex
   }
 
   getActiveTrack(): Track | undefined {
@@ -845,7 +846,7 @@ export class NativeAudioBrowser
     }
 
     // Replace the track in the playlist
-    this.playlist[index] = updatedTrack
+    this.queue.replaceTrack(index, updatedTrack)
 
     // Emit favorite changed event
     this.onFavoriteChanged({ track: updatedTrack, favorited })
@@ -860,7 +861,7 @@ export class NativeAudioBrowser
     })
 
     // Emit queue changed so useQueue() hook updates
-    this.onPlaybackQueueChanged(this.playlist)
+    this.onPlaybackQueueChanged(this.queue.tracks)
   }
 
   toggleActiveTrackFavorited(): void {
