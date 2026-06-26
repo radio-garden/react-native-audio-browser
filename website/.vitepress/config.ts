@@ -6,7 +6,7 @@ export default withMermaid(
   defineConfig({
     title: 'Audio Browser',
     description:
-      'React Native audio module with browsable navigation trees and native Android Auto/CarPlay integration.',
+      'Full-featured React Native audio for production apps that span app screens, lock screens, CarPlay, Android Auto, voice controls, and the web, with one shared playback and browse model.',
 
     head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
 

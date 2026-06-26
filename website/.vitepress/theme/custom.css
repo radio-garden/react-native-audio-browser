@@ -1,0 +1,61 @@
+/**
+ * Audio Browser docs theme.
+ *
+ * Borrows the Radio Garden palette — the station-green ramp plus the map-blue
+ * accent — and maps it onto VitePress's brand variables. Colors only; the site
+ * keeps its own "Audio Browser" identity.
+ *
+ *   green:  #00FF82 (intense) · #00E070 (bright) · #00C864 (normal) · #006432 (dark)
+ *   blue:   #2D00FF (map)
+ */
+
+:root {
+  /* Brand ramp — green deepened for readable link text on white. */
+  --vp-c-brand-1: #00a85a;
+  --vp-c-brand-2: #00c864;
+  --vp-c-brand-3: #00e070;
+  --vp-c-brand-soft: rgba(0, 200, 100, 0.14);
+
+  /* Legacy aliases some components still read. */
+  --vp-c-brand: var(--vp-c-brand-1);
+  --vp-c-brand-hover: var(--vp-c-brand-3);
+
+  /* Brand button (Get Started). */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: var(--vp-c-brand-2);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: var(--vp-c-brand-3);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: var(--vp-c-brand-1);
+
+  /* Hero headline: solid station-green. */
+  --vp-home-hero-name-color: #00c864;
+}
+
+.dark {
+  --vp-c-brand-1: #00e070;
+  --vp-c-brand-2: #00c864;
+  --vp-c-brand-3: #00ff82;
+  --vp-c-brand-soft: rgba(0, 224, 112, 0.16);
+
+  /* Dark green reads better with a dark label than white. */
+  --vp-button-brand-text: #06251a;
+  --vp-button-brand-hover-text: #06251a;
+  --vp-button-brand-active-text: #06251a;
+
+  /* Brighter green title on the dark background. */
+  --vp-home-hero-name-color: #00e070;
+}
+
+/* Let the isometric demo slab + its extruded shadow overflow the image column,
+   but clip at the hero edge so it never triggers a page scrollbar. */
+.VPHero .image,
+.VPHero .image-container {
+  overflow: visible !important;
+}
+.VPHero {
+  overflow: hidden;
+}
