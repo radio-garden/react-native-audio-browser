@@ -22,7 +22,7 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
     guard current != .error else { return nil }
     return .paused
   case .bufferingSufficient:
-    guard current != .playing else { return nil }
+    guard current != .playing, current != .ended else { return nil }
     return .ready
   }
 }
