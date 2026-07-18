@@ -32,6 +32,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private let trackSelector: TrackSelector
   private var volumeObservation: NSKeyValueObservation?
   private var routeChangeObserver: NSObjectProtocol?
+  private var interruptionObserver: NSObjectProtocol?
   private var nowPlayingOverride: NowPlayingUpdate?
   private let playerOptions = PlayerUpdateOptions()
 
@@ -257,6 +258,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       MainActor.assumeIsolated { player?.destroy() }
     } else {
       DispatchQueue.main.async { MainActor.assumeIsolated { player?.destroy() } }
+    }
+    if let observer = interruptionObserver {
+      NotificationCenter.default.removeObserver(observer)
     }
   }
 
@@ -492,6 +496,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Notify listeners that player is ready (e.g., CarPlay)
         playerAndConfiguredBrowser.check()
       }
+
+      self.setupInterruptionObserver()
     }
   }
 
@@ -889,6 +895,43 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // iOS doesn't provide a public API to set system volume programmatically.
     // Users must adjust volume via hardware buttons or Control Center.
     logger.debug("setSystemVolume is not supported on iOS - volume must be adjusted via hardware buttons or Control Center")
+  }
+
+  // MARK: - Audio Session Interruptions
+
+  /// Sets up observer for audio session interruptions (phone calls, Siri, other apps taking audio focus)
+  private func setupInterruptionObserver() {
+    if let observer = interruptionObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+
+    interruptionObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.interruptionNotification,
+      object: AVAudioSession.sharedInstance(),
+      queue: .main,
+    ) { [weak self] notification in
+      guard let self,
+            let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+      switch type {
+      case .began:
+        MainActor.assumeIsolated {
+          guard let player = self.player else { return }
+          player.pause()
+          player.transition(.avPlayerPaused(hasAsset: player.hasLoadedAsset))
+        }
+      case .ended:
+        let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+        let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+        if options.contains(.shouldResume) {
+          try? AVAudioSession.sharedInstance().setActive(true)
+          MainActor.assumeIsolated { self.player?.play() }
+        }
+      @unknown default:
+        break
+      }
+    }
   }
 
   // MARK: - External Audio Output
