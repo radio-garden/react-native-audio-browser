@@ -569,6 +569,21 @@ struct NaturalEndPlayIntentTests {
     #expect(eh.reloadTrackCalls == [false])
   }
 
+  /// The cleared intent opens the call-site `!playWhenReady` gate, so a stray
+  /// timeControlStatus pause after the end reaches the state machine — the
+  /// table's .ended guard must hold the state.
+  @Test @MainActor
+  func strayPauseAfterNaturalEnd_staysEnded() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleTrackDidPlayToEndTime()
+    #expect(c.state == .ended)
+
+    c.avPlayerDidChangeTimeControlStatus(.paused)
+
+    #expect(c.state == .ended)
+  }
+
   @Test @MainActor
   func interruptionAfterNaturalEnd_doesNotArmResume() {
     let (c, eh, _, _) = makeCoordinator()

@@ -95,6 +95,15 @@ struct AVPlayerPausedTests {
     #expect(nextPlaybackState(from: .error, on: .avPlayerPaused(hasAsset: true)) == nil)
   }
 
+  /// After a natural end the play intent is cleared, so the call-site
+  /// `!playWhenReady` gate no longer swallows stray pause observations —
+  /// without this guard a late timeControlStatus pause would re-report
+  /// .ended as .paused. (hasAsset: false still maps to .none: an emptied
+  /// element after ended is "nothing loaded".)
+  @Test func fromEnded_hasAssetTrue_isSuppressed() {
+    #expect(nextPlaybackState(from: .ended, on: .avPlayerPaused(hasAsset: true)) == nil)
+  }
+
   @Test func hasAssetFalse_transitionsToNone() {
     // hasAsset: false → .none from any non-stopped state
     let nonStoppedStates = allStates.filter { $0 != .stopped }
@@ -107,8 +116,8 @@ struct AVPlayerPausedTests {
   }
 
   @Test func hasAssetTrue_transitionsToPaused() {
-    // hasAsset: true → .paused from states that aren't stopped or error
-    let validStates = allStates.filter { $0 != .stopped && $0 != .error }
+    // hasAsset: true → .paused from states that aren't stopped, error, or ended
+    let validStates = allStates.filter { $0 != .stopped && $0 != .error && $0 != .ended }
     for state in validStates {
       #expect(
         nextPlaybackState(from: state, on: .avPlayerPaused(hasAsset: true)) == .paused,

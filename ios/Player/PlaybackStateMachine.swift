@@ -19,7 +19,10 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
   case let .avPlayerPaused(hasAsset):
     guard current != .stopped else { return nil }
     if !hasAsset { return PlaybackState.none }
-    guard current != .error else { return nil }
+    // .error and .ended own their state against stray pause observations —
+    // reachable from .ended since the natural-end intent clear opens the
+    // call site's `!playWhenReady` gate.
+    guard current != .error, current != .ended else { return nil }
     return .paused
   case .bufferingSufficient:
     // Terminal states must not drift back to .ready on a buffer refill: .ended
