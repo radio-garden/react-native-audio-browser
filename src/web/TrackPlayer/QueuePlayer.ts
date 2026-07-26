@@ -17,6 +17,16 @@ export class QueuePlayer extends Player {
   protected queue = new QueueManager()
 
   protected applyState(state: PlaybackState) {
+    // A natural queue end exhausts the play intent — nothing is left to play.
+    // Keeping it set inverted togglePlayback (the first press after completion
+    // was a silent pause) and armed load()'s auto-play with phantom intent.
+    // Cleared before the state lands so consumers observe the native order
+    // (intent → state → queueEnded), independent of onQueueEnded overrides.
+    // Per-track ends that advance the queue keep the intent.
+    if (state === State.Ended && this.endsQueue()) {
+      this.playWhenReady = false
+    }
+
     super.applyState(state)
 
     // dispatch() already gates on _isStopped before reaching applyState, so a
@@ -26,34 +36,35 @@ export class QueuePlayer extends Player {
     }
   }
 
-  protected onTrackEnded() {
-    switch (this.queue.repeatMode) {
-      case RepeatMode.Track:
-        if (this.queue.currentIndex !== undefined) {
-          this.goToIndex(this.queue.currentIndex)
-        }
-        break
-      case RepeatMode.Queue:
-        this.skipToNext()
-        break
-      default:
-        if (this.queue.nextIndex() !== undefined) {
-          this.skipToNext()
-        } else {
-          this.onQueueEnded()
-        }
-        break
-    }
+  /** True when a natural end has nowhere to go: not repeating, no next track. */
+  private endsQueue(): boolean {
+    return (
+      this.queue.repeatMode !== RepeatMode.Track &&
+      this.queue.repeatMode !== RepeatMode.Queue &&
+      this.queue.nextIndex() === undefined
+    )
   }
 
-  protected onQueueEnded() {
-    // A natural queue end exhausts the play intent — nothing is left to play.
-    // Keeping it set inverted togglePlayback (the first press after completion
-    // was a silent pause) and armed load()'s auto-play with phantom intent.
-    // Per-track ends that advance the queue keep the intent; only this
-    // no-next-track branch clears it. Overrides must call super.
-    this.playWhenReady = false
+  protected onTrackEnded() {
+    if (this.queue.repeatMode === RepeatMode.Track) {
+      if (this.queue.currentIndex !== undefined) {
+        this.goToIndex(this.queue.currentIndex)
+      }
+      return
+    }
+    if (this.endsQueue()) {
+      this.onQueueEnded()
+      return
+    }
+    this.skipToNext()
   }
+
+  /**
+   * Notification hook for a natural queue end. The play intent is already
+   * cleared in {@link applyState} — this is purely for subclasses to react
+   * (e.g. emitting the queue-ended event).
+   */
+  protected onQueueEnded() {}
 
   protected goToIndex(index: number, initialPosition?: number) {
     const track = this.queue.getTrack(index)

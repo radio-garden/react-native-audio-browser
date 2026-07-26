@@ -672,8 +672,26 @@ export class NativeAudioBrowser
   }
 
   setPlayWhenReady(pwr: boolean): void {
-    this.playWhenReady = pwr
-    if (!pwr) this.clearSleepTimerIfFading()
+    if (!pwr) {
+      // Clear a fading sleep timer before the change is emitted (matches the
+      // ordering of the native playWhenReady hooks).
+      this.clearSleepTimerIfFading()
+      this.playWhenReady = false
+      return
+    }
+    // Mirror native: raising the intent from a terminal state restarts
+    // playback (reload from stopped/error, replay from ended) instead of
+    // silently flipping the flag — play() owns those recovery paths and
+    // routes the intent through the emitting accessor.
+    const { state } = this.state
+    if (
+      this.current !== undefined &&
+      (state === 'ended' || state === 'stopped' || state === 'error')
+    ) {
+      this.play()
+      return
+    }
+    this.playWhenReady = true
   }
 
   getPlayWhenReady(): boolean {

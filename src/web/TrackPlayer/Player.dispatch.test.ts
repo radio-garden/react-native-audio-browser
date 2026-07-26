@@ -84,6 +84,45 @@ class TestQueueEndPlayer extends QueuePlayer {
   }
 }
 
+// Overrides onQueueEnded without calling super — the intent clear must not
+// depend on subclasses remembering to (NativeAudioBrowser overrides this hook).
+class OverridingQueueEndPlayer extends QueuePlayer {
+  queueEndedCount = 0
+  emit(event: PlaybackEvent): void {
+    this.dispatch(event)
+  }
+  protected onQueueEnded(): void {
+    this.queueEndedCount++
+  }
+}
+
+// Records the relative order of the intent drop, the state landing, and the
+// queue-ended hook — pinned to the native order (intent → state → queueEnded).
+class OrderRecordingPlayer extends QueuePlayer {
+  order: string[] = []
+  emit(event: PlaybackEvent): void {
+    this.dispatch(event)
+  }
+  protected get state(): Playback {
+    return super.state
+  }
+  protected set state(newState: Playback) {
+    super.state = newState
+    this.order.push(`state:${newState.state}`)
+  }
+  public get playWhenReady(): boolean {
+    return super.playWhenReady
+  }
+  public set playWhenReady(pwr: boolean) {
+    super.playWhenReady = pwr
+    this.order.push(`pwr:${pwr}`)
+  }
+  protected onQueueEnded(): void {
+    super.onQueueEnded()
+    this.order.push('queueEnded')
+  }
+}
+
 describe('QueuePlayer queue end', () => {
   it('drops the play intent when the queue ends naturally', () => {
     const player = new TestQueueEndPlayer()
@@ -95,6 +134,26 @@ describe('QueuePlayer queue end', () => {
     // togglePlayback (first press was a silent pause) and armed load()'s
     // auto-play with phantom intent.
     expect(player.playWhenReady).toBe(false)
+  })
+
+  it('drops the intent even when onQueueEnded overrides without super', () => {
+    const player = new OverridingQueueEndPlayer()
+    player.playWhenReady = true
+
+    player.emit({ type: 'trackEndedNaturally' })
+
+    expect(player.queueEndedCount).toBe(1)
+    expect(player.playWhenReady).toBe(false)
+  })
+
+  it('orders intent → state → queueEnded, matching native', () => {
+    const player = new OrderRecordingPlayer()
+    player.playWhenReady = true
+    player.order.length = 0
+
+    player.emit({ type: 'trackEndedNaturally' })
+
+    expect(player.order).toEqual(['pwr:false', 'state:ended', 'queueEnded'])
   })
 })
 
