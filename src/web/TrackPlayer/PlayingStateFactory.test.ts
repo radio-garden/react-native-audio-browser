@@ -27,7 +27,12 @@ describe('derivePlayingState', () => {
   })
 
   it('playWhenReady true plays except in terminal or empty states', () => {
-    const notPlaying = new Set<PlaybackState>(['error', 'ended', 'none'])
+    const notPlaying = new Set<PlaybackState>([
+      'error',
+      'ended',
+      'none',
+      'stopped'
+    ])
     for (const state of ALL_STATES) {
       expect(derivePlayingState(true, state).playing).toBe(!notPlaying.has(state))
     }

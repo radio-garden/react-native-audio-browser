@@ -17,7 +17,8 @@ export function derivePlayingState(
       playWhenReady &&
       state !== 'error' &&
       state !== 'ended' &&
-      state !== 'none',
+      state !== 'none' &&
+      state !== 'stopped',
     buffering: playWhenReady && (state === 'loading' || state === 'buffering')
   }
 }
