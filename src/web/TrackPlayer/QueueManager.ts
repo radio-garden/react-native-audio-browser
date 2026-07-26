@@ -153,6 +153,13 @@ export class QueueManager {
   insert(tracks: Track[], insertBeforeIndex?: number): void {
     if (insertBeforeIndex !== -1 && insertBeforeIndex !== undefined) {
       this._tracks.splice(insertBeforeIndex, 0, ...tracks)
+      // Keep the pointer on the same track (remove()/move() already do).
+      if (
+        this._currentIndex !== undefined &&
+        insertBeforeIndex <= this._currentIndex
+      ) {
+        this._currentIndex += tracks.length
+      }
     } else {
       this._tracks.push(...tracks)
     }

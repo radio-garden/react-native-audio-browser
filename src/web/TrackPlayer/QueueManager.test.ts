@@ -29,6 +29,38 @@ describe('QueueManager', () => {
     })
   })
 
+  describe('insert', () => {
+    it('adjusts currentIndex when inserting before the current track', () => {
+      q.setTracks(tracks(3))
+      q.currentIndex = 1
+
+      q.insert([{ src: 'x' } as Track], 0)
+
+      // The pointer must stay on the same track (remove()/move() already do
+      // this; native adjusts automatically).
+      expect(q.currentIndex).toBe(2)
+      expect(q.getTrack(q.currentIndex!)?.src).toBe('s1')
+    })
+
+    it('keeps currentIndex when inserting after the current track', () => {
+      q.setTracks(tracks(3))
+      q.currentIndex = 1
+
+      q.insert([{ src: 'x' } as Track], 2)
+
+      expect(q.currentIndex).toBe(1)
+    })
+
+    it('keeps currentIndex when appending', () => {
+      q.setTracks(tracks(3))
+      q.currentIndex = 1
+
+      q.insert([{ src: 'x' } as Track])
+
+      expect(q.currentIndex).toBe(1)
+    })
+  })
+
   describe('sequential navigation', () => {
     beforeEach(() => {
       q.setTracks(tracks(3))

@@ -157,6 +157,30 @@ describe('QueuePlayer queue end', () => {
   })
 })
 
+describe('QueuePlayer skip while stopped', () => {
+  it('reloads instead of seeking the unloaded element', () => {
+    const loads: string[] = []
+    class SkipTestPlayer extends QueuePlayer {
+      load(track: { src?: string }): void {
+        loads.push(track.src ?? '')
+      }
+      seekTo(): void {}
+      forceStopped(): void {
+        this._isStopped = true
+      }
+    }
+    const player = new SkipTestPlayer()
+    player.add([{ src: 's0' } as never])
+    expect(loads).toEqual(['s0'])
+    player.forceStopped()
+
+    player.skip(0)
+
+    // Same-index skip took the seek branch, which is dead while stopped.
+    expect(loads).toEqual(['s0', 's0'])
+  })
+})
+
 describe('QueuePlayer queue advance', () => {
   it('advances the queue when a track ends naturally', () => {
     const player = new TestQueuePlayer()

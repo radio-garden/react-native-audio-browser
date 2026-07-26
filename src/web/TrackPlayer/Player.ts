@@ -215,10 +215,16 @@ export class Player {
     console.debug('Error code', shakaError.code, 'object', shakaError)
   }
 
+  /** Invalidates the .then/.catch of superseded loads — a Shaka load
+   * interrupted by stop() or a newer load() rejects, and only the active load
+   * may surface that (or run its onLoaded side effects). */
+  private _loadGeneration = 0
+
   public load(track: Track, onLoaded?: (track: Track) => void): void {
     const player = this.requirePlayer()
     this._isStopped = false
     this._loadInProgress = true
+    const generation = ++this._loadGeneration
 
     if (!track.src) {
       this._loadInProgress = false
@@ -237,6 +243,7 @@ export class Player {
     player
       .load(track.src)
       .then(() => {
+        if (generation !== this._loadGeneration || this._isStopped) return
         this._loadInProgress = false
         this.current = track
         onLoaded?.(track)
@@ -253,6 +260,7 @@ export class Player {
         }
       })
       .catch((err: unknown) => {
+        if (generation !== this._loadGeneration || this._isStopped) return
         this._loadInProgress = false
         this._pendingSeek = undefined
         this.onError(this.toNormalizedError(err))

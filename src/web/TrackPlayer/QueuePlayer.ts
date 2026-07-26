@@ -81,6 +81,9 @@ export class QueuePlayer extends Player {
     if (this.queue.currentIndex !== index) {
       this.queue.currentIndex = index
       this.load(track, onLoaded)
+    } else if (this._isStopped) {
+      // The element is unloaded while stopped — a bare seek does nothing.
+      this.load(track, onLoaded)
     } else {
       // Replay the same track - seek to start (or initialPosition if specified)
       this.seekTo(initialPosition ?? 0)

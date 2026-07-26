@@ -302,14 +302,33 @@ export class NativeAudioBrowser
 
     // Call callbacks
     this.onPlaybackChanged(newState)
-    this.onPlaybackPlayingState(
-      derivePlayingState(this._playWhenReady, newState.state)
-    )
+    this.refreshPlayingState()
     this.remoteCommands.syncPlaybackState()
 
     if (newState.state === 'error' && newState.error) {
       this.onPlaybackError({ error: newState.error })
     }
+  }
+
+  private lastPlayingState?: PlayingState
+
+  /**
+   * Re-derives the playing state and emits on change. Called from both of its
+   * inputs' change points — the state setter and the playWhenReady setter —
+   * with a dedupe so identical derivations don't double-emit (parity with
+   * Android's refreshPlayingState / iOS's PlayingStateManager).
+   */
+  private refreshPlayingState(): void {
+    const next = derivePlayingState(this._playWhenReady, this.state.state)
+    if (
+      this.lastPlayingState !== undefined &&
+      this.lastPlayingState.playing === next.playing &&
+      this.lastPlayingState.buffering === next.buffering
+    ) {
+      return
+    }
+    this.lastPlayingState = next
+    this.onPlaybackPlayingState(next)
   }
 
   /**
@@ -640,6 +659,8 @@ export class NativeAudioBrowser
 
     // Execute async load without blocking, with error handling
     doLoad().catch((error: unknown) => {
+      // Only the active load may surface a resolution failure.
+      if (loadId !== this.currentLoadId) return
       this._loadInProgress = false
       this._pendingSeek = undefined
       console.error('Error loading track:', error)
@@ -667,6 +688,7 @@ export class NativeAudioBrowser
     super.playWhenReady = pwr
     if (didChange) {
       this.onPlaybackPlayWhenReadyChanged({ playWhenReady: pwr })
+      this.refreshPlayingState()
       this.remoteCommands.syncPlaybackState()
     }
   }

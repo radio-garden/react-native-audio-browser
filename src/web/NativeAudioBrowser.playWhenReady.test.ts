@@ -114,6 +114,38 @@ describe('NativeAudioBrowser setPlayWhenReady drives the engine', () => {
   })
 })
 
+// Intent-only changes alter the derived playing/buffering flags without a
+// state transition (e.g. pause during 'loading') — they must emit too, and
+// identical derivations must not double-emit (parity with Android's
+// refreshPlayingState dedupe).
+describe('NativeAudioBrowser playing-state emission', () => {
+  it('emits on an intent-only change', () => {
+    const { browser } = makeBrowser()
+    const states: Array<{ playing: boolean; buffering: boolean }> = []
+    browser.onPlaybackPlayingState = (s) =>
+      states.push({ playing: s.playing, buffering: s.buffering })
+    browser.forceState('loading')
+    browser.setPlayWhenReady(true)
+    states.length = 0
+
+    browser.setPlayWhenReady(false)
+
+    expect(states).toEqual([{ playing: false, buffering: false }])
+  })
+
+  it('does not re-emit an identical derivation across state changes', () => {
+    const { browser } = makeBrowser()
+    const states: Array<{ playing: boolean }> = []
+    browser.onPlaybackPlayingState = (s) => states.push({ playing: s.playing })
+
+    browser.forceState('paused')
+    browser.forceState('stopped')
+
+    // pwr is false throughout: both derive {playing:false,buffering:false}.
+    expect(states.length).toBe(1)
+  })
+})
+
 describe('NativeAudioBrowser stop vs in-flight load', () => {
   it('stop() invalidates a load still resolving its URL', async () => {
     const { browser } = makeBrowser()
