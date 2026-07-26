@@ -316,8 +316,15 @@ class Player(internal val context: Context) {
         .map { index -> TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index)) }
         .toTypedArray()
 
-  val isLastTrack: Boolean
-    get() = exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1
+  /**
+   * Whether nothing follows the current item in *playback order* — shuffle- and
+   * repeat-aware via media3's own order computation (the linear
+   * `currentMediaItemIndex == count - 1` check missed a shuffled queue whose
+   * playback order ends on a different linear index). Matches iOS's
+   * `isLastInPlaybackOrder`.
+   */
+  val isLastInPlaybackOrder: Boolean
+    get() = exoPlayer.nextMediaItemIndex == C.INDEX_UNSET
 
   /**
    * The source path from which the current queue was expanded (e.g., from a contextual URL). Used
@@ -1033,7 +1040,7 @@ class Player(internal val context: Context) {
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state
       // changes
-      if (state == PlaybackState.ENDED && isLastTrack) {
+      if (state == PlaybackState.ENDED && isLastInPlaybackOrder) {
         currentIndex?.let { index ->
           val event =
             PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
