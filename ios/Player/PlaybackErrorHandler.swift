@@ -61,6 +61,10 @@ public enum PlaybackErrorContext {
           let classified = PlaybackErrorHandler.classify(error: error, fallback: context.fallbackError)
           self.onError?(classified)
         }
+        // Done — clear the handle so intent-gated session release isn't blocked
+        // by a completed retry. A cancelled task was already replaced or nilled
+        // by its canceller; it must not clobber the successor's handle.
+        if !Task.isCancelled { pendingRetryTask = nil }
       }
       return
     }

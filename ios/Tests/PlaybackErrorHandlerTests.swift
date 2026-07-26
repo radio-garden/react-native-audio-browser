@@ -139,6 +139,23 @@ struct HandleErrorTests {
     #expect(surfacedError == nil)
   }
 
+  /// A completed retry task must clear its own handle: `evaluateSessionRelease`
+  /// gates on `pendingRetryTask == nil`, so a stale completed task blocked
+  /// audio-session release for the rest of the track.
+  @Test func completedRetryTask_clearsItsHandle() async {
+    let mock = MockRetryHandler()
+    mock.retryableErrors = [URLError.Code.timedOut.rawValue]
+    mock.attemptRetryResult = true
+    let handler = PlaybackErrorHandler(retryHandler: mock)
+
+    handler.handleError(URLError(.timedOut), context: .playback)
+    #expect(handler.pendingRetryTask != nil)
+
+    await handler.pendingRetryTask?.value
+
+    #expect(handler.pendingRetryTask == nil)
+  }
+
   @Test func retryExhausted_surfacesClassifiedError() async {
     let mock = MockRetryHandler()
     mock.retryableErrors = [URLError.Code.timedOut.rawValue]
