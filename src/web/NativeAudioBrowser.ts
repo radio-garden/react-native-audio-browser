@@ -604,13 +604,13 @@ export class NativeAudioBrowser
     if (this.queue.length === 0) {
       this.queue.setTracks([track])
       this.queue.currentIndex = 0
-      this.onPlaybackQueueChanged(this.queue.tracks)
+      this.emitQueueChanged()
     } else if (
       this.queue.currentIndex !== undefined &&
       this.queue.getTrack(this.queue.currentIndex) !== track
     ) {
       this.queue.replaceTrack(this.queue.currentIndex, track)
-      this.onPlaybackQueueChanged(this.queue.tracks)
+      this.emitQueueChanged()
     }
 
     const lastTrack = this.current
@@ -675,26 +675,34 @@ export class NativeAudioBrowser
     super.togglePlayback()
   }
 
+  /**
+   * Copies before emitting: the queue mutates in place, and handing out the
+   * live array defeats React's reference-equality change detection.
+   */
+  private emitQueueChanged(): void {
+    this.onPlaybackQueueChanged([...this.queue.tracks])
+  }
+
   // Queue mutations must reach onPlaybackQueueChanged (the contract covers
   // added/removed/reordered; Android emits via onTimelineChanged).
   override add(tracks: Track[], insertBeforeIndex?: number): void {
     super.add(tracks, insertBeforeIndex)
-    this.onPlaybackQueueChanged(this.queue.tracks)
+    this.emitQueueChanged()
   }
 
   override remove(indexes: number[]): void {
     super.remove(indexes)
-    this.onPlaybackQueueChanged(this.queue.tracks)
+    this.emitQueueChanged()
   }
 
   override move(fromIndex: number, toIndex: number): void {
     super.move(fromIndex, toIndex)
-    this.onPlaybackQueueChanged(this.queue.tracks)
+    this.emitQueueChanged()
   }
 
   override removeUpcomingTracks(): void {
     super.removeUpcomingTracks()
-    this.onPlaybackQueueChanged(this.queue.tracks)
+    this.emitQueueChanged()
   }
 
   // Override playWhenReady to emit events (mirrors the state override): the
@@ -885,7 +893,7 @@ export class NativeAudioBrowser
         }
       })
     )
-    this.onPlaybackQueueChanged(this.queue.tracks)
+    this.emitQueueChanged()
 
     // Regenerate shuffle order when queue is set
     if (this.queue.shuffleEnabled) {
@@ -903,7 +911,8 @@ export class NativeAudioBrowser
   }
 
   getQueue(): Track[] {
-    return this.queue.tracks
+    // Copy — see emitQueueChanged.
+    return [...this.queue.tracks]
   }
 
   getActiveTrackIndex(): number | undefined {
@@ -950,7 +959,7 @@ export class NativeAudioBrowser
     })
 
     // Emit queue changed so useQueue() hook updates
-    this.onPlaybackQueueChanged(this.queue.tracks)
+    this.emitQueueChanged()
   }
 
   toggleActiveTrackFavorited(): void {

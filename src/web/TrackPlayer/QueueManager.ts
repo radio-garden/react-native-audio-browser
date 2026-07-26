@@ -32,10 +32,7 @@ export class QueueManager {
   // MARK: tracks
 
   get tracks(): Track[] {
-    // Fresh copy: mutations happen in place, so handing out the live array
-    // defeats React's reference-equality change detection in consumers of
-    // onPlaybackQueueChanged/getQueue — and lets callers corrupt the queue.
-    return [...this._tracks]
+    return this._tracks
   }
 
   get length(): number {
