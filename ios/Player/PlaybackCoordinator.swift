@@ -119,7 +119,10 @@ class PlaybackCoordinator {
 
   var playWhenReady: Bool = false {
     didSet {
-      if playWhenReady == true, state == .error || state == .stopped {
+      // Terminal states need a reload, not a bare play(): the item is gone
+      // (.stopped/.error) or parked at its end (.ended), where startPlayback()
+      // is a silent no-op. Only .error resumes from the last position.
+      if playWhenReady == true, state == .error || state == .stopped || state == .ended {
         effectHandler?.reloadTrack(startFromCurrentTime: state == .error)
       }
       if state != .loading {
@@ -226,6 +229,13 @@ class PlaybackCoordinator {
       if playWhenReady { effectHandler?.startPlayback() }
     case .loading:
       effectHandler?.setTimePitchingAlgorithmForCurrentItem()
+    case .ended:
+      // A natural end exhausts the play intent — nothing is left to play.
+      // Keeping playWhenReady true would invert the play/pause toggle, hold
+      // the audio session forever (release is intent-gated), and arm
+      // interruption auto-resume into silence. The setter also requests the
+      // session release.
+      playWhenReady = false
     default: break
     }
 

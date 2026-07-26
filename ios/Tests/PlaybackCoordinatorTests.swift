@@ -525,6 +525,65 @@ struct HandleTrackDidPlayToEndTimeTests {
   }
 }
 
+// MARK: - Natural end drops play intent
+
+/// A natural queue end exhausts the play intent: nothing is left to play, so
+/// `playWhenReady` must not stay true. Keeping it inverted the play/pause
+/// toggle, held the audio session forever, armed interruption auto-resume into
+/// silence, and made play-from-ended a silent no-op.
+@Suite("PlaybackCoordinator - natural end drops play intent")
+struct NaturalEndPlayIntentTests {
+  @Test @MainActor
+  func naturalEnd_clearsPlayWhenReady() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.handleTrackDidPlayToEndTime()
+
+    #expect(c.state == .ended)
+    #expect(c.playWhenReady == false)
+  }
+
+  @Test @MainActor
+  func naturalEnd_requestsSessionRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    callbacks.releaseSessionCount = 0
+
+    c.handleTrackDidPlayToEndTime()
+
+    #expect(callbacks.releaseSessionCount == 1)
+  }
+
+  /// play() from .ended must reload from the start — startPlayback() alone is a
+  /// silent no-op on a player parked at the end of its item.
+  @Test @MainActor
+  func playAfterNaturalEnd_reloadsFromStart() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleTrackDidPlayToEndTime()
+    eh.reloadTrackCalls.removeAll()
+
+    c.play()
+
+    #expect(eh.reloadTrackCalls == [false])
+  }
+
+  @Test @MainActor
+  func interruptionAfterNaturalEnd_doesNotArmResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleTrackDidPlayToEndTime()
+    eh.reloadTrackCalls.removeAll()
+
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false) // nothing was playing — never resume
+    #expect(eh.reloadTrackCalls.isEmpty)
+  }
+}
+
 @Suite("PlaybackCoordinator - now playing state")
 struct PlaybackCoordinatorNowPlayingStateTests {
   @Test @MainActor
