@@ -834,6 +834,13 @@ class Player(internal val context: Context) {
   }
 
   fun play() {
+    // ExoPlayer.play() is only setPlayWhenReady(true) — at STATE_ENDED nothing
+    // restarts (the ENDED→seekToDefaultPosition replay lives in media3's
+    // media-button path, not the Player API). Mirror it so play after a natural
+    // end replays instead of silently doing nothing.
+    if (exoPlayer.playbackState == ExoPlayer.STATE_ENDED) {
+      exoPlayer.seekToDefaultPosition()
+    }
     exoPlayer.play()
     if (currentTrack != null) {
       // No-op unless the player is STATE_IDLE (ExoPlayer.prepare early-returns
@@ -987,6 +994,15 @@ class Player(internal val context: Context) {
       // line. The publish-dedupe in applyNowPlayingFields drops redundant updates, so re-running
       // through the rapid startup sequence (none→loading→buffering→ready→playing) is cheap.
       nowPlaying.render()
+
+      // A natural end exhausts the play intent — nothing is left to play. Keeping
+      // playWhenReady true inverted the play/pause toggle, held audio focus forever
+      // (ExoPlayer abandons it only at IDLE or on the intent dropping), and kept the
+      // periodic position save running. The listener emits the change to JS; the
+      // state machine's ENDED guard keeps the state from flipping to PAUSED.
+      if (state == PlaybackState.ENDED) {
+        playWhenReady = false
+      }
 
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state

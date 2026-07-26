@@ -69,7 +69,14 @@ object PlaybackStateMachine {
           else -> listOf(PlaybackState.LOADING)
         }
       is PlaybackEvent.PlayWhenReadyChanged ->
-        if (!event.playWhenReady && current != PlaybackState.STOPPED) {
+        // STOPPED and ENDED are terminal: dropping the intent there (stop()'s own
+        // clear, the clear on natural end, or a redundant pause press) must not
+        // re-report the state as PAUSED.
+        if (
+          !event.playWhenReady &&
+            current != PlaybackState.STOPPED &&
+            current != PlaybackState.ENDED
+        ) {
           listOf(PlaybackState.PAUSED)
         } else {
           emptyList()

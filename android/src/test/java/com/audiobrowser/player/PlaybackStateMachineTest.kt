@@ -174,10 +174,13 @@ class PlaybackStateMachineTest {
   // MARK: playWhenReady / isPlaying
 
   @Test
-  fun `losing playWhenReady pauses except from stopped`() {
+  fun `losing playWhenReady pauses except from stopped or ended`() {
     val paused = PlaybackEvent.PlayWhenReadyChanged(playWhenReady = false)
     assertEquals(listOf(PlaybackState.PAUSED), on(paused, from = PlaybackState.PLAYING))
     assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.STOPPED))
+    // ENDED is terminal the same way: dropping the intent after a natural end (the
+    // clear at ENDED, or a dead toggle press) must not re-report the state as PAUSED.
+    assertEquals(emptyList<PlaybackState>(), on(paused, from = PlaybackState.ENDED))
     assertEquals(
       emptyList<PlaybackState>(),
       on(PlaybackEvent.PlayWhenReadyChanged(playWhenReady = true)),
