@@ -22,7 +22,12 @@ func nextPlaybackState(from current: PlaybackState, on event: PlaybackEvent) -> 
     guard current != .error else { return nil }
     return .paused
   case .bufferingSufficient:
-    guard current != .playing, current != .ended else { return nil }
+    // Terminal states must not drift back to .ready on a buffer refill: .ended
+    // would restart the completed track (playWhenReady is still true), and
+    // .stopped/.error would skip the reload-on-play path, which only triggers
+    // from those states. Leaving them requires an explicit load or reload.
+    guard current != .playing, current != .ended, current != .stopped, current != .error
+    else { return nil }
     return .ready
   }
 }

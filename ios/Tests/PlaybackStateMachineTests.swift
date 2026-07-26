@@ -120,8 +120,10 @@ struct AVPlayerPausedTests {
 
 // MARK: - bufferingSufficient
 
-@Suite("bufferingSufficient — suppressed from .playing and .ended")
+@Suite("bufferingSufficient — suppressed from terminal states and .playing")
 struct BufferingSufficientTests {
+  private let suppressedStates: [PlaybackState] = [.playing, .ended, .stopped, .error]
+
   @Test func fromPlaying_isSuppressed() {
     #expect(nextPlaybackState(from: .playing, on: .bufferingSufficient) == nil)
   }
@@ -133,8 +135,22 @@ struct BufferingSufficientTests {
     #expect(nextPlaybackState(from: .ended, on: .bufferingSufficient) == nil)
   }
 
+  /// stop() seeks non-live tracks back to 0 with the asset still loaded, so the
+  /// buffer refill flips playbackLikelyToKeepUp right after stopping. Leaving
+  /// .stopped would both surface a wrong state and skip the reload-on-play path
+  /// (which only triggers from .stopped/.error).
+  @Test func fromStopped_isSuppressed() {
+    #expect(nextPlaybackState(from: .stopped, on: .bufferingSufficient) == nil)
+  }
+
+  /// Recovery from .error always goes through a reload (→ .loading); a direct
+  /// jump to .ready would clear playbackError without recovering anything.
+  @Test func fromError_isSuppressed() {
+    #expect(nextPlaybackState(from: .error, on: .bufferingSufficient) == nil)
+  }
+
   @Test func fromOtherStates_transitionsToReady() {
-    for state in allStates where state != .playing && state != .ended {
+    for state in allStates where !suppressedStates.contains(state) {
       #expect(
         nextPlaybackState(from: state, on: .bufferingSufficient) == .ready,
         "Expected .ready from \(state)",
