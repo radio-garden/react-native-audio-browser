@@ -60,6 +60,15 @@ class PlaybackCoordinator {
   /// auto-resume if we were actually playing when interrupted.
   private var shouldResumeAfterInterruption = false
 
+  /// Seconds of continuous audible playback after which the retry budget is
+  /// refilled — proof the stream actually delivered audio, not a brief blip
+  /// (mirrors Android's HEALTHY_PLAYBACK_MS). Without the refill a long-lived
+  /// stream permanently loses retry after its first recovered error, because
+  /// the window/attempt counters otherwise reset only on track change.
+  /// Overridable in tests.
+  var healthyPlaybackDuration: TimeInterval = 20
+  private var healthyPlaybackTask: Task<Void, Never>?
+
   /// Playback rate (1.0 = normal speed).
   var rate: Float = 1.0
 
@@ -220,6 +229,22 @@ class PlaybackCoordinator {
     }
     if case let .errorOccurred(error) = event {
       playbackError = error
+    }
+
+    // Retry-budget refill: sustained audible playback proves the stream
+    // recovered, so the next error starts a fresh retry window. Leaving
+    // .playing before the threshold cancels the pending refill.
+    if new == .playing {
+      healthyPlaybackTask?.cancel()
+      healthyPlaybackTask = Task { [weak self] in
+        guard let self else { return }
+        try? await Task.sleep(nanoseconds: UInt64(healthyPlaybackDuration * 1_000_000_000))
+        guard !Task.isCancelled else { return }
+        errorHandler.resetRetry()
+      }
+    } else if old == .playing {
+      healthyPlaybackTask?.cancel()
+      healthyPlaybackTask = nil
     }
 
     // State-specific effects

@@ -599,6 +599,52 @@ struct NaturalEndPlayIntentTests {
   }
 }
 
+// MARK: - Healthy playback refills the retry budget
+
+/// Sustained audible playback proves the stream recovered, so the retry
+/// window/attempt counters must refill (mirrors Android's healthy-playback
+/// refill) — otherwise a long-lived stream permanently loses retry after its
+/// first recovered blip.
+@Suite("PlaybackCoordinator - healthy playback resets retry budget")
+struct HealthyPlaybackRetryResetTests {
+  @Test @MainActor
+  func sustainedPlayback_resetsRetryBudget() async throws {
+    let retryHandler = MockRetryHandling()
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    coordinator.effectHandler = effectHandler
+    coordinator.healthyPlaybackDuration = 0.01
+
+    coordinator.transition(.avPlayerPlaying)
+    try await Task.sleep(nanoseconds: 100_000_000)
+
+    #expect(retryHandler.resetCallCount == 1)
+  }
+
+  @Test @MainActor
+  func playbackInterruptedBeforeThreshold_doesNotReset() async throws {
+    let retryHandler = MockRetryHandling()
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    coordinator.effectHandler = effectHandler
+    effectHandler.hasLoadedAsset = true
+    coordinator.healthyPlaybackDuration = 0.5
+
+    coordinator.transition(.avPlayerPlaying)
+    coordinator.transition(.avPlayerWaiting) // stalls before the threshold
+
+    try await Task.sleep(nanoseconds: 100_000_000)
+
+    #expect(retryHandler.resetCallCount == 0)
+  }
+}
+
 @Suite("PlaybackCoordinator - now playing state")
 struct PlaybackCoordinatorNowPlayingStateTests {
   @Test @MainActor
