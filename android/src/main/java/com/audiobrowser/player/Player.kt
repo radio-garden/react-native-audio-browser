@@ -376,6 +376,9 @@ class Player(internal val context: Context) {
     }
 
     if (setupOptions.maxCacheSize > 0) {
+      // SimpleCache locks its folder — re-setup must release the previous
+      // instance first or the constructor throws.
+      cache?.release()
       cache =
         SimpleCache(
           File(context.cacheDir, "RNAB"),
@@ -981,6 +984,9 @@ class Player(internal val context: Context) {
    * use [pause].
    */
   fun destroy() {
+    // Cancel without a final save: the loop would tick against the released
+    // player and persist position 0 over the real resumption position.
+    playbackStateStore.cancelPeriodicSave()
     stop()
     nowPlaying.destroy()
     mediaSessionCallback.destroy()

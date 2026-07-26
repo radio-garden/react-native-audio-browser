@@ -64,7 +64,10 @@ class AutomaticBufferManager(
    * media (station change).
    */
   fun reset() {
-    loadControl.resetToDefaults()
+    // The setup-provided defaults, not the media3 library defaults —
+    // resetToDefaults() silently wiped an app's fast-start buffer tuning on
+    // every queue set, station change, and seek.
+    loadControl.updateBufferConfig(defaultConfig)
     wasReady = false
     rebufferCount = 0
     playbackStartTimeMs = 0

@@ -97,10 +97,15 @@ class PlaybackStateStore(private val player: Player) {
       }
   }
 
-  /** Stops periodic position saving and saves final position. Call when playback stops. */
-  fun stopPeriodicSave() {
+  /** Cancels the periodic save without a final save. Call on engine teardown. */
+  fun cancelPeriodicSave() {
     periodicSaveJob?.cancel()
     periodicSaveJob = null
+  }
+
+  /** Stops periodic position saving and saves final position. Call when playback stops. */
+  fun stopPeriodicSave() {
+    cancelPeriodicSave()
     // Skip the final save after a natural end: setPlaybackState(ENDED) wrote
     // position 0 for resumption, and the intent-drop's listener echo runs this
     // strictly afterwards — a save here would overwrite that 0 with the

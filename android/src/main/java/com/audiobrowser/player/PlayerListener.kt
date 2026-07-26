@@ -33,13 +33,21 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
   // before re-stalling). Mirrors AutomaticBufferManager's Handler usage. Runs on the main thread,
   // where Player.Listener callbacks are delivered.
   private val healthyPlaybackHandler = Handler(Looper.getMainLooper())
-  private val healthyPlaybackRunnable = Runnable {
-    stuckRecoveryPolicy.reset()
-    // Refill the load-error retry window too — it otherwise resets only on
-    // track change, so a second outage >2min after the first got zero
-    // retries (instant terminal error) on a long-lived stream.
-    player.resetRetryTimer()
-  }
+  private val healthyPlaybackRunnable =
+    object : Runnable {
+      override fun run() {
+        stuckRecoveryPolicy.reset()
+        // Refill the load-error retry window too — it otherwise resets only
+        // on track change, so a second outage >2min after the first got zero
+        // retries (instant terminal error) on a long-lived stream.
+        player.resetRetryTimer()
+        // Re-post while playing: errors the buffer absorbs never flip
+        // isPlaying, so a one-shot refill left the window stale again.
+        if (player.isPlaying) {
+          healthyPlaybackHandler.postDelayed(this, HEALTHY_PLAYBACK_MS)
+        }
+      }
+    }
 
   /** Called when there is metadata associated with the current playback time. */
   override fun onMetadata(metadata: Metadata) {

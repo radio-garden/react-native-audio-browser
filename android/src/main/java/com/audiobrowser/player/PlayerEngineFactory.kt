@@ -113,7 +113,14 @@ internal fun buildPlayerEngine(
         .setIsGaplessSupportRequired(it.gaplessSupportRequired)
         .setIsSpeedChangeSupportRequired(it.rateChangeSupportRequired)
         .build()
-    exoPlayer.trackSelectionParameters.audioOffloadPreferences = audioOffloadPreferences
+    // Assigning the public final field compiles to a putfield that throws
+    // IllegalAccessError on ART, and mutating the getter's snapshot wouldn't
+    // reach the selector anyway — go through the builder.
+    exoPlayer.trackSelectionParameters =
+      exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setAudioOffloadPreferences(audioOffloadPreferences)
+        .build()
   }
 
   return PlayerEngine(loadControl, mediaFactory, exoPlayer)
