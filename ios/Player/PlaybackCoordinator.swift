@@ -390,6 +390,15 @@ class PlaybackCoordinator {
 
   // MARK: - Audio Session Interruptions
 
+  /// The active output route disappeared (headphones unplugged, Bluetooth
+  /// speaker off). A deliberate output loss: drop the intent and any pending
+  /// interruption auto-resume, so a call ending can't blast the built-in
+  /// speaker.
+  func handleRouteDisconnected() {
+    shouldResumeAfterInterruption = false
+    pause()
+  }
+
   /// An audio-session interruption began (a phone call, or another app such as
   /// Music/Spotify taking over playback). iOS has already paused our AVPlayer,
   /// but that pause arrives as a `timeControlStatus` change that's swallowed
@@ -513,6 +522,7 @@ class PlaybackCoordinator {
   func add(_ tracks: [Track], at index: Int) throws {
     let changed = try queue.addAt(tracks, at: index)
     if changed { handleCurrentTrackChanged() }
+    pushSkipAvailability() // didSet pushed pre-settlement state
   }
 
   func next() {
@@ -536,6 +546,7 @@ class PlaybackCoordinator {
   func remove(_ index: Int) throws {
     let changed = try queue.remove(index)
     if changed { handleCurrentTrackChanged() }
+    pushSkipAvailability() // didSet pushed pre-settlement state
   }
 
   func skipTo(_ index: Int, playWhenReady: Bool? = nil) throws {
@@ -552,10 +563,14 @@ class PlaybackCoordinator {
   func move(fromIndex: Int, toIndex: Int) throws {
     let changed = try queue.move(fromIndex: fromIndex, toIndex: toIndex)
     if changed { handleCurrentTrackChanged() }
+    // tracks.didSet pushed availability mid-mutation, before the pointer and
+    // shuffle order settled — re-push the real post-mutation state.
+    pushSkipAvailability()
   }
 
   func removeUpcomingTracks() {
     queue.removeUpcomingTracks()
+    pushSkipAvailability() // didSet pushed pre-settlement state
   }
 
   func replay() {

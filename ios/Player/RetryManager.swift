@@ -165,6 +165,11 @@ class RetryManager {
       return false
     }
 
+    // Cancellation can land after the sleep completed — without this check a
+    // replaced retry (new error right as the old backoff expires) still fires
+    // onRetry, double-reloading and burning the attempt count twice.
+    guard !Task.isCancelled else { return false }
+
     guard shouldRetry() else {
       logger.debug("shouldRetry returned false after delay, cancelling retry")
       return false

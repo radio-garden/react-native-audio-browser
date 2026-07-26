@@ -950,6 +950,20 @@ struct InterruptionTests {
     #expect(c.playWhenReady == true)
   }
 
+  /// Unplugging headphones during a call is a deliberate output loss — the
+  /// call ending must not blast playback from the built-in speaker.
+  @Test @MainActor
+  func routeDisconnectDuringInterruption_cancelsResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.handleRouteDisconnected()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false)
+  }
+
   /// An explicit stop during the interruption is a terminal command — the
   /// interruption-end must not restart playback over it.
   @Test @MainActor
@@ -994,6 +1008,48 @@ struct InterruptionTests {
     c.handleInterruptionEnded(shouldResume: true)
 
     #expect(c.playWhenReady == false) // never resumes — we weren't playing
+  }
+}
+
+// MARK: - Skip availability freshness
+
+/// tracks.didSet pushes availability mid-mutation, while currentIndex and the
+/// shuffle order are still stale — the coordinator must re-push after the
+/// mutation settles or the lock-screen buttons keep the wrong state.
+@Suite("PlaybackCoordinator - skip availability after mutations")
+struct MutationSkipAvailabilityTests {
+  @Test @MainActor
+  func move_pushesPostMutationAvailability() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue([
+      Track(id: "a", src: "https://example.com/a.mp3", title: "A"),
+      Track(id: "b", src: "https://example.com/b.mp3", title: "B"),
+    ])
+    eh.updateSkipAvailabilityCalls.removeAll()
+
+    try c.move(fromIndex: 0, toIndex: 1)
+
+    // Current track is now last: nothing to skip to.
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+  }
+
+  @Test @MainActor
+  func removeBeforeCurrent_pushesPostMutationAvailability() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(
+      [
+        Track(id: "a", src: "https://example.com/a.mp3", title: "A"),
+        Track(id: "b", src: "https://example.com/b.mp3", title: "B"),
+        Track(id: "c", src: "https://example.com/c.mp3", title: "C"),
+      ], initialIndex: 2,
+    )
+    eh.updateSkipAvailabilityCalls.removeAll()
+
+    try c.remove(0)
+
+    // Current settled at index 1 of 2: previous available, next not.
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
   }
 }
 

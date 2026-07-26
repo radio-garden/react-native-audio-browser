@@ -40,7 +40,7 @@ class QueueManager {
   }
 
   /// The shuffle order for randomized playback.
-  private var shuffleOrder = ShuffleOrder()
+  private(set) var shuffleOrder = ShuffleOrder()
 
   /// The repeat mode for the queue. Plain property — no side effects.
   var repeatMode: RepeatMode = .off
@@ -302,6 +302,7 @@ class QueueManager {
     guard currentIndex != -1 else { return false }
     currentIndex = -1
     tracks.removeAll()
+    shuffleOrder.clear()
     queueSourcePath = nil
     return true
   }
@@ -318,6 +319,8 @@ class QueueManager {
     guard !tracks.isEmpty else { return }
     let nextIndex = currentIndex + 1
     guard nextIndex < tracks.count else { return }
-    tracks.removeSubrange(nextIndex ..< tracks.count)
+    let end = tracks.count
+    tracks.removeSubrange(nextIndex ..< end)
+    shuffleOrder.remove(from: nextIndex, to: end)
   }
 }

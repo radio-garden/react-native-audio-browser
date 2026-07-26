@@ -315,6 +315,7 @@ class TrackPlayer {
   func togglePlayback() { coordinator.togglePlayback() }
 
   func handleInterruptionBegan() { coordinator.handleInterruptionBegan() }
+  func handleRouteDisconnected() { coordinator.handleRouteDisconnected() }
   var willResumeAfterInterruption: Bool { coordinator.willResumeAfterInterruption }
   func handleInterruptionEnded(shouldResume: Bool) {
     coordinator.handleInterruptionEnded(shouldResume: shouldResume)
@@ -687,7 +688,11 @@ extension TrackPlayer {
   /// can restore it without the JS runtime. Live streams persist `positionMs = nil`.
   private func persistPlaybackState() {
     guard let track = currentTrack else { return }
-    let positionMs: Double? = (track.live == true) ? nil : (currentTime * 1000)
+    // At .ended the position equals the duration — persisting it would make a
+    // cold-start resume seek to the end and instantly re-end (Android twin:
+    // savePositionZero).
+    let positionMs: Double? =
+      (track.live == true) ? nil : (state == .ended ? 0 : currentTime * 1000)
     playbackStateStore.save(
       PersistedPlaybackState(
         track: JsonTrack(from: track),

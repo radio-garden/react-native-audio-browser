@@ -621,6 +621,23 @@ struct ClearTests {
     let q = QueueManager()
     #expect(q.clear() == false)
   }
+
+  /// clear() and removeUpcomingTracks() were the only mutations not
+  /// maintaining the shuffle order — a stale order over a rebuilt queue
+  /// navigates to phantom indices, nil-ing currentTrack and unloading
+  /// playback mid-session.
+  @Test func clear_alsoClearsShuffleOrder() {
+    let q = QueueManager()
+    q.shuffleEnabled = true
+    q.setQueue(tracks("a", "b", "c", "d", "e"))
+
+    q.clear()
+
+    #expect(q.shuffleOrder.shuffled.isEmpty)
+
+    _ = try? q.addAt(tracks("x", "y"), at: 0)
+    #expect(q.shuffleOrder.shuffled.count == q.tracks.count)
+  }
 }
 
 // MARK: - Other: replace, removeUpcomingTracks
@@ -633,6 +650,16 @@ struct OtherMutationTests {
     q.setQueue(tracks("a", "b", "c"))
     q.replace(1, Track(id: "B"))
     #expect(q.tracks[1].id == "B")
+  }
+
+  @Test func removeUpcomingTracks_alsoTrimsShuffleOrder() {
+    let q = QueueManager()
+    q.shuffleEnabled = true
+    q.setQueue(tracks("a", "b", "c", "d", "e"), initialIndex: 1)
+
+    q.removeUpcomingTracks()
+
+    #expect(q.shuffleOrder.shuffled.count == q.tracks.count)
   }
 
   @Test func removeUpcomingTracks_keepsCurrentAndBefore() {

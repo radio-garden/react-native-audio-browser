@@ -1325,7 +1325,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       if let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
          AVAudioSession.RouteChangeReason(rawValue: reasonValue) == .oldDeviceUnavailable
       {
-        self.onMainActor { self.player?.pause() }
+        // Also cancels a pending interruption auto-resume: unplugging during
+        // a call must not blast the built-in speaker when the call ends.
+        self.onMainActor { self.player?.handleRouteDisconnected() }
       }
       if let output = self.getCurrentOutput() {
         self.onOutputChanged(output)
