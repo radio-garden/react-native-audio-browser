@@ -676,17 +676,28 @@ export class NativeAudioBrowser
       // Clear a fading sleep timer before the change is emitted (matches the
       // ordering of the native playWhenReady hooks).
       this.clearSleepTimerIfFading()
-      this.playWhenReady = false
+      // Drive the engine like native, not just the flag — otherwise audio
+      // keeps playing while every event reports paused. Flag-only before
+      // setup (no element yet).
+      if (this.element) {
+        this.pause()
+      } else {
+        this.playWhenReady = false
+      }
       return
     }
-    // Mirror native: raising the intent from a terminal state restarts
-    // playback (reload from stopped/error, replay from ended) instead of
-    // silently flipping the flag — play() owns those recovery paths and
-    // routes the intent through the emitting accessor.
+    // Mirror native: raising the intent restarts playback from terminal
+    // states (reload/replay via play()) and resumes a settled paused/ready
+    // player. While loading/buffering the flag alone is correct — load()'s
+    // auto-play starts playback once the source is ready.
     const { state } = this.state
     if (
       this.current !== undefined &&
-      (state === 'ended' || state === 'stopped' || state === 'error')
+      (state === 'ended' ||
+        state === 'stopped' ||
+        state === 'error' ||
+        state === 'paused' ||
+        state === 'ready')
     ) {
       this.play()
       return
@@ -768,6 +779,10 @@ export class NativeAudioBrowser
   }
 
   override stop(): void {
+    // Invalidate any in-flight load: its post-await continuation would call
+    // super.load(), whose first line re-arms the player (_isStopped = false)
+    // and revives the state out of Stopped.
+    this.currentLoadId++
     super.stop()
     this.clearSleepTimerIfFading()
   }
@@ -836,7 +851,12 @@ export class NativeAudioBrowser
     }
 
     if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
-      this.skip(startIndex, startPositionMs)
+      // skip()'s initialPosition is in seconds (matches Android's ms → s
+      // conversion at the same boundary).
+      this.skip(
+        startIndex,
+        startPositionMs === undefined ? undefined : startPositionMs / 1000
+      )
     }
   }
 
