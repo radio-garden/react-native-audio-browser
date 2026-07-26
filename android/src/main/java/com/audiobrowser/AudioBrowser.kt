@@ -66,6 +66,7 @@ import com.margelo.nitro.audiobrowser.PlaybackErrorEvent
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
 import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
+import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
 import com.margelo.nitro.audiobrowser.Progress
 import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
@@ -853,6 +854,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     player.stop()
     delay(300) // Allow playback to stop
     player.clear()
+    // clear() while IDLE emits no engine event, so the state machine never
+    // leaves STOPPED — a reset queue is "nothing loaded".
+    player.setPlaybackState(PlaybackState.NONE)
   }
 
   override fun play() = runBlockingOnMain { player.play() }

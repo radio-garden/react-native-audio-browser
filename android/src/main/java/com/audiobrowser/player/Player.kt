@@ -411,6 +411,14 @@ class Player(internal val context: Context) {
     mediaFactory = engine.mediaFactory
     exoPlayer = engine.exoPlayer
 
+    // A rebuilt engine starts paused and fires no change event — sync the
+    // eager cache and tell JS, or the stale true sticks (and the emit dedupe
+    // would swallow the next real rise).
+    if (!isInitialSetup) {
+      playWhenReadyCache = false
+      emitPlayWhenReadyChanged(false)
+    }
+
     // Recreate forwarding player with new ExoPlayer
     forwardingPlayer =
       InterceptingPlayer(
@@ -935,7 +943,10 @@ class Player(internal val context: Context) {
   }
 
   fun pause() {
-    exoPlayer.pause()
+    // Through the setter so the eager playWhenReadyCache write holds for the
+    // drop direction too — the retry policy reads it off-main before
+    // ExoPlayer's listener round-trip syncs it.
+    playWhenReady = false
   }
 
   fun togglePlayback() {
@@ -1019,6 +1030,13 @@ class Player(internal val context: Context) {
       if (state == PlaybackState.ENDED && playWhenReady) {
         playWhenReady = false
         emitPlayWhenReadyChanged(false)
+      }
+
+      // The last track fires no AUTO media-item transition, so an armed
+      // end-of-track sleep timer would stay set forever and pause the next
+      // track played instead.
+      if (state == PlaybackState.ENDED) {
+        sleepTimer.onTrackEnd()
       }
 
       // Clear error when transitioning away from error state
