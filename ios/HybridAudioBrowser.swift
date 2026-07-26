@@ -938,7 +938,9 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func retry() throws {
-    onMainActor { player?.reload(startFromCurrentTime: true) }
+    // Re-resolve rather than replay the cached URL: short-lived URLs/tokens
+    // may have expired since the failure (matches the internal retry path).
+    onMainActor { player?.reloadResolving(startFromCurrentTime: true) }
   }
 
   // MARK: - Sleep Timer
@@ -1290,9 +1292,12 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         .map { AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume) }
         ?? false
       onMainActor {
-        // The session may have been deactivated during the interruption;
-        // reactivate before resuming so playback actually produces output.
-        if shouldResume { try? AVAudioSession.sharedInstance().setActive(true) }
+        // Reactivate the possibly-deactivated session before resuming — but
+        // only when a resume will happen: activating while staying paused
+        // grabs a non-mixable session with nothing to release it.
+        if shouldResume, player?.willResumeAfterInterruption == true {
+          try? AVAudioSession.sharedInstance().setActive(true)
+        }
         player?.handleInterruptionEnded(shouldResume: shouldResume)
       }
     @unknown default:

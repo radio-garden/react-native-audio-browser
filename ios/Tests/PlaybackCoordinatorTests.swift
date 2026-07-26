@@ -1,4 +1,5 @@
 @testable import AudioBrowserTestable
+import Foundation
 import Testing
 
 /// Helper to build a coordinator with mocks for testing.
@@ -487,11 +488,29 @@ struct HandleTrackDidPlayToEndTimeTests {
     let (c, eh, _, _) = makeCoordinator()
     loadTrack(c)
     c.repeatMode = .track
+    c.playWhenReady = true
 
     c.handleTrackDidPlayToEndTime()
 
     // replay delegates to effectHandler.replayCurrentTrack (seek to 0 + play)
     #expect(eh.replayCurrentTrackCallCount == 1)
+  }
+
+  /// The end-of-track sleep timer pauses (clears intent) just before this
+  /// handler runs — an unguarded replay would resume seconds after the sleep
+  /// timer paused. Without intent the track settles in .ended, where play()
+  /// reloads (a bare .paused would park at the end, where play() no-ops).
+  @Test @MainActor
+  func repeatTrack_withoutIntent_settlesEnded() {
+    let (c, eh, _, _) = makeCoordinator()
+    loadTrack(c)
+    c.repeatMode = .track
+    c.playWhenReady = false
+
+    c.handleTrackDidPlayToEndTime()
+
+    #expect(eh.replayCurrentTrackCallCount == 0)
+    #expect(c.state == .ended)
   }
 
   @Test @MainActor
@@ -875,6 +894,54 @@ struct InterruptionTests {
     #expect(c.playWhenReady == false)
   }
 
+  /// The host gates audio-session reactivation at interruption-end on this:
+  /// paused-when-interrupted must not grab a non-mixable session for a resume
+  /// that never happens.
+  @Test @MainActor
+  func willResumeAfterInterruption_reflectsCapturedIntent() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.handleInterruptionBegan()
+    #expect(c.willResumeAfterInterruption == true)
+
+    c.handleInterruptionEnded(shouldResume: false)
+    #expect(c.willResumeAfterInterruption == false)
+
+    // Paused before the interruption: no resume will happen.
+    c.handleInterruptionBegan()
+    #expect(c.willResumeAfterInterruption == false)
+  }
+
+  /// iOS can deliver nested interruptions (Siri, then a phone call) — a second
+  /// .began must not re-capture the now-false intent and wipe the resume flag.
+  @Test @MainActor
+  func doubleBegan_preservesResumeIntent() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.handleInterruptionBegan()
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == true)
+  }
+
+  /// A user who plays then pauses during the interruption has taken ownership
+  /// of the intent — interruption-end must not override their pause.
+  @Test @MainActor
+  func userPauseDuringInterruption_overridesResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.play()
+    c.pause()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false)
+  }
+
   @Test @MainActor
   func ended_doesNotResume_whenNotPlayingBeforeInterruption() {
     let (c, eh, _, _) = makeCoordinator()
@@ -888,6 +955,41 @@ struct InterruptionTests {
     c.handleInterruptionEnded(shouldResume: true)
 
     #expect(c.playWhenReady == false) // never resumes — we weren't playing
+  }
+}
+
+// MARK: - Stop cancels pending retry
+
+@Suite("PlaybackCoordinator - stop cancels pending retry")
+struct StopCancelsRetryTests {
+  /// A retry surviving stop() gives up later (intent dropped) and surfaced
+  /// .errorOccurred over the deliberate stop — the UI showed an error seconds
+  /// after the user stopped.
+  @Test @MainActor
+  func stop_cancelsPendingRetry_andStaysSilent() async {
+    let retryHandler = MockRetryHandling()
+    retryHandler.isRetryableResult = true
+    retryHandler.attemptRetryResult = false
+    retryHandler.attemptRetryDelayNs = 50_000_000
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    let callbacks = MockPlaybackCoordinatorCallbacks()
+    coordinator.effectHandler = effectHandler
+    coordinator.callbacks = callbacks
+
+    errorHandler.handleError(URLError(.timedOut), context: .playback)
+    let task = errorHandler.pendingRetryTask
+    #expect(task != nil)
+
+    coordinator.stop()
+    #expect(errorHandler.pendingRetryTask == nil)
+
+    await task?.value
+    #expect(coordinator.state == .stopped)
+    #expect(callbacks.errorEvents.isEmpty)
   }
 }
 

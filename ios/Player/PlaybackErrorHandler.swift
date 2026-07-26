@@ -57,14 +57,16 @@ public enum PlaybackErrorContext {
       pendingRetryTask = Task { [weak self] in
         guard let self else { return }
         let retried = await retryHandler.attemptRetry(startFromCurrentTime: context.startFromCurrentTime)
+        // Cancelled (track change / stop): stay silent — attemptRetry returns
+        // false on a cancelled wait, and surfacing that would flip the new
+        // track or a deliberate stop to .error. The canceller owns the handle.
+        if Task.isCancelled { return }
         if !retried {
           let classified = PlaybackErrorHandler.classify(error: error, fallback: context.fallbackError)
           self.onError?(classified)
         }
-        // Done — clear the handle so intent-gated session release isn't blocked
-        // by a completed retry. A cancelled task was already replaced or nilled
-        // by its canceller; it must not clobber the successor's handle.
-        if !Task.isCancelled { pendingRetryTask = nil }
+        // Clear the handle: session release is gated on no pending retry.
+        pendingRetryTask = nil
       }
       return
     }

@@ -128,6 +128,11 @@ class PlaybackCoordinator {
 
   var playWhenReady: Bool = false {
     didSet {
+      // A play during an interruption takes ownership of the intent — the
+      // user's subsequent pause must not be overridden by auto-resume.
+      // (handleInterruptionEnded consumes its flag before its own play().)
+      if playWhenReady { shouldResumeAfterInterruption = false }
+
       // Terminal states need a reload, not a bare play(): the item is gone
       // (.stopped/.error) or parked at its end (.ended), where startPlayback()
       // is a silent no-op. Only .error resumes from the last position.
@@ -371,6 +376,9 @@ class PlaybackCoordinator {
   }
 
   func stop() {
+    // Cancel before the intent drop: a surviving retry would surface .error
+    // over the stop, and a pending task blocks the session release below.
+    errorHandler.cancelPendingRetry()
     transition(.stopped)
     playWhenReady = false
   }
@@ -384,12 +392,19 @@ class PlaybackCoordinator {
   /// `.playing` and any UI driven by it stays stuck. Drop the play intent and
   /// force the paused state, independent of notification delivery order.
   func handleInterruptionBegan() {
-    shouldResumeAfterInterruption = playWhenReady
+    // OR: a nested interruption's second .began sees the already-paused
+    // intent and must not wipe the flag the first one captured.
+    shouldResumeAfterInterruption = shouldResumeAfterInterruption || playWhenReady
     pause()
     if playbackActive, state != .loading {
       transition(.avPlayerPaused(hasAsset: effectHandler?.hasLoadedAsset ?? false))
     }
   }
+
+  /// Whether an interruption-end will resume playback — the intent captured at
+  /// interruption start. Lets the host gate side effects that must precede the
+  /// resume (audio-session reactivation) on whether one will actually happen.
+  var willResumeAfterInterruption: Bool { shouldResumeAfterInterruption }
 
   /// An audio-session interruption ended. Resume only if we were playing when it
   /// began and the system indicates resumption is appropriate (`shouldResume`).
@@ -555,7 +570,14 @@ class PlaybackCoordinator {
     sleepTimerManager.onTrackPlayedToEnd()
 
     if repeatMode == .track {
-      replay()
+      // The end-of-track sleep pause lands just above and clears the intent;
+      // without it, settle in .ended (where play() reloads) instead of
+      // replaying past the sleep timer.
+      if playWhenReady {
+        replay()
+      } else {
+        transition(.trackEndedNaturally)
+      }
     } else if repeatMode == .queue || !isLastInPlaybackOrder {
       next()
     } else {

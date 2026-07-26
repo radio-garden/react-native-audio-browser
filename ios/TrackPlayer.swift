@@ -315,6 +315,7 @@ class TrackPlayer {
   func togglePlayback() { coordinator.togglePlayback() }
 
   func handleInterruptionBegan() { coordinator.handleInterruptionBegan() }
+  var willResumeAfterInterruption: Bool { coordinator.willResumeAfterInterruption }
   func handleInterruptionEnded(shouldResume: Bool) {
     coordinator.handleInterruptionEnded(shouldResume: shouldResume)
   }

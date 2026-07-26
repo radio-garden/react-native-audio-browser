@@ -19,9 +19,14 @@ private final class MockRetryHandler: RetryHandling {
     return retryableErrors.contains(code)
   }
 
+  var attemptRetryDelayNs: UInt64 = 0
+
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool {
     attemptRetryCallCount += 1
     lastStartFromCurrentTime = startFromCurrentTime
+    if attemptRetryDelayNs > 0 {
+      try? await Task.sleep(nanoseconds: attemptRetryDelayNs)
+    }
     return attemptRetryResult
   }
 
@@ -136,6 +141,27 @@ struct HandleErrorTests {
     #expect(mock.attemptRetryCallCount == 1)
     #expect(mock.lastStartFromCurrentTime == true)
     // Retry succeeded, no error surfaced
+    #expect(surfacedError == nil)
+  }
+
+  /// A cancelled retry must stay silent: track change / stop cancel the task,
+  /// but its tail still runs — attemptRetry returns false (wait cancelled) and
+  /// the unguarded body surfaced .errorOccurred over the new track / the
+  /// deliberate stop.
+  @Test func cancelledRetry_staysSilent() async throws {
+    let mock = MockRetryHandler()
+    mock.retryableErrors = [URLError.Code.timedOut.rawValue]
+    mock.attemptRetryResult = false
+    mock.attemptRetryDelayNs = 50_000_000
+    let handler = PlaybackErrorHandler(retryHandler: mock)
+    var surfacedError: TrackPlayerError.PlaybackError?
+    handler.onError = { surfacedError = $0 }
+
+    handler.handleError(URLError(.timedOut), context: .playback)
+    let task = handler.pendingRetryTask
+    handler.cancelPendingRetry()
+    await task?.value
+
     #expect(surfacedError == nil)
   }
 
