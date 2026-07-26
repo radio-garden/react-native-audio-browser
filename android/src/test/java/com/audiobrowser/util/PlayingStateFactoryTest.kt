@@ -21,7 +21,8 @@ class PlayingStateFactoryTest {
 
   @Test
   fun `playWhenReady true plays except in terminal or empty states`() {
-    val notPlaying = setOf(PlaybackState.ERROR, PlaybackState.ENDED, PlaybackState.NONE)
+    val notPlaying =
+      setOf(PlaybackState.ERROR, PlaybackState.ENDED, PlaybackState.NONE, PlaybackState.STOPPED)
     for (state in PlaybackState.entries) {
       val derived = PlayingStateFactory.derive(playWhenReady = true, playbackState = state)
       assertEquals("playing for $state", state !in notPlaying, derived.playing)

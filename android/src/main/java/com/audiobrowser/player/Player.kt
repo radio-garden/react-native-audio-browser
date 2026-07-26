@@ -926,8 +926,11 @@ class Player(internal val context: Context) {
    * required for playback.
    */
   fun stop() {
-    playbackState = PlaybackState.STOPPED
-    exoPlayer.playWhenReady = false
+    // State first so the machine's STOPPED guard suppresses the PAUSED transition
+    // from the playWhenReady drop below; through setPlaybackState so the change
+    // is emitted (direct field assignment bypasses events — see its docstring).
+    setPlaybackState(PlaybackState.STOPPED)
+    playWhenReady = false
     exoPlayer.stop()
   }
 

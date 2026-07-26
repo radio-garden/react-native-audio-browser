@@ -16,7 +16,8 @@ object PlayingStateFactory {
       playWhenReady &&
         !(playbackState == PlaybackState.ERROR ||
           playbackState == PlaybackState.ENDED ||
-          playbackState == PlaybackState.NONE)
+          playbackState == PlaybackState.NONE ||
+          playbackState == PlaybackState.STOPPED)
     val buffering =
       playWhenReady &&
         (playbackState == PlaybackState.LOADING || playbackState == PlaybackState.BUFFERING)
