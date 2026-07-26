@@ -717,15 +717,13 @@ export class NativeAudioBrowser
 
   setPlayWhenReady(pwr: boolean): void {
     if (!pwr) {
-      // Clear a fading sleep timer before the change is emitted (matches the
-      // ordering of the native playWhenReady hooks).
-      this.clearSleepTimerIfFading()
-      // Drive the engine like native, not just the flag — otherwise audio
-      // keeps playing while every event reports paused. Flag-only before
-      // setup (no element yet).
       if (this.element) {
+        // pause() halts first and its override then clears a fading sleep
+        // timer — restoring the volume before the halt would let full-volume
+        // audio slip out (VolumeFader's invariant).
         this.pause()
       } else {
+        this.clearSleepTimerIfFading()
         this.playWhenReady = false
       }
       return

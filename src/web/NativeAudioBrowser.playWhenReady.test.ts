@@ -206,6 +206,78 @@ describe('NativeAudioBrowser queue change events', () => {
   })
 })
 
+// The queue array must never leak by live reference: in-place mutations
+// (add/move) otherwise emit the same object React already holds, and the
+// useState Object.is bailout suppresses the re-render the event exists for.
+describe('NativeAudioBrowser queue reference freshness', () => {
+  it('emits a fresh array on each mutation', () => {
+    class QueueEventBrowser extends TestBrowser {
+      load(): void {}
+    }
+    const browser = new QueueEventBrowser()
+    const seen: object[] = []
+    browser.onPlaybackQueueChanged = (queue) => seen.push(queue)
+    browser.setQueue([track, { ...track, id: 't2' }], 0)
+
+    browser.add([{ ...track, id: 't3' }])
+    browser.move(0, 1)
+
+    expect(seen[1]).not.toBe(seen[0])
+    expect(seen[2]).not.toBe(seen[1])
+    expect(seen[2]).not.toBe(browser.getQueue())
+  })
+
+  it('getQueue returns a defensive copy', () => {
+    class QueueEventBrowser extends TestBrowser {
+      load(): void {}
+    }
+    const browser = new QueueEventBrowser()
+    browser.setQueue([track, { ...track, id: 't2' }], 0)
+
+    browser.getQueue().length = 0
+
+    expect(browser.getQueue().length).toBe(2)
+  })
+})
+
+// Halting must precede the fade-cancel volume restore — the reverse lets
+// full-volume audio slip out while the element is still playing.
+describe('NativeAudioBrowser sleep-fade halt order', () => {
+  it('setPlayWhenReady(false) pauses before restoring the fading volume', () => {
+    const order: string[] = []
+    class FadeBrowser extends NativeAudioBrowser {
+      constructor() {
+        super()
+        this.element = {
+          play: () => Promise.resolve(),
+          pause: () => {
+            order.push('pause')
+          },
+          get volume() {
+            return 1
+          },
+          set volume(_v: number) {
+            order.push('volume')
+          }
+        } as unknown as HTMLMediaElement
+        this.player = {
+          unload: () => Promise.resolve()
+        } as unknown as typeof this.player
+      }
+    }
+    const browser = new FadeBrowser()
+    ;(
+      browser as unknown as { sleepFader: { start(d: number): void } }
+    ).sleepFader.start(10)
+    order.length = 0
+
+    browser.setPlayWhenReady(false)
+
+    expect(order[0]).toBe('pause')
+    expect(order).toContain('volume')
+  })
+})
+
 describe('NativeAudioBrowser setQueue start position', () => {
   it('passes startPositionMs to skip() in seconds', () => {
     const skips: Array<[number, number | undefined]> = []
