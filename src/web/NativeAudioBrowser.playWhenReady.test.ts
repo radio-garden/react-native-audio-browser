@@ -204,6 +204,12 @@ describe('NativeAudioBrowser queue change events', () => {
     browser.removeUpcomingTracks()
     expect(lengths).toEqual([1])
   })
+
+  it('reset emits the emptied queue', () => {
+    const { browser, lengths } = makeQueueBrowser()
+    browser.reset()
+    expect(lengths).toEqual([0])
+  })
 })
 
 // The queue array must never leak by live reference: in-place mutations

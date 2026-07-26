@@ -705,6 +705,11 @@ export class NativeAudioBrowser
     this.emitQueueChanged()
   }
 
+  override reset(): void {
+    super.reset()
+    this.emitQueueChanged()
+  }
+
   // Override playWhenReady to emit events (mirrors the state override): the
   // base transport methods (play/pause/stop, the queue-end intent clear)
   // assign through this accessor, so the change event and MediaSession sync
