@@ -162,6 +162,50 @@ describe('NativeAudioBrowser stop vs in-flight load', () => {
   })
 })
 
+// Queue mutations must emit onPlaybackQueueChanged (the JS contract documents
+// "added, removed, reordered"; Android emits via onTimelineChanged) — only
+// load/setQueue did on web, so useQueue() went stale after any mutation.
+describe('NativeAudioBrowser queue change events', () => {
+  function makeQueueBrowser(): {
+    browser: TestBrowser
+    lengths: number[]
+  } {
+    class QueueEventBrowser extends TestBrowser {
+      load(): void {}
+    }
+    const browser = new QueueEventBrowser()
+    const lengths: number[] = []
+    browser.onPlaybackQueueChanged = (queue) => lengths.push(queue.length)
+    browser.setQueue([track, { ...track, id: 't2' }], 0)
+    lengths.length = 0
+    return { browser, lengths }
+  }
+
+  it('add emits', () => {
+    const { browser, lengths } = makeQueueBrowser()
+    browser.add([{ ...track, id: 't3' }])
+    expect(lengths).toEqual([3])
+  })
+
+  it('remove emits', () => {
+    const { browser, lengths } = makeQueueBrowser()
+    browser.remove([1])
+    expect(lengths).toEqual([1])
+  })
+
+  it('move emits', () => {
+    const { browser, lengths } = makeQueueBrowser()
+    browser.move(0, 1)
+    expect(lengths).toEqual([2])
+  })
+
+  it('removeUpcomingTracks emits', () => {
+    const { browser, lengths } = makeQueueBrowser()
+    browser.removeUpcomingTracks()
+    expect(lengths).toEqual([1])
+  })
+})
+
 describe('NativeAudioBrowser setQueue start position', () => {
   it('passes startPositionMs to skip() in seconds', () => {
     const skips: Array<[number, number | undefined]> = []

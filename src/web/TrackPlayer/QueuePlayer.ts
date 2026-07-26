@@ -156,7 +156,9 @@ export class QueuePlayer extends Player {
     const outcome = this.queue.remove(indexes)
     switch (outcome.kind) {
       case 'no-current':
-        return
+        // Tracks were still spliced — fall through to shuffle regeneration,
+        // or the stale order indexes the pre-remove layout.
+        break
       case 'kept':
         break
       case 'reload':

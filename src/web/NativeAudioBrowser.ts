@@ -675,6 +675,28 @@ export class NativeAudioBrowser
     super.togglePlayback()
   }
 
+  // Queue mutations must reach onPlaybackQueueChanged (the contract covers
+  // added/removed/reordered; Android emits via onTimelineChanged).
+  override add(tracks: Track[], insertBeforeIndex?: number): void {
+    super.add(tracks, insertBeforeIndex)
+    this.onPlaybackQueueChanged(this.queue.tracks)
+  }
+
+  override remove(indexes: number[]): void {
+    super.remove(indexes)
+    this.onPlaybackQueueChanged(this.queue.tracks)
+  }
+
+  override move(fromIndex: number, toIndex: number): void {
+    super.move(fromIndex, toIndex)
+    this.onPlaybackQueueChanged(this.queue.tracks)
+  }
+
+  override removeUpcomingTracks(): void {
+    super.removeUpcomingTracks()
+    this.onPlaybackQueueChanged(this.queue.tracks)
+  }
+
   // Override playWhenReady to emit events (mirrors the state override): the
   // base transport methods (play/pause/stop, the queue-end intent clear)
   // assign through this accessor, so the change event and MediaSession sync

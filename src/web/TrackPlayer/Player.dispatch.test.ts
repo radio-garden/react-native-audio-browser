@@ -157,6 +157,35 @@ describe('QueuePlayer queue end', () => {
   })
 })
 
+describe('QueuePlayer remove without a current track', () => {
+  it('still regenerates the shuffle order', () => {
+    class ShuffleTestPlayer extends QueuePlayer {
+      regens = 0
+      constructor() {
+        super()
+        const original = this.queue.regenerateShuffleOrder.bind(this.queue)
+        this.queue.regenerateShuffleOrder = () => {
+          this.regens++
+          original()
+        }
+      }
+      seed(tracks: Array<{ src: string }>): void {
+        this.queue.setTracks(tracks as never)
+      }
+    }
+    const player = new ShuffleTestPlayer()
+    player.setShuffleEnabled(true)
+    player.seed([{ src: 'a' }, { src: 'b' }])
+    player.regens = 0
+
+    // 'no-current' outcome: tracks were spliced, so a stale order would
+    // index the pre-remove layout.
+    player.remove([0])
+
+    expect(player.regens).toBe(1)
+  })
+})
+
 describe('QueuePlayer skip while stopped', () => {
   it('reloads instead of seeking the unloaded element', () => {
     const loads: string[] = []
