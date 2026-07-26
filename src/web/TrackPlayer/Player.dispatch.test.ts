@@ -76,6 +76,28 @@ describe('Player.dispatch', () => {
   })
 })
 
+// Uses the real onTrackEnded (unlike TestQueuePlayer) so the natural-end path
+// runs through to onQueueEnded.
+class TestQueueEndPlayer extends QueuePlayer {
+  emit(event: PlaybackEvent): void {
+    this.dispatch(event)
+  }
+}
+
+describe('QueuePlayer queue end', () => {
+  it('drops the play intent when the queue ends naturally', () => {
+    const player = new TestQueueEndPlayer()
+    player.playWhenReady = true
+
+    player.emit({ type: 'trackEndedNaturally' })
+
+    // A natural end exhausts the intent: keeping it set inverted
+    // togglePlayback (first press was a silent pause) and armed load()'s
+    // auto-play with phantom intent.
+    expect(player.playWhenReady).toBe(false)
+  })
+})
+
 describe('QueuePlayer queue advance', () => {
   it('advances the queue when a track ends naturally', () => {
     const player = new TestQueuePlayer()

@@ -47,7 +47,12 @@ export class QueuePlayer extends Player {
   }
 
   protected onQueueEnded() {
-    console.warn('`onQueueEnded` is currently unimplemented')
+    // A natural queue end exhausts the play intent — nothing is left to play.
+    // Keeping it set inverted togglePlayback (the first press after completion
+    // was a silent pause) and armed load()'s auto-play with phantom intent.
+    // Per-track ends that advance the queue keep the intent; only this
+    // no-next-track branch clears it. Overrides must call super.
+    this.playWhenReady = false
   }
 
   protected goToIndex(index: number, initialPosition?: number) {

@@ -654,17 +654,26 @@ export class NativeAudioBrowser
     super.togglePlayback()
   }
 
-  setPlayWhenReady(pwr: boolean): void {
-    const didChange = pwr !== this._playWhenReady
-    super.playWhenReady = pwr
-    if (!pwr) this.clearSleepTimerIfFading()
+  // Override playWhenReady to emit events (mirrors the state override): the
+  // base transport methods (play/pause/stop, the queue-end intent clear)
+  // assign through this accessor, so the change event and MediaSession sync
+  // fire for every writer — not only setPlayWhenReady().
+  public override get playWhenReady(): boolean {
+    return super.playWhenReady
+  }
 
+  public override set playWhenReady(pwr: boolean) {
+    const didChange = pwr !== super.playWhenReady
+    super.playWhenReady = pwr
     if (didChange) {
-      this.onPlaybackPlayWhenReadyChanged({
-        playWhenReady: this._playWhenReady
-      })
+      this.onPlaybackPlayWhenReadyChanged({ playWhenReady: pwr })
       this.remoteCommands.syncPlaybackState()
     }
+  }
+
+  setPlayWhenReady(pwr: boolean): void {
+    this.playWhenReady = pwr
+    if (!pwr) this.clearSleepTimerIfFading()
   }
 
   getPlayWhenReady(): boolean {
