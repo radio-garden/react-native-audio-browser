@@ -96,15 +96,38 @@ describe('nextPlaybackState', () => {
     })
   })
 
-  describe('bufferingSufficient — suppressed while playing', () => {
+  describe('bufferingSufficient — suppressed from terminal states and playing', () => {
+    const suppressed: PlaybackState[] = ['playing', 'ended', 'stopped', 'error']
+
     it('from playing → suppressed', () => {
       expect(
         nextPlaybackState('playing', { type: 'bufferingSufficient' })
       ).toBeNull()
     })
 
+    // Shaka's post-error unload emits buffering events without the stopped
+    // dispatch gate; drifting error → ready would silently clear the error
+    // the UI is rendering with nothing recovered. Same guard as iOS/Android.
+    it('from error → suppressed (preserves the error)', () => {
+      expect(
+        nextPlaybackState('error', { type: 'bufferingSufficient' })
+      ).toBeNull()
+    })
+
+    it('from ended → suppressed', () => {
+      expect(
+        nextPlaybackState('ended', { type: 'bufferingSufficient' })
+      ).toBeNull()
+    })
+
+    it('from stopped → suppressed', () => {
+      expect(
+        nextPlaybackState('stopped', { type: 'bufferingSufficient' })
+      ).toBeNull()
+    })
+
     it('from any other state → ready', () => {
-      for (const state of ALL_STATES.filter((s) => s !== 'playing')) {
+      for (const state of ALL_STATES.filter((s) => !suppressed.includes(s))) {
         expect(
           nextPlaybackState(state, { type: 'bufferingSufficient' })
         ).toBe('ready')

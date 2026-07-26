@@ -67,7 +67,16 @@ export function nextPlaybackState(
       if (current === 'error') return null
       return 'paused'
     case 'bufferingSufficient':
-      // A rebuffer that finishes mid-playback should stay playing, not flash ready.
-      return current === 'playing' ? null : 'ready'
+      // A rebuffer that finishes mid-playback should stay playing, not flash
+      // ready. Terminal states must not drift back to ready either: from error
+      // it would silently clear the error the UI is rendering (Shaka's
+      // post-error unload emits buffering events without the stopped dispatch
+      // gate); ended/stopped own their state until an explicit load or play.
+      return current === 'playing' ||
+        current === 'ended' ||
+        current === 'stopped' ||
+        current === 'error'
+        ? null
+        : 'ready'
   }
 }
