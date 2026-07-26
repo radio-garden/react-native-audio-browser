@@ -16,7 +16,6 @@ import com.audiobrowser.util.MetadataAdapter
 import com.audiobrowser.util.RepeatModeFactory
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
-import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 import timber.log.Timber
@@ -153,9 +152,9 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // non-main readers see the new intent before ExoPlayer round-trips; this event is
     // the authoritative sync for changes ExoPlayer makes on its own (e.g. audio focus).
     player.playWhenReadyCache = playWhenReady
-    player.callbacks?.onPlaybackPlayWhenReadyChanged(
-      PlaybackPlayWhenReadyChangedEvent(playWhenReady)
-    )
+    // Through the dedupe guard: the ENDED clear in setPlaybackState already
+    // emitted this change synchronously (ordered before queue-ended).
+    player.emitPlayWhenReadyChanged(playWhenReady)
     player.refreshPlayingState()
 
     if (playWhenReady) {

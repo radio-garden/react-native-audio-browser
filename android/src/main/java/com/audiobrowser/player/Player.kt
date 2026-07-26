@@ -36,6 +36,7 @@ import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
 import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
@@ -80,6 +81,21 @@ class Player(internal val context: Context) {
   lateinit var forwardingPlayer: androidx.media3.common.Player
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
+
+  /** Last playWhenReady value emitted to JS — see [emitPlayWhenReadyChanged]. */
+  private var lastEmittedPlayWhenReady: Boolean? = null
+
+  /**
+   * Emits the playWhenReady change to JS exactly once per value. Two producers exist: the
+   * synchronous clear at ENDED in [setPlaybackState] (ordered before the state / queue-ended
+   * callbacks, matching iOS) and the async media3 listener (authoritative for changes ExoPlayer
+   * makes on its own, e.g. audio focus); the guard deduplicates their overlap.
+   */
+  internal fun emitPlayWhenReadyChanged(value: Boolean) {
+    if (lastEmittedPlayWhenReady == value) return
+    lastEmittedPlayWhenReady = value
+    callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(value))
+  }
   private lateinit var mediaFactory: MediaFactory
   private lateinit var loadControl: DynamicLoadControl
   private var automaticBufferManager: AutomaticBufferManager? = null
@@ -231,6 +247,14 @@ class Player(internal val context: Context) {
   var playWhenReady: Boolean
     get() = exoPlayer.playWhenReady
     set(value) {
+      // Raising the intent at STATE_ENDED must replay, not silently no-op:
+      // ExoPlayer's setPlayWhenReady(true) never restarts an ended player (the
+      // ENDED→seekToDefaultPosition replay lives in media3's media-button
+      // path, not the Player API). In the setter so every writer gets it —
+      // play(), togglePlayback() and JS setPlayWhenReady alike.
+      if (value && exoPlayer.playbackState == ExoPlayer.STATE_ENDED) {
+        exoPlayer.seekToDefaultPosition()
+      }
       playWhenReadyCache = value
       exoPlayer.playWhenReady = value
     }
@@ -834,14 +858,9 @@ class Player(internal val context: Context) {
   }
 
   fun play() {
-    // ExoPlayer.play() is only setPlayWhenReady(true) — at STATE_ENDED nothing
-    // restarts (the ENDED→seekToDefaultPosition replay lives in media3's
-    // media-button path, not the Player API). Mirror it so play after a natural
-    // end replays instead of silently doing nothing.
-    if (exoPlayer.playbackState == ExoPlayer.STATE_ENDED) {
-      exoPlayer.seekToDefaultPosition()
-    }
-    exoPlayer.play()
+    // Through the setter so the STATE_ENDED replay handling applies
+    // (ExoPlayer.play() is only setPlayWhenReady(true)).
+    playWhenReady = true
     if (currentTrack != null) {
       // No-op unless the player is STATE_IDLE (ExoPlayer.prepare early-returns
       // otherwise), so this only reconnects after a stop() or error and never
@@ -982,6 +1001,19 @@ class Player(internal val context: Context) {
       val oldState = playbackState
       playbackState = state
 
+      // A natural end exhausts the play intent — nothing is left to play. Keeping
+      // playWhenReady true inverted the play/pause toggle, held audio focus forever
+      // (ExoPlayer abandons it only at IDLE or on the intent dropping), and kept the
+      // periodic position save running. Cleared and emitted before the state /
+      // queue-ended callbacks so JS observes the native order (intent → state →
+      // queueEnded); the media3 listener's later echo is deduplicated by
+      // emitPlayWhenReadyChanged. The state machine's ENDED guard keeps the drop
+      // from re-reporting the state as PAUSED.
+      if (state == PlaybackState.ENDED && playWhenReady) {
+        playWhenReady = false
+        emitPlayWhenReadyChanged(false)
+      }
+
       // Clear error when transitioning away from error state
       if (oldState == PlaybackState.ERROR) {
         playbackError = null
@@ -997,15 +1029,6 @@ class Player(internal val context: Context) {
       // line. The publish-dedupe in applyNowPlayingFields drops redundant updates, so re-running
       // through the rapid startup sequence (none→loading→buffering→ready→playing) is cheap.
       nowPlaying.render()
-
-      // A natural end exhausts the play intent — nothing is left to play. Keeping
-      // playWhenReady true inverted the play/pause toggle, held audio focus forever
-      // (ExoPlayer abandons it only at IDLE or on the intent dropping), and kept the
-      // periodic position save running. The listener emits the change to JS; the
-      // state machine's ENDED guard keeps the state from flipping to PAUSED.
-      if (state == PlaybackState.ENDED) {
-        playWhenReady = false
-      }
 
       // Emit queue ended event when playback ends on the last track
       // This coupling ensures queue ended events are always triggered consistently with state
