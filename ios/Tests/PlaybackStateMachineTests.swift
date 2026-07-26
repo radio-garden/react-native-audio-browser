@@ -120,14 +120,21 @@ struct AVPlayerPausedTests {
 
 // MARK: - bufferingSufficient
 
-@Suite("bufferingSufficient — suppressed from .playing")
+@Suite("bufferingSufficient — suppressed from .playing and .ended")
 struct BufferingSufficientTests {
   @Test func fromPlaying_isSuppressed() {
     #expect(nextPlaybackState(from: .playing, on: .bufferingSufficient) == nil)
   }
 
+  /// A late playbackLikelyToKeepUp observation after a natural track end must not
+  /// leave .ended — playWhenReady is still true, so entering .ready would restart
+  /// playback of the completed track.
+  @Test func fromEnded_isSuppressed() {
+    #expect(nextPlaybackState(from: .ended, on: .bufferingSufficient) == nil)
+  }
+
   @Test func fromOtherStates_transitionsToReady() {
-    for state in allStates where state != .playing {
+    for state in allStates where state != .playing && state != .ended {
       #expect(
         nextPlaybackState(from: state, on: .bufferingSufficient) == .ready,
         "Expected .ready from \(state)",
