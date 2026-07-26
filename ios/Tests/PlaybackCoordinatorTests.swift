@@ -643,6 +643,29 @@ struct HealthyPlaybackRetryResetTests {
     #expect(retryHandler.resetCallCount == 1)
   }
 
+  /// resetRetry() cancels a pending retry — firing the refill mid-episode
+  /// would kill an in-flight reconnect silently (stuck .playing forever).
+  @Test @MainActor
+  func refill_skipsWhileRetryIsPending() async throws {
+    let retryHandler = MockRetryHandling()
+    retryHandler.isRetryableResult = true
+    retryHandler.attemptRetryDelayNs = 1_000_000_000
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    coordinator.effectHandler = effectHandler
+    coordinator.healthyPlaybackDuration = 0.01
+
+    coordinator.transition(.avPlayerPlaying)
+    errorHandler.handleError(URLError(.timedOut), context: .playback)
+    try await Task.sleep(nanoseconds: 100_000_000)
+
+    #expect(retryHandler.resetCallCount == 0)
+    #expect(errorHandler.pendingRetryTask != nil)
+  }
+
   @Test @MainActor
   func playbackInterruptedBeforeThreshold_doesNotReset() async throws {
     let retryHandler = MockRetryHandling()
@@ -925,6 +948,22 @@ struct InterruptionTests {
     c.handleInterruptionEnded(shouldResume: true)
 
     #expect(c.playWhenReady == true)
+  }
+
+  /// An explicit stop during the interruption is a terminal command — the
+  /// interruption-end must not restart playback over it.
+  @Test @MainActor
+  func stopDuringInterruption_isNotOverriddenByResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.stop()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.state == .stopped)
+    #expect(c.playWhenReady == false)
+    #expect(eh.reloadTrackCalls.isEmpty)
   }
 
   /// A user who plays then pauses during the interruption has taken ownership

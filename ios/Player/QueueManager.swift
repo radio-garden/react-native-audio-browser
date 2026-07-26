@@ -239,7 +239,7 @@ class QueueManager {
     }
     let wasEmpty = tracks.isEmpty
     // Correct index when tracks were inserted in front of it:
-    if tracks.count > 1, currentIndex >= index {
+    if currentIndex >= 0, currentIndex >= index {
       currentIndex += newTracks.count
     }
     tracks.insert(contentsOf: newTracks, at: index)
@@ -278,11 +278,19 @@ class QueueManager {
     // Mutate a copy and assign once to trigger didSet only once
     var newTracks = tracks
     let track = newTracks.remove(at: fromIndex)
-    newTracks.insert(track, at: min(newTracks.count, toIndex))
+    let insertion = min(newTracks.count, toIndex)
+    newTracks.insert(track, at: insertion)
     tracks = newTracks
-    if fromIndex == currentIndex {
-      currentIndex = toIndex
-      return true
+    shuffleOrder.remove(from: fromIndex, to: fromIndex + 1)
+    shuffleOrder.insert(at: insertion, count: 1)
+    // The pointer follows the playing track; its identity never changes on a
+    // move, so no caller needs to reload (returning true reloads).
+    if currentIndex == fromIndex {
+      currentIndex = insertion
+    } else if fromIndex < currentIndex, insertion >= currentIndex {
+      currentIndex -= 1
+    } else if fromIndex > currentIndex, insertion <= currentIndex {
+      currentIndex += 1
     }
     return false
   }

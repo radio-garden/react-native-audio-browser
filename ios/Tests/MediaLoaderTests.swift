@@ -68,6 +68,21 @@ struct MediaLoaderInitialStateTests {
   }
 }
 
+// MARK: - loadAsset
+
+@Suite("loadAsset")
+@MainActor
+struct LoadAssetTests {
+  /// A silent return here stranded the player: reload-from-terminal has
+  /// already transitioned to .loading, so no-oping leaves a spinner forever
+  /// with no load in flight and no error.
+  @Test func withoutResolvedUrl_reportsError() {
+    let (loader, spy) = makeLoader()
+    loader.loadAsset()
+    #expect(spy.playbackErrors.count == 1)
+  }
+}
+
 // MARK: - resolveAndLoad
 
 @Suite("resolveAndLoad")

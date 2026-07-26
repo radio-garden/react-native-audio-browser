@@ -245,6 +245,9 @@ class PlaybackCoordinator {
         guard let self else { return }
         try? await Task.sleep(nanoseconds: UInt64(healthyPlaybackDuration * 1_000_000_000))
         guard !Task.isCancelled else { return }
+        // Refill only between episodes: resetRetry() cancels a pending retry,
+        // which would silently kill an in-flight reconnect.
+        guard errorHandler.pendingRetryTask == nil else { return }
         errorHandler.resetRetry()
       }
     } else if old == .playing {
@@ -379,6 +382,8 @@ class PlaybackCoordinator {
     // Cancel before the intent drop: a surviving retry would surface .error
     // over the stop, and a pending task blocks the session release below.
     errorHandler.cancelPendingRetry()
+    // A stop is terminal — interruption-end must not resume over it.
+    shouldResumeAfterInterruption = false
     transition(.stopped)
     playWhenReady = false
   }

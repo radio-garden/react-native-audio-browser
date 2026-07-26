@@ -75,7 +75,12 @@ final class MediaLoader {
   }
 
   func loadAsset() {
-    guard let url else { return }
+    guard let url else {
+      // Callers (reload-from-terminal) have already transitioned to .loading;
+      // a silent return would strand that state with no load in flight.
+      delegate?.mediaLoaderDidFailWithError(.invalidSourceUrl("nil"))
+      return
+    }
     let pendingAsset = AVURLAsset(url: url, options: urlOptions)
     asset = pendingAsset
 
