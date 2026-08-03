@@ -856,7 +856,9 @@ public final class RNABCarPlayController: NSObject {
       template.userInfo = ["path": path] as [String: Any]
     }
     if let loadingTitle = config.carPlayLoadingTitle {
-      template.emptyViewTitleVariants = [loadingTitle]
+      // Subtitle slot on purpose: the title slot renders at CarPlay's large
+      // empty-state size, which is too heavy for a transient loading hint.
+      template.emptyViewSubtitleVariants = [loadingTitle]
     }
     if #available(iOS 18.4, *) {
       template.showsSpinnerWhileEmpty = true
