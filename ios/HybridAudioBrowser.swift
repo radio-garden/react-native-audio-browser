@@ -1064,13 +1064,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     try? setActiveTrackFavorited(favorited: !isActiveTrackFavorited())
   }
 
-  public func setQueue(tracks: [Track], startIndex: Double?, startPositionMs: Double?) throws {
+  public func setQueue(tracks: [Track], startIndex: Double?, startPosition: Double?) throws {
     onMainActor {
       guard let player else { return }
       player.setQueue(
         tracks,
         initialIndex: startIndex.map { Int($0) } ?? 0,
-        startPositionMs: startPositionMs,
+        startPositionMs: startPosition.map { $0 * 1000 },
       )
     }
   }

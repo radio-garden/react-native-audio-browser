@@ -2112,7 +2112,7 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setQueue(tracks: bridge.std__vector_Track_, startIndex: bridge.std__optional_double_, startPositionMs: bridge.std__optional_double_) -> bridge.Result_void_ {
+  public final func setQueue(tracks: bridge.std__vector_Track_, startIndex: bridge.std__optional_double_, startPosition: bridge.std__optional_double_) -> bridge.Result_void_ {
     do {
       try self.__implementation.setQueue(tracks: tracks.map({ __item in __item }), startIndex: { () -> Double? in
         if bridge.has_value_std__optional_double_(startIndex) {
@@ -2121,9 +2121,9 @@ open class HybridAudioBrowserSpec_cxx {
         } else {
           return nil
         }
-      }(), startPositionMs: { () -> Double? in
-        if bridge.has_value_std__optional_double_(startPositionMs) {
-          let __unwrapped = bridge.get_std__optional_double_(startPositionMs)
+      }(), startPosition: { () -> Double? in
+        if bridge.has_value_std__optional_double_(startPosition) {
+          let __unwrapped = bridge.get_std__optional_double_(startPosition)
           return __unwrapped
         } else {
           return nil

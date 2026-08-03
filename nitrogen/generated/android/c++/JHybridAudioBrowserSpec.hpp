@@ -220,7 +220,7 @@ namespace margelo::nitro::audiobrowser {
     void skipToPrevious(std::optional<double> initialPosition) override;
     void setActiveTrackFavorited(bool favorited) override;
     void toggleActiveTrackFavorited() override;
-    void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) override;
+    void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) override;
     std::vector<Track> getQueue() override;
     std::optional<Track> getTrack(double index) override;
     std::optional<double> getActiveTrackIndex() override;

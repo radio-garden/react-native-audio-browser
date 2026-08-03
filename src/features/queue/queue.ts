@@ -123,14 +123,14 @@ export function skipToPrevious(initialPosition?: number): void {
  *
  * @param tracks - The tracks to set as the queue.
  * @param startIndex - (Optional) The index of the track to make active.
- * @param startPositionMs - (Optional) The position in milliseconds to start the active track from.
+ * @param startPosition - (Optional) The position in seconds to start the active track from.
  */
 export function setQueue(
   tracks: Track[],
   startIndex?: number,
-  startPositionMs?: number
+  startPosition?: number
 ): void {
-  nativeBrowser.setQueue(tracks, startIndex, startPositionMs)
+  nativeBrowser.setQueue(tracks, startIndex, startPosition)
 }
 
 // MARK: - Getters

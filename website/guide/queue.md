@@ -24,16 +24,14 @@ import { setQueue, play } from 'react-native-audio-browser'
 
 setQueue(tracks) // replace; first track becomes active
 setQueue(tracks, 2) // start on index 2
-setQueue(tracks, 2, 30_000) // ...30 seconds in (milliseconds!)
+setQueue(tracks, 2, 30) // ...30 seconds in
 ```
 
-Two things to know:
+One thing to know:
 
 - **It doesn't start playback.** `setQueue` leaves the play/pause state as-is —
   if the player was paused it stays paused. Call
   [`play()`](/api/features/playback/#play) to begin (see [Playback](/guide/playback)).
-- **`startPositionMs` is in milliseconds**, unlike the seconds used everywhere
-  else (`seekTo`, `skip`, …). See the [units note](#a-note-on-units).
 
 So the usual "load these and play" is two calls:
 
@@ -282,17 +280,15 @@ confuse row identity.
 
 ## A note on units
 
-Most position arguments are **seconds** — `seekTo`, `seekBy`, and the
-`initialPosition` on `skip` / `skipToNext` / `skipToPrevious`. The one exception
-is `setQueue`'s third argument, `startPositionMs`, which is **milliseconds**.
-When in doubt, `30` means half a minute everywhere except `setQueue`, where it
-means 30 thousandths of a second.
+All position arguments are **seconds** — `seekTo`, `seekBy`, the
+`initialPosition` on `skip` / `skipToNext` / `skipToPrevious`, and `setQueue`'s
+`startPosition`.
 
 ## API summary
 
 | API | Purpose |
 | --- | --- |
-| `setQueue(tracks, startIndex?, startPositionMs?)` | Replace the queue (doesn't auto-play; position in **ms**). |
+| `setQueue(tracks, startIndex?, startPosition?)` | Replace the queue (doesn't auto-play; position in **seconds**). |
 | `add(track \| tracks, insertBeforeIndex?)` | Append, or insert before an index. |
 | `load(track)` | Replace the active track (or start the queue if empty). |
 | `move(from, to)` | Reorder; `to` past the end → end. |

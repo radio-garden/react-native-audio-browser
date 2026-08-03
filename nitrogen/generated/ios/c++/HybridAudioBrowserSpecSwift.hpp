@@ -1096,8 +1096,8 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) override {
-      auto __result = _swiftPart.setQueue(tracks, startIndex, startPositionMs);
+    inline void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) override {
+      auto __result = _swiftPart.setQueue(tracks, startIndex, startPosition);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

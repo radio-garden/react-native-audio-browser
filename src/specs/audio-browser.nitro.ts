@@ -269,7 +269,7 @@ export interface AudioBrowser extends HybridObject<{
    * Toggles the favorited state of the currently playing track.
    */
   toggleActiveTrackFavorited(): void
-  setQueue(tracks: Track[], startIndex?: number, startPositionMs?: number): void
+  setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void
   getQueue(): Track[]
   getTrack(index: number): Track | undefined
   getActiveTrackIndex(): number | undefined

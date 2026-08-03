@@ -1016,7 +1016,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setQueue(tracks: Array<Track>, startIndex: Double?, startPositionMs: Double?): Unit
+  abstract fun setQueue(tracks: Array<Track>, startIndex: Double?, startPosition: Double?): Unit
   
   @DoNotStrip
   @Keep

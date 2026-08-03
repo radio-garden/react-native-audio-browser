@@ -974,9 +974,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
   }
 
-  override fun setQueue(tracks: Array<Track>, startIndex: Double?, startPositionMs: Double?) =
+  override fun setQueue(tracks: Array<Track>, startIndex: Double?, startPosition: Double?) =
     runBlockingOnMain {
-      player.setQueue(tracks, startIndex?.toInt() ?: 0, startPositionMs?.toLong() ?: 0)
+      player.setQueue(tracks, startIndex?.toInt() ?: 0, ((startPosition ?: 0.0) * 1000).toLong())
     }
 
   override fun setActiveTrackFavorited(favorited: Boolean) = runBlockingOnMain {

@@ -13,13 +13,13 @@ import { setQueue } from './queue'
 describe('setQueue wrapper', () => {
   beforeEach(() => { calls.length = 0 })
 
-  it('threads startIndex and startPositionMs to native', () => {
+  it('threads startIndex and startPosition to native', () => {
     const tracks = [{ src: 'a' }, { src: 'b' }] as any
-    setQueue(tracks, 1, 5000)
-    expect(calls).toContainEqual(['setQueue', tracks, 1, 5000])
+    setQueue(tracks, 1, 5)
+    expect(calls).toContainEqual(['setQueue', tracks, 1, 5])
   })
 
-  it('forwards startIndex even when startPositionMs is omitted', () => {
+  it('forwards startIndex even when startPosition is omitted', () => {
     const tracks = [{ src: 'a' }, { src: 'b' }] as any
     setQueue(tracks, 1)
     expect(calls[0]).toEqual(['setQueue', tracks, 1, undefined])

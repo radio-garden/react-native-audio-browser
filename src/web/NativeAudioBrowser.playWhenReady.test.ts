@@ -285,7 +285,7 @@ describe('NativeAudioBrowser sleep-fade halt order', () => {
 })
 
 describe('NativeAudioBrowser setQueue start position', () => {
-  it('passes startPositionMs to skip() in seconds', () => {
+  it('passes startPosition through to skip() in seconds', () => {
     const skips: Array<[number, number | undefined]> = []
     class SkipRecordingBrowser extends TestBrowser {
       skip(index: number, initialPosition?: number): void {
@@ -294,7 +294,7 @@ describe('NativeAudioBrowser setQueue start position', () => {
     }
     const browser = new SkipRecordingBrowser()
 
-    browser.setQueue([track], 0, 30000)
+    browser.setQueue([track], 0, 30)
 
     expect(skips).toEqual([[0, 30]])
   })

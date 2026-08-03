@@ -876,7 +876,7 @@ export class NativeAudioBrowser
   setQueue(
     tracks: Track[],
     startIndex?: number,
-    startPositionMs?: number
+    startPosition?: number
   ): void {
     this.stop()
     // Clear stale references from previous queue
@@ -906,12 +906,7 @@ export class NativeAudioBrowser
     }
 
     if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
-      // skip()'s initialPosition is in seconds (matches Android's ms → s
-      // conversion at the same boundary).
-      this.skip(
-        startIndex,
-        startPositionMs === undefined ? undefined : startPositionMs / 1000
-      )
+      this.skip(startIndex, startPosition)
     }
   }
 

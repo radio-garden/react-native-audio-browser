@@ -1719,8 +1719,8 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("toggleActiveTrackFavorited");
     method(_javaPart);
   }
-  void JHybridAudioBrowserSpec::setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* startIndex */, jni::alias_ref<jni::JDouble> /* startPositionMs */)>("setQueue");
+  void JHybridAudioBrowserSpec::setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JTrack>> /* tracks */, jni::alias_ref<jni::JDouble> /* startIndex */, jni::alias_ref<jni::JDouble> /* startPosition */)>("setQueue");
     method(_javaPart, [&]() {
       size_t __size = tracks.size();
       jni::local_ref<jni::JArrayClass<JTrack>> __array = jni::JArrayClass<JTrack>::newArray(__size);
@@ -1730,7 +1730,7 @@ namespace margelo::nitro::audiobrowser {
         __array->setElement(__i, *__elementJni);
       }
       return __array;
-    }(), startIndex.has_value() ? jni::JDouble::valueOf(startIndex.value()) : nullptr, startPositionMs.has_value() ? jni::JDouble::valueOf(startPositionMs.value()) : nullptr);
+    }(), startIndex.has_value() ? jni::JDouble::valueOf(startIndex.value()) : nullptr, startPosition.has_value() ? jni::JDouble::valueOf(startPosition.value()) : nullptr);
   }
   std::vector<Track> JHybridAudioBrowserSpec::getQueue() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JTrack>>()>("getQueue");
