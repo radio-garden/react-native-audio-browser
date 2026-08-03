@@ -1191,7 +1191,6 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       description: track.description,
       mediaId: track.src ?? track.url,
       genre: track.genre,
-      rating: nil,
     )
   }
 
