@@ -169,14 +169,22 @@ final class CarPlayNowPlayingManager {
 
   // MARK: - Show Now Playing
 
-  func showNowPlaying() {
+  /// `popToFront` controls what happens when Now Playing is already on the
+  /// stack but buried under templates pushed on top of it (Up Next, the album
+  /// line's browse destination): a user-initiated surface (tap, voice play)
+  /// pops back to it, while the deferred post-resolve calls in
+  /// `handleItemSelection` pass `false` — they run seconds after the tap, and
+  /// popping then would yank away a screen the user navigated to meanwhile.
+  func showNowPlaying(popToFront: Bool = true) {
     updateNowPlayingButtonStates()
     let nowPlayingTemplate = CPNowPlayingTemplate.shared
-    // Don't push if already on the template stack
-    guard !interfaceController.templates.contains(where: { $0 === nowPlayingTemplate }) else {
-      return
+    if interfaceController.templates.contains(where: { $0 === nowPlayingTemplate }) {
+      if popToFront {
+        interfaceController.safePop(to: nowPlayingTemplate, animated: true)
+      }
+    } else {
+      interfaceController.safePush(nowPlayingTemplate, animated: true)
     }
-    interfaceController.pushTemplate(nowPlayingTemplate, animated: true, completion: nil)
   }
 
   // MARK: - Button State Updates
@@ -377,7 +385,7 @@ final class CarPlayNowPlayingManager {
 
     upNextTemplate = template
 
-    interfaceController.pushTemplate(template, animated: true, completion: nil)
+    interfaceController.safePush(template, animated: true)
   }
 
   private func createUpNextSection(tracks: [Track], player: TrackPlayer) -> CPListSection {

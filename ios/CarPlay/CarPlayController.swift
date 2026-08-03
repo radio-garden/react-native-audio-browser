@@ -441,7 +441,7 @@ public final class RNABCarPlayController: NSObject {
   /// re-shows it once config is available.
   private func showLoadingTemplate() {
     let template = makeLoadingTemplate(title: nil, path: nil)
-    interfaceController.setRootTemplate(template, animated: false, completion: nil)
+    interfaceController.safeSetRoot(template, animated: false)
   }
 
   // MARK: - Tab Bar
@@ -486,7 +486,7 @@ public final class RNABCarPlayController: NSObject {
     // Set the tab bar immediately so UI appears fast
     logger.info("Setting tab bar root template with \(tabTemplates.count) templates")
     let tabBar = CPTabBarTemplate(templates: tabTemplates)
-    interfaceController.setRootTemplate(tabBar, animated: true, completion: nil)
+    interfaceController.safeSetRoot(tabBar, animated: true)
 
     // Load content for the first tab only - others load lazily when selected
     if let firstTemplate = tabTemplates.first, let firstTab = tabs.first, let url = firstTab.url {
@@ -517,8 +517,8 @@ public final class RNABCarPlayController: NSObject {
       guard gateBuildGeneration == generation else { return }  // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
-        interfaceController.setRootTemplate(
-          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true, completion: nil,
+        interfaceController.safeSetRoot(
+          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true,
         )
       }
       return
@@ -546,8 +546,8 @@ public final class RNABCarPlayController: NSObject {
       // Equal-count in-place swap keeps the selected tab index.
       tabBar.updateTemplates(templates)
     } else {
-      interfaceController.setRootTemplate(
-        CPTabBarTemplate(templates: templates), animated: true, completion: nil,
+      interfaceController.safeSetRoot(
+        CPTabBarTemplate(templates: templates), animated: true,
       )
     }
 
@@ -775,9 +775,9 @@ public final class RNABCarPlayController: NSObject {
       switch result {
       case let .play(intent):
         self.executePlayback(intent, player: player)
-        self.nowPlayingManager.showNowPlaying()
+        self.nowPlayingManager.showNowPlaying(popToFront: false)
       case .intercepted:
-        self.nowPlayingManager.showNowPlaying()
+        self.nowPlayingManager.showNowPlaying(popToFront: false)
       case let .browse(url):
         await self.navigateToUrl(url, title: track.title)
       case .none:
@@ -815,8 +815,8 @@ public final class RNABCarPlayController: NSObject {
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
         if let top = interfaceController.topTemplate, getPath(from: top) == url { return }
-        interfaceController.pushTemplate(
-          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true, completion: nil,
+        interfaceController.safePush(
+          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true,
         )
         return
       }
@@ -831,7 +831,7 @@ public final class RNABCarPlayController: NSObject {
     navigatingPaths.insert(url)
 
     let template = makeLoadingTemplate(title: title, path: url)
-    interfaceController.pushTemplate(template, animated: true) { [weak self] pushed, error in
+    interfaceController.safePush(template, animated: true) { [weak self] pushed, error in
       guard !pushed else { return }
       // The push can fail (e.g. CarPlay's template stack depth limit). The
       // appear callback that normally clears the guard will never fire, so
@@ -906,8 +906,8 @@ public final class RNABCarPlayController: NSObject {
     message.emptyViewTitleVariants = [title.isEmpty ? "Couldn't load" : title]
     message.emptyViewSubtitleVariants = subtitle.map { [$0] } ?? []
 
-    interfaceController.popTemplate(animated: false) { [weak self] _, _ in
-      self?.interfaceController.pushTemplate(message, animated: false, completion: nil)
+    interfaceController.safePop(animated: false) { [weak self] _, _ in
+      self?.interfaceController.safePush(message, animated: false)
     }
   }
 
@@ -1130,7 +1130,7 @@ public final class RNABCarPlayController: NSObject {
     } else {
       // Tear down any pushed navigation — gated content must not stay reachable
       // behind the gate, and on clear we return to the root. (No-op at root.)
-      interfaceController.popToRootTemplate(animated: false, completion: nil)
+      interfaceController.safePopToRoot(animated: false)
       Task { await showTabBar(tabs: tabs) }
     }
     nowPlayingManager.setupNowPlayingButtons()
@@ -1209,7 +1209,7 @@ public final class RNABCarPlayController: NSObject {
   private func presentErrorActionSheet(customDisplay: FormattedNavigationError) {
     // If another template is already presented, dismiss it first
     if interfaceController.presentedTemplate != nil {
-      interfaceController.dismissTemplate(animated: false) { [weak self] _, _ in
+      interfaceController.safeDismiss(animated: false) { [weak self] _, _ in
         self?.showErrorActionSheet(customDisplay: customDisplay)
       }
     } else {
@@ -1222,7 +1222,7 @@ public final class RNABCarPlayController: NSObject {
     // OK action - dismiss the action sheet (use system-localized "OK")
     let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
     let ok = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
-      self?.interfaceController.dismissTemplate(animated: true, completion: nil)
+      self?.interfaceController.safeDismiss(animated: true)
     }
 
     let actionSheet = CPActionSheetTemplate(
@@ -1231,7 +1231,7 @@ public final class RNABCarPlayController: NSObject {
       actions: [ok],
     )
 
-    interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
+    interfaceController.safePresent(actionSheet, animated: true)
   }
 
   /// Shows an initialization failure as the root template — a centered empty
@@ -1244,7 +1244,7 @@ public final class RNABCarPlayController: NSObject {
     let template = CPListTemplate(title: nil, sections: [])
     template.emptyViewTitleVariants = [formatted.title]
     template.emptyViewSubtitleVariants = formatted.message.flatMap { $0.isEmpty ? nil : [$0] } ?? []
-    interfaceController.setRootTemplate(template, animated: true, completion: nil)
+    interfaceController.safeSetRoot(template, animated: true)
   }
 }
 
