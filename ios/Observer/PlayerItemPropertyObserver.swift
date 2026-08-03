@@ -47,22 +47,38 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
     observations = [
       avItem.observe(\.duration, options: [.new]) { [weak self] item, _ in
         let seconds = item.duration.seconds
-        Task { @MainActor in self?.onDurationUpdate(seconds) }
+        let identity = ObjectIdentifier(item)
+        Task { @MainActor in
+          guard let self, self.isObserving(identity) else { return }
+          self.onDurationUpdate(seconds)
+        }
       },
       avItem.observe(\.loadedTimeRanges, options: [.new]) { [weak self] item, _ in
         if let duration = item.loadedTimeRanges.first?.timeRangeValue.duration {
           let seconds = duration.seconds
-          Task { @MainActor in self?.onDurationUpdate(seconds) }
+          let identity = ObjectIdentifier(item)
+          Task { @MainActor in
+            guard let self, self.isObserving(identity) else { return }
+            self.onDurationUpdate(seconds)
+          }
         }
       },
       avItem.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] item, _ in
         let isLikely = item.isPlaybackLikelyToKeepUp
-        Task { @MainActor in self?.onPlaybackLikelyToKeepUpUpdate(isLikely) }
+        let identity = ObjectIdentifier(item)
+        Task { @MainActor in
+          guard let self, self.isObserving(identity) else { return }
+          self.onPlaybackLikelyToKeepUpUpdate(isLikely)
+        }
       },
       avItem.observe(\.status, options: [.new]) { [weak self] item, _ in
         let status = item.status
         let error = item.error
-        Task { @MainActor in self?.onStatusChange(status, error) }
+        let identity = ObjectIdentifier(item)
+        Task { @MainActor in
+          guard let self, self.isObserving(identity) else { return }
+          self.onStatusChange(status, error)
+        }
       },
     ]
 
@@ -82,6 +98,13 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 
     observingAVItem = nil
     currentMetadataOutput = nil
+  }
+
+  /// True when `identity` still names the observed item. KVO fires off the main thread, so
+  /// the main-actor hop can land after the observer switched items — without this check a
+  /// stale delivery (e.g. the old item's `.failed`) is attributed to the freshly loaded one.
+  private func isObserving(_ identity: ObjectIdentifier) -> Bool {
+    observingAVItem.map(ObjectIdentifier.init) == identity
   }
 }
 

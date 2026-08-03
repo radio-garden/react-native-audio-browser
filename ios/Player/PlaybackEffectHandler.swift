@@ -26,6 +26,8 @@
   // Track loading. The full `track` is threaded alongside `src` so the
   // media-URL resolver can invoke the consumer's `media.resolve(track)`.
   func loadTrack(src: String, track: Track)
+  /// Reloads the current track, re-running the media-URL resolver so a
+  /// short-lived/expired URL is refreshed rather than replayed.
   func reloadTrack(startFromCurrentTime: Bool)
   func unloadTrack()
   func cancelMediaLoading()

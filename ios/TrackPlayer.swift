@@ -379,7 +379,9 @@ class TrackPlayer {
     if let range = item.seekableTimeRanges.last?.timeRangeValue, range.duration.seconds > 0 {
       avPlayer.seek(to: range.end, toleranceBefore: .zero, toleranceAfter: .zero)
     } else {
-      reload(startFromCurrentTime: false)
+      // Re-resolve on reconnect: this is the stall-recovery path for non-seekable live
+      // streams, where a short-lived stream URL may have expired during the outage.
+      reloadResolving(startFromCurrentTime: false)
     }
   }
 
@@ -754,7 +756,10 @@ extension TrackPlayer: PlaybackEffectHandler {
   }
 
   func reloadTrack(startFromCurrentTime: Bool) {
-    reload(startFromCurrentTime: startFromCurrentTime)
+    // Re-resolve rather than replay the cached URL: play-from-.error typically happens long
+    // after the failure (an expired signed URL would just re-fail, often non-retryably),
+    // matching every other retry path (retry, network restore, media-services reset).
+    reloadResolving(startFromCurrentTime: startFromCurrentTime)
   }
 
   func unloadTrack() {
