@@ -376,13 +376,17 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     let defaultFormatted = navError.defaultFormatted()
     if let formatter = onMainActor({ browserManager.config.formatNavigationError }) {
       let params = FormatNavigationErrorParams(error: navError, defaultFormatted: defaultFormatted, path: path)
-      // Dispatch to main thread for the Nitro bridge call to avoid C++ noexcept crashes
+      // Dispatch to main thread for the Nitro bridge call to avoid C++ noexcept crashes.
+      // The result callbacks are @Sendable: a plain closure would inherit MainActor
+      // isolation from this block, and Nitro resolves its promises synchronously on the
+      // JS thread — Swift 6.2's dynamic isolation check then traps on closure entry.
+      // The property is JS-thread-touched elsewhere too, so no hop back is needed.
       DispatchQueue.main.async { [weak self] in
         formatter(params)
-          .then { customDisplay in
+          .then { @Sendable [weak self] customDisplay in
             self?.lastFormattedNavigationError = customDisplay ?? defaultFormatted
           }
-          .catch { _ in
+          .catch { @Sendable [weak self] _ in
             self?.lastFormattedNavigationError = defaultFormatted
           }
       }
