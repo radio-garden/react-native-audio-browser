@@ -92,6 +92,11 @@ internal class InterceptingPlayer(
 
   override fun pause() = intercept({ it.handleRemotePause() }) { super.pause() }
 
+  // Media3 controllers may drive transport via setPlayWhenReady instead of play()/pause()
+  // (the documented ForwardingPlayer hazard); route it through the same interception so the
+  // remote handlers and the idle-error recovery aren't bypassed.
+  override fun setPlayWhenReady(playWhenReady: Boolean) = if (playWhenReady) play() else pause()
+
   override fun stop() = intercept({ it.handleRemoteStop() }) { super.stop() }
 
   override fun seekToNext() =

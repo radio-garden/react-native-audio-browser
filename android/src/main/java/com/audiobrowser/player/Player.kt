@@ -987,6 +987,9 @@ class Player(internal val context: Context) {
     // Cancel without a final save: the loop would tick against the released
     // player and persist position 0 over the real resumption position.
     playbackStateStore.cancelPeriodicSave()
+    // An armed timer's Runnable would outlive the release and fire pause() into the
+    // released player. Cleared here, while a mid-ramp fade can still restore volume.
+    sleepTimer.clear()
     stop()
     nowPlaying.destroy()
     mediaSessionCallback.destroy()

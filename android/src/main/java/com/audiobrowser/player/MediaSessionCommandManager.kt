@@ -163,6 +163,14 @@ class MediaSessionCommandManager {
       )
     }
 
+    // Push the rebuilt commands to already-connected external controllers (Android Auto,
+    // Bluetooth) — buildConnectionResult only serves controllers that connect later, and an
+    // Android Auto session lives until the car shuts down. Granted before the layout broadcast
+    // so a newly-added button arrives with its command already available.
+    mediaSession.connectedControllers
+      .filterNot { mediaSession.isMediaNotificationController(it) }
+      .forEach { mediaSession.setAvailableCommands(it, sessionCommands, playerCommands) }
+
     // Broadcast updated layout to all external controllers (Android Auto, etc.)
     mediaSession.setCustomLayout(customLayout)
   }
@@ -204,6 +212,10 @@ class MediaSessionCommandManager {
       Timber.Forest.d("Updating notification controller button preferences")
       mediaSession.setMediaButtonPreferences(controllerInfo, notificationCustomLayout)
     }
+
+    // Broadcast the rebuilt layout so already-connected external controllers (Android Auto)
+    // flip the heart icon too — without this it stays stale for the life of the connection.
+    mediaSession.setCustomLayout(customLayout)
   }
 
   /**
