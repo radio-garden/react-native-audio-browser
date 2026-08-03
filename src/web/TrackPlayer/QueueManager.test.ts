@@ -150,6 +150,16 @@ describe('QueueManager', () => {
       expect(q.nextIndex()).toBe(2)
     })
 
+    it('does not let a stale order survive clear()', () => {
+      // Mutations no longer regenerate the order, so clear() must reset it —
+      // otherwise the first post-clear insert shifts a 4-entry ghost order.
+      q.clear()
+      q.insert(tracks(1))
+      q.currentIndex = 0
+      expect(q.previousIndex()).toBeUndefined()
+      expect(q.nextIndex()).toBeUndefined()
+    })
+
     it('keeps every track at its shuffle position across a move', () => {
       q.currentIndex = 1
       q.move(1, 3) // tracks [s0,s2,s3,s1]; order remapped to [0,3,1,2]
@@ -250,6 +260,11 @@ describe('QueueManager', () => {
 
     it('throws on an out-of-bounds source index', () => {
       expect(() => q.move(9, 0)).toThrow('index out of bounds')
+    })
+
+    it('throws on an out-of-bounds destination index', () => {
+      expect(() => q.move(0, 9)).toThrow('index out of bounds')
+      expect(() => q.move(0, -1)).toThrow('index out of bounds')
     })
   })
 

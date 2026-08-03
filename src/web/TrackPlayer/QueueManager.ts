@@ -252,8 +252,12 @@ export class QueueManager {
   }
 
   move(fromIndex: number, toIndex: number): void {
+    // Both ends are checked: an out-of-range destination would write a
+    // permanent out-of-range entry into the incrementally-maintained order.
     const item = this._tracks[fromIndex]
-    if (item === undefined) throw new Error('index out of bounds')
+    if (item === undefined || toIndex < 0 || toIndex >= this._tracks.length) {
+      throw new Error('index out of bounds')
+    }
 
     this._tracks.splice(fromIndex, 1)
     this._tracks.splice(toIndex, 0, item)
@@ -288,5 +292,8 @@ export class QueueManager {
     this._tracks = []
     this._currentIndex = undefined
     this._lastIndex = undefined
+    // Mutations maintain the order incrementally, so a stale order would
+    // survive the clear and corrupt the first post-clear insert.
+    this.shuffleOrder = []
   }
 }
