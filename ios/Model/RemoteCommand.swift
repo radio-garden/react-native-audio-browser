@@ -1,6 +1,10 @@
 import Foundation
 
-public enum RemoteCommand: CustomStringConvertible, Equatable {
+// Internal on purpose: nothing outside the module uses this, and a public
+// declaration gets printed into the generated -Swift.h C++ interop section,
+// where the [NSNumber] associated values don't compile for plain-C++
+// consumers of the header (Xcode 26.2 / Swift 6.2).
+enum RemoteCommand: CustomStringConvertible, Equatable {
   case play
 
   case pause
@@ -25,7 +29,7 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   case changePlaybackRate(supportedPlaybackRates: [NSNumber])
 
-  public var description: String {
+  var description: String {
     switch self {
     case .play: "play"
     case .pause: "pause"
