@@ -500,15 +500,17 @@ struct HandleTrackDidPlayToEndTimeTests {
   /// handler runs — an unguarded replay would resume seconds after the sleep
   /// timer paused. Without intent the track settles in .ended, where play()
   /// reloads (a bare .paused would park at the end, where play() no-ops).
+  /// A repeating queue never conceptually ends, so no queue-ended reaches JS.
   @Test @MainActor
   func repeatTrack_withoutIntent_settlesEnded() {
-    let (c, eh, _, _) = makeCoordinator()
+    let (c, eh, cb, _) = makeCoordinator()
     loadTrack(c)
     c.repeatMode = .track
     c.playWhenReady = false
 
     c.handleTrackDidPlayToEndTime()
 
+    #expect(cb.queueEndedEvents.isEmpty)
     #expect(eh.replayCurrentTrackCallCount == 0)
     #expect(c.state == .ended)
   }

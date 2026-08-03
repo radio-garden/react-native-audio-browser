@@ -220,6 +220,37 @@ struct ResetTests {
       return
     }
   }
+
+  @Test func invalidatesTheGenerationOfSeeksInFlight() {
+    let c = makeCoordinator()
+    let issuedAgainst = c.generation
+    #expect(c.isCurrentGeneration(issuedAgainst))
+    c.reset()
+    #expect(!c.isCurrentGeneration(issuedAgainst))
+  }
+
+  /// The cross-item race: a seek is in flight when a queue change resets the
+  /// coordinator and captures the new track's start position. The old item's
+  /// cancelled completion (now a stale generation) must be dropped — not
+  /// delivered as a completion that would consume the fresh pending seek.
+  @Test func staleCompletionAfterResetIsDroppedAndKeepsThePendingSeek() async {
+    let c = makeCoordinator()
+    let player = AVPlayer()
+    let spy = SeekCompletionSpy()
+
+    c.capture(position: 10.0)
+    _ = c.executeIfPending(on: player, delegate: spy)
+
+    // Queue change: reset, then capture the new track's start position.
+    c.reset()
+    c.capture(position: 25.0)
+
+    // Let the (immediately-cancelled, itemless) seek completion drain.
+    for _ in 0 ..< 20 { await Task.yield() }
+
+    #expect(spy.calls.isEmpty)
+    #expect(c.pendingTime == 25.0)
+  }
 }
 
 // MARK: - Integration

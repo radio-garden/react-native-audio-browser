@@ -297,8 +297,11 @@ class PlaybackCoordinator {
       )
     }
 
-    // Queue ended — when playback ends on the last track
-    if new == .ended, isLastInPlaybackOrder, let effectHandler {
+    // Queue ended — when playback ends on the last track. Repeat modes never
+    // conceptually end the queue (matches web's endsQueue()): a repeat-track
+    // pause at the track boundary (e.g. the end-of-track sleep timer) must not
+    // read as "playlist over".
+    if new == .ended, isLastInPlaybackOrder, repeatMode == .off, let effectHandler {
       callbacks?.playerDidEndQueue(
         PlaybackQueueEndedEvent(track: Double(currentIndex), position: effectHandler.currentTime),
       )

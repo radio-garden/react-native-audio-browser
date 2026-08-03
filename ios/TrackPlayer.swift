@@ -396,10 +396,22 @@ class TrackPlayer {
     } else if avPlayer.currentItem != nil {
       let time = CMTime(seconds: seconds, preferredTimescale: 1000)
       let seekSeconds = seconds
+      let generation = loadSeekCoordinator.generation
       avPlayer
         .seek(to: time, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { [weak self] finished in
           Task { @MainActor in
-            self?.handleSeekCompleted(to: Double(seekSeconds), didFinish: finished)
+            guard let self else {
+              completion(false)
+              return
+            }
+            // A completion from before a track change (reset() bumped the
+            // generation) belongs to the old item — delivering it would emit a
+            // bogus seek-completed and consume the new track's pending start seek.
+            guard self.loadSeekCoordinator.isCurrentGeneration(generation) else {
+              completion(false)
+              return
+            }
+            self.handleSeekCompleted(to: Double(seekSeconds), didFinish: finished)
             completion(finished)
           }
         }
