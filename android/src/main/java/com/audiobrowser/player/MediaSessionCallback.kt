@@ -808,10 +808,10 @@ class MediaSessionCallback(private val player: Player) :
     Timber.d("${controller.packageName}")
 
     return scope.future {
-      // Restore player settings and persisted state
+      // A pure read first: restore()'s side effects (it applies repeat/shuffle/speed to the
+      // live player, emitting option-changed events to JS) belong to actual resumption only.
       val state =
-        // restore() sets player properties which must happen on main thread
-        withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
+        player.playbackStateStore.get()
           ?: run {
             Timber.w("No persisted playback state found")
             throw IllegalStateException("No playback state to resume")
@@ -819,7 +819,7 @@ class MediaSessionCallback(private val player: Player) :
 
       // isForPlayback == false is the device-boot-time notification case: network may be
       // unavailable and we must not start playback. Return just the locally-stored track with its
-      // already-local metadata; skip the network queue expansion below.
+      // already-local metadata; skip the settings restore and network queue expansion below.
       if (!isForPlayback) {
         Timber.d("Info-gathering resumption (boot-time); returning stored track without expansion")
         return@future MediaSession.MediaItemsWithStartPosition(
@@ -828,6 +828,9 @@ class MediaSessionCallback(private val player: Player) :
           state.positionMs,
         )
       }
+
+      // restore() sets player properties which must happen on main thread
+      withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
 
       val url = state.track.url
       Timber.d("Resuming from url=$url, positionMs=${state.positionMs}")

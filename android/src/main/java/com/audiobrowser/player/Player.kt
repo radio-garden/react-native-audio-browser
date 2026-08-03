@@ -1064,19 +1064,19 @@ class Player(internal val context: Context) {
       // through the rapid startup sequence (none→loading→buffering→ready→playing) is cheap.
       nowPlaying.render()
 
-      // Emit queue ended event when playback ends on the last track
+      // Emit queue ended event when playback ends on the last track. Repeat modes never
+      // conceptually end the queue (matches web's endsQueue()): an ENDED that surfaces while
+      // repeating (e.g. a seek to the end) must not read as "playlist over".
       // This coupling ensures queue ended events are always triggered consistently with state
       // changes
-      if (state == PlaybackState.ENDED && isLastInPlaybackOrder) {
+      if (state == PlaybackState.ENDED && isLastInPlaybackOrder && repeatMode == RepeatMode.OFF) {
         currentIndex?.let { index ->
           val event =
             PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
         }
-        // Reset saved position to 0 so resumption starts from beginning (only when not repeating)
-        if (repeatMode == RepeatMode.OFF) {
-          playbackStateStore.savePositionZero()
-        }
+        // Reset saved position to 0 so resumption starts from beginning
+        playbackStateStore.savePositionZero()
       }
 
       progressTimer.onPlaybackStateChanged(state)
