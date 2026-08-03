@@ -99,10 +99,6 @@ export class QueuePlayer extends Player {
     if (this.queue.currentIndex === undefined) {
       this.goToIndex(0)
     }
-
-    if (this.queue.shuffleEnabled) {
-      this.queue.regenerateShuffleOrder()
-    }
   }
 
   public skip(index: number, initialPosition?: number): void {
@@ -156,9 +152,6 @@ export class QueuePlayer extends Player {
     const outcome = this.queue.remove(indexes)
     switch (outcome.kind) {
       case 'no-current':
-        // Tracks were still spliced — fall through to shuffle regeneration,
-        // or the stale order indexes the pre-remove layout.
-        break
       case 'kept':
         break
       case 'reload':
@@ -168,10 +161,6 @@ export class QueuePlayer extends Player {
         this.current = undefined
         this.stop()
         break
-    }
-
-    if (this.queue.shuffleEnabled) {
-      this.queue.regenerateShuffleOrder()
     }
   }
 

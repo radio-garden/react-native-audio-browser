@@ -125,6 +125,38 @@ describe('QueueManager', () => {
       expect(q.previousIndex()).toBeUndefined()
       expect(q.nextIndex()).toBe(1)
     })
+
+    // Mutations maintain the shuffle order in place (matching iOS/ExoPlayer)
+    // instead of regenerating it — a regeneration erased the played history,
+    // leaving previous() dead after any add/remove/move.
+
+    it('keeps the shuffle history across an append', () => {
+      q.currentIndex = 2 // identity order [0,1,2,3], position 2
+      const random = vi.spyOn(Math, 'random').mockReturnValue(0.999)
+      try {
+        q.insert([{ src: 'x' } as Track]) // appended at the order's end
+      } finally {
+        random.mockRestore()
+      }
+      expect(q.previousIndex()).toBe(1)
+      expect(q.nextIndex()).toBe(3)
+    })
+
+    it('keeps the shuffle history across a remove of another track', () => {
+      q.currentIndex = 2
+      q.remove([0]) // order [0,1,2,3] → [0,1,2] with current now at index 1
+      expect(q.currentIndex).toBe(1)
+      expect(q.previousIndex()).toBe(0)
+      expect(q.nextIndex()).toBe(2)
+    })
+
+    it('keeps every track at its shuffle position across a move', () => {
+      q.currentIndex = 1
+      q.move(1, 3) // tracks [s0,s2,s3,s1]; order remapped to [0,3,1,2]
+      expect(q.currentIndex).toBe(3)
+      expect(q.previousIndex()).toBe(0)
+      expect(q.nextIndex()).toBe(1)
+    })
   })
 
   describe('insert', () => {
@@ -138,6 +170,21 @@ describe('QueueManager', () => {
       q.setTracks([{ src: 'a' }, { src: 'b' }] as Track[])
       q.insert([{ src: 'x' }] as Track[], 1)
       expect(q.tracks.map((t) => t.src)).toEqual(['a', 'x', 'b'])
+    })
+
+    it('throws on a negative index other than the -1 append sentinel', () => {
+      q.setTracks(tracks(3))
+      q.currentIndex = 1
+      // -2 used to splice from the end while still shifting the pointer,
+      // leaving currentIndex on a different track (native throws here).
+      expect(() => q.insert(tracks(1), -2)).toThrow('use -1 to append')
+      expect(q.currentIndex).toBe(1)
+      expect(q.length).toBe(3)
+    })
+
+    it('throws on a past-the-end index', () => {
+      q.setTracks(tracks(3))
+      expect(() => q.insert(tracks(1), 4)).toThrow('out of bounds')
     })
   })
 
@@ -158,6 +205,15 @@ describe('QueueManager', () => {
       // index clamped into the shrunken queue; current reset so caller reloads
       expect(result).toEqual({ kind: 'reload', index: 2 })
       expect(q.currentIndex).toBeUndefined()
+    })
+
+    it('wraps to the first track when the current track was the last', () => {
+      const result = q.remove([4])
+      expect(result).toEqual({ kind: 'kept' })
+      q.currentIndex = 3 // now the last track
+      // Documented contract (and iOS behavior): removing the last-and-current
+      // track activates the first, not the new last.
+      expect(q.remove([3])).toEqual({ kind: 'reload', index: 0 })
     })
 
     it('reports emptied when the last remaining track is removed', () => {

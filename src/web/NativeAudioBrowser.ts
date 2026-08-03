@@ -593,6 +593,23 @@ export class NativeAudioBrowser
     return RequestConfigBuilder.resolveMediaUrl(src, request, media)
   }
 
+  /**
+   * Reload from the queue's own entry, whose `src` is still unresolved —
+   * `current` holds the resolved track, and re-feeding it into `load()` would
+   * re-resolve the resolved URL (double-applying a `transform`) and replace
+   * the queue entry with it.
+   */
+  protected override reloadCurrent(): void {
+    const index = this.queue.currentIndex
+    const sourceTrack =
+      index !== undefined ? this.queue.getTrack(index) : undefined
+    if (sourceTrack) {
+      this.load(sourceTrack)
+    } else {
+      super.reloadCurrent()
+    }
+  }
+
   load(track: Track, callback?: (track: Track) => void): void {
     const element = this.requireElement()
 
@@ -899,11 +916,6 @@ export class NativeAudioBrowser
       })
     )
     this.emitQueueChanged()
-
-    // Regenerate shuffle order when queue is set
-    if (this.queue.shuffleEnabled) {
-      this.queue.regenerateShuffleOrder()
-    }
 
     if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
       this.skip(startIndex, startPosition)

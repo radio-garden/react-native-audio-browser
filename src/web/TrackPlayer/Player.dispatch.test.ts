@@ -158,31 +158,30 @@ describe('QueuePlayer queue end', () => {
 })
 
 describe('QueuePlayer remove without a current track', () => {
-  it('still regenerates the shuffle order', () => {
+  it('keeps the shuffle order aligned with the post-remove layout', () => {
     class ShuffleTestPlayer extends QueuePlayer {
-      regens = 0
-      constructor() {
-        super()
-        const original = this.queue.regenerateShuffleOrder.bind(this.queue)
-        this.queue.regenerateShuffleOrder = () => {
-          this.regens++
-          original()
-        }
-      }
       seed(tracks: Array<{ src: string }>): void {
         this.queue.setTracks(tracks as never)
+      }
+      setCurrent(index: number): void {
+        this.queue.currentIndex = index
+      }
+      neighbours(): [number | undefined, number | undefined] {
+        return [this.queue.previousIndex(), this.queue.nextIndex()]
       }
     }
     const player = new ShuffleTestPlayer()
     player.setShuffleEnabled(true)
     player.seed([{ src: 'a' }, { src: 'b' }])
-    player.regens = 0
 
-    // 'no-current' outcome: tracks were spliced, so a stale order would
-    // index the pre-remove layout.
+    // 'no-current' outcome: tracks are still spliced, so a stale order would
+    // keep indexing the pre-remove layout.
     player.remove([0])
 
-    expect(player.regens).toBe(1)
+    // One track left: a stale two-entry order (either permutation) would give
+    // the survivor a neighbour that no longer exists.
+    player.setCurrent(0)
+    expect(player.neighbours()).toEqual([undefined, undefined])
   })
 })
 

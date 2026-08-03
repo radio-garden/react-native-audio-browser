@@ -292,17 +292,27 @@ export class Player {
     this.playWhenReady = true
 
     if (this.state.state === State.Error && this.current) {
-      this.load(this.current)
+      this.reloadCurrent()
       return
     }
 
     // Match Android: play() after stop() re-prepares the current track
     if (this._isStopped && this.current) {
-      this.load(this.current)
+      this.reloadCurrent()
       return
     }
 
     element.play().catch((err: unknown) => console.error(err))
+  }
+
+  /**
+   * Reloads the current track. `current` holds the *resolved* track, so
+   * subclasses that resolve media URLs override this to reload from the
+   * original source instead — re-feeding `current` into `load()` would
+   * re-resolve an already-resolved URL and leak it into the queue.
+   */
+  protected reloadCurrent(): void {
+    if (this.current) this.load(this.current)
   }
 
   public retry(): void {
@@ -364,7 +374,7 @@ export class Player {
     if (end > 0) {
       element.currentTime = end
     } else {
-      this.load(this.current)
+      this.reloadCurrent()
     }
   }
 

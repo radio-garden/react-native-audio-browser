@@ -70,7 +70,7 @@ export class NowPlayingManager {
     return {
       title: this.override?.title ?? currentTrack.title,
       artist: this.override?.artist ?? currentTrack.artist,
-      album: currentTrack.album,
+      album: this.override?.album ?? currentTrack.album,
       artwork: currentTrack.artwork,
       description: currentTrack.description,
       mediaId: currentTrack.src ?? currentTrack.url,

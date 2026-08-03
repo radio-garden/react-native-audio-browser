@@ -48,6 +48,7 @@ export class QueueManager {
     this._tracks = tracks
     this._currentIndex = undefined
     this._lastIndex = undefined
+    if (this._shuffleEnabled) this.regenerateShuffleOrder()
   }
 
   /** Replaces a single track in place (e.g. a favorite toggle). */
@@ -103,6 +104,43 @@ export class QueueManager {
     }
   }
 
+  // The shuffle order is maintained incrementally across mutations (matching
+  // iOS's ShuffleOrder and ExoPlayer's DefaultShuffleOrder) rather than
+  // regenerated: a regeneration re-randomizes the upcoming order and erases
+  // the played history, leaving previous() dead after any add/remove/move.
+
+  /** Shifts indices for an insertion and slots the new ones in at random positions. */
+  private shuffleOrderInsert(at: number, count: number): void {
+    if (!this._shuffleEnabled || count <= 0) return
+    this.shuffleOrder = this.shuffleOrder.map((idx) =>
+      idx >= at ? idx + count : idx
+    )
+    for (let i = 0; i < count; i++) {
+      const pos = Math.floor(Math.random() * (this.shuffleOrder.length + 1))
+      this.shuffleOrder.splice(pos, 0, at + i)
+    }
+  }
+
+  /** Drops removed indices and shifts the survivors down past them. */
+  private shuffleOrderRemove(removed: Set<number>): void {
+    if (!this._shuffleEnabled || removed.size === 0) return
+    const sorted = [...removed].sort((a, b) => a - b)
+    this.shuffleOrder = this.shuffleOrder
+      .filter((idx) => !removed.has(idx))
+      .map((idx) => idx - sorted.filter((r) => r < idx).length)
+  }
+
+  /** Remaps indices for a move, keeping every track's shuffle position. */
+  private shuffleOrderMove(fromIndex: number, toIndex: number): void {
+    if (!this._shuffleEnabled) return
+    this.shuffleOrder = this.shuffleOrder.map((idx) => {
+      if (idx === fromIndex) return toIndex
+      let adjusted = idx > fromIndex ? idx - 1 : idx
+      if (adjusted >= toIndex) adjusted += 1
+      return adjusted
+    })
+  }
+
   // MARK: navigation
 
   nextIndex(): number | undefined {
@@ -152,6 +190,14 @@ export class QueueManager {
   /** Inserts tracks at `insertBeforeIndex`, or appends when omitted/-1. */
   insert(tracks: Track[], insertBeforeIndex?: number): void {
     if (insertBeforeIndex !== -1 && insertBeforeIndex !== undefined) {
+      // Match Android/iOS, which throw here: a negative index other than the
+      // -1 sentinel would splice from the end and mis-shift the current
+      // pointer; past-the-end would silently append under a lying index.
+      if (insertBeforeIndex < 0 || insertBeforeIndex > this._tracks.length) {
+        throw new Error(
+          `insertBeforeIndex out of bounds: ${insertBeforeIndex} (use -1 to append)`
+        )
+      }
       this._tracks.splice(insertBeforeIndex, 0, ...tracks)
       // Keep the pointer on the same track (remove()/move() already do).
       if (
@@ -160,8 +206,10 @@ export class QueueManager {
       ) {
         this._currentIndex += tracks.length
       }
+      this.shuffleOrderInsert(insertBeforeIndex, tracks.length)
     } else {
       this._tracks.push(...tracks)
+      this.shuffleOrderInsert(this._tracks.length - tracks.length, tracks.length)
     }
   }
 
@@ -181,6 +229,7 @@ export class QueueManager {
       else if (current !== undefined && idx < current) removedBeforeCurrent++
       return false
     })
+    this.shuffleOrderRemove(idxSet)
 
     if (current === undefined) return { kind: 'no-current' }
 
@@ -197,7 +246,9 @@ export class QueueManager {
     // Reset so the caller's reload always loads the track at this position.
     this._currentIndex = undefined
     const adjusted = current - removedBeforeCurrent
-    return { kind: 'reload', index: Math.min(adjusted, this._tracks.length - 1) }
+    // Wrap: removing the last-and-current track activates the first (the
+    // documented contract, matching iOS's modulo).
+    return { kind: 'reload', index: adjusted % this._tracks.length }
   }
 
   move(fromIndex: number, toIndex: number): void {
@@ -218,14 +269,18 @@ export class QueueManager {
       }
     }
 
-    if (this._shuffleEnabled) this.regenerateShuffleOrder()
+    this.shuffleOrderMove(fromIndex, toIndex)
   }
 
   /** Drops every track after the current one. */
   removeUpcoming(): void {
     if (this._currentIndex === undefined) return
+    const dropped = new Set<number>()
+    for (let i = this._currentIndex + 1; i < this._tracks.length; i++) {
+      dropped.add(i)
+    }
     this._tracks = this._tracks.slice(0, this._currentIndex + 1)
-    if (this._shuffleEnabled) this.regenerateShuffleOrder()
+    this.shuffleOrderRemove(dropped)
   }
 
   /** Empties the queue and resets the index. */
