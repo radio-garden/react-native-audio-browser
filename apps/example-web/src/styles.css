@@ -1,0 +1,447 @@
+:root {
+  /* Mirrors the docs BrowseDemo: VitePress dark surfaces + the Radio Garden
+     green ramp, and the same translucent text tones. */
+  --bg: #1b1b1f;
+  --bg-soft: #202127;
+  --line: rgba(82, 82, 89, 0.32);
+  --text: rgba(255, 255, 245, 0.86);
+  --text-2: rgba(235, 235, 245, 0.6);
+  --text-3: rgba(235, 235, 245, 0.38);
+  --accent: #00e070; /* brand-1 — icons, back, active accent */
+  --accent-fill: #00c864; /* brand-2 — filled play button */
+  --accent-soft: rgba(0, 224, 112, 0.16); /* highlight wash */
+
+  /* Type scale */
+  --fs-body: 16px; /* row + header + now-playing titles */
+  --fs-label: 15px; /* tabs */
+  --fs-meta: 13px; /* subtitles */
+  --fs-icon: 20px; /* row disclosure / play glyph */
+  --fs-chevron: 24px; /* back */
+
+  font-family:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+button {
+  font-family: inherit;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  background: var(--bg-soft);
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 48px;
+}
+.bar .icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-chevron);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.bar .icon:disabled {
+  color: var(--line);
+  cursor: default;
+}
+.bar .title {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--fs-body);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pager {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+.list {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  background: var(--bg-soft);
+}
+
+/* Route slide transitions (iOS push/pop). */
+.enter-right {
+  animation: enterRight 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.enter-left {
+  animation: enterLeft 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.leave-left {
+  animation: leaveLeft 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.leave-right {
+  animation: leaveRight 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes enterRight {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes enterLeft {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes leaveLeft {
+  to {
+    transform: translateX(-28%);
+    opacity: 0.5;
+  }
+}
+@keyframes leaveRight {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter-right,
+  .enter-left,
+  .leave-left,
+  .leave-right {
+    animation: none;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0 8px;
+  padding: 9px 8px;
+  border-radius: 10px;
+  font-size: var(--fs-body);
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease;
+}
+.row:hover {
+  background: var(--accent-soft);
+}
+.row.active {
+  background: var(--accent-soft);
+}
+.row:active {
+  transform: scale(0.985);
+}
+.row.active .rt-title {
+  color: var(--accent);
+  font-weight: 600;
+}
+.row.active .ic {
+  color: var(--accent);
+}
+.row.muted {
+  color: var(--text-3);
+  cursor: default;
+}
+/* imageRow carousels */
+.section {
+  padding: 4px 0 12px;
+}
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.img-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 6px 16px 2px;
+  scrollbar-width: none;
+}
+.img-row::-webkit-scrollbar {
+  display: none;
+}
+.tile {
+  flex: 0 0 auto;
+  width: 112px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.tile-art {
+  display: block;
+  width: 112px;
+  height: 112px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--bg);
+  transition: transform 0.12s ease;
+}
+.tile:hover .tile-art {
+  transform: scale(1.03);
+}
+.tile-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin-top: 7px;
+  font-size: var(--fs-meta);
+  color: var(--text-2);
+}
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.art {
+  width: 48px;
+  height: 48px;
+  border-radius: 9px;
+  object-fit: cover;
+  background: var(--bg-soft);
+  flex: 0 0 auto;
+}
+.art.ph {
+  display: inline-block;
+}
+.rt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rt-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rt-sub {
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ic {
+  display: flex;
+  align-items: center;
+  color: var(--text-3);
+  font-size: var(--fs-icon);
+}
+.ic-svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+.seek {
+  position: relative;
+  z-index: 1;
+  height: 4px;
+  background: var(--line);
+  cursor: pointer;
+}
+/* Invisible padded hit area so the 4px bar is easy to grab, without making it
+   look thicker or shifting layout (it reaches into the player-row's top padding). */
+.seek::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  bottom: -11px;
+}
+.seek-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+}
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ctrl:hover {
+  color: var(--text);
+}
+.ctrl-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.part {
+  width: 50px;
+  height: 50px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+.pinfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ptitle {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.psub {
+  font-size: var(--fs-meta);
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-fill);
+  color: #06251a;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+.play:hover {
+  background: var(--accent);
+}
+.play:active {
+  transform: scale(0.94);
+}
+.glyph {
+  width: 22.5px;
+  height: 22.5px;
+  display: block;
+}
+.btn-spin {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  border-color: rgba(6, 37, 26, 0.3);
+  border-top-color: #06251a;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+.tab {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-label);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.tab:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.tab.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
