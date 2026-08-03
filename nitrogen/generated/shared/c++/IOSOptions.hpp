@@ -49,8 +49,6 @@ namespace margelo::nitro::audiobrowser {
     IOSOptions() = default;
     explicit IOSOptions(std::vector<double> playbackRates, bool carPlayUpNextButton, std::vector<CarPlayNowPlayingButton> carPlayNowPlayingButtons): playbackRates(playbackRates), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons) {}
 
-  public:
-    friend bool operator==(const IOSOptions& lhs, const IOSOptions& rhs) = default;
   };
 
 } // namespace margelo::nitro::audiobrowser

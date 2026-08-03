@@ -50,8 +50,6 @@ namespace margelo::nitro::audiobrowser {
     NitroIOSUpdateOptions() = default;
     explicit NitroIOSUpdateOptions(std::optional<std::vector<double>> playbackRates, std::optional<bool> carPlayUpNextButton, std::optional<std::vector<CarPlayNowPlayingButton>> carPlayNowPlayingButtons): playbackRates(playbackRates), carPlayUpNextButton(carPlayUpNextButton), carPlayNowPlayingButtons(carPlayNowPlayingButtons) {}
 
-  public:
-    friend bool operator==(const NitroIOSUpdateOptions& lhs, const NitroIOSUpdateOptions& rhs) = default;
   };
 
 } // namespace margelo::nitro::audiobrowser

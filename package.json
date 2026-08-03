@@ -53,7 +53,7 @@
     "android:test": "yarn workspace example-native android:test",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && yarn build",
+    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && node codegen/strip-struct-equality.cjs && yarn build",
     "prepare": "bob build",
     "example": "yarn workspace example-native",
     "ci:format": "prettier --check src",
