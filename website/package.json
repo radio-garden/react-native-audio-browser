@@ -10,9 +10,10 @@
   },
   "devDependencies": {
     "mermaid": "^11.4.1",
-    "typedoc": "^0.28.15",
+    "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.9.0",
     "typedoc-vitepress-theme": "^1.1.2",
+    "typescript": "^6.0.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17"
   }
