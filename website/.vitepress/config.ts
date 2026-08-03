@@ -2,13 +2,24 @@ import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import typedocSidebar from '../api/typedoc-sidebar.json'
 
+// Deploy base path. Defaults to '/' (root domain like audiobrowser.dev). When
+// hosting under a subpath — e.g. share.radio.garden/<deploy-id>/ — set DOCS_BASE
+// to that subpath at build time so asset URLs resolve. Must start and end with
+// '/'. Example:
+//   DOCS_BASE=/2026-06-26-abc123/ corepack yarn build
+const rawBase = process.env.DOCS_BASE ?? '/'
+const base = `/${rawBase.replace(/^\/+|\/+$/g, '')}/`.replace('//', '/')
+
 export default withMermaid(
   defineConfig({
+    base,
+
     title: 'Audio Browser',
     description:
       'Full-featured React Native audio for production apps that span app screens, lock screens, CarPlay, Android Auto, voice controls, and the web, with one shared playback and browse model.',
 
-    head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+    // Raw head hrefs are not auto-prefixed with base, so build it in explicitly.
+    head: [['link', { rel: 'icon', href: `${base}favicon.ico` }]],
 
     ignoreDeadLinks: true,
 
@@ -38,7 +49,7 @@ export default withMermaid(
               { text: 'Track', link: '/guide/track' },
               { text: 'Hooks', link: '/guide/hooks' },
               {
-                text: 'From Track Player',
+                text: 'Track Player Migration',
                 link: '/guide/migrating-from-track-player'
               }
             ]

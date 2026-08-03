@@ -151,11 +151,17 @@ function funcsToSidebarEntries(allFuncs: ParsedFunction[]): SidebarEntry[] {
   return entries
 }
 
+// Files in features/ that are internal helpers, not public API. They are not
+// re-exported from features/index.ts and are excluded from the generated docs
+// pages too (see `exclude` in typedoc.json) — keep the two lists in sync.
+const internalFeatureFiles = new Set(['browser-config.ts'])
+
 function scanSourceFiles(srcDir: string): Map<string, SidebarEntry[]> {
   const modules = new Map<string, SidebarEntry[]>()
   const featuresDir = join(srcDir, 'features')
 
   for (const item of readdirSync(featuresDir)) {
+    if (internalFeatureFiles.has(item)) continue
     const itemPath = join(featuresDir, item)
     const stat = statSync(itemPath)
 

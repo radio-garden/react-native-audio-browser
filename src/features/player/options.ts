@@ -457,6 +457,9 @@ const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
 /**
  * Warns when more CarPlay now-playing buttons are configured than CarPlay renders.
  * Shared by {@link updateOptions} and `setupPlayer` (both can carry `ios` options).
+ *
+ * @internal Validation helper, not public API. Re-exported through the barrel
+ * only so `setupPlayer` can share it.
  */
 export function validateIOSUpdateOptions(ios?: IOSUpdateOptions): void {
   const buttons = ios?.carPlayNowPlayingButtons

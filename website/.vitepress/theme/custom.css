@@ -20,6 +20,15 @@
   --vp-c-brand: var(--vp-c-brand-1);
   --vp-c-brand-hover: var(--vp-c-brand-3);
 
+  /* Inline code defaults to the brand green, which makes it read as a link.
+     Use normal text colour instead (the chip background keeps it legible);
+     green stays reserved for links, including code inside links via
+     --vp-code-link-color. */
+  --vp-code-color: var(--vp-c-text-1);
+
+  /* Keep code-in-link colour steady on hover (default shifts it to brand-2). */
+  --vp-code-link-hover-color: var(--vp-code-link-color);
+
   /* Brand button (Get Started). */
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: #ffffff;
@@ -50,12 +59,49 @@
   --vp-home-hero-name-color: #00e070;
 }
 
-/* Let the isometric demo slab + its extruded shadow overflow the image column,
-   but clip at the hero edge so it never triggers a page scrollbar. */
+/* The brand-green text already marks a link, so drop the resting underline —
+   dense API-reference link lists (e.g. the migration guide) then read calmly.
+   A full-green underline appears on hover as a precision / accessibility affordance. */
+.vp-doc a {
+  text-decoration: none;
+  transition: none;
+}
+.vp-doc a:hover {
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Let the demo overflow the image column, but clip at the hero edge so it never
+   triggers a page scrollbar. */
 .VPHero .image,
 .VPHero .image-container {
   overflow: visible !important;
 }
+/* The decorative hero glow is purely visual — never let it intercept clicks on
+   the embedded live-demo iframe (it overlaps the upper area otherwise). */
+.VPHero .image-bg {
+  pointer-events: none;
+}
 .VPHero {
   overflow: hidden;
+}
+/* On narrow (stacked) layouts VitePress puts the image above the text; show the
+   live demo below the title / subtitle / buttons instead. */
+@media (max-width: 959px) {
+  .VPHero .main {
+    order: 1;
+  }
+  .VPHero .image {
+    order: 2;
+    /* Extra top/bottom room so the tilted device doesn't overlap the buttons
+       above or the cards below. */
+    margin: 48px 0 40px;
+  }
+  /* The default image box is a fixed 320×320 — let the (taller) demo size itself
+     instead of being capped/clipped. */
+  .VPHero .image-container {
+    width: auto;
+    height: auto;
+  }
 }

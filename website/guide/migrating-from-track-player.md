@@ -5,18 +5,32 @@ If you're coming from [react-native-track-player](https://github.com/doublesymme
 function names and semantics were deliberately kept familiar. This page maps the
 parts that *do* change.
 
-(The two projects aren't affiliated; the API is just intentionally recognizable.)
+`react-native-audio-browser` started as a fork of RNTP v4, and we wrote much of
+that original code. We've since rethought and rewritten it almost entirely. The
+API stays familiar by lineage, not coincidence, but almost everything underneath
+is new. RNTP has itself moved to a commercial license; `react-native-audio-browser`
+stays MIT.
 
 ## What ports over unchanged
 
 These are the same calls with the same meaning — `import` them from
 `react-native-audio-browser` instead of `react-native-track-player`:
 
-`setupPlayer`, `updateOptions`, `add`, `remove`, `move`, `skip`, `skipToNext`,
-`skipToPrevious`, `setQueue`, `getQueue`, `getTrack`, `removeUpcomingTracks`,
-`load`, `reset`, `retry`, `play`, `pause`, `stop`, `seekTo`, `seekBy`, `setRate`,
-`getRate`, `setVolume`, `getVolume`, `setRepeatMode`, `getRepeatMode`,
-`setPlayWhenReady`, `getPlayWhenReady`, `getActiveTrack`, `getActiveTrackIndex`.
+[`setupPlayer`](/api/features/player/#setupplayer), [`updateOptions`](/api/features/player/#updateoptions),
+[`add`](/api/features/queue/#add), [`remove`](/api/features/queue/#remove), [`move`](/api/features/queue/#move),
+[`skip`](/api/features/queue/#skip), [`skipToNext`](/api/features/queue/#skiptonext),
+[`skipToPrevious`](/api/features/queue/#skiptoprevious), [`setQueue`](/api/features/queue/#setqueue),
+[`getQueue`](/api/features/queue/#getqueue), [`getTrack`](/api/features/queue/#gettrack),
+[`removeUpcomingTracks`](/api/features/queue/#removeupcomingtracks), [`load`](/api/features/queue/#load),
+[`reset`](/api/features/playback/#reset), [`retry`](/api/features/playback/#retry),
+[`play`](/api/features/playback/#play), [`pause`](/api/features/playback/#pause),
+[`stop`](/api/features/playback/#stop), [`seekTo`](/api/features/playback/#seekto),
+[`seekBy`](/api/features/playback/#seekby), [`setRate`](/api/features/playback/#setrate),
+[`getRate`](/api/features/playback/#getrate), [`setVolume`](/api/features/playback/#setvolume),
+[`getVolume`](/api/features/playback/#getvolume), [`setRepeatMode`](/api/features/queue/#setrepeatmode),
+[`getRepeatMode`](/api/features/queue/#getrepeatmode), [`setPlayWhenReady`](/api/features/playback/#setplaywhenready),
+[`getPlayWhenReady`](/api/features/playback/#getplaywhenready), [`getActiveTrack`](/api/features/queue/#getactivetrack),
+[`getActiveTrackIndex`](/api/features/queue/#getactivetrackindex).
 
 The differences below are what to watch for.
 
@@ -28,24 +42,24 @@ non-Promise still works, so this isn't urgent), and prefer the hook in React.
 
 | RNTP v4 | audio-browser |
 | --- | --- |
-| `await getPosition()` | [`getProgress()`](/guide/playback#progress)`.position` |
-| `await getDuration()` | `getProgress().duration` |
-| `await getBufferedPosition()` | `getProgress().buffered` |
-| `await getProgress()` | `getProgress()` (sync) / [`usePolledProgress()`](/guide/playback#progress) |
-| `await getState()` / `getPlaybackState()` | [`getPlayback()`](/guide/playback#playback-state)`.state` / `usePlayback()` |
-| `await getActiveTrack()` | `getActiveTrack()` / [`useActiveTrack()`](/guide/queue#the-active-track) |
-| `await getQueue()` | `getQueue()` / [`useQueue()`](/guide/queue#reading-the-queue) |
-| `await getRepeatMode()` | `getRepeatMode()` / `useRepeatMode()` |
+| `await getPosition()` | [`getProgress().position`](/api/features/playback/#position) |
+| `await getDuration()` | [`getProgress().duration`](/api/features/playback/#duration) |
+| `await getBufferedPosition()` | [`getProgress().buffered`](/api/features/playback/#buffered) |
+| `await getProgress()` | [`getProgress()`](/api/features/playback/#getprogress) (sync) / [`usePolledProgress()`](/api/features/playback/#usepolledprogress) |
+| `await getState()` / `getPlaybackState()` | [`getPlayback().state`](/api/features/playback/#state) / [`usePlayback()`](/api/features/playback/#useplayback) |
+| `await getActiveTrack()` | [`getActiveTrack()`](/api/features/queue/#getactivetrack) / [`useActiveTrack()`](/api/features/queue/#useactivetrack) |
+| `await getQueue()` | [`getQueue()`](/api/features/queue/#getqueue) / [`useQueue()`](/api/features/queue/#usequeue) |
+| `await getRepeatMode()` | [`getRepeatMode()`](/api/features/queue/#getrepeatmode) / [`useRepeatMode()`](/api/features/queue/#userepeatmode) |
 
 Two hook gotchas:
 
 - **`useProgress` changed meaning.** RNTP's `useProgress(interval)` is polling;
-  its drop-in is [`usePolledProgress(intervalMs)`](/guide/playback#progress).
-  audio-browser *also* has a `useProgress()`, but it's **event-based and takes no
+  its drop-in is [`usePolledProgress(intervalMs)`](/api/features/playback/#usepolledprogress).
+  audio-browser *also* has a [`useProgress()`](/api/features/playback/#useprogress), but it's **event-based and takes no
   interval** (and needs `progressUpdateEventInterval` enabled) — so copying
   `useProgress(2000)` over compiles but silently ignores the arg. Use
   `usePolledProgress` if you relied on the polling interval.
-- **`useIsPlaying()` → [`usePlayingState()`](/guide/playback#just-playing-or-buffering)**,
+- **`useIsPlaying()` → [`usePlayingState()`](/api/features/playback/#useplayingstate)**,
   but the field is renamed: RNTP's `{ playing, bufferingDuringPlay }` becomes
   `{ playing, buffering }`.
 
@@ -73,14 +87,14 @@ unsubscribe()
 
 | RNTP `Event.*` | audio-browser |
 | --- | --- |
-| `PlaybackActiveTrackChanged` | `onActiveTrackChanged` / `useActiveTrack()` |
-| `PlaybackState` | `onPlaybackChanged` / `usePlayback()` |
-| `PlaybackProgressUpdated` | `onProgressUpdated` / `useProgress()` |
-| `PlaybackQueueEnded` | `onQueueEnded` |
-| `PlaybackError` / `PlayerError` | `onPlaybackError` / [`usePlaybackError()`](/guide/errors) |
-| `PlaybackPlayWhenReadyChanged` | `onPlayWhenReadyChanged` / `usePlayWhenReady()` |
+| `PlaybackActiveTrackChanged` | [`onActiveTrackChanged`](/api/features/queue/#onactivetrackchanged) / [`useActiveTrack()`](/api/features/queue/#useactivetrack) |
+| `PlaybackState` | [`onPlaybackChanged`](/api/features/playback/#onplaybackchanged) / [`usePlayback()`](/api/features/playback/#useplayback) |
+| `PlaybackProgressUpdated` | [`onProgressUpdated`](/api/features/playback/#onprogressupdated) / [`useProgress()`](/api/features/playback/#useprogress) |
+| `PlaybackQueueEnded` | [`onQueueEnded`](/api/features/queue/#onqueueended) |
+| `PlaybackError` / `PlayerError` | [`onPlaybackError`](/api/features/errors/#onplaybackerror) / [`usePlaybackError()`](/api/features/errors/#useplaybackerror) |
+| `PlaybackPlayWhenReadyChanged` | [`onPlayWhenReadyChanged`](/api/features/playback/#onplaywhenreadychanged) / [`usePlayWhenReady()`](/api/features/playback/#useplaywhenready) |
 | `Remote*` (Play, Pause, Next, …) | `handleRemote*` to override, `onRemote*` to observe — see [Remote Controls](/guide/remote-controls) |
-| `Metadata*Received` | `onTimedMetadata` / `onChapterMetadata` / `onTrackMetadata` — see [Metadata](/guide/metadata) |
+| `Metadata*Received` | [`onTimedMetadata`](/api/features/metadata/#ontimedmetadata) / [`onChapterMetadata`](/api/features/metadata/#onchaptermetadata) / [`onTrackMetadata`](/api/features/metadata/#ontrackmetadata) — see [Metadata](/guide/metadata) |
 
 ## Delete the playback service
 
@@ -113,8 +127,9 @@ await TrackPlayer.updateOptions({
 updateOptions({ capabilities: { skipToPrevious: false } })
 ```
 
-Pass `capabilities` to **either** `setupPlayer` (initial) or `updateOptions`
-(later) — both accept it. See
+Pass `capabilities` to **either** [`setupPlayer`](/api/features/player/#setupplayer)
+(initial) or [`updateOptions`](/api/features/player/#updateoptions) (later) — both
+accept it. See
 [Configuration → Capabilities](/guide/configuration#capabilities) for the
 defaults (everything on except `jumpForward`, `jumpBackward`, `favorite`).
 `Capability.Like` / `RatingType` map to the [`favorite`](/guide/favorites)
@@ -137,7 +152,7 @@ directly — you just drop the enum import.
 
 The playable URL field is renamed. In audio-browser, `url` means a track's
 **browse path** (for the [browse tree](/guide/browser)); the **playable source**
-is [`src`](/guide/track):
+is [`src`](/api/types/browser-nodes/#src):
 
 ```ts
 // RNTP
@@ -147,7 +162,7 @@ is [`src`](/guide/track):
 { src: 'https://cdn.example.com/song.mp3', title, artist, artwork }
 ```
 
-Other field changes: `isLiveStream` → [`live`](/guide/track); per-track `headers`
+Other field changes: `isLiveStream` → [`live`](/api/types/browser-nodes/#live); per-track `headers`
 move to a [media request config](/guide/browser); `rating` → favorites (see
 above). `title` / `artist` / `album` / `artwork` / `duration` are unchanged.
 
@@ -216,6 +231,6 @@ ported:
 | Remote handling | a registered playback **service** | default behavior + `handleRemote*` |
 | Capabilities | `Capability[]` | `capabilities` object of booleans |
 | Enums | `State.*`, `RepeatMode.*` | string literals (`'playing'`, `'queue'`) |
-| Playable URL | `track.url` | `track.src` |
-| Live flag | `track.isLiveStream` | `track.live` |
-| Now playing | `updateNowPlayingMetadata` / `clearNowPlayingMetadata` | `updateNowPlaying(update \| null)` |
+| Playable URL | `track.url` | [`track.src`](/api/types/browser-nodes/#src) |
+| Live flag | `track.isLiveStream` | [`track.live`](/api/types/browser-nodes/#live) |
+| Now playing | `updateNowPlayingMetadata` / `clearNowPlayingMetadata` | [`updateNowPlaying`](/api/features/nowPlaying/#updatenowplaying)`(update \| null)` |
