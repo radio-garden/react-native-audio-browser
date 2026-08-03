@@ -13,6 +13,12 @@ import type {
   PlaybackErrorEvent
 } from '../features/errors'
 import type {
+  NativeGate,
+  NativeGateRequest,
+  GateDecision,
+  GateEvent
+} from '../features/gate'
+import type {
   ChapterMetadata,
   NowPlayingMetadata,
   NowPlayingUpdate,
@@ -45,7 +51,6 @@ import type {
   RemoteSeekEvent,
   RemoteSkipEvent
 } from '../features/remoteControls'
-import type { NativeGate, NativeGateRequest, GateDecision, GateEvent } from '../features/gate'
 import type { SleepTimer, SleepTimerChangedEvent } from '../features/sleepTimer'
 import type { ResolvedTrack, Track } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
@@ -96,6 +101,11 @@ export type Output = {
   external: boolean
 }
 
+/**
+ * The Nitro hybrid-object spec — the bridge surface itself. Not consumer API;
+ * feature modules wrap every method.
+ * @internal
+ */
 export interface AudioBrowser extends HybridObject<{
   ios: 'swift'
   android: 'kotlin'

@@ -1,6 +1,5 @@
 // MARK: - Types
 
-import { nativeBrowser } from '../../native'
 import type { Track } from '../../types'
 import type { PlaybackError } from '../errors'
 import type { NowPlayingUpdate, TimedMetadata } from '../metadata'
@@ -11,6 +10,7 @@ import type {
   NativeUpdateOptions,
   UpdateOptions
 } from './options'
+import { nativeBrowser } from '../../native'
 import { validateIOSUpdateOptions } from './options'
 
 /**
@@ -295,9 +295,12 @@ export type RetryConfig = {
 export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 
 /**
- * Android-specific player setup options.
+ * Android setup options: the engine-construction fields plus the Android runtime options
+ * ({@link AndroidUpdateOptions} — `notificationButtons`, `skipSilence`, …), all expressible at
+ * launch. The consumer never has to know which is which; `setupPlayer` routes each field to
+ * where it's applied.
  */
-export type NativeAndroidSetupOptions = {
+export interface AndroidSetupOptions extends AndroidUpdateOptions {
   /**
    * Minimum duration of media that the player will attempt to buffer in ms.
    *
@@ -403,7 +406,8 @@ export type NativeAndroidSetupOptions = {
   wakeMode?: AndroidPlayerWakeMode
 }
 
-export interface NativeIOSSetupOptions {
+/** iOS setup options: the audio-session fields plus the iOS runtime options. */
+export interface IOSSetupOptions extends IOSUpdateOptions {
   /**
    * Preferred forward buffer duration in ms. When set to 0 (default), AVPlayer
    * chooses an appropriate level of buffering automatically.
@@ -446,12 +450,76 @@ export interface NativeIOSSetupOptions {
   categoryPolicy?: IOSCategoryPolicy
 }
 
-export interface NativeSetupPlayerOptions {
+/**
+ * @internal The wire shape `setupPlayer` sends across the bridge: the platform bags hold only
+ * construction fields, the runtime options nest under `options`, and the public `nowPlaying`
+ * option arrives normalized into the two now-playing fields.
+ */
+export interface NativeSetupPlayerOptions extends Pick<
+  SetupPlayerOptions,
+  'playWhenReady' | 'repeatMode' | 'retry' | 'keepSessionAliveOnError'
+> {
   /** Android-specific configuration options for setup */
   android?: NativeAndroidSetupOptions
   /** iOS-specific configuration options for setup */
   ios?: NativeIOSSetupOptions
 
+  /**
+   * Player options to apply atomically with setup. They're stored before the player is
+   * constructed, so e.g. Android's media session derives its notification buttons from
+   * `capabilities` the moment the service connects — no window with default controls.
+   * Normalized from the flat fields on {@link SetupPlayerOptions}.
+   */
+  options?: NativeUpdateOptions
+
+  /**
+   * Normalized from the public `nowPlaying` option. Whether the player
+   * publishes/refreshes track metadata on the now-playing surface.
+   * @default true
+   */
+  autoUpdateNowPlayingMetadata?: boolean
+
+  /**
+   * Normalized from `nowPlaying` when it's a function. Customizes what's
+   * rendered on the now-playing surface.
+   */
+  nowPlayingMetadataFormatter?: FormatNowPlayingCallback
+}
+
+// MARK: - Lifecycle
+
+/**
+ * @internal Wire shape for {@link AndroidSetupOptions}: just the engine-construction fields —
+ * the runtime options travel separately under the wire payload's `options.android`.
+ */
+export type NativeAndroidSetupOptions = Omit<
+  AndroidSetupOptions,
+  keyof AndroidUpdateOptions
+>
+
+/**
+ * @internal Wire shape for {@link IOSSetupOptions}: just the audio-session fields — the
+ * runtime options travel separately under the wire payload's `options.ios`.
+ */
+export type NativeIOSSetupOptions = Omit<
+  IOSSetupOptions,
+  keyof IOSUpdateOptions
+>
+
+/**
+ * Public setup options: the full launch description of a player in one bag — engine
+ * construction, runtime options (`capabilities`, jump intervals, …), and initial player state
+ * (`playWhenReady`, `repeatMode`). Everything is applied natively in one atomic setup; there
+ * is no call ordering to get right. `setupPlayer` normalizes this into the wire taxonomy —
+ * consumers never see the split.
+ */
+export type SetupPlayerOptions = Pick<
+  UpdateOptions,
+  | 'capabilities'
+  | 'forwardJumpInterval'
+  | 'backwardJumpInterval'
+  | 'progressUpdateEventInterval'
+> & {
   /**
    * The initial play/pause intent, applied natively as soon as the player exists. Set it to
    * `true` so the first queued track starts playing the moment it loads.
@@ -470,14 +538,6 @@ export interface NativeSetupPlayerOptions {
    * @default 'off'
    */
   repeatMode?: RepeatMode
-
-  /**
-   * Player options to apply atomically with setup. They're stored before the player is
-   * constructed, so e.g. Android's media session derives its notification buttons from
-   * `capabilities` the moment the service connects — no window with default controls.
-   * Normalized from the flat fields on {@link SetupPlayerOptions}.
-   */
-  options?: NativeUpdateOptions
 
   /**
    * Retry policy for load errors (network failures, timeouts, etc.)
@@ -505,76 +565,24 @@ export interface NativeSetupPlayerOptions {
    */
   keepSessionAliveOnError?: boolean
 
+  /** Android-specific options: engine construction and runtime, merged. */
+  android?: AndroidSetupOptions
+  /** iOS-specific options: audio session and runtime, merged. */
+  ios?: IOSSetupOptions
   /**
-   * @internal Normalized from the public `nowPlaying` option. Whether the player
-   * publishes/refreshes track metadata on the now-playing surface.
+   * Controls what the player renders on the now-playing surface (lock screen / notification /
+   * Control Center / CarPlay / Android Auto).
+   *
+   * - `true` (default): publish the track's own title / artist.
+   * - `false`: don't manage the now-playing metadata at all.
+   * - a {@link FormatNowPlayingCallback}: render it yourself — the callback owns every line,
+   *   including any transient status (buffering / reconnecting / offline / error), which the
+   *   library no longer renders on your behalf.
+   *
    * @default true
    */
-  autoUpdateNowPlayingMetadata?: boolean
-
-  /**
-   * @internal Normalized from `nowPlaying` when it's a function. Customizes what's
-   * rendered on the now-playing surface.
-   */
-  nowPlayingMetadataFormatter?: FormatNowPlayingCallback
+  nowPlaying?: boolean | FormatNowPlayingCallback
 }
-
-// MARK: - Lifecycle
-
-/**
- * Android setup options: the engine-construction fields plus the Android runtime options
- * ({@link AndroidUpdateOptions} — `notificationButtons`, `skipSilence`, …), all expressible at
- * launch. The consumer never has to know which is which; `setupPlayer` routes each field to
- * where it's applied.
- */
-export type AndroidSetupOptions = NativeAndroidSetupOptions &
-  AndroidUpdateOptions
-
-/** iOS setup options: the audio-session fields plus the iOS runtime options. */
-export type IOSSetupOptions = NativeIOSSetupOptions & IOSUpdateOptions
-
-/**
- * Public setup options: the full launch description of a player in one bag — engine
- * construction, runtime options (`capabilities`, jump intervals, …), and initial player state
- * (`playWhenReady`, `repeatMode`). Everything is applied natively in one atomic setup; there
- * is no call ordering to get right. Mirrors {@link NativeSetupPlayerOptions} but exposes the
- * ergonomic `nowPlaying` option instead of the normalized native field(s) and merges the
- * runtime options (which the wire nests under `options`) into the flat bag and the platform
- * bags.
- */
-export type SetupPlayerOptions = Omit<
-  NativeSetupPlayerOptions,
-  | 'autoUpdateNowPlayingMetadata'
-  | 'nowPlayingMetadataFormatter'
-  | 'options'
-  | 'android'
-  | 'ios'
-> &
-  Pick<
-    UpdateOptions,
-    | 'capabilities'
-    | 'forwardJumpInterval'
-    | 'backwardJumpInterval'
-    | 'progressUpdateEventInterval'
-  > & {
-    /** Android-specific options: engine construction and runtime, merged. */
-    android?: AndroidSetupOptions
-    /** iOS-specific options: audio session and runtime, merged. */
-    ios?: IOSSetupOptions
-    /**
-     * Controls what the player renders on the now-playing surface (lock screen / notification /
-     * Control Center / CarPlay / Android Auto).
-     *
-     * - `true` (default): publish the track's own title / artist.
-     * - `false`: don't manage the now-playing metadata at all.
-     * - a {@link FormatNowPlayingCallback}: render it yourself — the callback owns every line,
-     *   including any transient status (buffering / reconnecting / offline / error), which the
-     *   library no longer renders on your behalf.
-     *
-     * @default true
-     */
-    nowPlaying?: boolean | FormatNowPlayingCallback
-  }
 
 /** The normalized native now-playing fields, resolved from the public option. */
 type NormalizedNowPlaying = Pick<

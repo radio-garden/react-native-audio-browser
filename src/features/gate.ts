@@ -1,5 +1,5 @@
-import { nativeBrowser } from '../native'
 import type { SearchParams } from '../types/browser'
+import { nativeBrowser } from '../native'
 import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 
 // MARK: - Wire types (cross the Nitro bridge; native↔JS)
@@ -8,23 +8,9 @@ import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 export type GateReason = 'browse' | 'search'
 
 /**
- * The wire shape of the gate chrome — what crosses the bridge.
- * Renders as a plain centered message on CarPlay; Android Auto shows one
- * non-playable list tile. No button is shown on either platform.
- */
-export type NativeGate = {
-  /** Headline shown on the gate page. */
-  title: string
-  /**
-   * The explanatory copy under the title. On CarPlay this is the centered
-   * message body; newlines become spaces. Android Auto does not display it.
-   */
-  message?: string
-}
-
-/**
  * Flat wire struct for a gate request (crosses the Nitro bridge).
  * Use {@link GateRequest} in consumer-facing code; `gate.ts` converts between them.
+ * @internal
  */
 export type NativeGateRequest = {
   reason: GateReason
@@ -32,8 +18,11 @@ export type NativeGateRequest = {
   search?: SearchParams
 }
 
-/** Wire form of a resolver result (native awaits this from JS). */
-export type GateDecision = { gated: boolean; gate?: NativeGate }
+/**
+ * Wire form of a resolver result (native awaits this from JS).
+ * @internal
+ */
+export type GateDecision = { gated: boolean; gate?: Gate }
 
 /**
  * Fired once per gated serve (each time the gate chrome is rendered for a
@@ -57,7 +46,21 @@ export type GateEvent = { reason: GateReason }
  * - **CarPlay**: plain centered message page.
  * - **Android Auto**: one non-playable list tile (message not shown).
  */
-export type Gate = NativeGate
+export type Gate = {
+  /** Headline shown on the gate page. */
+  title: string
+  /**
+   * The explanatory copy under the title. On CarPlay this is the centered
+   * message body; newlines become spaces. Android Auto does not display it.
+   */
+  message?: string
+}
+
+/**
+ * The gate chrome crosses the bridge as-is; this alias marks the wire side.
+ * @internal
+ */
+export type NativeGate = Gate
 
 /**
  * Describes the request being decided by a {@link GateResolver}.

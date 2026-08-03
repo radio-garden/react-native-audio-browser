@@ -310,6 +310,10 @@ export interface AndroidUpdateOptions {
   notificationButtons?: NotificationButtonLayout | null
 }
 
+/**
+ * Wire shape of {@link AndroidUpdateOptions} — what crosses the Nitro bridge.
+ * @internal
+ */
 export interface NitroAndroidUpdateOptions {
   appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
   skipSilence?: boolean
@@ -348,6 +352,10 @@ export interface IOSUpdateOptions {
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 }
 
+/**
+ * Wire shape of {@link IOSUpdateOptions} — what crosses the Nitro bridge.
+ * @internal
+ */
 export interface NitroIOSUpdateOptions {
   playbackRates?: number[]
   carPlayUpNextButton?: boolean
@@ -421,6 +429,10 @@ export interface UpdateOptions {
   capabilities?: PlayerCapabilities
 }
 
+/**
+ * Wire shape of {@link UpdateOptions} — what crosses the Nitro bridge.
+ * @internal
+ */
 export interface NativeUpdateOptions {
   /** Android-specific configuration options */
   android?: NitroAndroidUpdateOptions
@@ -458,8 +470,8 @@ const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
  * Warns when more CarPlay now-playing buttons are configured than CarPlay renders.
  * Shared by {@link updateOptions} and `setupPlayer` (both can carry `ios` options).
  *
- * @internal Validation helper, not public API. Re-exported through the barrel
- * only so `setupPlayer` can share it.
+ * @internal Validation helper, not public API — `stripInternal` removes it from
+ * the published types and typedoc hides it from the docs.
  */
 export function validateIOSUpdateOptions(ios?: IOSUpdateOptions): void {
   const buttons = ios?.carPlayNowPlayingButtons
