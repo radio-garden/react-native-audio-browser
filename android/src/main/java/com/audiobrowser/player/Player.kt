@@ -64,9 +64,8 @@ class Player(internal val context: Context) {
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
-  internal val equalizer = EqualizerController { settings ->
-    callbacks?.onEqualizerChanged(settings)
-  }
+  internal val equalizer =
+    EqualizerController(onSettingsChanged = { settings -> callbacks?.onEqualizerChanged(settings) })
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(this)
   internal val volumeFader = VolumeFader(getVolume = { volume }, setVolume = { volume = it })
@@ -96,6 +95,7 @@ class Player(internal val context: Context) {
     lastEmittedPlayWhenReady = value
     callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(value))
   }
+
   private lateinit var mediaFactory: MediaFactory
   private lateinit var loadControl: DynamicLoadControl
   private var automaticBufferManager: AutomaticBufferManager? = null
@@ -317,10 +317,9 @@ class Player(internal val context: Context) {
         .toTypedArray()
 
   /**
-   * Whether nothing follows the current item in *playback order* — shuffle- and
-   * repeat-aware via media3's own order computation (the linear
-   * `currentMediaItemIndex == count - 1` check missed a shuffled queue whose
-   * playback order ends on a different linear index). Matches iOS's
+   * Whether nothing follows the current item in *playback order* — shuffle- and repeat-aware via
+   * media3's own order computation (the linear `currentMediaItemIndex == count - 1` check missed a
+   * shuffled queue whose playback order ends on a different linear index). Matches iOS's
    * `isLastInPlaybackOrder`.
    */
   val isLastInPlaybackOrder: Boolean

@@ -5,16 +5,43 @@ import com.audiobrowser.util.EqualizerManager
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import timber.log.Timber
 
+/** The equalizer operations [EqualizerController] drives, so tests can stand in for the effect. */
+internal interface EqualizerEffect {
+  val audioSessionId: Int
+
+  fun getSettings(): EqualizerSettings?
+
+  fun setOnSettingsChanged(callback: (EqualizerSettings) -> Unit)
+
+  fun setEnabled(enabled: Boolean)
+
+  fun setPreset(presetName: String)
+
+  fun setLevels(levels: DoubleArray)
+
+  fun release()
+}
+
 /**
  * Owns the equalizer's lifecycle across audio sessions. Android's Equalizer effect binds to a
- * single audioSessionId, so a session change (new ExoPlayer instance, first audio output) needs a
- * fresh [EqualizerManager] with the previous settings carried over — and startup may have no
- * session yet, deferring initialization to the first session change. One create-and-wire definition
- * replaces the three copies Player carried.
+ * single audioSessionId, so there are stretches with no effect at all: startup has no session until
+ * the first audio output, and a session change (new ExoPlayer instance) needs a fresh one. Callers
+ * see none of that — settings requested during a gap land on whichever effect comes next, and every
+ * new effect announces itself through [onSettingsChanged].
  */
-internal class EqualizerController(private val onSettingsChanged: (EqualizerSettings) -> Unit) {
+internal class EqualizerController(
+  private val onSettingsChanged: (EqualizerSettings) -> Unit,
+  private val createEffect: (Int) -> EqualizerEffect = { EqualizerManager(it) },
+) {
 
-  private var manager: EqualizerManager? = null
+  private var effect: EqualizerEffect? = null
+
+  // Settings to apply to the next effect: what the caller asked for during a gap, or what the
+  // outgoing effect held across a session change. A preset and custom levels are exclusive — the
+  // last one asked for wins, matching how the two setters behave on a live effect.
+  private var pendingPreset: String? = null
+  private var pendingLevels: DoubleArray? = null
+  private var pendingEnabled: Boolean? = null
 
   /** Initializes for [audioSessionId]; deferred when the session is still unset. */
   fun initialize(audioSessionId: Int) {
@@ -22,69 +49,105 @@ internal class EqualizerController(private val onSettingsChanged: (EqualizerSett
       Timber.d("Skipping equalizer init - no audio session yet, will init on first playback")
       return
     }
-    manager = create(audioSessionId)
+    install(audioSessionId)
   }
 
   /**
-   * Reacts to an audio session change: first-time initialization when startup deferred it, a no-op
-   * for the same session, otherwise a fresh instance with the old one's settings restored.
+   * Reacts to an audio session change: a no-op for the same session, otherwise a fresh effect that
+   * picks up the outgoing one's settings.
    */
   fun onAudioSessionChanged(newAudioSessionId: Int) {
-    val old = manager
-    if (old == null) {
-      Timber.d("First-time equalizer initialization with session ID: $newAudioSessionId")
-      manager = create(newAudioSessionId)
-      return
-    }
-    if (old.audioSessionId == newAudioSessionId) return
+    val old = effect
+    if (old != null && old.audioSessionId == newAudioSessionId) return
 
-    try {
-      // Capture current settings before releasing the old equalizer, then restore them onto the
-      // new instance (a preset wins over custom levels; the enabled state always carries over).
-      val settings = old.getSettings()
-      old.release()
-      manager = create(newAudioSessionId)
-      settings?.let {
-        if (it.activePreset != null) {
-          manager?.setPreset(it.activePreset)
-        } else if (it.enabled) {
-          manager?.setLevels(it.bandLevels)
-        }
-        manager?.setEnabled(it.enabled)
-      }
-      Timber.d("Equalizer reinitialized for new session ID: $newAudioSessionId")
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to reinitialize equalizer")
-      manager = null
+    old?.let {
+      it.getSettings()?.let(::remember)
+      it.release()
+      effect = null
     }
+    install(newAudioSessionId)
   }
 
   fun release() {
-    manager?.release()
-    manager = null
+    effect?.release()
+    effect = null
   }
 
-  fun getSettings(): EqualizerSettings? = manager?.getSettings()
+  fun getSettings(): EqualizerSettings? = effect?.getSettings()
 
   fun setEnabled(enabled: Boolean) {
-    manager?.setEnabled(enabled)
+    val effect = effect
+    if (effect == null) {
+      pendingEnabled = enabled
+      return
+    }
+    effect.setEnabled(enabled)
   }
 
   fun setPreset(preset: String) {
-    manager?.setPreset(preset)
+    val effect = effect
+    if (effect == null) {
+      rememberPreset(preset)
+      return
+    }
+    effect.setPreset(preset)
   }
 
   fun setLevels(levels: DoubleArray) {
-    manager?.setLevels(levels)
+    val effect = effect
+    if (effect == null) {
+      rememberLevels(levels)
+      return
+    }
+    effect.setLevels(levels)
   }
 
-  private fun create(audioSessionId: Int): EqualizerManager? =
-    try {
-      EqualizerManager(audioSessionId)
-        .apply { setOnSettingsChanged(onSettingsChanged) }
-        .also { Timber.d("Equalizer initialized with session ID: $audioSessionId") }
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to initialize equalizer")
-      null
+  /**
+   * Creates the effect for [audioSessionId] and hands it the pending settings before wiring the
+   * callback, so the restore stays silent and the caller gets one event describing the result. A
+   * failed create keeps the pending settings for the next attempt.
+   */
+  private fun install(audioSessionId: Int) {
+    val created =
+      try {
+        createEffect(audioSessionId)
+      } catch (e: Exception) {
+        Timber.e(e, "Failed to initialize equalizer")
+        return
+      }
+    effect = created
+    Timber.d("Equalizer initialized with session ID: $audioSessionId")
+
+    pendingPreset?.let(created::setPreset)
+    pendingLevels?.let(created::setLevels)
+    pendingEnabled?.let(created::setEnabled)
+    pendingPreset = null
+    pendingLevels = null
+    pendingEnabled = null
+
+    created.setOnSettingsChanged(onSettingsChanged)
+    // Announce unconditionally. The caller reads the settings once at startup, which is exactly
+    // when there may be no effect yet, and nothing else would tell it the equalizer now exists.
+    created.getSettings()?.let(onSettingsChanged)
+  }
+
+  private fun remember(settings: EqualizerSettings) {
+    val preset = settings.activePreset
+    if (preset != null) {
+      rememberPreset(preset)
+    } else {
+      rememberLevels(settings.bandLevels)
     }
+    pendingEnabled = settings.enabled
+  }
+
+  private fun rememberPreset(preset: String) {
+    pendingPreset = preset
+    pendingLevels = null
+  }
+
+  private fun rememberLevels(levels: DoubleArray) {
+    pendingLevels = levels
+    pendingPreset = null
+  }
 }

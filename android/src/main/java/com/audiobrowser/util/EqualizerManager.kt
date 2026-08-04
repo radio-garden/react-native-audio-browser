@@ -1,6 +1,7 @@
 package com.audiobrowser.util
 
 import android.media.audiofx.Equalizer
+import com.audiobrowser.player.EqualizerEffect
 import com.margelo.nitro.audiobrowser.EqualizerSettings
 import timber.log.Timber
 
@@ -10,7 +11,7 @@ import timber.log.Timber
  * Provides access to equalizer presets, band levels, and enables/disables the effect. The equalizer
  * is attached to a specific audio session ID.
  */
-class EqualizerManager(val audioSessionId: Int) {
+internal class EqualizerManager(override val audioSessionId: Int) : EqualizerEffect {
   private var equalizer: Equalizer? = null
   private var onSettingsChanged: ((EqualizerSettings) -> Unit)? = null
 
@@ -37,7 +38,7 @@ class EqualizerManager(val audioSessionId: Int) {
    *
    * @return Current settings or null if equalizer is not available
    */
-  fun getSettings(): EqualizerSettings? {
+  override fun getSettings(): EqualizerSettings? {
     val eq = equalizer ?: return null
 
     return try {
@@ -90,7 +91,7 @@ class EqualizerManager(val audioSessionId: Int) {
    *
    * @param enabled true to enable, false to disable
    */
-  fun setEnabled(enabled: Boolean) {
+  override fun setEnabled(enabled: Boolean) {
     val eq = equalizer ?: return
 
     // Only notify if state actually changed
@@ -105,18 +106,10 @@ class EqualizerManager(val audioSessionId: Int) {
    *
    * @param presetName Name of the preset to apply
    */
-  fun setPreset(presetName: String) {
+  override fun setPreset(presetName: String) {
     val eq = equalizer ?: return
 
     try {
-      // Get current preset first
-      val currentPreset =
-        try {
-          eq.currentPreset.toInt()
-        } catch (e: Exception) {
-          -1
-        }
-
       // Find preset by case-insensitive name match
       val presetIndex =
         (0 until eq.numberOfPresets).firstOrNull { index ->
@@ -124,14 +117,11 @@ class EqualizerManager(val audioSessionId: Int) {
         }
 
       if (presetIndex != null) {
-        // Only apply if it's actually a different preset
-        if (currentPreset != presetIndex) {
-          eq.usePreset(presetIndex.toShort())
-          Timber.d("Applied equalizer preset: $presetName")
-          notifySettingsChanged()
-        } else {
-          Timber.d("Preset already active: $presetName")
-        }
+        // Applied even when it is already the current preset: usePreset costs nothing in that
+        // case, and the caller gets an event whatever the effect reports as current.
+        eq.usePreset(presetIndex.toShort())
+        Timber.d("Applied equalizer preset: $presetName")
+        notifySettingsChanged()
       } else {
         // Log available presets to help debug
         val availablePresets =
@@ -150,7 +140,7 @@ class EqualizerManager(val audioSessionId: Int) {
    *
    * @param levels Array of levels in millibels for each band
    */
-  fun setLevels(levels: DoubleArray) {
+  override fun setLevels(levels: DoubleArray) {
     val eq = equalizer ?: return
 
     try {
@@ -176,7 +166,7 @@ class EqualizerManager(val audioSessionId: Int) {
    *
    * @param callback Function to call with new settings
    */
-  fun setOnSettingsChanged(callback: (EqualizerSettings) -> Unit) {
+  override fun setOnSettingsChanged(callback: (EqualizerSettings) -> Unit) {
     onSettingsChanged = callback
   }
 
@@ -185,7 +175,7 @@ class EqualizerManager(val audioSessionId: Int) {
   }
 
   /** Releases the equalizer resources. Call this when the equalizer is no longer needed. */
-  fun release() {
+  override fun release() {
     try {
       equalizer?.release()
       equalizer = null
