@@ -17,27 +17,88 @@ else is from `react-native-audio-browser`.
 ## Playback errors
 
 When the active track fails, the [playback state](/guide/playback#playback-state)
-becomes `'error'` and a [`PlaybackError`](/api/features/errors/#playbackerror)
-(`{ code, message }`) is available. Read it reactively with
+becomes `'error'` and a [`PlaybackError`](/api/features/errors/#playbackerror) is
+available. Read it reactively with
 [`usePlaybackError()`](/api/features/errors/#useplaybackerror) — it returns the
-current error, or `undefined` once playback recovers. (`code` is an opaque
-string identifier; show `message` to users.)
+current error, or `undefined` once playback recovers.
+
+`PlaybackError` is `{ kind, code, message, statusCode? }`. **Branch on `kind`**:
+
+| Field | Use it for |
+| --- | --- |
+| `kind` | Everything user-facing. A normalized classification both platforms map onto — see the table below. |
+| `code` | Diagnostics and telemetry **only**. Platform-specific and unstable: loader cases on iOS (`failed-to-load`, …), lower-cased ExoPlayer names on Android (`io-bad-http-status`, …). |
+| `message` | Logs. Hard-coded developer English, e.g. *"Failed to load audio track"*. |
+| `statusCode` | The HTTP status, when the failure came from a response. |
+
+::: warning Don't show `message` to listeners
+It is developer English and it is never localized. Map `kind` to your own copy
+instead — the same error reaches the lock screen and the car, where a technical
+string is especially jarring.
+:::
+
+`kind` is one of:
+
+| `kind` | Meaning | Retrying help? |
+| --- | --- | --- |
+| `'offline'` | The device had no connection at the moment of failure. The stream may be fine. | Once back online |
+| `'unreachable'` | The host could not be reached: DNS failure, refused connection, timeout, or a connection dropped while loading. | Maybe |
+| `'not-found'` | The server said this stream is gone (HTTP 404 / 410). | No |
+| `'rejected'` | The server refused the request (HTTP 401 / 403) — geo-blocking, an expired token. | No |
+| `'server-error'` | The server responded 5xx. Usually transient. | Maybe |
+| `'unplayable'` | Fetched, but not playable: unknown container, unsupported codec, decoder failure. | No |
+| `'stalled'` | Playback had started, then stopped, and the player exhausted its recovery budget. | Maybe |
+| `'unknown'` | Could not be classified. Inspect `code`. | Maybe |
+
+Codes that name no cause stay `'unknown'` rather than being guessed into a
+friendlier bucket — a wrong classification misleads the listener *and* poisons
+your telemetry aggregates.
+
+Map `kind` to your own localized copy. How finely you split is a product
+decision — collapsing several kinds onto one line is fine, as long as the
+listener can still tell *"fix your connection"* from *"this one is gone"* from
+*"try again in a minute"*:
 
 ```tsx
 import { View, Text, Button } from 'react-native'
 import { usePlaybackError, retry } from 'react-native-audio-browser'
+import type { PlaybackErrorKind } from 'react-native-audio-browser'
+
+function errorLine(kind: PlaybackErrorKind): string {
+  switch (kind) {
+    case 'offline':
+      return t('…your "check your connection" copy')
+    // Both transient — worth another try, so they can share a line.
+    case 'unreachable':
+    case 'server-error':
+      return t('…your "could not reach it" copy')
+    // Both permanent — retrying will not help.
+    case 'not-found':
+    case 'rejected':
+      return t('…your "not available" copy')
+    case 'unplayable':
+      return t('…your "cannot be played" copy')
+    case 'stalled':
+      return t('…your "connection lost" copy')
+    case 'unknown':
+      return t('…your generic fallback copy')
+  }
+}
 
 function PlaybackErrorView() {
   const error = usePlaybackError()
   if (!error) return null
   return (
     <View>
-      <Text>Couldn't play this: {error.message}</Text>
+      <Text>{errorLine(error.kind)}</Text>
       <Button title="Try again" onPress={() => retry()} />
     </View>
   )
 }
 ```
+
+Leaving off the `default` case is deliberate: TypeScript then tells you when a
+new `kind` is added, instead of it silently falling into a generic line.
 
 Outside React, use `getPlaybackError()` for a snapshot or
 [`onPlaybackError`](/api/features/errors/#onplaybackerror) to subscribe. The same
@@ -150,7 +211,7 @@ message to render.
 
 | API | Purpose |
 | --- | --- |
-| `usePlaybackError()` / `getPlaybackError()` | The current playback error (`{ code, message }`). |
+| `usePlaybackError()` / `getPlaybackError()` | The current playback error (`{ kind, code, message, statusCode? }`) — branch on `kind`. |
 | `onPlaybackError` | Subscribe to playback errors outside React. |
 | `retry()` | Re-attempt the current item (while state is `'error'`). |
 | `setupPlayer({ retry })` | Automatic retry of transient load failures (off by default). |

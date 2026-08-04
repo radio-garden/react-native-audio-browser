@@ -16,6 +16,7 @@ import com.audiobrowser.util.MetadataAdapter
 import com.audiobrowser.util.RepeatModeFactory
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackErrorKind
 import com.margelo.nitro.audiobrowser.PlaybackState
 import java.util.Locale
 import timber.log.Timber
@@ -241,11 +242,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       return
     }
 
-    // When the device is offline at the moment of failure, normalize to a cross-platform code
-    // (matching iOS) so consumers can reliably tell "no internet" from a broken/unreachable stream.
-    // ExoPlayer's own error codes don't distinguish the two; the connectivity monitor does.
+    val online = player.networkMonitor.getOnline()
+    // `code` stays the raw ExoPlayer name for telemetry; `kind` is the normalized classification
+    // consumers branch on. Offline is the one distinction ExoPlayer's codes cannot make on their
+    // own, so it overrides the code name too.
     val code =
-      if (!player.networkMonitor.getOnline()) {
+      if (!online) {
         "not-connected-to-internet"
       } else {
         error.errorCodeName
@@ -253,7 +255,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
           .lowercase(Locale.getDefault())
           .replace("_", "-")
       }
-    val playbackError = PlaybackError(code, error.message ?: "An unknown error occurred")
+    val playbackError =
+      PlaybackError(
+        PlaybackErrorClassifier.classify(error, online),
+        code,
+        error.message ?: "An unknown error occurred",
+        PlaybackErrorClassifier.responseCode(error)?.toDouble(),
+      )
     player.callbacks?.onPlaybackError(playbackError)
     player.playbackError = playbackError
     player.setPlaybackState(PlaybackState.ERROR)
@@ -283,7 +291,13 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
       }
       StuckRecoveryPolicy.Decision.GIVE_UP -> {
         Timber.w("Stuck player recovery exhausted (type=${error.stuckType}), surfacing error")
-        val playbackError = PlaybackError("playback-stalled", error.message ?: "Playback stalled")
+        val playbackError =
+          PlaybackError(
+            PlaybackErrorKind.STALLED,
+            "playback-stalled",
+            error.message ?: "Playback stalled",
+            null,
+          )
         player.callbacks?.onPlaybackError(playbackError)
         player.playbackError = playbackError
         player.setPlaybackState(PlaybackState.ERROR)

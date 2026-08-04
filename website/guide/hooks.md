@@ -151,7 +151,7 @@ const output = useOutput() // { type, name, external } | undefined
 
 ## Errors
 
-- [**`usePlaybackError()`**](/api/features/errors/#useplaybackerror) → [`PlaybackError`](/api/types/player/#playbackerror)` | undefined` (`{ code, message }`) — playback failures.
+- [**`usePlaybackError()`**](/api/features/errors/#useplaybackerror) → [`PlaybackError`](/api/features/errors/#playbackerror)` | undefined` — playback failures, with a normalized `kind` (`offline`, `unreachable`, `not-found`, `rejected`, `unplayable`, `stalled`, …) to branch on, plus a platform-specific `code` and optional `statusCode` for telemetry. Never show its `message` — see [Errors](/guide/errors#playback-errors).
 - [**`useNavigationError()`**](/api/features/errors/#usenavigationerror) → [`NavigationError`](/api/features/errors/#navigationerror)` | undefined` — a browse/search failure, with a typed `code` (`network-error`, `http-error`, `timeout`, `empty-content`, …) and optional `statusCode`.
 - [**`useFormattedNavigationError()`**](/api/features/errors/#useformattednavigationerror) → `{ title, message } | undefined` — the same error run through your `formatNavigationError` config (the copy CarPlay and Android Auto show), ready to display.
 
@@ -205,7 +205,7 @@ The **Hook** name links to its full API entry; the **Returns** type links to its
 | [`useSystemVolume`](/api/features/playback/#usesystemvolume) | `number` | `onSystemVolumeChanged` | all (read-only iOS) |
 | [`useActiveTrack`](/api/features/queue/#useactivetrack) | [`Track`](/api/types/browser-nodes/#track)` \| undefined` | `onActiveTrackChanged` | all |
 | [`useQueue`](/api/features/queue/#usequeue) | [`Track`](/api/types/browser-nodes/#track)`[]` | `onQueueChanged` | all |
-| [`useRepeatMode`](/api/features/queue/#userepeatmode) | [`RepeatMode`](/api/types/player/#repeatmode) | `onRepeatModeChanged` | all |
+| [`useRepeatMode`](/api/features/queue/#userepeatmode) | [`RepeatMode`](/api/features/queue/#repeatmode) | `onRepeatModeChanged` | all |
 | [`useShuffle`](/api/features/queue/#useshuffle) | `boolean` | `onShuffleChanged` | all |
 | [`useNowPlaying`](/api/features/nowPlaying/#usenowplaying) | `NowPlayingMetadata \| undefined` | `onNowPlayingChanged` | all |
 | [`useTabs`](/api/features/browser/#usetabs) | [`Track`](/api/types/browser-nodes/#track)`[] \| undefined` | `onTabsChanged` | all |
@@ -216,7 +216,7 @@ The **Hook** name links to its full API entry; the **Returns** type links to its
 | [`useOnline`](/api/features/network/#useonline) | `boolean` | `onOnlineChanged` | all |
 | [`useCarConnected`](/api/features/carConnection/#usecarconnected) | `boolean` | `onCarConnectedChanged` | all (`false` web) |
 | [`useOutput`](/api/features/output/#useoutput) | [`Output`](/api/features/output/#output)` \| undefined` | `onOutputChanged` | iOS, Android |
-| [`usePlaybackError`](/api/features/errors/#useplaybackerror) | [`PlaybackError`](/api/types/player/#playbackerror)` \| undefined` | `onPlaybackError` | all |
+| [`usePlaybackError`](/api/features/errors/#useplaybackerror) | [`PlaybackError`](/api/features/errors/#playbackerror)` \| undefined` | `onPlaybackError` | all |
 | [`useNavigationError`](/api/features/errors/#usenavigationerror) | [`NavigationError`](/api/features/errors/#navigationerror)` \| undefined` | `onNavigationError` | all |
 | [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) | `{ title, message } \| undefined` | `onFormattedNavigationError` | all |
 | [`useOptions`](/api/features/player/#useoptions) | [`Options`](/api/features/player/#options) | `onOptionsChanged` | all |

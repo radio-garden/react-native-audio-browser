@@ -6,9 +6,51 @@ import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 // Re-export for Nitro spec
 export type { FormattedNavigationError } from '../types/browser'
 
+/**
+ * Normalized, cross-platform classification of a playback failure.
+ *
+ * Both platforms map their native failure onto this set, so consumers can
+ * branch on it without knowing whether the error came from AVFoundation or
+ * ExoPlayer. Use this — not `code` — for anything user-visible.
+ *
+ * - `'offline'` - The device had no network connection at the moment of
+ *   failure. The stream itself may be fine.
+ * - `'unreachable'` - The stream host could not be reached: DNS failure,
+ *   connection refused, timed out, or the connection dropped while loading.
+ * - `'not-found'` - The server said this stream is gone (HTTP 404 / 410).
+ *   Retrying will not help; the station is dead.
+ * - `'rejected'` - The server refused the request (HTTP 401 / 403), e.g.
+ *   geo-blocking or an expired token.
+ * - `'server-error'` - The server responded with 5xx. Usually transient.
+ * - `'unplayable'` - The stream was fetched but cannot be played: unknown
+ *   container, unsupported codec, or a decoder failure.
+ * - `'stalled'` - Playback had started and then stopped, and the player
+ *   exhausted its recovery budget without recovering.
+ * - `'unknown'` - The failure could not be classified. Inspect `code`.
+ */
+export type PlaybackErrorKind =
+  | 'offline'
+  | 'unreachable'
+  | 'not-found'
+  | 'rejected'
+  | 'server-error'
+  | 'unplayable'
+  | 'stalled'
+  | 'unknown'
+
 export type PlaybackError = {
+  /** Normalized classification. Branch on this, not on `code`. */
+  kind: PlaybackErrorKind
+  /**
+   * The raw native failure identifier, for diagnostics and telemetry only.
+   * Platform-specific and unstable: loader cases on iOS
+   * (`failed-to-load`, `playback-failed`, …), lower-cased ExoPlayer error
+   * names on Android (`io-bad-http-status`, `parsing-container-malformed`, …).
+   */
   code: string
   message: string
+  /** HTTP status code, when the failure came from an HTTP response. */
+  statusCode?: number
 }
 
 /**

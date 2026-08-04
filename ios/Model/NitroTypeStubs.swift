@@ -192,9 +192,24 @@
 
   // MARK: - Playback Event Types (used by PlaybackCoordinator)
 
+  /// Public to match the generated Nitro enum, which `TrackPlayerError`
+  /// exposes from a public property.
+  public enum PlaybackErrorKind {
+    case offline
+    case unreachable
+    case notFound
+    case rejected
+    case serverError
+    case unplayable
+    case stalled
+    case unknown
+  }
+
   struct PlaybackError: Equatable {
+    var kind: PlaybackErrorKind
     var code: String
     var message: String
+    var statusCode: Double?
   }
 
   struct Playback: Equatable {
@@ -255,25 +270,4 @@
     case third(SleepTimerEndOfTrack)
   }
 
-  // MARK: - TrackPlayerError.PlaybackError Nitro Conversion Stub
-
-  extension TrackPlayerError.PlaybackError {
-    func toNitroError() -> PlaybackError {
-      let code = switch self {
-      case .failedToLoadKeyValue:
-        "failed-to-load"
-      case .invalidSourceUrl:
-        "invalid-source-url"
-      case .notConnectedToInternet:
-        "not-connected-to-internet"
-      case .playbackFailed:
-        "playback-failed"
-      case .trackWasUnplayable:
-        "track-unplayable"
-      case .playbackStalled:
-        "playback-stalled"
-      }
-      return PlaybackError(code: code, message: errorDescription ?? "Unknown error")
-    }
-  }
 #endif

@@ -124,6 +124,8 @@ namespace margelo::nitro::audiobrowser { struct Output; }
 namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent; }
 // Forward declaration of `PlaybackErrorEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
+// Forward declaration of `PlaybackErrorKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackErrorKind; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
 // Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
@@ -254,6 +256,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorEvent.hpp"
+#include "PlaybackErrorKind.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
 #include "PlaybackProgressUpdatedEvent.hpp"
 #include "PlaybackQueueEndedEvent.hpp"

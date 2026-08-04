@@ -17,6 +17,7 @@ import {
   usePlaybackError,
   usePlayingState
 } from 'react-native-audio-browser'
+import { playbackErrorMessage } from '../utils/playbackError'
 
 type MiniPlayerProps = {
   onPress: () => void
@@ -50,7 +51,7 @@ export function MiniPlayer({ onPress }: MiniPlayerProps) {
             style={[styles.artist, playbackError && styles.error]}
             numberOfLines={1}
           >
-            {playbackError?.message ?? artist}
+            {playbackError ? playbackErrorMessage(playbackError.kind) : artist}
           </Text>
         </View>
       </Pressable>

@@ -67,7 +67,11 @@ class TrackPlayer {
     onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
     onFailedToPlayToEndTime: { [weak self] error in
       let effectiveError = error ?? self?.avPlayer.currentItem?.error
-      self?.coordinator.errorHandler.handleError(effectiveError, context: .playback)
+      self?.coordinator.errorHandler.handleError(
+        effectiveError,
+        context: .playback,
+        httpStatusCode: self?.currentItemHttpStatusCode,
+      )
     },
     // Buffer emptied mid-playback: nudge the player, but don't reconnect — a
     // genuine drop is recovered by the retry / network-restore paths.
@@ -660,7 +664,10 @@ class TrackPlayer {
 
   private func avPlayerStatusDidChange(_ status: AVPlayer.Status) {
     if status == .failed {
-      coordinator.avPlayerStatusDidFail(error: avPlayer.currentItem?.error)
+      coordinator.avPlayerStatusDidFail(
+        error: avPlayer.currentItem?.error,
+        httpStatusCode: currentItemHttpStatusCode,
+      )
     }
   }
 
@@ -672,7 +679,25 @@ class TrackPlayer {
     case .failed: mapped = .failed
     @unknown default: return
     }
-    coordinator.avItemStatusDidChange(mapped, error: error ?? avPlayer.currentItem?.error)
+    coordinator.avItemStatusDidChange(
+      mapped,
+      error: error ?? avPlayer.currentItem?.error,
+      httpStatusCode: currentItemHttpStatusCode,
+    )
+  }
+
+  /// The HTTP status the server last answered the current item with, if any.
+  ///
+  /// `AVPlayerItem.error` never carries it — a 404 arrives as an opaque
+  /// CoreMedia error — so the error log is the only place it surfaces. The log
+  /// is per-item, so its entries belong to the track that just failed; picking
+  /// among them is `PlaybackErrorHandler`'s job, where it is testable
+  /// (`AVPlayerItemErrorLogEvent` cannot be constructed).
+  private var currentItemHttpStatusCode: Int? {
+    guard let events = avPlayer.currentItem?.errorLog()?.events else { return nil }
+    return PlaybackErrorHandler.httpStatusCode(
+      fromErrorStatusCodes: events.map(\.errorStatusCode),
+    )
   }
 
   private func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {

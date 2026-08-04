@@ -45,6 +45,7 @@ import type {
 import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
 import { BrowserManager } from './browser/BrowserManager'
+import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
 import { NavigationErrorManager } from './browser/NavigationErrorManager'
 import { SearchManager } from './browser/SearchManager'
@@ -53,14 +54,9 @@ import { RequestConfigBuilder } from './http/RequestConfigBuilder'
 import { NowPlayingManager } from './player/NowPlayingManager'
 import { OptionsManager } from './player/OptionsManager'
 import { RemoteCommandController } from './player/RemoteCommandController'
-import {
-  QueuePlayer,
-  SleepTimerManager,
-  VolumeFader
-} from './TrackPlayer'
+import { QueuePlayer, SleepTimerManager, VolumeFader } from './TrackPlayer'
 import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
-import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 
 /**
  * Web implementation of AudioBrowser (unified browser + player)
@@ -107,7 +103,7 @@ export class NativeAudioBrowser
   private offlineHandler: (() => void) | undefined
   private sleepFader = new VolumeFader(
     () => this.getVolume(),
-    volume => this.setVolume(volume)
+    (volume) => this.setVolume(volume)
   )
   private sleepTimer = new (class extends SleepTimerManager {
     constructor(private parent: NativeAudioBrowser) {
@@ -209,7 +205,8 @@ export class NativeAudioBrowser
   // Fail closed by default: only reachable in the init window before gate.ts
   // re-binds resolveGate. Web has no serve sites, so this is never called in
   // practice, but the default must agree with the fail-closed contract.
-  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> = async () => ({ gated: true })
+  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> =
+    async () => ({ gated: true })
   onCarConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers
@@ -398,7 +395,9 @@ export class NativeAudioBrowser
    * @returns true if the handler intercepted, false if defaultBehavior ran
    */
   private async handleLoad(
-    track: Track, queue: Track[], startIndex: number,
+    track: Track,
+    queue: Track[],
+    startIndex: number,
     defaultBehavior: () => void
   ): Promise<boolean> {
     const handler = this.configuration.handleTrackLoad
@@ -683,7 +682,13 @@ export class NativeAudioBrowser
       console.error('Error loading track:', error)
       const message =
         error instanceof Error ? error.message : 'Failed to load track'
-      const playbackError = { code: 'load-error', message }
+      // Track resolution failed before playback was ever attempted, so nothing
+      // is known about the stream itself.
+      const playbackError: PlaybackError = {
+        kind: 'unknown',
+        code: 'load-error',
+        message
+      }
       this.state = { state: 'error', error: playbackError }
     })
   }
@@ -890,11 +895,7 @@ export class NativeAudioBrowser
   }
 
   // MARK: Queue management
-  setQueue(
-    tracks: Track[],
-    startIndex?: number,
-    startPosition?: number
-  ): void {
+  setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void {
     this.stop()
     // Clear stale references from previous queue
     this.current = undefined

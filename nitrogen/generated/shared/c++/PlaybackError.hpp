@@ -28,9 +28,12 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
+// Forward declaration of `PlaybackErrorKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackErrorKind; }
 
-
+#include "PlaybackErrorKind.hpp"
 #include <string>
+#include <optional>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -39,12 +42,14 @@ namespace margelo::nitro::audiobrowser {
    */
   struct PlaybackError final {
   public:
+    PlaybackErrorKind kind     SWIFT_PRIVATE;
     std::string code     SWIFT_PRIVATE;
     std::string message     SWIFT_PRIVATE;
+    std::optional<double> statusCode     SWIFT_PRIVATE;
 
   public:
     PlaybackError() = default;
-    explicit PlaybackError(std::string code, std::string message): code(code), message(message) {}
+    explicit PlaybackError(PlaybackErrorKind kind, std::string code, std::string message, std::optional<double> statusCode): kind(kind), code(code), message(message), statusCode(statusCode) {}
 
   public:
     friend bool operator==(const PlaybackError& lhs, const PlaybackError& rhs) = default;
@@ -60,14 +65,18 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::PlaybackError fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::PlaybackError(
+        JSIConverter<margelo::nitro::audiobrowser::PlaybackErrorKind>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "kind"))),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "code"))),
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message")))
+        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message"))),
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "statusCode")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PlaybackError& arg) {
       jsi::Object obj(runtime);
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "kind"), JSIConverter<margelo::nitro::audiobrowser::PlaybackErrorKind>::toJSI(runtime, arg.kind));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "code"), JSIConverter<std::string>::toJSI(runtime, arg.code));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "message"), JSIConverter<std::string>::toJSI(runtime, arg.message));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "statusCode"), JSIConverter<std::optional<double>>::toJSI(runtime, arg.statusCode));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -78,8 +87,10 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
+      if (!JSIConverter<margelo::nitro::audiobrowser::PlaybackErrorKind>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "kind")))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "code")))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message")))) return false;
+      if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "statusCode")))) return false;
       return true;
     }
   };

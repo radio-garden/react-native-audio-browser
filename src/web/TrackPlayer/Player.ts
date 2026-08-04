@@ -8,6 +8,7 @@ import type {
 } from '../../features'
 import type { Track } from '../../types'
 import type { PlaybackEvent } from './PlaybackStateMachine'
+import { playbackErrorKind } from '../playbackErrorKind'
 import { nextPlaybackState } from './PlaybackStateMachine'
 import { SetupNotCalledError } from './SetupNotCalledError'
 import { State } from './State'
@@ -21,10 +22,14 @@ declare global {
 
 // Shaka event type definitions
 interface ShakaErrorEvent extends CustomEvent {
-  detail: {
-    code: number
-    message: string
-  }
+  detail: ShakaError
+}
+
+interface ShakaError {
+  code: number
+  message: string
+  /** Shaka's per-code payload; for BAD_HTTP_STATUS `data[1]` is the status. */
+  data?: unknown[]
 }
 
 interface ShakaBufferingEvent extends CustomEvent {
@@ -102,6 +107,7 @@ export class Player {
       this.state = {
         state: State.Error,
         error: {
+          kind: 'unplayable',
           code: 'not_supported',
           message: 'Browser not supported...'
         }
@@ -128,7 +134,9 @@ export class Player {
     element.addEventListener('ended', () =>
       this.dispatch({ type: 'trackEndedNaturally' })
     )
-    element.addEventListener('playing', () => this.dispatch({ type: 'playing' }))
+    element.addEventListener('playing', () =>
+      this.dispatch({ type: 'playing' })
+    )
     element.addEventListener('pause', () =>
       this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
     )
@@ -180,30 +188,43 @@ export class Player {
     this.state = { state }
   }
 
-  private toNormalizedError(err: unknown): { code: number; message: string } {
+  private toNormalizedError(err: unknown): ShakaError {
     if (
       typeof err === 'object' &&
       err !== null &&
       'code' in err &&
       typeof (err as Record<string, unknown>).code === 'number'
     ) {
-      const e = err as { code: number; message?: string }
-      return { code: e.code, message: e.message ?? 'Unknown error' }
+      const e = err as ShakaError
+      return {
+        code: e.code,
+        message: e.message ?? 'Unknown error',
+        data: e.data
+      }
     }
 
     const message = err instanceof Error ? err.message : String(err)
     return { code: -1, message }
   }
 
-  protected onError(shakaError: { code: number; message: string }): void {
+  protected onError(shakaError: ShakaError): void {
     // unload the current track to allow for clean playback on other
     this.player?.unload().catch((err) => {
       console.error(`Error unloading player on 'onError'`, err)
     })
 
+    const status = shakaError.data?.[1]
+    const httpStatus = typeof status === 'number' ? status : undefined
     const error: PlaybackError = {
+      kind: playbackErrorKind(
+        shakaError.code,
+        httpStatus,
+        // `navigator` is absent when this runs outside a browser (SSR, tests).
+        typeof navigator === 'undefined' || navigator.onLine
+      ),
       code: shakaError.code.toString(),
-      message: shakaError.message
+      message: shakaError.message,
+      statusCode: httpStatus
     }
 
     this.state = {
@@ -230,6 +251,7 @@ export class Player {
       this._loadInProgress = false
       this._pendingSeek = undefined
       const error: PlaybackError = {
+        kind: 'unplayable',
         code: 'invalid_track',
         message: 'Track does not have a valid src URL'
       }

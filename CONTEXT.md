@@ -128,6 +128,18 @@ Whether the user wants playback to start automatically when the Active Track has
 The UX-level state: a struct of two booleans `{ playing, buffering }`. Derived from `PlaybackState` + `playWhenReady`. What a play/pause button and loading spinner should bind to.
 *Avoid*: PlaybackStatus, PlayingFlags, UIState.
 
+### Playback failure
+
+**PlaybackErrorKind**:
+The normalized, cross-platform classification of why playback failed. Each platform maps its own native failure onto this set (AVFoundation on iOS, ExoPlayer on Android, Shaka on web), so an app can branch on it without knowing which engine produced it. **The only part of a PlaybackError that may drive user-facing copy.** The parallel of `NavigationErrorType` on the browsing side.
+*Avoid*: error type, error category, error reason.
+
+**PlaybackError code**:
+The raw native failure identifier carried alongside the Kind, for diagnostics and telemetry only. Deliberately *not* a contract: its values are the underlying engine's own, so they differ per platform and change with it. Never branch on it, never show it.
+*Avoid*: treating it as an enum.
+
+A failure carrying no evidence of a cause takes the catch-all Kind rather than being guessed into a more specific one. A wrong classification both misleads the listener and corrupts the telemetry aggregates the Kind exists to make possible.
+
 ### Metadata
 
 **TrackMetadata**:

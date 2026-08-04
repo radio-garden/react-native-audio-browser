@@ -40,6 +40,8 @@
 #include "JStallReason.hpp"
 #include "PlaybackError.hpp"
 #include "JPlaybackError.hpp"
+#include "PlaybackErrorKind.hpp"
+#include "JPlaybackErrorKind.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

@@ -42,7 +42,11 @@ The [`nowPlaying`](/api/features/player/#formatnowplayingcallback) formatter han
 ```ts
 setupPlayer({
   nowPlaying: ({ timedMetadata, playWhenReady, stalled, error }) => {
-    if (error) return { artist: error.message ?? 'Playback error' }
+    // `yourErrorLine` is your own kind→copy mapping — branch on `error.kind`,
+    // never `error.message`, which is developer English and never localized.
+    // This line is read by listeners, on the lock screen and in the car.
+    // See [Playback errors](/guide/errors#playback-errors).
+    if (error) return { artist: yourErrorLine(error.kind) }
     if (stalled) {
       return {
         artist: stalled === 'offline' ? 'No connection' : 'Reconnecting…'
@@ -64,7 +68,7 @@ The callback receives a single [`FormatNowPlayingParams`](/api/features/player/#
 | `timedMetadata` | `TimedMetadata?` | The ICY / ID3 "now playing song", if any. |
 | `playWhenReady` | `boolean` | Play/pause intent — stays `true` through buffers, so the song line won't flicker. |
 | `stalled` | `StallReason?` | Truthy only during a mid-stream stall: `'buffering'` (rebuffering while online) or `'offline'` (no connectivity). Use `if (stalled)`, compare `=== 'offline'` for the reason. |
-| `error` | `PlaybackError?` | The current playback error, if playback failed. |
+| `error` | `PlaybackError?` | The current playback error, if playback failed. Switch on `error.kind` to pick your own localized line — see [Playback errors](/guide/errors#playback-errors). |
 
 It returns a [`NowPlayingUpdate`](/api/features/metadata/#nowplayingupdate) (`{ title?, artist?, album? }`) or `undefined`. The callback is synchronous and should stay cheap — it's a pure formatting function, no I/O. Each returned field falls back **independently** to the track's value when omitted; returning `undefined` (or `{}`) uses the track default entirely. Identical results across a rapid burst of transitions are de-duplicated natively, so they won't flicker the surface.
 

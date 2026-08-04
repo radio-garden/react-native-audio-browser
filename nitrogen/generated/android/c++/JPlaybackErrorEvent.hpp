@@ -11,7 +11,9 @@
 #include "PlaybackErrorEvent.hpp"
 
 #include "JPlaybackError.hpp"
+#include "JPlaybackErrorKind.hpp"
 #include "PlaybackError.hpp"
+#include "PlaybackErrorKind.hpp"
 #include <optional>
 #include <string>
 

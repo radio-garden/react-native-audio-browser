@@ -341,13 +341,13 @@ class PlaybackCoordinator {
     }
   }
 
-  func avPlayerStatusDidFail(error: Error?) {
-    errorHandler.handleError(error, context: .playback)
+  func avPlayerStatusDidFail(error: Error?, httpStatusCode: Int? = nil) {
+    errorHandler.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
   }
 
-  func avItemStatusDidChange(_ status: PlayerItemStatus, error: Error?) {
+  func avItemStatusDidChange(_ status: PlayerItemStatus, error: Error?, httpStatusCode: Int? = nil) {
     if status == .failed {
-      errorHandler.handleError(error, context: .playback)
+      errorHandler.handleError(error, context: .playback, httpStatusCode: httpStatusCode)
     }
   }
 
