@@ -1557,7 +1557,7 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setGate(gate: bridge.std__optional_NativeGate_, hasResolver: Bool) -> bridge.Result_void_ {
+  public final func setGate(gate: bridge.std__optional_Gate_, hasResolver: Bool) -> bridge.Result_void_ {
     do {
       try self.__implementation.setGate(gate: gate.value, hasResolver: hasResolver)
       return bridge.create_Result_void_()

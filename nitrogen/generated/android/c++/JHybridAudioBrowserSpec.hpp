@@ -176,7 +176,7 @@ namespace margelo::nitro::audiobrowser {
     void notifyContentChanged(const std::string& path) override;
     void invalidateAllContent() override;
     void setFavorites(const std::vector<std::string>& favorites) override;
-    void setGate(const std::optional<NativeGate>& gate, bool hasResolver) override;
+    void setGate(const std::optional<Gate>& gate, bool hasResolver) override;
     void clearGate() override;
     bool isCarConnected() override;
     std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) override;

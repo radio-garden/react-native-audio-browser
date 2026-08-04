@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.MediaReference
-import com.margelo.nitro.audiobrowser.NativeGate
+import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
@@ -136,7 +136,7 @@ class MediaSessionCallback(private val player: Player) :
       reference = MediaReference.UNKNOWN,
     )
 
-  private fun createGateMediaItem(gate: NativeGate): MediaItem =
+  private fun createGateMediaItem(gate: Gate): MediaItem =
     createErrorMediaItem(
       mediaId = BrowserPathHelper.GATE_PATH,
       title = gate.title,

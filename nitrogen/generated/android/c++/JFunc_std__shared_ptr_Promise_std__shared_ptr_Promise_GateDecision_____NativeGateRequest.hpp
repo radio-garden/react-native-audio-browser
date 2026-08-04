@@ -17,9 +17,9 @@
 #include <NitroModules/JNICallable.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JGateDecision.hpp"
-#include "NativeGate.hpp"
+#include "Gate.hpp"
 #include <optional>
-#include "JNativeGate.hpp"
+#include "JGate.hpp"
 #include <string>
 #include "JNativeGateRequest.hpp"
 #include "GateReason.hpp"

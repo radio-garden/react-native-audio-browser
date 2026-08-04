@@ -56,6 +56,8 @@ namespace margelo::nitro::audiobrowser { struct GateDecision; }
 namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `GateReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class GateReason; }
+// Forward declaration of `Gate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Gate; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 // Forward declaration of `HybridAudioBrowserSpec` to properly resolve imports.
@@ -88,8 +90,6 @@ namespace margelo::nitro::audiobrowser { struct MediaTransformParams; }
 namespace margelo::nitro::audiobrowser { struct NativeAndroidSetupOptions; }
 // Forward declaration of `NativeGateRequest` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
-// Forward declaration of `NativeGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeGate; }
 // Forward declaration of `NativeIOSSetupOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeIOSSetupOptions; }
 // Forward declaration of `NativeRouteEntry` to properly resolve imports.
@@ -215,6 +215,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "FormatNavigationErrorParams.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "FormattedNavigationError.hpp"
+#include "Gate.hpp"
 #include "GateDecision.hpp"
 #include "GateEvent.hpp"
 #include "GateReason.hpp"
@@ -233,7 +234,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeAndroidSetupOptions.hpp"
-#include "NativeGate.hpp"
 #include "NativeGateRequest.hpp"
 #include "NativeIOSSetupOptions.hpp"
 #include "NativeRouteEntry.hpp"
@@ -1703,18 +1703,18 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return PromiseHolder<std::optional<FormattedNavigationError>>(std::move(promise));
   }
   
-  // pragma MARK: std::optional<NativeGate>
+  // pragma MARK: std::optional<Gate>
   /**
-   * Specialized version of `std::optional<NativeGate>`.
+   * Specialized version of `std::optional<Gate>`.
    */
-  using std__optional_NativeGate_ = std::optional<NativeGate>;
-  inline std::optional<NativeGate> create_std__optional_NativeGate_(const NativeGate& value) noexcept {
-    return std::optional<NativeGate>(value);
+  using std__optional_Gate_ = std::optional<Gate>;
+  inline std::optional<Gate> create_std__optional_Gate_(const Gate& value) noexcept {
+    return std::optional<Gate>(value);
   }
-  inline bool has_value_std__optional_NativeGate_(const std::optional<NativeGate>& optional) noexcept {
+  inline bool has_value_std__optional_Gate_(const std::optional<Gate>& optional) noexcept {
     return optional.has_value();
   }
-  inline NativeGate get_std__optional_NativeGate_(const std::optional<NativeGate>& optional) noexcept {
+  inline Gate get_std__optional_Gate_(const std::optional<Gate>& optional) noexcept {
     return optional.value();
   }
   
@@ -2087,21 +2087,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<RepeatMode>
-  /**
-   * Specialized version of `std::optional<RepeatMode>`.
-   */
-  using std__optional_RepeatMode_ = std::optional<RepeatMode>;
-  inline std::optional<RepeatMode> create_std__optional_RepeatMode_(const RepeatMode& value) noexcept {
-    return std::optional<RepeatMode>(value);
-  }
-  inline bool has_value_std__optional_RepeatMode_(const std::optional<RepeatMode>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline RepeatMode get_std__optional_RepeatMode_(const std::optional<RepeatMode>& optional) noexcept {
-    return optional.value();
-  }
-  
   // pragma MARK: std::optional<NativeUpdateOptions>
   /**
    * Specialized version of `std::optional<NativeUpdateOptions>`.
@@ -2358,50 +2343,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return std__variant_bool__FavoriteConfig_(value);
   }
   
-  // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
-  /**
-   * Specialized version of `std::optional<std::variant<bool, RetryConfig>>`.
-   */
-  using std__optional_std__variant_bool__RetryConfig__ = std::optional<std::variant<bool, RetryConfig>>;
-  inline std::optional<std::variant<bool, RetryConfig>> create_std__optional_std__variant_bool__RetryConfig__(const std::variant<bool, RetryConfig>& value) noexcept {
-    return std::optional<std::variant<bool, RetryConfig>>(value);
-  }
-  inline bool has_value_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
-    return optional.value();
-  }
-  
-  // pragma MARK: std::variant<bool, RetryConfig>
-  /**
-   * Wrapper struct for `std::variant<bool, RetryConfig>`.
-   * std::variant cannot be used in Swift because of a Swift bug.
-   * Not even specializing it works. So we create a wrapper struct.
-   */
-  struct std__variant_bool__RetryConfig_ final {
-    std::variant<bool, RetryConfig> variant;
-    std__variant_bool__RetryConfig_(std::variant<bool, RetryConfig> variant): variant(variant) { }
-    operator std::variant<bool, RetryConfig>() const noexcept {
-      return variant;
-    }
-    inline size_t index() const noexcept {
-      return variant.index();
-    }
-    inline bool get_0() const noexcept {
-      return std::get<0>(variant);
-    }
-    inline RetryConfig get_1() const noexcept {
-      return std::get<1>(variant);
-    }
-  };
-  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(bool value) noexcept {
-    return std__variant_bool__RetryConfig_(value);
-  }
-  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(const RetryConfig& value) noexcept {
-    return std__variant_bool__RetryConfig_(value);
-  }
-  
   // pragma MARK: std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& /* params */)>>
   /**
    * Specialized version of `std::optional<std::function<std::shared_ptr<Promise<std::optional<NowPlayingUpdate>>>(const FormatNowPlayingParams& / * params * /)>>`.
@@ -2532,6 +2473,65 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline PlaybackError get_std__optional_PlaybackError_(const std::optional<PlaybackError>& optional) noexcept {
     return optional.value();
+  }
+  
+  // pragma MARK: std::optional<RepeatMode>
+  /**
+   * Specialized version of `std::optional<RepeatMode>`.
+   */
+  using std__optional_RepeatMode_ = std::optional<RepeatMode>;
+  inline std::optional<RepeatMode> create_std__optional_RepeatMode_(const RepeatMode& value) noexcept {
+    return std::optional<RepeatMode>(value);
+  }
+  inline bool has_value_std__optional_RepeatMode_(const std::optional<RepeatMode>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline RepeatMode get_std__optional_RepeatMode_(const std::optional<RepeatMode>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<std::variant<bool, RetryConfig>>
+  /**
+   * Specialized version of `std::optional<std::variant<bool, RetryConfig>>`.
+   */
+  using std__optional_std__variant_bool__RetryConfig__ = std::optional<std::variant<bool, RetryConfig>>;
+  inline std::optional<std::variant<bool, RetryConfig>> create_std__optional_std__variant_bool__RetryConfig__(const std::variant<bool, RetryConfig>& value) noexcept {
+    return std::optional<std::variant<bool, RetryConfig>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<bool, RetryConfig> get_std__optional_std__variant_bool__RetryConfig__(const std::optional<std::variant<bool, RetryConfig>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::variant<bool, RetryConfig>
+  /**
+   * Wrapper struct for `std::variant<bool, RetryConfig>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_bool__RetryConfig_ final {
+    std::variant<bool, RetryConfig> variant;
+    std__variant_bool__RetryConfig_(std::variant<bool, RetryConfig> variant): variant(variant) { }
+    operator std::variant<bool, RetryConfig>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline bool get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline RetryConfig get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(bool value) noexcept {
+    return std__variant_bool__RetryConfig_(value);
+  }
+  inline std__variant_bool__RetryConfig_ create_std__variant_bool__RetryConfig_(const RetryConfig& value) noexcept {
+    return std__variant_bool__RetryConfig_(value);
   }
   
   // pragma MARK: std::optional<AndroidOptions>

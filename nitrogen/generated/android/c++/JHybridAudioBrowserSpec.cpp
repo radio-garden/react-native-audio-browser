@@ -67,8 +67,8 @@ namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 namespace margelo::nitro::audiobrowser { struct GateDecision; }
 // Forward declaration of `NativeGateRequest` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
-// Forward declaration of `NativeGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeGate; }
+// Forward declaration of `Gate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Gate; }
 // Forward declaration of `GateReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class GateReason; }
 // Forward declaration of `GateEvent` to properly resolve imports.
@@ -181,14 +181,14 @@ namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
-// Forward declaration of `RetryConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `StallReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 
 #include <string>
 #include <optional>
@@ -279,8 +279,8 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "NativeGateRequest.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest.hpp"
 #include "JGateDecision.hpp"
-#include "NativeGate.hpp"
-#include "JNativeGate.hpp"
+#include "Gate.hpp"
+#include "JGate.hpp"
 #include "JNativeGateRequest.hpp"
 #include "GateReason.hpp"
 #include "JGateReason.hpp"
@@ -430,9 +430,6 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JNitroAndroidUpdateOptions.hpp"
 #include "NitroIOSUpdateOptions.hpp"
 #include "JNitroIOSUpdateOptions.hpp"
-#include "RetryConfig.hpp"
-#include "JVariant_Boolean_RetryConfig.hpp"
-#include "JRetryConfig.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
@@ -440,6 +437,9 @@ namespace margelo::nitro::audiobrowser { enum class StallReason; }
 #include "JFormatNowPlayingParams.hpp"
 #include "StallReason.hpp"
 #include "JStallReason.hpp"
+#include "RetryConfig.hpp"
+#include "JVariant_Boolean_RetryConfig.hpp"
+#include "JRetryConfig.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -1505,9 +1505,9 @@ namespace margelo::nitro::audiobrowser {
       return __array;
     }());
   }
-  void JHybridAudioBrowserSpec::setGate(const std::optional<NativeGate>& gate, bool hasResolver) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNativeGate> /* gate */, jboolean /* hasResolver */)>("setGate");
-    method(_javaPart, gate.has_value() ? JNativeGate::fromCpp(gate.value()) : nullptr, hasResolver);
+  void JHybridAudioBrowserSpec::setGate(const std::optional<Gate>& gate, bool hasResolver) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JGate> /* gate */, jboolean /* hasResolver */)>("setGate");
+    method(_javaPart, gate.has_value() ? JGate::fromCpp(gate.value()) : nullptr, hasResolver);
   }
   void JHybridAudioBrowserSpec::clearGate() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("clearGate");

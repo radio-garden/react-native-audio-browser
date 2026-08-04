@@ -22,7 +22,7 @@ data class GateDecision(
   val gated: Boolean,
   @DoNotStrip
   @Keep
-  val gate: NativeGate?
+  val gate: Gate?
 ) {
   /* primary constructor */
 
@@ -34,7 +34,7 @@ data class GateDecision(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(gated: Boolean, gate: NativeGate?): GateDecision {
+    private fun fromCpp(gated: Boolean, gate: Gate?): GateDecision {
       return GateDecision(gated, gate)
     }
   }

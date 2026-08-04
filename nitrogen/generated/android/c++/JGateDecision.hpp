@@ -10,8 +10,8 @@
 #include <fbjni/fbjni.h>
 #include "GateDecision.hpp"
 
-#include "JNativeGate.hpp"
-#include "NativeGate.hpp"
+#include "Gate.hpp"
+#include "JGate.hpp"
 #include <optional>
 #include <string>
 
@@ -36,8 +36,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldGated = clazz->getField<jboolean>("gated");
       jboolean gated = this->getFieldValue(fieldGated);
-      static const auto fieldGate = clazz->getField<JNativeGate>("gate");
-      jni::local_ref<JNativeGate> gate = this->getFieldValue(fieldGate);
+      static const auto fieldGate = clazz->getField<JGate>("gate");
+      jni::local_ref<JGate> gate = this->getFieldValue(fieldGate);
       return GateDecision(
         static_cast<bool>(gated),
         gate != nullptr ? std::make_optional(gate->toCpp()) : std::nullopt
@@ -50,13 +50,13 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JGateDecision::javaobject> fromCpp(const GateDecision& value) {
-      using JSignature = JGateDecision(jboolean, jni::alias_ref<JNativeGate>);
+      using JSignature = JGateDecision(jboolean, jni::alias_ref<JGate>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.gated,
-        value.gate.has_value() ? JNativeGate::fromCpp(value.gate.value()) : nullptr
+        value.gate.has_value() ? JGate::fromCpp(value.gate.value()) : nullptr
       );
     }
   };

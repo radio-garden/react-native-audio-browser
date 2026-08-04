@@ -72,8 +72,8 @@ namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
 namespace margelo::nitro::audiobrowser { struct GateDecision; }
 // Forward declaration of `NativeGateRequest` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
-// Forward declaration of `NativeGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeGate; }
+// Forward declaration of `Gate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Gate; }
 // Forward declaration of `GateReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class GateReason; }
 // Forward declaration of `GateEvent` to properly resolve imports.
@@ -184,14 +184,14 @@ namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
-// Forward declaration of `RetryConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 // Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
 // Forward declaration of `StallReason` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class StallReason; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 
@@ -232,7 +232,7 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "FormatNavigationErrorParams.hpp"
 #include "GateDecision.hpp"
 #include "NativeGateRequest.hpp"
-#include "NativeGate.hpp"
+#include "Gate.hpp"
 #include "GateReason.hpp"
 #include "GateEvent.hpp"
 #include "ChapterMetadata.hpp"
@@ -289,10 +289,10 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NitroIOSUpdateOptions.hpp"
-#include "RetryConfig.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "FormatNowPlayingParams.hpp"
 #include "StallReason.hpp"
+#include "RetryConfig.hpp"
 #include "Progress.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
@@ -804,7 +804,7 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void setGate(const std::optional<NativeGate>& gate, bool hasResolver) override {
+    inline void setGate(const std::optional<Gate>& gate, bool hasResolver) override {
       auto __result = _swiftPart.setGate(gate, std::forward<decltype(hasResolver)>(hasResolver));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());

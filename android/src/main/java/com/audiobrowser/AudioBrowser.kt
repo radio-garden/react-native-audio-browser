@@ -47,7 +47,7 @@ import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.GateDecision
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.NativeGate
+import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
@@ -706,11 +706,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   // MARK: Gate
 
   /** A gate decision for one request: whether to gate, and which chrome to render. */
-  data class GateOutcome(val gated: Boolean, val chrome: NativeGate?)
+  data class GateOutcome(val gated: Boolean, val chrome: Gate?)
 
   // The minimal chrome rendered when a gate is active but no override or stored
   // default chrome exists (the resolver-only setGate overload).
-  private val builtInGate = NativeGate("Unavailable", null)
+  private val builtInGate = Gate("Unavailable", null)
 
   /**
    * The three gate fields as one immutable triple so [gateDecision] reads them as a unit. Written
@@ -723,11 +723,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * torn `(active=true, chrome=null)` state that crashed the force-unwrap at the serve sites. One
    * volatile reference read once cannot tear.
    */
-  private data class GateState(val active: Boolean, val chrome: NativeGate?, val hasResolver: Boolean)
+  private data class GateState(val active: Boolean, val chrome: Gate?, val hasResolver: Boolean)
 
   @Volatile private var gateState = GateState(active = false, chrome = null, hasResolver = false)
 
-  override fun setGate(gate: NativeGate?, hasResolver: Boolean) {
+  override fun setGate(gate: Gate?, hasResolver: Boolean) {
     // Single atomic assignment — readers never see a half-updated triple.
     gateState = GateState(active = true, chrome = gate, hasResolver = hasResolver)
     // Re-query every subscribed parent so a connected controller (Android

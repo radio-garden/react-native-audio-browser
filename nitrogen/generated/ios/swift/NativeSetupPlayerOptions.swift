@@ -18,7 +18,7 @@ public extension NativeSetupPlayerOptions {
   /**
    * Create a new instance of `NativeSetupPlayerOptions`.
    */
-  init(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, playWhenReady: Bool?, repeatMode: RepeatMode?, options: NativeUpdateOptions?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?) {
+  init(android: NativeAndroidSetupOptions?, ios: NativeIOSSetupOptions?, options: NativeUpdateOptions?, autoUpdateNowPlayingMetadata: Bool?, nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?, playWhenReady: Bool?, repeatMode: RepeatMode?, retry: Variant_Bool_RetryConfig?, keepSessionAliveOnError: Bool?) {
     self.init({ () -> bridge.std__optional_NativeAndroidSetupOptions_ in
       if let __unwrappedValue = android {
         return bridge.create_std__optional_NativeAndroidSetupOptions_(__unwrappedValue)
@@ -31,6 +31,27 @@ public extension NativeSetupPlayerOptions {
       } else {
         return .init()
       }
+    }(), { () -> bridge.std__optional_NativeUpdateOptions_ in
+      if let __unwrappedValue = options {
+        return bridge.create_std__optional_NativeUpdateOptions_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = autoUpdateNowPlayingMetadata {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______ in
+      if let __unwrappedValue = nowPlayingMetadataFormatter {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams in
+          let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__closureWrapper.toUnsafe())
+        }())
+      } else {
+        return .init()
+      }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = playWhenReady {
         return bridge.create_std__optional_bool_(__unwrappedValue)
@@ -40,12 +61,6 @@ public extension NativeSetupPlayerOptions {
     }(), { () -> bridge.std__optional_RepeatMode_ in
       if let __unwrappedValue = repeatMode {
         return bridge.create_std__optional_RepeatMode_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_NativeUpdateOptions_ in
-      if let __unwrappedValue = options {
-        return bridge.create_std__optional_NativeUpdateOptions_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -68,21 +83,6 @@ public extension NativeSetupPlayerOptions {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_bool_ in
-      if let __unwrappedValue = autoUpdateNowPlayingMetadata {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______ in
-      if let __unwrappedValue = nowPlayingMetadataFormatter {
-        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____const_FormatNowPlayingParams_____params______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams in
-          let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__unwrappedValue)
-          return bridge.create_Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams(__closureWrapper.toUnsafe())
-        }())
-      } else {
-        return .init()
-      }
     }())
   }
 
@@ -97,61 +97,8 @@ public extension NativeSetupPlayerOptions {
   }
   
   @inline(__always)
-  var playWhenReady: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__playWhenReady) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__playWhenReady)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var repeatMode: RepeatMode? {
-    return self.__repeatMode.value
-  }
-  
-  @inline(__always)
   var options: NativeUpdateOptions? {
     return self.__options.value
-  }
-  
-  @inline(__always)
-  var retry: Variant_Bool_RetryConfig? {
-    return { () -> Variant_Bool_RetryConfig? in
-      if bridge.has_value_std__optional_std__variant_bool__RetryConfig__(self.__retry) {
-        let __unwrapped = bridge.get_std__optional_std__variant_bool__RetryConfig__(self.__retry)
-        return { () -> Variant_Bool_RetryConfig in
-          let __variant = bridge.std__variant_bool__RetryConfig_(__unwrapped)
-          switch __variant.index() {
-            case 0:
-              let __actual = __variant.get_0()
-              return .first(__actual)
-            case 1:
-              let __actual = __variant.get_1()
-              return .second(__actual)
-            default:
-              fatalError("Variant can never have index \(__variant.index())!")
-          }
-        }()
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var keepSessionAliveOnError: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__keepSessionAliveOnError) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__keepSessionAliveOnError)
-        return __unwrapped
-      } else {
-        return nil
-      }
-    }()
   }
   
   @inline(__always)
@@ -198,6 +145,59 @@ public extension NativeSetupPlayerOptions {
             }()
           }
         }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var playWhenReady: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__playWhenReady) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__playWhenReady)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var repeatMode: RepeatMode? {
+    return self.__repeatMode.value
+  }
+  
+  @inline(__always)
+  var retry: Variant_Bool_RetryConfig? {
+    return { () -> Variant_Bool_RetryConfig? in
+      if bridge.has_value_std__optional_std__variant_bool__RetryConfig__(self.__retry) {
+        let __unwrapped = bridge.get_std__optional_std__variant_bool__RetryConfig__(self.__retry)
+        return { () -> Variant_Bool_RetryConfig in
+          let __variant = bridge.std__variant_bool__RetryConfig_(__unwrapped)
+          switch __variant.index() {
+            case 0:
+              let __actual = __variant.get_0()
+              return .first(__actual)
+            case 1:
+              let __actual = __variant.get_1()
+              return .second(__actual)
+            default:
+              fatalError("Variant can never have index \(__variant.index())!")
+          }
+        }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var keepSessionAliveOnError: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__keepSessionAliveOnError) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__keepSessionAliveOnError)
+        return __unwrapped
       } else {
         return nil
       }

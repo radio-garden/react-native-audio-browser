@@ -840,7 +840,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun setGate(gate: NativeGate?, hasResolver: Boolean): Unit
+  abstract fun setGate(gate: Gate?, hasResolver: Boolean): Unit
   
   @DoNotStrip
   @Keep

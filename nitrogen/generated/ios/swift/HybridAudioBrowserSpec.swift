@@ -78,7 +78,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   func notifyContentChanged(path: String) throws -> Void
   func invalidateAllContent() throws -> Void
   func setFavorites(favorites: [String]) throws -> Void
-  func setGate(gate: NativeGate?, hasResolver: Bool) throws -> Void
+  func setGate(gate: Gate?, hasResolver: Bool) throws -> Void
   func clearGate() throws -> Void
   func isCarConnected() throws -> Bool
   func setupPlayer(options: NativeSetupPlayerOptions) throws -> Promise<Void>

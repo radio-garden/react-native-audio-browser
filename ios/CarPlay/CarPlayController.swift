@@ -1154,7 +1154,7 @@ public final class RNABCarPlayController: NSObject {
   /// to spaces (the "variants" are width alternatives, not lines). No action
   /// button: a gate withholds content; the consumer surfaces any "subscribe"
   /// affordance in its own UI, not on the car surface.
-  private func makeGateTemplate(gate gateChrome: NativeGate?, tab: Track?) -> CPListTemplate {
+  private func makeGateTemplate(gate gateChrome: Gate?, tab: Track?) -> CPListTemplate {
     // A gated decision with neither an override nor a stored default chrome
     // (resolver-only `true`) falls back to the built-in minimal gate.
     let gate = gateChrome ?? HybridAudioBrowser.builtInGate

@@ -536,7 +536,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// The gate's default chrome, if one was set. Served when the resolver
   /// returns a gated decision with no per-request override, and for the static
   /// gate (no resolver). May be nil for a resolver-only gate.
-  private(set) var defaultChrome: NativeGate?
+  private(set) var defaultChrome: Gate?
 
   /// Whether JS installed a per-request resolver. When false the gate is static
   /// — every request is gated with `defaultChrome` and the JS hop is skipped.
@@ -552,16 +552,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// The minimal built-in gate served when a request is gated but neither a
   /// per-request override nor a stored default chrome exists (resolver-only
   /// gate returning `true`).
-  static let builtInGate = NativeGate(title: "Unavailable", message: nil)
+  static let builtInGate = Gate(title: "Unavailable", message: nil)
 
   /// The outcome of a single gate decision: whether to gate, and (if so) the
   /// chrome to render.
   struct GateOutcome {
     let gated: Bool
-    let chrome: NativeGate?
+    let chrome: Gate?
   }
 
-  public func setGate(gate: NativeGate?, hasResolver: Bool) throws {
+  public func setGate(gate: Gate?, hasResolver: Bool) throws {
     onMainActor {
       defaultChrome = gate
       self.hasResolver = hasResolver

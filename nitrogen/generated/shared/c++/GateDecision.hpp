@@ -28,10 +28,10 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `NativeGate` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NativeGate; }
+// Forward declaration of `Gate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Gate; }
 
-#include "NativeGate.hpp"
+#include "Gate.hpp"
 #include <optional>
 
 namespace margelo::nitro::audiobrowser {
@@ -42,11 +42,11 @@ namespace margelo::nitro::audiobrowser {
   struct GateDecision final {
   public:
     bool gated     SWIFT_PRIVATE;
-    std::optional<NativeGate> gate     SWIFT_PRIVATE;
+    std::optional<Gate> gate     SWIFT_PRIVATE;
 
   public:
     GateDecision() = default;
-    explicit GateDecision(bool gated, std::optional<NativeGate> gate): gated(gated), gate(gate) {}
+    explicit GateDecision(bool gated, std::optional<Gate> gate): gated(gated), gate(gate) {}
 
   public:
     friend bool operator==(const GateDecision& lhs, const GateDecision& rhs) = default;
@@ -63,13 +63,13 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::GateDecision(
         JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gated"))),
-        JSIConverter<std::optional<margelo::nitro::audiobrowser::NativeGate>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gate")))
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::Gate>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gate")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::GateDecision& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "gated"), JSIConverter<bool>::toJSI(runtime, arg.gated));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "gate"), JSIConverter<std::optional<margelo::nitro::audiobrowser::NativeGate>>::toJSI(runtime, arg.gate));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "gate"), JSIConverter<std::optional<margelo::nitro::audiobrowser::Gate>>::toJSI(runtime, arg.gate));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -81,7 +81,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gated")))) return false;
-      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::NativeGate>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gate")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::Gate>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "gate")))) return false;
       return true;
     }
   };

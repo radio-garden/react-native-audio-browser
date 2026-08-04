@@ -18,10 +18,10 @@ public extension GateDecision {
   /**
    * Create a new instance of `GateDecision`.
    */
-  init(gated: Bool, gate: NativeGate?) {
-    self.init(gated, { () -> bridge.std__optional_NativeGate_ in
+  init(gated: Bool, gate: Gate?) {
+    self.init(gated, { () -> bridge.std__optional_Gate_ in
       if let __unwrappedValue = gate {
-        return bridge.create_std__optional_NativeGate_(__unwrappedValue)
+        return bridge.create_std__optional_Gate_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -34,7 +34,7 @@ public extension GateDecision {
   }
   
   @inline(__always)
-  var gate: NativeGate? {
+  var gate: Gate? {
     return self.__gate.value
   }
 }
