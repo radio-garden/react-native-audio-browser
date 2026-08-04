@@ -58,7 +58,10 @@ class PlaybackErrorClassifierTest {
   fun `http status is recovered when nested deeper in the chain`() {
     val nested = IOException("loading failed", httpException(404))
     val error = exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, nested)
-    assertEquals(PlaybackErrorKind.NOT_FOUND, PlaybackErrorClassifier.classify(error, online = true))
+    assertEquals(
+      PlaybackErrorKind.NOT_FOUND,
+      PlaybackErrorClassifier.classify(error, online = true),
+    )
   }
 
   @Test
@@ -92,7 +95,10 @@ class PlaybackErrorClassifierTest {
   @Test
   fun `recovered status outranks the error code mapping`() {
     val error = exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, httpException(404))
-    assertEquals(PlaybackErrorKind.NOT_FOUND, PlaybackErrorClassifier.classify(error, online = true))
+    assertEquals(
+      PlaybackErrorKind.NOT_FOUND,
+      PlaybackErrorClassifier.classify(error, online = true),
+    )
   }
 
   // MARK: - Error codes

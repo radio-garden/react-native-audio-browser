@@ -9,10 +9,10 @@ import com.margelo.nitro.audiobrowser.PlaybackErrorKind
  * populates from AVFoundation. Consumers branch on the kind; the raw ExoPlayer code still travels
  * alongside it as `PlaybackError.code` for telemetry.
  *
- * Codes that carry no real evidence of a cause (`ERROR_CODE_UNSPECIFIED`, `ERROR_CODE_IO_UNSPECIFIED`,
- * a bad HTTP status whose response code we could not recover) stay [PlaybackErrorKind.UNKNOWN]
- * rather than being guessed into a nicer-sounding bucket — a wrong classification is worse than an
- * honest one, both for the listener and for the aggregates.
+ * Codes that carry no real evidence of a cause (`ERROR_CODE_UNSPECIFIED`,
+ * `ERROR_CODE_IO_UNSPECIFIED`, a bad HTTP status whose response code we could not recover) stay
+ * [PlaybackErrorKind.UNKNOWN] rather than being guessed into a nicer-sounding bucket — a wrong
+ * classification is worse than an honest one, both for the listener and for the aggregates.
  */
 object PlaybackErrorClassifier {
   /**
@@ -78,14 +78,14 @@ object PlaybackErrorClassifier {
     }
 
   private val PARSING_CODES =
-    PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED..
-      PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED
+    PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED..PlaybackException
+        .ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED
   private val DECODING_CODES =
-    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED..
-      PlaybackException.ERROR_CODE_DECODING_RESOURCES_RECLAIMED
+    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED..PlaybackException
+        .ERROR_CODE_DECODING_RESOURCES_RECLAIMED
   private val AUDIO_TRACK_CODES =
-    PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED..
-      PlaybackException.ERROR_CODE_AUDIO_TRACK_OFFLOAD_INIT_FAILED
+    PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED..PlaybackException
+        .ERROR_CODE_AUDIO_TRACK_OFFLOAD_INIT_FAILED
   private val DRM_CODES =
     PlaybackException.ERROR_CODE_DRM_UNSPECIFIED..PlaybackException.ERROR_CODE_DRM_LICENSE_EXPIRED
 }

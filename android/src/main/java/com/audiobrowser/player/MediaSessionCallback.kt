@@ -19,14 +19,14 @@ import com.audiobrowser.util.TrackFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.MediaReference
-import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
-import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
+import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -461,7 +461,8 @@ class MediaSessionCallback(private val player: Player) :
       // Serve tracks from the track cache first (keyed by url and src). Besides avoiding an HTTP
       // resolve, this keeps item identity correct for contextual mediaIds: resolve() strips
       // __trackId and would return the *parent container's* metadata as the item.
-      val browseAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
+      val browseAuthority =
+        com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
       browserManager.getCachedTrack(mediaId)?.let { track ->
         return@future LibraryResult.ofItem(
           TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, browseAuthority),
@@ -475,7 +476,11 @@ class MediaSessionCallback(private val player: Player) :
         // to the cached-track path above (list line from subtitle, favorited heart)
         // and the item's tag is a Track, as fromMedia3 expects.
         LibraryResult.ofItem(
-          TrackFactory.toBrowseMediaItem(resolvedTrack.toTrack(), player.browseArtworkRegistry, browseAuthority),
+          TrackFactory.toBrowseMediaItem(
+            resolvedTrack.toTrack(),
+            player.browseArtworkRegistry,
+            browseAuthority,
+          ),
           null,
         )
       } catch (e: Exception) {
@@ -598,11 +603,7 @@ class MediaSessionCallback(private val player: Player) :
       // a way around the gate. One "result": the gate tile (see onGetSearchResult).
       val searchOutcome =
         audioBrowser.gateDecision(
-          NativeGateRequest(
-            reason = GateReason.SEARCH,
-            path = null,
-            search = searchParams(query),
-          )
+          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = searchParams(query))
         )
       if (searchOutcome.gated) {
         audioBrowser.onGate(GateEvent(GateReason.SEARCH))
@@ -659,11 +660,7 @@ class MediaSessionCallback(private val player: Player) :
       // Gated: the single search "result" is the gate tile (paired with onSearch's count of 1).
       val searchOutcome =
         audioBrowser.gateDecision(
-          NativeGateRequest(
-            reason = GateReason.SEARCH,
-            path = null,
-            search = searchParams(query),
-          )
+          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = searchParams(query))
         )
       if (searchOutcome.gated) {
         audioBrowser.onGate(GateEvent(GateReason.SEARCH))
@@ -677,7 +674,8 @@ class MediaSessionCallback(private val player: Player) :
         // Get cached search results from BrowserManager
         browserManager.getCachedSearchResults(query)?.let { tracks ->
           // Convert to MediaItems
-          val searchAuthority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
+          val searchAuthority =
+            com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
           val mediaItems =
             tracks.map { track ->
               Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")

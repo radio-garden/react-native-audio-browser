@@ -43,13 +43,14 @@ import com.margelo.nitro.audiobrowser.EqualizerSettings
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
 import com.margelo.nitro.audiobrowser.FormatNavigationErrorParams
 import com.margelo.nitro.audiobrowser.FormattedNavigationError
-import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
+import com.margelo.nitro.audiobrowser.Gate
 import com.margelo.nitro.audiobrowser.GateDecision
 import com.margelo.nitro.audiobrowser.GateEvent
+import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.Gate
-import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
+import com.margelo.nitro.audiobrowser.NativeGateRequest
+import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NavigationError
 import com.margelo.nitro.audiobrowser.NavigationErrorEvent
@@ -58,7 +59,6 @@ import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.Output
-import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
@@ -718,10 +718,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
    * MediaSessionCallback consult it) — hence the single field is @Volatile.
    *
    * Folding the three former @Volatile fields into one reference is what makes the read atomic:
+   *
    * @Volatile gives per-field visibility but NO atomicity across a compound read, so reading three
-   * separate volatiles in [gateDecision] could interleave with a concurrent [clearGate] and yield a
-   * torn `(active=true, chrome=null)` state that crashed the force-unwrap at the serve sites. One
-   * volatile reference read once cannot tear.
+   *   separate volatiles in [gateDecision] could interleave with a concurrent [clearGate] and yield
+   *   a torn `(active=true, chrome=null)` state that crashed the force-unwrap at the serve sites.
+   *   One volatile reference read once cannot tear.
    */
   private data class GateState(val active: Boolean, val chrome: Gate?, val hasResolver: Boolean)
 
@@ -745,19 +746,18 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   /**
    * The single gate choke point. Each enforcement site (browse / search) calls this for the current
-   * request and serves the gate chrome when [GateOutcome.gated] is true. Structurally similar to the
-   * iOS `gateDecision(for:)` helper, but note the concurrency model differs: iOS confines gate state
-   * to `@MainActor`; here the consistent read comes from snapshotting the single [gateState]
+   * request and serves the gate chrome when [GateOutcome.gated] is true. Structurally similar to
+   * the iOS `gateDecision(for:)` helper, but note the concurrency model differs: iOS confines gate
+   * state to `@MainActor`; here the consistent read comes from snapshotting the single [gateState]
    * reference once (see [GateState]).
-   *
    * - No active gate → allow.
    * - Active gate, no resolver → static fast path: gate with the stored default chrome (or built-in
    *   if none), no JS hop.
-   * - Active gate with a resolver → ask JS per request. A resolver that throws / rejects / times out
-   *   FAILS CLOSED by design: while a gate is active the consumer has declared content blocked, so
-   *   the only safe fallback when we cannot compute the per-request decision is the gate's own
-   *   chrome — never the content. A *successful* `gated:false` still allows. Chrome order on a gated
-   *   decision: override → stored default → built-in.
+   * - Active gate with a resolver → ask JS per request. A resolver that throws / rejects / times
+   *   out FAILS CLOSED by design: while a gate is active the consumer has declared content blocked,
+   *   so the only safe fallback when we cannot compute the per-request decision is the gate's own
+   *   chrome — never the content. A *successful* `gated:false` still allows. Chrome order on a
+   *   gated decision: override → stored default → built-in.
    *
    * Every gated return guards chrome against null (`?: builtInGate`) so a gated outcome always
    * carries a renderable chrome — the serve sites force-unwrap it.
