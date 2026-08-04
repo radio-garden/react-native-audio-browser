@@ -8,7 +8,8 @@ class BrowseArtworkRegistryTest {
   @Test
   fun `register then lookup returns the entry`() {
     val reg = BrowseArtworkRegistry()
-    val art = ResolvedArtwork("https://x/a.png", mapOf("Authorization" to "Bearer t"), isSvg = false)
+    val art =
+      ResolvedArtwork("https://x/a.png", mapOf("Authorization" to "Bearer t"), isSvg = false)
     reg.register("tok", art)
     assertEquals(art, reg.lookup("tok"))
   }

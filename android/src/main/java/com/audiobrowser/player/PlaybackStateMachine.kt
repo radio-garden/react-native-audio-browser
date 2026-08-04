@@ -73,9 +73,7 @@ object PlaybackStateMachine {
         // clear, the clear on natural end, or a redundant pause press) must not
         // re-report the state as PAUSED.
         if (
-          !event.playWhenReady &&
-            current != PlaybackState.STOPPED &&
-            current != PlaybackState.ENDED
+          !event.playWhenReady && current != PlaybackState.STOPPED && current != PlaybackState.ENDED
         ) {
           listOf(PlaybackState.PAUSED)
         } else {

@@ -16,12 +16,16 @@ import org.robolectric.RuntimeEnvironment
 class CoilArtworkLoaderHolderTest {
   private fun deps() =
     ArtworkProviderDeps(
-      loader = CoilArtworkLoader(
-        RuntimeEnvironment.getApplication(),
-        FakeImageLoader(RuntimeEnvironment.getApplication(), Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565)) {}
-      ),
+      loader =
+        CoilArtworkLoader(
+          RuntimeEnvironment.getApplication(),
+          FakeImageLoader(
+            RuntimeEnvironment.getApplication(),
+            Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565),
+          ) {},
+        ),
       registry = BrowseArtworkRegistry(),
-      scope = CoroutineScope(Dispatchers.Unconfined)
+      scope = CoroutineScope(Dispatchers.Unconfined),
     )
 
   @After

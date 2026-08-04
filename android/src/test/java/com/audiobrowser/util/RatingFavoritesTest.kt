@@ -11,19 +11,23 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class RatingFavoritesTest {
-  @Test fun `rated heart up maps to favorited true`() {
+  @Test
+  fun `rated heart up maps to favorited true`() {
     assertEquals(true, RatingFavorites.favoritedFor(HeartRating(true)))
   }
 
-  @Test fun `rated heart down maps to favorited false`() {
+  @Test
+  fun `rated heart down maps to favorited false`() {
     assertEquals(false, RatingFavorites.favoritedFor(HeartRating(false)))
   }
 
-  @Test fun `unrated heart carries no favorite intent`() {
+  @Test
+  fun `unrated heart carries no favorite intent`() {
     assertNull(RatingFavorites.favoritedFor(HeartRating()))
   }
 
-  @Test fun `non-heart ratings carry no favorite intent`() {
+  @Test
+  fun `non-heart ratings carry no favorite intent`() {
     assertNull(RatingFavorites.favoritedFor(ThumbRating(true)))
     assertNull(RatingFavorites.favoritedFor(StarRating(5, 4f)))
   }

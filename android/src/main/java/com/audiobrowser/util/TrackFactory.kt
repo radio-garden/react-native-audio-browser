@@ -32,9 +32,9 @@ object TrackFactory {
 
   /**
    * Browse-surface conversion. Routes http(s) artwork through the content:// provider (so headers +
-   * SVG apply in our process, and no bytes cross the Binder), registering it in [registry]. Non-http
-   * artwork (android.resource:// tab icons, file://) passes through to setArtworkUri unchanged so
-   * vector/category icons survive. Plain toMedia3 (queue/now-playing) is unaffected.
+   * SVG apply in our process, and no bytes cross the Binder), registering it in [registry].
+   * Non-http artwork (android.resource:// tab icons, file://) passes through to setArtworkUri
+   * unchanged so vector/category icons survive. Plain toMedia3 (queue/now-playing) is unaffected.
    */
   fun toBrowseMediaItem(
     track: Track,
@@ -47,10 +47,7 @@ object TrackFactory {
     if (rawUrl != null && (scheme == "http" || scheme == "https")) {
       val isSvg = SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork)
       val token = ArtworkUris.tokenFor(rawUrl)
-      registry.register(
-        token,
-        ResolvedArtwork(rawUrl, track.artworkSource?.headers, isSvg),
-      )
+      registry.register(token, ResolvedArtwork(rawUrl, track.artworkSource?.headers, isSvg))
       builder.setArtworkUri(ArtworkUris.contentUri(authority, token).toUri())
     } else if (rawUrl != null) {
       builder.setArtworkUri(rawUrl.toUri())

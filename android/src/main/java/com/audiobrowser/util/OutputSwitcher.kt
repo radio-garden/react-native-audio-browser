@@ -7,18 +7,17 @@ import android.os.Build
 import timber.log.Timber
 
 /**
- * Presents the system audio **Output Switcher** — the picker users know from the
- * media notification: paired Bluetooth devices, the phone speaker, wired output,
- * Cast targets. System-rendered; the app does not own its look.
+ * Presents the system audio **Output Switcher** — the picker users know from the media
+ * notification: paired Bluetooth devices, the phone speaker, wired output, Cast targets.
+ * System-rendered; the app does not own its look.
  *
  * Availability is Android 11+ (API 30, [isSupported]): API 34+ has the direct
- * `MediaRouter2.showSystemOutputSwitcher()` call, and API 30–33 open the
- * `MEDIA_OUTPUT` settings panel. Below 30 there is no system switcher, so callers
- * should hide the control rather than call [open] (which no-ops + logs).
+ * `MediaRouter2.showSystemOutputSwitcher()` call, and API 30–33 open the `MEDIA_OUTPUT` settings
+ * panel. Below 30 there is no system switcher, so callers should hide the control rather than call
+ * [open] (which no-ops + logs).
  *
- * (Android, unlike iOS, does not let an app force media to an arbitrary specific
- * Bluetooth device — route selection is the system's job, which is exactly what
- * this switcher hands off to.)
+ * (Android, unlike iOS, does not let an app force media to an arbitrary specific Bluetooth device —
+ * route selection is the system's job, which is exactly what this switcher hands off to.)
  */
 object OutputSwitcher {
   fun isSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
@@ -55,6 +54,5 @@ object OutputSwitcher {
   // Framework settings-panel action + package extra for the media-output switcher.
   // Not public SDK symbols — verify on device.
   private const val ACTION_MEDIA_OUTPUT = "com.android.settings.panel.action.MEDIA_OUTPUT"
-  private const val EXTRA_OUTPUT_SWITCHER_PACKAGE =
-    "com.android.settings.panel.extra.PACKAGE_NAME"
+  private const val EXTRA_OUTPUT_SWITCHER_PACKAGE = "com.android.settings.panel.extra.PACKAGE_NAME"
 }

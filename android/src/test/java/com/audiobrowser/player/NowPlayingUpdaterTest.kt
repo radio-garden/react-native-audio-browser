@@ -2,11 +2,11 @@ package com.audiobrowser.player
 
 import com.audiobrowser.TestFixtures.track
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
-import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.advanceTimeBy

@@ -17,23 +17,22 @@ import timber.log.Timber
 
 /**
  * Exported, token-gated provider serving browse artwork to Android Auto / AAOS (which run in a
- * different uid and cannot read a non-exported provider; Media3 issues no URI grant — verified).
- * It NEVER fetches a caller-supplied URL: the content URI carries an opaque token, looked up in
+ * different uid and cannot read a non-exported provider; Media3 issues no URI grant — verified). It
+ * NEVER fetches a caller-supplied URL: the content URI carries an opaque token, looked up in
  * [com.audiobrowser.browser.BrowseArtworkRegistry]; an unknown token returns null. So it cannot be
  * used as a fetch proxy / SSRF vector. http(s)-only on the registered finalUrl is defense-in-depth.
  *
  * Serve design: a real on-disk file via [ParcelFileDescriptor.open] — seekable, no pipe, no writer
  * coroutine. The file is keyed by SHA-256 token so identical URLs always reuse the same file.
  *
- * Bug fixes over the previous pipe/coroutine design:
- *   B (FD leak): eliminated — no coroutine launched from deps.scope; no writer that could fail to
- *     close the write-end of a pipe when the scope is already cancelled.
- *   C (wedge DoS): eliminated — the Semaphore permit is released in a try/finally BEFORE the file
- *     is opened for the caller; no blocking write to a pipe while holding the permit.
- *   D (per-request re-encode): eliminated — on-disk file IS the cache; re-requests are a cheap
- *     file open (fast path, zero decode, zero network).
- *   E (non-seekable pipe): eliminated — ParcelFileDescriptor.open returns a regular file FD;
- *     statSize is valid; the car's image loader can seek.
+ * Bug fixes over the previous pipe/coroutine design: B (FD leak): eliminated — no coroutine
+ * launched from deps.scope; no writer that could fail to close the write-end of a pipe when the
+ * scope is already cancelled. C (wedge DoS): eliminated — the Semaphore permit is released in a
+ * try/finally BEFORE the file is opened for the caller; no blocking write to a pipe while holding
+ * the permit. D (per-request re-encode): eliminated — on-disk file IS the cache; re-requests are a
+ * cheap file open (fast path, zero decode, zero network). E (non-seekable pipe): eliminated —
+ * ParcelFileDescriptor.open returns a regular file FD; statSize is valid; the car's image loader
+ * can seek.
  */
 class ArtworkContentProvider : ContentProvider() {
 
@@ -72,12 +71,13 @@ class ArtworkContentProvider : ContentProvider() {
     try {
       // Re-check after acquiring — a concurrent producer may have written the file.
       if (file.exists() && file.length() > 0) {
-        val fd = try {
-          ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-        } catch (e: Throwable) {
-          Timber.w(e, "Artwork cache file vanished before re-check open; producing")
-          null
-        }
+        val fd =
+          try {
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+          } catch (e: Throwable) {
+            Timber.w(e, "Artwork cache file vanished before re-check open; producing")
+            null
+          }
         if (fd != null) return fd
         // else: file was pruned/deleted concurrently — fall through to produce
       }
@@ -99,9 +99,8 @@ class ArtworkContentProvider : ContentProvider() {
         }
 
       try {
-        val ok = tmp.outputStream().use { out ->
-          bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        }
+        val ok =
+          tmp.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
         if (!ok) throw IOException("PNG encode failed for token=$token")
         if (!tmp.renameTo(file)) {
           Timber.w("Artwork rename failed for token=$token")
@@ -154,7 +153,8 @@ class ArtworkContentProvider : ContentProvider() {
     val limit = maxCacheFilesOverride ?: MAX_CACHE_FILES
     val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".png") } ?: return
     if (files.size <= limit) return
-    files.sortedBy { it.lastModified() }
+    files
+      .sortedBy { it.lastModified() }
       .take(files.size - limit)
       .forEach { runCatching { it.delete() } }
   }

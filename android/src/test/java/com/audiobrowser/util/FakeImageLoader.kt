@@ -14,8 +14,8 @@ import coil3.request.SuccessResult
 import kotlinx.coroutines.CompletableDeferred
 
 /**
- * Minimal [ImageLoader] test double. Records each executed [ImageRequest] via [onRequest]
- * and returns a [SuccessResult] wrapping [fakeBitmap].
+ * Minimal [ImageLoader] test double. Records each executed [ImageRequest] via [onRequest] and
+ * returns a [SuccessResult] wrapping [fakeBitmap].
  */
 class FakeImageLoader(
   private val context: Context,
@@ -33,19 +33,20 @@ class FakeImageLoader(
 
   override suspend fun execute(request: ImageRequest): ImageResult {
     onRequest(request)
-    return SuccessResult(
-      image = fakeBitmap.asImage(),
-      request = request,
-    )
+    return SuccessResult(image = fakeBitmap.asImage(), request = request)
   }
 
   override fun enqueue(request: ImageRequest): Disposable {
-    val deferred = CompletableDeferred<ImageResult>(
-      SuccessResult(image = fakeBitmap.asImage(), request = request)
-    )
+    val deferred =
+      CompletableDeferred<ImageResult>(
+        SuccessResult(image = fakeBitmap.asImage(), request = request)
+      )
     return object : Disposable {
-      override val isDisposed: Boolean get() = true
+      override val isDisposed: Boolean
+        get() = true
+
       override fun dispose() {}
+
       override val job = deferred
     }
   }

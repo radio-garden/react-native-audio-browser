@@ -135,7 +135,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Best-effort: clear stale artwork cache from previous process so the disk doesn't grow
     // unboundedly across restarts. Fresh files will be re-fetched on demand.
     runCatching {
-      java.io.File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
+      java.io
+        .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
         .deleteRecursively()
     }
 
@@ -216,8 +217,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // those verticals are iOS-only.
     val mode =
       when (mediaFocus) {
-        "vnd.android.cursor.item/*" ->
-          if (query.isEmpty()) SearchMode.ANY else null
+        "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
         "vnd.android.cursor.item/audio" -> SearchMode.SONG
         MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
         else -> null // genre/artist/album/unknown focus → no vertical
@@ -344,7 +344,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   /**
    * Cancels the artwork-provider coroutine scope and clears the Coil loader holder. Idempotent —
    * safe to call more than once; the second call is a no-op because the field is null after the
-   * first.  Must be called BEFORE player.destroy() on every teardown path.
+   * first. Must be called BEFORE player.destroy() on every teardown path.
    */
   private fun tearDownArtworkProvider() {
     artworkProviderDeps?.let {

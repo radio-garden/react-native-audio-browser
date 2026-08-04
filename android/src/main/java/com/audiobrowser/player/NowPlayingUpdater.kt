@@ -1,11 +1,11 @@
 package com.audiobrowser.player
 
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
-import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackState
+import com.margelo.nitro.audiobrowser.StallReason
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CoroutineScope
@@ -230,7 +230,8 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       // Gate the raw load-control signal to the buffering state so `stalled` is correct on its
       // own: ExoPlayer's rebuffering flag is polled on a different cadence than state transitions
       // and can linger true into the PLAYING transition as a rebuffer recovers. Classify by
-      // connectivity so the formatter can show "offline" vs a plain rebuffer; null when not stalled.
+      // connectivity so the formatter can show "offline" vs a plain rebuffer; null when not
+      // stalled.
       val isStalled = surface.playbackState == PlaybackState.BUFFERING && surface.isRebuffering
       val stalled =
         if (isStalled) {

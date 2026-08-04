@@ -4,8 +4,8 @@ import com.margelo.nitro.audiobrowser.AndroidOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NotificationButtonLayout
-import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.Options
+import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
 import com.margelo.nitro.audiobrowser.Variant_NullType_NotificationButtonLayout
 
@@ -65,7 +65,6 @@ data class PlayerUpdateOptions(
 
       // Update boolean options
       androidOptions.skipSilence?.let { skipSilence = it }
-
 
       // Handle notificationButtons - variant allows distinguishing undefined from null
       androidOptions.notificationButtons?.let { variant ->

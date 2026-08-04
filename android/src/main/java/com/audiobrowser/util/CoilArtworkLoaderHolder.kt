@@ -25,7 +25,10 @@ object CoilArtworkLoaderHolder {
 
   fun get(): ArtworkProviderDeps? = deps
 
-  /** Clears only if [deps] is still the current one — prevents a stale Service from blanking a newer. */
+  /**
+   * Clears only if [deps] is still the current one — prevents a stale Service from blanking a
+   * newer.
+   */
   @Synchronized
   fun clearIf(deps: ArtworkProviderDeps) {
     if (this.deps === deps) this.deps = null

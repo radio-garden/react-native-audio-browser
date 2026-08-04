@@ -24,12 +24,13 @@ class CoilArtworkLoaderTest {
     val imageLoader = FakeImageLoader(context, fakeBitmap) { captured = it }
 
     val loader = CoilArtworkLoader(context, imageLoader, defaultSizePixels = 512)
-    val bmp = loader.load(
-      finalUrl = "https://cdn.example.com/a.png",
-      headers = mapOf("Authorization" to "Bearer t"),
-      sizeHintPixels = 256,
-      isSvg = false,
-    )
+    val bmp =
+      loader.load(
+        finalUrl = "https://cdn.example.com/a.png",
+        headers = mapOf("Authorization" to "Bearer t"),
+        sizeHintPixels = 256,
+        isSvg = false,
+      )
 
     assertEquals(fakeBitmap, bmp)
     assertNotNull(captured)

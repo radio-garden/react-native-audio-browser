@@ -88,9 +88,9 @@ object TestFixtures {
     )
 
   /**
-   * Builds a minimal browse-only Track (no src → browsable, not playable). Pass [artworkSource]
-   * for a pre-resolved HTTP artwork URL or [artwork] for a raw resource/file URI; omit both for
-   * no artwork.
+   * Builds a minimal browse-only Track (no src → browsable, not playable). Pass [artworkSource] for
+   * a pre-resolved HTTP artwork URL or [artwork] for a raw resource/file URI; omit both for no
+   * artwork.
    */
   fun browseTrack(
     title: String = "T",

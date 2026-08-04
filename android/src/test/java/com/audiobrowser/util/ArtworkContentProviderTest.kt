@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
@@ -18,14 +19,14 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class ArtworkContentProviderTest {
   private lateinit var provider: ArtworkContentProvider
   private lateinit var registry: BrowseArtworkRegistry
 
-  @Before fun setUp() {
+  @Before
+  fun setUp() {
     provider = Robolectric.setupContentProvider(ArtworkContentProvider::class.java)
     registry = BrowseArtworkRegistry()
     val context = RuntimeEnvironment.getApplication()
@@ -40,7 +41,8 @@ class ArtworkContentProviderTest {
     )
   }
 
-  @After fun tearDown() {
+  @After
+  fun tearDown() {
     CoilArtworkLoaderHolder.get()?.let { CoilArtworkLoaderHolder.clearIf(it) }
     // Clean up any files written during the test.
     val context = RuntimeEnvironment.getApplication()
@@ -50,11 +52,13 @@ class ArtworkContentProviderTest {
   private fun uri(token: String) =
     Uri.parse(ArtworkUris.contentUri(ArtworkUris.authorityFor("com.test"), token))
 
-  @Test fun `getType is png`() {
+  @Test
+  fun `getType is png`() {
     assertEquals("image/png", provider.getType(uri("anything")))
   }
 
-  @Test fun `openFile returns a readable PNG for a registered http token`() {
+  @Test
+  fun `openFile returns a readable PNG for a registered http token`() {
     val token = ArtworkUris.tokenFor("https://cdn/a.png")
     registry.register(token, ResolvedArtwork("https://cdn/a.png", null, isSvg = false))
     val pfd = provider.openFile(uri(token), "r")
@@ -64,28 +68,32 @@ class ArtworkContentProviderTest {
   }
 
   // Prove E-mitigation: file FD has a real stat size (non-negative); a pipe FD would return -1.
-  @Test fun `openFile returns a file-backed seekable FD (statSize non-negative)`() {
+  @Test
+  fun `openFile returns a file-backed seekable FD (statSize non-negative)`() {
     val token = ArtworkUris.tokenFor("https://cdn/seekable.png")
     registry.register(token, ResolvedArtwork("https://cdn/seekable.png", null, isSvg = false))
     val pfd = provider.openFile(uri(token), "r")
     assertNotNull(pfd)
-    assertTrue(
-      "Expected statSize >= 0 for a file FD, got ${pfd!!.statSize}",
-      pfd.statSize >= 0
-    )
+    assertTrue("Expected statSize >= 0 for a file FD, got ${pfd!!.statSize}", pfd.statSize >= 0)
   }
 
-  @Test fun `openFile returns null for an unknown token`() {
+  @Test
+  fun `openFile returns null for an unknown token`() {
     assertNull(provider.openFile(uri("nope"), "r"))
   }
 
-  @Test fun `openFile returns null for a non-http registered url`() {
+  @Test
+  fun `openFile returns null for a non-http registered url`() {
     val token = ArtworkUris.tokenFor("android.resource://com.test/drawable/ic")
-    registry.register(token, ResolvedArtwork("android.resource://com.test/drawable/ic", null, false))
+    registry.register(
+      token,
+      ResolvedArtwork("android.resource://com.test/drawable/ic", null, false),
+    )
     assertNull(provider.openFile(uri(token), "r"))
   }
 
-  @Test fun `openFile returns null when holder absent`() {
+  @Test
+  fun `openFile returns null when holder absent`() {
     CoilArtworkLoaderHolder.get()?.let { CoilArtworkLoaderHolder.clearIf(it) }
     val token = ArtworkUris.tokenFor("https://cdn/a.png")
     registry.register(token, ResolvedArtwork("https://cdn/a.png", null, false))
@@ -94,7 +102,8 @@ class ArtworkContentProviderTest {
 
   // Fix 2: artwork dir must not grow beyond MAX_CACHE_FILES after producing many distinct tokens.
   // We override the cap to 5 so the test stays fast (rather than producing 512+ real files).
-  @Test fun `openFile prunes cache to MAX_CACHE_FILES after producing excess entries`() {
+  @Test
+  fun `openFile prunes cache to MAX_CACHE_FILES after producing excess entries`() {
     val testCap = 5
     ArtworkContentProvider.maxCacheFilesOverride = testCap
     try {
@@ -110,7 +119,7 @@ class ArtworkContentProviderTest {
       val pngCount = artworkDir.listFiles { f -> f.isFile && f.name.endsWith(".png") }?.size ?: 0
       assertTrue(
         "Expected at most $testCap .png files after producing $produce; got $pngCount",
-        pngCount <= testCap
+        pngCount <= testCap,
       )
     } finally {
       ArtworkContentProvider.maxCacheFilesOverride = null
@@ -119,14 +128,13 @@ class ArtworkContentProviderTest {
 
   // Prove D-fix: two openFile calls for the same token → loadCount == 1.
   // The second call is served from the on-disk file without re-decoding.
-  @Test fun `openFile serves second request from disk cache without re-decoding`() {
+  @Test
+  fun `openFile serves second request from disk cache without re-decoding`() {
     var loadCount = 0
     val context = RuntimeEnvironment.getApplication()
     val fakeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
-    val countingLoader = CoilArtworkLoader(
-      context,
-      FakeImageLoader(context, fakeBitmap) { loadCount++ }
-    )
+    val countingLoader =
+      CoilArtworkLoader(context, FakeImageLoader(context, fakeBitmap) { loadCount++ })
     CoilArtworkLoaderHolder.set(
       ArtworkProviderDeps(countingLoader, registry, CoroutineScope(Dispatchers.IO))
     )
@@ -146,6 +154,10 @@ class ArtworkContentProviderTest {
     val bytes2 = java.io.FileInputStream(pfd2!!.fileDescriptor).readBytes()
     assertNotNull(BitmapFactory.decodeByteArray(bytes2, 0, bytes2.size))
 
-    assertEquals("Expected exactly one decode; second call should be served from disk", 1, loadCount)
+    assertEquals(
+      "Expected exactly one decode; second call should be served from disk",
+      1,
+      loadCount,
+    )
   }
 }
