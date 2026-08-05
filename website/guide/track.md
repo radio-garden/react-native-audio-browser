@@ -114,6 +114,8 @@ On CarPlay, an SF Symbol with no explicit colors adapts to light/dark mode autom
 
 **Tinting (`artworkCarPlayTinted`).** For monochrome icons, set this so CarPlay tints them per appearance — black in light mode, white in dark. Use it for icons, not full-color album art. iOS CarPlay only; Android Auto is dark-only, so ship appropriately-colored (e.g. white) icons there. On Android, an `android.resource://…` artwork URI automatically gets category styling (icon margins + system tinting for vector drawables).
 
+**Light and dark images.** When the appearances need genuinely different artwork rather than the same shape recolored, set `artwork` to an [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants) pair — `{ light, dark }`. CarPlay adapts between them in place; everywhere that needs a single image uses `dark`. See [Artwork → Light and dark](/guide/artwork#light-and-dark-artwork).
+
 ## Per-track request override
 
 [`request`](/api/types/browser-nodes/#trackrequest) is a **narrow** per-track override for *how* this track's audio request is made — merged last, after the shared `request` and `media` layers:

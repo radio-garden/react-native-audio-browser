@@ -10,9 +10,11 @@
 #include <fbjni/fbjni.h>
 #include "MediaRequestConfig.hpp"
 
+#include "ArtworkVariants.hpp"
 #include "HttpMethod.hpp"
 #include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkVariants.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_RequestConfig___Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
@@ -24,6 +26,7 @@
 #include "JTrack.hpp"
 #include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
 #include "RequestConfig.hpp"
 #include "Track.hpp"
 #include "TrackRequest.hpp"
@@ -35,6 +38,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {

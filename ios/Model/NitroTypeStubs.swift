@@ -2,6 +2,16 @@
   /// Lightweight stand-ins for NitroModules types used by the testable target.
   /// Only compiled when NitroModules is unavailable (SPM test builds).
 
+  struct ArtworkVariants: Equatable {
+    var light: String
+    var dark: String
+  }
+
+  @frozen enum Variant_String_ArtworkVariants {
+    case first(String)
+    case second(ArtworkVariants)
+  }
+
   struct TrackRequest: Equatable {
     var userAgent: String?
     var headers: [String: String]?
@@ -18,7 +28,7 @@
     var albumUrl: String?
     var album: String?
     var live: Bool?
-    var artwork: String?
+    var artwork: Variant_String_ArtworkVariants?
     var artworkSource: ImageSource?
   }
 
@@ -80,7 +90,7 @@
     var carPlaySiriListButton: CarPlaySiriListButtonPosition?
     var id: String?
     var src: String?
-    var artwork: String?
+    var artwork: Variant_String_ArtworkVariants?
     var artworkSource: ImageSource?
     var request: TrackRequest?
     var artworkCarPlayTinted: Bool?

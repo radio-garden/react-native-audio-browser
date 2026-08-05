@@ -1,5 +1,7 @@
 package com.audiobrowser
 
+import com.audiobrowser.util.artworkOf
+
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageSource
@@ -27,7 +29,7 @@ object TestFixtures {
       id = id,
       url = null,
       src = src,
-      artwork = artwork,
+      artwork = artworkOf(artwork),
       artworkSource = null,
       request = null,
       artworkCarPlayTinted = null,
@@ -102,7 +104,7 @@ object TestFixtures {
       id = null,
       url = url,
       src = null, // browsable, not playable
-      artwork = artwork,
+      artwork = artworkOf(artwork),
       artworkSource = artworkSource,
       request = null,
       artworkCarPlayTinted = null,

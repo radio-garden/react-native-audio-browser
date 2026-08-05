@@ -53,6 +53,16 @@ final class CarPlayImageLoader {
   ///   - size: The target size in points (will be multiplied by CarPlay display scale)
   ///   - completion: Called with the loaded image, or nil on failure
   func loadArtwork(for track: Track, size: CGSize, completion: @escaping @Sendable (UIImage?) -> Void) {
+    // A track that ships one image per appearance is loaded as two ordinary
+    // single-URL loads and combined below. Recursing rather than branching
+    // inside the loader means each variant still goes through the whole
+    // pipeline — route config, headers, SVG rasterising, the resolve transform
+    // — instead of a second, thinner fetch path that would drift from it.
+    if let variants = track.artwork?.variants {
+      loadVariants(for: track, variants: variants, size: size, completion: completion)
+      return
+    }
+
     // Build URL resolver closure that wraps BrowserManager
     let urlResolver: ((Double, Double) async -> ArtworkResolvedImage?)? = browserManager.map { bm in
       { [weak bm] pixelWidth, pixelHeight in
@@ -65,7 +75,7 @@ final class CarPlayImageLoader {
 
     Task {
       let action = await CarPlayArtworkResolver.resolve(
-        artwork: track.artwork,
+        artwork: track.artwork?.url,
         artworkSourceUri: track.artworkSource?.uri,
         artworkCarPlayTinted: track.artworkCarPlayTinted,
         targetWidth: Double(size.width),
@@ -91,6 +101,49 @@ final class CarPlayImageLoader {
   }
 
   // MARK: - Private
+
+  /// Loads both images of an `ArtworkVariants` pair and returns them as one
+  /// adaptive image.
+  ///
+  /// The pair is registered on a `UIImageAsset`, which is what makes an
+  /// appearance change mid-drive re-resolve in place: CarPlay re-reads the
+  /// asset against the new trait collection, so the row swaps image without
+  /// another fetch or a re-query of the browse tree.
+  ///
+  /// If either half fails to load, the other is used alone rather than dropping
+  /// the row's image entirely — a glyph that is wrong for one appearance still
+  /// beats an empty slot, and this is usually a transient fetch failure.
+  private func loadVariants(
+    for track: Track,
+    variants: ArtworkVariants,
+    size: CGSize,
+    completion: @escaping @Sendable (UIImage?) -> Void,
+  ) {
+    Task {
+      async let light = self.loadArtworkAsync(for: track.copying(artwork: .some(.first(variants.light))), size: size)
+      async let dark = self.loadArtworkAsync(for: track.copying(artwork: .some(.first(variants.dark))), size: size)
+      let (lightImage, darkImage) = await (light, dark)
+
+      guard let lightImage, let darkImage else {
+        completion(lightImage ?? darkImage)
+        return
+      }
+
+      let asset = UIImageAsset()
+      asset.register(lightImage, with: UITraitCollection(userInterfaceStyle: .light))
+      asset.register(darkImage, with: UITraitCollection(userInterfaceStyle: .dark))
+      completion(asset.image(with: self.carTraitCollection))
+    }
+  }
+
+  /// `loadArtwork` as an awaitable, so the two variants can load concurrently.
+  private func loadArtworkAsync(for track: Track, size: CGSize) async -> UIImage? {
+    await withCheckedContinuation { continuation in
+      self.loadArtwork(for: track, size: size) { image in
+        continuation.resume(returning: image)
+      }
+    }
+  }
 
   /// Fetches an image from a URL with optional headers and SVG processing.
   private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool) async -> UIImage? {

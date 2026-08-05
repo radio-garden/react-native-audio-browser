@@ -43,6 +43,30 @@ export interface TrackRequest {
 //   children: Track
 // }
 
+/**
+ * Artwork URLs for a track that ships a different image per appearance.
+ *
+ * Both are required: a pair with one side missing has no sensible fallback at
+ * render time, and making that unrepresentable is the reason this is a pair
+ * rather than two optional fields.
+ *
+ * Android Auto is dark-only and takes `dark`.
+ */
+export interface ArtworkVariants {
+  /** Shown in light mode. */
+  light: string
+  /** Shown in dark mode, and on Android Auto. */
+  dark: string
+}
+
+// Aliased rather than written inline on `Track.artwork` because Nitro names
+// variant types after their members: without the alias the generated Swift and
+// Kotlin type is `Variant_String_ArtworkVariants` either way, but the alias is
+// what keeps that name readable rather than accidental. Kept out of the doc
+// comment below — it is a note for this repo, not for the API reference.
+/** A single artwork URL, or one per appearance. */
+export type TrackArtwork = string | ArtworkVariants
+
 export interface ImageRowItem {
   /** Navigation path. Tapping this thumbnail navigates to this URL. */
   url?: string
@@ -96,11 +120,16 @@ export interface Track {
   src?: string
 
   /**
-   * Artwork URL for the item.
+   * Artwork URL for the item, or a URL per appearance.
    *
    * The artwork URL is also returned by native in the `artworkSource` property
    * for use in an `<Image>` component, which will contain the transformed version
    * if `artwork` configuration is set in `BrowserConfiguration` or a route.
+   *
+   * Pass an {@link ArtworkVariants} pair to supply genuinely different images
+   * per appearance — a logo that changes colour, say. For a monochrome glyph
+   * that only needs recolouring, prefer a single URL plus
+   * {@link Track.artworkCarPlayTinted}, which is one fetch instead of two.
    *
    * **iOS:** supports {@link https://developer.apple.com/sf-symbols/ | SF Symbols}
    * with the `sf:` prefix and optional color params:
@@ -109,7 +138,7 @@ export interface Track {
    * On CarPlay, SF Symbols without explicit colors automatically adapt to
    * light/dark mode.
    */
-  artwork?: string
+  artwork?: TrackArtwork
 
   /**
    * Ready-to-use image source for React Native's `<Image>` component.

@@ -10,9 +10,11 @@
 #include <fbjni/fbjni.h>
 #include "FormatNowPlayingParams.hpp"
 
+#include "ArtworkVariants.hpp"
 #include "HttpMethod.hpp"
 #include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkVariants.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageRowItem.hpp"
 #include "JImageSource.hpp"
@@ -23,6 +25,7 @@
 #include "JTrack.hpp"
 #include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
 #include "PlaybackError.hpp"
 #include "PlaybackErrorKind.hpp"
 #include "StallReason.hpp"
@@ -33,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {

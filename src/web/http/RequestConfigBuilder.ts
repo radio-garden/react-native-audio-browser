@@ -9,6 +9,7 @@ import type {
   ImageQueryParams
 } from '../../types'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+import { artworkUrl as resolveArtworkUrl } from '../../utils/artwork'
 
 /**
  * Appends query parameters to a URL, handling existing query strings.
@@ -272,7 +273,9 @@ export const RequestConfigBuilder = {
     artworkConfig: ArtworkRequestConfig | undefined,
     imageContext?: ImageContext
   ): Promise<ImageSource | undefined> {
-    const artworkUrl = track.artwork
+    // Collapses a per-appearance pair to one URL: this pipeline produces a
+    // single `ImageSource`, and the web fallback renders one <Image>.
+    const artworkUrl = resolveArtworkUrl(track.artwork)
 
     // If no config and no track.artwork, nothing to transform
     if (!artworkConfig && !artworkUrl) {
@@ -374,7 +377,7 @@ export const RequestConfigBuilder = {
     if (track.artworkSource) return track
 
     const artworkSource = this.resolveArtworkSource(
-      track.artwork,
+      resolveArtworkUrl(track.artwork),
       requestConfig,
       artworkConfig
     )

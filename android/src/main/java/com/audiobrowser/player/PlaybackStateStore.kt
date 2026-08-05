@@ -1,5 +1,9 @@
 package com.audiobrowser.player
 
+import com.audiobrowser.util.artworkOf
+
+import com.audiobrowser.util.url
+
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
@@ -157,7 +161,7 @@ class PlaybackStateStore(private val player: Player) {
         put("artist", track.artist)
         put("albumUrl", track.albumUrl)
         put("album", track.album)
-        put("artwork", track.artwork)
+        put("artwork", track.artwork?.url)
         put("description", track.description)
         put("genre", track.genre)
         put("duration", track.duration)
@@ -181,7 +185,7 @@ class PlaybackStateStore(private val player: Player) {
           artist = obj.optString("artist").takeIf { it.isNotEmpty() },
           albumUrl = obj.optString("albumUrl").takeIf { it.isNotEmpty() },
           album = obj.optString("album").takeIf { it.isNotEmpty() },
-          artwork = obj.optString("artwork").takeIf { it.isNotEmpty() },
+          artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
           artworkSource = null, // Not persisted - will be re-transformed on browse
           artworkCarPlayTinted = null, // iOS-only, not persisted
           description = obj.optString("description").takeIf { it.isNotEmpty() },

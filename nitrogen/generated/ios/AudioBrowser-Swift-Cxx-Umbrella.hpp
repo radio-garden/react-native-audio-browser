@@ -20,6 +20,8 @@ namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
+// Forward declaration of `ArtworkVariants` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkVariants; }
 // Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
@@ -202,6 +204,7 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "AndroidPlayerWakeMode.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "ArtworkRequestConfig.hpp"
+#include "ArtworkVariants.hpp"
 #include "BatteryOptimizationStatus.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"

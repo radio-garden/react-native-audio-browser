@@ -1176,7 +1176,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// Falls back to the raw artwork string only if it's not an SF Symbol (which JS can't load).
   private func nowPlayingArtwork(for track: Track) -> String? {
     if let uri = track.artworkSource?.uri { return uri }
-    guard let artwork = track.artwork else { return nil }
+    guard let artwork = track.artwork?.url else { return nil }
     return SFSymbolRenderer.isSFSymbol(artwork) ? nil : artwork
   }
 

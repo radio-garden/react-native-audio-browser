@@ -13,7 +13,7 @@ extension Track {
     id: String?? = nil,
     url: String?? = nil,
     src: String?? = nil,
-    artwork: String?? = nil,
+    artwork: Variant_String_ArtworkVariants?? = nil,
     artworkSource: ImageSource?? = nil,
     request: TrackRequest?? = nil,
     artworkCarPlayTinted: Bool?? = nil,

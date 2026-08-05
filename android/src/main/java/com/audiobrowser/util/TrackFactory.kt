@@ -45,7 +45,7 @@ object TrackFactory {
     val scheme = rawUrl?.let { Uri.parse(it).scheme?.lowercase() }
     val builder = metadataBuilder(track)
     if (rawUrl != null && (scheme == "http" || scheme == "https")) {
-      val isSvg = SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork)
+      val isSvg = SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
       val token = ArtworkUris.tokenFor(rawUrl)
       registry.register(token, ResolvedArtwork(rawUrl, track.artworkSource?.headers, isSvg))
       builder.setArtworkUri(ArtworkUris.contentUri(authority, token).toUri())
@@ -56,7 +56,7 @@ object TrackFactory {
   }
 
   /** The transformed artworkSource wins over the raw artwork field. */
-  private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork
+  private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork?.url
 
   /** All metadata except artwork. */
   private fun metadataBuilder(track: Track): MediaMetadata.Builder =

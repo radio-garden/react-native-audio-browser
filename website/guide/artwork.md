@@ -2,7 +2,7 @@
 
 **Artwork** is the image shown for a track — the thumbnail in a browse list, the cover on the lock screen, the icon on a CarPlay row. You set one field, `artwork`, on a [`Track`](/guide/track); the library resolves and transforms it per surface and per requested size, and hands the ready-to-render result back on `artworkSource`.
 
-This guide covers the mental model (the two configs and the output field), **which artwork renders where**, the **transform pipeline** that turns your URL into a sized request, and the platform-specific bits: SF Symbols on iOS, tinting, Android vector icons, and SVG.
+This guide covers the mental model (the two configs and the output field), **which artwork renders where**, the **transform pipeline** that turns your URL into a sized request, and the platform-specific bits: SF Symbols on iOS, tinting, light/dark artwork, Android vector icons, and SVG.
 
 ## Mental model
 
@@ -10,7 +10,7 @@ Three names do all the work:
 
 | Name | What it is | You |
 | --- | --- | --- |
-| `Track.artwork` | The image **you set** — an `https` URL, an `sf:` symbol (iOS), or a platform URI. | set it |
+| `Track.artwork` | The image **you set** — an `https` URL, an `sf:` symbol (iOS), a platform URI, or a `{ light, dark }` pair. | set it |
 | `artwork` / `nowPlayingArtwork` config | How the library **fetches** that image (base URL, headers, signing, sizing). | configure once (override per route / for now-playing) |
 | `Track.artworkSource` | The resolved, ready-to-render [`ImageSource`](/api/types/browser-nodes/#imagesource) (URL + headers) the library **produces**. | read it |
 
@@ -33,7 +33,7 @@ The library publishes art to several surfaces; each gets its image from a field/
 
 | Surface | Image from | Size hint | Tinting |
 | --- | --- | --- | --- |
-| **Browse rows / tabs** (CarPlay / Android Auto) | `artwork` (per-route override allowed) | no | CarPlay: `artworkCarPlayTinted` |
+| **Browse rows / tabs** (CarPlay / Android Auto) | `artwork` (per-route override allowed) | no | CarPlay: `artworkCarPlayTinted`, or a `{ light, dark }` pair |
 | **In-app `<Image>`** | `artworkSource` (output) | no | your UI |
 | **iOS lock screen / Control Center** | `nowPlayingArtwork` → falls back to `artwork` | yes | — |
 | **CarPlay Now Playing** | `nowPlayingArtwork` → `artwork` | yes | — |
@@ -148,6 +148,40 @@ For monochrome **icons** (not full-color album art), let the system tint them to
 
 **SVG** is supported on both platforms and detected by a `.svg` URL suffix — serve SVGs with a path ending in `.svg` and they decode as vectors rather than raster images.
 
+## Light and dark artwork
+
+Tinting recolors *one* image. When the two appearances need genuinely **different** images — a logo whose colors change, a mark with a light-on-dark counterpart — set `artwork` to an [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants) pair instead of a URL:
+
+```ts
+{
+  title: 'Playlists',
+  url: '/playlists',
+  artwork: {
+    light: 'https://images.example.com/playlists-light.png',
+    dark: 'https://images.example.com/playlists-dark.png'
+  }
+}
+```
+
+Both fields are required — a pair with one side missing has no sensible fallback at render time.
+
+On CarPlay browse rows and tabs the library fetches both and registers them as a single adaptive image, so switching appearance mid-drive swaps the image **in place** — no re-fetch, and no re-query of the browse tree. Each URL runs through the [transform pipeline](#the-transform-pipeline) independently, so `baseUrl`, headers, `imageQueryParams` and `resolve` / `transform` apply to both.
+
+Everywhere a single image is required, a pair resolves to its `dark` URL:
+
+| Surface | Uses |
+| --- | --- |
+| **CarPlay browse rows / tabs** | both, adapting per appearance |
+| **Android Auto** | `dark` (dark-only platform) |
+| **Now-playing** (all platforms) | `dark` |
+| **`artworkSource`** (your own `<Image>`) | `dark` |
+
+`imageRow` thumbnails take a single URL only — pairs are not supported there.
+
+::: tip Pair or tint?
+Prefer [`artworkCarPlayTinted`](#tinting-and-platform-icons) when recoloring the same shape gives the right result: it's one fetch instead of two, the variants can't drift apart, and it works from the image's alpha so the source color is irrelevant. Reach for a pair only when the appearances need different artwork.
+:::
+
 ::: warning Android Auto fetches only `http(s)` artwork
 Browse artwork is served to Android Auto through an internal content provider that only fetches `http`/`https` URLs. `android.resource://` and `file://` URIs pass through and render directly; other custom schemes won't load there.
 :::
@@ -203,6 +237,7 @@ This is **CarPlay-only** and shows ~4–5 thumbnails (extras are dropped); Andro
 | [`Track.artwork`](/api/types/browser-nodes/#track) | The image you set — `https` URL, `sf:` symbol (iOS), or platform URI. |
 | [`Track.artworkSource`](/api/types/browser-nodes/#track) | Output-only resolved `ImageSource` for your own `<Image>`. |
 | [`Track.artworkCarPlayTinted`](/api/types/browser-nodes/#track) | Tint a monochrome icon per CarPlay light/dark (iOS only). |
+| [`ArtworkVariants`](/api/types/browser-nodes/#artworkvariants) | A `{ light, dark }` pair set on `artwork` when the appearances need different images. |
 | [`artwork`](/api/types/browser/#artworkrequestconfig) | Config for browse-row image requests (and the default everywhere). |
 | `nowPlayingArtwork` | Separate config for now-playing art; supports `{id}`; native-only. |
 | [`imageQueryParams`](/api/types/browser/#imagequeryparams) | Map the surface's requested size to your CDN's query params. |

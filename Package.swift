@@ -43,6 +43,7 @@ let package = Package(
         "TrackSelector.swift",
         "CarPlay/CarPlayArtworkResolver.swift",
         "Extension/ResolvedTrack+Copying.swift",
+        "Extension/Variant+Artwork.swift",
         "Extension/TrackMetadata+AVFoundation.swift",
         "Extension/TimedMetadata+AVFoundation.swift",
         "Extension/ChapterMetadata+AVFoundation.swift",

@@ -20,6 +20,8 @@ namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
 // Forward declaration of `ArtworkRequestConfig` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ArtworkRequestConfig; }
+// Forward declaration of `ArtworkVariants` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkVariants; }
 // Forward declaration of `BatteryOptimizationStatusChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
@@ -202,6 +204,7 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "AndroidPlayerWakeMode.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "ArtworkRequestConfig.hpp"
+#include "ArtworkVariants.hpp"
 #include "BatteryOptimizationStatus.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
@@ -319,6 +322,50 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
   }
   inline std::string get_std__optional_std__string_(const std::optional<std::string>& optional) noexcept {
     return optional.value();
+  }
+  
+  // pragma MARK: std::optional<std::variant<std::string, ArtworkVariants>>
+  /**
+   * Specialized version of `std::optional<std::variant<std::string, ArtworkVariants>>`.
+   */
+  using std__optional_std__variant_std__string__ArtworkVariants__ = std::optional<std::variant<std::string, ArtworkVariants>>;
+  inline std::optional<std::variant<std::string, ArtworkVariants>> create_std__optional_std__variant_std__string__ArtworkVariants__(const std::variant<std::string, ArtworkVariants>& value) noexcept {
+    return std::optional<std::variant<std::string, ArtworkVariants>>(value);
+  }
+  inline bool has_value_std__optional_std__variant_std__string__ArtworkVariants__(const std::optional<std::variant<std::string, ArtworkVariants>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::variant<std::string, ArtworkVariants> get_std__optional_std__variant_std__string__ArtworkVariants__(const std::optional<std::variant<std::string, ArtworkVariants>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::variant<std::string, ArtworkVariants>
+  /**
+   * Wrapper struct for `std::variant<std::string, ArtworkVariants>`.
+   * std::variant cannot be used in Swift because of a Swift bug.
+   * Not even specializing it works. So we create a wrapper struct.
+   */
+  struct std__variant_std__string__ArtworkVariants_ final {
+    std::variant<std::string, ArtworkVariants> variant;
+    std__variant_std__string__ArtworkVariants_(std::variant<std::string, ArtworkVariants> variant): variant(variant) { }
+    operator std::variant<std::string, ArtworkVariants>() const noexcept {
+      return variant;
+    }
+    inline size_t index() const noexcept {
+      return variant.index();
+    }
+    inline std::string get_0() const noexcept {
+      return std::get<0>(variant);
+    }
+    inline ArtworkVariants get_1() const noexcept {
+      return std::get<1>(variant);
+    }
+  };
+  inline std__variant_std__string__ArtworkVariants_ create_std__variant_std__string__ArtworkVariants_(const std::string& value) noexcept {
+    return std__variant_std__string__ArtworkVariants_(value);
+  }
+  inline std__variant_std__string__ArtworkVariants_ create_std__variant_std__string__ArtworkVariants_(const ArtworkVariants& value) noexcept {
+    return std__variant_std__string__ArtworkVariants_(value);
   }
   
   // pragma MARK: std::optional<ImageSource>

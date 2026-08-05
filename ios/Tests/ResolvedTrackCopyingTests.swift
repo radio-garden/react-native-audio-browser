@@ -37,7 +37,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     carPlaySiriListButton: .top,
     id: "original-id",
     src: "src.mp3",
-    artwork: "art.jpg",
+    artwork: .first("art.jpg"),
     artworkSource: ImageSource(uri: "resolved-art.jpg"),
     artworkCarPlayTinted: true,
     title: "Original Title",
@@ -104,8 +104,8 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
 
 @Test func copyingOverridesArtwork() {
   let original = makeResolvedTrack()
-  let copy = original.copying(artwork: "new-art.jpg")
-  #expect(copy.artwork == "new-art.jpg")
+  let copy = original.copying(artwork: .some(.first("new-art.jpg")))
+  #expect(copy.artwork?.url == "new-art.jpg")
 }
 
 @Test func copyingOverridesArtworkSource() {
@@ -234,7 +234,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.children?.count == 1)
   #expect(copy.carPlaySiriListButton == .top)
   #expect(copy.src == "src.mp3")
-  #expect(copy.artwork == "art.jpg")
+  #expect(copy.artwork?.url == "art.jpg")
   #expect(copy.artworkSource == ImageSource(uri: "resolved-art.jpg"))
   #expect(copy.artworkCarPlayTinted == true)
   #expect(copy.subtitle == "Original Subtitle")

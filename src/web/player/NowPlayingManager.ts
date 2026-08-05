@@ -1,5 +1,6 @@
 import type { NowPlayingUpdate, NowPlayingMetadata } from '../../features'
 import type { Track } from '../../types'
+import { artworkUrl } from '../../utils/artwork'
 
 /**
  * Manages now playing metadata overrides.
@@ -34,7 +35,7 @@ export class NowPlayingManager {
           title: update.title ?? currentTrack.title,
           artist: update.artist ?? currentTrack.artist,
           album: update.album ?? currentTrack.album,
-          artwork: currentTrack.artwork,
+          artwork: artworkUrl(currentTrack.artwork),
           description: currentTrack.description,
           mediaId: currentTrack.src ?? currentTrack.url,
           genre: currentTrack.genre,
@@ -44,7 +45,7 @@ export class NowPlayingManager {
           title: currentTrack.title,
           artist: currentTrack.artist,
           album: currentTrack.album,
-          artwork: currentTrack.artwork,
+          artwork: artworkUrl(currentTrack.artwork),
           description: currentTrack.description,
           mediaId: currentTrack.src ?? currentTrack.url,
           genre: currentTrack.genre,
@@ -71,7 +72,7 @@ export class NowPlayingManager {
       title: this.override?.title ?? currentTrack.title,
       artist: this.override?.artist ?? currentTrack.artist,
       album: this.override?.album ?? currentTrack.album,
-      artwork: currentTrack.artwork,
+      artwork: artworkUrl(currentTrack.artwork),
       description: currentTrack.description,
       mediaId: currentTrack.src ?? currentTrack.url,
       genre: currentTrack.genre,

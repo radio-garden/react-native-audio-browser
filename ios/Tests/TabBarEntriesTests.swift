@@ -8,7 +8,7 @@ struct TabBarEntriesTests {
     artworkSource: ImageSource? = nil, artist: String? = nil
   ) -> Track {
     Track(
-      id: url, url: url, title: title, artist: artist, artwork: artwork,
+      id: url, url: url, title: title, artist: artist, artwork: artwork.map { .first($0) },
       artworkSource: artworkSource
     )
   }

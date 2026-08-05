@@ -6,6 +6,62 @@ import Foundation
 /// JSON serializable models for parsing API responses.
 /// These will be converted to Nitro types after parsing.
 
+/// A track's `artwork` on the wire: a URL string, or `{ light, dark }`.
+///
+/// These models are the browse-response format as well as the persistence
+/// format, so this is what decides whether a payload parses at all — a plain
+/// `String?` here rejects the whole page with a type mismatch, however tolerant
+/// the layers above it are.
+///
+/// Encodes back to whichever shape it came from, so a persisted snapshot
+/// round-trips, and one written before pairs existed still decodes as `.single`.
+enum JsonArtwork: Codable, Equatable {
+  case single(String)
+  case variants(light: String, dark: String)
+
+  private struct Variants: Codable, Equatable {
+    let light: String
+    let dark: String
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    if let url = try? container.decode(String.self) {
+      self = .single(url)
+    } else {
+      let variants = try container.decode(Variants.self)
+      self = .variants(light: variants.light, dark: variants.dark)
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    switch self {
+    case let .single(url): try container.encode(url)
+    case let .variants(light, dark): try container.encode(Variants(light: light, dark: dark))
+    }
+  }
+}
+
+extension JsonArtwork {
+  /// The Nitro union this maps onto, one case per case.
+  func toNitro() -> Variant_String_ArtworkVariants {
+    switch self {
+    case let .single(url): .first(url)
+    case let .variants(light, dark): .second(ArtworkVariants(light: light, dark: dark))
+    }
+  }
+
+  /// Snapshot a live artwork value back to its JSON model.
+  init?(_ artwork: Variant_String_ArtworkVariants?) {
+    switch artwork {
+    case nil: return nil
+    case let .first(url): self = .single(url)
+    case let .second(variants): self = .variants(light: variants.light, dark: variants.dark)
+    }
+  }
+}
+
 /// JSON model for image row items (horizontal thumbnail row).
 struct JsonImageRowItem: Codable {
   let url: String?
@@ -42,7 +98,7 @@ struct JsonResolvedTrack: Codable {
   let url: String
   let title: String
   let subtitle: String?
-  let artwork: String?
+  let artwork: JsonArtwork?
   let artist: String?
   let albumUrl: String?
   let album: String?
@@ -62,7 +118,7 @@ struct JsonResolvedTrack: Codable {
     url: String,
     title: String,
     subtitle: String? = nil,
-    artwork: String? = nil,
+    artwork: JsonArtwork? = nil,
     artist: String? = nil,
     albumUrl: String? = nil,
     album: String? = nil,
@@ -104,7 +160,7 @@ struct JsonTrack: Codable {
   let url: String?
   let title: String
   let subtitle: String?
-  let artwork: String?
+  let artwork: JsonArtwork?
   let artist: String?
   let albumUrl: String?
   let album: String?
@@ -124,7 +180,7 @@ struct JsonTrack: Codable {
     url: String? = nil,
     title: String,
     subtitle: String? = nil,
-    artwork: String? = nil,
+    artwork: JsonArtwork? = nil,
     artist: String? = nil,
     albumUrl: String? = nil,
     album: String? = nil,
@@ -179,7 +235,7 @@ struct JsonTrack: Codable {
         url: track.url,
         title: track.title,
         subtitle: track.subtitle,
-        artwork: track.artwork,
+        artwork: JsonArtwork(track.artwork),
         artist: track.artist,
         albumUrl: track.albumUrl,
         album: track.album,
@@ -214,7 +270,7 @@ struct JsonTrack: Codable {
         id: track.id,
         url: track.url,
         title: track.title,
-        artwork: track.artwork,
+        artwork: JsonArtwork(track.artwork),
         artist: track.artist,
         albumUrl: track.albumUrl,
         album: track.album,
@@ -256,7 +312,7 @@ struct JsonTrack: Codable {
         carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
         id: id,
         src: src,
-        artwork: artwork,
+        artwork: artwork?.toNitro(),
         artworkSource: nil, request: nil,
         artworkCarPlayTinted: nil,
         title: title,
@@ -283,7 +339,7 @@ struct JsonTrack: Codable {
         id: id,
         url: url,
         src: src,
-        artwork: artwork,
+        artwork: artwork?.toNitro(),
         artworkSource: nil,
         request: request?.toNitro(),
         artworkCarPlayTinted: nil,

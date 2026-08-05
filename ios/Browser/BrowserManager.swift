@@ -583,7 +583,7 @@ final class BrowserManager {
             id: nil,
             url: item.url,
             src: nil,
-            artwork: item.artwork,
+            artwork: item.artwork.map { .first($0) },
             artworkSource: nil, request: nil,
             artworkCarPlayTinted: nil,
             title: item.title,

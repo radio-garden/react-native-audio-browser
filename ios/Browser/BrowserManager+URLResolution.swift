@@ -146,7 +146,7 @@ extension BrowserManager {
   ///   - imageContext: Optional size context for CDN URL generation (nil at browse-time)
   /// - Returns: ImageSource ready for image loading, or nil if no artwork
   func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
-    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
+    if let artwork = track.artwork?.url, SFSymbolRenderer.isSFSymbol(artwork) {
       let canvasSize: CGSize = if let w = imageContext?.width, let h = imageContext?.height {
         CGSize(width: w, height: h)
       } else {
@@ -168,7 +168,7 @@ extension BrowserManager {
 
     // If no artwork config, return original artwork URL as simple ImageSource
     guard let artworkConfig = effectiveArtworkConfig else {
-      guard let artwork = track.artwork else { return nil }
+      guard let artwork = track.artwork?.url else { return nil }
       return ImageSource(uri: artwork, method: nil, headers: nil, body: nil)
     }
 
@@ -180,7 +180,7 @@ extension BrowserManager {
       var mergedConfig = try await applyLayer(
         resolvedRequestLayer,
         to: RequestConfig(
-          method: nil, path: track.artwork, baseUrl: nil, headers: nil,
+          method: nil, path: track.artwork?.url, baseUrl: nil, headers: nil,
           query: nil, body: nil, contentType: nil, userAgent: nil,
         ),
         params: [:],
@@ -280,7 +280,7 @@ extension BrowserManager {
         headers["User-Agent"] = userAgent
       }
 
-      logger.debug("Artwork URL transformed: \(track.artwork ?? "nil") -> \(uri)")
+      logger.debug("Artwork URL transformed: \(track.artwork?.url ?? "nil") -> \(uri)")
 
       return ImageSource(
         uri: uri,

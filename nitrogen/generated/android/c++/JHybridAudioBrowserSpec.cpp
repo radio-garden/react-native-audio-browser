@@ -9,6 +9,8 @@
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `ArtworkVariants` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkVariants; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
@@ -197,6 +199,10 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "Track.hpp"
 #include <vector>
 #include "JTrack.hpp"
+#include "ArtworkVariants.hpp"
+#include <variant>
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
@@ -255,7 +261,6 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "NativeRouteEntry.hpp"
 #include "JNativeRouteEntry.hpp"
 #include "BrowseError.hpp"
-#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam.hpp"
 #include "JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.hpp"

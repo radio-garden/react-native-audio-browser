@@ -11,6 +11,7 @@
 #include "NativeRouteEntry.hpp"
 
 #include "ArtworkRequestConfig.hpp"
+#include "ArtworkVariants.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
@@ -20,6 +21,7 @@
 #include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
 #include "JArtworkRequestConfig.hpp"
+#include "JArtworkVariants.hpp"
 #include "JBrowseError.hpp"
 #include "JBrowseResult.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
@@ -49,6 +51,7 @@
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
 #include "JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"

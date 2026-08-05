@@ -1,5 +1,7 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.util.url
+
 import com.audiobrowser.http.RequestConfigBuilder
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageContext
@@ -94,7 +96,7 @@ suspend fun BrowserManager.resolveArtworkUrl(
 ): ImageSource? {
   val effectiveArtworkConfig = perRouteConfig ?: config.artwork
   // Treat empty string as null for artwork
-  val trackArtwork = track.artwork?.takeIf { it.isNotEmpty() }
+  val trackArtwork = track.artwork?.url?.takeIf { it.isNotEmpty() }
 
   // If no artwork config and no track.artwork, nothing to transform
   if (effectiveArtworkConfig == null && trackArtwork == null) return null

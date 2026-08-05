@@ -14,6 +14,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `ArtworkVariants` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkVariants; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
@@ -201,6 +203,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include <optional>
 #include "Track.hpp"
 #include <vector>
+#include "ArtworkVariants.hpp"
+#include <variant>
 #include "ImageSource.hpp"
 #include "HttpMethod.hpp"
 #include <unordered_map>
@@ -225,7 +229,6 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "ImageQueryParams.hpp"
 #include "NativeRouteEntry.hpp"
 #include "BrowseError.hpp"
-#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
 #include "SearchMode.hpp"

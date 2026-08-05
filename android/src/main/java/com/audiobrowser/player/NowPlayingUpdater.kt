@@ -1,5 +1,7 @@
 package com.audiobrowser.player
 
+import com.audiobrowser.util.url
+
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate
@@ -161,7 +163,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       album = flash?.album ?: override?.album ?: track.album,
       artist = flash?.artist ?: override?.artist ?: track.artist,
       duration = track.duration,
-      artwork = track.artwork,
+      artwork = track.artwork?.url,
       description = track.description,
       mediaId = track.src ?: track.url,
       genre = track.genre,

@@ -1,5 +1,7 @@
 package com.audiobrowser.browser
 
+import com.audiobrowser.util.artworkOf
+
 import android.util.LruCache
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
@@ -274,7 +276,7 @@ class BrowserManager {
           id = null,
           url = null,
           src = mediaId,
-          artwork = metadata.artworkUri?.toString(),
+          artwork = artworkOf(metadata.artworkUri?.toString()),
           artworkSource = null,
           request = null,
           artworkCarPlayTinted = null,

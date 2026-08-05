@@ -580,7 +580,7 @@ public final class RNABCarPlayController: NSObject {
     // artworkSource). A tab with no icon stays title-only — CPTemplate renders
     // fine with just `tabTitle`. Tab bar icons are 24pt x 24pt per the CarPlay
     // Developer Guide: https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
-    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
+    if let artwork = track.artwork?.url, SFSymbolRenderer.isSFSymbol(artwork) {
       let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
       if let image = imageLoader?.sfSymbolImage(symbolName) {
         template.tabImage = image

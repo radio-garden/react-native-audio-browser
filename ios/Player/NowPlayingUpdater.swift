@@ -147,7 +147,9 @@ final class NowPlayingUpdater {
   }
 
   private func loadArtwork(for track: Track) {
-    let artworkUrl = track.artworkSource?.uri ?? track.artwork
+    // Now-playing is a single image with no appearance to key off, so a pair
+    // collapses to its dark URL (see `Variant_String_ArtworkVariants.url`).
+    let artworkUrl = track.artworkSource?.uri ?? track.artwork?.url
     logger.debug("loadArtwork: \(track.title), artworkUrl: \(artworkUrl ?? "nil")")
 
     // Now Playing artwork: use screen width in pixels, capped at 1200px

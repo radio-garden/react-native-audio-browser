@@ -20,6 +20,9 @@
 #include <vector>
 #include <optional>
 #include "JTrack.hpp"
+#include "ArtworkVariants.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "JArtworkVariants.hpp"
 #include "ImageSource.hpp"
 #include "JImageSource.hpp"
 #include "HttpMethod.hpp"
