@@ -376,6 +376,18 @@ struct JsonTrack: Codable {
         albumUrl: albumUrl,
         album: album,
         live: live,
+        artwork: artwork?.toNitro(),
+      )
+    }
+  }
+
+  extension JsonResolvedTrack {
+    func toNitro() -> ResolvedTrack {
+      ResolvedTrack(
+        url: url,
+        children: children?.map { $0.toNitro() },
+        artwork: artwork?.toNitro(),
+        title: title,
       )
     }
   }
