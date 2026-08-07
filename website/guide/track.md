@@ -148,7 +148,7 @@ A couple of constraints worth knowing:
 
 - **`childrenStyle` goes on the child as it appears in its parent's list** — Android Auto reads it there to decide how to lay out the folder once you navigate in.
 - **`albumUrl` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumUrl` in the [Browser config](/guide/browser).
-- **`imageRow` is CarPlay-only** and shows ~4–5 thumbnails (extras are silently dropped); Android Auto ignores it and renders the parent as a normal row.
+- **`imageRow` renders as thumbnails on CarPlay only** (~4–5 visible; extras are silently dropped). Android Auto has no image-row rendering, so the row expands into its items as a grid-styled group (artwork tiles where the host honors per-item content-style hints, list rows otherwise) — plus a trailing "view all" row when the track has a `url`. A track with `imageRow` but no `url` is a pure preview: on CarPlay its header isn't tappable.
 
 ```ts
 {

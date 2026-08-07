@@ -178,8 +178,14 @@ final class CarPlayListItemFactory {
       CPListImageRowItem(text: track.title, images: placeholders)
     }
 
-    // Handler for row header tap → navigate to track.url if present
+    // Handler for row header tap → navigate to track.url if present. A row
+    // without a url (pure preview) has nothing to open, so its header tap is
+    // a no-op rather than a selection that can't resolve.
     item.handler = { [onItemSelected] _, completion in
+      guard track.url != nil else {
+        completion()
+        return
+      }
       onItemSelected(track, completion)
     }
 

@@ -7,7 +7,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
+import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackStyle
+import com.margelo.nitro.audiobrowser.Variant_String_ArtworkVariants
 
 /**
  * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
@@ -20,6 +23,52 @@ object TrackFactory {
   fun fromMedia3(mediaItem: MediaItem): Track {
     return mediaItem.localConfiguration!!.tag as Track
   }
+
+  /**
+   * Android Auto has no image-row rendering; its closest equivalent is a grid of artwork
+   * tiles. A track carrying `imageRow` expands into its items as grid-styled rows (the
+   * per-item content-style hint — hosts that ignore it fall back to list rows) grouped under
+   * the row's title, followed by the row itself as a browsable "view all" link when it has a
+   * `url` (a url-less row is a pure preview and contributes only its items). Tracks without
+   * an `imageRow` pass through unchanged.
+   */
+  fun expandImageRows(tracks: List<Track>): List<Track> =
+    tracks.flatMap { track ->
+      val items = track.imageRow
+      if (items.isNullOrEmpty()) return@flatMap listOf(track)
+      val expanded = items.map { it.toTrack(groupTitle = track.title) }
+      if (track.url != null) {
+        expanded + track.copy(imageRow = null, groupTitle = track.title)
+      } else {
+        expanded
+      }
+    }
+
+  /** The row-item equivalent of a full Track, for surfaces that render items as plain rows. */
+  private fun ImageRowItem.toTrack(groupTitle: String?): Track =
+    Track(
+      id = id,
+      url = url,
+      src = src,
+      artwork = artwork?.let { Variant_String_ArtworkVariants.First(it) },
+      artworkSource = artworkSource,
+      request = request,
+      artworkCarPlayTinted = null,
+      title = title,
+      subtitle = null,
+      artist = artist,
+      albumUrl = albumUrl,
+      album = album,
+      description = null,
+      genre = null,
+      duration = null,
+      style = TrackStyle.GRID,
+      childrenStyle = null,
+      favorited = null,
+      groupTitle = groupTitle,
+      live = live,
+      imageRow = null,
+    )
 
   fun toMedia3(tracks: Array<Track>): List<MediaItem> {
     return tracks.map { toMedia3(it) }

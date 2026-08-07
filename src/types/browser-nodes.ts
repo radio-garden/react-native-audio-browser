@@ -300,10 +300,14 @@ export interface Track {
    *   with `src` plays immediately on tap, otherwise its `url` is navigated
    *
    * On CarPlay: maps to CPListImageRowItem. Limits visible images by display
-   * width (~4-5). Excess silently truncated.
+   * width (~4-5). Excess silently truncated. A row whose track has no `url`
+   * is a pure preview: its header is not tappable.
    *
-   * On Android Auto: ignored; the parent Track renders as a regular
-   * browsable item using its own artwork/title/url.
+   * On Android Auto: there is no image-row rendering, so the row expands into
+   * its items as grid-styled rows (artwork tiles where the host honors the
+   * per-item content-style hint, list rows otherwise) grouped under the
+   * track's title, followed by the track itself as a browsable "view all"
+   * link when it has a `url`.
    *
    * On app side: consumable by React Native UI for horizontal thumbnail layouts.
    */
