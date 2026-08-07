@@ -25,15 +25,16 @@ import timber.log.Timber
  *   (2 minutes)
  * @param shouldRetry Optional callback to check if retry should proceed (e.g., check playWhenReady)
  * @param isOnline Optional callback to check current network state
- * @param onRetryPending Optional callback invoked when a retry is pending (for network restoration
- *   acceleration)
+ * @param onRetryPending Optional callback invoked when a retry is pending, with the load error
+ *   being retried (for surfacing it while the retry runs, and for network restoration
+ *   acceleration). Invoked on ExoPlayer's loader thread.
  */
 class RetryLoadErrorHandlingPolicy(
   private val maxRetries: Int? = null,
   maxRetryDurationMs: Long? = null,
   private val shouldRetry: () -> Boolean = { true },
   private val isOnline: () -> Boolean = { true },
-  private val onRetryPending: ((isNetworkError: Boolean) -> Unit)? = null,
+  private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
 ) : DefaultLoadErrorHandlingPolicy() {
 
   companion object {
@@ -138,7 +139,7 @@ class RetryLoadErrorHandlingPolicy(
       )
 
       // Notify that a retry is pending (for network restoration acceleration)
-      onRetryPending?.invoke(isNetworkError)
+      onRetryPending?.invoke(exception, isNetworkError)
 
       delay
     } else {

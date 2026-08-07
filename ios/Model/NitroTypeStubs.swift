@@ -227,6 +227,7 @@
     var code: String
     var message: String
     var statusCode: Double?
+    var retrying: Bool?
   }
 
   struct Playback: Equatable {

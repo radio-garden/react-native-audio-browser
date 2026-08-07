@@ -51,10 +51,28 @@ export type PlaybackError = {
   message: string
   /** HTTP status code, when the failure came from an HTTP response. */
   statusCode?: number
+  /**
+   * True while the player is still retrying this failure in the background.
+   *
+   * A retrying error arrives via `onPlaybackChanged` with the playback state
+   * still `loading`/`buffering` (or `paused`) — show it as advisory ("Stream
+   * unreachable" over a spinner), because playback may yet recover. It clears
+   * (the next `Playback` carries no error) once data flows again, and hardens
+   * into a terminal error (state `error`, `retrying` absent) when the retry
+   * budget runs out. Absent when retry is disabled: every error is then
+   * terminal. Native platforms only — the web implementation has no automatic
+   * retry, so its errors are always terminal.
+   */
+  retrying?: boolean
 }
 
 /**
  * Emitted when a playback error occurs.
+ *
+ * Terminal errors only: this fires on both edges of the `error` state —
+ * entering it (with the error) and leaving it (with `error` undefined).
+ * Errors the player is still retrying (`retrying: true`) are surfaced through
+ * `onPlaybackChanged` instead, attached to the `loading`/`buffering` state.
  */
 export interface PlaybackErrorEvent {
   error?: PlaybackError

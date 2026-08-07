@@ -938,7 +938,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getPlaybackError() throws -> PlaybackError? {
-    onMainActor { player?.playbackError?.toNitroError() }
+    onMainActor { player?.coordinator.nitroPlaybackError() }
   }
 
   public func retry() throws {
@@ -1212,7 +1212,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       timedMetadata: latestTimedMetadata,
       playWhenReady: player.playWhenReady,
       stalled: stalled,
-      error: player.coordinator.playbackError?.toNitroError(),
+      error: player.coordinator.nitroPlaybackError(),
       flash: nowPlayingFlash,
       override: nowPlayingMetadataEnabled ? nowPlayingOverride : nil,
       formatter: nowPlayingMetadataEnabled ? nowPlayingMetadataFormatter : nil,

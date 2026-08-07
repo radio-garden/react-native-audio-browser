@@ -8,6 +8,7 @@ import Testing
 
 @MainActor
 private final class MockRetryHandler: RetryHandling {
+  var isEnabled = true
   var retryableErrors: Set<Int> = []
   var attemptRetryResult = false
   var attemptRetryCallCount = 0
@@ -324,6 +325,69 @@ struct HandleErrorTests {
     #expect(surfaced.isEmpty)
   }
 
+  /// The advisory report must precede the retry outcome: it exists so UIs can
+  /// show the cause while the backoff runs, and it must carry the same
+  /// classification the terminal path would produce.
+  @Test func retryableError_reportsRetryingErrorBeforeTheRetryResolves() async {
+    let mock = MockRetryHandler()
+    mock.retryableErrors = [URLError.Code.cannotConnectToHost.rawValue]
+    mock.attemptRetryResult = true
+    let handler = PlaybackErrorHandler(retryHandler: mock)
+    var retrying: [TrackPlayerError.PlaybackError] = []
+    var surfaced: [TrackPlayerError.PlaybackError] = []
+    handler.onRetryingError = { retrying.append($0) }
+    handler.onError = { surfaced.append($0) }
+
+    handler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+
+    // Reported synchronously, before the retry task has run at all.
+    #expect(retrying == [.hostUnreachable])
+    #expect(mock.attemptRetryCallCount == 0)
+
+    await handler.pendingRetryTask?.value
+    // A successful retry surfaces nothing further.
+    #expect(surfaced.isEmpty)
+  }
+
+  /// Exhaustion after an advisory report still surfaces the terminal error —
+  /// the advisory does not consume it.
+  @Test func retryExhausted_reportsRetryingThenTerminal() async {
+    let mock = MockRetryHandler()
+    mock.retryableErrors = [URLError.Code.cannotConnectToHost.rawValue]
+    mock.attemptRetryResult = false
+    let handler = PlaybackErrorHandler(retryHandler: mock)
+    var retrying: [TrackPlayerError.PlaybackError] = []
+    var surfaced: [TrackPlayerError.PlaybackError] = []
+    handler.onRetryingError = { retrying.append($0) }
+    handler.onError = { surfaced.append($0) }
+
+    handler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await handler.pendingRetryTask?.value
+
+    #expect(retrying == [.hostUnreachable])
+    #expect(surfaced == [.hostUnreachable])
+  }
+
+  /// With the policy disabled every error is terminal: no advisory, no retry
+  /// task — the error surfaces synchronously even for a retryable class.
+  @Test func retryDisabled_skipsTheRetryingReport() {
+    let mock = MockRetryHandler()
+    mock.isEnabled = false
+    mock.retryableErrors = [URLError.Code.cannotConnectToHost.rawValue]
+    let handler = PlaybackErrorHandler(retryHandler: mock)
+    var retrying: [TrackPlayerError.PlaybackError] = []
+    var surfacedError: TrackPlayerError.PlaybackError?
+    handler.onRetryingError = { retrying.append($0) }
+    handler.onError = { surfacedError = $0 }
+
+    handler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+
+    #expect(retrying.isEmpty)
+    #expect(handler.pendingRetryTask == nil)
+    #expect(surfacedError == .hostUnreachable)
+    #expect(mock.attemptRetryCallCount == 0)
+  }
+
   /// The status reaches `classify` on the non-retryable path. Both call sites
   /// forward it separately; dropping either one is invisible otherwise.
   @Test func nonRetryable_forwardsHttpStatusCode() {
@@ -436,6 +500,15 @@ struct PlaybackErrorNitroCodeTests {
 
   @Test func nonHttpError_carriesNoStatusCode() {
     #expect(TrackPlayerError.PlaybackError.playbackStalled.toNitroError().statusCode == nil)
+  }
+
+  /// `retrying` is nil — not false — on a terminal payload, so JS consumers
+  /// see the field only while it means something.
+  @Test func retryingFlag_isNilUnlessSet() {
+    #expect(TrackPlayerError.PlaybackError.hostUnreachable.toNitroError().retrying == nil)
+    #expect(
+      TrackPlayerError.PlaybackError.hostUnreachable.toNitroError(retrying: true).retrying == true,
+    )
   }
 
   /// `code` is an untyped wire contract: nothing on either side of the bridge

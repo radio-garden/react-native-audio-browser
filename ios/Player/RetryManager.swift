@@ -38,6 +38,11 @@ class RetryManager {
   var shouldRetry: () -> Bool = { true }
   var onRetry: ((Bool) -> Void)?
 
+  var isEnabled: Bool {
+    if case .disabled = policy { return false }
+    return true
+  }
+
   // MARK: - Configuration
 
   func updatePolicy(from config: Variant_Bool_RetryConfig?) {

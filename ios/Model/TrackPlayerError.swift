@@ -123,12 +123,15 @@ extension TrackPlayerError.PlaybackError {
   /// `NitroTypeStubs` mirrors the generated one field for field, so this single
   /// definition compiles in both worlds and the tests exercise the shipped
   /// converter rather than a copy of it.
-  func toNitroError() -> PlaybackError {
+  /// `retrying` marks an advisory error the retry loop is still working on
+  /// (surfaced with a non-terminal playback state); terminal errors leave it nil.
+  func toNitroError(retrying: Bool = false) -> PlaybackError {
     PlaybackError(
       kind: kind,
       code: code,
       message: errorDescription ?? "Unknown error",
       statusCode: statusCode.map(Double.init),
+      retrying: retrying ? true : nil,
     )
   }
 }

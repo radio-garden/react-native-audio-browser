@@ -46,10 +46,11 @@ namespace margelo::nitro::audiobrowser {
     std::string code     SWIFT_PRIVATE;
     std::string message     SWIFT_PRIVATE;
     std::optional<double> statusCode     SWIFT_PRIVATE;
+    std::optional<bool> retrying     SWIFT_PRIVATE;
 
   public:
     PlaybackError() = default;
-    explicit PlaybackError(PlaybackErrorKind kind, std::string code, std::string message, std::optional<double> statusCode): kind(kind), code(code), message(message), statusCode(statusCode) {}
+    explicit PlaybackError(PlaybackErrorKind kind, std::string code, std::string message, std::optional<double> statusCode, std::optional<bool> retrying): kind(kind), code(code), message(message), statusCode(statusCode), retrying(retrying) {}
 
   public:
     friend bool operator==(const PlaybackError& lhs, const PlaybackError& rhs) = default;
@@ -68,7 +69,8 @@ namespace margelo::nitro {
         JSIConverter<margelo::nitro::audiobrowser::PlaybackErrorKind>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "kind"))),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "code"))),
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message"))),
-        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "statusCode")))
+        JSIConverter<std::optional<double>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "statusCode"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retrying")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::PlaybackError& arg) {
@@ -77,6 +79,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "code"), JSIConverter<std::string>::toJSI(runtime, arg.code));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "message"), JSIConverter<std::string>::toJSI(runtime, arg.message));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "statusCode"), JSIConverter<std::optional<double>>::toJSI(runtime, arg.statusCode));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "retrying"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.retrying));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -91,6 +94,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "code")))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "message")))) return false;
       if (!JSIConverter<std::optional<double>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "statusCode")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "retrying")))) return false;
       return true;
     }
   };

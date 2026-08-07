@@ -2,7 +2,9 @@ package com.audiobrowser.player
 
 import androidx.media3.common.PlaybackException
 import androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
+import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackErrorKind
+import java.io.IOException
 
 /**
  * Maps ExoPlayer's failure codes onto [PlaybackErrorKind], the cross-platform contract iOS
@@ -35,6 +37,42 @@ object PlaybackErrorClassifier {
       .filterIsInstance<InvalidResponseCodeException>()
       .firstOrNull()
       ?.responseCode
+
+  /**
+   * Classifies a load error the retry policy is still working on, as an advisory (`retrying`)
+   * [PlaybackError]. Load errors arrive as raw [IOException]s (see
+   * [RetryLoadErrorHandlingPolicy.classifyError]), never as [PlaybackException] — that shape only
+   * exists once retries are exhausted. The policy only retries HTTP statuses and transport
+   * failures, so a non-HTTP retryable load error is by construction a network one.
+   */
+  fun retryingLoadError(exception: IOException, online: Boolean): PlaybackError {
+    val responseCode =
+      generateSequence(exception as Throwable) { it.cause }
+        .filterIsInstance<InvalidResponseCodeException>()
+        .firstOrNull()
+        ?.responseCode
+    // Fixed message per classification (mirrors iOS's localized descriptions): raw
+    // IOException messages vary between attempts of the same outage, which would defeat
+    // the caller's identical-repeat dedupe and churn the wire payload.
+    val (kind, code, message) =
+      when {
+        !online ->
+          Triple(PlaybackErrorKind.OFFLINE, "not-connected-to-internet", "No internet connection")
+        responseCode != null ->
+          Triple(
+            kindForHttpStatus(responseCode),
+            "io-bad-http-status",
+            "Server responded with HTTP $responseCode",
+          )
+        else ->
+          Triple(
+            PlaybackErrorKind.UNREACHABLE,
+            "io-network-connection-failed",
+            "Could not reach the stream host",
+          )
+      }
+    return PlaybackError(kind, code, message, responseCode?.toDouble(), retrying = true)
+  }
 
   fun kindForHttpStatus(status: Int): PlaybackErrorKind =
     when (status) {

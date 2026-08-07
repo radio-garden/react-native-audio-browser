@@ -132,6 +132,10 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // Reset retry timer so new track gets fresh 2-minute window
     player.resetRetryTimer()
 
+    // A retrying error belongs to the outgoing track; drop it (with its own emit —
+    // the incoming track may hold the state on LOADING/BUFFERING, emitting nothing).
+    player.clearRetryingError()
+
     // A new station starts with a clean stuck-recovery budget, mirroring the retry timer reset.
     healthyPlaybackHandler.removeCallbacks(healthyPlaybackRunnable)
     stuckRecoveryPolicy.reset()
@@ -261,6 +265,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         code,
         error.message ?: "An unknown error occurred",
         PlaybackErrorClassifier.responseCode(error)?.toDouble(),
+        retrying = null,
       )
     player.callbacks?.onPlaybackError(playbackError)
     player.playbackError = playbackError
@@ -297,6 +302,7 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
             "playback-stalled",
             error.message ?: "Playback stalled",
             null,
+            retrying = null,
           )
         player.callbacks?.onPlaybackError(playbackError)
         player.playbackError = playbackError

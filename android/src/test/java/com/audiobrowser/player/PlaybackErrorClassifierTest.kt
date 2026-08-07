@@ -128,6 +128,44 @@ class PlaybackErrorClassifierTest {
     }
   }
 
+  // MARK: - Retrying load errors
+
+  /**
+   * Load errors are raw IOExceptions from the transport layer; the policy only retries network
+   * ones, so the advisory classification is UNREACHABLE unless the device is offline or the
+   * server actually answered.
+   */
+  @Test
+  fun `retrying transport failure is unreachable`() {
+    val error =
+      PlaybackErrorClassifier.retryingLoadError(IOException("connection refused"), online = true)
+    assertEquals(PlaybackErrorKind.UNREACHABLE, error.kind)
+    assertEquals(true, error.retrying)
+    assertNull(error.statusCode)
+    // Stable across attempts — the raw exception message varies between retries of the
+    // same outage, which would defeat the report dedupe.
+    assertEquals("Could not reach the stream host", error.message)
+  }
+
+  @Test
+  fun `retrying offline failure is offline`() {
+    val error =
+      PlaybackErrorClassifier.retryingLoadError(IOException("connection refused"), online = false)
+    assertEquals(PlaybackErrorKind.OFFLINE, error.kind)
+    assertEquals(true, error.retrying)
+  }
+
+  /** The HTTP status is dug out of the cause chain and mapped through the shared status table. */
+  @Test
+  fun `retrying HTTP failure carries the status`() {
+    val error =
+      PlaybackErrorClassifier.retryingLoadError(httpException(503), online = true)
+    assertEquals(PlaybackErrorKind.SERVER_ERROR, error.kind)
+    assertEquals(503.0, error.statusCode!!, 0.0)
+    assertEquals(true, error.retrying)
+    assertEquals("Server responded with HTTP 503", error.message)
+  }
+
   /**
    * Codes that name no cause must stay UNKNOWN. Guessing them into a friendlier bucket would put a
    * wrong line on the listener's screen and poison the telemetry aggregates that motivated the

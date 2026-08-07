@@ -49,7 +49,7 @@ class RetryLoadErrorHandlingPolicyTest {
     var pendingNetwork: Boolean? = null
     val policy =
       RetryLoadErrorHandlingPolicy(
-        onRetryPending = { isNetworkError -> pendingNetwork = isNetworkError }
+        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError }
       )
     val delay = policy.getRetryDelayMsFor(errorInfo(exception))
     assertEquals(C.TIME_UNSET, delay)
@@ -63,7 +63,7 @@ class RetryLoadErrorHandlingPolicyTest {
       RetryLoadErrorHandlingPolicy(
         maxRetries = null,
         isOnline = { false },
-        onRetryPending = { isNetworkError -> pendingNetwork = isNetworkError },
+        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
       )
 
     // A wifi drop surfaces as a raw IOException from the socket/DNS layer, NOT a
@@ -85,7 +85,7 @@ class RetryLoadErrorHandlingPolicyTest {
     val policy =
       RetryLoadErrorHandlingPolicy(
         isOnline = { true },
-        onRetryPending = { isNetworkError -> pendingNetwork = isNetworkError },
+        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
       )
 
     val delay = policy.getRetryDelayMsFor(errorInfo(SocketTimeoutException("timeout")))
@@ -116,7 +116,7 @@ class RetryLoadErrorHandlingPolicyTest {
     val policy =
       RetryLoadErrorHandlingPolicy(
         isOnline = { true },
-        onRetryPending = { isNetworkError -> pendingNetwork = isNetworkError },
+        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError },
       )
 
     val delay = policy.getRetryDelayMsFor(errorInfo(httpError(503)))
@@ -130,7 +130,7 @@ class RetryLoadErrorHandlingPolicyTest {
     var pendingNetwork: Boolean? = null
     val policy =
       RetryLoadErrorHandlingPolicy(
-        onRetryPending = { isNetworkError -> pendingNetwork = isNetworkError }
+        onRetryPending = { _, isNetworkError -> pendingNetwork = isNetworkError }
       )
 
     val delay = policy.getRetryDelayMsFor(errorInfo(httpError(404)))

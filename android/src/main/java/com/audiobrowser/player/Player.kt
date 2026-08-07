@@ -2,6 +2,8 @@ package com.audiobrowser.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.HeartRating
@@ -45,6 +47,7 @@ import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
@@ -61,6 +64,7 @@ class Player(internal val context: Context) {
     get() = options.appKilledPlaybackBehavior
 
   private var options = PlayerUpdateOptions()
+  private val mainHandler = Handler(Looper.getMainLooper())
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
@@ -1013,6 +1017,57 @@ class Player(internal val context: Context) {
   }
 
   /**
+   * Invalidates in-flight [reportRetryingError] posts: bumped on track change so a report
+   * classified for the outgoing track can't land on the incoming one's spinner. Written on main,
+   * read on ExoPlayer's loader thread.
+   */
+  @Volatile private var retryingErrorGeneration = 0
+
+  /**
+   * Surfaces a load failure the retry policy is still working on: attached to the current
+   * (non-terminal) state via [Callbacks.onPlaybackChanged], so UIs can show the cause over the
+   * spinner. Not an ERROR transition, and not a [Callbacks.onPlaybackError] — that event stays
+   * reserved for terminal errors. Called from ExoPlayer's loader thread, hence the main hop.
+   */
+  private fun reportRetryingError(exception: IOException) {
+    val error = PlaybackErrorClassifier.retryingLoadError(exception, networkMonitor.getOnline())
+    val generation = retryingErrorGeneration
+    mainHandler.post {
+      // The track changed while this post was in flight — the error belongs to the old one.
+      if (generation != retryingErrorGeneration) return@post
+      // Only attach while the failure is what the listener is looking at. During PLAYING/READY
+      // buffered audio is still audibly fine, and ExoPlayer's in-place retry can succeed without
+      // any state change — an advisory attached there would never clear.
+      if (
+        playbackState != PlaybackState.LOADING &&
+          playbackState != PlaybackState.BUFFERING &&
+          playbackState != PlaybackState.PAUSED
+      ) {
+        return@post
+      }
+      // Each failed attempt re-reports; identical repeats add nothing (and would
+      // re-render now-playing every backoff tick).
+      if (playbackError == error) return@post
+      playbackError = error
+      callbacks?.onPlaybackChanged(Playback(playbackState, error))
+      nowPlaying.render()
+    }
+  }
+
+  /**
+   * Drops a retrying error whose track is gone. The new track may keep the state on
+   * LOADING/BUFFERING — no state-change emit — so the clear is emitted here, or the old track's
+   * error would linger over the new one's spinner.
+   */
+  internal fun clearRetryingError() {
+    retryingErrorGeneration++
+    if (playbackError?.retrying != true) return
+    playbackError = null
+    callbacks?.onPlaybackChanged(Playback(playbackState, null))
+    nowPlaying.render()
+  }
+
+  /**
    * Updates the player state and emits a state change event if the state has changed. Only emits an
    * event if the new state differs from the current state.
    *
@@ -1051,6 +1106,18 @@ class Player(internal val context: Context) {
       if (oldState == PlaybackState.ERROR) {
         playbackError = null
         callbacks?.onPlaybackError(null)
+      }
+
+      // A retrying error rides along through LOADING/BUFFERING/PAUSED; a state that
+      // proves recovery (READY/PLAYING — data flowed) or abandons the attempt clears
+      // it, before the Playback below is built so the emitted event is already clean.
+      if (
+        playbackError?.retrying == true &&
+          state != PlaybackState.LOADING &&
+          state != PlaybackState.BUFFERING &&
+          state != PlaybackState.PAUSED
+      ) {
+        playbackError = null
       }
 
       val playback = Playback(state, playbackError)

@@ -4,6 +4,8 @@ import os.log
 
 /// Abstracts RetryManager for testability.
 @MainActor public protocol RetryHandling: AnyObject {
+  /// False when the configured policy is `disabled` — every error is then terminal.
+  var isEnabled: Bool { get }
   func isRetryable(_ error: Error?) -> Bool
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool
   func reset()
@@ -38,6 +40,11 @@ public enum PlaybackErrorContext {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "PlaybackErrorHandler")
 
   var onError: ((TrackPlayerError.PlaybackError) -> Void)?
+  /// A failure the retry loop is still working on. Fired when a retry is
+  /// scheduled, before its backoff elapses, so UIs can show the cause while
+  /// the playback state stays non-terminal. `onError` still fires if the
+  /// retries give up.
+  var onRetryingError: ((TrackPlayerError.PlaybackError) -> Void)?
   private(set) var pendingRetryTask: Task<Void, Never>?
   private let retryHandler: any RetryHandling
 
@@ -53,7 +60,10 @@ public enum PlaybackErrorContext {
       logger.error("[\(String(describing: context))] failure with nil error")
     }
 
-    if retryHandler.isRetryable(error) {
+    if retryHandler.isEnabled, retryHandler.isRetryable(error) {
+      onRetryingError?(PlaybackErrorHandler.classify(
+        error: error, fallback: context.fallbackError, httpStatusCode: httpStatusCode,
+      ))
       pendingRetryTask?.cancel()
       pendingRetryTask = Task { [weak self] in
         guard let self else { return }

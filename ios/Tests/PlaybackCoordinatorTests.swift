@@ -109,6 +109,120 @@ struct TransitionTests {
   }
 }
 
+// MARK: - Retrying Errors
+
+/// Advisory errors from the retry loop: attached to the current non-terminal
+/// state via `playerDidChangePlayback`, never a state transition and never a
+/// `playerDidError`.
+/// Builds a coordinator whose retry handler will accept the error and
+/// pretend the (instant) retry succeeded, so only the advisory path runs.
+/// The effect handler is returned solely to keep the weak reference alive.
+@MainActor
+private func makeRetrying() -> (
+  PlaybackCoordinator, MockRetryHandling, MockPlaybackCoordinatorCallbacks,
+  MockPlaybackEffectHandler
+) {
+  let retryHandler = MockRetryHandling()
+  retryHandler.isRetryableResult = true
+  retryHandler.attemptRetryResult = true
+  let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+  let coordinator = PlaybackCoordinator(
+    errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+  )
+  let effectHandler = MockPlaybackEffectHandler()
+  coordinator.effectHandler = effectHandler
+  let callbacks = MockPlaybackCoordinatorCallbacks()
+  coordinator.callbacks = callbacks
+  return (coordinator, retryHandler, callbacks, effectHandler)
+}
+
+@Suite("PlaybackCoordinator - retrying errors")
+struct RetryingErrorTests {
+  @Test @MainActor
+  func retryingError_attachesToCurrentState() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    cb.playbackChanges.removeAll()
+
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+
+    #expect(c.state == .loading)
+    #expect(c.playbackError == .hostUnreachable)
+    #expect(cb.playbackChanges.count == 1)
+    #expect(cb.playbackChanges.last?.state == .loading)
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+    // Advisory, not terminal: the error event is reserved for .error.
+    #expect(cb.errorEvents.isEmpty)
+    await c.errorHandler.pendingRetryTask?.value
+  }
+
+  /// Every failed attempt re-reports through `handleError`; identical repeats
+  /// must not re-emit (they'd re-render now-playing every backoff tick).
+  @Test @MainActor
+  func repeatedIdenticalFailure_emitsOnce() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    cb.playbackChanges.removeAll()
+
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    #expect(cb.playbackChanges.count == 1)
+  }
+
+  /// While .playing, buffered audio is still audibly fine — the advisory must
+  /// not replace the song line over working sound (matches Android's guard).
+  @Test @MainActor
+  func retryingErrorWhilePlaying_isSuppressed() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.avPlayerPlaying)
+    cb.playbackChanges.removeAll()
+
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .playback)
+
+    #expect(c.playbackError == nil)
+    #expect(cb.playbackChanges.isEmpty)
+    await c.errorHandler.pendingRetryTask?.value
+  }
+
+  /// Reaching .ready proves the retry recovered: the advisory error must not
+  /// survive into the clean state's emission.
+  @Test @MainActor
+  func recovery_clearsTheRetryingError() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    c.transition(.loadSeekCompleted)
+
+    #expect(c.state == .ready)
+    #expect(c.playbackError == nil)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  /// Giving up hardens the advisory into a terminal error: same kind, state
+  /// .error, `retrying` gone.
+  @Test @MainActor
+  func exhaustion_hardensIntoTerminalError() async {
+    let (c, retryHandler, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    retryHandler.attemptRetryResult = false
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    #expect(c.state == .error)
+    #expect(cb.playbackChanges.last?.state == .error)
+    #expect(cb.playbackChanges.last?.error?.retrying == nil)
+    #expect(cb.errorEvents.count == 1)
+  }
+}
+
 // MARK: - emitStateChange
 
 @Suite("PlaybackCoordinator - emitStateChange")

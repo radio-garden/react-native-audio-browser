@@ -42,11 +42,14 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> message = this->getFieldValue(fieldMessage);
       static const auto fieldStatusCode = clazz->getField<jni::JDouble>("statusCode");
       jni::local_ref<jni::JDouble> statusCode = this->getFieldValue(fieldStatusCode);
+      static const auto fieldRetrying = clazz->getField<jni::JBoolean>("retrying");
+      jni::local_ref<jni::JBoolean> retrying = this->getFieldValue(fieldRetrying);
       return PlaybackError(
         kind->toCpp(),
         code->toStdString(),
         message->toStdString(),
-        statusCode != nullptr ? std::make_optional(statusCode->value()) : std::nullopt
+        statusCode != nullptr ? std::make_optional(statusCode->value()) : std::nullopt,
+        retrying != nullptr ? std::make_optional(static_cast<bool>(retrying->value())) : std::nullopt
       );
     }
 
@@ -56,7 +59,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPlaybackError::javaobject> fromCpp(const PlaybackError& value) {
-      using JSignature = JPlaybackError(jni::alias_ref<JPlaybackErrorKind>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>);
+      using JSignature = JPlaybackError(jni::alias_ref<JPlaybackErrorKind>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -64,7 +67,8 @@ namespace margelo::nitro::audiobrowser {
         JPlaybackErrorKind::fromCpp(value.kind),
         jni::make_jstring(value.code),
         jni::make_jstring(value.message),
-        value.statusCode.has_value() ? jni::JDouble::valueOf(value.statusCode.value()) : nullptr
+        value.statusCode.has_value() ? jni::JDouble::valueOf(value.statusCode.value()) : nullptr,
+        value.retrying.has_value() ? jni::JBoolean::valueOf(value.retrying.value()) : nullptr
       );
     }
   };

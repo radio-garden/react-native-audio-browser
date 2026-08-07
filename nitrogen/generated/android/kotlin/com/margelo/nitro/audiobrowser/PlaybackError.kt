@@ -28,7 +28,10 @@ data class PlaybackError(
   val message: String,
   @DoNotStrip
   @Keep
-  val statusCode: Double?
+  val statusCode: Double?,
+  @DoNotStrip
+  @Keep
+  val retrying: Boolean?
 ) {
   /* primary constructor */
 
@@ -40,8 +43,8 @@ data class PlaybackError(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(kind: PlaybackErrorKind, code: String, message: String, statusCode: Double?): PlaybackError {
-      return PlaybackError(kind, code, message, statusCode)
+    private fun fromCpp(kind: PlaybackErrorKind, code: String, message: String, statusCode: Double?, retrying: Boolean?): PlaybackError {
+      return PlaybackError(kind, code, message, statusCode, retrying)
     }
   }
 }

@@ -12,6 +12,7 @@ import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import java.io.IOException
 
 // media3's configurable stuck-buffering (type-1, STUCK_BUFFERING_NO_PROGRESS) timeout. Fires only
 // on zero loading progress; 60s of silent non-progress is already a bad live-radio experience,
@@ -52,7 +53,7 @@ internal fun buildPlayerEngine(
   cache: SimpleCache?,
   shouldRetry: () -> Boolean,
   isOnline: () -> Boolean,
-  onRetryPending: (isNetworkError: Boolean) -> Unit,
+  onRetryPending: (exception: IOException, isNetworkError: Boolean) -> Unit,
   resolveMediaConfig: (url: String) -> MediaRequestConfig?,
 ): PlayerEngine {
   val renderer = DefaultRenderersFactory(context)

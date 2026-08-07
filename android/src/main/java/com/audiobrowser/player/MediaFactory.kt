@@ -15,6 +15,7 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import java.io.IOException
 
 class MediaFactory(
   private val context: Context,
@@ -22,7 +23,7 @@ class MediaFactory(
   private val retryPolicy: RetryPolicy,
   private val shouldRetry: () -> Boolean,
   private val isOnline: () -> Boolean = { true },
-  private val onRetryPending: ((isNetworkError: Boolean) -> Unit)? = null,
+  private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
   private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
