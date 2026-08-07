@@ -20,10 +20,22 @@ extension CPInterfaceController {
     String(describing: type(of: template))
   }
 
-  /// Pushes `template`, skipping the raise case (already in the hierarchy).
+  /// CarPlay's template-stack depth cap for audio apps. Not exposed by the SDK;
+  /// exceeding it raises `NSGenericException` ("Application exceeded the
+  /// hierarchy depth limit") synchronously — even through the completion-based
+  /// push — taking down the whole app, not just the CarPlay scene.
+  private static let maximumStackDepth = 5
+
+  /// Pushes `template`, skipping the raise cases (already in the hierarchy,
+  /// stack at the depth limit).
   func safePush(_ template: CPTemplate, animated: Bool, completion: ((Bool, Error?) -> Void)? = nil) {
     guard !templates.contains(where: { $0 === template }) else {
       Self.stackLogger.warning("push skipped: \(Self.name(of: template)) is already in the stack")
+      completion?(false, nil)
+      return
+    }
+    guard templates.count < Self.maximumStackDepth else {
+      Self.stackLogger.error("push skipped: \(Self.name(of: template)) would exceed the depth limit (\(self.templates.count) templates)")
       completion?(false, nil)
       return
     }
