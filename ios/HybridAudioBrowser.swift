@@ -1555,6 +1555,11 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     // `setActive(true)` is a no-op when the session is already active.
     if state.playing || state.buffering {
       try? AVAudioSession.sharedInstance().setActive(true)
+      // The now-playing session's activation request at link time predates this
+      // (the audio session was still inactive, and the system may have declined);
+      // re-request now so the surface can appear even if playback never produces
+      // audio (first-ever load failing on a dead stream).
+      player?.nowPlayingInfoController.reactivateSessionIfNeeded()
       // Output resumed — cancel any pending release armed by an earlier stop.
       cancelSessionRelease()
     }

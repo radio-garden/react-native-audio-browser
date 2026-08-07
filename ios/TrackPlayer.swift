@@ -93,6 +93,12 @@ class TrackPlayer {
     },
   )
 
+  // MARK: - Now-Playing Election
+
+  private let silentAudioPrimer = SilentAudioPrimer()
+  /// Latched on the first failure of each load; reset when a new track loads.
+  private var didPrimeNowPlayingElection = false
+
   // MARK: - Callbacks
 
   weak var callbacks: TrackPlayerCallbacks? {
@@ -789,6 +795,7 @@ extension TrackPlayer: PlaybackEffectHandler {
   }
 
   func loadTrack(src: String, track: Track) {
+    didPrimeNowPlayingElection = false
     mediaLoader.resolveAndLoad(src: src, track: track)
   }
 
@@ -934,14 +941,50 @@ extension TrackPlayer: MediaLoaderDelegate {
   }
 
   func mediaLoaderDidFailWithRetryableError(_ error: Error) {
+    attachPublishingCarrierItemIfNeeded()
+    primeNowPlayingElectionIfNeeded()
     coordinator.errorHandler.handleError(error, context: .mediaLoad)
   }
 
   func mediaLoaderDidFailWithUnplayableTrack() {
+    attachPublishingCarrierItemIfNeeded()
+    primeNowPlayingElectionIfNeeded()
     transition(.errorOccurred(.trackWasUnplayable))
   }
 
+  /// `MPNowPlayingSession` publishes only through the linked player's current item, so
+  /// a load that fails before item creation (a dead host on a cold start) leaves the
+  /// player item-less: the system never surfaces the app on the lock screen / CarPlay
+  /// — no metadata, no transport buttons — and the failure line has nowhere to appear.
+  /// Attach the failed asset's item purely as a publishing carrier. Deliberately not
+  /// observed: its `.failed` status must not re-report the error the loader already
+  /// delivered. A successful load (retry, or the next track) replaces it with the
+  /// real, observed item via `mediaLoaderDidPrepareItem`; retry reloads leave it in
+  /// place (`prepareForReload` drops only the asset), so the surface doesn't flicker.
+  private func attachPublishingCarrierItemIfNeeded() {
+    guard avPlayer.currentItem == nil, let asset = mediaLoader.asset else { return }
+    logger.notice("Attaching publishing-carrier item for failed load")
+    let item = AVPlayerItem(asset: asset)
+    nowPlayingInfoController.prepareItem(item)
+    avPlayer.replaceCurrentItem(with: item)
+  }
+
+  /// A failed load renders no audio, and without rendered audio iOS never elects the
+  /// app onto the system now-playing surfaces — the published failure metadata and
+  /// transport controls stay invisible (see `SilentAudioPrimer`). On the first
+  /// failure of a play-intended load, render a silence burst to claim the surface.
+  /// Once per load: the retry loop re-fails every few seconds, and one burst either
+  /// elected us or never will. Does not touch the retry loop itself.
+  private func primeNowPlayingElectionIfNeeded() {
+    guard playWhenReady, !didPrimeNowPlayingElection else { return }
+    didPrimeNowPlayingElection = true
+    silentAudioPrimer.prime()
+  }
+
   func mediaLoaderDidFailWithError(_ error: TrackPlayerError.PlaybackError) {
+    // No carrier here: an invalid/missing src never produced an asset. The
+    // direct-center publish still carries the metadata once elected.
+    primeNowPlayingElectionIfNeeded()
     transition(.errorOccurred(error))
   }
 

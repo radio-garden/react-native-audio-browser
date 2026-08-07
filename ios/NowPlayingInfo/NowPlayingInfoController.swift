@@ -43,7 +43,7 @@ class NowPlayingInfoController {
   /// - Important: This creates an `MPNowPlayingSession` with its own `remoteCommandCenter`;
   ///   the `onRemoteCommandCenterChanged` callback is invoked with the new command center.
   func linkPlayer(_ player: AVPlayer) {
-    logger.info("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
+    logger.notice("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
 
     linkedPlayer = player
 
@@ -55,10 +55,26 @@ class NowPlayingInfoController {
     session.automaticallyPublishesNowPlayingInfo = true
 
     session.becomeActiveIfPossible { success in
-      self.logger.info("MPNowPlayingSession becomeActiveIfPossible: \(success)")
+      self.logger.notice("MPNowPlayingSession becomeActiveIfPossible: \(success)")
     }
 
     onRemoteCommandCenterChanged?(remoteCommandCenter)
+  }
+
+  /// Re-requests now-playing activation for the linked session.
+  ///
+  /// `linkPlayer` runs at player setup, before the audio session is active, and the
+  /// system can decline the election at that point. Without a later re-request the
+  /// session stays unfeatured until actual audio output elects the app through the
+  /// system's own path — which never happens when the first-ever load fails (a cold
+  /// start onto a dead stream showed no now-playing surface at all). Call whenever
+  /// the audio session (re)activates; no-op while already active.
+  func reactivateSessionIfNeeded() {
+    guard let session = nowPlayingSession, !session.isActive else { return }
+    logger.notice("MPNowPlayingSession inactive (canBecomeActive: \(session.canBecomeActive)) — re-requesting activation")
+    session.becomeActiveIfPossible { success in
+      self.logger.notice("MPNowPlayingSession re-activation: \(success)")
+    }
   }
 
   /// Unlinks the AVPlayer, tearing down the session and restoring the shared command center.
