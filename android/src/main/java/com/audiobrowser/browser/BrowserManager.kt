@@ -490,8 +490,11 @@ class BrowserManager {
           children
             .mapIndexed { index, track ->
               async {
-                // Validate that track has stable identifier
-                validateTrack(track, "Child track")
+                // Validate that track has stable identifier. A track carrying an
+                // imageRow is exempt: a url-less row is a pure preview — never
+                // selected, navigated to, or cached (its items carry their own
+                // identity; on Android Auto it expands into them).
+                if (track.imageRow.isNullOrEmpty()) validateTrack(track, "Child track")
 
                 var transformedTrack = track
 

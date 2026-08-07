@@ -555,8 +555,10 @@ final class BrowserManager {
     var transformed: [Track] = []
 
     for track in children {
-      // Validate track has stable identifier
-      if track.url == nil, track.src == nil {
+      // Validate track has stable identifier. A track carrying an imageRow is
+      // exempt: a url-less row is a pure preview — never selected, navigated
+      // to, or cached (its items carry their own identity).
+      if track.url == nil, track.src == nil, track.imageRow?.isEmpty != false {
         throw BrowserError.invalidConfiguration(
           "Track must have either 'url' or 'src' for stable identification: \(track.title)",
         )
