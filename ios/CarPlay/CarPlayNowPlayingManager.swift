@@ -110,7 +110,16 @@ final class CarPlayNowPlayingManager {
   func setupNowPlayingButtons() {
     // While a gate is active, custom buttons (favorite etc.) are hidden;
     // the system transport controls stay — a gate never blocks playback.
-    let buttons = (audioBrowser?.isGateActive ?? false) ? [] : (audioBrowser?.carPlayNowPlayingButtons ?? [])
+    let configured = (audioBrowser?.isGateActive ?? false) ? [] : (audioBrowser?.carPlayNowPlayingButtons ?? [])
+    // The template caps custom buttons at 5 (CPNowPlayingTemplate.h) and says
+    // nothing about overflow — unlike lists (trim) or the tab bar (throw). The
+    // config comes straight from JS, where duplicates and excess are
+    // representable, so dedupe (order preserved) and clamp here.
+    var deduped: [CarPlayNowPlayingButton] = []
+    for button in configured where !deduped.contains(button) {
+      deduped.append(button)
+    }
+    let buttons = Array(deduped.prefix(5))
     let player = audioBrowser?.getPlayer()
     let row = BuiltButtonRow(
       types: buttons,

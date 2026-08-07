@@ -72,7 +72,10 @@ final class CarPlayListItemFactory {
 
       let availableSlots = maxTotalItems - totalItemCount
       let items: [CPListTemplateItem] = run.tracks.prefix(availableSlots).map { track in
-        if track.imageRow != nil {
+        // Empty image rows fall through to a plain list item: zero-image
+        // CPListImageRowItem init is undocumented territory, and a header-only
+        // row is a dead end regardless (a "popular" row with no entries yet).
+        if let imageRow = track.imageRow, !imageRow.isEmpty {
           return createImageRowItem(for: track)
         }
         return createListItem(for: track)
