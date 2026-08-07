@@ -25,7 +25,7 @@ end
 
 subgraph CoordOwned["Coordinator-owned Managers"]
   PEH["PlaybackErrorHandler<br/>@MainActor<br/>Error classify + retry orchestration"]
-  RM["RetryManager<br/>@MainActor (RetryHandling)<br/>Backoff, network-aware"]
+  RM["RetryManager<br/>@MainActor (RetryHandling)<br/>Backoff, network-aware<br/>Split budgets: first-connect / recovery (ADR 0004)"]
   PSM["PlayingStateManager<br/>playing / buffering flags"]
   STM["SleepTimerManager<br/>@MainActor (SleepTimerHandling)<br/>Time & end-of-track"]
   PTimer["PlaybackTimer x2<br/>progressTimer + intervalTimer"]
@@ -65,6 +65,7 @@ end
 subgraph Controllers["Controllers"]
   RCC["RemoteCommandController<br/>@MainActor<br/>MPRemoteCommand handlers<br/>Session command-center switching"]
   NPIC["NowPlayingInfoController<br/>@MainActor<br/>MPNowPlayingSession + nowPlayingInfo"]
+  SAP["SilentAudioPrimer<br/>@MainActor<br/>Now-playing election on failed first load (ADR 0005)"]
 end
 
 subgraph Loaders["Media Loading"]
@@ -175,6 +176,7 @@ PIPO -->|KVO + metadata output| AVP
 %% Platform
 RCC -->|addTarget| MPRC
 NPIC -->|linkPlayer| MPNS
+TP -->|Owns, primes on failed first load| SAP
 TP -->|setCategory| AS
 RM -->|Monitors| NM
 AIF --> SVG
@@ -223,7 +225,7 @@ class PSMF,PE state
 class BM,SR,BPH,BC,LRU,MRC,SDI,TBE browser
 class HC browser
 class PSO,PTO,PINO,PIPO observer
-class RCC,NPIC controller
+class RCC,NPIC,SAP controller
 class AVP,MPRC,AS,MPNS,CPT,SK,JS platform
 class PEH,RM,PSM,STM,PTimer,VF,LSC state
 class NM,EM,OV,AIF,SFR,SVG util

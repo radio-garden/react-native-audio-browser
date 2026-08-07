@@ -68,7 +68,7 @@ The callback receives a single [`FormatNowPlayingParams`](/api/features/player/#
 | `timedMetadata` | `TimedMetadata?` | The ICY / ID3 "now playing song", if any. |
 | `playWhenReady` | `boolean` | Play/pause intent — stays `true` through buffers, so the song line won't flicker. |
 | `stalled` | `StallReason?` | Truthy only during a mid-stream stall: `'buffering'` (rebuffering while online) or `'offline'` (no connectivity). Use `if (stalled)`, compare `=== 'offline'` for the reason. |
-| `error` | `PlaybackError?` | The current playback error, if playback failed. Switch on `error.kind` to pick your own localized line — see [Playback errors](/guide/errors#playback-errors). |
+| `error` | `PlaybackError?` | The current playback error, if playback failed. Switch on `error.kind` to pick your own localized line — see [Playback errors](/guide/errors#playback-errors). While [automatic retry](/guide/errors#automatic-retry) is still working, this carries the advisory error (`error.retrying === true`) — the formatter re-runs when it arrives, changes, and clears, so you can show provisional copy ("… — retrying") that hardens into the final line when the player gives up. |
 
 It returns a [`NowPlayingUpdate`](/api/features/metadata/#nowplayingupdate) (`{ title?, artist?, album? }`) or `undefined`. The callback is synchronous and should stay cheap — it's a pure formatting function, no I/O. Each returned field falls back **independently** to the track's value when omitted; returning `undefined` (or `{}`) uses the track default entirely. Identical results across a rapid burst of transitions are de-duplicated natively, so they won't flicker the surface.
 

@@ -140,6 +140,18 @@ The raw native failure identifier carried alongside the Kind, for diagnostics an
 
 A failure carrying no evidence of a cause takes the catch-all Kind rather than being guessed into a more specific one. A wrong classification both misleads the listener and corrupts the telemetry aggregates the Kind exists to make possible.
 
+**Load**:
+One track's playback session: created when a track becomes current (selection, queue advance, skip) or restarted from a terminal error (`retry()`, or play while in `error`), surviving every *automatic* retry reload of that track. The unit that retry budgets, the **hasPlayed** flag, and advisory-error deduplication are scoped to. A new load starts fresh; retries within one don't.
+*Avoid*: request, attempt (an attempt is one try *within* a load).
+
+**Advisory (retrying) error**:
+A classified PlaybackError surfaced *while automatic retry is still working on it* — `retrying: true`, attached via `onPlaybackChanged` to a non-terminal playback state, so UIs can show the cause over a spinner. Provisional by definition: it clears when playback recovers, or hardens into a terminal error (state `error`, `retrying` absent) when the retry budget runs out. Terminal errors alone fire `onPlaybackError`.
+*Avoid*: warning, soft error, pending error.
+
+**First-connect budget** / **Recovery budget**:
+The two duration bounds on automatic retry, selected per load by whether it has ever rendered audio (**hasPlayed**): a short budget (default 12s, counting only a contiguous online stretch) for a load that never played, the long one (default 2 min) once playback has proven the source works. Durations bound the give-up promise; attempt counts only pace the backoff. See ADR 0004.
+*Avoid*: retry limit, timeout (both suggest a single number).
+
 ### Metadata
 
 **TrackMetadata**:

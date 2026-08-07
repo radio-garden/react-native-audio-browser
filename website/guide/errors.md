@@ -8,8 +8,10 @@ Two different things can fail, and they surface separately:
   the network dropped, a server returned non-2xx). See
   [Navigation errors](#navigation-errors).
 
-For playback, the library can also **retry automatically** — often the error
-never reaches the user. See [Automatic retry](#automatic-retry).
+For playback, the library can also **retry automatically** — transient failures
+recover on their own, and while it retries the error is surfaced as *advisory*
+so your UI can say what's wrong over the spinner. See
+[Automatic retry](#automatic-retry).
 
 The UI snippets import `View` / `Text` / `Button` from `react-native`; everything
 else is from `react-native-audio-browser`.
@@ -22,7 +24,8 @@ available. Read it reactively with
 [`usePlaybackError()`](/api/features/errors/#useplaybackerror) — it returns the
 current error, or `undefined` once playback recovers.
 
-`PlaybackError` is `{ kind, code, message, statusCode? }`. **Branch on `kind`**:
+`PlaybackError` is `{ kind, code, message, statusCode?, retrying? }`. **Branch
+on `kind`**:
 
 | Field | Use it for |
 | --- | --- |
@@ -30,6 +33,7 @@ current error, or `undefined` once playback recovers.
 | `code` | Diagnostics and telemetry **only**. Platform-specific and unstable: loader cases on iOS (`failed-to-load`, …), lower-cased ExoPlayer names on Android (`io-bad-http-status`, …). |
 | `message` | Logs. Hard-coded developer English, e.g. *"Failed to load audio track"*. |
 | `statusCode` | The HTTP status, when the failure came from a response. |
+| `retrying` | `true` while [automatic retry](#automatic-retry) is still working on the failure — the error is advisory, not final. See [Errors while retrying](#errors-while-retrying). |
 
 ::: warning Don't show `message` to listeners
 It is developer English and it is never localized. Map `kind` to your own copy
@@ -110,35 +114,104 @@ so you can show it on the lock screen / car too.
 [`retry()`](/api/features/errors/#retry) re-attempts the current item — it only
 does something while the state is `'error'`. It's the action behind a "Try again"
 button, and what you call after [automatic retry](#automatic-retry) has given up.
+It begins a fresh load with fresh retry budgets, exactly as if the listener had
+re-selected the track (a plain play command from `'error'` does the same).
 
 ## Automatic retry
 
 Configure [`setupPlayer({ retry })`](/guide/configuration) to recover from
-transient **load** failures (network blips, timeouts) without bothering the user
-— a track that fails *after* it's already playing goes straight to `'error'` for
-manual [`retry()`](#manual-retry) instead. It's **off by default**:
+transient **load** failures (network blips, timeouts, a live stream dropping
+mid-play) with exponential backoff. It's **off by default**, and it's native
+only — the web implementation has no automatic retry, so every web error is
+terminal:
 
 ```ts
 import { setupPlayer } from 'react-native-audio-browser'
 
-// Retry indefinitely with exponential backoff (2-minute cap):
+// Retry with the default duration budgets (12s / 2 min, see below):
 await setupPlayer({ retry: true })
 
-// Or bound it:
-await setupPlayer({ retry: { maxRetries: 5, maxRetryDurationMs: 60_000 } })
+// Or bound it yourself:
+await setupPlayer({
+  retry: {
+    maxRetries: 5,
+    maxRetryDurationMs: 60_000,
+    firstConnectMaxRetryDurationMs: 8_000
+  }
+})
 ```
 
-| `retry` value | Behavior |
-| --- | --- |
-| `false` / omitted | No automatic retry (default). |
-| `true` | Retry indefinitely, capped at `maxRetryDurationMs` (default **2 min**). |
-| `{ maxRetries }` | Retry up to N times. |
-| `{ maxRetries, maxRetryDurationMs }` | Retry up to N times or until the time cap. |
+### Two duration budgets
 
-Backoff delays grow `1s → 1.5s → 2.3s → 3.4s → 5s` (capped). The duration cap
-exists so playback doesn't surprise the listener by resuming after a long time
-offline. Once retries are exhausted the state lands on `'error'`, where your
-`PlaybackErrorView` and `retry()` take over.
+Retry state is tracked per **load** — one track's playback session, created
+when a track becomes current (selection, queue advance, skip) *or restarted
+from a terminal error* (`retry()`, or any play command while in `'error'`),
+and surviving every automatic retry of that track. A new load starts fresh
+budgets; retries within it don't.
+
+How long the player keeps trying depends on one piece of evidence: **has this
+load ever produced audio?**
+
+| Situation | Budget | Why |
+| --- | --- | --- |
+| **First connect** — the load has never played | `firstConnectMaxRetryDurationMs`, default **12s** | A stream that fails before ever playing is usually dead, and the listener is actively waiting for a verdict — seconds, not minutes. |
+| **Recovery** — the load played, then failed | `maxRetryDurationMs`, default **2 min** | Playback proved the stream works. Drops are usually transient (tunnels, network handovers, a station's encoder restarting) and patience recovers them unattended. |
+
+While the device is **offline**, the first-connect budget does not apply: the
+player parks and retries the moment connectivity returns, so a stream started
+in a tunnel still plays when the network comes back. Any offline observation
+resets the first-connect clock entirely — after restoration the load gets
+another full first-connect window, because the clock only ever measures a
+contiguous online stretch. `maxRetryDurationMs` is different: it is a
+wall-clock ceiling that **includes** offline time, deliberately — it exists so
+playback can't surprise the listener by resuming after a long time offline.
+
+`maxRetries` additionally caps the retry attempts of a load, counted across
+both budgets and across offline/online transitions. (One Android caveat: for
+segmented formats like HLS, ExoPlayer counts attempts per internal loadable —
+playlist and segments separately — so an attempt cap is less predictable there;
+prefer the duration budgets as the bound you rely on.)
+
+Backoff delays grow `1s → 1.5s → 2.3s → 3.4s → 5s` (capped). Once a budget is
+exhausted the state lands on `'error'`, where your `PlaybackErrorView` and
+[`retry()`](#manual-retry) take over. Restarting from `'error'` — via
+`retry()` or any play command — begins a **new load** of the same track:
+fresh budgets, starting with the first-connect one. The tap behaves exactly
+like re-selecting the track.
+
+### Errors while retrying
+
+While the retry loop is working, the player doesn't go silent: each failure is
+classified and surfaced immediately through
+[`onPlaybackChanged`](/api/features/playback/#onplaybackchanged) /
+[`usePlayback()`](/guide/playback#playback-state), attached to the current
+non-terminal state (`'loading'` / `'buffering'`, or `'paused'`) with
+`retrying: true`. Show it as advisory — the cause over a spinner — because the
+next attempt may still succeed:
+
+```tsx
+const { state, error } = usePlayback()
+
+if (error?.retrying) {
+  // Still trying: provisional copy, keep the spinner.
+} else if (state === 'error') {
+  // Gave up: final copy, offer retry().
+}
+```
+
+`onPlaybackError` and `usePlaybackError()` stay **terminal-only**: they fire on
+*both* edges of the `'error'` state — entering it (with the error) and leaving
+it (with `error: undefined`; the hook returns `undefined` again). Advisory
+errors never pass through them. The same advisory error also reaches the
+[Now Playing formatter](/guide/now-playing#the-formatter-derived-continuous),
+so the lock screen and the car can show it too.
+
+Advisory emissions are deduplicated by **classification** (`kind`, plus the
+HTTP status when there is one) — never by the raw native `message`. The scope
+is the current advisory episode: consecutive identical failures within one
+retry sequence produce a single event rather than one per backoff tick, and the
+dedupe resets once the advisory clears (recovery, track change, or hardening
+into the terminal error).
 
 ## Navigation errors
 
@@ -211,10 +284,10 @@ message to render.
 
 | API | Purpose |
 | --- | --- |
-| `usePlaybackError()` / `getPlaybackError()` | The current playback error (`{ kind, code, message, statusCode? }`) — branch on `kind`. |
-| `onPlaybackError` | Subscribe to playback errors outside React. |
+| `usePlaybackError()` / `getPlaybackError()` | The current playback error (`{ kind, code, message, statusCode?, retrying? }`) — branch on `kind`. |
+| `onPlaybackError` | Subscribe to terminal playback errors outside React (fires on entering/leaving `'error'`; advisory retrying errors arrive via `onPlaybackChanged`). |
 | `retry()` | Re-attempt the current item (while state is `'error'`). |
-| `setupPlayer({ retry })` | Automatic retry of transient load failures (off by default). |
+| `setupPlayer({ retry })` | Automatic retry with two duration budgets: first-connect (12s) and recovery (2 min). Off by default. |
 | `useNavigationError()` / `getNavigationError()` | The raw navigation error (`code`, `statusCode`, …). |
 | `onNavigationError` | Subscribe to navigation errors outside React. |
 | `useFormattedNavigationError()` / `getFormattedNavigationError()` | Display-ready `{ title, message? }`, shared with CarPlay / Android Auto. |
