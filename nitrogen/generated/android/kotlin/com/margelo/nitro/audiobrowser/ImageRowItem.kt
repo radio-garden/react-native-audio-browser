@@ -19,7 +19,13 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class ImageRowItem(
   @DoNotStrip
   @Keep
+  val id: String?,
+  @DoNotStrip
+  @Keep
   val url: String?,
+  @DoNotStrip
+  @Keep
+  val src: String?,
   @DoNotStrip
   @Keep
   val artwork: String?,
@@ -28,7 +34,22 @@ data class ImageRowItem(
   val artworkSource: ImageSource?,
   @DoNotStrip
   @Keep
-  val title: String
+  val title: String,
+  @DoNotStrip
+  @Keep
+  val artist: String?,
+  @DoNotStrip
+  @Keep
+  val album: String?,
+  @DoNotStrip
+  @Keep
+  val albumUrl: String?,
+  @DoNotStrip
+  @Keep
+  val live: Boolean?,
+  @DoNotStrip
+  @Keep
+  val request: TrackRequest?
 ) {
   /* primary constructor */
 
@@ -40,8 +61,8 @@ data class ImageRowItem(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String?, artwork: String?, artworkSource: ImageSource?, title: String): ImageRowItem {
-      return ImageRowItem(url, artwork, artworkSource, title)
+    private fun fromCpp(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, artist: String?, album: String?, albumUrl: String?, live: Boolean?, request: TrackRequest?): ImageRowItem {
+      return ImageRowItem(id, url, src, artwork, artworkSource, title, artist, album, albumUrl, live, request)
     }
   }
 }

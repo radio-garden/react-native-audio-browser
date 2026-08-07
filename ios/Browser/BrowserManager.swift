@@ -579,34 +579,19 @@ final class BrowserManager {
       if let imageRowItems = transformedTrack.imageRow {
         var resolvedItems: [ImageRowItem] = []
         for item in imageRowItems {
-          let itemTrack = Track(
-            id: nil,
-            url: item.url,
-            src: nil,
-            artwork: item.artwork.map { .first($0) },
-            artworkSource: nil, request: nil,
-            artworkCarPlayTinted: nil,
-            title: item.title,
-            subtitle: nil,
-            artist: nil,
-            albumUrl: nil,
-            album: nil,
-            description: nil,
-            genre: nil,
-            duration: nil,
-            style: nil,
-            childrenStyle: nil,
-            favorited: nil,
-            groupTitle: nil,
-            live: nil,
-            imageRow: nil,
-          )
-          let itemImageSource = await resolveArtworkUrl(track: itemTrack, perRouteConfig: artworkConfig)
+          let itemImageSource = await resolveArtworkUrl(track: item.toTrack(), perRouteConfig: artworkConfig)
           resolvedItems.append(ImageRowItem(
+            id: item.id,
             url: item.url,
+            src: item.src,
             artwork: item.artwork,
             artworkSource: itemImageSource,
             title: item.title,
+            artist: item.artist,
+            album: item.album,
+            albumUrl: item.albumUrl,
+            live: item.live,
+            request: item.request,
           ))
         }
         transformedTrack = transformedTrack.copying(imageRow: resolvedItems)
@@ -624,7 +609,7 @@ final class BrowserManager {
   /// Plain free-text search — wraps the structured overload with no mode/filters.
   func search(_ query: String) async throws -> ResolvedTrack {
     try await search(
-      SearchParams(mode: nil, query: query, genre: nil, artist: nil, album: nil, title: nil, playlist: nil, reference: .unknown)
+      SearchParams(mode: nil, query: query, genre: nil, artist: nil, album: nil, title: nil, playlist: nil, reference: .unknown),
     )
   }
 
@@ -700,10 +685,10 @@ final class BrowserManager {
   /// station. Decision in `SearchDrillIn.playable`; mirrors Android's
   /// `searchPlayable`.
   func searchPlayable(_ params: SearchParams) async throws -> [Track]? {
-    let children = (try await search(params).children) ?? []
+    let children = try await (search(params).children) ?? []
     return try await SearchDrillIn.playable(from: children) { [self] url in
       logger.debug("First search result is browsable-only, resolving: \(url)")
-      return (try await resolve(url).children) ?? []
+      return try await (resolve(url).children) ?? []
     }
   }
 

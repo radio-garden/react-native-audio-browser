@@ -78,10 +78,17 @@
   }
 
   struct ImageRowItem: Equatable {
+    var id: String?
     var url: String?
+    var src: String?
     var artwork: String?
     var artworkSource: ImageSource?
     var title: String
+    var artist: String?
+    var album: String?
+    var albumUrl: String?
+    var live: Bool?
+    var request: TrackRequest?
   }
 
   struct ResolvedTrack: Equatable {

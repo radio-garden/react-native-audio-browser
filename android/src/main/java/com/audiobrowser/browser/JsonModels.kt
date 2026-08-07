@@ -14,9 +14,16 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class JsonImageRowItem(
+  val id: String? = null,
   val url: String? = null,
+  val src: String? = null,
   val artwork: String? = null,
   val title: String,
+  val artist: String? = null,
+  val album: String? = null,
+  val albumUrl: String? = null,
+  val live: Boolean? = null,
+  val request: JsonTrackRequest? = null,
 )
 
 /** JSON model for a track's per-request HTTP override (identity/auth/signed-url). */
@@ -93,7 +100,19 @@ private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosi
 }
 
 private fun JsonImageRowItem.toNitro(): ImageRowItem {
-  return ImageRowItem(url = url, artwork = artwork, artworkSource = null, title = title)
+  return ImageRowItem(
+    id = id,
+    url = url,
+    src = src,
+    artwork = artwork,
+    artworkSource = null,
+    title = title,
+    artist = artist,
+    album = album,
+    albumUrl = albumUrl,
+    live = live,
+    request = request?.toNitro(),
+  )
 }
 
 fun JsonResolvedTrack.toNitro(): ResolvedTrack {

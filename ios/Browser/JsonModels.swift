@@ -64,18 +64,39 @@ extension JsonArtwork {
 
 /// JSON model for image row items (horizontal thumbnail row).
 struct JsonImageRowItem: Codable {
+  let id: String?
   let url: String?
+  let src: String?
   let artwork: String?
   let title: String
+  let artist: String?
+  let album: String?
+  let albumUrl: String?
+  let live: Bool?
+  let request: JsonTrackRequest?
 
   init(
+    id: String? = nil,
     url: String? = nil,
+    src: String? = nil,
     artwork: String? = nil,
     title: String,
+    artist: String? = nil,
+    album: String? = nil,
+    albumUrl: String? = nil,
+    live: Bool? = nil,
+    request: JsonTrackRequest? = nil,
   ) {
+    self.id = id
     self.url = url
+    self.src = src
     self.artwork = artwork
     self.title = title
+    self.artist = artist
+    self.album = album
+    self.albumUrl = albumUrl
+    self.live = live
+    self.request = request
   }
 }
 
@@ -296,10 +317,17 @@ struct JsonTrack: Codable {
   extension JsonImageRowItem {
     func toNitro() -> ImageRowItem {
       ImageRowItem(
+        id: id,
         url: url,
+        src: src,
         artwork: artwork,
         artworkSource: nil,
         title: title,
+        artist: artist,
+        album: album,
+        albumUrl: albumUrl,
+        live: live,
+        request: request?.toNitro(),
       )
     }
   }

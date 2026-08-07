@@ -68,14 +68,35 @@ export interface ArtworkVariants {
 export type TrackArtwork = string | ArtworkVariants
 
 export interface ImageRowItem {
+  /**
+   * Opaque, stable identifier for this item's track. Round-tripped like
+   * `Track.id` when the thumbnail is played (see `src`).
+   */
+  id?: string
   /** Navigation path. Tapping this thumbnail navigates to this URL. */
   url?: string
+  /**
+   * Direct audio source. When present, tapping this thumbnail plays it
+   * immediately (same selection path as a playable list row) instead of
+   * navigating. Takes precedence over `url`.
+   */
+  src?: string
   /** Artwork URL for the thumbnail image. */
   artwork?: string
   /** Output only — populated by the artwork transform pipeline. */
   readonly artworkSource?: ImageSource
-  /** Title of this item. Used for identification and accessibility. */
+  /** Title of this item. Shown as the thumbnail caption; used for identification and accessibility. */
   title: string
+  /** Now-playing secondary line when played via `src` (mirrors `Track.artist`). */
+  artist?: string
+  /** Now-playing album line when played via `src` (mirrors `Track.album`). */
+  album?: string
+  /** Navigation target of the album line when played via `src` (mirrors `Track.albumUrl`). */
+  albumUrl?: string
+  /** Live stream indicator when played via `src` (mirrors `Track.live`). */
+  live?: boolean
+  /** Per-item media-request override when played via `src` (mirrors `Track.request`). */
+  request?: TrackRequest
 }
 
 export interface Track {
@@ -275,7 +296,8 @@ export interface Track {
    *
    * - Track.title → row header text
    * - Track.url → navigated when header is tapped (optional)
-   * - Each ImageRowItem → one thumbnail in the horizontal row
+   * - Each ImageRowItem → one thumbnail in the horizontal row; a thumbnail
+   *   with `src` plays immediately on tap, otherwise its `url` is navigated
    *
    * On CarPlay: maps to CPListImageRowItem. Limits visible images by display
    * width (~4-5). Excess silently truncated.

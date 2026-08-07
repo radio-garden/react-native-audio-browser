@@ -160,15 +160,26 @@ A couple of constraints worth knowing:
 ```
 
 An `imageRow` is an array of [`ImageRowItem`](/api/types/browser-nodes/#imagerowitem)
-(`{ title, url?, artwork? }`) — the track's own `title` is the row header,
-each item is one tappable thumbnail:
+(`{ title, url?, src?, artwork?, … }`) — the track's own `title` is the row header,
+its `url` the header's tap-through target, and each item one tappable thumbnail. A
+thumbnail with `src` **plays immediately on tap** (same selection path as a playable
+list row — a station app can make thumbnails play their station directly); otherwise
+its `url` is navigated. Playable items can carry the now-playing fields a regular
+track would (`id`, `artist`, `album`, `albumUrl`, `live`, `request`):
 
 ```ts
 {
   title: 'Featured',
+  url: '/browse/featured', // header tap → the full list
   imageRow: [
     { title: 'Jazz', url: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
-    { title: 'Rock', url: '/browse/rock', artwork: 'https://…/rock.jpg' }
+    {
+      title: 'Beacon FM',
+      src: 'https://audio.example.com/beacon.mp3', // tap plays it
+      artist: 'Springfield',
+      live: true,
+      artwork: 'https://…/beacon.jpg'
+    }
   ]
 }
 ```

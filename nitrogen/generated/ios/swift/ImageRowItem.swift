@@ -18,9 +18,21 @@ public extension ImageRowItem {
   /**
    * Create a new instance of `ImageRowItem`.
    */
-  init(url: String?, artwork: String?, artworkSource: ImageSource?, title: String) {
+  init(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, artist: String?, album: String?, albumUrl: String?, live: Bool?, request: TrackRequest?) {
     self.init({ () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = id {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = src {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -37,14 +49,68 @@ public extension ImageRowItem {
       } else {
         return .init()
       }
-    }(), std.string(title))
+    }(), std.string(title), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = artist {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = album {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = albumUrl {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_bool_ in
+      if let __unwrappedValue = live {
+        return bridge.create_std__optional_bool_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_TrackRequest_ in
+      if let __unwrappedValue = request {
+        return bridge.create_std__optional_TrackRequest_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }())
   }
 
+  @inline(__always)
+  var id: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__id) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__id)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
   @inline(__always)
   var url: String? {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__url) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__url)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var src: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__src) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__src)
         return String(__unwrapped)
       } else {
         return nil
@@ -72,5 +138,58 @@ public extension ImageRowItem {
   @inline(__always)
   var title: String {
     return String(self.__title)
+  }
+  
+  @inline(__always)
+  var artist: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__artist) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__artist)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var album: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__album) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__album)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var albumUrl: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__albumUrl) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__albumUrl)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var live: Bool? {
+    return { () -> Bool? in
+      if bridge.has_value_std__optional_bool_(self.__live) {
+        let __unwrapped = bridge.get_std__optional_bool_(self.__live)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var request: TrackRequest? {
+    return self.__request.value
   }
 }

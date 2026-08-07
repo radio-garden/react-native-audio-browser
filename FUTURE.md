@@ -657,16 +657,6 @@ Tap artist on Now Playing screen to search/browse related content.
 - Our approach: search for artist and show results list (more user control)
 - Requires search to be configured in browser config
 
-## CarPlay Image Row Items
-
-Support `CPListImageRowItem` / `CPListImageRowItemCardElement` for list items with multiple images.
-
-**Use cases:**
-
-- Album row showing multiple cover arts
-- Playlist preview with track thumbnails
-- "Recently played" with visual history
-
 ## CarPlay Grid Template
 
 Support `CPGridButton` / `CPGridTemplate` for grid-based navigation with image buttons.
