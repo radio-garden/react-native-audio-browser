@@ -49,54 +49,41 @@ final class CarPlayListItemFactory {
     let maxSections = CPListTemplate.maximumSectionCount
     let maxTotalItems = CPListTemplate.maximumItemCount
 
-    // Group by groupTitle if present, remembering the order each groupTitle
-    // first appears so sections render in source (server) order rather than
-    // alphabetically.
-    var groups: [String?: [Track]] = [:]
-    var orderedKeys: [String?] = []
+    // Contiguous runs sharing a groupTitle form a section (the same semantics
+    // Android Auto's GROUP_TITLE hint has), so sections — titled or not —
+    // render in exact source (server) order. Ungrouped runs become headerless
+    // sections in place rather than being hoisted to the top.
+    var runs: [(title: String?, tracks: [Track])] = []
     for track in children {
-      let groupKey = track.groupTitle
-      if groups[groupKey] == nil { orderedKeys.append(groupKey) }
-      groups[groupKey, default: []].append(track)
+      if let last = runs.indices.last, runs[last].title == track.groupTitle {
+        runs[last].tracks.append(track)
+      } else {
+        runs.append((track.groupTitle, [track]))
+      }
     }
 
     // Create sections (respecting both section and total item limits)
     var sections: [CPListSection] = []
     var totalItemCount = 0
 
-    // Ungrouped items first
-    if let ungrouped = groups[nil], !ungrouped.isEmpty {
-      let availableSlots = maxTotalItems - totalItemCount
-      let items: [CPListTemplateItem] = ungrouped.prefix(availableSlots).map { track in
-        if track.imageRow != nil {
-          return createImageRowItem(for: track)
-        }
-        return createListItem(for: track)
-      }
-      if !items.isEmpty {
-        sections.append(CPListSection(items: items))
-        totalItemCount += items.count
-      }
-    }
-
-    // Then grouped items, in source order (respecting section and item limits)
-    for groupTitle in orderedKeys {
-      guard groupTitle != nil else { continue }
+    for run in runs {
       guard sections.count < maxSections else { break }
       guard totalItemCount < maxTotalItems else { break }
 
-      let tracks = groups[groupTitle] ?? []
       let availableSlots = maxTotalItems - totalItemCount
-      let items: [CPListTemplateItem] = tracks.prefix(availableSlots).map { track in
+      let items: [CPListTemplateItem] = run.tracks.prefix(availableSlots).map { track in
         if track.imageRow != nil {
           return createImageRowItem(for: track)
         }
         return createListItem(for: track)
       }
-      if !items.isEmpty {
-        sections.append(CPListSection(items: items, header: groupTitle, sectionIndexTitle: nil))
-        totalItemCount += items.count
+      guard !items.isEmpty else { continue }
+      if let title = run.title {
+        sections.append(CPListSection(items: items, header: title, sectionIndexTitle: nil))
+      } else {
+        sections.append(CPListSection(items: items))
       }
+      totalItemCount += items.count
     }
 
     return sections
