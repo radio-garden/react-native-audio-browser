@@ -267,21 +267,51 @@ export interface AndroidAudioOffloadSettings {
 
 /**
  * Configuration for retry behavior.
+ *
+ * Two budgets apply, chosen by whether the current load has ever produced
+ * audio:
+ *
+ * - **First connect** (the load has never played): retries are bounded by
+ *   `firstConnectMaxRetryDurationMs`. A stream that fails before ever playing
+ *   is usually dead, and the listener is actively waiting for a verdict —
+ *   seconds, not minutes.
+ * - **Recovery** (the load played, then failed): retries are bounded by
+ *   `maxRetryDurationMs`. Playback proved the stream works; drops are usually
+ *   transient (tunnels, network handovers, a station's encoder restarting)
+ *   and patience is what recovers them unattended.
+ *
+ * While the device is offline, the first-connect budget does not apply: the
+ * player waits for connectivity to return (bounded by `maxRetryDurationMs`),
+ * so a station tapped in a tunnel still starts when the network comes back.
+ * Any offline observation restarts the first-connect clock, so it only ever
+ * measures a contiguous online stretch.
+ *
+ * Native platforms only — the web implementation has no automatic retry.
  */
 export type RetryConfig = {
   /**
    * Maximum number of retry attempts before giving up. Omit to retry without an attempt
-   * limit, bounded only by `maxRetryDurationMs`.
+   * limit, bounded only by the duration budgets.
    */
   maxRetries?: number
 
   /**
-   * Maximum duration in milliseconds to keep retrying before giving up.
+   * Maximum duration in milliseconds to keep retrying a load that had been
+   * playing before it failed, and any load while the device is offline.
    * This prevents surprising playback resumption after long periods offline.
    *
    * @default 120000 (2 minutes)
    */
   maxRetryDurationMs?: number
+
+  /**
+   * Maximum duration in milliseconds to keep retrying a load that has never
+   * produced audio, while the device is online. When it runs out, the terminal
+   * error carries the real diagnosis (`unreachable`, `not-found`, …).
+   *
+   * @default 12000 (12 seconds)
+   */
+  firstConnectMaxRetryDurationMs?: number
 }
 
 /**
@@ -541,10 +571,12 @@ export type SetupPlayerOptions = Pick<
 
   /**
    * Retry policy for load errors (network failures, timeouts, etc.)
-   * - `true`: Retry indefinitely with exponential backoff (2 minute timeout)
+   * - `true`: Retry indefinitely with exponential backoff, under the default
+   *   duration budgets (12s before first audio, 2 minutes after — see
+   *   {@link RetryConfig})
    * - `false`/`undefined`: No automatic retry (default)
    * - `{ maxRetries: n }`: Retry up to n times with exponential backoff
-   * - `{ maxRetries: n, maxRetryDurationMs: m }`: Retry with custom timeout
+   * - `RetryConfig`: custom attempt and duration budgets
    *
    * Exponential backoff delays: 1s → 1.5s → 2.3s → 3.4s → 5s (capped)
    *

@@ -23,10 +23,17 @@ sealed class RetryPolicy {
   data object Default : RetryPolicy()
 
   /** Retry indefinitely with exponential backoff */
-  data class Infinite(val maxRetryDurationMs: Long? = null) : RetryPolicy()
+  data class Infinite(
+    val maxRetryDurationMs: Long? = null,
+    val firstConnectMaxRetryDurationMs: Long? = null,
+  ) : RetryPolicy()
 
   /** Retry up to maxRetries times with exponential backoff */
-  data class Limited(val maxRetries: Int, val maxRetryDurationMs: Long? = null) : RetryPolicy()
+  data class Limited(
+    val maxRetries: Int,
+    val maxRetryDurationMs: Long? = null,
+    val firstConnectMaxRetryDurationMs: Long? = null,
+  ) : RetryPolicy()
 }
 
 /**
@@ -102,9 +109,19 @@ data class PlayerSetupOptions(
           is Variant_Boolean_RetryConfig.Second -> {
             val maxRetries = it.value.maxRetries?.toInt()
             val maxDurationMs = it.value.maxRetryDurationMs?.toLong()
-            // No attempt cap = retry indefinitely, bounded only by the duration.
-            if (maxRetries == null) RetryPolicy.Infinite(maxRetryDurationMs = maxDurationMs)
-            else RetryPolicy.Limited(maxRetries = maxRetries, maxRetryDurationMs = maxDurationMs)
+            val firstConnectMs = it.value.firstConnectMaxRetryDurationMs?.toLong()
+            // No attempt cap = retry indefinitely, bounded only by the durations.
+            if (maxRetries == null)
+              RetryPolicy.Infinite(
+                maxRetryDurationMs = maxDurationMs,
+                firstConnectMaxRetryDurationMs = firstConnectMs,
+              )
+            else
+              RetryPolicy.Limited(
+                maxRetries = maxRetries,
+                maxRetryDurationMs = maxDurationMs,
+                firstConnectMaxRetryDurationMs = firstConnectMs,
+              )
           }
         }
     }

@@ -53,6 +53,7 @@ internal fun buildPlayerEngine(
   cache: SimpleCache?,
   shouldRetry: () -> Boolean,
   isOnline: () -> Boolean,
+  hasPlayed: () -> Boolean,
   onRetryPending: (exception: IOException, isNetworkError: Boolean) -> Unit,
   resolveMediaConfig: (url: String) -> MediaRequestConfig?,
 ): PlayerEngine {
@@ -74,6 +75,7 @@ internal fun buildPlayerEngine(
       options.retryPolicy,
       shouldRetry = shouldRetry,
       isOnline = isOnline,
+      hasPlayed = hasPlayed,
       onRetryPending = onRetryPending,
       transferListener = bandwidthMeter,
       getRequestConfig = resolveMediaConfig,

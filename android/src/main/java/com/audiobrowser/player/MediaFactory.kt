@@ -23,6 +23,7 @@ class MediaFactory(
   private val retryPolicy: RetryPolicy,
   private val shouldRetry: () -> Boolean,
   private val isOnline: () -> Boolean = { true },
+  private val hasPlayed: () -> Boolean = { false },
   private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
   private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
@@ -45,16 +46,20 @@ class MediaFactory(
         RetryLoadErrorHandlingPolicy(
           maxRetries = null,
           maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
+          firstConnectMaxRetryDurationMs = retryPolicy.firstConnectMaxRetryDurationMs,
           shouldRetry = shouldRetry,
           isOnline = isOnline,
+          hasPlayed = hasPlayed,
           onRetryPending = onRetryPending,
         )
       is RetryPolicy.Limited ->
         RetryLoadErrorHandlingPolicy(
           maxRetries = retryPolicy.maxRetries,
           maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
+          firstConnectMaxRetryDurationMs = retryPolicy.firstConnectMaxRetryDurationMs,
           shouldRetry = shouldRetry,
           isOnline = isOnline,
+          hasPlayed = hasPlayed,
           onRetryPending = onRetryPending,
         )
     }

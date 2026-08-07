@@ -22,7 +22,10 @@ data class RetryConfig(
   val maxRetries: Double?,
   @DoNotStrip
   @Keep
-  val maxRetryDurationMs: Double?
+  val maxRetryDurationMs: Double?,
+  @DoNotStrip
+  @Keep
+  val firstConnectMaxRetryDurationMs: Double?
 ) {
   /* primary constructor */
 
@@ -34,8 +37,8 @@ data class RetryConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(maxRetries: Double?, maxRetryDurationMs: Double?): RetryConfig {
-      return RetryConfig(maxRetries, maxRetryDurationMs)
+    private fun fromCpp(maxRetries: Double?, maxRetryDurationMs: Double?, firstConnectMaxRetryDurationMs: Double?): RetryConfig {
+      return RetryConfig(maxRetries, maxRetryDurationMs, firstConnectMaxRetryDurationMs)
     }
   }
 }

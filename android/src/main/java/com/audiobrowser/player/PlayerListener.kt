@@ -129,8 +129,11 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
     // This also fires onNowPlayingChanged, so we don't emit it separately below.
     player.nowPlaying.render()
 
-    // Reset retry timer so new track gets fresh 2-minute window
+    // Reset retry timer so the new track gets fresh duration budgets, and mark
+    // the new load unproven — its failures get the short first-connect budget
+    // until it renders audio.
     player.resetRetryTimer()
+    player.hasPlayedCache = false
 
     // A retrying error belongs to the outgoing track; drop it (with its own emit —
     // the incoming track may hold the state on LOADING/BUFFERING, emitting nothing).
@@ -222,6 +225,12 @@ class PlayerListener(private val player: Player) : MediaPlayer.Listener {
         player.setPlaybackState(state)
       }
     }
+  }
+
+  override fun onPlayerErrorChanged(error: PlaybackException?) {
+    // The error clearing means a recovery path ran prepare() — a restart from
+    // terminal error, which begins a new load (see Player.resetForNewLoad).
+    if (error == null) player.resetForNewLoad()
   }
 
   override fun onPlayerError(error: PlaybackException) {

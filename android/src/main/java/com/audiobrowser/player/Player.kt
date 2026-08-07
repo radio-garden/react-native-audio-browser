@@ -85,6 +85,14 @@ class Player(internal val context: Context) {
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
 
+  /**
+   * Whether the current load has ever produced audio — selects between the retry policy's
+   * first-connect and recovery budgets. Volatile: read from ExoPlayer's loader thread. Set when
+   * playback starts, cleared on media-item transition (a new load starts unproven); retry reloads
+   * of the same load keep it.
+   */
+  @Volatile internal var hasPlayedCache = false
+
   /** Last playWhenReady value emitted to JS — see [emitPlayWhenReadyChanged]. */
   private var lastEmittedPlayWhenReady: Boolean? = null
 
@@ -404,12 +412,14 @@ class Player(internal val context: Context) {
         cache,
         shouldRetry = { playWhenReadyCache },
         isOnline = { networkMonitor.getOnline() },
-        onRetryPending = { isNetworkError ->
+        hasPlayed = { hasPlayedCache },
+        onRetryPending = { exception, isNetworkError ->
           // Track pending network retries for acceleration when connectivity returns
           pendingNetworkRetry = isNetworkError
           if (isNetworkError) {
             Timber.d("Network retry pending, will accelerate on connectivity restoration")
           }
+          reportRetryingError(exception)
         },
         resolveMediaConfig = { url -> browser?.getMediaRequestConfig(url) },
       )
@@ -820,6 +830,18 @@ class Player(internal val context: Context) {
   /**
    * Resets the retry timer when track changes. Called from PlayerListener.onMediaItemTransition.
    */
+  /**
+   * A restart from a terminal error begins a new load of the same track: fresh retry budgets and
+   * unproven playback, so the user's tap yields a visible first-connect retry window instead of a
+   * single silent attempt — the same behavior as re-selecting the track (ADR 0004). Hooked off the
+   * player error clearing: every recovery path (retry(), play(), the transport controls'
+   * idle-error recovery) goes through exoPlayer.prepare(), which clears the error.
+   */
+  internal fun resetForNewLoad() {
+    resetRetryTimer()
+    hasPlayedCache = false
+  }
+
   internal fun resetRetryTimer() {
     mediaFactory.resetRetryTimer()
   }
@@ -1081,6 +1103,12 @@ class Player(internal val context: Context) {
     if (state != playbackState) {
       val oldState = playbackState
       playbackState = state
+
+      // Audio rendered: this load has proven itself — retries from here on get
+      // the retry policy's full recovery budget, not the short first-connect one.
+      if (state == PlaybackState.PLAYING) {
+        hasPlayedCache = true
+      }
 
       // A natural end exhausts the play intent — nothing is left to play. Keeping
       // playWhenReady true inverted the play/pause toggle, held audio focus forever

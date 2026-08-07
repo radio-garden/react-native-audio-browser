@@ -78,17 +78,10 @@
   }
 
   struct ImageRowItem: Equatable {
-    var id: String?
     var url: String?
-    var src: String?
     var artwork: String?
     var artworkSource: ImageSource?
     var title: String
-    var artist: String?
-    var album: String?
-    var albumUrl: String?
-    var live: Bool?
-    var request: TrackRequest?
   }
 
   struct ResolvedTrack: Equatable {
@@ -220,6 +213,17 @@
     case unplayable
     case stalled
     case unknown
+  }
+
+  struct RetryConfig {
+    var maxRetries: Double?
+    var maxRetryDurationMs: Double?
+    var firstConnectMaxRetryDurationMs: Double?
+  }
+
+  @frozen enum Variant_Bool_RetryConfig {
+    case first(Bool)
+    case second(RetryConfig)
   }
 
   struct PlaybackError: Equatable {

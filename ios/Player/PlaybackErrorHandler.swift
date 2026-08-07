@@ -6,6 +6,8 @@ import os.log
 @MainActor public protocol RetryHandling: AnyObject {
   /// False when the configured policy is `disabled` — every error is then terminal.
   var isEnabled: Bool { get }
+  /// Whether the current load has produced audio — selects the retry budget.
+  var hasPlayed: Bool { get set }
   func isRetryable(_ error: Error?) -> Bool
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool
   func reset()
@@ -95,6 +97,15 @@ public enum PlaybackErrorContext {
   func resetRetry() {
     cancelPendingRetry()
     retryHandler.reset()
+  }
+
+  /// A restart from a terminal error begins a new load of the same track:
+  /// fresh budgets and unproven playback, so the user's tap yields a visible
+  /// first-connect retry window instead of a single silent attempt — the same
+  /// behavior as re-selecting the track (ADR 0004).
+  func resetForNewLoad() {
+    resetRetry()
+    retryHandler.hasPlayed = false
   }
 
   /// Classifies an error into the narrowest case the evidence supports, so JS

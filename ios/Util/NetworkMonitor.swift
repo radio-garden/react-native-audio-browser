@@ -65,3 +65,5 @@ final class NetworkMonitor: @unchecked Sendable {
     destroy()
   }
 }
+
+extension NetworkMonitor: NetworkStatusProviding {}

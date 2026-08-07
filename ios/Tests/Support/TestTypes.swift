@@ -203,6 +203,7 @@ final class MockSleepTimerHandling: SleepTimerHandling {
 @MainActor
 final class MockRetryHandling: RetryHandling {
   var isEnabled = true
+  var hasPlayed = false
   var isRetryableResult = false
   var attemptRetryResult = false
   var attemptRetryDelayNs: UInt64 = 0

@@ -162,3 +162,107 @@ class RetryLoadErrorHandlingPolicyTest {
     assertNonRecoverable(DataSourceException(DataSourceException.POSITION_OUT_OF_RANGE))
   }
 }
+
+/**
+ * The two duration budgets: a never-played load gives up fast while online; a load that produced
+ * audio — or a device that is offline — keeps the full recovery budget. Clock-based: budgets are
+ * 100ms and the tests sleep 150ms between errors, comfortable margins in both directions.
+ */
+class RetryLoadErrorHandlingPolicyBudgetTest {
+  private val loadEventInfo = org.mockito.Mockito.mock(LoadEventInfo::class.java)
+  private val mediaLoadData = MediaLoadData(C.DATA_TYPE_MEDIA)
+
+  private fun errorInfo(errorCount: Int = 1) =
+    LoadErrorHandlingPolicy.LoadErrorInfo(
+      loadEventInfo,
+      mediaLoadData,
+      UnknownHostException("dead host"),
+      errorCount,
+    )
+
+  @Test
+  fun `never-played load gives up after the first-connect budget`() {
+    val policy =
+      RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { false })
+
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+    Thread.sleep(150)
+    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
+  }
+
+  @Test
+  fun `played load ignores the first-connect budget`() {
+    val policy =
+      RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { true })
+
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+    Thread.sleep(150)
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
+  }
+
+  /**
+   * Offline failures must not burn the first-connect budget (a station tapped in a tunnel parks
+   * for connectivity); the budget's clock starts at the first error observed online, so a dead
+   * station still gets a fast verdict after restoration.
+   */
+  @Test
+  fun `offline time does not burn the first-connect budget`() {
+    var online = false
+    val policy =
+      RetryLoadErrorHandlingPolicy(
+        firstConnectMaxRetryDurationMs = 100,
+        isOnline = { online },
+        hasPlayed = { false },
+      )
+
+    // Offline: the short budget never engages.
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+    Thread.sleep(150)
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
+
+    // Connectivity returns: the short clock starts now — one more error is
+    // retried, then the budget is spent.
+    online = true
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
+    Thread.sleep(150)
+    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
+  }
+
+  /**
+   * An offline stretch in the middle of the budget must not count against it: any offline
+   * observation wipes the clock, which restarts at the next error observed online.
+   */
+  @Test
+  fun `offline stretch mid-budget restarts the first-connect clock`() {
+    var online = true
+    val policy =
+      RetryLoadErrorHandlingPolicy(
+        firstConnectMaxRetryDurationMs = 100,
+        isOnline = { online },
+        hasPlayed = { false },
+      )
+
+    // Online failure starts the clock, then the budget elapses while offline.
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+    Thread.sleep(150)
+    online = false
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 2)))
+
+    // Back online: the clock restarted — a full budget remains.
+    online = true
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 3)))
+    Thread.sleep(150)
+    assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(errorCount = 4)))
+  }
+
+  @Test
+  fun `reset restarts the first-connect clock`() {
+    val policy =
+      RetryLoadErrorHandlingPolicy(firstConnectMaxRetryDurationMs = 100, hasPlayed = { false })
+
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+    Thread.sleep(150)
+    policy.reset()
+    assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo()))
+  }
+}

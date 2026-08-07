@@ -59,6 +59,9 @@ class TrackPlayer {
 
   private lazy var playerTimeObserver: PlayerTimeObserver = .init(
     onAudioDidStart: { [weak self] in
+      // Audio rendered: this load has proven itself — retries from here on get
+      // the full recovery budget, not the short first-connect one.
+      self?.retryManager.hasPlayed = true
       self?.coordinator.audioDidStart()
     },
   )
@@ -559,6 +562,11 @@ class TrackPlayer {
   /// asset, then enter the loading state.
   private func prepareForReload() {
     if state == .error {
+      // A restart from terminal error begins a new load of the same track:
+      // fresh budgets, unproven playback (see resetForNewLoad). Automatic
+      // retries never enter this branch — the retry loop keeps the state
+      // non-terminal — so only retry() / play-from-error land here.
+      coordinator.errorHandler.resetForNewLoad()
       recreateAVPlayer()
     } else {
       mediaLoader.cancelAll()
@@ -796,6 +804,10 @@ extension TrackPlayer: PlaybackEffectHandler {
 
   func loadTrack(src: String, track: Track) {
     didPrimeNowPlayingElection = false
+    // A new track starts unproven: its failures get the short first-connect
+    // budget until it renders audio. Reloads of the current track (retry,
+    // play-from-error) deliberately keep the flag.
+    retryManager.hasPlayed = false
     mediaLoader.resolveAndLoad(src: src, track: track)
   }
 
