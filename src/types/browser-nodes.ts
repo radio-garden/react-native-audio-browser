@@ -103,17 +103,26 @@ export interface Track {
   /**
    * Opaque, stable identifier for this track.
    *
-   * The library never interprets or derives anything from this value — it is
+   * The library never parses or derives anything from this value — it is
    * round-tripped verbatim through `setQueue`, `getActiveTrack`, the queue, and
    * `onActiveTrackChanged`, so consumers can recognise which item became active
    * after an external transport change (lock screen / CarPlay / Android Auto /
    * Bluetooth next-previous) without parsing the playable `src`.
    *
+   * When present on a playable track it is also the track's *identity* on car
+   * browse surfaces: CarPlay's and Android Auto's "now playing" row indicator
+   * match the active track to browse rows by `id` (falling back to exact `src`
+   * equality for tracks without one). Assign ids when your playable `src`
+   * strings for the same item can differ between browse rows and loaded tracks
+   * (absolute vs relative URLs, volatile query params) — otherwise the
+   * indicator never matches.
+   *
    * It is also handed to the per-track `MediaRequestConfig.resolve` and
    * `ArtworkRequestConfig.resolve` hooks, so requests can be built from a stable
    * id (e.g. supply tracks with only an `id` and synthesise `src` in `resolve`).
    *
-   * Optional: consumers that key identity off `url`/`src` can ignore it.
+   * Optional: consumers whose `url`/`src` strings are already stable across
+   * surfaces can ignore it.
    *
    * Note: an Android Auto item selected directly from the browse tree that the
    * consumer never queued is identified only by `url`/`src`, so `id` may be

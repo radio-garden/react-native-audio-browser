@@ -7,6 +7,7 @@ import os.log
 
 /// Typed metadata stored on CPListItems, replacing stringly-typed userInfo dictionaries.
 struct CarPlayItemInfo {
+  let id: String?
   let src: String?
 }
 
@@ -28,11 +29,11 @@ final class CarPlayListItemFactory {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayListItemFactory")
 
   var imageLoader: CarPlayImageLoader?
-  private let isActiveTrack: (String) -> Bool
+  private let isActiveTrack: (_ id: String?, _ src: String?) -> Bool
   private let onItemSelected: (Track, @escaping () -> Void) -> Void
 
   init(
-    isActiveTrack: @escaping (String) -> Bool,
+    isActiveTrack: @escaping (_ id: String?, _ src: String?) -> Bool,
     onItemSelected: @escaping (Track, @escaping () -> Void) -> Void,
   ) {
     self.isActiveTrack = isActiveTrack
@@ -108,13 +109,20 @@ final class CarPlayListItemFactory {
     )
 
     // Store typed info for updatePlayingIndicators()
-    item.setCarPlayItemInfo(CarPlayItemInfo(src: track.src))
+    item.setCarPlayItemInfo(CarPlayItemInfo(id: track.id, src: track.src))
 
     // Set accessory type based on whether track is browsable or playable
     if let src = track.src {
       // Playable track - check if it's currently playing
       item.accessoryType = .none
-      item.isPlaying = isActiveTrack(src)
+      // Leading (the system default, set explicitly to make the choice
+      // deliberate): the indicator draws in the artwork slot. Note the
+      // indicator's rendering is owned by the phone's CarPlay service, and on
+      // some iOS/CarPlay-Simulator combinations it isn't drawn at all — for
+      // ANY third-party app. Verify on a real head unit before assuming a
+      // logic bug here.
+      item.playingIndicatorLocation = .leading
+      item.isPlaying = isActiveTrack(track.id, src)
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
       }

@@ -15,9 +15,10 @@ import com.margelo.nitro.audiobrowser.Variant_String_ArtworkVariants
 /**
  * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
  * displayed artwork is the transformed `artworkSource.uri` falling back to the raw `artwork` field,
- * and the mediaId is `url` falling back to `src` (a Track must have one of the two — see the `src`
- * vs `url` note in CONTEXT.md). The list line renders from `subtitle` (the now-playing line is
- * re-stamped from `artist` by the now-playing pipeline; see the Now Playing Metadata guide).
+ * and the mediaId is the stable `id` for playable tracks, falling back to `url` then `src` (a Track
+ * must have one of the latter two — see the `src` vs `url` note in CONTEXT.md). The list line
+ * renders from `subtitle` (the now-playing line is re-stamped from `artist` by the now-playing
+ * pipeline; see the Now Playing Metadata guide).
  */
 object TrackFactory {
   fun fromMedia3(mediaItem: MediaItem): Track {
@@ -121,8 +122,19 @@ object TrackFactory {
       .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {
+    // A playable track's mediaId is the consumer's stable `id` when it has one.
+    // Android Auto marks the "now playing" browse row by exact mediaId equality
+    // between the row and the player's current item (media3 announces
+    // `currentMediaItem.mediaId` in the legacy playback state), and a
+    // consumer-loaded track's `src` can differ textually from the browse row's
+    // for the same item (absolute vs relative, extra query params) — the id is
+    // the one string both sides share. It is also context-free, so the same
+    // station gets the same mediaId in every tab. Browsable-only tracks keep
+    // `url` so navigation parentIds stay resolvable paths.
+    val stableId = if (track.src != null) track.id?.takeUnless { it.isBlank() } else null
     val mediaId =
-      track.url
+      stableId
+        ?: track.url
         ?: track.src
         ?: throw IllegalArgumentException(
           "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
@@ -130,6 +142,13 @@ object TrackFactory {
     return MediaItem.Builder()
       .setMediaId(mediaId)
       .setUri(track.src)
+      // The playable uri also rides in requestMetadata: a controller replaying
+      // this item after process death (track cache empty) round-trips only
+      // mediaId + requestMetadata, and a stable-id mediaId is not playable by
+      // itself — resolveMediaItemToTrack rebuilds a minimal track from this.
+      .setRequestMetadata(
+        MediaItem.RequestMetadata.Builder().setMediaUri(track.src?.toUri()).build()
+      )
       .setMediaMetadata(metadata)
       .setTag(track)
       .build()

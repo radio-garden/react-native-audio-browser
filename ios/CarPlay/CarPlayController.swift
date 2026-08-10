@@ -89,9 +89,21 @@ public final class RNABCarPlayController: NSObject {
     audioBrowser?.browserManager.config ?? BrowserConfig()
   }
 
-  /// Checks if the given src matches the currently active (loaded) track
-  private func isActiveTrack(src: String) -> Bool {
-    audioBrowser?.getPlayer()?.currentTrack?.src == src
+  /// Whether a list item identifies the currently active (loaded) track.
+  ///
+  /// Identity is the stable `Track.id` when both sides carry one — the active
+  /// track may have been loaded outside the browse tree (the consumer's own
+  /// `load`/`setQueue`) with a `src` that differs textually from the browse
+  /// row's (absolute vs relative, extra query params) while being the same
+  /// item. Exact `src` equality remains the fallback for consumers that don't
+  /// assign ids.
+  private func isActiveTrack(id: String?, src: String?) -> Bool {
+    guard let currentTrack = audioBrowser?.getPlayer()?.currentTrack else { return false }
+    if let id, !id.isEmpty, let currentId = currentTrack.id, !currentId.isEmpty {
+      return id == currentId
+    }
+    guard let src else { return false }
+    return currentTrack.src == src
   }
 
   // MARK: - Initialization
@@ -166,7 +178,7 @@ public final class RNABCarPlayController: NSObject {
 
       // Create list item factory
       let factory = CarPlayListItemFactory(
-        isActiveTrack: { [weak self] src in self?.isActiveTrack(src: src) ?? false },
+        isActiveTrack: { [weak self] id, src in self?.isActiveTrack(id: id, src: src) ?? false },
         onItemSelected: { [weak self] track, completion in
           self?.handleItemSelection(track: track, completion: completion)
         },
@@ -512,9 +524,9 @@ public final class RNABCarPlayController: NSObject {
       // and show a single gate page (or, if allowed, fall back to a normal
       // build once tabs arrive).
       let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: nil, search: nil)
+        for: NativeGateRequest(reason: .browse, path: nil, search: nil),
       )
-      guard gateBuildGeneration == generation else { return }  // superseded by a newer build
+      guard gateBuildGeneration == generation else { return } // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
         interfaceController.safeSetRoot(
@@ -528,9 +540,9 @@ public final class RNABCarPlayController: NSObject {
     var templates: [CPListTemplate] = []
     for tab in limitedTabs {
       let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: tab.url, search: nil)
+        for: NativeGateRequest(reason: .browse, path: tab.url, search: nil),
       )
-      guard gateBuildGeneration == generation else { return }  // superseded by a newer build
+      guard gateBuildGeneration == generation else { return } // superseded by a newer build
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
         templates.append(makeGateTemplate(gate: outcome.chrome, tab: tab))
@@ -670,7 +682,7 @@ public final class RNABCarPlayController: NSObject {
       // even with no rows — the "Ask Siri to Play" cell IS its content — so it
       // renders rather than falling through to the empty-content state.
       let hasAssistantCell = resolved.carPlaySiriListButton != nil
-      if (resolved.children?.isEmpty ?? true) && !hasAssistantCell {
+      if resolved.children?.isEmpty ?? true, !hasAssistantCell {
         // Empty is modeled as a navigation error (code .emptyContent) so it goes
         // through the same path-aware formatter as failures — letting an app give
         // an empty Favorites tab different copy than an empty search. ADR 0001.
@@ -737,7 +749,7 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // If this track is already loaded, resume playback and show Now Playing.
-    if let src = track.src, isActiveTrack(src: src) {
+    if track.src != nil, isActiveTrack(id: track.id, src: track.src) {
       try? audioBrowser.play()
       nowPlayingManager.showNowPlaying()
       completion()
@@ -810,7 +822,7 @@ public final class RNABCarPlayController: NSObject {
     // browses normally even while a gate is active.
     if isGated, let audioBrowser {
       let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: url, search: nil)
+        for: NativeGateRequest(reason: .browse, path: url, search: nil),
       )
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
@@ -998,18 +1010,30 @@ public final class RNABCarPlayController: NSObject {
     }
 
     for template in templates {
+      var templateChanged = false
       for section in template.sections {
         for item in section.items {
           guard let listItem = item as? CPListItem,
-                let itemSrc = listItem.carPlayItemInfo?.src
+                let info = listItem.carPlayItemInfo,
+                info.src != nil
           else { continue }
 
-          let isPlaying = isActiveTrack(src: itemSrc)
+          let isPlaying = isActiveTrack(id: info.id, src: info.src)
           if listItem.isPlaying != isPlaying {
-            logger.debug("Updating isPlaying for \(itemSrc): \(listItem.isPlaying) → \(isPlaying)")
+            logger.debug(
+              "Updating isPlaying for \(info.id ?? info.src ?? ""): \(listItem.isPlaying) → \(isPlaying)")
             listItem.isPlaying = isPlaying
+            templateChanged = true
           }
         }
+      }
+      // Setting isPlaying on an already-displayed item does not reliably reach
+      // the CarPlay screen (rdar-known; the flag only renders when the item is
+      // pushed with it already set). Re-pushing the same sections re-serializes
+      // every item with its current flags — done only when something actually
+      // changed, so routine appear-time passes don't churn the display.
+      if templateChanged {
+        template.updateSections(template.sections)
       }
     }
   }
@@ -1262,7 +1286,10 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
   }
 
   func templateDidAppear(_ aTemplate: CPTemplate, animated _: Bool) {
-    guard let listTemplate = aTemplate as? CPListTemplate else { return }
+    // Popping back from Now Playing surfaces the tab bar (not a list), so the
+    // guard must let both through — the playing indicator was toggled while
+    // the list was covered, and this appearance is the moment to repaint it.
+    guard aTemplate is CPListTemplate || aTemplate is CPTabBarTemplate else { return }
 
     // A tab change deferred while the user was browsing replaces the whole
     // tab bar — no point updating a template that's about to be discarded.
@@ -1272,7 +1299,17 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
     controller?.updatePlayingIndicators()
 
     // Lazy load content for tabs that haven't been loaded yet
-    controller?.loadContentIfNeeded(for: listTemplate)
+    if let listTemplate = aTemplate as? CPListTemplate {
+      controller?.loadContentIfNeeded(for: listTemplate)
+    }
+  }
+
+  func templateDidDisappear(_ aTemplate: CPTemplate, animated _: Bool) {
+    // The complement of the appear hook: whether popping Now Playing reports
+    // "tab bar appeared" or only "now playing disappeared" is a platform
+    // detail — cover both so the revealed list always repaints its indicator.
+    guard aTemplate is CPNowPlayingTemplate else { return }
+    controller?.updatePlayingIndicators()
   }
 }
 

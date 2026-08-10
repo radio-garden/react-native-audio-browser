@@ -213,8 +213,9 @@ class BrowserManager {
     return resolvedTrack.copy(children = hydratedChildren)
   }
 
-  /** Cache a track by both url and src for O(1) lookup from either key. */
+  /** Cache a track by id, url, and src for O(1) lookup from any mediaId form. */
   private fun cacheTrack(track: Track) {
+    track.id?.takeUnless { it.isBlank() }?.let { trackCache.put(it, track) }
     track.url?.let { trackCache.put(it, track) }
     track.src?.let { trackCache.put(it, track) }
   }
@@ -224,9 +225,9 @@ class BrowserManager {
   }
 
   /**
-   * Get a cached Track by mediaId (url or src), or null if not cached. Used by Media3 to rehydrate
-   * MediaItem shells with full track metadata. Re-hydrates favorites in case setFavoriteStates was
-   * called after caching.
+   * Get a cached Track by mediaId (stable id, url, or src), or null if not cached. Used by Media3
+   * to rehydrate MediaItem shells with full track metadata. Re-hydrates favorites in case
+   * setFavoriteStates was called after caching.
    */
   fun getCachedTrack(mediaId: String): Track? {
     // Try direct lookup first (matches url or src)
@@ -251,14 +252,28 @@ class BrowserManager {
   }
 
   /**
-   * Resolves a single Media3 MediaItem to a Track. Prefers the track cache (keyed by url and src).
+   * Resolves a tapped mediaId to the contextual url to expand a queue from, or null when there is
+   * none. A contextual mediaId is its own; a stable-id mediaId (see TrackFactory.buildMediaItem)
+   * resolves through the track cache to the contextual url of the container it was most recently
+   * browsed in — a legacy car controller round-trips only the mediaId, so the cache is what
+   * remembers which list the row came from.
+   */
+  fun contextualUrlFor(mediaId: String): String? {
+    if (BrowserPathHelper.isContextual(mediaId)) return mediaId
+    return getCachedTrack(mediaId)?.url?.takeIf { BrowserPathHelper.isContextual(it) }
+  }
+
+  /**
+   * Resolves a single Media3 MediaItem to a Track. Prefers the track cache (keyed by id, url, and
+   * src).
    *
    * A cache miss is legitimately reachable: a controller can replay a mediaId this process never
-   * browsed — e.g. a search-result track (whose mediaId is its bare src) after process death. When
-   * the mediaId is a playable URL, fall back to a minimal track built from the item's own metadata
-   * instead of failing playback.
+   * browsed — e.g. a search-result track after process death. When the mediaId is a playable URL,
+   * or the item's requestMetadata carries the playable uri (stamped by TrackFactory for stable-id
+   * mediaIds, and round-tripped by Media3 controllers), fall back to a minimal track built from the
+   * item's own metadata instead of failing playback.
    *
-   * @throws IllegalStateException if the mediaId is not cached and not a playable URL
+   * @throws IllegalStateException if the mediaId is not cached and no playable URL is available
    */
   private fun resolveMediaItemToTrack(mediaItem: MediaItem): Track {
     val mediaId = mediaItem.mediaId
@@ -268,14 +283,22 @@ class BrowserManager {
       return cachedTrack
     }
 
-    if (mediaId.startsWith("http://") || mediaId.startsWith("https://")) {
+    val fallbackSrc =
+      if (mediaId.startsWith("http://") || mediaId.startsWith("https://")) {
+        mediaId
+      } else {
+        mediaItem.requestMetadata.mediaUri?.toString()
+      }
+    if (fallbackSrc != null) {
       Timber.w("Cache MISS for mediaId='$mediaId' - building minimal track from media item")
       val metadata = mediaItem.mediaMetadata
       return hydrateFavorite(
         Track(
-          id = null,
+          // A mediaId distinct from the playable uri is the track's stable id —
+          // keep it so the item's identity (car now-playing row match) survives.
+          id = mediaId.takeIf { it != fallbackSrc },
           url = null,
-          src = mediaId,
+          src = fallbackSrc,
           artwork = artworkOf(metadata.artworkUri?.toString()),
           artworkSource = null,
           request = null,
@@ -336,10 +359,13 @@ class BrowserManager {
         val searchTracks = searchResults.children
 
         if (searchTracks != null && searchTracks.isNotEmpty()) {
-          // Find the selected track in search results
+          // Find the selected track in search results (mediaId is the stable id
+          // when the track has one, else url/src — see TrackFactory)
           val mediaId = mediaItem.mediaId
           val selectedIndex =
-            searchTracks.indexOfFirst { track -> track.url == mediaId || track.src == mediaId }
+            searchTracks.indexOfFirst { track ->
+              track.id == mediaId || track.url == mediaId || track.src == mediaId
+            }
 
           if (selectedIndex >= 0) {
             Timber.d(
@@ -363,11 +389,14 @@ class BrowserManager {
       }
 
       val mediaId = mediaItems[0].mediaId
+      // A failed search match falls through to plain resolution, never to browse
+      // expansion — the user asked for that one result, not a browsed list.
+      val contextualUrl = if (searchQuery == null) contextualUrlFor(mediaId) else null
 
-      if (BrowserPathHelper.isContextual(mediaId)) {
-        Timber.d("Attempting queue expansion for mediaId='$mediaId'")
+      if (contextualUrl != null) {
+        Timber.d("Attempting queue expansion for mediaId='$mediaId' via '$contextualUrl'")
 
-        val expanded = expandQueueFromContextualUrl(mediaId)
+        val expanded = expandQueueFromContextualUrl(contextualUrl)
 
         if (expanded != null) {
           val (tracks, selectedIndex) = expanded
@@ -420,6 +449,11 @@ class BrowserManager {
     if (useCache) {
       contentCache.get(normalizedPath)?.let { cached ->
         Timber.d("Content cache HIT for path='$normalizedPath'")
+        // Re-key the track cache even on a hit: an id-keyed lookup (stable-id
+        // mediaId → contextual url, see contextualUrlFor) must reflect the
+        // most recently *browsed* container, which a cached re-display
+        // otherwise wouldn't re-register.
+        cacheChildren(cached)
         // Re-hydrate favorites in case they changed since caching
         return hydrateChildren(cached)
       }

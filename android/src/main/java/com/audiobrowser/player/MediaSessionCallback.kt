@@ -731,37 +731,46 @@ class MediaSessionCallback(private val player: Player) :
           MediaSession.MediaItemsWithStartPosition(currentItems, currentIndex, startPositionMs)
         }
 
-      // Check if this is a single contextual URL that matches the current queue source
-      if (mediaItems.size == 1) {
-        val mediaId = mediaItems[0].mediaId
-        if (BrowserPathHelper.isContextual(mediaId)) {
-          val parentPath = BrowserPathHelper.stripTrackId(mediaId)
-          val trackId = BrowserPathHelper.extractTrackId(mediaId)
+      val browserManager = audioBrowser.browserManager
 
-          // Check if queue already came from this parent path - just skip to the track
-          if (trackId != null && parentPath == player.queueSourcePath) {
-            val queueTracks = withContext(Dispatchers.Main) { player.tracks }
-            val index = queueTracks.indexOfFirst { it.src == trackId }
-            if (index >= 0) {
-              Timber.d("Queue already from $parentPath, skipping to index $index")
-              val track = queueTracks[index]
-              return@future handleTrackLoad(
-                audioBrowser.configuration.handleTrackLoad,
-                track,
-                queueTracks,
-                index.toDouble(),
-                ::currentPlayerState,
-              ) {
-                // Return the existing queue items with the new start index
-                val existingItems = queueTracks.map { TrackFactory.toMedia3(it) }
-                MediaSession.MediaItemsWithStartPosition(existingItems, index, startPositionMs)
-              }
+      // A single tapped item resolves to the contextual url of the list it was
+      // tapped in: directly for contextual mediaIds, via the track cache for
+      // stable-id mediaIds (see BrowserManager.contextualUrlFor). A search
+      // selection is not a list tap — its queue comes from the search results
+      // (resolveMediaItemsForPlayback), never from a browsed container.
+      val singleContextualUrl =
+        mediaItems
+          .singleOrNull()
+          ?.takeIf { it.requestMetadata.searchQuery == null }
+          ?.let { browserManager.contextualUrlFor(it.mediaId) }
+
+      // Check if this is a single item from the current queue source
+      if (singleContextualUrl != null) {
+        val parentPath = BrowserPathHelper.stripTrackId(singleContextualUrl)
+        val trackId = BrowserPathHelper.extractTrackId(singleContextualUrl)
+
+        // Check if queue already came from this parent path - just skip to the track
+        if (trackId != null && parentPath == player.queueSourcePath) {
+          val queueTracks = withContext(Dispatchers.Main) { player.tracks }
+          val index = queueTracks.indexOfFirst { it.src == trackId }
+          if (index >= 0) {
+            Timber.d("Queue already from $parentPath, skipping to index $index")
+            val track = queueTracks[index]
+            return@future handleTrackLoad(
+              audioBrowser.configuration.handleTrackLoad,
+              track,
+              queueTracks,
+              index.toDouble(),
+              ::currentPlayerState,
+            ) {
+              // Return the existing queue items with the new start index
+              val existingItems = queueTracks.map { TrackFactory.toMedia3(it) }
+              MediaSession.MediaItemsWithStartPosition(existingItems, index, startPositionMs)
             }
           }
         }
       }
 
-      val browserManager = audioBrowser.browserManager
       val result =
         browserManager.resolveMediaItemsForPlayback(mediaItems, startIndex, startPositionMs)
 
@@ -776,12 +785,9 @@ class MediaSessionCallback(private val player: Player) :
         ::currentPlayerState,
       ) {
         // If this was a contextual URL expansion, track the source path (only for default behavior)
-        if (mediaItems.size == 1) {
-          val mediaId = mediaItems[0].mediaId
-          if (BrowserPathHelper.isContextual(mediaId)) {
-            val parentPath = BrowserPathHelper.stripTrackId(mediaId)
-            withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
-          }
+        if (singleContextualUrl != null) {
+          val parentPath = BrowserPathHelper.stripTrackId(singleContextualUrl)
+          withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
         }
         result
       }

@@ -213,6 +213,8 @@ An app-imposed block on browsing from External surfaces, set and cleared at runt
 
 * **`src` vs `url` on a Track.** Both are string fields and easy to mix up. `url` is a *navigation* address — its presence makes the Track **Browsable**. `src` is a *media* identifier (usually an audio URL) — its presence makes the Track **Playable**. A Track can have both. When in doubt: ask "do I navigate into this or stream this?"
 
+* **`id` is the Playable Track's identity when present.** External surfaces mark the "now playing" browse row by comparing identities (CarPlay's playing indicator; Android Auto's, via the Media3 mediaId). A consumer-loaded Track's `src` can differ textually from the browse row's for the same item (absolute vs relative, extra query params), so when both sides carry an `id` it *is* the identity, and `src`/`url` equality is only the fallback for consumers that don't assign ids.
+
 * **"path" has two senses.** A tree address (`/albums/abbey-road`, the navigation primitive) and an HTTP path (`/api/v2/albums/123/tracks`, the `path` field on `RequestConfig`). They are never both fields on the same object, but the same string can appear in both roles when a Route forwards a tree path into an HTTP request. Disambiguate by context, not by renaming.
 
 * **`buffering` is a `PlayingState` flag, not a `PlaybackState` value.** `PlaybackState` has `loading` (covering both initial load and mid-stream rebuffering); `PlayingState` exposes the derived `buffering` boolean for UI binding. "The player is buffering" is a UX statement, not a state-machine claim.
