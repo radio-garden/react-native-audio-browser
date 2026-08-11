@@ -4,6 +4,7 @@ import com.audiobrowser.util.artworkOf
 
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageQueryParams
+import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.Track
@@ -24,6 +25,8 @@ object TestFixtures {
     artist: String? = null,
     album: String? = null,
     favorited: Boolean? = null,
+    groupTitle: String? = null,
+    imageRow: Array<ImageRowItem>? = null,
   ) =
     Track(
       id = id,
@@ -44,9 +47,24 @@ object TestFixtures {
       style = null,
       childrenStyle = null,
       favorited = favorited,
-      groupTitle = null,
+      groupTitle = groupTitle,
       live = null,
-      imageRow = null,
+      imageRow = imageRow,
+    )
+
+  fun imageRowItem(src: String, title: String = src) =
+    ImageRowItem(
+      id = null,
+      url = null,
+      src = src,
+      artwork = null,
+      artworkSource = null,
+      title = title,
+      artist = null,
+      album = null,
+      albumUrl = null,
+      live = null,
+      request = null,
     )
 
   fun transformableConfig(

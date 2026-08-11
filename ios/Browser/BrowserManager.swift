@@ -582,9 +582,15 @@ final class BrowserManager {
         var resolvedItems: [ImageRowItem] = []
         for item in imageRowItems {
           let itemImageSource = await resolveArtworkUrl(track: item.toTrack(), perRouteConfig: artworkConfig)
+          // Playable items get a contextual URL like any list row, so a
+          // thumbnail tap expands into its section's queue instead of a
+          // queue of one (ADR 0006).
+          let itemUrl = item.url ?? item.src.map {
+            BrowserPathHelper.build(parentPath: parentPath, trackId: $0)
+          }
           resolvedItems.append(ImageRowItem(
             id: item.id,
-            url: item.url,
+            url: itemUrl,
             src: item.src,
             artwork: item.artwork,
             artworkSource: itemImageSource,
@@ -758,8 +764,21 @@ final class BrowserManager {
     let resolved = try await resolve(parentPath, useCache: true)
     guard let children = resolved.children else { return nil }
 
+    // Queue scope is the tapped section, not the whole page (ADR 0006).
+    // Unfound id falls back to the whole page, preserving the pre-scoping
+    // behavior for stale contextual URLs.
+    let sectionTracks: [Track]
+    switch SectionScope.section(of: children, containing: trackId) {
+    case .imageRow(let items):
+      sectionTracks = items.map { $0.toTrack() }
+    case .run(let tracks):
+      sectionTracks = tracks
+    case nil:
+      sectionTracks = children
+    }
+
     // Filter to playable tracks (have src)
-    let playableTracks = children.filter { $0.src != nil }
+    let playableTracks = sectionTracks.filter { $0.src != nil }
     guard !playableTracks.isEmpty else { return nil }
 
     logger.debug("Found \(playableTracks.count) playable tracks")

@@ -46,7 +46,7 @@ object TrackFactory {
     }
 
   /** The row-item equivalent of a full Track, for surfaces that render items as plain rows. */
-  private fun ImageRowItem.toTrack(groupTitle: String?): Track =
+  fun ImageRowItem.toTrack(groupTitle: String?): Track =
     Track(
       id = id,
       url = url,

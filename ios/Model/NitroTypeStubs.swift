@@ -1,6 +1,10 @@
 #if !canImport(NitroModules)
   /// Lightweight stand-ins for NitroModules types used by the testable target.
   /// Only compiled when NitroModules is unavailable (SPM test builds).
+  ///
+  /// These stubs declare `Equatable` for test ergonomics — the generated
+  /// Nitro types do NOT. Shared `ios/` sources must not rely on conformances
+  /// that exist only here: `swift test` compiles, the app build breaks.
 
   struct ArtworkVariants: Equatable {
     var light: String
@@ -30,6 +34,8 @@
     var live: Bool?
     var artwork: Variant_String_ArtworkVariants?
     var artworkSource: ImageSource?
+    var groupTitle: String?
+    var imageRow: [ImageRowItem]?
   }
 
   struct TrackLoadEvent {
@@ -78,7 +84,9 @@
   }
 
   struct ImageRowItem: Equatable {
+    var id: String?
     var url: String?
+    var src: String?
     var artwork: String?
     var artworkSource: ImageSource?
     var title: String

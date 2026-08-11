@@ -1,0 +1,64 @@
+@testable import AudioBrowserTestable
+import Testing
+
+struct SectionScopeTests {
+  private func track(_ src: String, group: String? = nil) -> Track {
+    Track(id: src, src: src, groupTitle: group)
+  }
+
+  private func runSrcs(_ section: SectionScope.Section?) -> [String?]? {
+    guard case .run(let tracks) = section else { return nil }
+    return tracks.map(\.src)
+  }
+
+  private func imageRowSrcs(_ section: SectionScope.Section?) -> [String?]? {
+    guard case .imageRow(let items) = section else { return nil }
+    return items.map(\.src)
+  }
+
+  @Test func scopesToTheContiguousGroupTitleRun() {
+    let children = [
+      track("a", group: "First"),
+      track("b", group: "First"),
+      track("c", group: "Second"),
+      track("d", group: "Second"),
+      track("e"),
+    ]
+    #expect(runSrcs(SectionScope.section(of: children, containing: "c")) == ["c", "d"])
+    #expect(runSrcs(SectionScope.section(of: children, containing: "a")) == ["a", "b"])
+  }
+
+  @Test func ungroupedItemsFormTheirOwnRun() {
+    let children = [
+      track("a", group: "First"),
+      track("b"),
+      track("c"),
+      track("d", group: "Second"),
+    ]
+    #expect(runSrcs(SectionScope.section(of: children, containing: "b")) == ["b", "c"])
+  }
+
+  @Test func identicalTitlesInSeparateRunsStaySeparate() {
+    let children = [
+      track("a", group: "Same"),
+      track("x", group: "Other"),
+      track("b", group: "Same"),
+    ]
+    #expect(runSrcs(SectionScope.section(of: children, containing: "a")) == ["a"])
+  }
+
+  @Test func findsTheIdInsideAnImageRow() {
+    let items = [
+      ImageRowItem(src: "s1", title: "One"),
+      ImageRowItem(src: "s2", title: "Two"),
+    ]
+    var row = Track(id: "row", title: "Most Played")
+    row.imageRow = items
+    let children = [row, track("a")]
+    #expect(imageRowSrcs(SectionScope.section(of: children, containing: "s2")) == ["s1", "s2"])
+  }
+
+  @Test func unknownIdReturnsNil() {
+    #expect(SectionScope.section(of: [track("a")], containing: "zz") == nil)
+  }
+}

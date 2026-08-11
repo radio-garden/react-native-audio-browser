@@ -550,6 +550,25 @@ class BrowserManager {
                   )
                 }
 
+                // Playable image-row items get contextual URLs like any list
+                // row, so a tile tap expands into its section's queue instead
+                // of a queue of one (ADR 0006).
+                transformedTrack.imageRow?.let { items ->
+                  transformedTrack =
+                    transformedTrack.copy(
+                      imageRow =
+                        items
+                          .map { item ->
+                            if (item.url == null && item.src != null) {
+                              item.copy(url = BrowserPathHelper.build(path, item.src))
+                            } else {
+                              item
+                            }
+                          }
+                          .toTypedArray()
+                    )
+                }
+
                 // Transform artwork URL. At browse-time there is no display size info.
                 transformedTrack =
                   transformArtworkUrl(
@@ -655,8 +674,19 @@ class BrowserManager {
         return null
       }
 
+      // Queue scope is the tapped section, not the whole page (ADR 0006).
+      // Unfound id falls back to the whole page, preserving the pre-scoping
+      // behavior for stale contextual URLs.
+      val sectionTracks =
+        when (val section = SectionScope.section(children.toList(), trackId)) {
+          is SectionScope.Section.ImageRow ->
+            with(TrackFactory) { section.items.map { it.toTrack(groupTitle = null) } }
+          is SectionScope.Section.Run -> section.tracks
+          null -> children.toList()
+        }
+
       // Filter to only playable tracks (tracks with src)
-      val playableTracks = children.filter { track -> track.src != null }
+      val playableTracks = sectionTracks.filter { track -> track.src != null }
 
       if (playableTracks.isEmpty()) {
         Timber.w("Parent has no playable tracks, cannot expand queue")
