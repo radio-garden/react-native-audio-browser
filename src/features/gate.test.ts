@@ -2,8 +2,8 @@ import { describe, test, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../native', () => ({ nativeBrowser: {} }))
 
-import { setGate, clearGate } from './gate'
 import { nativeBrowser } from '../native'
+import { setGate, clearGate } from './gate'
 
 const chrome = { title: 'T', message: 'M' }
 
@@ -50,7 +50,7 @@ describe('resolveGate (native→JS bridge)', () => {
     expect(
       await (nativeBrowser as any).resolveGate({
         reason: 'search',
-        search: { query: 'q' },
+        search: { query: 'q' }
       })
     ).toEqual({ gated: true, gate: override })
   })

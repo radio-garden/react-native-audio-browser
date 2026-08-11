@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { RequestConfigBuilder } from './RequestConfigBuilder'
 import type { RequestConfig, TransformableRequestConfig } from '../../types'
+import { RequestConfigBuilder } from './RequestConfigBuilder'
 
 /**
  * Composition tests for the sync/async `transform` split. These lock down the

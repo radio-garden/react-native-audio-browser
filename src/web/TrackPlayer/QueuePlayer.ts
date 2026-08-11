@@ -112,7 +112,8 @@ export class QueuePlayer extends Player {
   public skipToNext(initialPosition?: number): void {
     if (this.queue.currentIndex === undefined) return
 
-    const nextIndex = this.queue.nextIndex() ?? this.queue.wrapAroundFirstIndex()
+    const nextIndex =
+      this.queue.nextIndex() ?? this.queue.wrapAroundFirstIndex()
     if (nextIndex === undefined) return
 
     this.goToIndex(nextIndex, initialPosition)

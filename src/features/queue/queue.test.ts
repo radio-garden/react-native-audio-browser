@@ -4,14 +4,16 @@ const calls: any[] = []
 vi.mock('../../native', () => ({
   nativeBrowser: {
     setQueue: (...a: any[]) => calls.push(['setQueue', ...a]),
-    play: () => calls.push(['play']),
-  },
+    play: () => calls.push(['play'])
+  }
 }))
 
 import { setQueue } from './queue'
 
 describe('setQueue wrapper', () => {
-  beforeEach(() => { calls.length = 0 })
+  beforeEach(() => {
+    calls.length = 0
+  })
 
   it('threads startIndex and startPosition to native', () => {
     const tracks = [{ src: 'a' }, { src: 'b' }] as any
@@ -29,6 +31,6 @@ describe('setQueue wrapper', () => {
     setQueue([{ src: 'a' }] as any, 0)
     // setQueue no longer auto-plays — it preserves the current play/pause
     // state; callers start playback explicitly with play().
-    expect(calls.map(c => c[0])).toEqual(['setQueue'])
+    expect(calls.map((c) => c[0])).toEqual(['setQueue'])
   })
 })

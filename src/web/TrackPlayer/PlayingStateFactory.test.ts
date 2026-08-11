@@ -34,7 +34,9 @@ describe('derivePlayingState', () => {
       'stopped'
     ])
     for (const state of ALL_STATES) {
-      expect(derivePlayingState(true, state).playing).toBe(!notPlaying.has(state))
+      expect(derivePlayingState(true, state).playing).toBe(
+        !notPlaying.has(state)
+      )
     }
   })
 

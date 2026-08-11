@@ -61,20 +61,32 @@ export class RemoteCommandController {
     // after construction and still be honoured.
     this.mediaSession = new MediaSessionManager({
       play: () =>
-        this.run(host.handleRemotePlay, undefined, () => host.play(), () =>
-          host.onRemotePlay()
+        this.run(
+          host.handleRemotePlay,
+          undefined,
+          () => host.play(),
+          () => host.onRemotePlay()
         ),
       pause: () =>
-        this.run(host.handleRemotePause, undefined, () => host.pause(), () =>
-          host.onRemotePause()
+        this.run(
+          host.handleRemotePause,
+          undefined,
+          () => host.pause(),
+          () => host.onRemotePause()
         ),
       stop: () =>
-        this.run(host.handleRemoteStop, undefined, () => host.stop(), () =>
-          host.onRemoteStop()
+        this.run(
+          host.handleRemoteStop,
+          undefined,
+          () => host.stop(),
+          () => host.onRemoteStop()
         ),
       next: () =>
-        this.run(host.handleRemoteNext, undefined, () => host.skipToNext(), () =>
-          host.onRemoteNext()
+        this.run(
+          host.handleRemoteNext,
+          undefined,
+          () => host.skipToNext(),
+          () => host.onRemoteNext()
         ),
       previous: () =>
         this.run(

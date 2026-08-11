@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { updateOptions } from './options'
 import { nativeBrowser } from '../../native'
+import { updateOptions } from './options'
 
 vi.mock('../../native', () => ({
   nativeBrowser: { updateOptions: vi.fn() }

@@ -40,7 +40,11 @@ class LoadTestPlayer extends Player {
 }
 
 const track = (n: number): Track =>
-  ({ id: `t${n}`, src: `https://example.com/${n}.mp3`, title: `T${n}` }) as Track
+  ({
+    id: `t${n}`,
+    src: `https://example.com/${n}.mp3`,
+    title: `T${n}`
+  }) as Track
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 

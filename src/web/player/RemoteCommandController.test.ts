@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { RemoteCommandController } from './RemoteCommandController'
 import type { RemoteCommandHost } from './RemoteCommandController'
+import { RemoteCommandController } from './RemoteCommandController'
 
 type Handler = ((details: any) => void) | null
 
@@ -23,7 +23,9 @@ function stubMediaSession() {
   return { session, handlers }
 }
 
-function makeHost(overrides: Partial<RemoteCommandHost> = {}): RemoteCommandHost {
+function makeHost(
+  overrides: Partial<RemoteCommandHost> = {}
+): RemoteCommandHost {
   return {
     play: vi.fn(),
     pause: vi.fn(),

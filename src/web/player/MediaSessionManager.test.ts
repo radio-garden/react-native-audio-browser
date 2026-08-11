@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MediaSessionManager } from './MediaSessionManager'
 import type { MediaSessionActions } from './MediaSessionManager'
+import { MediaSessionManager } from './MediaSessionManager'
 
 type Handler = ((details: any) => void) | null
 
@@ -120,7 +120,9 @@ describe('MediaSessionManager', () => {
     expect(metadata.title).toBe('Live Set')
     expect(metadata.artist).toBe('Station FM')
     expect(metadata.album).toBe('Radio')
-    expect(metadata.artwork).toEqual([{ src: 'https://api.example.com/art.png' }])
+    expect(metadata.artwork).toEqual([
+      { src: 'https://api.example.com/art.png' }
+    ])
   })
 
   it('omits artwork when none is provided', () => {
@@ -149,7 +151,11 @@ describe('MediaSessionManager', () => {
 
   it('clears position state for live streams (infinite/zero duration)', () => {
     const manager = new MediaSessionManager(makeActions())
-    manager.setPositionState({ duration: Infinity, position: 30, playbackRate: 1 })
+    manager.setPositionState({
+      duration: Infinity,
+      position: 30,
+      playbackRate: 1
+    })
     manager.setPositionState({ duration: 0, position: 0, playbackRate: 1 })
     // Called with no argument resets the position state.
     expect(fake.setPositionState).toHaveBeenCalledTimes(2)

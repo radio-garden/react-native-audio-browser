@@ -107,5 +107,4 @@ describe('validateBrowserConfiguration', () => {
     })
     expect(warnings.some((w) => w.includes('at most 4'))).toBe(true)
   })
-
 })

@@ -8,12 +8,12 @@ import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
-import { assertBrowsePageShape } from './assertBrowsePageShape'
-import { parseSearchResponse } from './parseSearchResponse'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+import { assertBrowsePageShape } from './assertBrowsePageShape'
+import { parseSearchResponse } from './parseSearchResponse'
 
 /**
  * Manages browser navigation, route resolution, and content loading.
@@ -346,14 +346,20 @@ export class BrowserManager {
 
     // Handle callback-based search
     if (searchRoute.searchCallback) {
-      searchResults = await searchRoute.searchCallback({ query, reference: 'unknown' })
+      searchResults = await searchRoute.searchCallback({
+        query,
+        reference: 'unknown'
+      })
     }
     // Handle request config-based search via the shared layered fetch.
     else if (searchRoute.searchConfig) {
       try {
-        searchResults = await this.fetchSearchResults(searchRoute.searchConfig, {
-          q: query
-        })
+        searchResults = await this.fetchSearchResults(
+          searchRoute.searchConfig,
+          {
+            q: query
+          }
+        )
       } catch (error) {
         console.error('Search failed:', error)
         return undefined

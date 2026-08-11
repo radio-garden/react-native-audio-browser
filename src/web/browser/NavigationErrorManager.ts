@@ -13,7 +13,7 @@ const ERROR_TITLES: Record<NavigationErrorType, string> = {
   'callback-error': 'Error',
   'unknown-error': 'Error',
   'empty-content': 'Nothing here',
-  timeout: "Couldn't load"
+  'timeout': "Couldn't load"
 }
 
 /**

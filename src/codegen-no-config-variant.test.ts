@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { describe, it, expect } from 'vitest'
 
 /**
  * Regression guard for the original "async config callback returns an empty
@@ -32,7 +32,10 @@ const BANNED: Array<{ re: RegExp; what: string }> = [
     re: /Variant_TransformableRequestConfig_Promise_TransformableRequestConfig_/,
     what: 'TransformableRequestConfig | Promise<TransformableRequestConfig> (Swift/Kotlin variant)'
   },
-  { re: /std::variant<\s*RequestConfig\b/, what: 'std::variant<RequestConfig, ...> (C++)' },
+  {
+    re: /std::variant<\s*RequestConfig\b/,
+    what: 'std::variant<RequestConfig, ...> (C++)'
+  },
   {
     re: /std::variant<\s*TransformableRequestConfig\b/,
     what: 'std::variant<TransformableRequestConfig, ...> (C++)'

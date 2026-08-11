@@ -95,7 +95,7 @@ function toPublicRequest(req: NativeGateRequest): GateRequest {
       return { kind: 'search', params: req.search! }
     default: {
       const _exhaustive: never = req.reason
-      throw new Error(`Unhandled GateReason: ${_exhaustive}`)
+      throw new Error(`Unhandled GateReason: ${String(_exhaustive)}`)
     }
   }
 }

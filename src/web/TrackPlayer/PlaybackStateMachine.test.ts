@@ -20,7 +20,9 @@ describe('nextPlaybackState', () => {
   describe('unconditional events — always produce their target state', () => {
     it('trackLoading → loading from any state', () => {
       for (const state of ALL_STATES) {
-        expect(nextPlaybackState(state, { type: 'trackLoading' })).toBe('loading')
+        expect(nextPlaybackState(state, { type: 'trackLoading' })).toBe(
+          'loading'
+        )
       }
     })
 
@@ -128,9 +130,9 @@ describe('nextPlaybackState', () => {
 
     it('from any other state → ready', () => {
       for (const state of ALL_STATES.filter((s) => !suppressed.includes(s))) {
-        expect(
-          nextPlaybackState(state, { type: 'bufferingSufficient' })
-        ).toBe('ready')
+        expect(nextPlaybackState(state, { type: 'bufferingSufficient' })).toBe(
+          'ready'
+        )
       }
     })
   })

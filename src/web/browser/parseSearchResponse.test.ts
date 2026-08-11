@@ -4,9 +4,9 @@ import { parseSearchResponse } from './parseSearchResponse'
 describe('parseSearchResponse', () => {
   it('extracts children from a page-object response', () => {
     const tracks = [{ src: '/a', title: 'A' }]
-    expect(parseSearchResponse({ url: '/search', title: 'Search', children: tracks })).toEqual(
-      tracks
-    )
+    expect(
+      parseSearchResponse({ url: '/search', title: 'Search', children: tracks })
+    ).toEqual(tracks)
   })
 
   it('returns a bare array response unchanged (back-compat)', () => {

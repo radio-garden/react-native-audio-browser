@@ -27,7 +27,9 @@ describe('trackPlaybackTime', () => {
     a()
     expect(nativeMock.setPlaybackIntervalEnabled).toHaveBeenLastCalledWith(true) // b still active
     b()
-    expect(nativeMock.setPlaybackIntervalEnabled).toHaveBeenLastCalledWith(false)
+    expect(nativeMock.setPlaybackIntervalEnabled).toHaveBeenLastCalledWith(
+      false
+    )
   })
 
   it('fires every `period` seconds with cumulative total', () => {

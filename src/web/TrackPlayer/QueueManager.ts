@@ -209,7 +209,10 @@ export class QueueManager {
       this.shuffleOrderInsert(insertBeforeIndex, tracks.length)
     } else {
       this._tracks.push(...tracks)
-      this.shuffleOrderInsert(this._tracks.length - tracks.length, tracks.length)
+      this.shuffleOrderInsert(
+        this._tracks.length - tracks.length,
+        tracks.length
+      )
     }
   }
 

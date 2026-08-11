@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
+import type { HttpClient } from '../../http/HttpClient'
 import { BrowserManager } from '../BrowserManager'
 import { FavoriteManager } from '../FavoriteManager'
 import { NavigationErrorManager } from '../NavigationErrorManager'
-import type { HttpClient } from '../../http/HttpClient'
 
 /**
  * Builds a BrowserManager wired to an HttpClient stub that always rejects.

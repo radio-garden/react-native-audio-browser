@@ -583,7 +583,6 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * ```
    */
   imageQueryParams?: ImageQueryParams
-
 }
 
 /**
@@ -1114,6 +1113,4 @@ export type FormatNavigationErrorCallback = (
  * Maps the tapped active track to a browse path for the CarPlay album line,
  * or `undefined` to do nothing. See `resolveAlbumUrl`.
  */
-export type ResolveAlbumUrlCallback = (
-  track: Track
-) => string | undefined
+export type ResolveAlbumUrlCallback = (track: Track) => string | undefined

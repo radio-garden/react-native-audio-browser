@@ -8,8 +8,8 @@ import type {
   ImageContext,
   ImageQueryParams
 } from '../../types'
-import { BrowserPathHelper } from '../util/BrowserPathHelper'
 import { artworkUrl as resolveArtworkUrl } from '../../utils/artwork'
+import { BrowserPathHelper } from '../util/BrowserPathHelper'
 
 /**
  * Appends query parameters to a URL, handling existing query strings.
@@ -290,7 +290,10 @@ export const RequestConfigBuilder = {
     try {
       // Step 0: Apply the shared request layer, with track.artwork as the path.
       // Its transform (if any) runs for artwork too — e.g. a dynamic baseUrl.
-      const baseConfig = await this.applyLayer({ path: artworkUrl }, requestConfig)
+      const baseConfig = await this.applyLayer(
+        { path: artworkUrl },
+        requestConfig
+      )
 
       // Step 1: Per-track resolution — async `resolve` first, then `resolveSync`
       // merged over it (mirrors native).
@@ -300,7 +303,9 @@ export const RequestConfigBuilder = {
       }
       if (artworkConfig.resolveSync) {
         const r = artworkConfig.resolveSync(track)
-        resolvedConfig = resolvedConfig ? this.mergeConfig(resolvedConfig, r) : r
+        resolvedConfig = resolvedConfig
+          ? this.mergeConfig(resolvedConfig, r)
+          : r
       }
       // If a resolver ran but produced nothing and there's no artwork URL, no artwork
       if (
