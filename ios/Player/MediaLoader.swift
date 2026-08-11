@@ -25,7 +25,9 @@ final class MediaLoader {
 
   weak var delegate: MediaLoaderDelegate?
 
-  private var mediaResolverTask: Task<Void, Never>?
+  /// The in-flight resolve. Readable so tests can await the resolve-then-load
+  /// chain instead of sleeping past it; only this type starts and cancels it.
+  private(set) var mediaResolverTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
   private var url: URL?

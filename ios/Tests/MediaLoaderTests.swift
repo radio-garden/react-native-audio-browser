@@ -123,8 +123,7 @@ struct ResolveAndLoadTests {
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
 
-    // Allow the resolver task to run
-    await Task.yield()
+    await loader.mediaResolverTask?.value
 
     #expect(resolverCalled == true)
   }
@@ -136,12 +135,9 @@ struct ResolveAndLoadTests {
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
 
-    // The resolver runs in a Task that awaits the resolver then does MainActor.run,
-    // so we need multiple yields for the full chain to settle.
-    for _ in 0 ..< 10 {
-      await Task.yield()
-      if !spy.playbackErrors.isEmpty { break }
-    }
+    // The task awaits the resolver then hops back to the main actor, so the
+    // delegate call has landed by the time the task itself completes.
+    await loader.mediaResolverTask?.value
 
     #expect(spy.playbackErrors.count == 1)
     if case let .invalidSourceUrl(url) = spy.playbackErrors.first {
@@ -166,8 +162,8 @@ struct ResolveAndLoadTests {
     // Immediately start second — should cancel first
     loader.resolveAndLoad(src: "https://example.com/second.mp3")
 
-    // Wait for both to settle
-    try? await Task.sleep(for: .milliseconds(200))
+    // Await the surviving task; the cancelled one bailed before its resolver.
+    await loader.mediaResolverTask?.value
 
     // Only the second resolver should have run (first was cancelled before calling resolver)
     #expect(callCount == 1)
@@ -188,10 +184,11 @@ struct CancelAllTests {
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
+    // cancelAll() drops the handle, so grab it first to await the point where
+    // the callback would have fired.
+    let resolve = loader.mediaResolverTask
     loader.cancelAll()
-
-    // Wait for what would have been the callback
-    try? await Task.sleep(for: .milliseconds(100))
+    await resolve?.value
 
     #expect(spy.preparedItems.isEmpty)
     #expect(spy.playbackErrors.isEmpty)
