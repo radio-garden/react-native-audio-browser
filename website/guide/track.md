@@ -138,7 +138,7 @@ Optional fields that change how a Track renders on CarPlay / Android Auto. They'
 | --- | --- | --- |
 | `style: 'list' \| 'grid'` | how this item renders | Android Auto / AAOS |
 | `childrenStyle: 'list' \| 'grid'` | how this container's children render | Android Auto / AAOS |
-| `groupTitle` | section header above contiguous same-group items | Android Auto / AAOS |
+| `groupTitle` | section header above contiguous same-group items (Android Auto / AAOS); also scopes the tap-to-play queue to the group on every surface (see [Playback behavior](/guide/browser#playback-behavior)) | all |
 | `favorited` | filled/empty heart (needs the `favorite` capability) | Android Auto, notification |
 | `live` | a "live" indicator | iOS now-playing |
 | `imageRow` | render as a horizontal thumbnail strip | CarPlay |
@@ -148,7 +148,7 @@ A couple of constraints worth knowing:
 
 - **`childrenStyle` goes on the child as it appears in its parent's list** — Android Auto reads it there to decide how to lay out the folder once you navigate in.
 - **`albumUrl` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumUrl` in the [Browser config](/guide/browser).
-- **`imageRow` renders as thumbnails on CarPlay only** (~4–5 visible; extras are silently dropped). Android Auto has no image-row rendering, so the row expands into its items as a grid-styled group (artwork tiles where the host honors per-item content-style hints, list rows otherwise) — plus a trailing "view all" row when the track has a `url`. A track with `imageRow` but no `url` is a pure preview: on CarPlay its header isn't tappable.
+- **`imageRow` renders as thumbnails on CarPlay only** (~4–5 visible; extras are silently dropped). Android Auto has no image-row rendering, so the row expands into its items as a grid-styled group (artwork tiles where the host honors per-item content-style hints, list rows otherwise) — plus a trailing "view all" row when the track has a `url`. A track with `imageRow` but no `url` is a pure preview: on CarPlay its header isn't tappable. Tapping a playable item queues **the row's items** — the row is its own section (see [Playback behavior](/guide/browser#playback-behavior)).
 
 ```ts
 {

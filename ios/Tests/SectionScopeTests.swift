@@ -61,4 +61,22 @@ struct SectionScopeTests {
   @Test func unknownIdReturnsNil() {
     #expect(SectionScope.section(of: [track("a")], containing: "zz") == nil)
   }
+
+  // Pins the documented precedence: sections are located by src, and an id
+  // present in both an image row and the flat list resolves to the row.
+  @Test func imageRowWinsOverAFlatListDuplicate() {
+    var row = Track(id: "row", title: "Row")
+    row.imageRow = [ImageRowItem(src: "dup", title: "Dup")]
+    let children = [row, track("dup"), track("b")]
+    #expect(imageRowSrcs(SectionScope.section(of: children, containing: "dup")) == ["dup"])
+  }
+
+  @Test func duplicateSrcAcrossRunsResolvesToTheEarlierRun() {
+    let children = [
+      track("dup", group: "First"),
+      track("x", group: "Second"),
+      track("dup", group: "Second"),
+    ]
+    #expect(runSrcs(SectionScope.section(of: children, containing: "dup")) == ["dup"])
+  }
 }

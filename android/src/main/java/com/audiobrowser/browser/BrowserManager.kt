@@ -221,7 +221,15 @@ class BrowserManager {
   }
 
   private fun cacheChildren(resolvedTrack: ResolvedTrack) {
-    resolvedTrack.children?.forEach { track -> cacheTrack(track) }
+    resolvedTrack.children?.forEach { track ->
+      cacheTrack(track)
+      // Image-row items are playable surfaces of their own: cache them (with
+      // their stamped contextual urls) so an id-keyed mediaId from an
+      // expanded Android Auto tile can find its way back to queue expansion.
+      track.imageRow?.forEach { item ->
+        cacheTrack(with(TrackFactory) { item.toTrack(groupTitle = track.title) })
+      }
+    }
   }
 
   /**
@@ -674,15 +682,16 @@ class BrowserManager {
         return null
       }
 
-      // Queue scope is the tapped section, not the whole page (ADR 0006).
-      // Unfound id falls back to the whole page, preserving the pre-scoping
-      // behavior for stale contextual URLs.
+      // Queue scope is the tapped section, not the whole page (ADR 0006). An
+      // id that no longer appears on the page aborts the expansion — the
+      // caller falls back to the stored single track; silently queueing the
+      // changed list would resume the wrong station.
       val sectionTracks =
         when (val section = SectionScope.section(children.toList(), trackId)) {
           is SectionScope.Section.ImageRow ->
             with(TrackFactory) { section.items.map { it.toTrack(groupTitle = null) } }
           is SectionScope.Section.Run -> section.tracks
-          null -> children.toList()
+          null -> return null
         }
 
       // Filter to only playable tracks (tracks with src)

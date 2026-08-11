@@ -367,7 +367,9 @@ See [Now Playing](/guide/now-playing) for the metadata side of the now-playing s
 
 Two options control what happens when a playable Track is tapped.
 
-**`singleTrack`** — by default, tapping a track queues **all its siblings** and starts there (so next/previous walk the list). Set `singleTrack: true` to play only the tapped track.
+**`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in: the contiguous `groupTitle` group the track sits in (a contiguous block of ungrouped items forms a section of its own), or — for an image-row thumbnail — the row's items. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its list (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
+
+Two constraints of section scoping: the section is located **by the track's `src`**, so a src should appear in at most one section per page — when the same station sits in both an image row and a list, a tap resolves to the image row regardless of where it happened. And when the tapped src is already in the current queue from the same page, the player skips in place rather than requeueing the section.
 
 **`handleTrackLoad`** — intercept loading entirely. When set, tapping a track calls *your* handler **instead of** the library auto-playing, and native waits for your promise to resolve before continuing. The two branches differ:
 

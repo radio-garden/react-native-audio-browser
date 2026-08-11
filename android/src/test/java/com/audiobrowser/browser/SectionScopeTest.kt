@@ -68,4 +68,29 @@ class SectionScopeTest {
   fun `unknown id returns null`() {
     assertNull(SectionScope.section(listOf(track(src = "a")), "zz"))
   }
+
+  // Pins the documented precedence: sections are located by src, and an id
+  // present in both an image row and the flat list resolves to the row.
+  @Test
+  fun `image row wins over a flat-list duplicate`() {
+    val row = track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup")))
+    val children = listOf(row, track(src = "dup"), track(src = "b"))
+
+    val section =
+      SectionScope.section(children, "dup") as SectionScope.Section.ImageRow
+    assertEquals(listOf("dup"), section.items.map { it.src })
+  }
+
+  @Test
+  fun `duplicate src across runs resolves to the earlier run`() {
+    val children =
+      listOf(
+        track(src = "dup", groupTitle = "First"),
+        track(src = "x", groupTitle = "Second"),
+        track(src = "dup", groupTitle = "Second"),
+      )
+
+    val section = SectionScope.section(children, "dup") as SectionScope.Section.Run
+    assertEquals(listOf("dup"), section.tracks.map { it.src })
+  }
 }

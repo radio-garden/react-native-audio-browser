@@ -764,9 +764,10 @@ final class BrowserManager {
     let resolved = try await resolve(parentPath, useCache: true)
     guard let children = resolved.children else { return nil }
 
-    // Queue scope is the tapped section, not the whole page (ADR 0006).
-    // Unfound id falls back to the whole page, preserving the pre-scoping
-    // behavior for stale contextual URLs.
+    // Queue scope is the tapped section, not the whole page (ADR 0006). An
+    // id that no longer appears on the page aborts the expansion — the
+    // caller falls back to the stored single track (matching Android);
+    // silently queueing the changed list would resume the wrong station.
     let sectionTracks: [Track]
     switch SectionScope.section(of: children, containing: trackId) {
     case .imageRow(let items):
@@ -774,7 +775,7 @@ final class BrowserManager {
     case .run(let tracks):
       sectionTracks = tracks
     case nil:
-      sectionTracks = children
+      return nil
     }
 
     // Filter to playable tracks (have src)
@@ -787,7 +788,11 @@ final class BrowserManager {
     }
 
     // Find selected track index
-    let selectedIndex = playableTracks.firstIndex { $0.src == trackId } ?? 0
+    // Unreachable in practice (the section was found BY this id), but a miss
+    // must abort rather than silently start the queue at the wrong track.
+    guard let selectedIndex = playableTracks.firstIndex(where: { $0.src == trackId }) else {
+      return nil
+    }
     logger.debug("Selected track index: \(selectedIndex)")
 
     // If singleTrack mode, return just the selected track
