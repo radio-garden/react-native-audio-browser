@@ -550,14 +550,14 @@ const track = {
 - API becomes "input can be X or Y, output is always Y"
 - May not be worth it if global artwork config covers most cases
 
-## Custom Notification Buttons
+## Custom Remote Buttons
 
-Currently `ButtonCapability` only supports predefined actions: `skip-to-previous`, `skip-to-next`, `jump-backward`, `jump-forward`, `favorite`. Users may want custom actions (e.g., "sleep timer", "playback speed", "share").
+Currently `RemoteButton` only supports predefined actions: `skip-to-previous`, `skip-to-next`, `jump-backward`, `jump-forward`, `favorite`. Users may want custom actions (e.g., "sleep timer", "playback speed", "share").
 
 **Potential API:**
 
 ```typescript
-notificationButtons: {
+remoteButtonLayout: {
   back: 'skip-to-previous',
   forward: 'skip-to-next',
   overflow: [

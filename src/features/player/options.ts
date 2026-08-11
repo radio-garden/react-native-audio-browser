@@ -70,7 +70,8 @@ export interface PlayerCapabilities {
    *
    * Turns on the favorite/like heart across all surfaces:
    * - iOS: Control Center + CarPlay now-playing.
-   * - Android: notification button slot + Android Auto now-playing, and an
+   * - Android: a place in the {@link RemoteButtonLayout} — the notification,
+   *   Android Auto and the Android 13+ system media controls — and an
    *   (empty or filled) heart on playable browse rows.
    *
    * `match` controls how the ids from `setFavorites` are

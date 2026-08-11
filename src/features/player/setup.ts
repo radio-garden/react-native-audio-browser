@@ -496,7 +496,7 @@ export interface NativeSetupPlayerOptions extends Pick<
 
   /**
    * Player options to apply atomically with setup. They're stored before the player is
-   * constructed, so e.g. Android's media session derives its notification buttons from
+   * constructed, so e.g. Android's media session derives its remote button layout from
    * `capabilities` the moment the service connects — no window with default controls.
    * Normalized from the flat fields on {@link SetupPlayerOptions}.
    */
