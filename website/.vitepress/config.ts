@@ -1,6 +1,24 @@
-import { defineConfig } from 'vitepress'
+import { writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { defineConfig, type HeadConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import typedocSidebar from '../api/typedoc-sidebar.json'
+
+// Keep a deploy out of search indexes. Set DOCS_NOINDEX=1 for anything that is
+// not the canonical audiobrowser.dev site — a Cloudflare Pages preview
+// deployment, or a one-off share link. Off by default so the production build
+// is never accidentally deindexed.
+//
+// X-Robots-Tag is what deindexes, and it covers non-HTML assets too; Cloudflare
+// Pages reads it from _headers. The meta tag is the fallback for hosts that
+// ignore _headers.
+const noindex = process.env.DOCS_NOINDEX === '1'
+
+const head: HeadConfig[] = [['link', { rel: 'icon', href: '/favicon.ico' }]]
+
+if (noindex) {
+  head.push(['meta', { name: 'robots', content: 'noindex, nofollow' }])
+}
 
 export default withMermaid(
   defineConfig({
@@ -8,9 +26,21 @@ export default withMermaid(
     description:
       'React Native audio module with browsable navigation trees and native Android Auto/CarPlay integration.',
 
-    head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+    head,
 
     ignoreDeadLinks: true,
+
+    // Emitted here rather than committed to public/ so it only ever lands in a
+    // DOCS_NOINDEX build — a noindex header file sitting in public/ would follow
+    // a merge straight onto audiobrowser.dev.
+    async buildEnd({ outDir }) {
+      if (!noindex) return
+
+      await writeFile(
+        join(outDir, '_headers'),
+        '/*\n  X-Robots-Tag: noindex, nofollow\n'
+      )
+    },
 
     themeConfig: {
       search: {
