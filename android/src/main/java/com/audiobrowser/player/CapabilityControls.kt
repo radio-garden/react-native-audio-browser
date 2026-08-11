@@ -113,6 +113,11 @@ internal fun RemoteButtonLayout?.sameAs(other: RemoteButtonLayout?): Boolean =
  * position empty rather than promoting anything into it: turning off one capability must not
  * silently rearrange the row.
  *
+ * A [layout] is all-or-nothing: every field is required, so it fully describes the arrangement and
+ * nothing is merged with the capability defaults. The bridge could not support a per-field merge
+ * anyway — Nitro maps both an omitted and a null enum field to Kotlin `null`, so native cannot tell
+ * "leave this empty" from "derive this one".
+ *
  * [capabilities] has a second job outside this function: it also drives the player and session
  * commands, which govern what a Bluetooth remote or headset can trigger. That is why placement is
  * purely cosmetic here — a button left out of the layout disappears from every screen while still
@@ -129,7 +134,7 @@ fun deriveButtonSlots(
     return buildList {
         layout.back?.let { add(SlottedButton(it, ButtonSlot.BACK)) }
         layout.forward?.let { add(SlottedButton(it, ButtonSlot.FORWARD)) }
-        layout.overflow?.forEach { add(SlottedButton(it, ButtonSlot.OVERFLOW)) }
+        layout.overflow.forEach { add(SlottedButton(it, ButtonSlot.OVERFLOW)) }
       }
       .filter { capabilities.allows(it.button) }
   }

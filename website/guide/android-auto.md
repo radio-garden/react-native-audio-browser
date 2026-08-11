@@ -71,7 +71,7 @@ notification — there's no car-specific option. Two behaviors are particular to
 the car, though:
 
 - **The head unit has the last word.** Slots are a preference. A unit with a
-  spare position will promote the first `overflow` entry onto the main row, so
+  spare position may promote the first `overflow` entry onto the main row, so
   a button you placed in overflow can still appear beside play/pause.
 - **Fewer buttons, cleaner row.** If you want just
   `jump-back │ play/pause │ jump-forward`, leave the rest out of the layout

@@ -52,7 +52,11 @@ describe('setupPlayer wire regrouping', () => {
         minBuffer: 50_000,
         wakeMode: 'network',
         skipSilence: true,
-        remoteButtonLayout: { back: 'jump-backward', forward: 'jump-forward' }
+        remoteButtonLayout: {
+          back: 'jump-backward',
+          forward: 'jump-forward',
+          overflow: ['favorite']
+        }
       }
     })
 
@@ -61,7 +65,11 @@ describe('setupPlayer wire regrouping', () => {
     expect(sent.options).toEqual({
       android: {
         skipSilence: true,
-        remoteButtonLayout: { back: 'jump-backward', forward: 'jump-forward' }
+        remoteButtonLayout: {
+          back: 'jump-backward',
+          forward: 'jump-forward',
+          overflow: ['favorite']
+        }
       }
     })
   })

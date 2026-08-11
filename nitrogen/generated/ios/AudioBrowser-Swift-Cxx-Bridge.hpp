@@ -2241,21 +2241,6 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<std::vector<RemoteButton>>
-  /**
-   * Specialized version of `std::optional<std::vector<RemoteButton>>`.
-   */
-  using std__optional_std__vector_RemoteButton__ = std::optional<std::vector<RemoteButton>>;
-  inline std::optional<std::vector<RemoteButton>> create_std__optional_std__vector_RemoteButton__(const std::vector<RemoteButton>& value) noexcept {
-    return std::optional<std::vector<RemoteButton>>(value);
-  }
-  inline bool has_value_std__optional_std__vector_RemoteButton__(const std::optional<std::vector<RemoteButton>>& optional) noexcept {
-    return optional.has_value();
-  }
-  inline std::vector<RemoteButton> get_std__optional_std__vector_RemoteButton__(const std::optional<std::vector<RemoteButton>>& optional) noexcept {
-    return optional.value();
-  }
-  
   // pragma MARK: std::vector<RemoteButton>
   /**
    * Specialized version of `std::vector<RemoteButton>`.

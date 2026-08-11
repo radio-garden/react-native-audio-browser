@@ -44,11 +44,11 @@ namespace margelo::nitro::audiobrowser {
   public:
     std::optional<RemoteButton> back     SWIFT_PRIVATE;
     std::optional<RemoteButton> forward     SWIFT_PRIVATE;
-    std::optional<std::vector<RemoteButton>> overflow     SWIFT_PRIVATE;
+    std::vector<RemoteButton> overflow     SWIFT_PRIVATE;
 
   public:
     RemoteButtonLayout() = default;
-    explicit RemoteButtonLayout(std::optional<RemoteButton> back, std::optional<RemoteButton> forward, std::optional<std::vector<RemoteButton>> overflow): back(back), forward(forward), overflow(overflow) {}
+    explicit RemoteButtonLayout(std::optional<RemoteButton> back, std::optional<RemoteButton> forward, std::vector<RemoteButton> overflow): back(back), forward(forward), overflow(overflow) {}
 
   public:
     friend bool operator==(const RemoteButtonLayout& lhs, const RemoteButtonLayout& rhs) = default;
@@ -66,14 +66,14 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::RemoteButtonLayout(
         JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteButton>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "back"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteButton>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "forward"))),
-        JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::RemoteButton>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "overflow")))
+        JSIConverter<std::vector<margelo::nitro::audiobrowser::RemoteButton>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "overflow")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::RemoteButtonLayout& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "back"), JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteButton>>::toJSI(runtime, arg.back));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "forward"), JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteButton>>::toJSI(runtime, arg.forward));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "overflow"), JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::RemoteButton>>>::toJSI(runtime, arg.overflow));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "overflow"), JSIConverter<std::vector<margelo::nitro::audiobrowser::RemoteButton>>::toJSI(runtime, arg.overflow));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -86,7 +86,7 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteButton>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "back")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::RemoteButton>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "forward")))) return false;
-      if (!JSIConverter<std::optional<std::vector<margelo::nitro::audiobrowser::RemoteButton>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "overflow")))) return false;
+      if (!JSIConverter<std::vector<margelo::nitro::audiobrowser::RemoteButton>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "overflow")))) return false;
       return true;
     }
   };

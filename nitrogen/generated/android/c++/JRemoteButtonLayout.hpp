@@ -43,7 +43,7 @@ namespace margelo::nitro::audiobrowser {
       return RemoteButtonLayout(
         back != nullptr ? std::make_optional(back->toCpp()) : std::nullopt,
         forward != nullptr ? std::make_optional(forward->toCpp()) : std::nullopt,
-        overflow != nullptr ? std::make_optional([&]() {
+        [&]() {
           size_t __size = overflow->size();
           std::vector<RemoteButton> __vector;
           __vector.reserve(__size);
@@ -52,7 +52,7 @@ namespace margelo::nitro::audiobrowser {
             __vector.push_back(__element->toCpp());
           }
           return __vector;
-        }()) : std::nullopt
+        }()
       );
     }
 
@@ -69,16 +69,16 @@ namespace margelo::nitro::audiobrowser {
         clazz,
         value.back.has_value() ? JRemoteButton::fromCpp(value.back.value()) : nullptr,
         value.forward.has_value() ? JRemoteButton::fromCpp(value.forward.value()) : nullptr,
-        value.overflow.has_value() ? [&]() {
-          size_t __size = value.overflow.value().size();
+        [&]() {
+          size_t __size = value.overflow.size();
           jni::local_ref<jni::JArrayClass<JRemoteButton>> __array = jni::JArrayClass<JRemoteButton>::newArray(__size);
           for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.overflow.value()[__i];
+            const auto& __element = value.overflow[__i];
             auto __elementJni = JRemoteButton::fromCpp(__element);
             __array->setElement(__i, *__elementJni);
           }
           return __array;
-        }() : nullptr
+        }()
       );
     }
   };

@@ -25,7 +25,7 @@ data class RemoteButtonLayout(
   val forward: RemoteButton?,
   @DoNotStrip
   @Keep
-  val overflow: Array<RemoteButton>?
+  val overflow: Array<RemoteButton>
 ) {
   /* primary constructor */
 
@@ -37,7 +37,7 @@ data class RemoteButtonLayout(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(back: RemoteButton?, forward: RemoteButton?, overflow: Array<RemoteButton>?): RemoteButtonLayout {
+    private fun fromCpp(back: RemoteButton?, forward: RemoteButton?, overflow: Array<RemoteButton>): RemoteButtonLayout {
       return RemoteButtonLayout(back, forward, overflow)
     }
   }

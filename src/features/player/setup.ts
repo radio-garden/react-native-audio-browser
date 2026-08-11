@@ -699,7 +699,14 @@ function nonEmpty<K extends string, T extends object>(
  *   playWhenReady: true,
  *   repeatMode: 'queue',
  *   capabilities: { favorite: true },
- *   android: { audioContentType: 'music', remoteButtonLayout: { back: 'jump-backward', forward: 'jump-forward' } },
+ *   android: {
+ *     audioContentType: 'music',
+ *     remoteButtonLayout: {
+ *       back: 'jump-backward',
+ *       forward: 'jump-forward',
+ *       overflow: ['favorite']
+ *     }
+ *   },
  *   ios: { category: 'playback' }
  * })
  * ```

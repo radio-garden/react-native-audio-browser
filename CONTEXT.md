@@ -176,6 +176,14 @@ An input event from an External surface — play, pause, next, previous, seek, f
 A flag controlling whether a specific control is *available* on External surfaces. Disabling a Capability hides the corresponding control and prevents the matching **Remote command** from firing. Distinct from Remote command: a Capability is what's *configured*, a Remote command is the *event* fired when an available Capability is invoked.
 *Avoid*: Permission, Feature flag, Control.
 
+**Remote button**:
+A button an External surface draws, which emits a **Remote command** when tapped — skip, jump, favorite. Distinct from a **Capability**: a Capability decides whether the button may exist at all, a Remote button is the thing rendered. Android only; CarPlay's now-playing buttons are configured separately.
+*Avoid*: Notification button, player button, control button.
+
+**Remote button layout**:
+The arrangement of **Remote buttons** on Android, published once and honoured by every Android External surface — notification, Android Auto, and the Android 13+ system media controls. Has exactly three positions: `back` and `forward` either side of play/pause, and `overflow` for the rest. A layout describes the whole arrangement; omitting it derives one from **Capabilities**.
+*Avoid*: Notification buttons, slots (a Media3 implementation term — `back`/`forward`/`overflow` are the domain names).
+
 **Favorited**:
 A boolean on a Track marking it as a user favorite. Toggled programmatically or via the heart button on an External surface. The library's domain vocabulary has no Rating concept.
 

@@ -9,7 +9,6 @@ import androidx.media3.session.SessionCommands
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButton
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
-import kotlin.math.roundToInt
 import timber.log.Timber
 
 /**
@@ -62,27 +61,32 @@ class MediaSessionCommandManager {
   }
 
   /**
-   * Media3 ships dedicated icons for the common jump intervals; anything else falls back to the
-   * generic skip icon. The icon constant — not the drawable — is what a controller that renders its
-   * own UI reads, and it is carried through the legacy conversion Android Auto consumes. Building a
-   * button with only `setIconResId` leaves the constant at ICON_UNDEFINED, so the car has nothing
-   * to draw.
+   * Media3 ships numbered icons for 5, 10, 15 and 30 seconds; every other interval falls back to
+   * the unnumbered arrow.
+   *
+   * The match is exact, not rounded. A numbered icon is a claim about how far the button seeks, so
+   * a 14.6s interval must not draw "15" — it would promise a jump the player never makes. Better an
+   * honest arrow than a wrong number.
+   *
+   * The icon constant — not the drawable — is what a controller that renders its own UI reads, and
+   * it is carried through the legacy conversion Android Auto consumes. Building a button with only
+   * `setIconResId` leaves the constant at ICON_UNDEFINED, so the car has nothing to draw.
    */
   private fun jumpForwardIcon(seconds: Double): Int =
-    when (seconds.roundToInt()) {
-      5 -> CommandButton.ICON_SKIP_FORWARD_5
-      10 -> CommandButton.ICON_SKIP_FORWARD_10
-      15 -> CommandButton.ICON_SKIP_FORWARD_15
-      30 -> CommandButton.ICON_SKIP_FORWARD_30
+    when (seconds) {
+      5.0 -> CommandButton.ICON_SKIP_FORWARD_5
+      10.0 -> CommandButton.ICON_SKIP_FORWARD_10
+      15.0 -> CommandButton.ICON_SKIP_FORWARD_15
+      30.0 -> CommandButton.ICON_SKIP_FORWARD_30
       else -> CommandButton.ICON_SKIP_FORWARD
     }
 
   private fun jumpBackwardIcon(seconds: Double): Int =
-    when (seconds.roundToInt()) {
-      5 -> CommandButton.ICON_SKIP_BACK_5
-      10 -> CommandButton.ICON_SKIP_BACK_10
-      15 -> CommandButton.ICON_SKIP_BACK_15
-      30 -> CommandButton.ICON_SKIP_BACK_30
+    when (seconds) {
+      5.0 -> CommandButton.ICON_SKIP_BACK_5
+      10.0 -> CommandButton.ICON_SKIP_BACK_10
+      15.0 -> CommandButton.ICON_SKIP_BACK_15
+      30.0 -> CommandButton.ICON_SKIP_BACK_30
       else -> CommandButton.ICON_SKIP_BACK
     }
 

@@ -154,6 +154,16 @@ class CapabilityControlsTest {
   }
 
   @Test
+  fun `a layout is never merged with the capability defaults`() {
+    // Nitro collapses an omitted and a null enum field to the same Kotlin null, so a per-field
+    // merge is not expressible: an empty position must stay empty rather than falling back to the
+    // capability default. Every capability here is enabled, so a merge would add skip and jump.
+    val derived =
+      slots(capabilities(favorite = true), layout(overflow = arrayOf(RemoteButton.FAVORITE)))
+    assertEquals(listOf(RemoteButton.FAVORITE to ButtonSlot.OVERFLOW), derived)
+  }
+
+  @Test
   fun `a disabled entry drops out without promoting anything into its position`() {
     // favorite unset (= disabled), skipToPrevious explicitly off. skip-to-next must stay on
     // FORWARD rather than sliding into the vacated BACK position.

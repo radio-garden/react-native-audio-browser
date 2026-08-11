@@ -18,7 +18,7 @@ public extension RemoteButtonLayout {
   /**
    * Create a new instance of `RemoteButtonLayout`.
    */
-  init(back: RemoteButton?, forward: RemoteButton?, overflow: [RemoteButton]?) {
+  init(back: RemoteButton?, forward: RemoteButton?, overflow: [RemoteButton]) {
     self.init({ () -> bridge.std__optional_RemoteButton_ in
       if let __unwrappedValue = back {
         return bridge.create_std__optional_RemoteButton_(__unwrappedValue)
@@ -31,18 +31,12 @@ public extension RemoteButtonLayout {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__vector_RemoteButton__ in
-      if let __unwrappedValue = overflow {
-        return bridge.create_std__optional_std__vector_RemoteButton__({ () -> bridge.std__vector_RemoteButton_ in
-          var __vector = bridge.create_std__vector_RemoteButton_(__unwrappedValue.count)
-          for __item in __unwrappedValue {
-            __vector.push_back(__item)
-          }
-          return __vector
-        }())
-      } else {
-        return .init()
+    }(), { () -> bridge.std__vector_RemoteButton_ in
+      var __vector = bridge.create_std__vector_RemoteButton_(overflow.count)
+      for __item in overflow {
+        __vector.push_back(__item)
       }
+      return __vector
     }())
   }
 
@@ -57,14 +51,7 @@ public extension RemoteButtonLayout {
   }
   
   @inline(__always)
-  var overflow: [RemoteButton]? {
-    return { () -> [RemoteButton]? in
-      if bridge.has_value_std__optional_std__vector_RemoteButton__(self.__overflow) {
-        let __unwrapped = bridge.get_std__optional_std__vector_RemoteButton__(self.__overflow)
-        return __unwrapped.map({ __item in __item })
-      } else {
-        return nil
-      }
-    }()
+  var overflow: [RemoteButton] {
+    return self.__overflow.map({ __item in __item })
   }
 }

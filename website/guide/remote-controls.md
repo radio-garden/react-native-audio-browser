@@ -63,17 +63,25 @@ updateOptions({
 ```
 
 One layout drives every Android surface — the notification, the Android Auto
-Now Playing screen, and the Android 13+ system media controls. Omit
-`remoteButtonLayout` entirely and it's derived from your capabilities; set it to
-`null` to go back to that default.
+Now Playing screen, and the Android 13+ system media controls.
 
-Per position: omit a field to derive it, set `null` to leave it empty, or name
-a button to place it there.
+**A layout describes the whole arrangement.** All three fields are required and
+nothing is merged with the defaults, so what you write is exactly what renders —
+list every button you want, not just the ones you're adding. Use `undefined` for
+an empty position and `[]` for no overflow:
 
 ```ts
 // Live radio: a forward skip only, nothing to the left of play/pause
-remoteButtonLayout: { back: null, forward: 'skip-to-next' }
+remoteButtonLayout: {
+  back: undefined,
+  forward: 'skip-to-next',
+  overflow: []
+}
 ```
+
+To go back to the capability-derived defaults, omit `remoteButtonLayout`
+entirely or set it to `null`. That's the only switch — there's no per-field
+opt-out.
 
 ### Capabilities admit, the layout arranges
 
@@ -119,7 +127,7 @@ has room for, **taking them from the front**:
 
 Two consequences worth knowing:
 
-- A head unit with a spare slot will **promote** the first overflow entry onto
+- A head unit with a spare slot **may promote** the first overflow entry onto
   the main row. Seeing an "overflow" button beside play/pause in the car is
   expected, not a bug.
 - A long list gets **truncated**. Put what matters most first — a `'favorite'`

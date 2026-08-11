@@ -143,13 +143,16 @@ export type RemoteButton =
  * - **`forward`** — the single position right of play/pause
  * - **`overflow`** — everything else, in priority order
  *
- * Per field: omit it to derive from capabilities, set `null` to leave it empty,
- * or name a button to place it there.
+ * **A layout describes the whole arrangement.** All three fields are required —
+ * there is no per-field merge with the capability defaults, so what you write is
+ * exactly what renders. Use `undefined` for an empty position and `[]` for no
+ * overflow. To go back to the derived defaults, omit `remoteButtonLayout`
+ * entirely (or set it to `null`); that is the only switch.
  *
  * **Overflow order is priority, not coordinates.** Each surface renders as many
  * buttons as it has room for, taking them from the front — a phone
  * notification, the Android 13+ system media controls, and a car head unit all
- * have different budgets. A head unit with a spare slot will promote the first
+ * have different budgets. A head unit with a spare slot may promote the first
  * overflow entry onto the main row, and a long list gets truncated by whichever
  * surface is showing it. Put what matters most first.
  *
@@ -163,7 +166,7 @@ export type RemoteButton =
  * remoteButtonLayout: {
  *   back: 'jump-backward',
  *   forward: 'jump-forward',
- *   overflow: ['favorite']
+ *   overflow: ['skip-to-previous', 'skip-to-next', 'favorite']
  * }
  *
  * // Music-style: skip either side of play/pause
@@ -174,16 +177,23 @@ export type RemoteButton =
  * }
  *
  * // Live radio: forward only, nothing to the left
- * remoteButtonLayout: { back: null, forward: 'skip-to-next' }
+ * remoteButtonLayout: {
+ *   back: undefined,
+ *   forward: 'skip-to-next',
+ *   overflow: []
+ * }
  * ```
  */
 export type RemoteButtonLayout = {
-  /** The single position left of play/pause. */
-  back?: RemoteButton | null
-  /** The single position right of play/pause. */
-  forward?: RemoteButton | null
-  /** Everything else, most important first — surfaces promote and truncate from the front. */
-  overflow?: RemoteButton[]
+  /** The single position left of play/pause. `undefined` leaves it empty. */
+  back: RemoteButton | undefined
+  /** The single position right of play/pause. `undefined` leaves it empty. */
+  forward: RemoteButton | undefined
+  /**
+   * Everything else, most important first — surfaces promote and truncate from
+   * the front. `[]` for none.
+   */
+  overflow: RemoteButton[]
 }
 
 /**
@@ -223,12 +233,22 @@ export interface Options {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval: number
@@ -413,12 +433,22 @@ export interface UpdateOptions {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval?: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval?: number
@@ -461,12 +491,22 @@ export interface NativeUpdateOptions {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval?: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval?: number
