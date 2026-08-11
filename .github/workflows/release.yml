@@ -2,9 +2,9 @@ name: Release
 
 on:
   schedule:
-    - cron: '0 3 * * *' # nightly at 3am UTC
+    - cron: '0 3 * * *' # nightly at 3am UTC, publishes prereleases from `next`
   push:
-    branches: [next]
+    branches: [main, next]
   workflow_dispatch:
 
 permissions:
@@ -29,8 +29,25 @@ jobs:
         with:
           ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
-      - name: Fetch all branch refs for semantic-release
-        run: git fetch origin +refs/heads/*:refs/heads/*
+
+      # semantic-release runs `git tag --merged <branch>` for every branch in
+      # release.config.cjs. actions/checkout only creates a local branch for the
+      # ref it checked out, so the others resolve to nothing and it dies with
+      # `fatal: malformed object name main` before analysing a single commit.
+      # Fetch each configured branch into a local ref, skipping the one already
+      # checked out — git refuses to update the current branch and would fail
+      # the step under `bash -e`.
+      - name: Create local refs for semantic-release branches
+        run: |
+          current=$(git rev-parse --abbrev-ref HEAD)
+          for branch in main next; do
+            if [ "$branch" != "$current" ]; then
+              spec="refs/heads/${branch}:refs/heads/${branch}"
+              git fetch --no-tags --force origin "$spec"
+            fi
+          done
+          git branch --list
+
       - name: Enable Corepack
         run: corepack enable
       - name: Setup Node.js
