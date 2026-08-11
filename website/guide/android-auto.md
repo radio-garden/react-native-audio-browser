@@ -63,6 +63,20 @@ children: [
 ]
 ```
 
+## Now Playing buttons
+
+The buttons on the Now Playing screen come from the same
+[`remoteButtonLayout`](/guide/remote-controls#button-layout-android) that drives the
+notification — there's no car-specific option. Two behaviors are particular to
+the car, though:
+
+- **The head unit has the last word.** Slots are a preference. A unit with a
+  spare position may promote the first `overflow` entry onto the main row, so
+  a button you placed in overflow can still appear beside play/pause.
+- **Fewer buttons, cleaner row.** If you want just
+  `jump-back │ play/pause │ jump-forward`, leave the rest out of the layout
+  entirely — they keep working from the steering wheel and headset regardless.
+
 ## Testing
 
 Test in a real car, or in Google's **Desktop Head Unit (DHU)** emulator:

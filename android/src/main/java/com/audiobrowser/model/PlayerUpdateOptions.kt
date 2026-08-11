@@ -3,11 +3,11 @@ package com.audiobrowser.model
 import com.margelo.nitro.audiobrowser.AndroidOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
-import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
+import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
-import com.margelo.nitro.audiobrowser.Variant_NullType_NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.Variant_NullType_RemoteButtonLayout
 
 /**
  * Update options for the AudioBrowser that can be changed at runtime. These options control player
@@ -37,8 +37,8 @@ data class PlayerUpdateOptions(
       playbackRate = null,
     ),
 
-  // Notification button layout (null = derive from capabilities)
-  var notificationButtons: NotificationButtonLayout? = null,
+  // Ordered button layout (null = derive from capabilities)
+  var remoteButtonLayout: RemoteButtonLayout? = null,
 
   // Android-specific runtime options (all under android.* in JS)
   var appKilledPlaybackBehavior: AppKilledPlaybackBehavior =
@@ -66,12 +66,12 @@ data class PlayerUpdateOptions(
       // Update boolean options
       androidOptions.skipSilence?.let { skipSilence = it }
 
-      // Handle notificationButtons - variant allows distinguishing undefined from null
-      androidOptions.notificationButtons?.let { variant ->
-        notificationButtons =
+      // Handle remoteButtonLayout - variant allows distinguishing undefined from null
+      androidOptions.remoteButtonLayout?.let { variant ->
+        remoteButtonLayout =
           when (variant) {
-            is Variant_NullType_NotificationButtonLayout.First -> null
-            is Variant_NullType_NotificationButtonLayout.Second -> variant.value
+            is Variant_NullType_RemoteButtonLayout.First -> null
+            is Variant_NullType_RemoteButtonLayout.Second -> variant.value
           }
       }
     }
@@ -84,8 +84,8 @@ data class PlayerUpdateOptions(
         AndroidOptions(
           appKilledPlaybackBehavior = appKilledPlaybackBehavior,
           skipSilence = skipSilence,
-          notificationButtons =
-            notificationButtons?.let { Variant_NullType_NotificationButtonLayout.create(it) },
+          remoteButtonLayout =
+            remoteButtonLayout?.let { Variant_NullType_RemoteButtonLayout.create(it) },
         ),
       forwardJumpInterval = forwardJumpInterval,
       backwardJumpInterval = backwardJumpInterval,

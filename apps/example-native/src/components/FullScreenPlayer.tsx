@@ -19,7 +19,7 @@ import { SleepTimerModal } from './SleepTimerModal'
 import {
   getRate,
   getRepeatMode,
-  openIosOutputPicker,
+  openOutputPicker,
   seekTo,
   setRate,
   setRepeatMode,
@@ -30,7 +30,7 @@ import {
   toggleShuffle,
   useActiveTrack,
   useEqualizerSettings,
-  useIosOutput,
+  useOutput,
   useNowPlaying,
   usePlayingState,
   usePolledProgress,
@@ -70,7 +70,7 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
   const repeatMode = useRepeatMode()
   const sleepTimerActive = useSleepTimerActive()
   const equalizerSettings = useEqualizerSettings()
-  const iosOutput = useIosOutput()
+  const output = useOutput()
   const { width: screenWidth } = useWindowDimensions()
   const [rateState, setRateState] = useState(() => getRate())
 
@@ -276,12 +276,12 @@ export function FullScreenPlayer({ visible, onClose }: Props) {
             {Platform.OS === 'ios' && (
               <Pressable
                 style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={openIosOutputPicker}
+                onPress={openOutputPicker}
               >
                 <Icon
                   name="headphones"
                   size={20}
-                  color={iosOutput?.external ? '#007AFF' : 'white'}
+                  color={output?.external ? '#007AFF' : 'white'}
                   iconStyle="solid"
                 />
               </Pressable>

@@ -30,12 +30,12 @@
 
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
+// Forward declaration of `RemoteButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
 
 #include "AppKilledPlaybackBehavior.hpp"
 #include <NitroModules/Null.hpp>
-#include "NotificationButtonLayout.hpp"
+#include "RemoteButtonLayout.hpp"
 #include <variant>
 #include <optional>
 
@@ -48,11 +48,11 @@ namespace margelo::nitro::audiobrowser {
   public:
     AppKilledPlaybackBehavior appKilledPlaybackBehavior     SWIFT_PRIVATE;
     bool skipSilence     SWIFT_PRIVATE;
-    std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> notificationButtons     SWIFT_PRIVATE;
+    std::optional<std::variant<nitro::NullType, RemoteButtonLayout>> remoteButtonLayout     SWIFT_PRIVATE;
 
   public:
     AndroidOptions() = default;
-    explicit AndroidOptions(AppKilledPlaybackBehavior appKilledPlaybackBehavior, bool skipSilence, std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> notificationButtons): appKilledPlaybackBehavior(appKilledPlaybackBehavior), skipSilence(skipSilence), notificationButtons(notificationButtons) {}
+    explicit AndroidOptions(AppKilledPlaybackBehavior appKilledPlaybackBehavior, bool skipSilence, std::optional<std::variant<nitro::NullType, RemoteButtonLayout>> remoteButtonLayout): appKilledPlaybackBehavior(appKilledPlaybackBehavior), skipSilence(skipSilence), remoteButtonLayout(remoteButtonLayout) {}
 
   public:
     friend bool operator==(const AndroidOptions& lhs, const AndroidOptions& rhs) = default;
@@ -70,14 +70,14 @@ namespace margelo::nitro {
       return margelo::nitro::audiobrowser::AndroidOptions(
         JSIConverter<margelo::nitro::audiobrowser::AppKilledPlaybackBehavior>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "appKilledPlaybackBehavior"))),
         JSIConverter<bool>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipSilence"))),
-        JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::NotificationButtonLayout>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "notificationButtons")))
+        JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::RemoteButtonLayout>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "remoteButtonLayout")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::AndroidOptions& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "appKilledPlaybackBehavior"), JSIConverter<margelo::nitro::audiobrowser::AppKilledPlaybackBehavior>::toJSI(runtime, arg.appKilledPlaybackBehavior));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "skipSilence"), JSIConverter<bool>::toJSI(runtime, arg.skipSilence));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "notificationButtons"), JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::NotificationButtonLayout>>>::toJSI(runtime, arg.notificationButtons));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "remoteButtonLayout"), JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::RemoteButtonLayout>>>::toJSI(runtime, arg.remoteButtonLayout));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -90,7 +90,7 @@ namespace margelo::nitro {
       }
       if (!JSIConverter<margelo::nitro::audiobrowser::AppKilledPlaybackBehavior>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "appKilledPlaybackBehavior")))) return false;
       if (!JSIConverter<bool>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "skipSilence")))) return false;
-      if (!JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::NotificationButtonLayout>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "notificationButtons")))) return false;
+      if (!JSIConverter<std::optional<std::variant<nitro::NullType, margelo::nitro::audiobrowser::RemoteButtonLayout>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "remoteButtonLayout")))) return false;
       return true;
     }
   };

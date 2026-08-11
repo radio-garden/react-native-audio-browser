@@ -55,7 +55,13 @@ With the capability enabled, a heart appears on the now-playing surfaces. Add it
 ```ts
 await AudioBrowser.setupPlayer({
   capabilities: { favorite: true },
-  android: { notificationButtons: { overflow: ['favorite'] } },
+  android: {
+    remoteButtonLayout: {
+      back: 'skip-to-previous',
+      forward: 'skip-to-next',
+      overflow: ['favorite']
+    }
+  },
   ios: { carPlayNowPlayingButtons: ['favorite'] },
 })
 ```
@@ -134,6 +140,6 @@ Voice intents can target the favorites collection — both "play my favorites" a
 | `setActiveTrackFavorited(bool)` / `toggleActiveTrackFavorited()` | Favorite the active track from your own UI. |
 | `onFavoriteChanged` | Subscribe to system heart taps to persist the change. |
 | `notifyContentChanged('/favorites')` | Re-fetch the `/favorites` content after the collection changes. |
-| `android.notificationButtons.overflow: ['favorite']` | Heart in the Android notification. |
+| `'favorite'` in `android.remoteButtonLayout` | Heart in the Android notification, Android Auto, and the system media controls. A layout replaces the defaults wholesale, so list the other buttons you still want. |
 | `ios.carPlayNowPlayingButtons: ['favorite']` | Heart on the CarPlay now-playing screen. |
 | `search` source with `reference: 'my'` | Resolve "play my favorites" / favorites search. |

@@ -51,7 +51,7 @@ updateOptions({ ios: { carPlayNowPlayingButtons: ['repeat'] } })
 
 `null` is meaningful on exactly two fields, where it turns the feature off:
 `progressUpdateEventInterval: null` disables progress events, and
-`android.notificationButtons: null` empties the layout (deriving it from
+`android.remoteButtonLayout: null` empties the layout (deriving it from
 capabilities). Elsewhere, just omit a field to leave it unchanged.
 
 ## Setup-only vs updatable
@@ -64,7 +64,7 @@ capabilities). Elsewhere, just omit a field to leave it unchanged.
 | `capabilities` | ✓ | ✓ |
 | `forwardJumpInterval` / `backwardJumpInterval` | ✓ | ✓ |
 | `progressUpdateEventInterval` | ✓ | ✓ |
-| `android.appKilledPlaybackBehavior` / `skipSilence` / `notificationButtons` | ✓ | ✓ |
+| `android.appKilledPlaybackBehavior` / `skipSilence` / `remoteButtonLayout` | ✓ | ✓ |
 | `ios.playbackRates` / `carPlayUpNextButton` / `carPlayNowPlayingButtons` | ✓ | ✓ |
 | `nowPlaying` (metadata formatter) | ✓ | — |
 | `playWhenReady`, `repeatMode` (initial values) | ✓ | — |
@@ -124,7 +124,7 @@ It's **setup-only** (a function can't cross `updateOptions`). See
 | --- | --- | --- |
 | `appKilledPlaybackBehavior` | `'continue-playback'` | What happens when the app is swiped away (`continue-playback` / `pause-playback` / `stop-playback-and-remove-notification`). |
 | `skipSilence` | `false` | Skip silent segments during playback. |
-| `notificationButtons` | `null` | Explicit notification button layout; `null` derives it from capabilities — see [Android Auto](/guide/android-auto). |
+| `remoteButtonLayout` | `null` | Explicit button placement (`back` / `forward` / `overflow`); `null` derives it from capabilities — see [Button layout](/guide/remote-controls#button-layout-android). |
 | `audioContentType` | `'music'` | Audio attributes content type (setup-only). |
 | `wakeMode` | `'none'` | CPU/network wake lock during playback (setup-only). |
 

@@ -12,11 +12,11 @@
 
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "JNotificationButton.hpp"
-#include "JNotificationButtonLayout.hpp"
-#include "JVariant_NullType_NotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
-#include "NotificationButtonLayout.hpp"
+#include "JRemoteButton.hpp"
+#include "JRemoteButtonLayout.hpp"
+#include "JVariant_NullType_RemoteButtonLayout.hpp"
+#include "RemoteButton.hpp"
+#include "RemoteButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>
@@ -46,12 +46,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JAppKilledPlaybackBehavior> appKilledPlaybackBehavior = this->getFieldValue(fieldAppKilledPlaybackBehavior);
       static const auto fieldSkipSilence = clazz->getField<jboolean>("skipSilence");
       jboolean skipSilence = this->getFieldValue(fieldSkipSilence);
-      static const auto fieldNotificationButtons = clazz->getField<JVariant_NullType_NotificationButtonLayout>("notificationButtons");
-      jni::local_ref<JVariant_NullType_NotificationButtonLayout> notificationButtons = this->getFieldValue(fieldNotificationButtons);
+      static const auto fieldRemoteButtonLayout = clazz->getField<JVariant_NullType_RemoteButtonLayout>("remoteButtonLayout");
+      jni::local_ref<JVariant_NullType_RemoteButtonLayout> remoteButtonLayout = this->getFieldValue(fieldRemoteButtonLayout);
       return AndroidOptions(
         appKilledPlaybackBehavior->toCpp(),
         static_cast<bool>(skipSilence),
-        notificationButtons != nullptr ? std::make_optional(notificationButtons->toCpp()) : std::nullopt
+        remoteButtonLayout != nullptr ? std::make_optional(remoteButtonLayout->toCpp()) : std::nullopt
       );
     }
 
@@ -61,14 +61,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JAndroidOptions::javaobject> fromCpp(const AndroidOptions& value) {
-      using JSignature = JAndroidOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jboolean, jni::alias_ref<JVariant_NullType_NotificationButtonLayout>);
+      using JSignature = JAndroidOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jboolean, jni::alias_ref<JVariant_NullType_RemoteButtonLayout>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         JAppKilledPlaybackBehavior::fromCpp(value.appKilledPlaybackBehavior),
         value.skipSilence,
-        value.notificationButtons.has_value() ? JVariant_NullType_NotificationButtonLayout::fromCpp(value.notificationButtons.value()) : nullptr
+        value.remoteButtonLayout.has_value() ? JVariant_NullType_RemoteButtonLayout::fromCpp(value.remoteButtonLayout.value()) : nullptr
       );
     }
   };

@@ -25,7 +25,7 @@ data class NitroAndroidUpdateOptions(
   val skipSilence: Boolean?,
   @DoNotStrip
   @Keep
-  val notificationButtons: Variant_NullType_NotificationButtonLayout?
+  val remoteButtonLayout: Variant_NullType_RemoteButtonLayout?
 ) {
   /* primary constructor */
 
@@ -37,8 +37,8 @@ data class NitroAndroidUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, notificationButtons: Variant_NullType_NotificationButtonLayout?): NitroAndroidUpdateOptions {
-      return NitroAndroidUpdateOptions(appKilledPlaybackBehavior, skipSilence, notificationButtons)
+    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior?, skipSilence: Boolean?, remoteButtonLayout: Variant_NullType_RemoteButtonLayout?): NitroAndroidUpdateOptions {
+      return NitroAndroidUpdateOptions(appKilledPlaybackBehavior, skipSilence, remoteButtonLayout)
     }
   }
 }

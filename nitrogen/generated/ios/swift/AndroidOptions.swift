@@ -18,15 +18,15 @@ public extension AndroidOptions {
   /**
    * Create a new instance of `AndroidOptions`.
    */
-  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Bool, notificationButtons: Variant_NullType_NotificationButtonLayout?) {
-    self.init(appKilledPlaybackBehavior, skipSilence, { () -> bridge.std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ in
-      if let __unwrappedValue = notificationButtons {
-        return bridge.create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__({ () -> bridge.std__variant_nitro__NullType__NotificationButtonLayout_ in
+  init(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Bool, remoteButtonLayout: Variant_NullType_RemoteButtonLayout?) {
+    self.init(appKilledPlaybackBehavior, skipSilence, { () -> bridge.std__optional_std__variant_nitro__NullType__RemoteButtonLayout__ in
+      if let __unwrappedValue = remoteButtonLayout {
+        return bridge.create_std__optional_std__variant_nitro__NullType__RemoteButtonLayout__({ () -> bridge.std__variant_nitro__NullType__RemoteButtonLayout_ in
           switch __unwrappedValue {
             case .first(let __value):
-              return bridge.create_std__variant_nitro__NullType__NotificationButtonLayout_(margelo.nitro.NullType.null)
+              return bridge.create_std__variant_nitro__NullType__RemoteButtonLayout_(margelo.nitro.NullType.null)
             case .second(let __value):
-              return bridge.create_std__variant_nitro__NullType__NotificationButtonLayout_(__value)
+              return bridge.create_std__variant_nitro__NullType__RemoteButtonLayout_(__value)
           }
         }().variant)
       } else {
@@ -46,12 +46,12 @@ public extension AndroidOptions {
   }
   
   @inline(__always)
-  var notificationButtons: Variant_NullType_NotificationButtonLayout? {
-    return { () -> Variant_NullType_NotificationButtonLayout? in
-      if bridge.has_value_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(self.__notificationButtons) {
-        let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(self.__notificationButtons)
-        return { () -> Variant_NullType_NotificationButtonLayout in
-          let __variant = bridge.std__variant_nitro__NullType__NotificationButtonLayout_(__unwrapped)
+  var remoteButtonLayout: Variant_NullType_RemoteButtonLayout? {
+    return { () -> Variant_NullType_RemoteButtonLayout? in
+      if bridge.has_value_std__optional_std__variant_nitro__NullType__RemoteButtonLayout__(self.__remoteButtonLayout) {
+        let __unwrapped = bridge.get_std__optional_std__variant_nitro__NullType__RemoteButtonLayout__(self.__remoteButtonLayout)
+        return { () -> Variant_NullType_RemoteButtonLayout in
+          let __variant = bridge.std__variant_nitro__NullType__RemoteButtonLayout_(__unwrapped)
           switch __variant.index() {
             case 0:
               let __actual = __variant.get_0()

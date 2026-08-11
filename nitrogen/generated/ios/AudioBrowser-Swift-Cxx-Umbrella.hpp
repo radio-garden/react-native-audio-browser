@@ -112,10 +112,6 @@ namespace margelo::nitro::audiobrowser { struct NavigationError; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
-// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
-// Forward declaration of `NotificationButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
@@ -150,6 +146,10 @@ namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `RemoteButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
+// Forward declaration of `RemoteButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 // Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
@@ -250,8 +250,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NitroIOSUpdateOptions.hpp"
-#include "NotificationButton.hpp"
-#include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
@@ -269,6 +267,8 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "PlayerCapabilities.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
+#include "RemoteButton.hpp"
+#include "RemoteButtonLayout.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
 #include "RemotePlayIdEvent.hpp"

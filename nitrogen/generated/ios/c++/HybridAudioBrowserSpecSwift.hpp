@@ -132,10 +132,10 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
-// Forward declaration of `NotificationButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
+// Forward declaration of `RemoteButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
+// Forward declaration of `RemoteButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 // Forward declaration of `PlayerCapabilities` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 // Forward declaration of `FavoriteConfig` to properly resolve imports.
@@ -267,8 +267,8 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include "Options.hpp"
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
-#include "NotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
+#include "RemoteButtonLayout.hpp"
+#include "RemoteButton.hpp"
 #include "PlayerCapabilities.hpp"
 #include "FavoriteConfig.hpp"
 #include "FavoritesMatchMode.hpp"

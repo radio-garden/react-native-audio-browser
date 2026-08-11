@@ -326,7 +326,7 @@ export type AndroidPlayerWakeMode = 'none' | 'local' | 'network'
 
 /**
  * Android setup options: the engine-construction fields plus the Android runtime options
- * ({@link AndroidUpdateOptions} — `notificationButtons`, `skipSilence`, …), all expressible at
+ * ({@link AndroidUpdateOptions} — `remoteButtonLayout`, `skipSilence`, …), all expressible at
  * launch. The consumer never has to know which is which; `setupPlayer` routes each field to
  * where it's applied.
  */
@@ -658,7 +658,7 @@ function wrapNowPlayingFormatter(
 
 /**
  * The object's entries whose values aren't `undefined`. `null` stays: it's meaningful on some
- * fields (`progressUpdateEventInterval: null` disables progress events, `notificationButtons:
+ * fields (`progressUpdateEventInterval: null` disables progress events, `remoteButtonLayout:
  * null` empties the layout), so only `undefined` means "not provided".
  */
 function definedFields<T extends object>(obj: T): Partial<T> {
@@ -682,7 +682,7 @@ function nonEmpty<K extends string, T extends object>(
 /**
  * Initializes the player with the specified options — the full launch description in one
  * declarative, atomic call. Runtime options (`capabilities`, jump intervals,
- * `notificationButtons`, …) and the initial `playWhenReady` / `repeatMode` are applied
+ * `remoteButtonLayout`, …) and the initial `playWhenReady` / `repeatMode` are applied
  * natively as part of setup itself, so there is no setup-then-command ordering for consumers
  * to know about, and no window where the player exists without its options.
  *
@@ -699,7 +699,14 @@ function nonEmpty<K extends string, T extends object>(
  *   playWhenReady: true,
  *   repeatMode: 'queue',
  *   capabilities: { favorite: true },
- *   android: { audioContentType: 'music', notificationButtons: { overflow: ['favorite'] } },
+ *   android: {
+ *     audioContentType: 'music',
+ *     remoteButtonLayout: {
+ *       back: 'jump-backward',
+ *       forward: 'jump-forward',
+ *       overflow: ['favorite']
+ *     }
+ *   },
  *   ios: { category: 'playback' }
  * })
  * ```
@@ -724,7 +731,7 @@ export async function setupPlayer(
   const {
     appKilledPlaybackBehavior,
     skipSilence,
-    notificationButtons,
+    remoteButtonLayout,
     ...androidSetup
   } = android
   const {
@@ -750,7 +757,7 @@ export async function setupPlayer(
       definedFields({
         appKilledPlaybackBehavior,
         skipSilence,
-        notificationButtons
+        remoteButtonLayout
       })
     ),
     ...nonEmpty('ios', iosUpdate)

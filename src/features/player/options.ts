@@ -117,10 +117,11 @@ export interface PlayerCapabilities {
 }
 
 /**
- * Buttons that can be assigned to Android notification button slots.
- * These represent the interactive buttons users can tap in the notification.
+ * Buttons that can be placed in the Android button layout — the interactive
+ * controls a listener taps in the notification, on the Android Auto Now Playing
+ * screen, and in the Android 13+ system media controls.
  */
-export type NotificationButton =
+export type RemoteButton =
   | 'skip-to-previous'
   | 'skip-to-next'
   | 'jump-backward'
@@ -128,43 +129,71 @@ export type NotificationButton =
   | 'favorite'
 
 /**
- * Configuration for notification button layout on Android.
- * Allows explicit control over which buttons appear in which slots.
+ * Where each button sits on Android.
  *
- * Slot behavior:
- * - **Omit a slot**: Derive from capabilities (smart default)
- * - **Set to null**: Explicitly empty slot
- * - **Set to button**: Show that button in that slot
+ * Android offers exactly three positions, and play/pause always occupies the
+ * centre — you cannot move it, and you cannot put two buttons on the same side
+ * of it:
+ *
+ * ```
+ *   back  │  ▶ play/pause  │  forward        overflow ⋯
+ * ```
+ *
+ * - **`back`** — the single position left of play/pause
+ * - **`forward`** — the single position right of play/pause
+ * - **`overflow`** — everything else, in priority order
+ *
+ * **A layout describes the whole arrangement.** All three fields are required —
+ * there is no per-field merge with the capability defaults, so what you write is
+ * exactly what renders. Use `undefined` for an empty position and `[]` for no
+ * overflow. To go back to the derived defaults, omit `remoteButtonLayout`
+ * entirely (or set it to `null`); that is the only switch.
+ *
+ * **Overflow order is priority, not coordinates.** Each surface renders as many
+ * buttons as it has room for, taking them from the front — a phone
+ * notification, the Android 13+ system media controls, and a car head unit all
+ * have different budgets. A head unit with a spare slot may promote the first
+ * overflow entry onto the main row, and a long list gets truncated by whichever
+ * surface is showing it. Put what matters most first.
+ *
+ * Placement never changes what a control *can* do: a button left out entirely
+ * still responds to a Bluetooth remote or headset, as long as its
+ * {@link PlayerCapabilities} entry is enabled.
  *
  * @example
  * ```typescript
- * // Podcast-style: jump buttons as primary
- * notificationButtons: {
+ * // Podcast-style: jump either side of play/pause
+ * remoteButtonLayout: {
  *   back: 'jump-backward',
  *   forward: 'jump-forward',
+ *   overflow: ['skip-to-previous', 'skip-to-next', 'favorite']
+ * }
+ *
+ * // Music-style: skip either side of play/pause
+ * remoteButtonLayout: {
+ *   back: 'skip-to-previous',
+ *   forward: 'skip-to-next',
  *   overflow: ['favorite']
  * }
  *
- * // Music-style: skip as primary, jump as secondary
- * notificationButtons: {
- *   back: 'skip-to-previous',
+ * // Live radio: forward only, nothing to the left
+ * remoteButtonLayout: {
+ *   back: undefined,
  *   forward: 'skip-to-next',
- *   backSecondary: 'jump-backward',
- *   forwardSecondary: 'jump-forward'
+ *   overflow: []
  * }
  * ```
  */
-export type NotificationButtonLayout = {
-  /** Primary back position (SLOT_BACK) - typically previous track or jump backward */
-  back?: NotificationButton | null
-  /** Primary forward position (SLOT_FORWARD) - typically next track or jump forward */
-  forward?: NotificationButton | null
-  /** Secondary back position (SLOT_BACK_SECONDARY) */
-  backSecondary?: NotificationButton | null
-  /** Secondary forward position (SLOT_FORWARD_SECONDARY) */
-  forwardSecondary?: NotificationButton | null
-  /** Additional buttons in overflow area (SLOT_OVERFLOW) */
-  overflow?: NotificationButton[]
+export type RemoteButtonLayout = {
+  /** The single position left of play/pause. `undefined` leaves it empty. */
+  back: RemoteButton | undefined
+  /** The single position right of play/pause. `undefined` leaves it empty. */
+  forward: RemoteButton | undefined
+  /**
+   * Everything else, most important first — surfaces promote and truncate from
+   * the front. `[]` for none.
+   */
+  overflow: RemoteButton[]
 }
 
 /**
@@ -204,12 +233,22 @@ export interface Options {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval: number
@@ -273,14 +312,14 @@ export interface AndroidOptions {
   skipSilence: boolean
 
   /**
-   * Slot-based button layout for Android notifications.
-   * Provides explicit control over which buttons appear in which positions.
+   * Ordered button layout, applied to the notification, Android Auto, and the
+   * Android 13+ system media controls. See {@link RemoteButtonLayout}.
    *
-   * When not specified, button layout is derived from capabilities.
+   * When not specified, the layout is derived from capabilities.
    *
    * @platform android
    */
-  notificationButtons: NotificationButtonLayout | null
+  remoteButtonLayout: RemoteButtonLayout | null
 }
 
 export interface AndroidUpdateOptions {
@@ -300,14 +339,14 @@ export interface AndroidUpdateOptions {
   skipSilence?: boolean
 
   /**
-   * Slot-based button layout for Android notifications.
-   * Provides explicit control over which buttons appear in which positions.
+   * Ordered button layout, applied to the notification, Android Auto, and the
+   * Android 13+ system media controls. See {@link RemoteButtonLayout}.
    *
-   * When not specified, button layout is derived from capabilities.
+   * When not specified, the layout is derived from capabilities.
    *
    * @platform android
    */
-  notificationButtons?: NotificationButtonLayout | null
+  remoteButtonLayout?: RemoteButtonLayout | null
 }
 
 /**
@@ -317,7 +356,7 @@ export interface AndroidUpdateOptions {
 export interface NitroAndroidUpdateOptions {
   appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
   skipSilence?: boolean
-  notificationButtons?: NotificationButtonLayout | null
+  remoteButtonLayout?: RemoteButtonLayout | null
 }
 
 /**
@@ -394,12 +433,22 @@ export interface UpdateOptions {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval?: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval?: number
@@ -442,12 +491,22 @@ export interface NativeUpdateOptions {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval?: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval?: number

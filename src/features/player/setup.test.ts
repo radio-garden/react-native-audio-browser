@@ -52,7 +52,11 @@ describe('setupPlayer wire regrouping', () => {
         minBuffer: 50_000,
         wakeMode: 'network',
         skipSilence: true,
-        notificationButtons: { overflow: ['favorite'] }
+        remoteButtonLayout: {
+          back: 'jump-backward',
+          forward: 'jump-forward',
+          overflow: ['favorite']
+        }
       }
     })
 
@@ -61,7 +65,11 @@ describe('setupPlayer wire regrouping', () => {
     expect(sent.options).toEqual({
       android: {
         skipSilence: true,
-        notificationButtons: { overflow: ['favorite'] }
+        remoteButtonLayout: {
+          back: 'jump-backward',
+          forward: 'jump-forward',
+          overflow: ['favorite']
+        }
       }
     })
   })
@@ -85,12 +93,12 @@ describe('setupPlayer wire regrouping', () => {
   it('forwards meaningful nulls (progress disabled, empty button layout)', async () => {
     await setupPlayer({
       progressUpdateEventInterval: null,
-      android: { notificationButtons: null }
+      android: { remoteButtonLayout: null }
     })
 
     expect(payload().options).toEqual({
       progressUpdateEventInterval: null,
-      android: { notificationButtons: null }
+      android: { remoteButtonLayout: null }
     })
   })
 

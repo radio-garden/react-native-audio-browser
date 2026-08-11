@@ -25,7 +25,7 @@ data class AndroidOptions(
   val skipSilence: Boolean,
   @DoNotStrip
   @Keep
-  val notificationButtons: Variant_NullType_NotificationButtonLayout?
+  val remoteButtonLayout: Variant_NullType_RemoteButtonLayout?
 ) {
   /* primary constructor */
 
@@ -37,8 +37,8 @@ data class AndroidOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Boolean, notificationButtons: Variant_NullType_NotificationButtonLayout?): AndroidOptions {
-      return AndroidOptions(appKilledPlaybackBehavior, skipSilence, notificationButtons)
+    private fun fromCpp(appKilledPlaybackBehavior: AppKilledPlaybackBehavior, skipSilence: Boolean, remoteButtonLayout: Variant_NullType_RemoteButtonLayout?): AndroidOptions {
+      return AndroidOptions(appKilledPlaybackBehavior, skipSilence, remoteButtonLayout)
     }
   }
 }
