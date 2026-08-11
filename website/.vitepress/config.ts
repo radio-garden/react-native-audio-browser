@@ -51,6 +51,26 @@ export default withMermaid(
     // Without it every internal link is a 308 redirect on Cloudflare.
     cleanUrls: true,
 
+    // The Pages project also answers on audiobrowser.pages.dev, serving the same
+    // production build, so a canonical URL keeps the two from competing in
+    // search results.
+    //
+    // Skipped for noindex builds: noindex and a canonical pointing elsewhere are
+    // contradictory signals, and previews are already noindexed.
+    transformPageData(pageData) {
+      if (noindex) return
+
+      const path = pageData.relativePath
+        .replace(/(^|\/)index\.md$/, '$1')
+        .replace(/\.md$/, '')
+
+      pageData.frontmatter.head ??= []
+      pageData.frontmatter.head.push([
+        'link',
+        { rel: 'canonical', href: `https://audiobrowser.dev/${path}` }
+      ])
+    },
+
     // Emitted here rather than committed to public/ so it only ever lands in a
     // DOCS_NOINDEX build — a noindex header file sitting in public/ would follow
     // a merge straight onto audiobrowser.dev.
