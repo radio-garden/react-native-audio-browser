@@ -297,8 +297,7 @@ export class NativeAudioBrowser
     return {
       playing:
         pwr && state !== 'error' && state !== 'ended' && state !== 'none',
-      buffering:
-        pwr && (state === 'loading' || state === 'buffering')
+      buffering: pwr && (state === 'loading' || state === 'buffering')
     }
   }
 
@@ -356,7 +355,9 @@ export class NativeAudioBrowser
    * @returns true if the handler intercepted, false if defaultBehavior ran
    */
   private async handleLoad(
-    track: Track, queue: Track[], startIndex: number,
+    track: Track,
+    queue: Track[],
+    startIndex: number,
     defaultBehavior: () => void
   ): Promise<boolean> {
     const handler = this.configuration.handleTrackLoad
@@ -437,7 +438,10 @@ export class NativeAudioBrowser
         const trackId = BrowserPathHelper.extractTrackId(url)
 
         // Optimization: skip to track if already in current queue
-        if (trackId && await this.trySkipToExistingQueueTrack(trackId, parentPath)) {
+        if (
+          trackId &&
+          (await this.trySkipToExistingQueueTrack(trackId, parentPath))
+        ) {
           return
         }
 

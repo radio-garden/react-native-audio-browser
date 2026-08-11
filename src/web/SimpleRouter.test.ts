@@ -18,7 +18,7 @@ describe('SimpleRouter', () => {
 
     it('matches multi-segment paths', () => {
       const result = match('/artists/top/rated', {
-        '/artists/top/rated': true,
+        '/artists/top/rated': true
       })
       expect(result).not.toBeNull()
       expect(result![0]).toBe('/artists/top/rated')
@@ -52,12 +52,12 @@ describe('SimpleRouter', () => {
 
     it('extracts multiple parameters', () => {
       const result = match('/artists/123/albums/456', {
-        '/artists/{artistId}/albums/{albumId}': true,
+        '/artists/{artistId}/albums/{albumId}': true
       })
       expect(result).not.toBeNull()
       expect(result![1].params).toEqual({
         artistId: '123',
-        albumId: '456',
+        albumId: '456'
       })
     })
   })
@@ -98,12 +98,12 @@ describe('SimpleRouter', () => {
 
     it('works with parameters before tail wildcard', () => {
       const result = match('/api/v1/users/list', {
-        '/api/{version}/**': true,
+        '/api/{version}/**': true
       })
       expect(result).not.toBeNull()
       expect(result![1].params).toEqual({
         version: 'v1',
-        tail: 'users/list',
+        tail: 'users/list'
       })
     })
 
@@ -118,7 +118,7 @@ describe('SimpleRouter', () => {
     it('prefers constant segments over parameters', () => {
       const result = match('/artists/top', {
         '/artists/{id}': true,
-        '/artists/top': true,
+        '/artists/top': true
       })
       expect(result![0]).toBe('/artists/top')
     })
@@ -126,7 +126,7 @@ describe('SimpleRouter', () => {
     it('prefers parameters over wildcards', () => {
       const result = match('/artists/123', {
         '/artists/*': true,
-        '/artists/{id}': true,
+        '/artists/{id}': true
       })
       expect(result![0]).toBe('/artists/{id}')
     })
@@ -134,7 +134,7 @@ describe('SimpleRouter', () => {
     it('prefers exact match over tail wildcard', () => {
       const result = match('/api/v1', {
         '/api/**': true,
-        '/api/{version}': true,
+        '/api/{version}': true
       })
       expect(result![0]).toBe('/api/{version}')
     })
@@ -152,7 +152,7 @@ describe('SimpleRouter', () => {
       // prefix should beat the parameter prefix.
       const result = match('/api/v1/users', {
         '/api/{version}/**': true,
-        '/api/v1/**': true,
+        '/api/v1/**': true
       })
       expect(result![0]).toBe('/api/v1/**')
     })
