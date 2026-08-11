@@ -1,3 +1,9 @@
+## [0.2.0-next.6](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.5...v0.2.0-next.6) (2026-08-11)
+
+### Documentation
+
+* follow the remote button layout rename ([e083d26](https://github.com/radio-garden/react-native-audio-browser/commit/e083d26a7959a20712cf26f0577f20ebf48a7f9c))
+
 ## [0.2.0-next.5](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.4...v0.2.0-next.5) (2026-08-11)
 
 ### ⚠ BREAKING CHANGES
