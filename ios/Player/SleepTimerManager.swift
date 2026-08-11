@@ -7,15 +7,51 @@ import Foundation
 /// Type alias for the Nitro SleepTimer variant type
 typealias SleepTimerState = SleepTimer
 
+/// A scheduled job that has not run yet. `cancel()` is nonisolated so `deinit`
+/// — always nonisolated in Swift 6 — can tear pending work down.
+protocol SleepTimerJob: AnyObject {
+  func cancel()
+}
+
+extension DispatchWorkItem: SleepTimerJob {}
+
+/// Runs work after a delay. Injected into `SleepTimerManager` so tests can
+/// drive the clock instead of racing it: production schedules on the main
+/// queue, tests hand in a scheduler they advance by hand.
+@MainActor
+protocol SleepTimerScheduling {
+  func schedule(
+    after delay: TimeInterval,
+    _ work: @escaping @Sendable @MainActor () -> Void,
+  ) -> any SleepTimerJob
+}
+
+struct MainQueueSleepTimerScheduler: SleepTimerScheduling {
+  func schedule(
+    after delay: TimeInterval,
+    _ work: @escaping @Sendable @MainActor () -> Void,
+  ) -> any SleepTimerJob {
+    let job = DispatchWorkItem { MainActor.assumeIsolated { work() } }
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: job)
+    return job
+  }
+}
+
 /// Manages sleep timer functionality for the audio player.
 /// Supports both time-based timers and end-of-track timers.
 @MainActor
 class SleepTimerManager: SleepTimerHandling {
   // MARK: - Properties
 
+  private let scheduler: any SleepTimerScheduling
+
   // nonisolated(unsafe) for deinit cleanup — deinit is always nonisolated in Swift 6.
-  private nonisolated(unsafe) var sleepTimerJob: DispatchWorkItem?
-  private nonisolated(unsafe) var fadeJob: DispatchWorkItem?
+  private nonisolated(unsafe) var sleepTimerJob: (any SleepTimerJob)?
+  private nonisolated(unsafe) var fadeJob: (any SleepTimerJob)?
+
+  init(scheduler: any SleepTimerScheduling = MainQueueSleepTimerScheduler()) {
+    self.scheduler = scheduler
+  }
 
   /// The time when playback should stop (seconds since epoch), or -1 if inactive
   private(set) var sleepTimerTime: TimeInterval = -1 {
@@ -94,23 +130,15 @@ class SleepTimerManager: SleepTimerHandling {
   func set(seconds: TimeInterval, fadeDuration: TimeInterval? = nil) {
     cancelSleepTimerJob()
     onFadeCancel?()
-    let job = DispatchWorkItem { [weak self] in
-      MainActor.assumeIsolated {
-        self?.complete()
-      }
-    }
-    sleepTimerJob = job
     sleepTimerTime = Date().timeIntervalSince1970 + seconds
-    DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: job)
+    sleepTimerJob = scheduler.schedule(after: seconds) { [weak self] in
+      self?.complete()
+    }
     if let fadeDuration, fadeDuration > 0 {
       let fade = min(fadeDuration, seconds)
-      let fadeJob = DispatchWorkItem { [weak self] in
-        MainActor.assumeIsolated {
-          self?.onFadeStart?(fade)
-        }
+      fadeJob = scheduler.schedule(after: seconds - fade) { [weak self] in
+        self?.onFadeStart?(fade)
       }
-      self.fadeJob = fadeJob
-      DispatchQueue.main.asyncAfter(deadline: .now() + (seconds - fade), execute: fadeJob)
     }
     if let state = get() { onChanged?(state) }
   }

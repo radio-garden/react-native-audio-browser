@@ -743,7 +743,7 @@ struct NaturalEndPlayIntentTests {
 @Suite("PlaybackCoordinator - healthy playback resets retry budget")
 struct HealthyPlaybackRetryResetTests {
   @Test @MainActor
-  func sustainedPlayback_resetsRetryBudget() async throws {
+  func sustainedPlayback_resetsRetryBudget() async {
     let retryHandler = MockRetryHandling()
     let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
     let coordinator = PlaybackCoordinator(
@@ -754,7 +754,7 @@ struct HealthyPlaybackRetryResetTests {
     coordinator.healthyPlaybackDuration = 0.01
 
     coordinator.transition(.avPlayerPlaying)
-    try await Task.sleep(nanoseconds: 100_000_000)
+    await coordinator.healthyPlaybackTask?.value
 
     #expect(retryHandler.resetCallCount == 1)
   }
@@ -762,7 +762,7 @@ struct HealthyPlaybackRetryResetTests {
   /// resetRetry() cancels a pending retry — firing the refill mid-episode
   /// would kill an in-flight reconnect silently (stuck .playing forever).
   @Test @MainActor
-  func refill_skipsWhileRetryIsPending() async throws {
+  func refill_skipsWhileRetryIsPending() async {
     let retryHandler = MockRetryHandling()
     retryHandler.isRetryableResult = true
     retryHandler.attemptRetryDelayNs = 1_000_000_000
@@ -776,14 +776,14 @@ struct HealthyPlaybackRetryResetTests {
 
     coordinator.transition(.avPlayerPlaying)
     errorHandler.handleError(URLError(.timedOut), context: .playback)
-    try await Task.sleep(nanoseconds: 100_000_000)
+    await coordinator.healthyPlaybackTask?.value
 
     #expect(retryHandler.resetCallCount == 0)
     #expect(errorHandler.pendingRetryTask != nil)
   }
 
   @Test @MainActor
-  func playbackInterruptedBeforeThreshold_doesNotReset() async throws {
+  func playbackInterruptedBeforeThreshold_doesNotReset() async {
     let retryHandler = MockRetryHandling()
     let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
     let coordinator = PlaybackCoordinator(
@@ -795,9 +795,12 @@ struct HealthyPlaybackRetryResetTests {
     coordinator.healthyPlaybackDuration = 0.5
 
     coordinator.transition(.avPlayerPlaying)
+    let refill = coordinator.healthyPlaybackTask
     coordinator.transition(.avPlayerWaiting) // stalls before the threshold
 
-    try await Task.sleep(nanoseconds: 100_000_000)
+    // Leaving .playing cancels the refill; awaiting the cancelled task is the
+    // deterministic way to reach the point where it would have fired.
+    await refill?.value
 
     #expect(retryHandler.resetCallCount == 0)
   }

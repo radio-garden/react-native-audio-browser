@@ -76,7 +76,10 @@ class PlaybackCoordinator {
   /// the window/attempt counters otherwise reset only on track change.
   /// Overridable in tests.
   var healthyPlaybackDuration: TimeInterval = 20
-  private var healthyPlaybackTask: Task<Void, Never>?
+
+  /// The pending refill. Readable so tests can await the window instead of
+  /// sleeping past it; only this type arms and cancels it.
+  private(set) var healthyPlaybackTask: Task<Void, Never>?
 
   /// Playback rate (1.0 = normal speed).
   var rate: Float = 1.0
