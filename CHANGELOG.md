@@ -1,3 +1,9 @@
+## [0.2.0-next.4](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.3...v0.2.0-next.4) (2026-08-11)
+
+### Documentation
+
+* emit clean URLs without the .html suffix ([10b6f1b](https://github.com/radio-garden/react-native-audio-browser/commit/10b6f1b0fcd226aaa9c4b0cc04890ceb068585b5))
+
 ## [0.2.0-next.3](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.2...v0.2.0-next.3) (2026-08-11)
 
 ### Features
