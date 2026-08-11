@@ -1,3 +1,24 @@
+## [0.2.0-next.5](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.4...v0.2.0-next.5) (2026-08-11)
+
+### ⚠ BREAKING CHANGES
+
+* **android:** `android.notificationButtons` is now
+`android.remoteButtonLayout`, and its `backSecondary` / `forwardSecondary`
+fields are gone — no Android surface ever rendered them. The type
+`NotificationButtonLayout` is now `RemoteButtonLayout` and
+`NotificationButton` is now `RemoteButton`; nothing in this path is
+notification-specific, which is what disguised the bug. Buttons that
+previously named a secondary slot should move to `overflow`.
+
+All three fields of the layout are now required, so a layout always describes the whole arrangement — use
+`undefined` for an empty position and `[]` for no overflow. Omit
+`remoteButtonLayout` (or set it to `null`) to derive one from
+capabilities.
+
+### Bug Fixes
+
+* **android:** publish one button layout to every surface ([3463e27](https://github.com/radio-garden/react-native-audio-browser/commit/3463e2734484075e53cad156486f486c080a10aa)), closes [#107](https://github.com/radio-garden/react-native-audio-browser/issues/107)
+
 ## [0.2.0-next.4](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.3...v0.2.0-next.4) (2026-08-11)
 
 ### Documentation
