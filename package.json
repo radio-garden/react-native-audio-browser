@@ -14,7 +14,7 @@
   "source": "src/index",
   "workspaces": [
     "apps/*",
-    "docs"
+    "website"
   ],
   "files": [
     "src",

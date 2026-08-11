@@ -9294,19 +9294,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"docs@workspace:docs":
-  version: 0.0.0-use.local
-  resolution: "docs@workspace:docs"
-  dependencies:
-    mermaid: "npm:^11.4.1"
-    typedoc: "npm:^0.28.15"
-    typedoc-plugin-markdown: "npm:^4.9.0"
-    typedoc-vitepress-theme: "npm:^1.1.2"
-    vitepress: "npm:^1.6.4"
-    vitepress-plugin-mermaid: "npm:^2.0.17"
-  languageName: unknown
-  linkType: soft
-
 "dompurify@npm:^3.2.5":
   version: 3.3.1
   resolution: "dompurify@npm:3.3.1"
@@ -19491,6 +19478,19 @@ __metadata:
   checksum: 10/4ba737916c4b72812cdd1961ea82d0a6de8ac814134584b54d523a2c4b9e1d377490d63b2c74856e2b9146dbe6d09b05c8878439b0783c3e5195ca3e248b2131
   languageName: node
   linkType: hard
+
+"website@workspace:website":
+  version: 0.0.0-use.local
+  resolution: "website@workspace:website"
+  dependencies:
+    mermaid: "npm:^11.4.1"
+    typedoc: "npm:^0.28.15"
+    typedoc-plugin-markdown: "npm:^4.9.0"
+    typedoc-vitepress-theme: "npm:^1.1.2"
+    vitepress: "npm:^1.6.4"
+    vitepress-plugin-mermaid: "npm:^2.0.17"
+  languageName: unknown
+  linkType: soft
 
 "whatwg-fetch@npm:^3.0.0":
   version: 3.6.20
