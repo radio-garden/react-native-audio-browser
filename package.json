@@ -18,10 +18,8 @@
   ],
   "files": [
     "src",
-    "react-native.config.js",
     "lib",
     "nitrogen",
-    "cpp",
     "nitro.json",
     "android/build.gradle",
     "android/fix-prefab.gradle",
@@ -33,7 +31,6 @@
     "ios/**/*.mm",
     "ios/**/*.cpp",
     "ios/**/*.swift",
-    "app.plugin.js",
     "*.podspec",
     "README.md"
   ],
@@ -56,8 +53,8 @@
     "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && yarn build",
     "prepare": "bob build",
     "example": "yarn workspace example-native",
-    "ci:format": "prettier --check src",
-    "ci:lint": "oxlint src",
+    "ci:format": "oxfmt --check src",
+    "ci:lint": "oxlint --type-aware src",
     "format": "oxfmt --write",
     "ios:format": "swiftformat ios",
     "ios:ide": "yarn workspace example-native ios:ide",
@@ -79,7 +76,6 @@
     "oxfmt": "^0.27.0",
     "oxlint": "^1.42.0",
     "oxlint-tsgolint": "^0.11.2",
-    "prettier": "^3.0.3",
     "react": "19.1.1",
     "react-native": "0.83.0",
     "react-native-builder-bob": "^0.37.0",
@@ -88,13 +84,12 @@
     "semantic-release": "^25.0.3",
     "shaka-player": "^4.15.4",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.46.0",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-native": "*",
-    "react-native-nitro-modules": "*",
+    "react": ">=18.2.0",
+    "react-native": ">=0.76.0",
+    "react-native-nitro-modules": ">=0.35.0",
     "shaka-player": "^4.7.9"
   },
   "peerDependenciesMeta": {
