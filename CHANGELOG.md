@@ -1,3 +1,9 @@
+## [0.2.0-next.7](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.6...v0.2.0-next.7) (2026-08-11)
+
+### Documentation
+
+* declare a canonical URL ([eaea018](https://github.com/radio-garden/react-native-audio-browser/commit/eaea01841371ddb406e4286cbee0d27135ffd83e))
+
 ## [0.2.0-next.6](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.5...v0.2.0-next.6) (2026-08-11)
 
 ### Documentation
