@@ -113,7 +113,8 @@ class TransformingDataSource(private val upstream: DataSource, private val facto
    * installs the `IcyDataSource` that emits in-stream ICY/Shoutcast song metadata via
    * `Player.Listener.onMetadata`. The `DataSource` default returns an empty map, so without this
    * override this transparent wrapper would swallow the ICY headers — playback keeps working but
-   * `onMetadata` never fires (live "now playing" song goes missing).
+   * `onMetadata` never fires (live "now playing" song goes missing). Swallowing them also leaves
+   * the interleaved metadata bytes in the audio stream, where they decode as audible chirping.
    */
   override fun getResponseHeaders(): Map<String, List<String>> {
     return upstream.responseHeaders
