@@ -1,3 +1,14 @@
+## [0.2.0-next.2](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.1...v0.2.0-next.2) (2026-08-11)
+
+### Bug Fixes
+
+* **android:** strip ICY metadata on radio livestreams to fix audio chirping ([a6e5360](https://github.com/radio-garden/react-native-audio-browser/commit/a6e5360171fae9cdd180928f77e15942a6d4c8c0))
+* **ios:** do not automaticaly play completed content ([9c18944](https://github.com/radio-garden/react-native-audio-browser/commit/9c189449bd2f6ef4e856cb77552a16ed302a03ce))
+
+### Other changes
+
+* **release:** 0.1.1 [skip ci] ([80c2037](https://github.com/radio-garden/react-native-audio-browser/commit/80c20373d70bb3db7d4f34f4c3ab7385c7702fc6))
+
 ## [0.2.0-next.1](https://github.com/radio-garden/react-native-audio-browser/compare/v0.1.0...v0.2.0-next.1) (2026-08-11)
 
 ### ⚠ BREAKING CHANGES
