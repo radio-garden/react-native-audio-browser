@@ -1,8 +1,11 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": null,
+  "plugins": ["unicorn", "typescript", "oxc", "react"],
   "categories": {},
-  "rules": {},
+  "rules": {
+    "react/exhaustive-deps": "error",
+    "react/rules-of-hooks": "error"
+  },
   "settings": {
     "jsx-a11y": {
       "polymorphicPropName": null,
@@ -41,5 +44,13 @@
     "post-script.cjs",
     "apps/example-nextjs/next-env.d.ts",
     "apps/example-nextjs/.next"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "typescript/unbound-method": "off"
+      }
+    }
   ]
 }
