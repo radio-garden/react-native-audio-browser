@@ -108,10 +108,6 @@ namespace margelo::nitro::audiobrowser { struct NavigationError; }
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
 // Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
-// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
-// Forward declaration of `NotificationButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
@@ -146,6 +142,10 @@ namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 namespace margelo::nitro::audiobrowser { struct PlayingState; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `RemoteButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
+// Forward declaration of `RemoteButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 // Forward declaration of `RemoteJumpBackwardEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteJumpBackwardEvent; }
 // Forward declaration of `RemoteJumpForwardEvent` to properly resolve imports.
@@ -248,8 +248,6 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "NavigationErrorType.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
 #include "NitroIOSUpdateOptions.hpp"
-#include "NotificationButton.hpp"
-#include "NotificationButtonLayout.hpp"
 #include "NowPlayingMetadata.hpp"
 #include "NowPlayingUpdate.hpp"
 #include "Options.hpp"
@@ -267,6 +265,8 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 #include "PlayerCapabilities.hpp"
 #include "PlayingState.hpp"
 #include "Progress.hpp"
+#include "RemoteButton.hpp"
+#include "RemoteButtonLayout.hpp"
 #include "RemoteJumpBackwardEvent.hpp"
 #include "RemoteJumpForwardEvent.hpp"
 #include "RemotePlayIdEvent.hpp"
@@ -2182,31 +2182,31 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>
+  // pragma MARK: std::optional<std::variant<nitro::NullType, RemoteButtonLayout>>
   /**
-   * Specialized version of `std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>`.
+   * Specialized version of `std::optional<std::variant<nitro::NullType, RemoteButtonLayout>>`.
    */
-  using std__optional_std__variant_nitro__NullType__NotificationButtonLayout__ = std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>;
-  inline std::optional<std::variant<nitro::NullType, NotificationButtonLayout>> create_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::variant<nitro::NullType, NotificationButtonLayout>& value) noexcept {
-    return std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>(value);
+  using std__optional_std__variant_nitro__NullType__RemoteButtonLayout__ = std::optional<std::variant<nitro::NullType, RemoteButtonLayout>>;
+  inline std::optional<std::variant<nitro::NullType, RemoteButtonLayout>> create_std__optional_std__variant_nitro__NullType__RemoteButtonLayout__(const std::variant<nitro::NullType, RemoteButtonLayout>& value) noexcept {
+    return std::optional<std::variant<nitro::NullType, RemoteButtonLayout>>(value);
   }
-  inline bool has_value_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
+  inline bool has_value_std__optional_std__variant_nitro__NullType__RemoteButtonLayout__(const std::optional<std::variant<nitro::NullType, RemoteButtonLayout>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::variant<nitro::NullType, NotificationButtonLayout> get_std__optional_std__variant_nitro__NullType__NotificationButtonLayout__(const std::optional<std::variant<nitro::NullType, NotificationButtonLayout>>& optional) noexcept {
+  inline std::variant<nitro::NullType, RemoteButtonLayout> get_std__optional_std__variant_nitro__NullType__RemoteButtonLayout__(const std::optional<std::variant<nitro::NullType, RemoteButtonLayout>>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::variant<nitro::NullType, NotificationButtonLayout>
+  // pragma MARK: std::variant<nitro::NullType, RemoteButtonLayout>
   /**
-   * Wrapper struct for `std::variant<nitro::NullType, NotificationButtonLayout>`.
+   * Wrapper struct for `std::variant<nitro::NullType, RemoteButtonLayout>`.
    * std::variant cannot be used in Swift because of a Swift bug.
    * Not even specializing it works. So we create a wrapper struct.
    */
-  struct std__variant_nitro__NullType__NotificationButtonLayout_ final {
-    std::variant<nitro::NullType, NotificationButtonLayout> variant;
-    std__variant_nitro__NullType__NotificationButtonLayout_(std::variant<nitro::NullType, NotificationButtonLayout> variant): variant(variant) { }
-    operator std::variant<nitro::NullType, NotificationButtonLayout>() const noexcept {
+  struct std__variant_nitro__NullType__RemoteButtonLayout_ final {
+    std::variant<nitro::NullType, RemoteButtonLayout> variant;
+    std__variant_nitro__NullType__RemoteButtonLayout_(std::variant<nitro::NullType, RemoteButtonLayout> variant): variant(variant) { }
+    operator std::variant<nitro::NullType, RemoteButtonLayout>() const noexcept {
       return variant;
     }
     inline size_t index() const noexcept {
@@ -2215,54 +2215,54 @@ namespace margelo::nitro::audiobrowser::bridge::swift {
     inline nitro::NullType get_0() const noexcept {
       return std::get<0>(variant);
     }
-    inline NotificationButtonLayout get_1() const noexcept {
+    inline RemoteButtonLayout get_1() const noexcept {
       return std::get<1>(variant);
     }
   };
-  inline std__variant_nitro__NullType__NotificationButtonLayout_ create_std__variant_nitro__NullType__NotificationButtonLayout_(nitro::NullType value) noexcept {
-    return std__variant_nitro__NullType__NotificationButtonLayout_(value);
+  inline std__variant_nitro__NullType__RemoteButtonLayout_ create_std__variant_nitro__NullType__RemoteButtonLayout_(nitro::NullType value) noexcept {
+    return std__variant_nitro__NullType__RemoteButtonLayout_(value);
   }
-  inline std__variant_nitro__NullType__NotificationButtonLayout_ create_std__variant_nitro__NullType__NotificationButtonLayout_(const NotificationButtonLayout& value) noexcept {
-    return std__variant_nitro__NullType__NotificationButtonLayout_(value);
+  inline std__variant_nitro__NullType__RemoteButtonLayout_ create_std__variant_nitro__NullType__RemoteButtonLayout_(const RemoteButtonLayout& value) noexcept {
+    return std__variant_nitro__NullType__RemoteButtonLayout_(value);
   }
   
-  // pragma MARK: std::optional<NotificationButton>
+  // pragma MARK: std::optional<RemoteButton>
   /**
-   * Specialized version of `std::optional<NotificationButton>`.
+   * Specialized version of `std::optional<RemoteButton>`.
    */
-  using std__optional_NotificationButton_ = std::optional<NotificationButton>;
-  inline std::optional<NotificationButton> create_std__optional_NotificationButton_(const NotificationButton& value) noexcept {
-    return std::optional<NotificationButton>(value);
+  using std__optional_RemoteButton_ = std::optional<RemoteButton>;
+  inline std::optional<RemoteButton> create_std__optional_RemoteButton_(const RemoteButton& value) noexcept {
+    return std::optional<RemoteButton>(value);
   }
-  inline bool has_value_std__optional_NotificationButton_(const std::optional<NotificationButton>& optional) noexcept {
+  inline bool has_value_std__optional_RemoteButton_(const std::optional<RemoteButton>& optional) noexcept {
     return optional.has_value();
   }
-  inline NotificationButton get_std__optional_NotificationButton_(const std::optional<NotificationButton>& optional) noexcept {
+  inline RemoteButton get_std__optional_RemoteButton_(const std::optional<RemoteButton>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::optional<std::vector<NotificationButton>>
+  // pragma MARK: std::optional<std::vector<RemoteButton>>
   /**
-   * Specialized version of `std::optional<std::vector<NotificationButton>>`.
+   * Specialized version of `std::optional<std::vector<RemoteButton>>`.
    */
-  using std__optional_std__vector_NotificationButton__ = std::optional<std::vector<NotificationButton>>;
-  inline std::optional<std::vector<NotificationButton>> create_std__optional_std__vector_NotificationButton__(const std::vector<NotificationButton>& value) noexcept {
-    return std::optional<std::vector<NotificationButton>>(value);
+  using std__optional_std__vector_RemoteButton__ = std::optional<std::vector<RemoteButton>>;
+  inline std::optional<std::vector<RemoteButton>> create_std__optional_std__vector_RemoteButton__(const std::vector<RemoteButton>& value) noexcept {
+    return std::optional<std::vector<RemoteButton>>(value);
   }
-  inline bool has_value_std__optional_std__vector_NotificationButton__(const std::optional<std::vector<NotificationButton>>& optional) noexcept {
+  inline bool has_value_std__optional_std__vector_RemoteButton__(const std::optional<std::vector<RemoteButton>>& optional) noexcept {
     return optional.has_value();
   }
-  inline std::vector<NotificationButton> get_std__optional_std__vector_NotificationButton__(const std::optional<std::vector<NotificationButton>>& optional) noexcept {
+  inline std::vector<RemoteButton> get_std__optional_std__vector_RemoteButton__(const std::optional<std::vector<RemoteButton>>& optional) noexcept {
     return optional.value();
   }
   
-  // pragma MARK: std::vector<NotificationButton>
+  // pragma MARK: std::vector<RemoteButton>
   /**
-   * Specialized version of `std::vector<NotificationButton>`.
+   * Specialized version of `std::vector<RemoteButton>`.
    */
-  using std__vector_NotificationButton_ = std::vector<NotificationButton>;
-  inline std::vector<NotificationButton> create_std__vector_NotificationButton_(size_t size) noexcept {
-    std::vector<NotificationButton> vector;
+  using std__vector_RemoteButton_ = std::vector<RemoteButton>;
+  inline std::vector<RemoteButton> create_std__vector_RemoteButton_(size_t size) noexcept {
+    std::vector<RemoteButton> vector;
     vector.reserve(size);
     return vector;
   }

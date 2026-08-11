@@ -168,8 +168,10 @@ class Player(internal val context: Context) {
         mediaSessionCallback.updateMediaSession(
           mediaSession,
           options.capabilities,
-          options.notificationButtons,
+          options.remoteButtonLayout,
           searchAvailable,
+          options.forwardJumpInterval,
+          options.backwardJumpInterval,
         )
       }
     }
@@ -834,8 +836,8 @@ class Player(internal val context: Context) {
    * A restart from a terminal error begins a new load of the same track: fresh retry budgets and
    * unproven playback, so the user's tap yields a visible first-connect retry window instead of a
    * single silent attempt — the same behavior as re-selecting the track (ADR 0004). Hooked off the
-   * player error clearing: every recovery path (retry(), play(), the transport controls'
-   * idle-error recovery) goes through exoPlayer.prepare(), which clears the error.
+   * player error clearing: every recovery path (retry(), play(), the transport controls' idle-error
+   * recovery) goes through exoPlayer.prepare(), which clears the error.
    */
   internal fun resetForNewLoad() {
     resetRetryTimer()
@@ -1215,8 +1217,8 @@ class Player(internal val context: Context) {
     val backwardJumpIntervalChanged =
       previousOptions.backwardJumpInterval != options.backwardJumpInterval
     val capabilitiesChanged = previousOptions.capabilities != options.capabilities
-    val notificationButtonsChanged =
-      previousOptions.notificationButtons != options.notificationButtons
+    val remoteButtonLayoutChanged =
+      !previousOptions.remoteButtonLayout.sameAs(options.remoteButtonLayout)
     val appKilledPlaybackBehaviorChanged =
       previousOptions.appKilledPlaybackBehavior != options.appKilledPlaybackBehavior
 
@@ -1226,7 +1228,7 @@ class Player(internal val context: Context) {
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged ||
         capabilitiesChanged ||
-        notificationButtonsChanged ||
+        remoteButtonLayoutChanged ||
         appKilledPlaybackBehaviorChanged
 
     // Apply only changed properties
@@ -1244,13 +1246,22 @@ class Player(internal val context: Context) {
       setProgressUpdateInterval(options.progressUpdateEventInterval)
     }
 
-    if (capabilitiesChanged || notificationButtonsChanged) {
+    // The jump intervals pick the button icons (ICON_SKIP_BACK_15 and friends), so a changed
+    // interval has to rebuild the layout even when capabilities and placement are untouched.
+    if (
+      capabilitiesChanged ||
+        remoteButtonLayoutChanged ||
+        forwardJumpIntervalChanged ||
+        backwardJumpIntervalChanged
+    ) {
       val searchAvailable = browser?.browserManager?.config?.hasSearch ?: false
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
-        options.notificationButtons,
+        options.remoteButtonLayout,
         searchAvailable,
+        options.forwardJumpInterval,
+        options.backwardJumpInterval,
       )
     }
 

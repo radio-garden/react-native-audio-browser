@@ -127,10 +127,10 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
-// Forward declaration of `NotificationButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
+// Forward declaration of `RemoteButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
+// Forward declaration of `RemoteButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 // Forward declaration of `PlayerCapabilities` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
 // Forward declaration of `FavoriteConfig` to properly resolve imports.
@@ -370,11 +370,11 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JAndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "NotificationButtonLayout.hpp"
-#include "JVariant_NullType_NotificationButtonLayout.hpp"
-#include "JNotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
-#include "JNotificationButton.hpp"
+#include "RemoteButtonLayout.hpp"
+#include "JVariant_NullType_RemoteButtonLayout.hpp"
+#include "JRemoteButtonLayout.hpp"
+#include "RemoteButton.hpp"
+#include "JRemoteButton.hpp"
 #include "JVariant_NullType_Double.hpp"
 #include "PlayerCapabilities.hpp"
 #include "JPlayerCapabilities.hpp"

@@ -24,8 +24,8 @@ import com.margelo.nitro.audiobrowser.GateEvent
 import com.margelo.nitro.audiobrowser.GateReason
 import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.NativeGateRequest
-import com.margelo.nitro.audiobrowser.NotificationButtonLayout
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
+import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
@@ -160,16 +160,20 @@ class MediaSessionCallback(private val player: Player) :
   fun updateMediaSession(
     mediaSession: MediaSession,
     capabilities: PlayerCapabilities,
-    notificationButtons: NotificationButtonLayout?,
+    remoteButtonLayout: RemoteButtonLayout?,
     searchAvailable: Boolean,
+    forwardJumpInterval: Double,
+    backwardJumpInterval: Double,
   ) {
     // Store as MediaLibrarySession for notifyChildrenChanged support
     this.mediaLibrarySession = mediaSession as? MediaLibraryService.MediaLibrarySession
     commandManager.updateMediaSession(
       mediaSession,
       capabilities,
-      notificationButtons,
+      remoteButtonLayout,
       searchAvailable,
+      forwardJumpInterval,
+      backwardJumpInterval,
     )
   }
 
@@ -400,8 +404,8 @@ class MediaSessionCallback(private val player: Player) :
   /**
    * Converts tracks to MediaItems for browse delivery, routing http(s) artwork through the
    * content:// provider so Android Auto can load it via the ArtworkContentProvider. Image-row
-   * tracks (a CarPlay-only rendering) are expanded into their items as regular grouped rows
-   * first — see [TrackFactory.expandImageRows].
+   * tracks (a CarPlay-only rendering) are expanded into their items as regular grouped rows first —
+   * see [TrackFactory.expandImageRows].
    */
   private fun toMediaItems(tracks: List<Track>): List<MediaItem> {
     val registry = player.browseArtworkRegistry
