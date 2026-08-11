@@ -30,6 +30,11 @@ export default withMermaid(
 
     ignoreDeadLinks: true,
 
+    // Emit links without the .html suffix. Cloudflare Pages serves foo.html at
+    // /foo natively, and so does GitHub Pages, so this works on both hosts.
+    // Without it every internal link is a 308 redirect on Cloudflare.
+    cleanUrls: true,
+
     // Emitted here rather than committed to public/ so it only ever lands in a
     // DOCS_NOINDEX build — a noindex header file sitting in public/ would follow
     // a merge straight onto audiobrowser.dev.
