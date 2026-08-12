@@ -25,7 +25,10 @@ import { validateIOSUpdateOptions } from './validateOptions'
 export type FormatNowPlayingParams = {
   /** The currently playing track. */
   track: Track
-  /** Timed metadata (ICY / ID3 "now playing song") received during playback, if any. */
+  /**
+   * Timed metadata (ICY / ID3 "now playing song") received during playback, if any.
+   * Always `undefined` on web — see `onTimedMetadata` for why.
+   */
   timedMetadata?: TimedMetadata
   /** The play/pause intent — `false` while paused. Stays `true` through buffers, so the song line won't flicker. */
   playWhenReady: boolean

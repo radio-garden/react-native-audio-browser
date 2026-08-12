@@ -98,6 +98,11 @@ export interface ChapterMetadata {
 
 /**
  * Subscribes to chapter metadata events.
+ *
+ * @platform ios android
+ * Never fires on web — the web player does not read chapter markers. See
+ * {@link https://github.com/radio-garden/react-native-audio-browser/issues/118 | #118}.
+ *
  * @param callback - Called when chapter metadata is received
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
@@ -107,6 +112,11 @@ export const onChapterMetadata = NativeUpdatedValue.emitterize<
 
 /**
  * Subscribes to track metadata events.
+ *
+ * @platform ios android
+ * Never fires on web — the web player does not read embedded file tags. See
+ * {@link https://github.com/radio-garden/react-native-audio-browser/issues/118 | #118}.
+ *
  * @param callback - Called when static track metadata is received
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
@@ -116,6 +126,13 @@ export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
 
 /**
  * Subscribes to timed metadata events (ICY/ID3 from live streams).
+ *
+ * @platform ios android
+ * Never fires on web. ICY metadata is stripped by the browser before the player
+ * can see it, and no browser API exposes it; in-band ID3 from HLS is reachable
+ * but not yet wired. See
+ * {@link https://github.com/radio-garden/react-native-audio-browser/issues/118 | #118}.
+ *
  * @param callback - Called when stream metadata is received (title, artist from ICY/ID3 tags)
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */

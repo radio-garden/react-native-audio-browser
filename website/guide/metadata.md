@@ -183,6 +183,19 @@ function ChapterList() {
 | Changes | Throughout the track | Once, on load | Once, on load |
 | Shape | One `TimedMetadata` | One `TrackMetadata` | A `ChapterMetadata[]` |
 | Typical use | Live "now playing" song | Podcast/file info | Chapter navigation |
+| Platform | iOS, Android | iOS, Android | iOS, Android |
+
+::: warning Not available on web
+All three are iOS and Android only. On web they are subscribable but never
+fire, so a listener sees nothing and
+[`FormatNowPlayingParams.timedMetadata`](/api/features/player/#formatnowplayingparams)
+stays `undefined`.
+
+ICY is the hard case: the browser strips the interleaved metadata before the
+player can reach it, and no API exposes it. In-band ID3 from HLS *is* reachable
+through the web player and simply isn't wired up yet — that part is tracked in
+[#118](https://github.com/radio-garden/react-native-audio-browser/issues/118).
+:::
 
 ## Holding metadata in state
 
