@@ -43,6 +43,8 @@ corepack yarn test         # unit tests (vitest)
 corepack yarn ios:test     # Swift tests (macOS)
 ```
 
+Formatting is handled for you: `yarn install` points `core.hooksPath` at `.githooks`, whose `pre-commit` runs oxfmt over your staged files and re-stages them. It never blocks a commit, and `git commit --no-verify` skips it. Run `yarn hooks:install` if you cloned before the hook existed, and `yarn format` to format the repo by hand.
+
 ## Commits & releases
 
 Releases are automated with [semantic-release](https://semantic-release.gitbook.io/) from [Conventional Commits](https://www.conventionalcommits.org/). Please format commit messages accordingly — e.g. `feat: …`, `fix: …`, `docs: …`.
