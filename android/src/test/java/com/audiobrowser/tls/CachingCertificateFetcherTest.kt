@@ -1,5 +1,7 @@
 package com.audiobrowser.tls
 
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -71,5 +73,38 @@ class CachingCertificateFetcherTest {
     assertNull(
       CachingCertificateFetcher.parseHttpResponse("garbage without a header break".toByteArray())
     )
+  }
+
+  // -- response cap (the AIA URL, so the host serving it, comes from the presented cert) --
+
+  @Test
+  fun `reads a response that fits within the cap`() {
+    val body = ByteArray(64) { it.toByte() }
+
+    assertArrayEquals(
+      body,
+      CachingCertificateFetcher.readCapped(ByteArrayInputStream(body), limit = 128),
+    )
+  }
+
+  @Test
+  fun `returns null for a response that exceeds the cap`() {
+    val body = ByteArray(129)
+
+    assertNull(CachingCertificateFetcher.readCapped(ByteArrayInputStream(body), limit = 128))
+  }
+
+  @Test
+  fun `a stream that never ends does not read without bound`() {
+    // Endless: read() always fills the buffer and never signals EOF, the shape a slow-drip
+    // server takes — the per-read timeout never fires because every read succeeds.
+    val endless =
+      object : InputStream() {
+        override fun read() = 0
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int = len
+      }
+
+    assertNull(CachingCertificateFetcher.readCapped(endless, limit = 1 shl 16))
   }
 }

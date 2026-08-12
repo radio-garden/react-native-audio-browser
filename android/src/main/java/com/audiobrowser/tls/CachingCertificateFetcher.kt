@@ -2,6 +2,7 @@ package com.audiobrowser.tls
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
@@ -21,6 +22,11 @@ import timber.log.Timber
  * fetch resolves to an empty list (the handshake then fails exactly as it would have without AIA
  * chasing). Only non-empty results are cached, so the (typically `http`) round-trip happens at most
  * once per intermediate for the process lifetime while transient failures stay retryable.
+ *
+ * Responses are capped at [MAX_RESPONSE_BYTES]. The URL comes from a server-presented certificate,
+ * so the host, port and path are chosen by whoever we are failing to validate; the read timeout is
+ * per-read and would not stop a slow drip of unbounded length. A certificate is a few kilobytes and
+ * even a PKCS#7 bundle a few dozen, so the cap is far above anything legitimate.
  *
  * `http` fetches go over a raw [Socket] rather than `HttpURLConnection`. CA "CA Issuers" URLs are
  * virtually always plain `http` (the CA/Browser Forum Baseline Requirements mandate it, to avoid a
@@ -77,7 +83,7 @@ class CachingCertificateFetcher(
     connection.connectTimeout = connectTimeoutMs
     connection.readTimeout = readTimeoutMs
     connection.sslSocketFactory = plainSslSocketFactory
-    return connection.inputStream.use { it.readBytes() }
+    return connection.inputStream.use { readCapped(it) }
   }
 
   /**
@@ -104,8 +110,8 @@ class CachingCertificateFetcher(
           write(request.toByteArray(Charsets.ISO_8859_1))
           flush()
         }
-        socket.getInputStream().use { it.readBytes() }
-      }
+        socket.getInputStream().use { readCapped(it) }
+      } ?: return null
     val response = parseHttpResponse(raw) ?: return null
     return when {
       response.status in 200..299 -> response.body
@@ -118,6 +124,25 @@ class CachingCertificateFetcher(
 
   companion object {
     private const val MAX_REDIRECTS = 5
+
+    /** Ceiling on a single AIA response, headers included. */
+    const val MAX_RESPONSE_BYTES = 1 shl 20 // 1 MiB
+
+    /**
+     * Reads [input] to EOF, or returns null once it exceeds [limit] bytes. Null rather than a
+     * truncated buffer: a cut-off certificate is not parseable anyway, and "too big" is a failed
+     * fetch, which the caller already knows how to treat as "no AIA".
+     */
+    fun readCapped(input: InputStream, limit: Int = MAX_RESPONSE_BYTES): ByteArray? {
+      val out = ByteArrayOutputStream()
+      val chunk = ByteArray(8 * 1024)
+      while (true) {
+        val read = input.read(chunk)
+        if (read < 0) return out.toByteArray()
+        if (out.size() + read > limit) return null
+        out.write(chunk, 0, read)
+      }
+    }
 
     /**
      * Parses every certificate from the bytes a CA-Issuers URL serves — a single DER certificate
