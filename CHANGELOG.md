@@ -1,3 +1,36 @@
+## [0.2.0-next.10](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.9...v0.2.0-next.10) (2026-08-12)
+
+### Bug Fixes
+
+* **android:** actually run the teardown, and finish it ([d6299a5](https://github.com/radio-garden/react-native-audio-browser/commit/d6299a51a34c42eea8bc791a25d06a81e9012bd5))
+* **android:** cap the AIA certificate fetch at 1 MiB ([fd770a7](https://github.com/radio-garden/react-native-audio-browser/commit/fd770a7280c2847159e99490eae7352d5a52fb71)), closes [PKCS#7](https://github.com/radio-garden/PKCS/issues/7)
+* **android:** harden the AIA fetch against the server that supplied the URL ([d411c63](https://github.com/radio-garden/react-native-audio-browser/commit/d411c63bca29cdad7d1b00fca7ef3a24ada37c29))
+* **android:** keep the platform's hostname-aware trust path ([9c2f6fe](https://github.com/radio-garden/react-native-audio-browser/commit/9c2f6fe685f5cf6ca3a5c698ba073e78be4beab9))
+* **android:** stop a crafted AIA extension from hanging the handshake ([cba13ea](https://github.com/radio-garden/react-native-audio-browser/commit/cba13eac0a6c06b5d746a80df638a1aa8a4f6f39))
+* **android:** stop logging request and response bodies in release ([a70f611](https://github.com/radio-garden/react-native-audio-browser/commit/a70f611691ad73bd191cdbb6b7580ecae39a25ae))
+* **android:** stop sleeping 300ms on the JS thread in reset() ([c326970](https://github.com/radio-garden/react-native-audio-browser/commit/c3269707c2bcee805be4b95a09528b6cf7f2e19a)), closes [#96](https://github.com/radio-garden/react-native-audio-browser/issues/96)
+* **ios:** break the LRU cache's node cycle ([25dc942](https://github.com/radio-garden/react-native-audio-browser/commit/25dc942cf06c10d7fb3d6b2f38dcb4cf51980359))
+* **ios:** retry the failures Android retries ([880037f](https://github.com/radio-garden/react-native-audio-browser/commit/880037fcb4e582cb1ec6abfc800f06310fcb5230)), closes [radio-garden/react-native-audio-browser#97](https://github.com/radio-garden/react-native-audio-browser/issues/97)
+* **ios:** start shuffled playback from the track being played ([8d0c5aa](https://github.com/radio-garden/react-native-audio-browser/commit/8d0c5aa422e7a311b371920d6549fa72123a8660))
+* **ios:** unregister the player's observers on destroy ([db70992](https://github.com/radio-garden/react-native-audio-browser/commit/db709927c28b4db9c70116ebd7d885ba6d770001))
+* **ts:** re-sync the sleep timer hooks before subscribing ([e9b5604](https://github.com/radio-garden/react-native-audio-browser/commit/e9b56047b1de478165baf861067df7fe226a9ece))
+
+### Code Refactors
+
+* **ios:** drop the write-only track cache ([2c277ad](https://github.com/radio-garden/react-native-audio-browser/commit/2c277ad1d72b1a8d8ae1f92b138bc74ab0235bb4))
+* **spec:** rename onSearch to search ([5277418](https://github.com/radio-garden/react-native-audio-browser/commit/5277418e298e5fe237857227166f611088792a4e)), closes [radio-garden/react-native-audio-browser#97](https://github.com/radio-garden/react-native-audio-browser/issues/97)
+
+### Documentation
+
+* **android:** record why the play-from-search filter is exported ([94a3997](https://github.com/radio-garden/react-native-audio-browser/commit/94a3997355d49288582386b87e3641277a8dba87)), closes [#96](https://github.com/radio-garden/react-native-audio-browser/issues/96)
+* **gate:** state that the gate is iOS and Android only ([918c423](https://github.com/radio-garden/react-native-audio-browser/commit/918c4239178f26e506d627e9ecde65ba0ed03753)), closes [radio-garden/react-native-audio-browser#97](https://github.com/radio-garden/react-native-audio-browser/issues/97)
+* **metadata:** mark the three metadata events as native-only ([fcb72f0](https://github.com/radio-garden/react-native-audio-browser/commit/fcb72f05c1a6b48737ded3875b8c1c1285505051)), closes [#118](https://github.com/radio-garden/react-native-audio-browser/issues/118) [radio-garden/react-native-audio-browser#97](https://github.com/radio-garden/react-native-audio-browser/issues/97)
+* **src:** state the export rules once, in a CLAUDE.md ([3b237bd](https://github.com/radio-garden/react-native-audio-browser/commit/3b237bd4a7c9716121027998f5dfa73156061cac))
+
+### Other changes
+
+* **ios:** delete the unused MediaURL ([fa5595b](https://github.com/radio-garden/react-native-audio-browser/commit/fa5595b6be3f2695d77f6c2002553e22e4bea73a))
+
 ## [0.2.0-next.9](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.8...v0.2.0-next.9) (2026-08-12)
 
 ### Bug Fixes
