@@ -49,6 +49,24 @@ enum RemoteCommand: CustomStringConvertible, Equatable {
   var key: String { description }
 
   /**
+   Commands in `self` that are absent from `next` and so should be disabled.
+
+   Compared by `key`, not by `==`. `RemoteCommand` is `Equatable` including its
+   associated values, but every case with associated values maps onto a single
+   `MPRemoteCommand` addressed by `key`: `.skipForward([15])` and
+   `.skipForward([30])` are two different values of one command. Diffing by `==`
+   would report the old interval as removed and disable the command that the new
+   interval had just re-enabled.
+   */
+  static func commandsToDisable(
+    enabled: [RemoteCommand],
+    replacedBy next: [RemoteCommand],
+  ) -> [RemoteCommand] {
+    let nextKeys = Set(next.map(\.key))
+    return enabled.filter { !nextKeys.contains($0.key) }
+  }
+
+  /**
    All values in an array for convenience.
    Don't use for associated values.
    */

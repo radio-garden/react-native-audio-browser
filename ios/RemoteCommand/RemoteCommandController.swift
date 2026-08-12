@@ -46,7 +46,7 @@ class RemoteCommandController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RemoteCommandController")
   private var center: MPRemoteCommandCenter
 
-  weak var callbacks: TrackPlayerCallbacks?
+  weak var callbacks: RemoteCommandCallbacks?
 
   var commandTargetPointers: [String: Any] = [:]
   private var enabledCommands: [RemoteCommand] = []
@@ -72,7 +72,7 @@ class RemoteCommandController {
    */
   init(
     remoteCommandCenter: MPRemoteCommandCenter = MPRemoteCommandCenter.shared(),
-    callbacks: TrackPlayerCallbacks? = nil,
+    callbacks: RemoteCommandCallbacks? = nil,
   ) {
     center = remoteCommandCenter
     self.callbacks = callbacks
@@ -112,13 +112,16 @@ class RemoteCommandController {
   }
 
   func enable(commands: [RemoteCommand]) {
-    let commandsToDisable = enabledCommands.filter { command in
-      !commands.contains(command)
-    }
+    let commandsToDisable = RemoteCommand.commandsToDisable(
+      enabled: enabledCommands, replacedBy: commands,
+    )
 
     enabledCommands = commands
-    commands.forEach { self.enable(command: $0) }
+    // Disable first. The key diff already makes the two sets disjoint, so this
+    // is belt-and-braces: it keeps a disable from tearing down a command the
+    // enable pass just configured should the two ever overlap again.
     disable(commands: commandsToDisable)
+    commands.forEach { self.enable(command: $0) }
   }
 
   func disable(commands: [RemoteCommand]) {
