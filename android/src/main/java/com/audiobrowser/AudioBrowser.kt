@@ -90,6 +90,7 @@ import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -100,10 +101,37 @@ import timber.log.Timber
 @DoNotStrip
 class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
-  /** Called by Nitro when the JS object is destroyed (incl. JS runtime reloads). */
+  /**
+   * Called by Nitro when the JS object is destroyed (incl. JS runtime reloads).
+   *
+   * The Service outlives this object, so everything registered in `init` or on connect has to be
+   * undone here. Left alone, the running [Player] goes on invoking callbacks into a dead JSI
+   * runtime, and every reload strands another ServiceConnection and lifecycle observer, each
+   * retaining a BrowserManager.
+   */
   override fun dispose() {
     systemVolumeMonitor.destroy()
     outputMonitor.destroy()
+
+    connectedService?.let { service ->
+      service.player.setCallbacks(null)
+      service.player.browser = null
+      service.onBatteryWarningPendingChanged = null
+    }
+    connectedService = null
+    mediaBrowserFuture = null
+
+    serviceBinding.unbind(this)
+
+    // Only when still ours: on a reload the replacement instance may already own the slot.
+    if (carConnectionTarget === onCarConnectedChanged) carConnectionTarget = null
+
+    // Drop queued work first, then post the removal — LifecycleRegistry is main-thread only,
+    // which is why the observer is added the same way.
+    handler.removeCallbacksAndMessages(null)
+    handler.post { ProcessLifecycleOwner.get().lifecycle.removeObserver(lifecycleObserver) }
+
+    mainScope.cancel()
     super.dispose()
   }
 
@@ -150,6 +178,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var mediaBrowserFuture: ListenableFuture<MediaBrowser>? = null
   private var setupOptions = PlayerSetupOptions()
   private var connectedService: Service? = null
+
+  private val serviceBinding = ServiceBinding(context)
   private var setupPromise: ((Unit) -> Unit)? = null
 
   // Initial player state staged before the player exists — from setup options or the imperative
@@ -244,7 +274,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       try {
         Timber.d("Attempting to auto-bind to existing AudioBrowserService from AudioBrowser")
         val intent = Intent(context, Service::class.java)
-        val bound = context.bindService(intent, this@AudioBrowser, Context.BIND_AUTO_CREATE)
+        val bound = serviceBinding.bind(intent, this@AudioBrowser)
         Timber.d("Auto-bind result: $bound")
 
         if (!bound) {
@@ -811,12 +841,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       // Service not connected yet, bind to service
       suspendCoroutine<Unit> { continuation ->
         Timber.d("Binding to AudioBrowserService")
-        val bound =
-          context.bindService(
-            Intent(context, Service::class.java),
-            this@AudioBrowser,
-            Context.BIND_AUTO_CREATE,
-          )
+        val bound = serviceBinding.bind(Intent(context, Service::class.java), this@AudioBrowser)
 
         if (!bound) {
           continuation.resumeWithException(
