@@ -35,6 +35,17 @@ cd apps/example-native/android && ./gradlew :react-native-audio-browser:testDebu
 
 `swift test` needs `--disable-sandbox` locally: SwiftPM shells out to `sandbox-exec` to compile the manifest, which fails with `sandbox_apply: Operation not permitted` when the calling shell is already sandboxed. CI runners are unsandboxed, so the workflow calls plain `swift test`.
 
+### Testing hooks
+
+Hooks are tested with `@testing-library/react` and `react-dom` under vitest — no Jest, and deliberately not `@testing-library/react-native`. The library exports no components: all 29 hooks use only `useState`/`useEffect`/`useRef`/`useSyncExternalStore`, so react-dom is a valid host and costs three devDependencies instead of a second test runner plus `@react-native/jest-preset`. Revisit this the day the package exports something that renders RN primitives — react-dom cannot host those, and RNTL means Jest.
+
+Two things to know before writing one:
+
+- Start the file with `/** @vitest-environment happy-dom */`, detached by a blank line so the import sort cannot pull it off line 1. Without it the file runs in node and every render fails on `document is not defined`.
+- `'react-native'` is aliased to `src/test-utils/reactNativeStub.ts` in `vitest.config.ts`, because `react-native/index.js` is Flow-typed and Rollup cannot parse it. Extend the stub when a test needs more of the RN surface.
+
+Emitters are module-level singletons created at import, so `lastValue` and any log store outlive an individual test. Reset them in `beforeEach` or pin a baseline — `features/sleepTimer.test.ts` and `utils/useDebug.test.ts` show both. The tests that pin the render-vs-effect re-sync (`utils/useNativeUpdatedValue.test.ts`, `features/sleepTimer.test.ts`) guard a bug that already shipped once; they fail if the `lastValue` re-read is removed.
+
 ## Breaking Changes Policy
 
 This is an **alpha product** - we do not care about breaking changes. Feel free to make any necessary API changes to improve the codebase.
