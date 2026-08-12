@@ -1,6 +1,7 @@
 package com.audiobrowser.tls
 
 import java.security.cert.X509Certificate
+import javax.security.auth.x500.X500Principal
 
 /**
  * Fills in missing intermediate CA certificates by following the Authority Information Access (AIA)
@@ -69,8 +70,9 @@ object AiaCertChaser {
 
   /**
    * Walks up from the presented chain, fetching each missing issuer via its predecessor's AIA "CA
-   * Issuers" pointer, until it reaches a self-signed certificate, an issuer that cannot be fetched,
-   * or [maxIntermediates] additions. Returns the (possibly extended) chain.
+   * Issuers" pointer, until it reaches a certificate issued by one of [anchorSubjects], a
+   * self-signed certificate, an issuer that cannot be fetched, or [maxIntermediates] additions.
+   * Returns the (possibly extended) chain.
    *
    * Only ever *adds* certificates — the caller is still responsible for validating the completed
    * chain against the system trust anchors, so this can never cause an untrusted chain to be
@@ -78,11 +80,19 @@ object AiaCertChaser {
    * selected (defends against an AIA pointer to an unrelated certificate, and picks the right one
    * out of a multi-certificate PKCS#7 bundle).
    *
+   * @param anchorSubjects the subjects of the caller's trust anchors. A chain whose top is already
+   *   issued by one of them is not missing anything, so nothing is fetched — chasing could not help
+   *   and the fetch would be a blocking round trip to a host named by a certificate that just
+   *   failed validation. This is what keeps an expired-but-complete chain, a hostname mismatch or
+   *   any other non-path failure from triggering a chase, and it stops the genuine
+   *   missing-intermediate case one hop early, where the chain reaches a root the caller already
+   *   trusts. Empty means "unknown", and the walk runs to one of the other stopping conditions.
    * @param fetch resolves a CA-Issuers URL to its candidate certificates (e.g. every certificate in
    *   a PKCS#7 bundle); empty if nothing could be retrieved.
    */
   fun completeChain(
     presented: List<X509Certificate>,
+    anchorSubjects: Set<X500Principal> = emptySet(),
     maxIntermediates: Int = 5,
     fetch: (url: String) -> List<X509Certificate>,
   ): List<X509Certificate> {
@@ -93,6 +103,7 @@ object AiaCertChaser {
     while (added < maxIntermediates) {
       val last = chain.last()
       if (last.subjectX500Principal == last.issuerX500Principal) break // self-signed root
+      if (last.issuerX500Principal in anchorSubjects) break // already reaches a trust anchor
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()

@@ -1,11 +1,16 @@
 package com.audiobrowser.tls
 
+import android.os.Build
+import androidx.annotation.RequiresApi
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 import java.net.Socket
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.X509ExtendedTrustManager
 import javax.net.ssl.X509TrustManager
+import javax.security.auth.x500.X500Principal
 
 /**
  * The [AiaChasingTrustManager] behaviour, as an [X509ExtendedTrustManager].
@@ -18,9 +23,8 @@ import javax.net.ssl.X509TrustManager
  * > checkServerTrusted(X509Certificate[], String, String) is used
  *
  * Wrapping it in a plain [X509TrustManager] hides those overloads, so conscrypt falls through to
- * the two-argument form and *every* HTTPS connection in the process fails — and, because the
- * wrapper treats a [CertificateException] as its cue to chase AIA, fails slowly. The socket
- * overload is also where endpoint identification happens for a raw `SSLSocket` configured with
+ * the two-argument form and *every* HTTPS connection in the process fails. The socket overload is
+ * also where endpoint identification happens for a raw `SSLSocket` configured with
  * `endpointIdentificationAlgorithm = "HTTPS"`; skipping it skips hostname verification.
  *
  * [X509ExtendedTrustManager] is API 24+, hence the split from [AiaChasingTrustManager] — see
@@ -30,6 +34,7 @@ import javax.net.ssl.X509TrustManager
  * @param delegate the wrapped trust manager, normally the platform default.
  * @param fetch resolves a CA-Issuers URL to its candidate certificates.
  */
+@RequiresApi(Build.VERSION_CODES.N)
 class AiaChasingExtendedTrustManager(
   private val delegate: X509TrustManager,
   private val fetch: (url: String) -> List<X509Certificate>,
@@ -38,15 +43,37 @@ class AiaChasingExtendedTrustManager(
   /** The delegate's own extended overloads, when it has them. */
   private val extended = delegate as? X509ExtendedTrustManager
 
+  private val anchorSubjects: Set<X500Principal> by lazy { delegate.anchorSubjects() }
+
+  /**
+   * The delegate's Android-specific hostname-aware check, if it has one.
+   *
+   * `android.net.http.X509TrustManagerExtensions` — how an HTTP client reaches per-host certificate
+   * pinning — locates this method reflectively and refuses a trust manager that lacks it. It is not
+   * part of [X509ExtendedTrustManager], and `RootTrustManager` is not a public type, so it is
+   * forwarded reflectively rather than overridden.
+   */
+  private val hostAwareCheck: Method? by lazy {
+    runCatching {
+        delegate.javaClass.getMethod(
+          "checkServerTrusted",
+          Array<X509Certificate>::class.java,
+          String::class.java,
+          String::class.java,
+        )
+      }
+      .getOrNull()
+  }
+
   override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) =
-    withAiaRetry(chain) { delegate.checkServerTrusted(it, authType) }
+    withAiaRetry(chain, anchorSubjects, fetch) { delegate.checkServerTrusted(it, authType) }
 
   override fun checkServerTrusted(
     chain: Array<X509Certificate>,
     authType: String,
     socket: Socket?,
   ) =
-    withAiaRetry(chain) {
+    withAiaRetry(chain, anchorSubjects, fetch) {
       // A delegate without the extended overloads cannot be hostname-aware in the first place,
       // so falling back to its two-argument form loses nothing it could have offered.
       extended?.checkServerTrusted(it, authType, socket)
@@ -58,9 +85,52 @@ class AiaChasingExtendedTrustManager(
     authType: String,
     engine: SSLEngine?,
   ) =
-    withAiaRetry(chain) {
+    withAiaRetry(chain, anchorSubjects, fetch) {
       extended?.checkServerTrusted(it, authType, engine)
         ?: delegate.checkServerTrusted(it, authType)
+    }
+
+  /**
+   * The signature `X509TrustManagerExtensions` looks for: validates against [host] and returns the
+   * chain it accepted. Kept in step with the other overloads, AIA retry included, so installing
+   * this wrapper does not cost a consumer its certificate pinning.
+   */
+  @Suppress("unused") // called reflectively
+  fun checkServerTrusted(
+    chain: Array<X509Certificate>,
+    authType: String,
+    host: String,
+  ): List<X509Certificate> {
+    val method =
+      hostAwareCheck
+        ?: run {
+          // No host-aware delegate: fall back to the ordinary path and report what we were given.
+          checkServerTrusted(chain, authType)
+          return chain.toList()
+        }
+    var accepted: List<X509Certificate> = emptyList()
+    withAiaRetry(chain, anchorSubjects, fetch) {
+      accepted = invokeHostAware(method, it, authType, host)
+    }
+    return accepted
+  }
+
+  @Suppress("UNCHECKED_CAST")
+  private fun invokeHostAware(
+    method: Method,
+    chain: Array<X509Certificate>,
+    authType: String,
+    host: String,
+  ): List<X509Certificate> =
+    try {
+      method.invoke(delegate, chain, authType, host) as List<X509Certificate>
+    } catch (e: InvocationTargetException) {
+      // Unwrap, so a rejection still reaches withAiaRetry as the CertificateException it is.
+      when (val cause = e.targetException) {
+        is CertificateException -> throw cause
+        is RuntimeException -> throw cause
+        else -> throw CertificateException(cause)
+      }
     }
 
   // Client certificates are the app's own; there is nothing to chase.
@@ -87,23 +157,4 @@ class AiaChasingExtendedTrustManager(
   }
 
   override fun getAcceptedIssuers(): Array<X509Certificate> = delegate.acceptedIssuers
-
-  /**
-   * Runs [check], and on rejection retries it once against the AIA-completed chain. The completed
-   * chain goes through the same [check], so trust is never weakened: whatever the delegate would
-   * have refused, it still refuses.
-   */
-  private inline fun withAiaRetry(
-    chain: Array<X509Certificate>,
-    check: (Array<X509Certificate>) -> Unit,
-  ) {
-    try {
-      check(chain)
-    } catch (original: CertificateException) {
-      val completed = AiaCertChaser.completeChain(chain.toList(), fetch = fetch)
-      // Nothing could be added — the original failure stands (don't re-check an unchanged chain).
-      if (completed.size == chain.size) throw original
-      check(completed.toTypedArray())
-    }
-  }
 }

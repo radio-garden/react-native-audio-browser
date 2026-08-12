@@ -125,6 +125,156 @@ class AiaChasingTrustManagerTest {
   }
 
   @Test
+  fun `a complete chain rejected for some other reason is not chased`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val root = CertFixtures.cert("isrg-root-x1.pem")
+    // Trusts nothing — an expired chain, a hostname mismatch, a CT refusal all look like this:
+    // the delegate rejects a chain that is not missing anything.
+    val delegate =
+      object : X509TrustManager {
+        override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) =
+          throw CertificateException("certificate expired")
+
+        override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) = Unit
+
+        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf(root)
+      }
+    var fetches = 0
+    val tm =
+      AiaChasingTrustManager(delegate) {
+        fetches++
+        emptyList()
+      }
+
+    assertThrows(CertificateException::class.java) {
+      tm.checkServerTrusted(arrayOf(leaf, r13), "RSA")
+    }
+
+    // Chasing could not have helped, so it must not have reached out to a host named by a
+    // certificate that just failed validation.
+    assertEquals(0, fetches)
+  }
+
+  @Test
+  fun `the original failure is kept when the completed chain fails too`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    // Trusts no chain of any size, so the retry fails as well.
+    val delegate = FakeDelegate(trustsChainOfSize = -1)
+    val tm = AiaChasingTrustManager(delegate) { listOf(r13) }
+
+    val thrown =
+      assertThrows(CertificateException::class.java) { tm.checkServerTrusted(arrayOf(leaf), "RSA") }
+
+    assertEquals(1, thrown.suppressed.size)
+  }
+
+  @Test
+  fun `client checks are forwarded, not routed through the server path`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    var clientChecks = 0
+    val delegate =
+      object : X509ExtendedTrustManager() {
+        override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) =
+          throw CertificateException("server path must not be used for a client check")
+
+        override fun checkServerTrusted(
+          chain: Array<X509Certificate>,
+          authType: String,
+          socket: Socket?,
+        ) = throw CertificateException("server path must not be used for a client check")
+
+        override fun checkServerTrusted(
+          chain: Array<X509Certificate>,
+          authType: String,
+          engine: SSLEngine?,
+        ) = throw CertificateException("server path must not be used for a client check")
+
+        override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {
+          clientChecks++
+        }
+
+        override fun checkClientTrusted(
+          chain: Array<X509Certificate>,
+          authType: String,
+          socket: Socket?,
+        ) {
+          clientChecks++
+        }
+
+        override fun checkClientTrusted(
+          chain: Array<X509Certificate>,
+          authType: String,
+          engine: SSLEngine?,
+        ) {
+          clientChecks++
+        }
+
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+      }
+    val tm = AiaChasingExtendedTrustManager(delegate) { emptyList() }
+
+    tm.checkClientTrusted(arrayOf(leaf), "RSA")
+    tm.checkClientTrusted(arrayOf(leaf), "RSA", null as Socket?)
+    tm.checkClientTrusted(arrayOf(leaf), "RSA", null as SSLEngine?)
+
+    assertEquals(3, clientChecks)
+  }
+
+  /** A delegate carrying the Android-specific hostname-aware method, as `RootTrustManager` does. */
+  @Suppress("unused")
+  private class HostAwareDelegate(private val trustsChainOfSize: Int) : X509TrustManager {
+    val hosts = mutableListOf<String>()
+
+    fun checkServerTrusted(
+      chain: Array<X509Certificate>,
+      authType: String,
+      host: String,
+    ): List<X509Certificate> {
+      hosts.add(host)
+      if (chain.size != trustsChainOfSize) {
+        throw CertificateException("Trust anchor for certification path not found.")
+      }
+      return chain.toList()
+    }
+
+    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) =
+      throw CertificateException("the host-aware overload should have been used")
+
+    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) = Unit
+
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+  }
+
+  @Test
+  fun `the X509TrustManagerExtensions signature is present and forwards the host`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val delegate = HostAwareDelegate(trustsChainOfSize = 2)
+    val tm =
+      AiaChasingExtendedTrustManager(delegate) {
+        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      }
+
+    // The method X509TrustManagerExtensions looks up reflectively must exist on the wrapper...
+    val method =
+      tm.javaClass.getMethod(
+        "checkServerTrusted",
+        Array<X509Certificate>::class.java,
+        String::class.java,
+        String::class.java,
+      )
+
+    // ...and must reach the delegate's own host-aware method, so pinning still sees the host.
+    val accepted = tm.checkServerTrusted(arrayOf(leaf), "RSA", "ca.example")
+
+    assertEquals(listOf(leaf, r13), accepted)
+    assertEquals(listOf("ca.example", "ca.example"), delegate.hosts)
+    assertEquals(List::class.java, method.returnType)
+  }
+
+  @Test
   fun `forwards to the hostname-aware overload the platform requires`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")

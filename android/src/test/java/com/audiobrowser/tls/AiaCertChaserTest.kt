@@ -113,6 +113,47 @@ class AiaCertChaserTest {
   }
 
   @Test
+  fun `completeChain stops at a chain that already reaches a trust anchor`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val root = CertFixtures.cert("isrg-root-x1.pem")
+    val fetched = mutableListOf<String>()
+
+    // R13's own AIA points at the ISRG root, so without knowing the anchors this walks one hop
+    // too far and pays for a second blocking fetch on the ordinary rescue path.
+    val completed =
+      AiaCertChaser.completeChain(listOf(leaf), anchorSubjects = setOf(root.subjectX500Principal)) {
+        fetched.add(it)
+        if (it == "http://r13.i.lencr.org/") listOf(r13) else listOf(root)
+      }
+
+    assertEquals(listOf(leaf, r13), completed)
+    assertEquals(listOf("http://r13.i.lencr.org/"), fetched)
+  }
+
+  @Test
+  fun `completeChain fetches nothing when the presented chain is already anchored`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val root = CertFixtures.cert("isrg-root-x1.pem")
+    var fetches = 0
+
+    // The shape of every non-path failure — expiry, hostname mismatch, CT — where the server
+    // sent a complete chain and validation failed for some other reason.
+    val completed =
+      AiaCertChaser.completeChain(
+        listOf(leaf, r13),
+        anchorSubjects = setOf(root.subjectX500Principal),
+      ) {
+        fetches++
+        emptyList()
+      }
+
+    assertEquals(listOf(leaf, r13), completed)
+    assertEquals(0, fetches)
+  }
+
+  @Test
   fun `completeChain stops when the issuer cannot be fetched`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
 
