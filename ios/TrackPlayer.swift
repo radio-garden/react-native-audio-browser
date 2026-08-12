@@ -753,7 +753,7 @@ extension TrackPlayer {
         repeatMode: repeatMode.persistedString,
         shuffleEnabled: shuffleEnabled,
         playbackSpeed: rate,
-      )
+      ),
     )
   }
 

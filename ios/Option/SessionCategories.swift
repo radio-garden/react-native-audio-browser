@@ -99,7 +99,7 @@ extension NativeIOSSetupOptions {
     category: AVAudioSession.Category,
     mode: AVAudioSession.Mode,
     policy: AVAudioSession.RouteSharingPolicy,
-    options: AVAudioSession.CategoryOptions
+    options: AVAudioSession.CategoryOptions,
   ) {
     let category = self.category
       .flatMap { SessionCategory(rawValue: $0.stringValue) }?
@@ -113,7 +113,8 @@ extension NativeIOSSetupOptions {
     let options = (self.categoryOptions ?? [])
       .reduce(into: AVAudioSession.CategoryOptions()) { acc, option in
         if let mapped = SessionCategoryOptions(rawValue: option.stringValue)?
-          .mapConfigToAVAudioSessionCategoryOptions() {
+          .mapConfigToAVAudioSessionCategoryOptions()
+        {
           acc.insert(mapped)
         }
       }

@@ -120,7 +120,7 @@ struct TransitionTests {
 @MainActor
 private func makeRetrying() -> (
   PlaybackCoordinator, MockRetryHandling, MockPlaybackCoordinatorCallbacks,
-  MockPlaybackEffectHandler
+  MockPlaybackEffectHandler,
 ) {
   let retryHandler = MockRetryHandling()
   retryHandler.isRetryableResult = true

@@ -21,7 +21,7 @@ class RNABMediaAffinityHandler: NSObject, INUpdateMediaAffinityIntentHandling {
 
   func handle(
     intent: INUpdateMediaAffinityIntent,
-    completion: @escaping @Sendable (INUpdateMediaAffinityIntentResponse) -> Void
+    completion: @escaping @Sendable (INUpdateMediaAffinityIntentResponse) -> Void,
   ) {
     let affinity = intent.affinityType
     Self.logger.info("Update media affinity — type=\(affinity.rawValue)")
@@ -60,7 +60,7 @@ class RNABMediaAffinityHandler: NSObject, INUpdateMediaAffinityIntentHandling {
   @objc(resolveMediaItemsForUpdateMediaAffinity:withCompletion:)
   func resolveMediaItems(
     for intent: INUpdateMediaAffinityIntent,
-    with completion: @escaping ([INUpdateMediaAffinityMediaItemResolutionResult]) -> Void
+    with completion: @escaping ([INUpdateMediaAffinityMediaItemResolutionResult]) -> Void,
   ) {
     let name = intent.mediaSearch?.mediaName ?? ""
     let item = INMediaItem(identifier: name, title: name, type: .unknown, artwork: nil)

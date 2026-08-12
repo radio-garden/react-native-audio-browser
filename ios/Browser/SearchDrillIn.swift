@@ -20,7 +20,7 @@ enum SearchDrillIn {
   /// yields nothing. Returns nil when nothing is playable.
   static func playable<Item: PlayableSearchItem>(
     from children: [Item],
-    resolveChildren: sending (String) async throws -> [Item]
+    resolveChildren: sending (String) async throws -> [Item],
   ) async throws -> [Item]? {
     guard !children.isEmpty else { return nil }
 

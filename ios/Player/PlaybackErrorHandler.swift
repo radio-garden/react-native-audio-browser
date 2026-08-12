@@ -138,7 +138,7 @@ public enum PlaybackErrorContext {
       }
     }
 
-    if let httpStatusCode, !(200...299).contains(httpStatusCode) {
+    if let httpStatusCode, !(200 ... 299).contains(httpStatusCode) {
       return .httpStatus(httpStatusCode)
     }
 
@@ -155,7 +155,7 @@ public enum PlaybackErrorContext {
   /// with HTTP statuses — so only in-range values count, and the newest wins:
   /// a live stream reconnects, and older entries describe earlier attempts.
   public static func httpStatusCode(fromErrorStatusCodes codes: [Int]) -> Int? {
-    codes.last { (100...599).contains($0) }
+    codes.last { (100 ... 599).contains($0) }
   }
 
   /// The stream was fetched but cannot be decoded — unknown container,

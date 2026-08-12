@@ -5,11 +5,11 @@ import Testing
 struct TabBarEntriesTests {
   private func tab(
     _ title: String, url: String, artwork: String? = nil,
-    artworkSource: ImageSource? = nil, artist: String? = nil
+    artworkSource: ImageSource? = nil, artist: String? = nil,
   ) -> Track {
     Track(
       id: url, url: url, title: title, artist: artist, artwork: artwork.map { .first($0) },
-      artworkSource: artworkSource
+      artworkSource: artworkSource,
     )
   }
 
@@ -22,7 +22,7 @@ struct TabBarEntriesTests {
     #expect(
       !TabBarEntries.same(
         [tab("Explore", url: "/explore")],
-        [tab("Verkennen", url: "/explore")]
+        [tab("Verkennen", url: "/explore")],
       ))
   }
 
@@ -30,7 +30,7 @@ struct TabBarEntriesTests {
     #expect(
       !TabBarEntries.same(
         [tab("Explore", url: "/explore")],
-        [tab("Explore", url: "/discover")]
+        [tab("Explore", url: "/discover")],
       ))
   }
 
@@ -38,7 +38,7 @@ struct TabBarEntriesTests {
     #expect(
       !TabBarEntries.same(
         [tab("Explore", url: "/explore", artwork: "sf:globe")],
-        [tab("Explore", url: "/explore", artwork: "sf:map")]
+        [tab("Explore", url: "/explore", artwork: "sf:map")],
       ))
   }
 
@@ -46,7 +46,7 @@ struct TabBarEntriesTests {
     #expect(
       !TabBarEntries.same(
         [tab("Explore", url: "/explore", artworkSource: ImageSource(uri: "https://a/1.png"))],
-        [tab("Explore", url: "/explore", artworkSource: ImageSource(uri: "https://a/2.png"))]
+        [tab("Explore", url: "/explore", artworkSource: ImageSource(uri: "https://a/2.png"))],
       ))
   }
 
@@ -65,7 +65,7 @@ struct TabBarEntriesTests {
     #expect(
       TabBarEntries.same(
         [tab("Explore", url: "/explore", artist: "a")],
-        [tab("Explore", url: "/explore", artist: "b")]
+        [tab("Explore", url: "/explore", artist: "b")],
       ))
   }
 }

@@ -43,7 +43,7 @@ public struct MediaIntentCriteria: Sendable {
     artist: String? = nil,
     album: String? = nil,
     title: String? = nil,
-    playlist: String? = nil
+    playlist: String? = nil,
   ) {
     self.query = query
     self.reference = reference
@@ -90,7 +90,7 @@ public struct MediaIntentCriteria: Sendable {
     mediaTypeMode: String?,
     reference: Reference,
     hasMediaType: Bool,
-    appName: String?
+    appName: String?,
   ) -> MediaIntentCriteria {
     let name = (mediaName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     let trimmedNonEmpty: (String?) -> String? = {
@@ -115,12 +115,12 @@ public struct MediaIntentCriteria: Sendable {
       hasGenres: !genreNames.isEmpty,
       hasMediaType: hasMediaType,
       matchesAppName: queryMatchesAppName(query, appName: appName),
-      searchMode: mediaTypeMode,   // mode is the vertical, verbatim — no derivation
+      searchMode: mediaTypeMode, // mode is the vertical, verbatim — no derivation
       genre: genre,
       artist: artist,
       album: album,
       title: title,
-      playlist: playlist
+      playlist: playlist,
     )
   }
 

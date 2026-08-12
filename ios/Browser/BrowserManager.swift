@@ -770,9 +770,9 @@ final class BrowserManager {
     // silently queueing the changed list would resume the wrong station.
     let sectionTracks: [Track]
     switch SectionScope.section(of: children, containing: trackId) {
-    case .imageRow(let items):
+    case let .imageRow(items):
       sectionTracks = items.map { $0.toTrack() }
-    case .run(let tracks):
+    case let .run(tracks):
       sectionTracks = tracks
     case nil:
       return nil

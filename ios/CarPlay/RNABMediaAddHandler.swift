@@ -22,8 +22,8 @@ class RNABMediaAddHandler: NSObject, INAddMediaIntentHandling {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "MediaAddHandler")
 
   func handle(
-    intent: INAddMediaIntent,
-    completion: @escaping @Sendable (INAddMediaIntentResponse) -> Void
+    intent _: INAddMediaIntent,
+    completion: @escaping @Sendable (INAddMediaIntentResponse) -> Void,
   ) {
     Self.logger.info("Add media — favorite current track")
 
@@ -57,7 +57,7 @@ class RNABMediaAddHandler: NSObject, INAddMediaIntentHandling {
   @objc(resolveMediaItemsForAddMedia:withCompletion:)
   func resolveMediaItems(
     for intent: INAddMediaIntent,
-    with completion: @escaping ([INAddMediaMediaItemResolutionResult]) -> Void
+    with completion: @escaping ([INAddMediaMediaItemResolutionResult]) -> Void,
   ) {
     let name = intent.mediaSearch?.mediaName ?? ""
     let item = INMediaItem(identifier: name, title: name, type: .unknown, artwork: nil)
@@ -66,10 +66,10 @@ class RNABMediaAddHandler: NSObject, INAddMediaIntentHandling {
 
   @objc(resolveMediaDestinationForAddMedia:withCompletion:)
   func resolveMediaDestination(
-    for intent: INAddMediaIntent,
-    with completion: @escaping (INAddMediaMediaDestinationResolutionResult) -> Void
+    for _: INAddMediaIntent,
+    with completion: @escaping (INAddMediaMediaDestinationResolutionResult) -> Void,
   ) {
     // One flat favorites collection — always the user's library, no playlists.
-      completion(.success(with: INMediaDestination.library))
+    completion(.success(with: INMediaDestination.library))
   }
 }

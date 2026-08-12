@@ -246,7 +246,9 @@ struct ResetTests {
     c.capture(position: 25.0)
 
     // Let the (immediately-cancelled, itemless) seek completion drain.
-    for _ in 0 ..< 20 { await Task.yield() }
+    for _ in 0 ..< 20 {
+      await Task.yield()
+    }
 
     #expect(spy.calls.isEmpty)
     #expect(c.pendingTime == 25.0)

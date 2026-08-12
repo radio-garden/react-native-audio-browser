@@ -170,7 +170,8 @@ class RetryManager {
       return "max retry duration (\(maxRetryDuration)s)"
     }
     if !hasPlayed, isOnline, let start = firstOnlineRetryTime,
-       now.timeIntervalSince(start) >= firstConnectMaxRetryDuration {
+       now.timeIntervalSince(start) >= firstConnectMaxRetryDuration
+    {
       return "first-connect retry duration (\(firstConnectMaxRetryDuration)s)"
     }
     return nil

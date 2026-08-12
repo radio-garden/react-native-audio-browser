@@ -21,7 +21,7 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
       mediaTypeMode: Self.mediaTypeMode(s?.mediaType ?? .unknown),
       reference: Self.reference(s?.reference ?? .unknown),
       hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
-      appName: Self.hostAppName()
+      appName: Self.hostAppName(),
     )
     Self.logger.info("Play media intent — query=\(criteria.query) matchesApp=\(criteria.matchesAppName) resume=\(criteria.isResume)")
 
@@ -37,18 +37,18 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
   /// `album` are filters, not verticals — they yield no mode.
   private static func mediaTypeMode(_ type: INMediaItemType) -> String? {
     switch type {
-    case .station, .radioStation, .algorithmicRadioStation, .musicStation: return "station"
-    case .podcastShow, .podcastEpisode, .podcastPlaylist, .podcastStation:  return "podcast"
-    case .audioBook:       return "audiobook"
-    case .news:            return "news"
-    case .music:           return "music"
-    case .song:            return "song"
-    case .playlist:        return "playlist"
-    case .musicVideo:      return "music-video"
-    case .movie:           return "movie"
-    case .tvShow:          return "tv-show"
-    case .tvShowEpisode:   return "tv-show-episode"
-    default:               return nil   // album/artist/genre/unknown
+    case .station, .radioStation, .algorithmicRadioStation, .musicStation: "station"
+    case .podcastShow, .podcastEpisode, .podcastPlaylist, .podcastStation: "podcast"
+    case .audioBook: "audiobook"
+    case .news: "news"
+    case .music: "music"
+    case .song: "song"
+    case .playlist: "playlist"
+    case .musicVideo: "music-video"
+    case .movie: "movie"
+    case .tvShow: "tv-show"
+    case .tvShowEpisode: "tv-show-episode"
+    default: nil // album/artist/genre/unknown
     }
   }
 
@@ -56,9 +56,9 @@ class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
   /// routes to native resume; `.my` to the consumer; everything else is unknown.
   private static func reference(_ ref: INMediaReference) -> MediaIntentCriteria.Reference {
     switch ref {
-    case .currentlyPlaying: return .currentlyPlaying
-    case .my:               return .my
-    default:                return .unknown
+    case .currentlyPlaying: .currentlyPlaying
+    case .my: .my
+    default: .unknown
     }
   }
 

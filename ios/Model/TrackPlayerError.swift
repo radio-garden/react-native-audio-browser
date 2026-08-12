@@ -103,10 +103,10 @@ public extension TrackPlayerError.PlaybackError {
   static func kind(forHttpStatus status: Int) -> PlaybackErrorKind {
     switch status {
     case 404, 410: .notFound
-    case 500...599: .serverError
+    case 500 ... 599: .serverError
     // Every other 4xx is the server refusing us — auth, geo-blocking, a
     // rate limit. All of them mean "you can't have this stream", not "retry".
-    case 400...499: .rejected
+    case 400 ... 499: .rejected
     default: .unknown
     }
   }

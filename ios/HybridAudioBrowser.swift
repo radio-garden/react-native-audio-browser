@@ -601,7 +601,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // built-in so the gate page still renders rather than leaking content.
       return GateOutcome(gated: true, chrome: defaultChrome ?? Self.builtInGate)
     }
-    guard decision.gated else { return GateOutcome(gated: false, chrome: nil) }  // explicit allow
+    guard decision.gated else { return GateOutcome(gated: false, chrome: nil) } // explicit allow
     return GateOutcome(gated: true, chrome: decision.gate ?? defaultChrome ?? Self.builtInGate)
   }
 
@@ -649,7 +649,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         category: AVAudioSession.Category,
         mode: AVAudioSession.Mode,
         policy: AVAudioSession.RouteSharingPolicy,
-        options: AVAudioSession.CategoryOptions
+        options: AVAudioSession.CategoryOptions,
       ) = options.ios?.resolveAudioSessionConfig()
         ?? (category: .playback, mode: .default, policy: .default, options: [])
       // Capture category application once so a media-services reset (which
@@ -1394,7 +1394,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   public func supportsOutputSwitcher() throws -> Bool {
     // iOS can always present the system route picker (AVRoutePickerView).
-    return true
+    true
   }
 
   public func openOutputPicker() throws {
@@ -1786,7 +1786,8 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           // URL (parent container → siblings + selected index). Fall back to the single
           // track when the url isn't contextual or expansion fails.
           if let url = state.track.url,
-             let expanded = try? await browser.browserManager.expandQueueFromContextualUrl(url) {
+             let expanded = try? await browser.browserManager.expandQueueFromContextualUrl(url)
+          {
             player.setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
           } else {
             player.setQueue([track], initialIndex: 0, startPositionMs: startMs, playWhenReady: true)
@@ -1795,7 +1796,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           completion(true)
         } else {
           browser.logger.error("resume: nothing playing and nothing persisted → no-op")
-          completion(false)   // nothing playing and nothing persisted
+          completion(false) // nothing playing and nothing persisted
         }
         return
       }
@@ -1812,14 +1813,14 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
         title: criteria.title,
         playlist: criteria.playlist,
         // .currentlyPlaying can't reach here — isResume routed it to resume.
-        reference: criteria.reference == .my ? .my : .unknown
+        reference: criteria.reference == .my ? .my : .unknown,
       )
 
       // Search is *finding* new content — refused when the gate decides this
       // request is gated (resume above is unaffected: the gate never blocks
       // hearing, and the gate check stays after the resume check).
       let outcome = await browser.gateDecision(
-        for: NativeGateRequest(reason: .search, path: nil, search: params)
+        for: NativeGateRequest(reason: .search, path: nil, search: params),
       )
       guard !outcome.gated else {
         browser.logger.info("handlePlayMediaIntent: search refused — gated")

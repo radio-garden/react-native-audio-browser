@@ -7,12 +7,12 @@ struct SectionScopeTests {
   }
 
   private func runSrcs(_ section: SectionScope.Section?) -> [String?]? {
-    guard case .run(let tracks) = section else { return nil }
+    guard case let .run(tracks) = section else { return nil }
     return tracks.map(\.src)
   }
 
   private func imageRowSrcs(_ section: SectionScope.Section?) -> [String?]? {
-    guard case .imageRow(let items) = section else { return nil }
+    guard case let .imageRow(items) = section else { return nil }
     return items.map(\.src)
   }
 

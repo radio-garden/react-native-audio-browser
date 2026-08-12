@@ -57,12 +57,12 @@ struct MediaIntentCriteriaFromTests {
     mediaTypeMode: String? = nil,
     reference: MediaIntentCriteria.Reference = .unknown,
     hasMediaType: Bool = false,
-    appName: String? = "Radio Garden"
+    appName: String? = "Radio Garden",
   ) -> MediaIntentCriteria {
     MediaIntentCriteria.from(
       mediaName: mediaName, genreNames: genreNames, artistName: artistName,
       albumName: albumName, mediaTypeMode: mediaTypeMode,
-      reference: reference, hasMediaType: hasMediaType, appName: appName
+      reference: reference, hasMediaType: hasMediaType, appName: appName,
     )
   }
 
