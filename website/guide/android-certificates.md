@@ -310,7 +310,7 @@ expired, or self-signed roots still fail exactly as before.
 
 ## What you are opting into
 
-Trust is never weakened. The chain is only ever *extended*, and the completed
+Trust is never weakened. The chain is only ever _extended_, and the completed
 chain is re-validated by the platform's own trust manager against the same
 system anchors, so anything Android would have rejected is still rejected.
 
@@ -329,7 +329,7 @@ It is bounded rather than absent:
 - the fetch happens **only** when the chain does not already reach one of your
   trust anchors, so the common non-path failures — an expired leaf, a hostname
   mismatch — do not trigger one. (The test is on the issuer name at the top of
-  the chain, so a chain topping at a root your device does *not* carry, such as
+  the chain, so a chain topping at a root your device does _not_ carry, such as
   a server still serving the retired DST Root CA X3 cross-sign, is still chased
   even if its real problem is expiry.)
 - the URL is rejected unless it is free of control characters, so it cannot
