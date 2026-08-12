@@ -1,3 +1,12 @@
+## [0.2.0-next.9](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.8...v0.2.0-next.9) (2026-08-12)
+
+### Bug Fixes
+
+* **android:** release everything dispose() registered ([40a07bb](https://github.com/radio-garden/react-native-audio-browser/commit/40a07bbb73416ee0d0486baaab83e63b229c691d))
+* **ci:** make the SwiftFormat version pin actually take effect ([577f138](https://github.com/radio-garden/react-native-audio-browser/commit/577f138958aad36afd74c5ea248e01c424ea6b95))
+* **ios:** isolate HybridAudioBrowser's shared state to the main actor ([aff8fe1](https://github.com/radio-garden/react-native-audio-browser/commit/aff8fe1677c8843cc56d53a674f881798ef9aec1))
+* **ios:** isolate the last two racing fields on HybridAudioBrowser ([7955832](https://github.com/radio-garden/react-native-audio-browser/commit/79558323d06e6bfc45e8e561c263627a842c1949))
+
 ## [0.2.0-next.8](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.7...v0.2.0-next.8) (2026-08-12)
 
 ### Bug Fixes
