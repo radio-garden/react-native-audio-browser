@@ -19,14 +19,45 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      # Nothing here reads the automatic GITHUB_TOKEN — checkout and
+      # semantic-release both authenticate as the release App instead.
+      #
+      # id-token stays: there is no NPM_TOKEN anywhere in this repo, so OIDC is
+      # how `npm publish` authenticates (trusted publishing), not just how
+      # NPM_CONFIG_PROVENANCE signs. Removing it breaks publishing outright.
+      contents: read
       id-token: write
     steps:
+      # `main` requires status checks, which reject *any* direct push whose
+      # commit has not been checked — including the release commit that
+      # @semantic-release/git makes during prepare. GITHUB_TOKEN is
+      # github-actions[bot], which `enforce_admins: false` does not exempt, so
+      # releases from `main` failed with GH006.
+      #
+      # The `main` ruleset lists this App as a bypass actor, so its push is
+      # exempt. An App was needed rather than github-actions[bot] itself:
+      # ruleset bypass actors of type Integration must be GitHub Apps installed
+      # on the owning org, and the first-party Actions app is not installable.
+      #
+      # The minted token is installation-scoped and expires in ~1 hour.
+      - name: Mint a release token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      # Checkout persists the token as the remote credential, so
+      # semantic-release's own push inherits it.
+      #
+      # Unlike GITHUB_TOKEN, an App token's push *does* trigger workflows. What
+      # stops the release commit re-running this job is the `[skip ci]` in
+      # @semantic-release/git's default commit message — do not override
+      # `message` in release.config.cjs without adding another guard.
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          token: ${{ steps.app-token.outputs.token }}
           ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
 
@@ -64,7 +95,7 @@ jobs:
 
       - name: Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
           GIT_AUTHOR_NAME: ${{ github.actor }}
           GIT_AUTHOR_EMAIL: '${{ github.actor }}@users.noreply.github.com'
