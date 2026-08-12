@@ -55,20 +55,21 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   @MainActor private var nowPlayingMetadataEnabled = true
   /// Customizes the now-playing title/subtitle from the track + live timed metadata + playback state.
   @MainActor private var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
-  /// Keep the media session controllable through a terminal error (see `keepSessionAliveOnError`).
-  @MainActor private var keepSessionAliveOnError = true
   /// Initial player state staged before the player exists — from setup options or the imperative
   /// setters called pre-setup. Strict last-write-wins; consumed when the player comes up.
   @MainActor private var pendingPlayWhenReady: Bool?
   @MainActor private var pendingRepeatMode: RepeatMode?
   /// Latest live timed (ICY/ID3) metadata, passed to the formatter. Cleared on track change.
   @MainActor private var latestTimedMetadata: TimedMetadata?
-  private let playerOptions = PlayerUpdateOptions()
+  @MainActor private let playerOptions = PlayerUpdateOptions()
 
   /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
-  var playbackRates: [Double] { playerOptions.playbackRates }
-  var carPlayUpNextButton: Bool { playerOptions.carPlayUpNextButton }
-  var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] { playerOptions.carPlayNowPlayingButtons }
+  @MainActor var playbackRates: [Double] { playerOptions.playbackRates }
+  @MainActor var carPlayUpNextButton: Bool { playerOptions.carPlayUpNextButton }
+  @MainActor var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] {
+    playerOptions.carPlayNowPlayingButtons
+  }
+
   /// Written from the JS thread, the cooperative pool and MainActor, with a
   /// `didSet` that calls back into Nitro. MainActor-isolated so the compiler
   /// requires an `onMainActor` hop at every access.
@@ -166,6 +167,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     androidControllerOfflineError: nil, carPlayLoadingTitle: nil, resolveAlbumUrl: nil, formatNavigationError: nil,
   ) {
     didSet {
+      // Copied here, on the setter's thread: the Task below outlives this call,
+      // and Nitro can reassign `configuration` — a C++ struct holding
+      // std::string/std::function — from the JS thread while it runs.
+      let configuredPath = configuration.path
       onMainActor { browserManager.config = BrowserConfig(from: configuration) }
 
       // Query tabs and navigate to initial path after config is set (matches Kotlin behavior)
@@ -176,7 +181,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       Task {
         let tabs = try? await browserManager.queryTabs()
         // Navigate to configured path, first tab, or "/"
-        let initialPath = configuration.path ?? tabs?.first?.url ?? "/"
+        let initialPath = configuredPath ?? tabs?.first?.url ?? "/"
         // Clear error before navigation (matches Kotlin clearNavigationError())
         clearNavigationError()
         do {
@@ -754,16 +759,16 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
           self?.onSleepTimerChanged(state)
         }
 
-        // Now-playing: whether to manage metadata, the optional formatter that owns the rendered
-        // lines, and whether to keep the session alive through a terminal error.
+        // Now-playing: whether to manage metadata, and the optional formatter that owns the
+        // rendered lines.
         nowPlayingMetadataEnabled = options.autoUpdateNowPlayingMetadata ?? true
         nowPlayingMetadataFormatter = options.nowPlayingMetadataFormatter
-        // Stored for API symmetry, but iOS needs no masking: a terminal error resolves the playback
-        // state to *paused* (PlaybackCoordinator.applySideEffects), the now-playing info is retained
-        // (never cleared on error), and next/previous stay enabled (gated on queue position, not
-        // state). So the session stays controllable through errors by default — the behavior Android
-        // achieves via InterceptingPlayer is already the iOS norm.
-        keepSessionAliveOnError = options.keepSessionAliveOnError ?? true
+        // `options.keepSessionAliveOnError` is deliberately ignored here: iOS needs no masking.
+        // A terminal error resolves the playback state to *paused*
+        // (PlaybackCoordinator.applySideEffects), the now-playing info is retained (never cleared
+        // on error), and next/previous stay enabled (gated on queue position, not state). So the
+        // session stays controllable through errors by default — the behavior Android achieves via
+        // InterceptingPlayer is already the iOS norm.
 
         // The bundled runtime options and initial state are part of the atomic launch
         // description. Stage the state first so setup options and earlier pre-setup setter
@@ -840,7 +845,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getOptions() throws -> Options {
-    playerOptions.toOptions()
+    onMainActor { playerOptions.toOptions() }
   }
 
   public func setPlaybackIntervalEnabled(enabled: Bool) {
