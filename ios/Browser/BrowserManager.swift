@@ -64,9 +64,6 @@ final class BrowserManager {
   private let router = SimpleRouter()
   private let httpClient = HttpClient()
 
-  // LRU cache for individual tracks - keyed by both url and src for O(1) lookup
-  private let trackCache = LRUCache<String, Track>(maxSize: 3000)
-
   // LRU cache for resolved content - keyed by path
   private let contentCache = LRUCache<String, ResolvedTrack>(maxSize: 20)
 
@@ -223,22 +220,6 @@ final class BrowserManager {
     return resolvedTrack.copying(children: hydratedChildren)
   }
 
-  // MARK: - Track Cache
-
-  /// Cache a track by both url and src for O(1) lookup from either key.
-  private func cacheTrack(_ track: Track) {
-    if let url = track.url {
-      trackCache.set(url, value: track)
-    }
-    if let src = track.src {
-      trackCache.set(src, value: track)
-    }
-  }
-
-  private func cacheChildren(_ resolvedTrack: ResolvedTrack) {
-    resolvedTrack.children?.forEach { cacheTrack($0) }
-  }
-
   // MARK: - Navigation
 
   /// Main navigation method - updates path and resolves content.
@@ -275,9 +256,6 @@ final class BrowserManager {
 
     // Cache the resolved content for future navigation
     contentCache.set(normalizedPath, value: resolvedTrack)
-
-    // Cache children for track lookups
-    cacheChildren(resolvedTrack)
 
     return hydrateChildren(resolvedTrack)
   }
@@ -681,9 +659,6 @@ final class BrowserManager {
     // Cache results
     lastSearchQuery = query
     lastSearchResults = hydratedResults
-
-    // Cache individual tracks
-    hydratedResults.forEach { cacheTrack($0) }
 
     return makeSearchResult(query: query, results: hydratedResults)
   }
