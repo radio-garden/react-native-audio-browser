@@ -62,12 +62,13 @@ android {
   ndkVersion getExtOrDefault("ndkVersion")
   compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
 
-  // JVM unit tests don't link the Android framework, so un-mocked android.* calls
-  // (e.g. android.util.LruCache.evictAll) throw "not mocked". Returning default
-  // values makes them no-ops so logic-only tests (e.g. layer-generation caching)
-  // can exercise code paths that touch framework types.
+  // Deliberately left off (the AGP default). Turning it on is global: every un-mocked
+  // android.* call in every unit test silently returns 0/false/null instead of throwing,
+  // so a test can pass while the code under test never ran. Tests that need real framework
+  // behaviour run under Robolectric instead — see BrowserManagerLayerResolutionTest, whose
+  // android.util.LruCache.evictAll() is what this flag used to paper over.
   testOptions {
-    unitTests.returnDefaultValues = true
+    unitTests.returnDefaultValues = false
   }
 
   defaultConfig {

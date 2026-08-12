@@ -8,6 +8,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * Tests the request/browse layer resolution + caching introduced for resolver thunks.
@@ -26,7 +28,11 @@ import org.junit.Test
  * bump, no in-flight cache) is identical for the static and resolver paths — `resolveLayer` only
  * differs in how it produces the `TransformableRequestConfig` — so the guard is fully covered here.
  * The resolver-await path is covered by the TS/web-stub tests and on iOS.
+ *
+ * Runs under Robolectric for [BrowserManager]'s `android.util.LruCache` fields: `clearContentCache`
+ * calls `evictAll()`, which a plain JVM test cannot execute.
  */
+@RunWith(RobolectricTestRunner::class)
 class BrowserManagerLayerResolutionTest {
 
   private lateinit var browserManager: BrowserManager
