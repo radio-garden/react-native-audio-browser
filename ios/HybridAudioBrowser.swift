@@ -16,6 +16,10 @@ import os.log
 /// Only safe when the caller blocks until the MainActor work completes (DispatchQueue.main.sync).
 private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
 
+/// `@unchecked Sendable` because it must be: the spec's requirements are all
+/// nonisolated and Nitro calls them synchronously on the JS thread, so the class
+/// can't be `@MainActor`. Isolation is therefore per-property, and `@unchecked`
+/// means the compiler won't tell you when a new one needs it.
 public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "AudioBrowser")
 
@@ -32,6 +36,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
 
   // MARK: - Private Properties
 
+  /// Main-confined by convention, not annotation: `deinit` reads it as a
+  /// safety net and can't hop. Reach it from `onMainActor` / `@MainActor`.
   private var player: TrackPlayer?
   private let networkMonitor = NetworkMonitor()
   private let playbackStateStore = PlaybackStateStore()
@@ -43,27 +49,30 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private var mediaServicesResetObserver: NSObjectProtocol?
   /// Re-applies our resolved audio-session category. Captured at setup so a
   /// media-services reset (which clears the category) can restore it.
-  private var applyAudioSessionCategory: () -> Void = {}
-  private var nowPlayingOverride: NowPlayingUpdate?
+  @MainActor private var applyAudioSessionCategory: () -> Void = {}
+  @MainActor private var nowPlayingOverride: NowPlayingUpdate?
   /// When false, the now-playing surface uses the raw track fields (override + formatter ignored).
-  private var nowPlayingMetadataEnabled = true
+  @MainActor private var nowPlayingMetadataEnabled = true
   /// Customizes the now-playing title/subtitle from the track + live timed metadata + playback state.
-  private var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
+  @MainActor private var nowPlayingMetadataFormatter: ((_ params: FormatNowPlayingParams) -> Promise<NowPlayingUpdate?>)?
   /// Keep the media session controllable through a terminal error (see `keepSessionAliveOnError`).
-  private var keepSessionAliveOnError = true
+  @MainActor private var keepSessionAliveOnError = true
   /// Initial player state staged before the player exists — from setup options or the imperative
   /// setters called pre-setup. Strict last-write-wins; consumed when the player comes up.
-  private var pendingPlayWhenReady: Bool?
-  private var pendingRepeatMode: RepeatMode?
+  @MainActor private var pendingPlayWhenReady: Bool?
+  @MainActor private var pendingRepeatMode: RepeatMode?
   /// Latest live timed (ICY/ID3) metadata, passed to the formatter. Cleared on track change.
-  private var latestTimedMetadata: TimedMetadata?
+  @MainActor private var latestTimedMetadata: TimedMetadata?
   private let playerOptions = PlayerUpdateOptions()
 
   /// Configured playback rates for the playback-rate capability (for CarPlay rate cycling)
   var playbackRates: [Double] { playerOptions.playbackRates }
   var carPlayUpNextButton: Bool { playerOptions.carPlayUpNextButton }
   var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] { playerOptions.carPlayNowPlayingButtons }
-  private var lastNavigationError: NavigationError? {
+  /// Written from the JS thread, the cooperative pool and MainActor, with a
+  /// `didSet` that calls back into Nitro. MainActor-isolated so the compiler
+  /// requires an `onMainActor` hop at every access.
+  @MainActor private var lastNavigationError: NavigationError? {
     didSet {
       // Skip if both nil (no real change)
       guard oldValue != nil || lastNavigationError != nil else { return }
@@ -71,7 +80,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  private var lastFormattedNavigationError: FormattedNavigationError? {
+  /// Isolated for the same reason as ``lastNavigationError``.
+  @MainActor private var lastFormattedNavigationError: FormattedNavigationError? {
     didSet {
       // Skip if both nil (no real change)
       guard oldValue != nil || lastFormattedNavigationError != nil else { return }
@@ -168,10 +178,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         // Navigate to configured path, first tab, or "/"
         let initialPath = configuration.path ?? tabs?.first?.url ?? "/"
         // Clear error before navigation (matches Kotlin clearNavigationError())
-        await MainActor.run {
-          lastNavigationError = nil
-          lastFormattedNavigationError = nil
-        }
+        clearNavigationError()
         do {
           try await browserManager.navigate(initialPath)
         } catch {
@@ -370,7 +377,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   private func handleNavigationError(_ error: Error, path: String) {
     let navError = NavigationError.from(error)
 
-    lastNavigationError = navError
+    onMainActor { lastNavigationError = navError }
 
     // Format the error (async if using JS callback, sync for defaults)
     let defaultFormatted = navError.defaultFormatted()
@@ -380,27 +387,40 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       // The result callbacks are @Sendable: a plain closure would inherit MainActor
       // isolation from this block, and Nitro resolves its promises synchronously on the
       // JS thread — Swift 6.2's dynamic isolation check then traps on closure entry.
-      // The property is JS-thread-touched elsewhere too, so no hop back is needed.
+      // They therefore hop back explicitly, like every other writer.
       DispatchQueue.main.async { [weak self] in
         formatter(params)
           .then { @Sendable [weak self] customDisplay in
-            self?.lastFormattedNavigationError = customDisplay ?? defaultFormatted
+            self?.setFormattedNavigationError(customDisplay ?? defaultFormatted)
           }
           .catch { @Sendable [weak self] _ in
-            self?.lastFormattedNavigationError = defaultFormatted
+            self?.setFormattedNavigationError(defaultFormatted)
           }
       }
     } else {
-      lastFormattedNavigationError = defaultFormatted
+      setFormattedNavigationError(defaultFormatted)
+    }
+  }
+
+  /// Callable from any thread — the Nitro promise callbacks below resolve on
+  /// the JS thread.
+  private func setFormattedNavigationError(_ formatted: FormattedNavigationError?) {
+    onMainActor { lastFormattedNavigationError = formatted }
+  }
+
+  /// Synchronous on purpose: the `didSet`s notify JS, which has to happen
+  /// before the navigation that may set them again.
+  private func clearNavigationError() {
+    onMainActor {
+      lastNavigationError = nil
+      lastFormattedNavigationError = nil
     }
   }
 
   // MARK: - Browser Methods
 
   public func navigatePath(path: String) throws {
-    // Clear error synchronously before starting navigation (didSet notifies JS)
-    lastNavigationError = nil
-    lastFormattedNavigationError = nil
+    clearNavigationError()
     Task {
       do {
         try await browserManager.navigate(path)
@@ -411,7 +431,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func navigateTrack(track: Track) throws {
-    Task {
+    // @MainActor: `player` is main-confined, and `trackSelector.select` is
+    // MainActor anyway — a bare Task read the reference off the cooperative
+    // pool, racing the assignment in `setupPlayer`.
+    Task { @MainActor in
       guard let player else { return }
       let result = await trackSelector.select(track: track, player: player)
       switch result {
@@ -445,9 +468,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   private func navigateToBrowsableUrl(_ url: String) {
-    // Clear error synchronously before starting navigation (didSet notifies JS)
-    lastNavigationError = nil
-    lastFormattedNavigationError = nil
+    clearNavigationError()
     Task {
       do {
         try await browserManager.navigate(url)
@@ -470,11 +491,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   }
 
   public func getNavigationError() throws -> NavigationError? {
-    lastNavigationError
+    onMainActor { lastNavigationError }
   }
 
   public func getFormattedNavigationError() throws -> FormattedNavigationError? {
-    lastFormattedNavigationError
+    onMainActor { lastFormattedNavigationError }
   }
 
   /// Internal signal sent on `externalContentChangedEmitter` to tell CarPlay to
@@ -1121,11 +1142,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// metadata can't stomp it mid-flash. Reverted by a NATIVE timer — JS
   /// timers pause with a backgrounded host on Android, and the lock screen
   /// is exactly the backgrounded case — and cleared early on track change.
-  private var nowPlayingFlash: NowPlayingUpdate?
-  private var nowPlayingFlashRevert: DispatchWorkItem?
+  @MainActor private var nowPlayingFlash: NowPlayingUpdate?
+  @MainActor private var nowPlayingFlashRevert: DispatchWorkItem?
 
   /// Pending debounced audio-session release (see `playerShouldReleaseSession`).
-  private var sessionReleaseWork: DispatchWorkItem?
+  @MainActor private var sessionReleaseWork: DispatchWorkItem?
 
   public func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) throws {
     onMainActor {
@@ -1151,6 +1172,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
+  @MainActor
   private func cancelNowPlayingFlash() {
     nowPlayingFlashRevert?.cancel()
     nowPlayingFlashRevert = nil
@@ -1354,8 +1376,10 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       guard let self else { return }
       // Re-apply our category (the reset cleared it), then have the player
       // recreate itself and reconnect the current stream.
-      self.applyAudioSessionCategory()
-      self.onMainActor { self.player?.handleMediaServicesReset() }
+      self.onMainActor {
+        self.applyAudioSessionCategory()
+        self.player?.handleMediaServicesReset()
+      }
     }
   }
 
@@ -1586,6 +1610,7 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
     DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: release)
   }
 
+  @MainActor
   private func cancelSessionRelease() {
     sessionReleaseWork?.cancel()
     sessionReleaseWork = nil
