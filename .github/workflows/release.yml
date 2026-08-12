@@ -9,15 +9,61 @@ permissions:
   contents: read
 
 concurrency:
+  # Never cancel: semantic-release pushes the git tag before it publishes to
+  # npm, so a cancel in that window leaves a version tagged but unpublished,
+  # and a re-run then finds no new commits and reports "no new release".
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  # Release triggers on the same push as Test, so it would otherwise publish
+  # without waiting for the result — 0.2.0 shipped from a commit whose iOS job
+  # was red. Wait for Test on this exact SHA. No secrets and no environment
+  # here, so a hang cannot sit on the release credential.
+  gate:
+    name: Gate on Test
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for Test to succeed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "push" ]; then
+            echo "$GITHUB_EVENT_NAME run — skipping the Test gate"
+            exit 0
+          fi
+          deadline=$((SECONDS + 2700))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow Test \
+              --commit "$GITHUB_SHA" --limit 1 --json status,conclusion)
+            status=$(echo "$run" | jq -r '.[0].status // "missing"')
+            conclusion=$(echo "$run" | jq -r '.[0].conclusion // ""')
+            case "$status" in
+              completed)
+                if [ "$conclusion" = "success" ]; then
+                  echo "Test succeeded"
+                  exit 0
+                fi
+                echo "Test concluded '$conclusion' — refusing to release"
+                exit 1
+                ;;
+              missing) echo "waiting for Test to start…" ;;
+              *) echo "Test $status…" ;;
+            esac
+            sleep 20
+          done
+          echo "timed out waiting for Test"
+          exit 1
+
   release:
     name: Release
+    needs: gate
     runs-on: ubuntu-latest
-    # Holds the App key; only main and next can read it. No required
-    # reviewers — they would gate every release on a human.
+    # Holds the App key. Restricted to main and next — note next is push-open,
+    # so this narrows exposure rather than closing it. No required reviewers:
+    # they would gate every release on a human.
     environment: release
     permissions:
       # Nothing reads the automatic GITHUB_TOKEN. id-token is how npm publish
@@ -31,7 +77,7 @@ jobs:
       # actor on the main ruleset; github-actions[bot] cannot be one.
       - name: Mint a release token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
@@ -40,7 +86,7 @@ jobs:
       # token's push triggers workflows, so the only thing stopping a re-run
       # loop is the `[skip ci]` in @semantic-release/git's default message.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
@@ -66,7 +112,7 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
           cache: 'yarn'
