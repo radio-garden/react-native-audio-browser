@@ -1,3 +1,22 @@
+## [0.2.0](https://github.com/radio-garden/react-native-audio-browser/compare/v0.1.1...v0.2.0) (2026-08-12)
+
+### Features
+
+* **docs:** add DOCS_NOINDEX to keep non-canonical builds out of search ([4ec28f2](https://github.com/radio-garden/react-native-audio-browser/commit/4ec28f21cc3239bde4bd2a17ba755981a34a3498))
+
+### Bug Fixes
+
+* **docs:** escape generics in prose copied into api/_media ([66b1320](https://github.com/radio-garden/react-native-audio-browser/commit/66b132094030d777874712eb98615dece9332c6e))
+
+### Code Refactors
+
+* **docs:** rename the docs workspace to website ([5428667](https://github.com/radio-garden/react-native-audio-browser/commit/542866761b6e930b4e7c8e0e5d1e88b1fccf10b4))
+
+### Documentation
+
+* declare a canonical URL ([eaea018](https://github.com/radio-garden/react-native-audio-browser/commit/eaea01841371ddb406e4286cbee0d27135ffd83e))
+* emit clean URLs without the .html suffix ([10b6f1b](https://github.com/radio-garden/react-native-audio-browser/commit/10b6f1b0fcd226aaa9c4b0cc04890ceb068585b5))
+
 ## [0.1.1](https://github.com/radio-garden/react-native-audio-browser/compare/v0.1.0...v0.1.1) (2026-08-11)
 
 ### Bug Fixes
