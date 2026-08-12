@@ -33,11 +33,17 @@ if (isNewArchitectureEnabled()) {
   apply plugin: "com.facebook.react"
 }
 
-ktfmt {  googleStyle()
+ktfmt {
+  googleStyle()
 }
 
 tasks.register("format") {
   dependsOn "ktfmtFormat"
+}
+
+// Fails instead of rewriting — what CI runs.
+tasks.register("formatCheck") {
+  dependsOn "ktfmtCheck"
 }
 
 def getExtOrDefault(name) {

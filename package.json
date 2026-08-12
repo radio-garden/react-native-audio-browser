@@ -45,6 +45,7 @@
   },
   "scripts": {
     "android:format": "yarn workspace example-native android:format",
+    "android:format:check": "yarn workspace example-native android:format:check",
     "android:ide": "yarn workspace example-native android:ide",
     "android:logs": "react-native log-android",
     "android:test": "yarn workspace example-native android:test",
@@ -54,6 +55,7 @@
     "prepare": "bob build",
     "example": "yarn workspace example-native",
     "ci:format": "oxfmt --check src",
+    "ci:format:ios": "swiftformat --lint ios",
     "ci:lint": "oxlint --type-aware src",
     "format": "oxfmt --write",
     "ios:format": "swiftformat ios",
