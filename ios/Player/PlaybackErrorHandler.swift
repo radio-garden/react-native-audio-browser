@@ -8,7 +8,7 @@ import os.log
   var isEnabled: Bool { get }
   /// Whether the current load has produced audio — selects the retry budget.
   var hasPlayed: Bool { get set }
-  func isRetryable(_ error: Error?) -> Bool
+  func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool
   func reset()
 }
@@ -62,7 +62,7 @@ public enum PlaybackErrorContext {
       logger.error("[\(String(describing: context))] failure with nil error")
     }
 
-    if retryHandler.isEnabled, retryHandler.isRetryable(error) {
+    if retryHandler.isEnabled, retryHandler.isRetryable(error, httpStatusCode: httpStatusCode) {
       onRetryingError?(PlaybackErrorHandler.classify(
         error: error, fallback: context.fallbackError, httpStatusCode: httpStatusCode,
       ))

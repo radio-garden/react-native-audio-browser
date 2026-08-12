@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Testing
 
@@ -85,5 +86,93 @@ struct RetryManagerBudgetTests {
     manager.hasPlayed = true
     manager.reset()
     #expect(manager.hasPlayed == true)
+  }
+}
+
+/// Which failures earn another attempt. The reference is Android's
+/// `RetryLoadErrorHandlingPolicy.classifyError`: same HTTP set, and the same
+/// default of treating an unrecognized failure as transient. Defaulting the
+/// other way made `retry: true` largely inert on iOS, since AVFoundation
+/// reports most stream failures as opaque CoreMedia errors, not `URLError`.
+@Suite("RetryManager error classification")
+@MainActor
+struct RetryManagerClassificationTests {
+  private func makeManager() -> RetryManager {
+    let manager = RetryManager()
+    manager.updatePolicy(from: .first(true))
+    return manager
+  }
+
+  /// `AVPlayerItem.error` never carries the status, so the caller reads it off
+  /// the item's error log and passes it in. It outranks the opaque error.
+  @Test(arguments: [408, 429, 500, 502, 503, 504])
+  func retryableHTTPStatus_retries(status: Int) {
+    let opaque = NSError(domain: "CoreMediaErrorDomain", code: -12660)
+    #expect(makeManager().isRetryable(opaque, httpStatusCode: status) == true)
+  }
+
+  /// A retry cannot conjure content that isn't there, whatever the error says.
+  @Test(arguments: [400, 401, 403, 404, 410, 451])
+  func permanentHTTPStatus_doesNotRetry(status: Int) {
+    let transient = URLError(.timedOut)
+    #expect(makeManager().isRetryable(transient, httpStatusCode: status) == false)
+  }
+
+  @Test func transientURLError_retries() {
+    #expect(makeManager().isRetryable(URLError(.networkConnectionLost), httpStatusCode: nil) == true)
+  }
+
+  @Test func fatalURLError_doesNotRetry() {
+    #expect(makeManager().isRetryable(URLError(.badURL), httpStatusCode: nil) == false)
+  }
+
+  /// The regression this suite exists for: an opaque CoreMedia failure with no
+  /// status to read used to be terminal, so a station that dropped mid-song
+  /// never came back on iOS while Android reconnected.
+  @Test func opaqueCoreMediaError_retries() {
+    let error = NSError(domain: "CoreMediaErrorDomain", code: -12939)
+    #expect(makeManager().isRetryable(error, httpStatusCode: nil) == true)
+  }
+
+  /// `AVErrorUnknown` is the wrapper AVFoundation puts around transport
+  /// failures, so it must stay retryable even though it is an AVError.
+  @Test func avErrorUnknown_retries() {
+    let error = NSError(domain: AVFoundationErrorDomain, code: AVError.unknown.rawValue)
+    #expect(makeManager().isRetryable(error, httpStatusCode: nil) == true)
+  }
+
+  @Test(arguments: [
+    AVError.fileFormatNotRecognized.rawValue,
+    AVError.failedToParse.rawValue,
+    AVError.decodeFailed.rawValue,
+  ])
+  func unusableMedia_doesNotRetry(code: Int) {
+    let error = NSError(domain: AVFoundationErrorDomain, code: code)
+    #expect(makeManager().isRetryable(error, httpStatusCode: nil) == false)
+  }
+
+  /// AVFoundation wraps the real cause rather than surfacing it, which is why
+  /// the classifier walks `NSUnderlyingError` instead of inspecting only the
+  /// outermost error.
+  @Test func underlyingURLError_isFound() {
+    let manager = makeManager()
+    let wrapped = NSError(
+      domain: AVFoundationErrorDomain,
+      code: AVError.unknown.rawValue,
+      userInfo: [NSUnderlyingErrorKey: URLError(.badURL)],
+    )
+    #expect(manager.isRetryable(wrapped, httpStatusCode: nil) == false)
+
+    let transient = NSError(
+      domain: AVFoundationErrorDomain,
+      code: AVError.unknown.rawValue,
+      userInfo: [NSUnderlyingErrorKey: URLError(.dnsLookupFailed)],
+    )
+    #expect(manager.isRetryable(transient, httpStatusCode: nil) == true)
+  }
+
+  /// Nothing to classify: no error and no status stays terminal.
+  @Test func nilError_doesNotRetry() {
+    #expect(makeManager().isRetryable(nil, httpStatusCode: nil) == false)
   }
 }

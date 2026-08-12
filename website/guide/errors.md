@@ -141,6 +141,12 @@ await setupPlayer({
 })
 ```
 
+Which failures qualify is the same on iOS and Android: HTTP 408, 429 and 5xx;
+transport failures (DNS, timeouts, a dropped connection); and anything the
+platform couldn't classify, which is assumed transient rather than fatal.
+Permanent failures are never retried — 403 / 404, and media that can't be
+parsed or decoded.
+
 ### Two duration budgets
 
 Retry state is tracked per **load** — one track's playback session, created

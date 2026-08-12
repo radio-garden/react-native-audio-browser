@@ -1,7 +1,7 @@
 # TypeScript API
 
 The rules here are about the shape of the package's public surface. Both are
-enforced by tests, but the tests only tell you *after* you've written it.
+enforced by tests, but the tests only tell you _after_ you've written it.
 
 ## Everything you export is public
 
@@ -11,7 +11,7 @@ feature module joins the package's public surface the moment you write it.
 
 `@internal` does **not** make a value private. `stripInternal` honours it when
 building `lib/typescript` — what a consumer's TypeScript sees — but React Native
-resolves `"react-native": "src/index"`, so Metro bundles the *source*, where
+resolves `"react-native": "src/index"`, so Metro bundles the _source_, where
 nothing was stripped. An `@internal` value is invisible to the type checker and
 fully reachable at runtime via `require()`.
 
@@ -35,7 +35,7 @@ returns an unsubscribe function. Never export a bare `on*(cb)` subscribe
 function — that split is what made the whole remote-controls guide a compile
 error until it was unified.
 
-Two emitter classes, picked by what the event *is*:
+Two emitter classes, picked by what the event _is_:
 
 - `NativeUpdatedValue` — state with a current value (playback, options,
   progress). Subscribes to native at module load so no update is missed, and

@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 #if canImport(NitroModules)
   import NitroModules
@@ -122,30 +123,89 @@ class RetryManager {
 
   // MARK: - Error Classification
 
-  func isRetryable(_ error: Error?) -> Bool {
+  /// HTTP statuses worth another attempt. Same set as Android's
+  /// `RetryLoadErrorHandlingPolicy.RETRYABLE_HTTP_STATUS_CODES`, so a flaky
+  /// server behaves the same on both platforms.
+  private static let retryableHTTPStatusCodes: Set<Int> = [408, 429]
+
+  /// AVFoundation failures a retry cannot fix: the media is unusable rather
+  /// than the transport unreliable. Everything not listed falls through to
+  /// retry — `AVErrorUnknown` especially, which is the wrapper AVFoundation
+  /// puts around opaque CoreMedia transport failures.
+  private static let fatalAVErrorCodes: Set<Int> = [
+    AVError.fileFormatNotRecognized.rawValue,
+    AVError.failedToParse.rawValue,
+    AVError.decodeFailed.rawValue,
+    AVError.contentIsProtected.rawValue,
+    AVError.contentIsNotAuthorized.rawValue,
+  ]
+
+  /// Whether another attempt could plausibly succeed.
+  ///
+  /// Mirrors Android's `classifyError`, including its default: an unrecognized
+  /// failure is treated as *transient* and retried, bounded by the retry
+  /// budgets, rather than being terminal. Defaulting the other way made
+  /// `retry: true` largely inert on iOS, because AVFoundation reports most
+  /// stream failures as opaque `CoreMediaErrorDomain` / `AVFoundationErrorDomain`
+  /// errors rather than `URLError`.
+  ///
+  /// - Parameter httpStatusCode: The status from the item's error log, when the
+  ///   caller has one. `AVPlayerItem.error` never carries it — a 404 arrives as
+  ///   an opaque CoreMedia error — so this is the only reliable HTTP signal and
+  ///   it outranks the error itself.
+  func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool {
+    if let status = httpStatusCode {
+      let retryable = Self.retryableHTTPStatusCodes.contains(status) || (500 ... 599).contains(status)
+      logger.debug("HTTP \(status) \(retryable ? "is" : "not") retryable")
+      return retryable
+    }
+
     guard let error else { return false }
 
-    if let urlError = error as? URLError {
-      switch urlError.code {
-      // Transient network errors - safe to retry
-      case .timedOut,
-           .networkConnectionLost,
-           .notConnectedToInternet,
-           .cannotConnectToHost,
-           .cannotFindHost,
-           .dnsLookupFailed:
-        logger.debug("URLError is retryable: code=\(urlError.code.rawValue)")
-        return true
-      default:
-        logger.debug("URLError not retryable: code=\(urlError.code.rawValue)")
+    // Walk the underlying-error chain: AVFoundation routinely wraps the real
+    // cause (a URLError, or a CoreMedia code) in an AVError.
+    for candidate in Self.errorChain(error) {
+      if let urlError = candidate as? URLError {
+        switch urlError.code {
+        // Transient network errors - safe to retry
+        case .timedOut,
+             .networkConnectionLost,
+             .notConnectedToInternet,
+             .cannotConnectToHost,
+             .cannotFindHost,
+             .dnsLookupFailed:
+          logger.debug("URLError is retryable: code=\(urlError.code.rawValue)")
+          return true
+        default:
+          logger.debug("URLError not retryable: code=\(urlError.code.rawValue)")
+          return false
+        }
+      }
+
+      let nsError = candidate as NSError
+      if nsError.domain == AVFoundationErrorDomain,
+         Self.fatalAVErrorCodes.contains(nsError.code)
+      {
+        logger.debug("AVError not retryable: code=\(nsError.code)")
         return false
       }
     }
 
-    // Unknown errors - don't retry
     let nsError = error as NSError
-    logger.debug("Error not retryable: domain=\(nsError.domain), code=\(nsError.code)")
-    return false
+    logger.debug("Treating as transient: domain=\(nsError.domain), code=\(nsError.code)")
+    return true
+  }
+
+  /// The error and its `NSUnderlyingError` ancestors, outermost first.
+  private static func errorChain(_ error: Error) -> [Error] {
+    var chain: [Error] = []
+    var current: Error? = error
+    // Bounded: a malformed cycle must not spin here.
+    while let error = current, chain.count < 8 {
+      chain.append(error)
+      current = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error
+    }
+    return chain
   }
 
   // MARK: - Retry Management

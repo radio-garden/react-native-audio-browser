@@ -209,7 +209,7 @@ final class MockRetryHandling: RetryHandling {
   var attemptRetryDelayNs: UInt64 = 0
   var resetCallCount = 0
 
-  func isRetryable(_: Error?) -> Bool { isRetryableResult }
+  func isRetryable(_: Error?, httpStatusCode _: Int?) -> Bool { isRetryableResult }
   func attemptRetry(startFromCurrentTime _: Bool) async -> Bool {
     if attemptRetryDelayNs > 0 {
       try? await Task.sleep(nanoseconds: attemptRetryDelayNs)

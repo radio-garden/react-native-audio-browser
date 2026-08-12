@@ -14,9 +14,11 @@ private final class MockRetryHandler: RetryHandling {
   var attemptRetryResult = false
   var attemptRetryCallCount = 0
   var lastStartFromCurrentTime: Bool?
+  var lastHTTPStatusCode: Int??
   var resetCallCount = 0
 
-  func isRetryable(_ error: Error?) -> Bool {
+  func isRetryable(_ error: Error?, httpStatusCode: Int?) -> Bool {
+    lastHTTPStatusCode = .some(httpStatusCode)
     guard let error else { return false }
     let code = (error as NSError).code
     return retryableErrors.contains(code)
