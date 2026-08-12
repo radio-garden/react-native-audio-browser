@@ -93,7 +93,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
@@ -902,7 +901,6 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   override fun reset() = runBlockingOnMain {
     player.stop()
-    delay(300) // Allow playback to stop
     player.clear()
     // clear() while IDLE emits no engine event, so the state machine never
     // leaves STOPPED — a reset queue is "nothing loaded".
