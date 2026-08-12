@@ -45,8 +45,15 @@ class QueueManager {
   /// The repeat mode for the queue. Plain property — no side effects.
   var repeatMode: RepeatMode = .off
 
-  /// Whether shuffle mode is enabled. Plain property — no side effects.
-  var shuffleEnabled: Bool = false
+  /// Whether shuffle mode is enabled.
+  var shuffleEnabled: Bool = false {
+    didSet {
+      // Re-pin on enable: the existing order has the current track wherever it happened to land,
+      // so without this, turning shuffle on near the end of the queue ends it right away.
+      guard shuffleEnabled, shuffleEnabled != oldValue else { return }
+      shuffleOrder.reshuffle(keepingFirst: currentIndex)
+    }
+  }
 
   // MARK: - Computed Properties
 
@@ -206,7 +213,7 @@ class QueueManager {
     currentIndex = clampedIndex
     queueSourcePath = sourcePath
     tracks = newTracks
-    shuffleOrder = ShuffleOrder(length: newTracks.count)
+    shuffleOrder = ShuffleOrder(length: newTracks.count, firstIndex: clampedIndex)
     return true
   }
 

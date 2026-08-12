@@ -39,6 +39,16 @@ struct ShuffleOrder {
     indexInShuffled = Self.buildIndexInShuffled(from: shuffled)
   }
 
+  /// Creates a shuffle order for the given length with `firstIndex` pinned to shuffle position 0.
+  ///
+  /// Playback starts on that track, so leaving it wherever the permutation put it would end the
+  /// queue as soon as it is reached — on average after half the queue, and immediately whenever it
+  /// lands last.
+  init(length: Int, firstIndex: Int) {
+    self.init(length: length)
+    reshuffle(keepingFirst: firstIndex)
+  }
+
   /// Creates a shuffle order with pre-defined indices
   init(shuffledIndices: [Int]) {
     shuffled = shuffledIndices

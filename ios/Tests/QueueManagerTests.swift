@@ -74,6 +74,52 @@ struct NextTests {
     #expect(q.currentIndex == 0)
   }
 
+  /// The start track must be first in the shuffle order, not wherever the permutation put it —
+  /// otherwise auto-advance ends the queue as soon as it is reached (#96).
+  @Test func shuffle_startTrackLeadsTheOrder() {
+    for start in 0 ..< 6 {
+      let q = QueueManager()
+      q.setQueue(tracks("a", "b", "c", "d", "e", "f"), initialIndex: start)
+      q.shuffleEnabled = true
+
+      #expect(q.shuffleOrder.isFirst(start))
+      #expect(!q.isLastInPlaybackOrder)
+      #expect(q.nextTracks.count == 5)
+      #expect(q.previousTracks.isEmpty)
+    }
+  }
+
+  /// Same hazard on enabling shuffle mid-queue: the existing order has the current track wherever
+  /// it landed, so without re-pinning, turning shuffle on can immediately report end-of-queue.
+  @Test func shuffle_enablingMidQueueLeadsFromCurrent() {
+    for start in 0 ..< 6 {
+      let q = QueueManager()
+      q.setQueue(tracks("a", "b", "c", "d", "e", "f"))
+      _ = try? q.skipTo(start)
+
+      q.shuffleEnabled = true
+
+      #expect(q.shuffleOrder.isFirst(start))
+      #expect(!q.isLastInPlaybackOrder)
+      #expect(q.nextTracks.count == 5)
+    }
+  }
+
+  /// Re-pinning happens on enable only — flipping it off and on again must not renege on the
+  /// order mid-listen, and a redundant `= true` must not reshuffle under the listener.
+  @Test func shuffle_redundantEnableKeepsTheOrder() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d", "e", "f"))
+    q.shuffleEnabled = true
+    let order = q.shuffleOrder.shuffled
+
+    q.shuffleEnabled = true
+    #expect(q.shuffleOrder.shuffled == order)
+
+    q.shuffleEnabled = false
+    #expect(q.shuffleOrder.shuffled == order)
+  }
+
   @Test func shuffle_visitsAllTracks() {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c", "d"))
