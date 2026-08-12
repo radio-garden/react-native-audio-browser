@@ -1,8 +1,6 @@
 name: Release
 
 on:
-  schedule:
-    - cron: '0 3 * * *' # nightly at 3am UTC, publishes prereleases from `next`
   push:
     branches: [main, next]
   workflow_dispatch:
@@ -18,28 +16,19 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Holds the App key; only main and next can read it. No required
+    # reviewers — they would gate every release on a human.
+    environment: release
     permissions:
-      # Nothing here reads the automatic GITHUB_TOKEN — checkout and
-      # semantic-release both authenticate as the release App instead.
-      #
-      # id-token stays: there is no NPM_TOKEN anywhere in this repo, so OIDC is
-      # how `npm publish` authenticates (trusted publishing), not just how
-      # NPM_CONFIG_PROVENANCE signs. Removing it breaks publishing outright.
+      # Nothing reads the automatic GITHUB_TOKEN. id-token is how npm publish
+      # authenticates (trusted publishing), not just provenance — removing it
+      # breaks publishing.
       contents: read
       id-token: write
     steps:
-      # `main` requires status checks, which reject *any* direct push whose
-      # commit has not been checked — including the release commit that
-      # @semantic-release/git makes during prepare. GITHUB_TOKEN is
-      # github-actions[bot], which `enforce_admins: false` does not exempt, so
-      # releases from `main` failed with GH006.
-      #
-      # The `main` ruleset lists this App as a bypass actor, so its push is
-      # exempt. An App was needed rather than github-actions[bot] itself:
-      # ruleset bypass actors of type Integration must be GitHub Apps installed
-      # on the owning org, and the first-party Actions app is not installable.
-      #
-      # The minted token is installation-scoped and expires in ~1 hour.
+      # main's required checks reject unchecked pushes, including the release
+      # commit @semantic-release/git makes during prepare. This App is a bypass
+      # actor on the main ruleset; github-actions[bot] cannot be one.
       - name: Mint a release token
         id: app-token
         uses: actions/create-github-app-token@v2
@@ -47,18 +36,13 @@ jobs:
           app-id: ${{ secrets.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
-      # Checkout persists the token as the remote credential, so
-      # semantic-release's own push inherits it.
-      #
-      # Unlike GITHUB_TOKEN, an App token's push *does* trigger workflows. What
-      # stops the release commit re-running this job is the `[skip ci]` in
-      # @semantic-release/git's default commit message — do not override
-      # `message` in release.config.cjs without adding another guard.
+      # Persists the token so semantic-release's push inherits it. An App
+      # token's push triggers workflows, so the only thing stopping a re-run
+      # loop is the `[skip ci]` in @semantic-release/git's default message.
       - name: Checkout
         uses: actions/checkout@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
 
       # semantic-release runs `git tag --merged <branch>` for every branch in
