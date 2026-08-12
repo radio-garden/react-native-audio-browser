@@ -26,9 +26,11 @@ internal class ServiceBinding(private val context: Context) {
    */
   fun bind(intent: Intent, connection: ServiceConnection): Boolean {
     if (isBound) return true
-    val bound = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-    if (bound) isBound = true
-    return bound
+    // Marked bound whatever the result: Android registers the connection before it asks the
+    // ActivityManager, so a false return still leaves one to release — "regardless of the return
+    // value, you should later call unbindService()".
+    isBound = true
+    return context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
   }
 
   /**

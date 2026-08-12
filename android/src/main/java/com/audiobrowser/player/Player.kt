@@ -178,6 +178,17 @@ class Player(internal val context: Context) {
   }
 
   /**
+   * Drops a completed browser registration so [awaitBrowser] waits for the replacement instead of
+   * handing out the disposed browser. A [CompletableDeferred] completes once, so it would otherwise
+   * pin the first browser for the life of the process.
+   */
+  fun forgetBrowserRegistration() {
+    if (browserRegistered.isCompleted) {
+      browserRegistered = CompletableDeferred()
+    }
+  }
+
+  /**
    * Suspends until the browser is registered, with a timeout.
    *
    * @throws TimeoutCancellationException if browser is not registered within timeout

@@ -84,6 +84,7 @@ import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackMetadata
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -102,36 +103,53 @@ import timber.log.Timber
 class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
 
   /**
-   * Called by Nitro when the JS object is destroyed (incl. JS runtime reloads).
+   * Nitro calls this only when JS calls `dispose()` explicitly — never on runtime teardown, which
+   * is what [AudioBrowserLifecycleModule] is for. Both routes land here.
    *
    * The Service outlives this object, so everything registered in `init` or on connect has to be
-   * undone here. Left alone, the running [Player] goes on invoking callbacks into a dead JSI
-   * runtime, and every reload strands another ServiceConnection and lifecycle observer, each
-   * retaining a BrowserManager.
+   * undone. Left alone, the running [Player] goes on invoking callbacks into a dead JSI runtime,
+   * and every reload strands another ServiceConnection and lifecycle observer, each retaining a
+   * BrowserManager.
+   *
+   * Runs the teardown on main: the state below is written from main-thread coroutines
+   * ([onServiceConnected], [onServiceDisconnected]), while dispose itself arrives on the JS thread
+   * or the teardown callback's thread.
    */
   override fun dispose() {
+    current.compareAndSet(this, null)
     systemVolumeMonitor.destroy()
     outputMonitor.destroy()
+    // Only when still ours: on a reload the replacement may already own the slot.
+    carConnectionTarget.compareAndSet(onCarConnectedChanged, null)
 
-    connectedService?.let { service ->
-      service.player.setCallbacks(null)
-      service.player.browser = null
-      service.onBatteryWarningPendingChanged = null
+    handler.post {
+      connectedService?.let { service ->
+        // Identity-guarded: both instances bind to the same singleton Service, so a late dispose
+        // must not strip the wiring a replacement has already installed.
+        if (service.player.getCallbacks() === callbacks) service.player.setCallbacks(null)
+        if (service.player.browser === this) {
+          service.player.browser = null
+          service.player.forgetBrowserRegistration()
+        }
+        if (service.onBatteryWarningPendingChanged === onBatteryWarningPending) {
+          service.onBatteryWarningPendingChanged = null
+        }
+      }
+      connectedService = null
+
+      // Dropping the reference disconnects nothing — the controller stays in the session's
+      // connected list, holding a binder and a listener.
+      mediaBrowserFuture?.let { MediaBrowser.releaseFuture(it) }
+      mediaBrowserFuture = null
+      setupPromise = null
+
+      serviceBinding.unbind(this)
+
+      ProcessLifecycleOwner.get().lifecycle.removeObserver(lifecycleObserver)
+      // After the observer removal, so this post is not the one dropped.
+      handler.removeCallbacksAndMessages(null)
+      mainScope.cancel()
     }
-    connectedService = null
-    mediaBrowserFuture = null
-
-    serviceBinding.unbind(this)
-
-    // Only when still ours: on a reload the replacement instance may already own the slot.
-    if (carConnectionTarget === onCarConnectedChanged) carConnectionTarget = null
-
-    // Drop queued work first, then post the removal — LifecycleRegistry is main-thread only,
-    // which is why the observer is added the same way.
-    handler.removeCallbacksAndMessages(null)
-    handler.post { ProcessLifecycleOwner.get().lifecycle.removeObserver(lifecycleObserver) }
-
-    mainScope.cancel()
     super.dispose()
   }
 
@@ -180,6 +198,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   private var connectedService: Service? = null
 
   private val serviceBinding = ServiceBinding(context)
+
+  /** Held rather than inlined so [dispose] can tell its own wiring from a replacement's. */
+  private val onBatteryWarningPending: (Boolean) -> Unit = { pending ->
+    post { onBatteryWarningPendingChanged(BatteryWarningPendingChangedEvent(pending)) }
+  }
   private var setupPromise: ((Unit) -> Unit)? = null
 
   // Initial player state staged before the player exists — from setup options or the imperative
@@ -269,6 +292,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
 
   init {
+    current.set(this)
+
     // Auto-bind to service if it's already running
     launchInScope {
       try {
@@ -811,7 +836,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onCarConnectedChanged: (Boolean) -> Unit = {}
     set(value) {
       field = value
-      carConnectionTarget = value
+      carConnectionTarget.set(value)
       // Immediately notify current state (the car may have connected before
       // this JS runtime subscribed) — mirrors the iOS behavior.
       value(carConnected)
@@ -1200,13 +1225,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         }
 
       // Wire up battery warning callback from service
-      connectedService?.onBatteryWarningPendingChanged = { pending ->
-        post {
-          this@AudioBrowser.onBatteryWarningPendingChanged(
-            BatteryWarningPendingChangedEvent(pending)
-          )
-        }
-      }
+      connectedService?.onBatteryWarningPendingChanged = onBatteryWarningPending
 
       val sessionToken = SessionToken(context, ComponentName(context, Service::class.java))
       mediaBrowserFuture = MediaBrowser.Builder(context, sessionToken).buildAsync()
@@ -1461,8 +1480,21 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // callback registers as the single notification target (mirrors the iOS
     // static + shared-instance pattern).
     @Volatile private var carConnected = false
-    @Volatile private var carConnectionTarget: ((Boolean) -> Unit)? = null
+    // Compare-and-set, not @Volatile: a disposing instance clears the slot only if it still owns
+    // it, and a replacement may be claiming it at the same moment.
+    private val carConnectionTarget = AtomicReference<((Boolean) -> Unit)?>(null)
     private var carConnectionObserverStarted = false
+
+    /**
+     * The instance the current JS runtime is using. Nitro hands out no registry, and the teardown
+     * callback has nothing to dispose without one.
+     */
+    private val current = AtomicReference<AudioBrowser?>(null)
+
+    /** Called by [AudioBrowserLifecycleModule] when the React instance is torn down. */
+    internal fun disposeCurrent() {
+      current.getAndSet(null)?.dispose()
+    }
 
     private fun startCarConnectionObserver(context: Context, handler: Handler) {
       // Posted to main: LiveData observation is main-thread only, and the
@@ -1474,7 +1506,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
           val connected = type != CarConnection.CONNECTION_TYPE_NOT_CONNECTED
           if (connected == carConnected) return@observeForever
           carConnected = connected
-          carConnectionTarget?.invoke(connected)
+          carConnectionTarget.get()?.invoke(connected)
         }
       }
     }

@@ -55,6 +55,25 @@ class ServiceBindingTest {
     assertTrue(shadowOf(app).unboundServiceConnections.isEmpty())
   }
 
+  /**
+   * Android registers the connection before it asks the ActivityManager, so a false return still
+   * leaves a binding to release. Treating false as "nothing bound" strands it permanently — the
+   * leak this class exists to prevent.
+   */
+  @Test
+  fun failedBindStillHoldsAConnectionToRelease() {
+    val binding = ServiceBinding(app)
+    shadowOf(app).declareActionUnbindable("unbindable")
+
+    assertFalse(binding.bind(Intent("unbindable"), connection))
+
+    assertTrue(binding.isBound)
+
+    binding.unbind(connection)
+
+    assertEquals(1, shadowOf(app).unboundServiceConnections.size)
+  }
+
   @Test
   fun unbindIsIdempotent() {
     val binding = ServiceBinding(app)
