@@ -132,8 +132,8 @@ class PlaybackErrorClassifierTest {
 
   /**
    * Load errors are raw IOExceptions from the transport layer; the policy only retries network
-   * ones, so the advisory classification is UNREACHABLE unless the device is offline or the
-   * server actually answered.
+   * ones, so the advisory classification is UNREACHABLE unless the device is offline or the server
+   * actually answered.
    */
   @Test
   fun `retrying transport failure is unreachable`() {
@@ -158,8 +158,7 @@ class PlaybackErrorClassifierTest {
   /** The HTTP status is dug out of the cause chain and mapped through the shared status table. */
   @Test
   fun `retrying HTTP failure carries the status`() {
-    val error =
-      PlaybackErrorClassifier.retryingLoadError(httpException(503), online = true)
+    val error = PlaybackErrorClassifier.retryingLoadError(httpException(503), online = true)
     assertEquals(PlaybackErrorKind.SERVER_ERROR, error.kind)
     assertEquals(503.0, error.statusCode!!, 0.0)
     assertEquals(true, error.retrying)

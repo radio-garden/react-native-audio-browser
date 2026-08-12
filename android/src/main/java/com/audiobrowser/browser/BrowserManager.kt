@@ -1,7 +1,5 @@
 package com.audiobrowser.browser
 
-import com.audiobrowser.util.artworkOf
-
 import android.util.LruCache
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
@@ -9,6 +7,7 @@ import com.audiobrowser.http.HttpClient
 import com.audiobrowser.http.RequestConfigBuilder
 import com.audiobrowser.util.BrowserPathHelper
 import com.audiobrowser.util.TrackFactory
+import com.audiobrowser.util.artworkOf
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BrowserSourceCallbackParam
 import com.margelo.nitro.audiobrowser.FavoritesMatchMode

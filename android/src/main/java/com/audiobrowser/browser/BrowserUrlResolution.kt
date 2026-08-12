@@ -1,8 +1,7 @@
 package com.audiobrowser.browser
 
-import com.audiobrowser.util.url
-
 import com.audiobrowser.http.RequestConfigBuilder
+import com.audiobrowser.util.url
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.ImageQueryParams

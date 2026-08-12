@@ -59,8 +59,7 @@ class SectionScopeTest {
     val row = track(title = "Most Played", src = null, imageRow = items)
     val children = listOf(row, track(src = "a"))
 
-    val section =
-      SectionScope.section(children, "s2") as SectionScope.Section.ImageRow
+    val section = SectionScope.section(children, "s2") as SectionScope.Section.ImageRow
     assertEquals(listOf("s1", "s2"), section.items.map { it.src })
   }
 
@@ -76,8 +75,7 @@ class SectionScopeTest {
     val row = track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup")))
     val children = listOf(row, track(src = "dup"), track(src = "b"))
 
-    val section =
-      SectionScope.section(children, "dup") as SectionScope.Section.ImageRow
+    val section = SectionScope.section(children, "dup") as SectionScope.Section.ImageRow
     assertEquals(listOf("dup"), section.items.map { it.src })
   }
 

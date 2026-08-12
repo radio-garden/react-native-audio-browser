@@ -4,9 +4,9 @@ import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.Track
 
 /**
- * Queue scope is the tapped section, not the whole page (ADR 0006): the
- * playback context a listener expects is the list they tapped in — a page
- * aggregating several sections must not leak next/previous across them.
+ * Queue scope is the tapped section, not the whole page (ADR 0006): the playback context a listener
+ * expects is the list they tapped in — a page aggregating several sections must not leak
+ * next/previous across them.
  */
 object SectionScope {
   sealed class Section {
@@ -14,15 +14,14 @@ object SectionScope {
     data class ImageRow(val items: List<ImageRowItem>) : Section()
 
     /**
-     * The contiguous `groupTitle` run around the tapped child (items with no
-     * group title form runs of their own).
+     * The contiguous `groupTitle` run around the tapped child (items with no group title form runs
+     * of their own).
      */
     data class Run(val tracks: List<Track>) : Section()
   }
 
   /**
-   * The section of [children] containing the playable [trackId], or null
-   * when the id is not found.
+   * The section of [children] containing the playable [trackId], or null when the id is not found.
    */
   fun section(children: List<Track>, trackId: String): Section? {
     for (child in children) {

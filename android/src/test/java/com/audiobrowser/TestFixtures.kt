@@ -1,7 +1,6 @@
 package com.audiobrowser
 
 import com.audiobrowser.util.artworkOf
-
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageRowItem

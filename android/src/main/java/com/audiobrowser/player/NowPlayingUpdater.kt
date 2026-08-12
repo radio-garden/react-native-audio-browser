@@ -1,7 +1,6 @@
 package com.audiobrowser.player
 
 import com.audiobrowser.util.url
-
 import com.margelo.nitro.audiobrowser.FormatNowPlayingParams
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.NowPlayingUpdate

@@ -26,12 +26,12 @@ object TrackFactory {
   }
 
   /**
-   * Android Auto has no image-row rendering; its closest equivalent is a grid of artwork
-   * tiles. A track carrying `imageRow` expands into its items as grid-styled rows (the
-   * per-item content-style hint — hosts that ignore it fall back to list rows) grouped under
-   * the row's title, followed by the row itself as a browsable "view all" link when it has a
-   * `url` (a url-less row is a pure preview and contributes only its items). Tracks without
-   * an `imageRow` pass through unchanged.
+   * Android Auto has no image-row rendering; its closest equivalent is a grid of artwork tiles. A
+   * track carrying `imageRow` expands into its items as grid-styled rows (the per-item
+   * content-style hint — hosts that ignore it fall back to list rows) grouped under the row's
+   * title, followed by the row itself as a browsable "view all" link when it has a `url` (a
+   * url-less row is a pure preview and contributes only its items). Tracks without an `imageRow`
+   * pass through unchanged.
    */
   fun expandImageRows(tracks: List<Track>): List<Track> =
     tracks.flatMap { track ->
@@ -95,7 +95,8 @@ object TrackFactory {
     val scheme = rawUrl?.let { Uri.parse(it).scheme?.lowercase() }
     val builder = metadataBuilder(track)
     if (rawUrl != null && (scheme == "http" || scheme == "https")) {
-      val isSvg = SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
+      val isSvg =
+        SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
       val token = ArtworkUris.tokenFor(rawUrl)
       registry.register(token, ResolvedArtwork(rawUrl, track.artworkSource?.headers, isSvg))
       builder.setArtworkUri(ArtworkUris.contentUri(authority, token).toUri())

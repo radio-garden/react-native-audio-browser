@@ -10,7 +10,8 @@ class JsonArtworkTest {
 
   @Test
   fun `decodes a single url`() {
-    val track = json.decodeFromString<JsonTrack>("""{"title":"X","artwork":"https://e.example/a.png"}""")
+    val track =
+      json.decodeFromString<JsonTrack>("""{"title":"X","artwork":"https://e.example/a.png"}""")
     assertEquals(
       Variant_String_ArtworkVariants.First("https://e.example/a.png"),
       track.toNitro().artwork,

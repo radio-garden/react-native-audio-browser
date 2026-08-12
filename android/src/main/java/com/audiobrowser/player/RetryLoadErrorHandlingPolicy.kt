@@ -107,7 +107,8 @@ class RetryLoadErrorHandlingPolicy(
    */
   private fun exhaustedBudget(currentTime: Long): String? {
     firstErrorTime?.let { start ->
-      if (currentTime - start >= maxRetryDurationMs) return "max retry duration ($maxRetryDurationMs ms)"
+      if (currentTime - start >= maxRetryDurationMs)
+        return "max retry duration ($maxRetryDurationMs ms)"
     }
     if (!hasPlayed() && isOnline()) {
       firstOnlineErrorTime?.let { start ->

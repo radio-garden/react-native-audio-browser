@@ -201,9 +201,9 @@ class RetryLoadErrorHandlingPolicyBudgetTest {
   }
 
   /**
-   * Offline failures must not burn the first-connect budget (a station tapped in a tunnel parks
-   * for connectivity); the budget's clock starts at the first error observed online, so a dead
-   * station still gets a fast verdict after restoration.
+   * Offline failures must not burn the first-connect budget (a station tapped in a tunnel parks for
+   * connectivity); the budget's clock starts at the first error observed online, so a dead station
+   * still gets a fast verdict after restoration.
    */
   @Test
   fun `offline time does not burn the first-connect budget`() {
