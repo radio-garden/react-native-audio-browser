@@ -106,9 +106,13 @@ object AiaCertChaser {
   }
 
   /**
-   * Minimal DER TLV reader over a byte buffer. Does no bounds-checking by design: truncated or
-   * malformed input throws (e.g. [IndexOutOfBoundsException]), which the callers above expect and
-   * turn into "no AIA".
+   * Minimal DER TLV reader over a byte buffer. Malformed input throws [IllegalArgumentException],
+   * which the callers above expect and turn into "no AIA".
+   *
+   * Every read is bounds-checked, and a declared length is rejected unless it is non-negative and
+   * within the buffer. Both matter: the extension bytes come from a server-presented certificate,
+   * so a length that shifts into a negative Int would rewind `pos` and spin [extractCaIssuerUrls]'s
+   * loop forever on the handshake thread rather than failing.
    */
   private class DerReader(private val buf: ByteArray) {
     private var pos = 0
@@ -116,16 +120,27 @@ object AiaCertChaser {
     fun hasNext(): Boolean = pos < buf.size
 
     fun read(): Tlv {
-      val tag = buf[pos++].toInt() and 0xFF
-      var len = buf[pos++].toInt() and 0xFF
+      val tag = readByte()
+      var len = readByte()
       if (len and 0x80 != 0) {
+        // Long form: the low bits give the number of length bytes. Four already covers any
+        // buffer that fits in memory; more would overflow the Int we shift them into. The
+        // indefinite form (0x80, i.e. zero length bytes) is not valid DER.
         val numBytes = len and 0x7F
+        require(numBytes in 1..4) { "unsupported DER length form: $numBytes length bytes" }
         len = 0
-        repeat(numBytes) { len = (len shl 8) or (buf[pos++].toInt() and 0xFF) }
+        repeat(numBytes) { len = (len shl 8) or readByte() }
+        require(len >= 0) { "DER length overflows Int" }
       }
+      require(len <= buf.size - pos) { "DER length $len runs past the end of the buffer" }
       val tlv = Tlv(buf, tag, pos, len)
       pos += len
       return tlv
+    }
+
+    private fun readByte(): Int {
+      require(pos < buf.size) { "truncated DER" }
+      return buf[pos++].toInt() and 0xFF
     }
   }
 

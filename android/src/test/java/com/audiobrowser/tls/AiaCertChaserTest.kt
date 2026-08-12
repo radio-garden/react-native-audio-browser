@@ -10,8 +10,54 @@ import java.util.Date
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
 class AiaCertChaserTest {
+
+  /** A certificate whose AIA extension value is exactly [extensionValue]. */
+  private fun certWithAia(extensionValue: ByteArray): X509Certificate =
+    mock(X509Certificate::class.java).also {
+      `when`(it.getExtensionValue("1.3.6.1.5.5.7.1.1")).thenReturn(extensionValue)
+    }
+
+  @Test(timeout = 5_000)
+  fun `a negative long-form length does not hang the parser`() {
+    // OCTET STRING { SEQUENCE { tag 0x00, long-form length 0xFFFFFFFA = -6 } }.
+    // The length's four bytes shift into a negative Int, so `pos += len` rewinds the
+    // reader by exactly the six bytes it just consumed: the tag is not a SEQUENCE, the
+    // loop `continue`s, and the reader is back where it started with more input to read.
+    val aia =
+      byteArrayOf(
+        0x04,
+        0x08,
+        0x30,
+        0x06,
+        0x00,
+        0x84.toByte(),
+        0xFF.toByte(),
+        0xFF.toByte(),
+        0xFF.toByte(),
+        0xFA.toByte(),
+      )
+
+    assertEquals(emptyList<String>(), AiaCertChaser.extractCaIssuerUrls(certWithAia(aia)))
+  }
+
+  @Test(timeout = 5_000)
+  fun `a length running past the buffer is treated as no AIA`() {
+    // SEQUENCE claiming 0x7F content bytes inside a 2-byte buffer.
+    val aia = byteArrayOf(0x04, 0x04, 0x30, 0x02, 0x30, 0x7F)
+
+    assertEquals(emptyList<String>(), AiaCertChaser.extractCaIssuerUrls(certWithAia(aia)))
+  }
+
+  @Test(timeout = 5_000)
+  fun `truncated DER is treated as no AIA`() {
+    val aia = byteArrayOf(0x04, 0x08, 0x30)
+
+    assertEquals(emptyList<String>(), AiaCertChaser.extractCaIssuerUrls(certWithAia(aia)))
+  }
 
   @Test
   fun `extracts CA Issuers URL from real leaf certificate AIA extension`() {
