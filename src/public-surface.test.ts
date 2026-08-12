@@ -5,24 +5,10 @@ import { describe, it, expect } from 'vitest'
 /**
  * Guard on what `import { … } from 'react-native-audio-browser'` can reach.
  *
- * The package root is a chain of unfiltered `export *` barrels, so every
- * `export` in every feature file joins the public surface by default — there is
- * no gate to forget to pass, only one to forget to add.
- *
- * `@internal` alone does not keep a symbol private. It is honoured by
- * `stripInternal` when generating `lib/typescript`, which is what a consumer's
- * TypeScript sees — but React Native resolves `"react-native": "src/index"`, so
- * Metro bundles the *source*, where nothing was stripped. An `@internal` value
- * is therefore invisible to the type checker and fully reachable at runtime:
- * `require('react-native-audio-browser').nativeBrowser` used to hand out the raw
- * Nitro object, whose `on*` properties are the single callback slots the library's
- * emitters own — assigning one unsubscribes every hook in the package.
- *
- * So: values marked `@internal` must not be reachable from the barrel at all.
- * Move them to a module the barrel doesn't re-export (see
- * `features/player/validateOptions.ts`) and import them directly. Types are
- * exempt — they carry no runtime representation, and `stripInternal` genuinely
- * removes them from the published `.d.ts`.
+ * `@internal` hides a value from the published types but not from the bundle:
+ * Metro resolves `"react-native": "src/index"` and compiles the source, where
+ * `stripInternal` never ran. Types are exempt — they have no runtime form.
+ * `CLAUDE.md` in this directory has the full rule.
  */
 const SRC = join(process.cwd(), 'src')
 const ENTRY = join(SRC, 'index.ts')
@@ -97,10 +83,8 @@ describe('public surface', () => {
       .map((e) => `${e.name}  (${e.file})`)
     expect(
       leaked,
-      'These values are tagged @internal but are reachable from the package root ' +
-        'at runtime — stripInternal only hides them from the published types, and ' +
-        'Metro bundles src/. Move each to a module the barrels do not re-export ' +
-        'and import it directly:\n' +
+      'Reachable from the package root at runtime despite @internal. Move each ' +
+        'to a module the barrels skip, and import it directly:\n' +
         leaked.join('\n')
     ).toEqual([])
   })
@@ -111,8 +95,8 @@ describe('public surface', () => {
       .map((e) => `${e.name}  (${e.file})`)
     expect(
       hooks,
-      'Test-only exports ship to consumers. Drive the unit under test through ' +
-        'the seam it already has (a mocked native slot, say) instead:\n' +
+      'Test-only exports ship to consumers. Drive the unit through a seam it ' +
+        'already has — a mocked native slot, say:\n' +
         hooks.join('\n')
     ).toEqual([])
   })

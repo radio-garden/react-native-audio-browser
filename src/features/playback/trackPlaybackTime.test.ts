@@ -19,11 +19,7 @@ beforeEach(() => {
   nativeMock.setPlaybackIntervalEnabled.mockClear()
 })
 
-/**
- * Drives the fan-out through the same slot the native side does: `install()`
- * assigns `onPlaybackInterval`, so calling it here also asserts that wiring
- * exists — a dedicated test-only export would skip it.
- */
+/** Ticks through the slot `install()` assigns, so this covers that wiring too. */
 function tick(times = 1) {
   for (let i = 0; i < times; i++) {
     if (!nativeMock.onPlaybackInterval) {

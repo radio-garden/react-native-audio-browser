@@ -5,11 +5,8 @@ const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
 /**
  * Warns when more CarPlay now-playing buttons are configured than CarPlay renders.
  * Shared by `updateOptions` and `setupPlayer` (both can carry `ios` options).
- *
- * Lives outside `options.ts` because `features/player/index.ts` re-exports that
- * module wholesale: anything exported there joins the package's runtime surface,
- * `@internal` or not. This file is imported directly by the two callers and by
- * nothing in the barrel.
+ * Kept out of `options.ts`, which the barrel re-exports — see
+ * public-surface.test.ts.
  */
 export function validateIOSUpdateOptions(ios?: IOSUpdateOptions): void {
   const buttons = ios?.carPlayNowPlayingButtons
