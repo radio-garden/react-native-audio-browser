@@ -1,8 +1,6 @@
 name: Release
 
 on:
-  schedule:
-    - cron: '0 3 * * *' # nightly at 3am UTC, publishes prereleases from `next`
   push:
     branches: [main, next]
   workflow_dispatch:
@@ -58,7 +56,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ github.event_name == 'schedule' && 'next' || github.ref }}
           fetch-depth: 0
 
       # semantic-release runs `git tag --merged <branch>` for every branch in
