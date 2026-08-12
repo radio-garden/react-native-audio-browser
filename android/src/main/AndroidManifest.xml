@@ -23,7 +23,9 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
 
-            <!-- For Android Auto support -->
+            <!-- Voice "play <query>". Any app can send it, but that is a subset of what an
+                 unauthenticated MediaController already has: onConnect admits everyone.
+                 Restrict connections there, not here. -->
             <intent-filter>
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
