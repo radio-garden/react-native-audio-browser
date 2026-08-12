@@ -16,6 +16,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Holds the App key; only main and next can read it. No required
+    # reviewers — they would gate every release on a human.
+    environment: release
     permissions:
       # Nothing here reads the automatic GITHUB_TOKEN — checkout and
       # semantic-release both authenticate as the release App instead.
