@@ -27,7 +27,14 @@ import { describe, it, expect } from 'vitest'
 const SRC = join(process.cwd(), 'src')
 const ENTRY = join(SRC, 'index.ts')
 
-const VALUE_KINDS = new Set(['const', 'let', 'var', 'function', 'class', 'enum'])
+const VALUE_KINDS = new Set([
+  'const',
+  'let',
+  'var',
+  'function',
+  'class',
+  'enum'
+])
 
 function resolveModule(fromFile: string, spec: string): string | undefined {
   const base = resolve(dirname(fromFile), spec.replace(/\.tsx?$/, ''))

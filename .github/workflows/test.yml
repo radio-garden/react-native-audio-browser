@@ -50,6 +50,8 @@ jobs:
     # every merge — put detail in step names instead.
     name: iOS (swift test)
     runs-on: macos-26
+    env:
+      SWIFTFORMAT_VERSION: 0.58.2
     steps:
       - uses: actions/checkout@v6
       - name: Setup Xcode
@@ -60,16 +62,29 @@ jobs:
       # Pinned, not `brew install`: formatter output shifts between releases, so
       # an unpinned version turns an unrelated PR into a repo-wide reformat. Keep
       # in step with whatever contributors run locally.
+      #
+      # Onto GITHUB_PATH, not /usr/local/bin: these runners are arm64 and put
+      # Homebrew's /opt/homebrew/bin first, so a preinstalled swiftformat
+      # shadowed the pinned one and lint ran under whatever the image shipped.
       - name: Install SwiftFormat
-        env:
-          SWIFTFORMAT_VERSION: 0.58.2
         run: |
           curl -fsSL -o swiftformat.zip \
             "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip"
           unzip -q swiftformat.zip
           chmod +x swiftformat
-          sudo mv swiftformat /usr/local/bin/swiftformat
-          swiftformat --version
+          mkdir -p "$RUNNER_TEMP/bin"
+          mv swiftformat "$RUNNER_TEMP/bin/swiftformat"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # Fail loudly if the pin is shadowed again — silent version drift showed
+      # up as 66 files "needing formatting" that were already correct.
+      - name: Verify SwiftFormat version
+        run: |
+          actual=$(swiftformat --version)
+          if [ "$actual" != "$SWIFTFORMAT_VERSION" ]; then
+            echo "expected SwiftFormat $SWIFTFORMAT_VERSION, got $actual"
+            exit 1
+          fi
 
       # `yarn ci:format:ios` locally; called directly here because this job has
       # no Node/Corepack setup.

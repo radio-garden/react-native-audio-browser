@@ -1,9 +1,9 @@
 import type { FavoriteConfig } from '../../types'
 import type { CarPlayNowPlayingButton } from '../../types/browser'
 import { nativeBrowser } from '../../native'
-import { validateIOSUpdateOptions } from './validateOptions'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
+import { validateIOSUpdateOptions } from './validateOptions'
 
 // MARK: - Types
 
