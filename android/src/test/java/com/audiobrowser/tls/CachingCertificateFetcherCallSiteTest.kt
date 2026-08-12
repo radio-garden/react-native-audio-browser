@@ -100,14 +100,66 @@ class CachingCertificateFetcherCallSiteTest {
 
   @Test(timeout = 30_000)
   fun `an oversized response is abandoned rather than read to EOF`() {
-    // 4 MiB of body against a 1 MiB cap. Without readCapped this is buffered in full and the
-    // fetch merely fails to parse; with it, the read stops early.
-    val body = ByteArray(4 shl 20)
-    val port = startServer(response = "HTTP/1.0 200 OK\r\n\r\n".toByteArray() + body)
+    // Asserting only that the fetch fails would prove nothing — 4 MiB crosses loopback in
+    // milliseconds and would fail to parse either way. What has to be true is that the client
+    // stopped reading, which shows up as the server's write not draining.
+    val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    server = socket
+    val written = AtomicInteger()
+    val finished = CountDownLatch(1)
+    thread(isDaemon = true) {
+      runCatching {
+        socket.accept().use { client ->
+          client.getInputStream().read(ByteArray(1024))
+          val out = client.getOutputStream()
+          out.write("HTTP/1.0 200 OK\r\n\r\n".toByteArray())
+          val chunk = ByteArray(64 * 1024)
+          // 64 MiB — far past the 1 MiB cap. Once the client stops reading and closes, this
+          // throws a broken pipe, which is the signal we want.
+          repeat(1024) {
+            out.write(chunk)
+            written.addAndGet(chunk.size)
+          }
+        }
+      }
+      finished.countDown()
+    }
 
-    val certs = CachingCertificateFetcher().fetch("http://127.0.0.1:$port/big.crt")
+    val certs = CachingCertificateFetcher().fetch("http://127.0.0.1:${socket.localPort}/big.crt")
 
     assertTrue(certs.isEmpty())
+    assertTrue(finished.await(20, TimeUnit.SECONDS))
+    // Socket buffers mean the server gets somewhat past the cap before the write fails, but it
+    // must be nowhere near the 64 MiB it wanted to send.
+    assertTrue(
+      "server wrote ${written.get()} bytes; the read was not cut off",
+      written.get() < 16 shl 20,
+    )
+  }
+
+  @Test(timeout = 30_000)
+  fun `a real certificate is fetched, parsed and then served from cache`() {
+    // The success path, end to end over a socket: every other wire test serves a failure, so a
+    // broken body offset or a broken cache write would not show up anywhere.
+    val der = CertFixtures.bytes("letsencrypt-r13.der")
+    val handled = AtomicInteger()
+    val port =
+      startServer(
+        response =
+          ("HTTP/1.0 200 OK\r\nContent-Type: application/pkix-cert\r\n\r\n").toByteArray() + der,
+        handled = handled,
+      )
+    val fetcher = CachingCertificateFetcher()
+    val url = "http://127.0.0.1:$port/r13.der"
+
+    val certs = fetcher.fetch(url)
+
+    assertEquals(1, certs.size)
+    assertEquals("CN=R13,O=Let's Encrypt,C=US", certs.first().subjectX500Principal.name)
+
+    // Second call must be served from the cache, not the network.
+    assertEquals(certs, fetcher.fetch(url))
+    assertEquals("a successful fetch must be cached", 1, handled.get())
   }
 
   @Test(timeout = 30_000)

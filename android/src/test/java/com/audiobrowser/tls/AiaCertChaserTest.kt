@@ -7,6 +7,7 @@ import java.security.cert.PKIXParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.util.Date
+import javax.security.auth.x500.X500Principal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -15,11 +16,50 @@ import org.mockito.Mockito.`when`
 
 class AiaCertChaserTest {
 
-  /** A certificate whose AIA extension value is exactly [extensionValue]. */
+  /**
+   * A certificate whose AIA extension value is exactly [extensionValue].
+   *
+   * Subject and issuer are stubbed to distinct principals on purpose: an unstubbed mock answers
+   * null to both, which `completeChain` would read as a self-signed root and stop on before
+   * fetching anything.
+   */
   private fun certWithAia(extensionValue: ByteArray): X509Certificate =
     mock(X509Certificate::class.java).also {
       `when`(it.getExtensionValue("1.3.6.1.5.5.7.1.1")).thenReturn(extensionValue)
+      `when`(it.subjectX500Principal).thenReturn(X500Principal("CN=leaf"))
+      `when`(it.issuerX500Principal).thenReturn(X500Principal("CN=issuer"))
     }
+
+  /** A DER tag-length-value, with the length in whichever form fits. */
+  private fun der(tag: Int, content: ByteArray): ByteArray {
+    val length =
+      when (val n = content.size) {
+        in 0..0x7F -> byteArrayOf(n.toByte())
+        in 0x80..0xFF -> byteArrayOf(0x81.toByte(), n.toByte())
+        in 0x100..0xFFFF -> byteArrayOf(0x82.toByte(), (n shr 8).toByte(), n.toByte())
+        else -> byteArrayOf(0x83.toByte(), (n shr 16).toByte(), (n shr 8).toByte(), n.toByte())
+      }
+    return byteArrayOf(tag.toByte()) + length + content
+  }
+
+  /** A well-formed AIA extension value listing [urls] as caIssuers locations. */
+  private fun aiaExtension(urls: List<String>): ByteArray {
+    val caIssuersOid = byteArrayOf(0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x02)
+    val descriptions =
+      urls.fold(ByteArray(0)) { acc, url ->
+        acc + der(0x30, der(0x06, caIssuersOid) + der(0x86, url.toByteArray(Charsets.US_ASCII)))
+      }
+    return der(0x04, der(0x30, descriptions))
+  }
+
+  @Test
+  fun `the AIA fixture builder round-trips through the parser`() {
+    // Guards the two tests below: if this builder were malformed they would pass by parsing
+    // nothing at all, rather than by the cap doing its job.
+    val urls = listOf("http://ca1.example/i.crt", "http://ca2.example/i.crt")
+
+    assertEquals(urls, AiaCertChaser.extractCaIssuerUrls(certWithAia(aiaExtension(urls))))
+  }
 
   @Test(timeout = 5_000)
   fun `a negative long-form length does not hang the parser`() {
@@ -151,6 +191,45 @@ class AiaCertChaserTest {
 
     assertEquals(listOf(leaf, r13), completed)
     assertEquals(0, fetches)
+  }
+
+  @Test
+  fun `completeChain tries only a few of a certificate's CA-Issuers URLs`() {
+    // The extension is authored by the server that just failed validation, and nothing limits
+    // how many URLs it lists. Each one costs a blocking connect on the handshake thread, so
+    // hundreds of them are a denial of service whatever each individual fetch costs.
+    val manyUrls = (1..500).map { "http://ca$it.example/issuer.crt" }
+    val cert = certWithAia(aiaExtension(manyUrls))
+    val fetched = mutableListOf<String>()
+
+    AiaCertChaser.completeChain(listOf(cert)) {
+      fetched.add(it)
+      emptyList()
+    }
+
+    assertEquals(AiaCertChaser.MAX_URLS_PER_CERT, fetched.size)
+  }
+
+  @Test
+  fun `completeChain stops fetching once its wall-clock budget is spent`() {
+    val cert = certWithAia(aiaExtension((1..500).map { "http://ca$it.example/issuer.crt" }))
+    var fetches = 0
+    var nanos = 0L
+
+    // Each fetch "takes" 8s against a 20s budget, so the walk must stop after a handful even
+    // though the URL cap alone would have allowed more.
+    AiaCertChaser.completeChain(
+      listOf(cert),
+      maxUrlsPerCert = 500,
+      budgetMs = 20_000,
+      nowNanos = { nanos },
+    ) {
+      fetches++
+      nanos += 8_000_000_000
+      emptyList()
+    }
+
+    assertEquals(3, fetches)
   }
 
   @Test

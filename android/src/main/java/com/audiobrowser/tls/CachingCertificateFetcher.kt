@@ -12,6 +12,7 @@ import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
+import kotlin.concurrent.thread
 import timber.log.Timber
 
 /**
@@ -28,6 +29,10 @@ import timber.log.Timber
  * - at most [MAX_REDIRECTS] redirects are followed,
  * - the cache holds at most [MAX_CACHE_ENTRIES], and only successful fetches, so a round trip
  *   happens at most once per intermediate while transient failures stay retryable.
+ *
+ * The one step no budget reaches is DNS: `InetSocketAddress` resolves synchronously and Java
+ * exposes no timeout for it. What bounds that is [AiaCertChaser.MAX_URLS_PER_CERT] — a certificate
+ * can only make us resolve a few names, not a few hundred.
  *
  * Both schemes go over a raw [Socket] rather than `HttpURLConnection`. For `http` that is because
  * CA "CA Issuers" URLs are virtually always plain `http` — the CA/Browser Forum Baseline
@@ -102,7 +107,8 @@ class CachingCertificateFetcher(
     val port = if (url.port != -1) url.port else if (secure) 443 else 80
     val path = url.file.ifEmpty { "/" } // URL.file is path + query
     val raw =
-      connect(host, port, secure).use { socket ->
+      connect(host, port, secure).useWithWatchdog(connectTimeoutMs + MAX_RESPONSE_MILLIS) { socket
+        ->
         socket.soTimeout = readTimeoutMs
         // HTTP/1.0 + `Connection: close` so the server closes after the body and we can read to
         // EOF without parsing Content-Length. A non-default port belongs in Host, or a
@@ -141,19 +147,53 @@ class CachingCertificateFetcher(
    */
   private fun connect(host: String, port: Int, secure: Boolean): Socket {
     val plain = Socket()
-    plain.connect(InetSocketAddress(host, port), connectTimeoutMs)
-    if (!secure) return plain
+    // Everything from here on closes `plain` if it throws. Android's Socket.connect, unlike
+    // modern OpenJDK's, does not close itself on failure once the descriptor is allocated, so
+    // every unreachable AIA host would otherwise leak one until finalization.
     return try {
-      (plainSslSocketFactory.createSocket(plain, host, port, true) as SSLSocket).apply {
-        soTimeout = readTimeoutMs
-        startHandshake()
-        require(HttpsURLConnection.getDefaultHostnameVerifier().verify(host, session)) {
-          "AIA host $host does not match its certificate"
+      plain.connect(InetSocketAddress(host, port), connectTimeoutMs)
+      if (!secure) return plain
+      // The handshake is bounded by the caller's watchdog, not by soTimeout: soTimeout is
+      // per-read, so a server drip-feeding handshake bytes would stretch it indefinitely.
+      plain.useWithWatchdog(connectTimeoutMs + MAX_RESPONSE_MILLIS, closeOnSuccess = false) {
+        (plainSslSocketFactory.createSocket(plain, host, port, true) as SSLSocket).apply {
+          soTimeout = readTimeoutMs
+          startHandshake()
+          require(HttpsURLConnection.getDefaultHostnameVerifier().verify(host, session)) {
+            "AIA host $host does not match its certificate"
+          }
         }
       }
     } catch (e: Exception) {
-      plain.close()
+      runCatching { plain.close() }
       throw e
+    }
+  }
+
+  /**
+   * Runs [body] with a watchdog that closes this socket after [budgetMs], then closes it unless
+   * [closeOnSuccess] is false (the TLS wrapper takes ownership of the socket it layers over).
+   *
+   * The socket timeouts are per-operation and so cannot bound a peer that keeps every individual
+   * read just inside them. Closing the descriptor out from under a stalled connect, handshake or
+   * read is what actually ends it — the blocked call throws, and a failed fetch is already handled
+   * as "no AIA".
+   */
+  private inline fun <T> Socket.useWithWatchdog(
+    budgetMs: Long,
+    closeOnSuccess: Boolean = true,
+    body: (Socket) -> T,
+  ): T {
+    val socket = this
+    val watchdog =
+      thread(isDaemon = true, name = "aia-fetch-watchdog") {
+        runCatching { Thread.sleep(budgetMs) }.onSuccess { runCatching { socket.close() } }
+      }
+    try {
+      return body(socket)
+    } finally {
+      watchdog.interrupt()
+      if (closeOnSuccess) runCatching { socket.close() }
     }
   }
 

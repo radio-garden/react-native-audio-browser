@@ -247,11 +247,16 @@ Work through these in order:
    AIA CA-issuer fetch failed: http://…/issuer.crt
    ```
 
-   This surfaces in `adb logcat` with **no logging setup on your side** — the
-   library plants its own logger (warnings and above reach logcat in both debug and
-   release builds). Filter for `AIA CA-issuer fetch failed`. If it appears, the
-   fetch was attempted but couldn't be reached — see the next point. (You do _not_
-   need to enable cleartext; the library's fetch already bypasses that policy.)
+   Filter `adb logcat` for `AIA CA-issuer fetch failed`. If it appears, the fetch
+   was attempted but couldn't be reached — see the next point. (You do _not_ need
+   to enable cleartext; the library's fetch already bypasses that policy.)
+
+   ::: warning The logger starts with the playback service
+   The library plants its logging trees when its service first starts, so a fetch
+   that fails **before** any playback has begun logs nothing — even though the
+   socket factory is process-wide and already in use. If you see no line at all,
+   start playback once and retry, or plant your own tree at startup.
+   :::
 
 3. **Reachable from your environment?** The fetch is a plain outbound request to
    the `CA Issuers - URI` during the handshake, so a corporate proxy, VPN,
@@ -321,9 +326,12 @@ This is inherent to AIA chasing: browsers and Apple's Secure Transport do the
 same thing, which is why the servers in question work everywhere except Android.
 It is bounded rather than absent:
 
-- the fetch happens **only** when the chain is genuinely short of an
-  intermediate — a chain that already reaches a trusted root is never chased,
-  so an expired certificate or a hostname mismatch does not trigger one;
+- the fetch happens **only** when the chain does not already reach one of your
+  trust anchors, so the common non-path failures — an expired leaf, a hostname
+  mismatch — do not trigger one. (The test is on the issuer name at the top of
+  the chain, so a chain topping at a root your device does *not* carry, such as
+  a server still serving the retired DST Root CA X3 cross-sign, is still chased
+  even if its real problem is expiry.)
 - the URL is rejected unless it is free of control characters, so it cannot
   inject request lines of its own;
 - a response is capped at 1 MiB and 10 seconds, and at most 5 redirects are

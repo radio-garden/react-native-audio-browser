@@ -15,6 +15,12 @@ import javax.security.auth.x500.X500Principal
  * found".
  */
 object AiaCertChaser {
+  /** How many CA-Issuers URLs from one certificate are worth trying. */
+  const val MAX_URLS_PER_CERT = 3
+
+  /** Wall-clock ceiling on one chain-completion attempt, across all of its fetches. */
+  const val MAX_CHASE_MILLIS = 20_000L
+
   /** Authority Information Access extension. */
   private const val AIA_OID = "1.3.6.1.5.5.7.1.1"
 
@@ -87,6 +93,13 @@ object AiaCertChaser {
    *   any other non-path failure from triggering a chase, and it stops the genuine
    *   missing-intermediate case one hop early, where the chain reaches a root the caller already
    *   trusts. Empty means "unknown", and the walk runs to one of the other stopping conditions.
+   * @param maxUrlsPerCert how many of a certificate's CA-Issuers URLs are tried before giving up on
+   *   it. The extension is authored by the same server that failed validation and nothing limits
+   *   how many URLs it may list — a leaf can carry hundreds — while each one costs a blocking
+   *   connect on the handshake thread. Real CAs publish one.
+   * @param budgetMs wall-clock ceiling on the whole walk, checked before each fetch. Per-fetch
+   *   limits bound one round trip; this bounds their sum, so no arrangement of URLs and hops can
+   *   hold the handshake thread indefinitely.
    * @param fetch resolves a CA-Issuers URL to its candidate certificates (e.g. every certificate in
    *   a PKCS#7 bundle); empty if nothing could be retrieved.
    */
@@ -94,11 +107,15 @@ object AiaCertChaser {
     presented: List<X509Certificate>,
     anchorSubjects: Set<X500Principal> = emptySet(),
     maxIntermediates: Int = 5,
+    maxUrlsPerCert: Int = MAX_URLS_PER_CERT,
+    budgetMs: Long = MAX_CHASE_MILLIS,
+    nowNanos: () -> Long = System::nanoTime,
     fetch: (url: String) -> List<X509Certificate>,
   ): List<X509Certificate> {
     if (presented.isEmpty()) return presented
     val chain = presented.toMutableList()
     val seen = HashSet(chain)
+    val deadline = nowNanos() + budgetMs * 1_000_000
     var added = 0
     while (added < maxIntermediates) {
       val last = chain.last()
@@ -107,6 +124,9 @@ object AiaCertChaser {
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()
+          .take(maxUrlsPerCert)
+          // Subtraction, not `>`: overflow-safe across nanoTime's arbitrary origin.
+          .takeWhile { nowNanos() - deadline < 0 }
           .flatMap { url -> runCatching { fetch(url) }.getOrElse { emptyList() } }
           .firstOrNull { it.subjectX500Principal == last.issuerX500Principal } ?: break
       if (!seen.add(issuer)) break // cycle guard

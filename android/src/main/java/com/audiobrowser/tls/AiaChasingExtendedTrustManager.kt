@@ -101,16 +101,17 @@ class AiaChasingExtendedTrustManager(
     authType: String,
     host: String,
   ): List<X509Certificate> {
-    val method =
-      hostAwareCheck
-        ?: run {
-          // No host-aware delegate: fall back to the ordinary path and report what we were given.
-          checkServerTrusted(chain, authType)
-          return chain.toList()
-        }
     var accepted: List<X509Certificate> = emptyList()
-    withAiaRetry(chain, anchorSubjects, fetch) {
-      accepted = invokeHostAware(method, it, authType, host)
+    val method = hostAwareCheck
+    withAiaRetry(chain, anchorSubjects, fetch) { checked ->
+      // Whichever chain passed is the one to report — reporting the originally presented chain
+      // would hand a pinning consumer a chain missing the intermediate that made it validate.
+      accepted =
+        if (method != null) invokeHostAware(method, checked, authType, host)
+        else {
+          delegate.checkServerTrusted(checked, authType)
+          checked.toList()
+        }
     }
     return accepted
   }
