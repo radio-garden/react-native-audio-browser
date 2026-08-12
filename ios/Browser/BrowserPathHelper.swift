@@ -101,7 +101,7 @@ enum BrowserPathHelper {
   /// Example: build("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
   static func build(parentPath: String, trackId: String) -> String {
     let encodedTrackId =
-      trackId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackId
+      trackId.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? trackId
     let separator = parentPath.contains("?") ? "&" : "?"
     return "\(parentPath)\(separator)\(contextualTrackParam)=\(encodedTrackId)"
   }

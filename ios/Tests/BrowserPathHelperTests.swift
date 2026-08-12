@@ -74,6 +74,35 @@ import Testing
   #expect(result == "/items?a=1&m=2&z=3")
 }
 
+// MARK: - build
+
+@Test func buildAppendsTrackIdWithQuestionMark() {
+  let result = BrowserPathHelper.build(parentPath: "/library", trackId: "song.mp3")
+  #expect(result == "/library?__trackId=song.mp3")
+}
+
+@Test func buildAppendsTrackIdWithAmpersandWhenParentHasQuery() {
+  let result = BrowserPathHelper.build(parentPath: "/search?q=jazz", trackId: "song.mp3")
+  #expect(result == "/search?q=jazz&__trackId=song.mp3")
+}
+
+@Test func buildRoundTripsSrcWithQueryParams() {
+  // A src carrying its own query string (signed CDN URL) must survive the
+  // build → extract/strip round-trip: an unescaped `&` splits the src into
+  // stray query params, truncating the trackId and polluting the parent path.
+  let src = "https://cdn.example.com/stream.mp3?token=abc&exp=1699999999"
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: src)
+  #expect(BrowserPathHelper.extractTrackId(url) == src)
+  #expect(BrowserPathHelper.stripTrackId(url) == "/library")
+}
+
+@Test func buildRoundTripsSrcWithEqualsAndPlus() {
+  let src = "https://cdn.example.com/a+b.mp3?sig=x=y"
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: src)
+  #expect(BrowserPathHelper.extractTrackId(url) == src)
+  #expect(BrowserPathHelper.stripTrackId(url) == "/library")
+}
+
 // MARK: - stripTrackId
 
 @Test func stripTrackIdRemovesTrackParam() {
