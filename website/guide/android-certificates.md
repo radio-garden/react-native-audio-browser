@@ -303,6 +303,41 @@ expired, or self-signed roots still fail exactly as before.
   `res/xml/network_security_config.xml` with custom trust anchors or certificate
   pinning is a _different_ source of TLS failures that this fix does not address.
 
+## What you are opting into
+
+Trust is never weakened. The chain is only ever *extended*, and the completed
+chain is re-validated by the platform's own trust manager against the same
+system anchors, so anything Android would have rejected is still rejected.
+
+What you are accepting is an outbound request driven by a certificate that just
+failed validation. Completing a chain means fetching the missing intermediate
+from a URL written into that certificate, so a rejected handshake can cause a
+cleartext request to a **host, port and path of the server's choosing** —
+including a loopback or LAN address — and that request is deliberately not
+subject to your app's `NetworkSecurityPolicy` (see
+[The cleartext fetch is handled for you](#the-cleartext-fetch-is-handled-for-you)).
+
+This is inherent to AIA chasing: browsers and Apple's Secure Transport do the
+same thing, which is why the servers in question work everywhere except Android.
+It is bounded rather than absent:
+
+- the fetch happens **only** when the chain is genuinely short of an
+  intermediate — a chain that already reaches a trusted root is never chased,
+  so an expired certificate or a hostname mismatch does not trigger one;
+- the URL is rejected unless it is free of control characters, so it cannot
+  inject request lines of its own;
+- a response is capped at 1 MiB and 10 seconds, and at most 5 redirects are
+  followed;
+- the cache holds at most 32 entries, and only successful fetches;
+- responses are never trusted on their say-so: a fetched certificate is used
+  only if it is the genuine issuer of the certificate below it, and the
+  completed chain still has to validate.
+
+If your threat model does not allow a failed handshake to trigger an outbound
+connection at all, don't install this — or install it on a single client
+(see [Advanced: custom OkHttp client](#advanced-custom-okhttp-client)) rather
+than as the process default.
+
 ## Advanced: custom OkHttp client
 
 If you manage your own HTTP client instead of changing the process default, use
@@ -350,5 +385,5 @@ untouched.
 > **Lifecycle.** Each call to `AiaTls.socketFactory()` / `AiaTls.trustManager()`
 > builds a fresh component with its **own** fetched-intermediate cache, so build
 > once and reuse it (don't construct one per request). The components are
-> thread-safe — the fetch cache is backed by a `ConcurrentHashMap` — so a single
+> thread-safe — the fetch cache is a synchronized, bounded LRU — so a single
 > instance is safe to install as the process default or share across a client.

@@ -5,6 +5,7 @@ import java.security.KeyStore
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509ExtendedTrustManager
 import javax.net.ssl.X509TrustManager
 
 /**
@@ -12,11 +13,21 @@ import javax.net.ssl.X509TrustManager
  * following the leaf's Authority Information Access (AIA) "CA Issuers" pointer — the behaviour
  * Apple's Secure Transport has by default but Android's lacks.
  *
- * The returned components are side-effect-free: they wrap the platform default trust manager and
- * only ever *add* a missing intermediate before re-validating against the same system trust
- * anchors, so they cannot weaken trust. Installing them as a process default (e.g.
- * `HttpsURLConnection.setDefaultSSLSocketFactory(AiaTls.socketFactory())`) is the caller's
- * decision.
+ * The returned components wrap the platform default trust manager and only ever *add* a missing
+ * intermediate before re-validating against the same system trust anchors, so they cannot weaken
+ * trust: whatever the platform would have refused, it still refuses.
+ *
+ * What they are not is side-effect-free. Completing a chain means fetching the missing intermediate
+ * from a URL named by the certificate that just failed to validate — so a rejected handshake can
+ * make an outbound request to a host, port and path of that server's choosing, over cleartext, not
+ * subject to the app's `NetworkSecurityPolicy`. That is inherent to AIA chasing and is what
+ * browsers and Apple's Secure Transport do too, but it is a real consequence of installing this,
+ * and it is bounded rather than absent: see [CachingCertificateFetcher] for the limits, and note
+ * that the fetch only happens when the chain is genuinely short of an intermediate.
+ *
+ * Installing them as a process default (e.g.
+ * `HttpsURLConnection.setDefaultSSLSocketFactory(AiaTls.socketFactory())`) applies that to every
+ * connection in the process, and is the caller's decision.
  */
 object AiaTls {
 
