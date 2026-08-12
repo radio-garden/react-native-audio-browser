@@ -1,12 +1,15 @@
-import type shaka from 'shaka-player/dist/shaka-player.ui'
+import type shaka from 'shaka-player/dist/shaka-player.compiled'
 import type {
   Progress,
-  PartialSetupPlayerOptions,
+  NativeSetupPlayerOptions,
   Playback,
-  PlaybackError
+  PlaybackError,
+  PlaybackState
 } from '../../features'
 import type { Track } from '../../types'
-import type { State as StateType } from './State'
+import type { PlaybackEvent } from './PlaybackStateMachine'
+import { playbackErrorKind } from '../playbackErrorKind'
+import { nextPlaybackState } from './PlaybackStateMachine'
 import { SetupNotCalledError } from './SetupNotCalledError'
 import { State } from './State'
 
@@ -19,10 +22,14 @@ declare global {
 
 // Shaka event type definitions
 interface ShakaErrorEvent extends CustomEvent {
-  detail: {
-    code: number
-    message: string
-  }
+  detail: ShakaError
+}
+
+interface ShakaError {
+  code: number
+  message: string
+  /** Shaka's per-code payload; for BAD_HTTP_STATUS `data[1]` is the status. */
+  data?: unknown[]
 }
 
 interface ShakaBufferingEvent extends CustomEvent {
@@ -83,19 +90,15 @@ export class Player {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async setupPlayer(_options: PartialSetupPlayerOptions = {}): Promise<void> {
+  async setupPlayer(_options: NativeSetupPlayerOptions = {}): Promise<void> {
     // shaka only runs in a browser
     if (typeof window === 'undefined') return
-    if (this.hasInitialized === true) {
-      const error: PlaybackError = {
-        code: 'player_already_initialized',
-        message: 'The player has already been initialized via setupPlayer.'
-      }
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw error
-    }
+    // Re-setup reconfigures: web has no construction-bound engine options, so
+    // there's nothing to rebuild — the caller re-applies options/state on top.
+    if (this.hasInitialized === true) return
 
-    const shaka = (await import('shaka-player/dist/shaka-player.ui')).default
+    const shaka = (await import('shaka-player/dist/shaka-player.compiled'))
+      .default
     // Install built-in polyfills to patch browser incompatibilities.
     shaka.polyfill.installAll()
     // Check to see if the browser supports the basic APIs Shaka needs.
@@ -104,6 +107,7 @@ export class Player {
       this.state = {
         state: State.Error,
         error: {
+          kind: 'unplayable',
           code: 'not_supported',
           message: 'Browser not supported...'
         }
@@ -127,20 +131,30 @@ export class Player {
       this.onError(errorEvent.detail)
     })
 
-    element.addEventListener('ended', () => this.onStateUpdate(State.Ended))
-    element.addEventListener('playing', () => this.onStateUpdate(State.Playing))
-    element.addEventListener('pause', () => this.onStateUpdate(State.Paused))
+    element.addEventListener('ended', () =>
+      this.dispatch({ type: 'trackEndedNaturally' })
+    )
+    element.addEventListener('playing', () =>
+      this.dispatch({ type: 'playing' })
+    )
+    element.addEventListener('pause', () =>
+      this.dispatch({ type: 'paused', hasAsset: this.current !== undefined })
+    )
 
-    player.addEventListener('loading', () => this.onStateUpdate(State.Loading))
-    player.addEventListener('loaded', () => this.onStateUpdate(State.Ready))
+    player.addEventListener('loading', () =>
+      this.dispatch({ type: 'trackLoading' })
+    )
+    player.addEventListener('loaded', () =>
+      this.dispatch({ type: 'loadSeekCompleted' })
+    )
 
     player.addEventListener('buffering', (event: Event) => {
       const bufferingEvent = event as ShakaBufferingEvent
-      if (bufferingEvent.detail.buffering === true) {
-        this.onStateUpdate(State.Buffering)
-      } else {
-        this.onStateUpdate(State.Ready)
-      }
+      this.dispatch(
+        bufferingEvent.detail.buffering === true
+          ? { type: 'waiting' }
+          : { type: 'bufferingSufficient' }
+      )
     })
 
     // Attach player to the window to make it easy to access in the JS console.
@@ -152,38 +166,65 @@ export class Player {
   }
 
   /**
-   * event handlers
+   * Routes a racy element/Shaka observation through the state machine. The
+   * machine decides the next state (or suppresses the transition); commands
+   * (stop, error) set their terminal state directly instead.
    */
-  protected onStateUpdate(state: Exclude<StateType, typeof State.Error>): void {
-    // Ignore Shaka/element events while stopped (e.g., from unload)
+  protected dispatch(event: PlaybackEvent): void {
+    // Ignore element/Shaka events while stopped. This is broader than the
+    // machine's own stopped guards on purpose: native engines are torn down on
+    // stop so they emit nothing, but Shaka's unload() emits spurious events
+    // (pause, buffering) that would otherwise clobber the stopped state.
     if (this._isStopped) return
+    const next = nextPlaybackState(this.state.state, event)
+    if (next !== null) this.applyState(next)
+  }
+
+  /**
+   * Applies a machine-decided state. Overridable so subclasses can react to
+   * specific transitions (e.g. QueuePlayer advancing the queue on `ended`).
+   */
+  protected applyState(state: PlaybackState): void {
     this.state = { state }
   }
 
-  private toNormalizedError(err: unknown): { code: number; message: string } {
+  private toNormalizedError(err: unknown): ShakaError {
     if (
       typeof err === 'object' &&
       err !== null &&
       'code' in err &&
       typeof (err as Record<string, unknown>).code === 'number'
     ) {
-      const e = err as { code: number; message?: string }
-      return { code: e.code, message: e.message ?? 'Unknown error' }
+      const e = err as ShakaError
+      return {
+        code: e.code,
+        message: e.message ?? 'Unknown error',
+        data: e.data
+      }
     }
 
     const message = err instanceof Error ? err.message : String(err)
     return { code: -1, message }
   }
 
-  protected onError(shakaError: { code: number; message: string }): void {
+  protected onError(shakaError: ShakaError): void {
     // unload the current track to allow for clean playback on other
     this.player?.unload().catch((err) => {
       console.error(`Error unloading player on 'onError'`, err)
     })
 
+    const status = shakaError.data?.[1]
+    const httpStatus = typeof status === 'number' ? status : undefined
     const error: PlaybackError = {
+      kind: playbackErrorKind(
+        shakaError.code,
+        httpStatus,
+        // `navigator` is absent when this runs outside a browser (SSR, tests).
+        typeof navigator === 'undefined' || navigator.onLine
+      ),
       code: shakaError.code.toString(),
-      message: shakaError.message
+      message: shakaError.message,
+      statusCode: httpStatus
     }
 
     this.state = {
@@ -195,15 +236,22 @@ export class Player {
     console.debug('Error code', shakaError.code, 'object', shakaError)
   }
 
+  /** Invalidates the .then/.catch of superseded loads — a Shaka load
+   * interrupted by stop() or a newer load() rejects, and only the active load
+   * may surface that (or run its onLoaded side effects). */
+  private _loadGeneration = 0
+
   public load(track: Track, onLoaded?: (track: Track) => void): void {
     const player = this.requirePlayer()
     this._isStopped = false
     this._loadInProgress = true
+    const generation = ++this._loadGeneration
 
     if (!track.src) {
       this._loadInProgress = false
       this._pendingSeek = undefined
       const error: PlaybackError = {
+        kind: 'unplayable',
         code: 'invalid_track',
         message: 'Track does not have a valid src URL'
       }
@@ -217,6 +265,7 @@ export class Player {
     player
       .load(track.src)
       .then(() => {
+        if (generation !== this._loadGeneration || this._isStopped) return
         this._loadInProgress = false
         this.current = track
         onLoaded?.(track)
@@ -233,6 +282,7 @@ export class Player {
         }
       })
       .catch((err: unknown) => {
+        if (generation !== this._loadGeneration || this._isStopped) return
         this._loadInProgress = false
         this._pendingSeek = undefined
         this.onError(this.toNormalizedError(err))
@@ -264,17 +314,27 @@ export class Player {
     this.playWhenReady = true
 
     if (this.state.state === State.Error && this.current) {
-      this.load(this.current)
+      this.reloadCurrent()
       return
     }
 
     // Match Android: play() after stop() re-prepares the current track
     if (this._isStopped && this.current) {
-      this.load(this.current)
+      this.reloadCurrent()
       return
     }
 
     element.play().catch((err: unknown) => console.error(err))
+  }
+
+  /**
+   * Reloads the current track. `current` holds the *resolved* track, so
+   * subclasses that resolve media URLs override this to reload from the
+   * original source instead — re-feeding `current` into `load()` would
+   * re-resolve an already-resolved URL and leak it into the queue.
+   */
+  protected reloadCurrent(): void {
+    if (this.current) this.load(this.current)
   }
 
   public retry(): void {
@@ -324,6 +384,20 @@ export class Player {
     }
     const element = this.requireElement()
     element.currentTime = seconds
+  }
+
+  public seekToLiveEdge(): void {
+    if (this.current?.live !== true) return
+    const element = this.requireElement()
+    // Live with a seekable window (HLS): jump to the window end. Without one
+    // (non-seekable stream): reload to reconnect at the live edge.
+    const { seekable } = element
+    const end = seekable.length > 0 ? seekable.end(seekable.length - 1) : 0
+    if (end > 0) {
+      element.currentTime = end
+    } else {
+      this.reloadCurrent()
+    }
   }
 
   public setVolume(volume: number): void {

@@ -11,8 +11,8 @@ import com.margelo.nitro.audiobrowser.TrackMetadata
 sealed class MetadataAdapter {
   companion object {
     /**
-     * Extracts chapter metadata from ID3 ChapterFrames.
-     * Returns a list of ChapterMetadata, one per chapter.
+     * Extracts chapter metadata from ID3 ChapterFrames. Returns a list of ChapterMetadata, one per
+     * chapter.
      */
     fun extractChapters(metadata: Metadata): List<ChapterMetadata> {
       val chapters = mutableListOf<ChapterMetadata>()
@@ -31,7 +31,8 @@ sealed class MetadataAdapter {
             when (val subFrame = entry.getSubFrame(j)) {
               is TextInformationFrame -> {
                 when (subFrame.id.uppercase()) {
-                  "TIT2", "TT2" -> title = subFrame.values.firstOrNull()
+                  "TIT2",
+                  "TT2" -> title = subFrame.values.firstOrNull()
                 }
               }
               is UrlLinkFrame -> {

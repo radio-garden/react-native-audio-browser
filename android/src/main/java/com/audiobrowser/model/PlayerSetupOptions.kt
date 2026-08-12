@@ -3,7 +3,8 @@ package com.audiobrowser.model
 import androidx.media3.exoplayer.DefaultLoadControl
 import com.margelo.nitro.audiobrowser.AndroidAudioContentType
 import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
-import com.margelo.nitro.audiobrowser.PartialSetupPlayerOptions
+import com.margelo.nitro.audiobrowser.Func_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams as NowPlayingFormatter
+import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.Variant_Boolean_AndroidAudioOffloadSettings
 import com.margelo.nitro.audiobrowser.Variant_Boolean_RetryConfig
 
@@ -22,10 +23,17 @@ sealed class RetryPolicy {
   data object Default : RetryPolicy()
 
   /** Retry indefinitely with exponential backoff */
-  data class Infinite(val maxRetryDurationMs: Long? = null) : RetryPolicy()
+  data class Infinite(
+    val maxRetryDurationMs: Long? = null,
+    val firstConnectMaxRetryDurationMs: Long? = null,
+  ) : RetryPolicy()
 
   /** Retry up to maxRetries times with exponential backoff */
-  data class Limited(val maxRetries: Int, val maxRetryDurationMs: Long? = null) : RetryPolicy()
+  data class Limited(
+    val maxRetries: Int,
+    val maxRetryDurationMs: Long? = null,
+    val firstConnectMaxRetryDurationMs: Long? = null,
+  ) : RetryPolicy()
 }
 
 /**
@@ -45,6 +53,15 @@ data class PlayerSetupOptions(
   var wakeMode: AndroidPlayerWakeMode = AndroidPlayerWakeMode.NONE,
   var audioOffload: AudioOffloadOptions? = null,
   var retryPolicy: RetryPolicy = RetryPolicy.Default,
+  // Keep the media session alive & controllable through a terminal playback error so external
+  // controllers (Android Auto) keep their transport controls instead of tearing the session down.
+  // Default on: matches iOS, where the session always survives errors.
+  var keepSessionAliveOnError: Boolean = true,
+  // Whether the player publishes/refreshes track metadata on the now-playing surface.
+  var autoUpdateNowPlayingMetadata: Boolean = true,
+  // Optional JS formatter that customizes the now-playing title/subtitle from the track + live
+  // timed metadata. When null, the default mapping is used.
+  var nowPlayingMetadataFormatter: NowPlayingFormatter? = null,
 ) {
   /**
    * Whether automatic buffer management is enabled. True when rebufferBuffer is not explicitly set
@@ -53,7 +70,7 @@ data class PlayerSetupOptions(
   val automaticBuffer: Boolean
     get() = rebufferBuffer == null
 
-  fun update(options: PartialSetupPlayerOptions) {
+  fun update(options: NativeSetupPlayerOptions) {
     // Android-specific options
     options.android?.let { android ->
       android.minBuffer?.let { minBuffer = it }
@@ -90,12 +107,27 @@ data class PlayerSetupOptions(
             if (it.value) RetryPolicy.Infinite() else RetryPolicy.Default
           }
           is Variant_Boolean_RetryConfig.Second -> {
-            RetryPolicy.Limited(
-              maxRetries = it.value.maxRetries.toInt(),
-              maxRetryDurationMs = it.value.maxRetryDurationMs?.toLong(),
-            )
+            val maxRetries = it.value.maxRetries?.toInt()
+            val maxDurationMs = it.value.maxRetryDurationMs?.toLong()
+            val firstConnectMs = it.value.firstConnectMaxRetryDurationMs?.toLong()
+            // No attempt cap = retry indefinitely, bounded only by the durations.
+            if (maxRetries == null)
+              RetryPolicy.Infinite(
+                maxRetryDurationMs = maxDurationMs,
+                firstConnectMaxRetryDurationMs = firstConnectMs,
+              )
+            else
+              RetryPolicy.Limited(
+                maxRetries = maxRetries,
+                maxRetryDurationMs = maxDurationMs,
+                firstConnectMaxRetryDurationMs = firstConnectMs,
+              )
           }
         }
     }
+
+    options.keepSessionAliveOnError?.let { keepSessionAliveOnError = it }
+    options.autoUpdateNowPlayingMetadata?.let { autoUpdateNowPlayingMetadata = it }
+    options.nowPlayingMetadataFormatter?.let { nowPlayingMetadataFormatter = it }
   }
 }

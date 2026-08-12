@@ -19,10 +19,19 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class PlaybackError(
   @DoNotStrip
   @Keep
+  val kind: PlaybackErrorKind,
+  @DoNotStrip
+  @Keep
   val code: String,
   @DoNotStrip
   @Keep
-  val message: String
+  val message: String,
+  @DoNotStrip
+  @Keep
+  val statusCode: Double?,
+  @DoNotStrip
+  @Keep
+  val retrying: Boolean?
 ) {
   /* primary constructor */
 
@@ -34,8 +43,8 @@ data class PlaybackError(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(code: String, message: String): PlaybackError {
-      return PlaybackError(code, message)
+    private fun fromCpp(kind: PlaybackErrorKind, code: String, message: String, statusCode: Double?, retrying: Boolean?): PlaybackError {
+      return PlaybackError(kind, code, message, statusCode, retrying)
     }
   }
 }

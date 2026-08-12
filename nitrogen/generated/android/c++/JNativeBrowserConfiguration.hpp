@@ -11,9 +11,9 @@
 #include "NativeBrowserConfiguration.hpp"
 
 #include "ArtworkRequestConfig.hpp"
+#include "ArtworkVariants.hpp"
 #include "BrowseError.hpp"
 #include "BrowserSourceCallbackParam.hpp"
-#include "CarPlayNowPlayingButton.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "FormatNavigationErrorParams.hpp"
 #include "FormattedNavigationError.hpp"
@@ -23,25 +23,31 @@
 #include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
 #include "JArtworkRequestConfig.hpp"
+#include "JArtworkVariants.hpp"
 #include "JBrowseError.hpp"
 #include "JBrowseResult.hpp"
 #include "JBrowserSourceCallbackParam.hpp"
-#include "JCarPlayNowPlayingButton.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
 #include "JFormatNavigationErrorParams.hpp"
 #include "JFormattedNavigationError.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___MediaTransformParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_std__string____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageContext.hpp"
 #include "JImageQueryParams.hpp"
 #include "JImageRowItem.hpp"
 #include "JImageSource.hpp"
+#include "JMediaReference.hpp"
 #include "JMediaRequestConfig.hpp"
 #include "JMediaTransformParams.hpp"
 #include "JNativeRouteEntry.hpp"
@@ -53,8 +59,12 @@
 #include "JSearchParams.hpp"
 #include "JTrack.hpp"
 #include "JTrackLoadEvent.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
 #include "JTransformableRequestConfig.hpp"
+#include "JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
+#include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
 #include "MediaTransformParams.hpp"
 #include "NativeRouteEntry.hpp"
@@ -66,6 +76,7 @@
 #include "SearchParams.hpp"
 #include "Track.hpp"
 #include "TrackLoadEvent.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "TransformableRequestConfig.hpp"
 #include <NitroModules/JNICallable.hpp>
@@ -102,10 +113,18 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
       static const auto fieldRequest = clazz->getField<JTransformableRequestConfig>("request");
       jni::local_ref<JTransformableRequestConfig> request = this->getFieldValue(fieldRequest);
+      static const auto fieldRequestResolver = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::javaobject>("requestResolver");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::javaobject> requestResolver = this->getFieldValue(fieldRequestResolver);
+      static const auto fieldBrowse = clazz->getField<JTransformableRequestConfig>("browse");
+      jni::local_ref<JTransformableRequestConfig> browse = this->getFieldValue(fieldBrowse);
+      static const auto fieldBrowseResolver = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::javaobject>("browseResolver");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::javaobject> browseResolver = this->getFieldValue(fieldBrowseResolver);
       static const auto fieldMedia = clazz->getField<JMediaRequestConfig>("media");
       jni::local_ref<JMediaRequestConfig> media = this->getFieldValue(fieldMedia);
       static const auto fieldArtwork = clazz->getField<JArtworkRequestConfig>("artwork");
       jni::local_ref<JArtworkRequestConfig> artwork = this->getFieldValue(fieldArtwork);
+      static const auto fieldNowPlayingArtwork = clazz->getField<JArtworkRequestConfig>("nowPlayingArtwork");
+      jni::local_ref<JArtworkRequestConfig> nowPlayingArtwork = this->getFieldValue(fieldNowPlayingArtwork);
       static const auto fieldRoutes = clazz->getField<jni::JArrayClass<JNativeRouteEntry>>("routes");
       jni::local_ref<jni::JArrayClass<JNativeRouteEntry>> routes = this->getFieldValue(fieldRoutes);
       static const auto fieldSingleTrack = clazz->getField<jni::JBoolean>("singleTrack");
@@ -114,17 +133,37 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject> handleTrackLoad = this->getFieldValue(fieldHandleTrackLoad);
       static const auto fieldAndroidControllerOfflineError = clazz->getField<jni::JBoolean>("androidControllerOfflineError");
       jni::local_ref<jni::JBoolean> androidControllerOfflineError = this->getFieldValue(fieldAndroidControllerOfflineError);
-      static const auto fieldCarPlayUpNextButton = clazz->getField<jni::JBoolean>("carPlayUpNextButton");
-      jni::local_ref<jni::JBoolean> carPlayUpNextButton = this->getFieldValue(fieldCarPlayUpNextButton);
-      static const auto fieldCarPlayNowPlayingButtons = clazz->getField<jni::JArrayClass<JCarPlayNowPlayingButton>>("carPlayNowPlayingButtons");
-      jni::local_ref<jni::JArrayClass<JCarPlayNowPlayingButton>> carPlayNowPlayingButtons = this->getFieldValue(fieldCarPlayNowPlayingButtons);
+      static const auto fieldCarPlayLoadingTitle = clazz->getField<jni::JString>("carPlayLoadingTitle");
+      jni::local_ref<jni::JString> carPlayLoadingTitle = this->getFieldValue(fieldCarPlayLoadingTitle);
+      static const auto fieldResolveAlbumUrl = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject>("resolveAlbumUrl");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject> resolveAlbumUrl = this->getFieldValue(fieldResolveAlbumUrl);
       static const auto fieldFormatNavigationError = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>("formatNavigationError");
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject> formatNavigationError = this->getFieldValue(fieldFormatNavigationError);
       return NativeBrowserConfiguration(
         path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         request != nullptr ? std::make_optional(request->toCpp()) : std::nullopt,
+        requestResolver != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()> {
+          if (requestResolver->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::javaobject>(requestResolver);
+            return downcast->cthis()->getFunction();
+          } else {
+            auto requestResolverRef = jni::make_global(requestResolver);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____, std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>(std::move(requestResolverRef));
+          }
+        }()) : std::nullopt,
+        browse != nullptr ? std::make_optional(browse->toCpp()) : std::nullopt,
+        browseResolver != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()> {
+          if (browseResolver->isInstanceOf(JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::javaobject>(browseResolver);
+            return downcast->cthis()->getFunction();
+          } else {
+            auto browseResolverRef = jni::make_global(browseResolver);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____, std::shared_ptr<Promise<std::shared_ptr<Promise<TransformableRequestConfig>>>>()>(std::move(browseResolverRef));
+          }
+        }()) : std::nullopt,
         media != nullptr ? std::make_optional(media->toCpp()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toCpp()) : std::nullopt,
+        nowPlayingArtwork != nullptr ? std::make_optional(nowPlayingArtwork->toCpp()) : std::nullopt,
         routes != nullptr ? std::make_optional([&]() {
           size_t __size = routes->size();
           std::vector<NativeRouteEntry> __vector;
@@ -146,16 +185,15 @@ namespace margelo::nitro::audiobrowser {
           }
         }()) : std::nullopt,
         androidControllerOfflineError != nullptr ? std::make_optional(static_cast<bool>(androidControllerOfflineError->value())) : std::nullopt,
-        carPlayUpNextButton != nullptr ? std::make_optional(static_cast<bool>(carPlayUpNextButton->value())) : std::nullopt,
-        carPlayNowPlayingButtons != nullptr ? std::make_optional([&]() {
-          size_t __size = carPlayNowPlayingButtons->size();
-          std::vector<CarPlayNowPlayingButton> __vector;
-          __vector.reserve(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            auto __element = carPlayNowPlayingButtons->getElement(__i);
-            __vector.push_back(__element->toCpp());
+        carPlayLoadingTitle != nullptr ? std::make_optional(carPlayLoadingTitle->toStdString()) : std::nullopt,
+        resolveAlbumUrl != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)> {
+          if (resolveAlbumUrl->isInstanceOf(JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::javaobject>(resolveAlbumUrl);
+            return downcast->cthis()->getFunction();
+          } else {
+            auto resolveAlbumUrlRef = jni::make_global(resolveAlbumUrl);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track, std::shared_ptr<Promise<std::optional<std::string>>>(Track)>(std::move(resolveAlbumUrlRef));
           }
-          return __vector;
         }()) : std::nullopt,
         formatNavigationError != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)> {
           if (formatNavigationError->isInstanceOf(JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::javaClassStatic())) [[likely]] {
@@ -175,15 +213,19 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeBrowserConfiguration::javaobject> fromCpp(const NativeBrowserConfiguration& value) {
-      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JCarPlayNowPlayingButton>>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
+      using JSignature = JNativeBrowserConfiguration(jni::alias_ref<jni::JString>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::javaobject>, jni::alias_ref<JTransformableRequestConfig>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____::javaobject>, jni::alias_ref<JMediaRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<JArtworkRequestConfig>, jni::alias_ref<jni::JArrayClass<JNativeRouteEntry>>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent::javaobject>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject>, jni::alias_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.request.has_value() ? JTransformableRequestConfig::fromCpp(value.request.value()) : nullptr,
+        value.requestResolver.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::fromCpp(value.requestResolver.value()) : nullptr,
+        value.browse.has_value() ? JTransformableRequestConfig::fromCpp(value.browse.value()) : nullptr,
+        value.browseResolver.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::fromCpp(value.browseResolver.value()) : nullptr,
         value.media.has_value() ? JMediaRequestConfig::fromCpp(value.media.value()) : nullptr,
         value.artwork.has_value() ? JArtworkRequestConfig::fromCpp(value.artwork.value()) : nullptr,
+        value.nowPlayingArtwork.has_value() ? JArtworkRequestConfig::fromCpp(value.nowPlayingArtwork.value()) : nullptr,
         value.routes.has_value() ? [&]() {
           size_t __size = value.routes.value().size();
           jni::local_ref<jni::JArrayClass<JNativeRouteEntry>> __array = jni::JArrayClass<JNativeRouteEntry>::newArray(__size);
@@ -197,17 +239,8 @@ namespace margelo::nitro::audiobrowser {
         value.singleTrack.has_value() ? jni::JBoolean::valueOf(value.singleTrack.value()) : nullptr,
         value.handleTrackLoad.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::fromCpp(value.handleTrackLoad.value()) : nullptr,
         value.androidControllerOfflineError.has_value() ? jni::JBoolean::valueOf(value.androidControllerOfflineError.value()) : nullptr,
-        value.carPlayUpNextButton.has_value() ? jni::JBoolean::valueOf(value.carPlayUpNextButton.value()) : nullptr,
-        value.carPlayNowPlayingButtons.has_value() ? [&]() {
-          size_t __size = value.carPlayNowPlayingButtons.value().size();
-          jni::local_ref<jni::JArrayClass<JCarPlayNowPlayingButton>> __array = jni::JArrayClass<JCarPlayNowPlayingButton>::newArray(__size);
-          for (size_t __i = 0; __i < __size; __i++) {
-            const auto& __element = value.carPlayNowPlayingButtons.value()[__i];
-            auto __elementJni = JCarPlayNowPlayingButton::fromCpp(__element);
-            __array->setElement(__i, *__elementJni);
-          }
-          return __array;
-        }() : nullptr,
+        value.carPlayLoadingTitle.has_value() ? jni::make_jstring(value.carPlayLoadingTitle.value()) : nullptr,
+        value.resolveAlbumUrl.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::fromCpp(value.resolveAlbumUrl.value()) : nullptr,
         value.formatNavigationError.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::fromCpp(value.formatNavigationError.value()) : nullptr
       );
     }

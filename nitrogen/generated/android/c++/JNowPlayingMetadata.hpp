@@ -10,18 +10,8 @@
 #include <fbjni/fbjni.h>
 #include "NowPlayingMetadata.hpp"
 
-#include "HeartRating.hpp"
-#include "JHeartRating.hpp"
-#include "JPercentageRating.hpp"
-#include "JStarRating.hpp"
-#include "JThumbsRating.hpp"
-#include "JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.hpp"
-#include "PercentageRating.hpp"
-#include "StarRating.hpp"
-#include "ThumbsRating.hpp"
 #include <optional>
 #include <string>
-#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -60,8 +50,6 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> mediaId = this->getFieldValue(fieldMediaId);
       static const auto fieldGenre = clazz->getField<jni::JString>("genre");
       jni::local_ref<jni::JString> genre = this->getFieldValue(fieldGenre);
-      static const auto fieldRating = clazz->getField<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>("rating");
-      jni::local_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating> rating = this->getFieldValue(fieldRating);
       return NowPlayingMetadata(
         elapsedTime != nullptr ? std::make_optional(elapsedTime->value()) : std::nullopt,
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
@@ -71,8 +59,7 @@ namespace margelo::nitro::audiobrowser {
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
         description != nullptr ? std::make_optional(description->toStdString()) : std::nullopt,
         mediaId != nullptr ? std::make_optional(mediaId->toStdString()) : std::nullopt,
-        genre != nullptr ? std::make_optional(genre->toStdString()) : std::nullopt,
-        rating != nullptr ? std::make_optional(rating->toCpp()) : std::nullopt
+        genre != nullptr ? std::make_optional(genre->toStdString()) : std::nullopt
       );
     }
 
@@ -82,7 +69,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNowPlayingMetadata::javaobject> fromCpp(const NowPlayingMetadata& value) {
-      using JSignature = JNowPlayingMetadata(jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating>);
+      using JSignature = JNowPlayingMetadata(jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -95,8 +82,7 @@ namespace margelo::nitro::audiobrowser {
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,
         value.mediaId.has_value() ? jni::make_jstring(value.mediaId.value()) : nullptr,
-        value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr,
-        value.rating.has_value() ? JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating::fromCpp(value.rating.value()) : nullptr
+        value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr
       );
     }
   };

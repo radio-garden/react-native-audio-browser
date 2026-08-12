@@ -4,15 +4,17 @@
   "type": "module",
   "scripts": {
     "dev": "yarn typedoc && vitepress dev",
-    "build": "yarn typedoc && vitepress build",
+    "build": "yarn build:demo && yarn typedoc && vitepress build",
+    "build:demo": "yarn workspace example-web build",
     "preview": "vitepress preview",
     "typedoc": "typedoc && node scripts/transform-sidebar.ts && node scripts/clean-markdown.ts"
   },
   "devDependencies": {
     "mermaid": "^11.4.1",
-    "typedoc": "^0.28.15",
+    "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.9.0",
     "typedoc-vitepress-theme": "^1.1.2",
+    "typescript": "^6.0.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17"
   }

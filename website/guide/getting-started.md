@@ -24,17 +24,17 @@ bun add react-native-audio-browser react-native-nitro-modules
 
 ## Basic Setup
 
-```typescript
-import { AudioBrowser } from 'react-native-audio-browser'
+```ts
+import { setupPlayer } from 'react-native-audio-browser'
 
-// Initialize the audio browser
-AudioBrowser.setup({
-  // Configuration options
-})
+// Initialize the player once at startup
+await setupPlayer()
 ```
+
+> The library exposes both named exports (`import { setupPlayer }`) and a default namespace (`import AudioBrowser from '…'; AudioBrowser.setupPlayer()`). The guides use the named form throughout.
 
 ## Next Steps
 
 - [Basic Usage](/guide/basic-usage) - Learn how to play audio and build navigation trees
 - [Android Auto](/guide/android-auto) - Set up Android Auto integration
-- [CarPlay](/guide/carplay) - Set up CarPlay integration (coming soon)
+- [CarPlay](/guide/carplay) - Set up CarPlay integration

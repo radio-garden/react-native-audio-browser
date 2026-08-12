@@ -18,7 +18,7 @@ public extension PlayerCapabilities {
   /**
    * Create a new instance of `PlayerCapabilities`.
    */
-  init(play: Bool?, pause: Bool?, stop: Bool?, seekTo: Bool?, skipToNext: Bool?, skipToPrevious: Bool?, jumpForward: Bool?, jumpBackward: Bool?, favorite: Bool?, shuffleMode: Bool?, repeatMode: Bool?, playbackRate: Bool?) {
+  init(play: Bool?, pause: Bool?, stop: Bool?, seekTo: Bool?, skipToNext: Bool?, skipToPrevious: Bool?, jumpForward: Bool?, jumpBackward: Bool?, favorite: Variant_Bool_FavoriteConfig?, shuffleMode: Bool?, repeatMode: Bool?, playbackRate: Bool?) {
     self.init({ () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = play {
         return bridge.create_std__optional_bool_(__unwrappedValue)
@@ -67,9 +67,16 @@ public extension PlayerCapabilities {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_bool_ in
+    }(), { () -> bridge.std__optional_std__variant_bool__FavoriteConfig__ in
       if let __unwrappedValue = favorite {
-        return bridge.create_std__optional_bool_(__unwrappedValue)
+        return bridge.create_std__optional_std__variant_bool__FavoriteConfig__({ () -> bridge.std__variant_bool__FavoriteConfig_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_bool__FavoriteConfig_(__value)
+            case .second(let __value):
+              return bridge.create_std__variant_bool__FavoriteConfig_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
@@ -191,11 +198,23 @@ public extension PlayerCapabilities {
   }
   
   @inline(__always)
-  var favorite: Bool? {
-    return { () -> Bool? in
-      if bridge.has_value_std__optional_bool_(self.__favorite) {
-        let __unwrapped = bridge.get_std__optional_bool_(self.__favorite)
-        return __unwrapped
+  var favorite: Variant_Bool_FavoriteConfig? {
+    return { () -> Variant_Bool_FavoriteConfig? in
+      if bridge.has_value_std__optional_std__variant_bool__FavoriteConfig__(self.__favorite) {
+        let __unwrapped = bridge.get_std__optional_std__variant_bool__FavoriteConfig__(self.__favorite)
+        return { () -> Variant_Bool_FavoriteConfig in
+          let __variant = bridge.std__variant_bool__FavoriteConfig_(__unwrapped)
+          switch __variant.index() {
+            case 0:
+              let __actual = __variant.get_0()
+              return .first(__actual)
+            case 1:
+              let __actual = __variant.get_1()
+              return .second(__actual)
+            default:
+              fatalError("Variant can never have index \(__variant.index())!")
+          }
+        }()
       } else {
         return nil
       }

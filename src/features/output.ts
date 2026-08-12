@@ -1,50 +1,63 @@
-import type { IosOutput, IosOutputType } from '../specs/audio-browser.nitro'
+import type { Output, OutputType } from '../specs/audio-browser.nitro'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
 
-export type { IosOutput, IosOutputType }
+export type { Output, OutputType }
 
 // MARK: - Actions
 
 /**
- * Opens the system output picker (iOS only).
- * Allows users to select output device (speaker, AirPlay, Bluetooth, etc.).
- * No-op on Android.
+ * Presents the system audio output switcher so the listener can move playback to
+ * another output. Cross-platform:
+ * - **iOS** — the system route picker (Bluetooth, AirPlay / Sonos-via-AirPlay,
+ *   speaker). Always available.
+ * - **Android** — the system Output Switcher (Bluetooth / speaker / Cast list) on
+ *   Android 11+. No-op on older Android — gate on {@link supportsOutputSwitcher}.
+ * - **Web** — no-op.
  */
-export function openIosOutputPicker(): void {
-  nativeBrowser.openIosOutputPicker()
+export function openOutputPicker(): void {
+  nativeBrowser.openOutputPicker()
+}
+
+/**
+ * Whether {@link openOutputPicker} can present a switcher on this device — use it
+ * to decide whether to surface the output control in your UI.
+ * `true` on iOS and Android 11+ (API 30); `false` on older Android and web.
+ */
+export function supportsOutputSwitcher(): boolean {
+  return nativeBrowser.supportsOutputSwitcher()
 }
 
 // MARK: - Getters
 
 /**
- * Gets the current audio output info.
- * Always returns a value on iOS, undefined on Android.
+ * The current audio output, or `undefined` when unknown. iOS reports one while a
+ * session is active; Android reports the active output route via AudioManager
+ * (the `type` is coarse — e.g. wired headphones may report as `speaker`). Guard
+ * for `undefined`.
  */
-export function getIosOutput(): IosOutput | undefined {
-  return nativeBrowser.getIosOutput()
+export function getOutput(): Output | undefined {
+  return nativeBrowser.getOutput()
 }
 
 // MARK: - Event Callbacks
 
 /**
- * Subscribes to output state changes (iOS only).
- * Never fires on Android.
- * @param callback - Called with output info when output changes
- * @returns Cleanup function to unsubscribe
+ * Subscribes to current-output changes (headphones unplugged, Bluetooth speaker
+ * connected, AirPlay/route selected). Fires on iOS and Android 11+; never below.
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
-export const onIosOutputChanged = NativeUpdatedValue.emitterize<IosOutput>(
-  (cb) => (nativeBrowser.onIosOutputChanged = cb)
+export const onOutputChanged = NativeUpdatedValue.emitterize<Output>(
+  (cb) => (nativeBrowser.onOutputChanged = cb)
 )
 
 // MARK: - Hooks
 
 /**
- * Hook that returns the current audio output info.
- * Updates when the output changes (e.g., AirPods connected/disconnected).
- * Always returns a value on iOS, undefined on Android.
+ * Reactive current audio output; re-renders when it changes (e.g. AirPods
+ * connect, a Bluetooth speaker is selected). `undefined` when unknown.
  */
-export function useIosOutput(): IosOutput | undefined {
-  return useNativeUpdatedValue(getIosOutput, onIosOutputChanged)
+export function useOutput(): Output | undefined {
+  return useNativeUpdatedValue(getOutput, onOutputChanged)
 }

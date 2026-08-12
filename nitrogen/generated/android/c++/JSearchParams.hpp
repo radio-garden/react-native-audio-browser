@@ -10,7 +10,9 @@
 #include <fbjni/fbjni.h>
 #include "SearchParams.hpp"
 
+#include "JMediaReference.hpp"
 #include "JSearchMode.hpp"
+#include "MediaReference.hpp"
 #include "SearchMode.hpp"
 #include <optional>
 #include <string>
@@ -48,6 +50,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldPlaylist = clazz->getField<jni::JString>("playlist");
       jni::local_ref<jni::JString> playlist = this->getFieldValue(fieldPlaylist);
+      static const auto fieldReference = clazz->getField<JMediaReference>("reference");
+      jni::local_ref<JMediaReference> reference = this->getFieldValue(fieldReference);
       return SearchParams(
         mode != nullptr ? std::make_optional(mode->toCpp()) : std::nullopt,
         query->toStdString(),
@@ -55,7 +59,8 @@ namespace margelo::nitro::audiobrowser {
         artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
         album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
-        playlist != nullptr ? std::make_optional(playlist->toStdString()) : std::nullopt
+        playlist != nullptr ? std::make_optional(playlist->toStdString()) : std::nullopt,
+        reference->toCpp()
       );
     }
 
@@ -65,7 +70,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JSearchParams::javaobject> fromCpp(const SearchParams& value) {
-      using JSignature = JSearchParams(jni::alias_ref<JSearchMode>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JSearchParams(jni::alias_ref<JSearchMode>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JMediaReference>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -76,7 +81,8 @@ namespace margelo::nitro::audiobrowser {
         value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
         value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
         value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
-        value.playlist.has_value() ? jni::make_jstring(value.playlist.value()) : nullptr
+        value.playlist.has_value() ? jni::make_jstring(value.playlist.value()) : nullptr,
+        JMediaReference::fromCpp(value.reference)
       );
     }
   };

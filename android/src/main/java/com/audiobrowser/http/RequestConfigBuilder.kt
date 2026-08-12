@@ -2,11 +2,11 @@ package com.audiobrowser.http
 
 import com.audiobrowser.util.BrowserPathHelper
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
-import com.margelo.nitro.audiobrowser.ImageContext
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import com.margelo.nitro.audiobrowser.MediaTransformParams
 import com.margelo.nitro.audiobrowser.RequestConfig
+import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
+import com.margelo.nitro.core.Promise
 import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,6 +43,49 @@ object RequestConfigBuilder {
     )
   }
 
+  /**
+   * Run-both resolve composition: the async-resolved config first, then the sync-resolved merged
+   * over it (sync winning). Returns null when neither produced a config. Extracted so the merge
+   * ordering is unit-testable without Nitro callbacks; used by [applyMediaResolve] and the artwork
+   * resolve in BrowserUrlResolution.
+   */
+  fun composeResolved(asyncResolved: RequestConfig?, syncResolved: RequestConfig?): RequestConfig? {
+    return when {
+      asyncResolved == null -> syncResolved
+      syncResolved == null -> asyncResolved
+      else -> mergeConfig(asyncResolved, syncResolved)
+    }
+  }
+
+  /**
+   * Awaits an **async** config callback. It lowers to `Promise<Promise<RequestConfig>>` (bridge hop
+   * → JS promise), so it is a DOUBLE await. That depth is the bug-prone part (single-awaiting an
+   * async callback hands a `Promise` downstream — the original "empty config" bug), so it lives in
+   * exactly one place. Pairs with [awaitSyncConfig].
+   */
+  suspend fun awaitAsyncConfig(promise: Promise<Promise<RequestConfig>>): RequestConfig =
+    promise.await().await()
+
+  /** Awaits a **sync** config callback (`Promise<RequestConfig>` — a single await). */
+  suspend fun awaitSyncConfig(promise: Promise<RequestConfig>): RequestConfig = promise.await()
+
+  /** Rebuilds a [MediaRequestConfig] with [c]'s request fields, preserving callbacks. */
+  private fun MediaRequestConfig.withRequestFields(c: RequestConfig) =
+    MediaRequestConfig(
+      resolve = resolve,
+      resolveSync = resolveSync,
+      transform = transform,
+      transformSync = transformSync,
+      method = c.method,
+      path = c.path,
+      baseUrl = c.baseUrl,
+      headers = c.headers,
+      query = c.query,
+      body = c.body,
+      contentType = c.contentType,
+      userAgent = c.userAgent,
+    )
+
   suspend fun mergeConfig(
     base: RequestConfig,
     override: TransformableRequestConfig,
@@ -50,117 +93,86 @@ object RequestConfigBuilder {
     return mergeConfig(base, override, emptyMap())
   }
 
+  /**
+   * Request-Config Layer application: a transform (async and/or sync) wins completely — with both
+   * set they run as a pipeline, async first, then sync, each replacing the running config —
+   * otherwise the override's static fields merge over the base, EXCEPT `path`, which is carried
+   * from the base (only a transform may change it; mirrors iOS `applyLayer` and the web stub). A
+   * thrown transform falls back to the base.
+   */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: TransformableRequestConfig,
     routeParams: Map<String, String>? = null,
   ): RequestConfig {
-    // Apply transform function if provided
-    return override.transform?.let { transformFn ->
-      try {
-        transformFn.invoke(base, routeParams).await().await() // Transform result wins completely
-      } catch (e: Exception) {
-        Timber.e(e, "Failed to apply transform function, using base config")
-        base
-      }
-    } ?: mergeConfig(base, toRequestConfig(override)) // Only merge if no transform
+    if (override.transform == null && override.transformSync == null) {
+      return mergeConfig(base, toRequestConfig(override)).copy(path = base.path)
+    }
+    return try {
+      // Async first, then sync (each replaces the running config). The bridge await
+      // depth is centralised in awaitAsync/SyncConfig.
+      var result = base
+      override.transform?.let { result = awaitAsyncConfig(it.invoke(result, routeParams)) }
+      override.transformSync?.let { result = awaitSyncConfig(it.invoke(result, routeParams)) }
+      result
+    } catch (e: Exception) {
+      Timber.e(e, "Failed to apply transform function, using base config")
+      base
+    }
   }
 
+  /**
+   * Media-kind layer application. A media config's transform/transformSync have the same shape as a
+   * [TransformableRequestConfig]'s, so this delegates to the layer overload above and rewraps — the
+   * layer semantics live in one place.
+   */
   suspend fun mergeConfig(
     base: RequestConfig,
     override: MediaRequestConfig,
     routeParams: Map<String, String>? = null,
-  ): MediaRequestConfig {
-    // Apply transform function if provided - transform result wins completely
-    val finalConfig: RequestConfig =
-      override.transform?.let { transformFn ->
-        try {
-          Timber.d("Invoking media transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(base, routeParams).await().await()
-          Timber.d(
-            "Media transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
-          )
-          transformed
-        } catch (e: Exception) {
-          Timber.e(e, "Failed to apply media transform function, using base config")
-          base
-        }
-      }
-        ?: RequestConfig(
-          path = override.path ?: base.path,
-          method = override.method ?: base.method,
-          baseUrl = override.baseUrl ?: base.baseUrl,
-          headers = mergeHeaders(base.headers, override.headers),
-          query = mergeQuery(base.query, override.query),
-          body = override.body ?: base.body,
-          contentType = override.contentType ?: base.contentType,
-          userAgent = override.userAgent ?: base.userAgent,
-        )
+  ): MediaRequestConfig =
+    override.withRequestFields(mergeConfig(base, override.asTransformable(), routeParams))
 
-    // Wrap the final RequestConfig in MediaRequestConfig to preserve resolve callback
-    return MediaRequestConfig(
-      resolve = override.resolve,
-      transform = override.transform,
-      method = finalConfig.method,
-      path = finalConfig.path,
-      baseUrl = finalConfig.baseUrl,
-      headers = finalConfig.headers,
-      query = finalConfig.query,
-      body = finalConfig.body,
-      contentType = finalConfig.contentType,
-      userAgent = finalConfig.userAgent,
+  private fun MediaRequestConfig.asTransformable() =
+    TransformableRequestConfig(
+      transform = transform,
+      transformSync = transformSync,
+      method = method,
+      path = path,
+      baseUrl = baseUrl,
+      headers = headers,
+      query = query,
+      body = body,
+      contentType = contentType,
+      userAgent = userAgent,
     )
-  }
 
   /**
-   * Merges artwork request config with base config, applying transform with ImageContext.
-   * Used for artwork URL transformation where size hints are needed.
+   * Applies the per-track `media.resolve(track)` callback as the final, most-specific layer over an
+   * already request+media-layered config. The callback receives the full Track — carrying any
+   * per-track `request` override (e.g. a strict-UA sentinel the consumer swaps for a clean
+   * User-Agent) — and returns the config whose fields win.
+   *
+   * No-op when the media config has no `resolve` callback or no track is available (so the
+   * request/media layers stand). The callback may return its config synchronously (variant `first`)
+   * or via a Promise (`second`). Mirrors iOS resolveMediaTrackConfig + applyMediaResolveLayer.
    */
-  suspend fun mergeConfig(
-    base: RequestConfig,
-    override: ArtworkRequestConfig,
-    imageContext: ImageContext? = null,
-  ): ArtworkRequestConfig {
-    // Apply transform function if provided - transform result wins completely
-    val finalConfig: RequestConfig =
-      override.transform?.let { transformFn ->
-        try {
-          Timber.d("Invoking artwork transform for URL: ${base.path}")
-          val transformed = transformFn.invoke(MediaTransformParams(base, imageContext)).await().await()
-          Timber.d(
-            "Artwork transform result: path=${transformed.path}, baseUrl=${transformed.baseUrl}, headers=${transformed.headers}, userAgent=${transformed.userAgent}"
-          )
-          transformed
-        } catch (e: Exception) {
-          Timber.e(e, "Failed to apply artwork transform function, using base config")
-          base
-        }
+  suspend fun applyMediaResolve(layered: MediaRequestConfig, track: Track?): MediaRequestConfig {
+    if (track == null) return layered
+    if (layered.resolve == null && layered.resolveSync == null) return layered
+    val resolved: RequestConfig =
+      try {
+        // Async first, then sync (merged, sync winning) — via the tested helper.
+        val asyncResolved = layered.resolve?.let { awaitAsyncConfig(it.invoke(track)) }
+        val syncResolved = layered.resolveSync?.let { awaitSyncConfig(it.invoke(track)) }
+        composeResolved(asyncResolved, syncResolved) ?: return layered
+      } catch (e: Exception) {
+        Timber.e(e, "Failed to apply media.resolve, using layered config")
+        return layered
       }
-        ?: RequestConfig(
-          path = override.path ?: base.path,
-          method = override.method ?: base.method,
-          baseUrl = override.baseUrl ?: base.baseUrl,
-          headers = mergeHeaders(base.headers, override.headers),
-          query = mergeQuery(base.query, override.query),
-          body = override.body ?: base.body,
-          contentType = override.contentType ?: base.contentType,
-          userAgent = override.userAgent ?: base.userAgent,
-        )
-
-    // Wrap the final RequestConfig in ArtworkRequestConfig to preserve callbacks and query params
-    return ArtworkRequestConfig(
-      resolve = override.resolve,
-      transform = override.transform,
-      imageQueryParams = override.imageQueryParams,
-      method = finalConfig.method,
-      path = finalConfig.path,
-      baseUrl = finalConfig.baseUrl,
-      headers = finalConfig.headers,
-      query = finalConfig.query,
-      body = finalConfig.body,
-      contentType = finalConfig.contentType,
-      userAgent = finalConfig.userAgent,
-    )
+    // Resolve wins: merge it over the layered config (override-wins on every field).
+    val merged = mergeConfig(toRequestConfig(layered), resolved)
+    return layered.withRequestFields(merged)
   }
 
   fun toRequestConfig(artworkConfig: ArtworkRequestConfig): RequestConfig {

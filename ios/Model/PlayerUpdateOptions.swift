@@ -23,11 +23,14 @@ class PlayerUpdateOptions {
     shuffleMode: nil, repeatMode: nil, playbackRate: nil,
   )
 
-  /// Repeat mode
-  var repeatMode: RepeatMode = .off
-
   /// Supported playback rates for the playback-rate capability
   var playbackRates: [Double] = [0.5, 1.0, 1.5, 2.0]
+
+  /// Enable the "Up Next" button on the CarPlay Now Playing screen
+  var carPlayUpNextButton: Bool = true
+
+  /// Custom buttons for the CarPlay Now Playing screen
+  var carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = []
 
   // MARK: - Initialization
 
@@ -60,13 +63,21 @@ class PlayerUpdateOptions {
       capabilities = mergeCapabilities(existing: capabilities, incoming: caps)
     }
 
-    // Update playback rates
-    if let rates = options.iosPlaybackRates {
-      playbackRates = rates
+    // Update iOS player-UI options (nested under `ios` on the wire)
+    if let ios = options.ios {
+      if let rates = ios.playbackRates {
+        playbackRates = rates
+      }
+      if let upNext = ios.carPlayUpNextButton {
+        carPlayUpNextButton = upNext
+      }
+      if let buttons = ios.carPlayNowPlayingButtons {
+        carPlayNowPlayingButtons = buttons
+      }
     }
   }
 
-  /// Convert to Nitro Options struct (full options with all required fields)
+  /// The resolved options in their wire shape (what getOptions/onOptionsChanged report).
   func toOptions() -> Options {
     // Convert Double? to Variant_NullType_Double?
     let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
@@ -77,22 +88,11 @@ class PlayerUpdateOptions {
       backwardJumpInterval: backwardJumpInterval,
       progressUpdateEventInterval: progressInterval,
       capabilities: capabilities,
-      repeatMode: repeatMode,
-    )
-  }
-
-  /// Convert to Nitro UpdateOptions struct (partial options for getOptions())
-  func toUpdateOptions() -> UpdateOptions {
-    // Convert Double? to Variant_NullType_Double?
-    let progressInterval: Variant_NullType_Double? = progressUpdateEventInterval.map { .second($0) }
-
-    return UpdateOptions(
-      android: nil,
-      forwardJumpInterval: forwardJumpInterval,
-      backwardJumpInterval: backwardJumpInterval,
-      progressUpdateEventInterval: progressInterval,
-      capabilities: capabilities,
-      iosPlaybackRates: playbackRates,
+      ios: IOSOptions(
+        playbackRates: playbackRates,
+        carPlayUpNextButton: carPlayUpNextButton,
+        carPlayNowPlayingButtons: carPlayNowPlayingButtons,
+      ),
     )
   }
 

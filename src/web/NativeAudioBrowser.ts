@@ -7,7 +7,6 @@ import type {
   PlayingState,
   RepeatModeChangedEvent,
   NativeUpdateOptions,
-  UpdateOptions,
   Options,
   Playback,
   PlaybackActiveTrackChangedEvent,
@@ -20,11 +19,14 @@ import type {
   RemotePlayIdEvent,
   RemotePlaySearchEvent,
   RemoteSeekEvent,
-  RemoteSetRatingEvent,
   RemoteSkipEvent,
   SleepTimer,
   SleepTimerChangedEvent,
   FavoriteChangedEvent,
+  NativeGate,
+  NativeGateRequest,
+  GateDecision,
+  GateEvent,
   NavigationError,
   NavigationErrorEvent,
   FormattedNavigationError,
@@ -34,15 +36,16 @@ import type {
   BatteryOptimizationStatus,
   BatteryOptimizationStatusChangedEvent,
   BatteryWarningPendingChangedEvent,
-  PartialSetupPlayerOptions
+  NativeSetupPlayerOptions
 } from '../features'
 import type {
   AudioBrowser as AudioBrowserSpec,
-  IosOutput
+  Output
 } from '../specs/audio-browser.nitro'
 import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
 import { BrowserManager } from './browser/BrowserManager'
+import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
 import { NavigationErrorManager } from './browser/NavigationErrorManager'
 import { SearchManager } from './browser/SearchManager'
@@ -50,14 +53,16 @@ import { HttpClient } from './http/HttpClient'
 import { RequestConfigBuilder } from './http/RequestConfigBuilder'
 import { NowPlayingManager } from './player/NowPlayingManager'
 import { OptionsManager } from './player/OptionsManager'
-import { PlaylistPlayer, SleepTimerManager } from './TrackPlayer'
-import { BrowserPathHelper } from './util/BrowserPathHelper'
+import { RemoteCommandController } from './player/RemoteCommandController'
+import { QueuePlayer, SleepTimerManager, VolumeFader } from './TrackPlayer'
+import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
+import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
 
 /**
  * Web implementation of AudioBrowser (unified browser + player)
  */
 export class NativeAudioBrowser
-  extends PlaylistPlayer
+  extends QueuePlayer
   implements AudioBrowserSpec
 {
   // HybridObject stuff
@@ -67,6 +72,8 @@ export class NativeAudioBrowser
   }
   dispose() {
     this.clearUpdateEventInterval()
+    this.setPlaybackIntervalEnabled(false)
+    this.remoteCommands.dispose()
     // Remove window event listeners to prevent memory leaks
     if (typeof window !== 'undefined' && this.onlineHandler) {
       window.removeEventListener('online', this.onlineHandler)
@@ -84,22 +91,34 @@ export class NativeAudioBrowser
   private searchManager: SearchManager
   private optionsManager: OptionsManager
   private nowPlayingManager: NowPlayingManager
+  private remoteCommands: RemoteCommandController
 
   // Player state
   private currentLoadId = 0
-  private progressUpdateEventInterval: NodeJS.Timeout | undefined
+  private progressTimer = new PlaybackTimer()
+  private intervalTimer = new PlaybackTimer()
   private _online: boolean =
     typeof navigator !== 'undefined' ? navigator.onLine : true
   private onlineHandler: (() => void) | undefined
   private offlineHandler: (() => void) | undefined
+  private sleepFader = new VolumeFader(
+    () => this.getVolume(),
+    (volume) => this.setVolume(volume)
+  )
   private sleepTimer = new (class extends SleepTimerManager {
     constructor(private parent: NativeAudioBrowser) {
       super()
     }
     protected onComplete(): void {
-      console.log('Sleep timer completed, stopping playback')
-      this.parent.stop()
+      console.log('Sleep timer completed, pausing playback')
+      this.parent.sleepFader.resolve(() => this.parent.pause())
       this.parent.onSleepTimerChanged(null)
+    }
+    protected onFadeStart(durationSeconds: number): void {
+      this.parent.sleepFader.start(durationSeconds)
+    }
+    protected onFadeCancel(): void {
+      this.parent.sleepFader.cancel(true)
     }
   })(this)
 
@@ -151,17 +170,15 @@ export class NativeAudioBrowser
   onPlaybackPlayingState: (data: PlayingState) => void = () => {}
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void =
     () => {}
+  onPlaybackInterval: () => void = () => {}
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void = () => {}
   onPlaybackQueueChanged: (queue: Track[]) => void = () => {}
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void = () => {}
   onPlaybackShuffleModeChanged: (enabled: boolean) => void = () => {}
   onSleepTimerChanged: (data: SleepTimerChangedEvent) => void = () => {}
   onPlaybackChanged: (data: Playback) => void = () => {}
-  onRemoteBookmark: () => void = () => {}
-  onRemoteDislike: () => void = () => {}
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void = () => {}
   onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void = () => {}
-  onRemoteLike: () => void = () => {}
   onRemoteNext: () => void = () => {}
   onRemotePause: () => void = () => {}
   onRemotePlay: () => void = () => {}
@@ -169,7 +186,6 @@ export class NativeAudioBrowser
   onRemotePlaySearch: (event: RemotePlaySearchEvent) => void = () => {}
   onRemotePrevious: () => void = () => {}
   onRemoteSeek: (event: RemoteSeekEvent) => void = () => {}
-  onRemoteSetRating: (event: RemoteSetRatingEvent) => void = () => {}
   onRemoteSkip: (event: RemoteSkipEvent) => void = () => {}
   onRemoteStop: () => void = () => {}
   onOptionsChanged: (event: Options) => void = () => {}
@@ -184,18 +200,22 @@ export class NativeAudioBrowser
     event: BatteryOptimizationStatusChangedEvent
   ) => void = () => {}
   onSystemVolumeChanged: (volume: number) => void = () => {}
-  onIosOutputChanged: (output: IosOutput) => void = () => {}
+  onOutputChanged: (output: Output) => void = () => {}
+  onGate: (event: GateEvent) => void = () => {}
+  // Fail closed by default: only reachable in the init window before gate.ts
+  // re-binds resolveGate. Web has no serve sites, so this is never called in
+  // practice, but the default must agree with the fail-closed contract.
+  resolveGate: (request: NativeGateRequest) => Promise<GateDecision> =
+    async () => ({ gated: true })
+  onCarConnectedChanged: (connected: boolean) => void = () => {}
 
   // MARK: Remote handlers
-  handleRemoteBookmark: (() => void) | undefined = undefined
-  handleRemoteDislike: (() => void) | undefined = undefined
   handleRemoteJumpBackward:
     | ((event: RemoteJumpBackwardEvent) => void)
     | undefined = undefined
   handleRemoteJumpForward:
     | ((event: RemoteJumpForwardEvent) => void)
     | undefined = undefined
-  handleRemoteLike: (() => void) | undefined = undefined
   handleRemoteNext: (() => void) | undefined = undefined
   handleRemotePause: (() => void) | undefined = undefined
   handleRemotePlay: (() => void) | undefined = undefined
@@ -205,8 +225,6 @@ export class NativeAudioBrowser
     undefined
   handleRemotePrevious: (() => void) | undefined = undefined
   handleRemoteSeek: ((event: RemoteSeekEvent) => void) | undefined = undefined
-  handleRemoteSetRating: ((event: RemoteSetRatingEvent) => void) | undefined =
-    undefined
   handleRemoteSkip: (() => void) | undefined = undefined
   handleRemoteStop: (() => void) | undefined = undefined
 
@@ -220,6 +238,7 @@ export class NativeAudioBrowser
     this.navigationErrorManager = new NavigationErrorManager()
     this.optionsManager = new OptionsManager()
     this.nowPlayingManager = new NowPlayingManager()
+    this.remoteCommands = new RemoteCommandController(this)
 
     this.browserManager = new BrowserManager(
       this.httpClient,
@@ -227,7 +246,7 @@ export class NativeAudioBrowser
       this.navigationErrorManager
     )
 
-    this.searchManager = new SearchManager(this.browserManager, this.httpClient)
+    this.searchManager = new SearchManager(this.browserManager)
 
     // Wire up event callbacks from managers to class callbacks
     this.browserManager.onPathChanged = (path) => this.onPathChanged(path)
@@ -241,7 +260,7 @@ export class NativeAudioBrowser
     this.optionsManager.onOptionsChanged = (options) =>
       this.onOptionsChanged(options)
     this.nowPlayingManager.onNowPlayingChanged = (metadata) =>
-      this.onNowPlayingChanged(metadata)
+      this.publishNowPlaying(metadata)
 
     // Setup online/offline listeners
     if (typeof window !== 'undefined') {
@@ -280,59 +299,81 @@ export class NativeAudioBrowser
 
     // Call callbacks
     this.onPlaybackChanged(newState)
-    this.onPlaybackPlayingState(this.getPlayingStateFromPlayback(newState))
+    this.refreshPlayingState()
+    this.remoteCommands.syncPlaybackState()
 
     if (newState.state === 'error' && newState.error) {
       this.onPlaybackError({ error: newState.error })
     }
   }
 
+  private lastPlayingState?: PlayingState
+
   /**
-   * Derives PlayingState from playback state and playWhenReady.
-   * Matches Android's PlayingStateFactory.derive() logic.
+   * Re-derives the playing state and emits on change. Called from both of its
+   * inputs' change points — the state setter and the playWhenReady setter —
+   * with a dedupe so identical derivations don't double-emit (parity with
+   * Android's refreshPlayingState / iOS's PlayingStateManager).
    */
-  private getPlayingStateFromPlayback(playback: Playback): PlayingState {
-    const state = playback.state
-    const pwr = this._playWhenReady
-    return {
-      playing:
-        pwr && state !== 'error' && state !== 'ended' && state !== 'none',
-      buffering: pwr && (state === 'loading' || state === 'buffering')
+  private refreshPlayingState(): void {
+    const next = derivePlayingState(this._playWhenReady, this.state.state)
+    if (
+      this.lastPlayingState !== undefined &&
+      this.lastPlayingState.playing === next.playing &&
+      this.lastPlayingState.buffering === next.buffering
+    ) {
+      return
     }
+    this.lastPlayingState = next
+    this.onPlaybackPlayingState(next)
+  }
+
+  /**
+   * Emits now-playing metadata to JS consumers and mirrors it to the OS media
+   * controls (lockscreen / notification / media keys).
+   */
+  private publishNowPlaying(metadata: NowPlayingMetadata): void {
+    this.onNowPlayingChanged(metadata)
+    this.remoteCommands.setMetadata(metadata)
   }
 
   protected setupProgressUpdates(interval?: number) {
-    this.clearUpdateEventInterval()
-    if (interval) {
-      this.progressUpdateEventInterval = setInterval(() => {
+    // Match Android: emit progress during loading, buffering, and playing.
+    this.progressTimer.start(
+      (interval ?? 0) * 1000,
+      () => {
         const state = this.state.state
-        // Match Android: emit progress during loading, buffering, and playing
-        if (
-          state === 'playing' ||
-          state === 'loading' ||
-          state === 'buffering'
-        ) {
-          const progress = this.getProgress()
-          const event: PlaybackProgressUpdatedEvent = {
-            ...progress,
-            track: this.currentIndex || 0
-          }
-          this.onPlaybackProgressUpdated(event)
-        }
-      }, interval * 1000)
-    }
+        return (
+          state === 'playing' || state === 'loading' || state === 'buffering'
+        )
+      },
+      () => {
+        const progress = this.getProgress()
+        this.onPlaybackProgressUpdated({
+          ...progress,
+          track: this.queue.currentIndex || 0
+        })
+        this.remoteCommands.updateProgress()
+      }
+    )
   }
 
   protected clearUpdateEventInterval() {
-    if (this.progressUpdateEventInterval) {
-      clearInterval(this.progressUpdateEventInterval)
-    }
+    this.progressTimer.stop()
   }
 
-  protected onPlaylistEnded() {
-    super.onPlaylistEnded()
+  setPlaybackIntervalEnabled(enabled: boolean): void {
+    this.intervalTimer.start(
+      enabled ? 1000 : 0,
+      () => this.state.state === 'playing',
+      () => this.onPlaybackInterval()
+    )
+  }
+
+  protected onQueueEnded() {
+    super.onQueueEnded()
     this.onPlaybackQueueEnded({
-      track: this.currentIndex ?? 0,
+      track: this.queue.currentIndex ?? 0,
       position: this.element?.currentTime ?? 0
     })
   }
@@ -343,9 +384,8 @@ export class NativeAudioBrowser
   }
 
   navigateTrack(track: Track): void {
-    const url = track.url
     // Execute async navigation logic without blocking
-    void this.navigateTrackAsync(track, url)
+    void this.navigateTrackAsync(track)
   }
 
   /**
@@ -418,7 +458,12 @@ export class NativeAudioBrowser
     }
 
     await this.handleLoad(track, result.tracks, result.startIndex, () => {
+      // setQueue keeps the current play/pause state, so start playback
+      // explicitly — selecting a track is an intent to play (matches the
+      // skip-to-existing-queue-track path). Without this the first track of a
+      // freshly expanded queue loads but stays paused.
       this.setQueue(result.tracks, result.startIndex)
+      this.play()
     })
     return true
   }
@@ -427,58 +472,57 @@ export class NativeAudioBrowser
    * Async implementation of track navigation with queue expansion support.
    * Matches Android's MediaSessionCallback behavior.
    */
-  private async navigateTrackAsync(
-    track: Track,
-    url: string | undefined
-  ): Promise<void> {
+  private async navigateTrackAsync(track: Track): Promise<void> {
     try {
-      // Handle contextual URL (playable track with queue context)
-      if (url && BrowserPathHelper.isContextual(url)) {
-        const parentPath = BrowserPathHelper.stripTrackId(url)
-        const trackId = BrowserPathHelper.extractTrackId(url)
-
-        // Optimization: skip to track if already in current queue
-        if (
-          trackId &&
-          (await this.trySkipToExistingQueueTrack(trackId, parentPath))
-        ) {
+      const nav = classifyTrackNavigation(track)
+      switch (nav.kind) {
+        case 'contextual':
+          // Optimization: skip to the track if it's already in the queue.
+          if (
+            nav.trackId &&
+            (await this.trySkipToExistingQueueTrack(
+              nav.trackId,
+              nav.parentPath
+            ))
+          ) {
+            return
+          }
+          // Otherwise expand the queue from the contextual URL, falling back to
+          // loading the single track if expansion yields nothing.
+          if (await this.expandQueueAndPlay(track)) return
+          await this.playSingleTrack(track)
           return
-        }
 
-        // Expand queue from contextual URL
-        if (await this.expandQueueAndPlay(track)) {
+        case 'browse':
+          this.browserManager.navigateTrack(track).catch((error: unknown) => {
+            console.error('Failed to navigate to track:', error)
+          })
           return
-        }
 
-        // Fallback: load single track if expansion fails
-        await this.handleLoad(track, [track], 0, () => this.load(track))
-        return
+        case 'playable':
+          await this.playSingleTrack(track)
+          return
+
+        case 'invalid':
+          throw new Error("Track must have either 'url' or 'src' property")
       }
-
-      // Handle browsable track (has URL but not contextual)
-      if (url) {
-        this.browserManager.navigateTrack(track).catch((error: unknown) => {
-          console.error('Failed to navigate to track:', error)
-        })
-        return
-      }
-
-      // Handle playable track (has src but no URL)
-      if (track.src) {
-        await this.handleLoad(track, [track], 0, () => this.load(track))
-        return
-      }
-
-      throw new Error("Track must have either 'url' or 'src' property")
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.navigationErrorManager.setNavigationError('unknown-error', message)
     }
   }
 
+  /** Loads a single track as its own queue and starts playback. */
+  private async playSingleTrack(track: Track): Promise<void> {
+    await this.handleLoad(track, [track], 0, () => {
+      this.load(track)
+      this.play()
+    })
+  }
+
   async onSearch(query: string): Promise<Track[]> {
     // Wrap query string in SearchParams (matches Android's search(query: String) overload)
-    return this.searchManager.search({ query })
+    return this.searchManager.search({ query, reference: 'unknown' })
   }
 
   getContent(): ResolvedTrack | undefined {
@@ -497,13 +541,24 @@ export class NativeAudioBrowser
     this.browserManager.notifyContentChanged(path)
   }
 
+  invalidateAllContent(): void {
+    this.browserManager.invalidateAllContent()
+  }
+
   setFavorites(favorites: string[]): void {
     this.favoriteManager.setFavorites(favorites)
   }
 
   // MARK: Player init and config
-  async setupPlayer(options: PartialSetupPlayerOptions): Promise<void> {
+  async setupPlayer(options: NativeSetupPlayerOptions): Promise<void> {
     await super.setupPlayer(options)
+    // Apply the launch options and initial state bundled in setup — same
+    // atomic contract as the native platforms.
+    if (options.options) this.updateOptions(options.options)
+    if (options.repeatMode !== undefined) this.setRepeatMode(options.repeatMode)
+    if (options.playWhenReady !== undefined) {
+      this.setPlayWhenReady(options.playWhenReady)
+    }
   }
 
   updateOptions(options: NativeUpdateOptions): void {
@@ -520,7 +575,7 @@ export class NativeAudioBrowser
     }
   }
 
-  getOptions(): UpdateOptions {
+  getOptions(): Options {
     return this.optionsManager.getOptions()
   }
 
@@ -533,8 +588,25 @@ export class NativeAudioBrowser
    * Mirrors Android's MediaFactory.getMediaRequestConfig behavior.
    */
   private async resolveMediaUrl(src: string): Promise<string> {
-    const mediaConfig = this.browserManager.configuration.media
-    return RequestConfigBuilder.resolveMediaUrl(src, mediaConfig)
+    const { request, media } = this.browserManager.configuration
+    return RequestConfigBuilder.resolveMediaUrl(src, request, media)
+  }
+
+  /**
+   * Reload from the queue's own entry, whose `src` is still unresolved —
+   * `current` holds the resolved track, and re-feeding it into `load()` would
+   * re-resolve the resolved URL (double-applying a `transform`) and replace
+   * the queue entry with it.
+   */
+  protected override reloadCurrent(): void {
+    const index = this.queue.currentIndex
+    const sourceTrack =
+      index !== undefined ? this.queue.getTrack(index) : undefined
+    if (sourceTrack) {
+      this.load(sourceTrack)
+    } else {
+      super.reloadCurrent()
+    }
   }
 
   load(track: Track, callback?: (track: Track) => void): void {
@@ -545,22 +617,22 @@ export class NativeAudioBrowser
 
     // Match Android: load() modifies the queue.
     // If queue is empty, add the track. If queue has items, replace at currentIndex.
-    if (this.playlist.length === 0) {
-      this.playlist = [track]
-      this._currentIndex = 0
-      this.onPlaybackQueueChanged(this.playlist)
+    if (this.queue.length === 0) {
+      this.queue.setTracks([track])
+      this.queue.currentIndex = 0
+      this.emitQueueChanged()
     } else if (
-      this.currentIndex !== undefined &&
-      this.playlist[this.currentIndex] !== track
+      this.queue.currentIndex !== undefined &&
+      this.queue.getTrack(this.queue.currentIndex) !== track
     ) {
-      this.playlist[this.currentIndex] = track
-      this.onPlaybackQueueChanged(this.playlist)
+      this.queue.replaceTrack(this.queue.currentIndex, track)
+      this.emitQueueChanged()
     }
 
     const lastTrack = this.current
     const lastPosition = element.currentTime
-    const lastIndex = this.lastIndex
-    const currentIndex = this.currentIndex
+    const lastIndex = this.queue.lastIndex
+    const currentIndex = this.queue.currentIndex
 
     // Set loading flag early so seekTo() calls during async URL resolution
     // are captured as pending seeks rather than silently dropped
@@ -591,7 +663,7 @@ export class NativeAudioBrowser
         // Update now playing metadata
         const nowPlaying = this.getNowPlaying()
         if (nowPlaying) {
-          this.onNowPlayingChanged(nowPlaying)
+          this.publishNowPlaying(nowPlaying)
         }
 
         // Call the provided callback if any
@@ -603,12 +675,20 @@ export class NativeAudioBrowser
 
     // Execute async load without blocking, with error handling
     doLoad().catch((error: unknown) => {
+      // Only the active load may surface a resolution failure.
+      if (loadId !== this.currentLoadId) return
       this._loadInProgress = false
       this._pendingSeek = undefined
       console.error('Error loading track:', error)
       const message =
         error instanceof Error ? error.message : 'Failed to load track'
-      const playbackError = { code: 'load-error', message }
+      // Track resolution failed before playback was ever attempted, so nothing
+      // is known about the stream itself.
+      const playbackError: PlaybackError = {
+        kind: 'unknown',
+        code: 'load-error',
+        message
+      }
       this.state = { state: 'error', error: playbackError }
     })
   }
@@ -617,15 +697,89 @@ export class NativeAudioBrowser
     super.togglePlayback()
   }
 
-  setPlayWhenReady(pwr: boolean): void {
-    const didChange = pwr !== this._playWhenReady
-    super.playWhenReady = pwr
+  /**
+   * Copies before emitting: the queue mutates in place, and handing out the
+   * live array defeats React's reference-equality change detection.
+   */
+  private emitQueueChanged(): void {
+    this.onPlaybackQueueChanged([...this.queue.tracks])
+  }
 
+  // Queue mutations must reach onPlaybackQueueChanged (the contract covers
+  // added/removed/reordered; Android emits via onTimelineChanged).
+  override add(tracks: Track[], insertBeforeIndex?: number): void {
+    super.add(tracks, insertBeforeIndex)
+    this.emitQueueChanged()
+  }
+
+  override remove(indexes: number[]): void {
+    super.remove(indexes)
+    this.emitQueueChanged()
+  }
+
+  override move(fromIndex: number, toIndex: number): void {
+    super.move(fromIndex, toIndex)
+    this.emitQueueChanged()
+  }
+
+  override removeUpcomingTracks(): void {
+    super.removeUpcomingTracks()
+    this.emitQueueChanged()
+  }
+
+  override reset(): void {
+    super.reset()
+    this.emitQueueChanged()
+  }
+
+  // Override playWhenReady to emit events (mirrors the state override): the
+  // base transport methods (play/pause/stop, the queue-end intent clear)
+  // assign through this accessor, so the change event and MediaSession sync
+  // fire for every writer — not only setPlayWhenReady().
+  public override get playWhenReady(): boolean {
+    return super.playWhenReady
+  }
+
+  public override set playWhenReady(pwr: boolean) {
+    const didChange = pwr !== super.playWhenReady
+    super.playWhenReady = pwr
     if (didChange) {
-      this.onPlaybackPlayWhenReadyChanged({
-        playWhenReady: this._playWhenReady
-      })
+      this.onPlaybackPlayWhenReadyChanged({ playWhenReady: pwr })
+      this.refreshPlayingState()
+      this.remoteCommands.syncPlaybackState()
     }
+  }
+
+  setPlayWhenReady(pwr: boolean): void {
+    if (!pwr) {
+      if (this.element) {
+        // pause() halts first and its override then clears a fading sleep
+        // timer — restoring the volume before the halt would let full-volume
+        // audio slip out (VolumeFader's invariant).
+        this.pause()
+      } else {
+        this.clearSleepTimerIfFading()
+        this.playWhenReady = false
+      }
+      return
+    }
+    // Mirror native: raising the intent restarts playback from terminal
+    // states (reload/replay via play()) and resumes a settled paused/ready
+    // player. While loading/buffering the flag alone is correct — load()'s
+    // auto-play starts playback once the source is ready.
+    const { state } = this.state
+    if (
+      this.current !== undefined &&
+      (state === 'ended' ||
+        state === 'stopped' ||
+        state === 'error' ||
+        state === 'paused' ||
+        state === 'ready')
+    ) {
+      this.play()
+      return
+    }
+    this.playWhenReady = true
   }
 
   getPlayWhenReady(): boolean {
@@ -637,7 +791,7 @@ export class NativeAudioBrowser
   }
 
   getPlayingState(): PlayingState {
-    return this.getPlayingStateFromPlayback(this.state)
+    return derivePlayingState(this._playWhenReady, this.state.state)
   }
 
   getRepeatMode(): RepeatModeType {
@@ -645,7 +799,7 @@ export class NativeAudioBrowser
   }
 
   setRepeatMode(mode: RepeatModeType): void {
-    const didChange = this.repeatMode !== mode
+    const didChange = this.queue.repeatMode !== mode
     super.setRepeatMode(mode)
     this.optionsManager.setRepeatMode(mode)
 
@@ -681,9 +835,33 @@ export class NativeAudioBrowser
     return null
   }
 
-  setSleepTimer(seconds: number): void {
-    this.sleepTimer.sleepAfter(seconds)
+  setSleepTimer(seconds: number, fadeDuration?: number): void {
+    this.sleepTimer.sleepAfter(seconds, fadeDuration)
     this.onSleepTimerChanged(this.getSleepTimer())
+  }
+
+  /**
+   * An explicit pause intent during the sleep fade is the timer's goal
+   * arriving early: clear the timer (which restores the pre-fade volume).
+   * Called after the halt lands so the restore never precedes it. Mirrors
+   * the native playWhenReady hooks.
+   */
+  private clearSleepTimerIfFading(): void {
+    if (this.sleepFader.isActive) this.clearSleepTimer()
+  }
+
+  override pause(): void {
+    super.pause()
+    this.clearSleepTimerIfFading()
+  }
+
+  override stop(): void {
+    // Invalidate any in-flight load: its post-await continuation would call
+    // super.load(), whose first line re-arms the player (_isStopped = false)
+    // and revives the state out of Stopped.
+    this.currentLoadId++
+    super.stop()
+    this.clearSleepTimerIfFading()
   }
 
   setSleepTimerToEndOfTrack(): void {
@@ -705,9 +883,9 @@ export class NativeAudioBrowser
   protected onTrackEnded(): void {
     // Check if sleep timer is set to end on track completion
     if (this.sleepTimer.sleepWhenPlayedToEnd) {
-      console.log('Sleep timer triggered on track end, stopping playback')
+      console.log('Sleep timer triggered on track end, pausing playback')
       this.sleepTimer.clear()
-      this.stop()
+      this.pause()
       this.onSleepTimerChanged(null)
       return
     }
@@ -717,49 +895,43 @@ export class NativeAudioBrowser
   }
 
   // MARK: Queue management
-  setQueue(
-    tracks: Track[],
-    startIndex?: number,
-    startPositionMs?: number
-  ): void {
+  setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void {
     this.stop()
     // Clear stale references from previous queue
     this.current = undefined
-    this._currentIndex = undefined
     // Hydrate favorites and transform artwork URLs on all tracks in the queue
-    const artworkConfig = this.browserManager.configuration.artwork
-    this.playlist = tracks.map((track) => {
-      try {
-        const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
-        return RequestConfigBuilder.transformTrackArtwork(
-          hydratedTrack,
-          artworkConfig
-        )
-      } catch (error) {
-        console.error('Failed to transform track:', error)
-        return track // Use original track as fallback
-      }
-    })
-    this.onPlaybackQueueChanged(this.playlist)
+    const { request, artwork } = this.browserManager.configuration
+    this.queue.setTracks(
+      tracks.map((track) => {
+        try {
+          const hydratedTrack = this.favoriteManager.hydrateFavorite(track)
+          return RequestConfigBuilder.transformTrackArtwork(
+            hydratedTrack,
+            request,
+            artwork
+          )
+        } catch (error) {
+          console.error('Failed to transform track:', error)
+          return track // Use original track as fallback
+        }
+      })
+    )
+    this.emitQueueChanged()
 
-    // Regenerate shuffle order when queue is set
-    if (super.getShuffleEnabled()) {
-      super.setShuffleEnabled(true) // Regenerates shuffle order
-    }
-
-    if (startIndex !== undefined && this.playlist[startIndex]) {
-      this.skip(startIndex, startPositionMs)
+    if (startIndex !== undefined && this.queue.getTrack(startIndex)) {
+      this.skip(startIndex, startPosition)
     }
   }
 
   getQueue(): Track[] {
-    return this.playlist
+    // Copy — see emitQueueChanged.
+    return [...this.queue.tracks]
   }
 
   getActiveTrackIndex(): number | undefined {
     this.requireElement()
     this.requirePlayer()
-    return this.currentIndex
+    return this.queue.currentIndex
   }
 
   getActiveTrack(): Track | undefined {
@@ -784,8 +956,8 @@ export class NativeAudioBrowser
       favorited
     }
 
-    // Replace the track in the playlist
-    this.playlist[index] = updatedTrack
+    // Replace the track in the queue
+    this.queue.replaceTrack(index, updatedTrack)
 
     // Emit favorite changed event
     this.onFavoriteChanged({ track: updatedTrack, favorited })
@@ -800,7 +972,7 @@ export class NativeAudioBrowser
     })
 
     // Emit queue changed so useQueue() hook updates
-    this.onPlaybackQueueChanged(this.playlist)
+    this.emitQueueChanged()
   }
 
   toggleActiveTrackFavorited(): void {
@@ -822,6 +994,26 @@ export class NativeAudioBrowser
     const track = this.getActiveTrack()
     const duration = this.getProgress().duration
     return this.nowPlayingManager.getNowPlaying(track, duration)
+  }
+
+  private nowPlayingFlashRevert: ReturnType<typeof setTimeout> | undefined
+
+  flashNowPlaying(update: NowPlayingUpdate, durationMs: number): void {
+    // Web approximation: an override + timer is sufficient here — the
+    // background-timer and formatter-priority concerns are native-only.
+    this.updateNowPlaying(update)
+    if (this.nowPlayingFlashRevert) clearTimeout(this.nowPlayingFlashRevert)
+    this.nowPlayingFlashRevert = setTimeout(() => {
+      this.nowPlayingFlashRevert = undefined
+      this.updateNowPlaying(undefined)
+    }, durationMs)
+  }
+
+  clearNowPlayingFlash(): void {
+    if (!this.nowPlayingFlashRevert) return
+    clearTimeout(this.nowPlayingFlashRevert)
+    this.nowPlayingFlashRevert = undefined
+    this.updateNowPlaying(undefined)
   }
 
   // MARK: Network connectivity
@@ -877,12 +1069,27 @@ export class NativeAudioBrowser
     // No-op on web - browsers can't set system volume
   }
 
-  // MARK: iOS output (not applicable on web)
-  getIosOutput(): IosOutput | undefined {
+  // MARK: Gate (no-op — web has no external browse surfaces)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setGate(_gate: NativeGate | undefined, _hasResolver: boolean): void {}
+
+  clearGate(): void {}
+
+  // MARK: Car connection (not applicable on web)
+  isCarConnected(): boolean {
+    return false
+  }
+
+  // MARK: audio output (not applicable on web)
+  getOutput(): Output | undefined {
     return undefined
   }
 
-  openIosOutputPicker(): void {
+  openOutputPicker(): void {
     // No-op on web
+  }
+
+  supportsOutputSwitcher(): boolean {
+    return false
   }
 }

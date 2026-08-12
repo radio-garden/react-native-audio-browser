@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.media3.common.C
+import com.audiobrowser.util.artworkOf
+import com.audiobrowser.util.url
+import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
@@ -96,11 +99,20 @@ class PlaybackStateStore(private val player: Player) {
       }
   }
 
-  /** Stops periodic position saving and saves final position. Call when playback stops. */
-  fun stopPeriodicSave() {
+  /** Cancels the periodic save without a final save. Call on engine teardown. */
+  fun cancelPeriodicSave() {
     periodicSaveJob?.cancel()
     periodicSaveJob = null
-    if (!player.isCurrentItemLive) {
+  }
+
+  /** Stops periodic position saving and saves final position. Call when playback stops. */
+  fun stopPeriodicSave() {
+    cancelPeriodicSave()
+    // Skip the final save after a natural end: setPlaybackState(ENDED) wrote
+    // position 0 for resumption, and the intent-drop's listener echo runs this
+    // strictly afterwards — a save here would overwrite that 0 with the
+    // end-of-track position, making cold-start resume restart at the very end.
+    if (!player.isCurrentItemLive && player.playbackState != PlaybackState.ENDED) {
       savePosition()
     }
   }
@@ -139,13 +151,15 @@ class PlaybackStateStore(private val player: Player) {
   private fun trackToJson(track: Track): String =
     JSONObject()
       .apply {
+        put("id", track.id)
         put("url", track.url)
         put("src", track.src)
         put("title", track.title)
         put("subtitle", track.subtitle)
         put("artist", track.artist)
+        put("albumUrl", track.albumUrl)
         put("album", track.album)
-        put("artwork", track.artwork)
+        put("artwork", track.artwork?.url)
         put("description", track.description)
         put("genre", track.genre)
         put("duration", track.duration)
@@ -161,13 +175,15 @@ class PlaybackStateStore(private val player: Player) {
     runCatching {
         val obj = JSONObject(json)
         Track(
+          id = obj.optString("id").takeIf { it.isNotEmpty() },
           url = obj.optString("url").takeIf { it.isNotEmpty() },
           src = obj.optString("src").takeIf { it.isNotEmpty() },
           title = obj.getString("title"),
           subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
           artist = obj.optString("artist").takeIf { it.isNotEmpty() },
+          albumUrl = obj.optString("albumUrl").takeIf { it.isNotEmpty() },
           album = obj.optString("album").takeIf { it.isNotEmpty() },
-          artwork = obj.optString("artwork").takeIf { it.isNotEmpty() },
+          artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
           artworkSource = null, // Not persisted - will be re-transformed on browse
           artworkCarPlayTinted = null, // iOS-only, not persisted
           description = obj.optString("description").takeIf { it.isNotEmpty() },
@@ -189,6 +205,10 @@ class PlaybackStateStore(private val player: Player) {
             else null,
           groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
           live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
+          // Not persisted: on resumption the contextual URL is re-browsed
+          // (expandQueueFromContextualUrl), which re-parses each track's request
+          // from the API's current response and re-caches it.
+          request = null,
           imageRow = null, // Not persisted
         )
       }

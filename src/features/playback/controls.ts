@@ -58,6 +58,14 @@ export function seekTo(position: number): void {
 }
 
 /**
+ * Jump to the live edge of the current track. No-op for non-live tracks; for
+ * live, seeks to the window end (HLS) or reconnects (non-seekable streams).
+ */
+export function seekToLiveEdge(): void {
+  nativeBrowser.seekToLiveEdge()
+}
+
+/**
  * Seeks by a relative time offset in the current track.
  * @param offset - The time offset to seek by in seconds.
  */

@@ -299,6 +299,84 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var resolveGate: bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest in
+        let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(self.__implementation.resolveGate)
+        return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.resolveGate = { () -> (NativeGateRequest) -> Promise<Promise<GateDecision>> in
+        let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest(newValue)
+        return { (__request: NativeGateRequest) -> Promise<Promise<GateDecision>> in
+          let __result = __wrappedFunction.call(__request)
+          return { () -> Promise<Promise<GateDecision>> in
+            let __promise = Promise<Promise<GateDecision>>()
+            let __resolver = { (__result: Promise<GateDecision>) in
+              __promise.resolve(withResult: __result)
+            }
+            let __rejecter = { (__error: Error) in
+              __promise.reject(withError: __error)
+            }
+            let __resolverCpp = { () -> bridge.Func_void_std__shared_ptr_Promise_GateDecision__ in
+              let __closureWrapper = Func_void_std__shared_ptr_Promise_GateDecision__(__resolver)
+              return bridge.create_Func_void_std__shared_ptr_Promise_GateDecision__(__closureWrapper.toUnsafe())
+            }()
+            let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+              let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+              return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+            }()
+            let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision____(__result)
+            __promiseHolder.addOnResolvedListener(__resolverCpp)
+            __promiseHolder.addOnRejectedListener(__rejecterCpp)
+            return __promise
+          }()
+        }
+      }()
+    }
+  }
+  
+  public final var onGate: bridge.Func_void_GateEvent {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_GateEvent in
+        let __closureWrapper = Func_void_GateEvent(self.__implementation.onGate)
+        return bridge.create_Func_void_GateEvent(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onGate = { () -> (GateEvent) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_GateEvent(newValue)
+        return { (__event: GateEvent) -> Void in
+          __wrappedFunction.call(__event)
+        }
+      }()
+    }
+  }
+  
+  public final var onCarConnectedChanged: bridge.Func_void_bool {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void_bool in
+        let __closureWrapper = Func_void_bool(self.__implementation.onCarConnectedChanged)
+        return bridge.create_Func_void_bool(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onCarConnectedChanged = { () -> (Bool) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_bool(newValue)
+        return { (__connected: Bool) -> Void in
+          __wrappedFunction.call(__connected)
+        }
+      }()
+    }
+  }
+  
   public final var onChapterMetadata: bridge.Func_void_std__vector_ChapterMetadata_ {
     @inline(__always)
     get {
@@ -457,6 +535,25 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
+  public final var onPlaybackInterval: bridge.Func_void {
+    @inline(__always)
+    get {
+      return { () -> bridge.Func_void in
+        let __closureWrapper = Func_void(self.__implementation.onPlaybackInterval)
+        return bridge.create_Func_void(__closureWrapper.toUnsafe())
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onPlaybackInterval = { () -> () -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void(newValue)
+        return { () -> Void in
+          __wrappedFunction.call()
+        }
+      }()
+    }
+  }
+  
   public final var onPlaybackQueueEnded: bridge.Func_void_PlaybackQueueEndedEvent {
     @inline(__always)
     get {
@@ -592,44 +689,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onRemoteBookmark: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteBookmark)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteBookmark = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteDislike: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteDislike)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteDislike = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
-        }
-      }()
-    }
-  }
-  
   public final var onRemoteJumpBackward: bridge.Func_void_RemoteJumpBackwardEvent {
     @inline(__always)
     get {
@@ -663,25 +722,6 @@ open class HybridAudioBrowserSpec_cxx {
         let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpForwardEvent(newValue)
         return { (__event: RemoteJumpForwardEvent) -> Void in
           __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
-  public final var onRemoteLike: bridge.Func_void {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void in
-        let __closureWrapper = Func_void(self.__implementation.onRemoteLike)
-        return bridge.create_Func_void(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteLike = { () -> () -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void(newValue)
-        return { () -> Void in
-          __wrappedFunction.call()
         }
       }()
     }
@@ -820,25 +860,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onRemoteSetRating: bridge.Func_void_RemoteSetRatingEvent {
-    @inline(__always)
-    get {
-      return { () -> bridge.Func_void_RemoteSetRatingEvent in
-        let __closureWrapper = Func_void_RemoteSetRatingEvent(self.__implementation.onRemoteSetRating)
-        return bridge.create_Func_void_RemoteSetRatingEvent(__closureWrapper.toUnsafe())
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.onRemoteSetRating = { () -> (RemoteSetRatingEvent) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_RemoteSetRatingEvent(newValue)
-        return { (__event: RemoteSetRatingEvent) -> Void in
-          __wrappedFunction.call(__event)
-        }
-      }()
-    }
-  }
-  
   public final var onRemoteSkip: bridge.Func_void_RemoteSkipEvent {
     @inline(__always)
     get {
@@ -934,70 +955,6 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var handleRemoteBookmark: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteBookmark {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteBookmark = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteDislike: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteDislike {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteDislike = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
   public final var handleRemoteJumpBackward: bridge.std__optional_std__function_void_const_RemoteJumpBackwardEvent_____event______ {
     @inline(__always)
     get {
@@ -1053,38 +1010,6 @@ open class HybridAudioBrowserSpec_cxx {
             let __wrappedFunction = bridge.wrap_Func_void_RemoteJumpForwardEvent(__unwrapped)
             return { (__event: RemoteJumpForwardEvent) -> Void in
               __wrappedFunction.call(__event)
-            }
-          }()
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var handleRemoteLike: bridge.std__optional_std__function_void____ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_std__function_void____ in
-        if let __unwrappedValue = self.__implementation.handleRemoteLike {
-          return bridge.create_std__optional_std__function_void____({ () -> bridge.Func_void in
-            let __closureWrapper = Func_void(__unwrappedValue)
-            return bridge.create_Func_void(__closureWrapper.toUnsafe())
-          }())
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.handleRemoteLike = { () -> (() -> Void)? in
-        if bridge.has_value_std__optional_std__function_void____(newValue) {
-          let __unwrapped = bridge.get_std__optional_std__function_void____(newValue)
-          return { () -> () -> Void in
-            let __wrappedFunction = bridge.wrap_Func_void(__unwrapped)
-            return { () -> Void in
-              __wrappedFunction.call()
             }
           }()
         } else {
@@ -1420,19 +1345,19 @@ open class HybridAudioBrowserSpec_cxx {
     }
   }
   
-  public final var onIosOutputChanged: bridge.Func_void_IosOutput {
+  public final var onOutputChanged: bridge.Func_void_Output {
     @inline(__always)
     get {
-      return { () -> bridge.Func_void_IosOutput in
-        let __closureWrapper = Func_void_IosOutput(self.__implementation.onIosOutputChanged)
-        return bridge.create_Func_void_IosOutput(__closureWrapper.toUnsafe())
+      return { () -> bridge.Func_void_Output in
+        let __closureWrapper = Func_void_Output(self.__implementation.onOutputChanged)
+        return bridge.create_Func_void_Output(__closureWrapper.toUnsafe())
       }()
     }
     @inline(__always)
     set {
-      self.__implementation.onIosOutputChanged = { () -> (IosOutput) -> Void in
-        let __wrappedFunction = bridge.wrap_Func_void_IosOutput(newValue)
-        return { (__output: IosOutput) -> Void in
+      self.__implementation.onOutputChanged = { () -> (Output) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_Output(newValue)
+        return { (__output: Output) -> Void in
           __wrappedFunction.call(__output)
         }
       }()
@@ -1610,6 +1535,17 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
+  public final func invalidateAllContent() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.invalidateAllContent()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func setFavorites(favorites: bridge.std__vector_std__string_) -> bridge.Result_void_ {
     do {
       try self.__implementation.setFavorites(favorites: favorites.map({ __item in String(__item) }))
@@ -1621,7 +1557,41 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setupPlayer(options: PartialSetupPlayerOptions) -> bridge.Result_std__shared_ptr_Promise_void___ {
+  public final func setGate(gate: bridge.std__optional_Gate_, hasResolver: Bool) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setGate(gate: gate.value, hasResolver: hasResolver)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func clearGate() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.clearGate()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func isCarConnected() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.isCarConnected()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setupPlayer(options: NativeSetupPlayerOptions) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
       let __result = try self.__implementation.setupPlayer(options: options)
       let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
@@ -1651,14 +1621,14 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func getOptions() -> bridge.Result_UpdateOptions_ {
+  public final func getOptions() -> bridge.Result_Options_ {
     do {
       let __result = try self.__implementation.getOptions()
       let __resultCpp = __result
-      return bridge.create_Result_UpdateOptions_(__resultCpp)
+      return bridge.create_Result_Options_(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_UpdateOptions_(__exceptionPtr)
+      return bridge.create_Result_Options_(__exceptionPtr)
     }
   }
   
@@ -1774,6 +1744,17 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
+  public final func seekToLiveEdge() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.seekToLiveEdge()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func setVolume(level: Double) -> bridge.Result_void_ {
     do {
       try self.__implementation.setVolume(level: level)
@@ -1828,6 +1809,17 @@ open class HybridAudioBrowserSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_Progress_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setPlaybackIntervalEnabled(enabled: Bool) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setPlaybackIntervalEnabled(enabled: enabled)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
   
@@ -1952,9 +1944,16 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setSleepTimer(seconds: Double) -> bridge.Result_void_ {
+  public final func setSleepTimer(seconds: Double, fadeDuration: bridge.std__optional_double_) -> bridge.Result_void_ {
     do {
-      try self.__implementation.setSleepTimer(seconds: seconds)
+      try self.__implementation.setSleepTimer(seconds: seconds, fadeDuration: { () -> Double? in
+        if bridge.has_value_std__optional_double_(fadeDuration) {
+          let __unwrapped = bridge.get_std__optional_double_(fadeDuration)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }())
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
@@ -2113,7 +2112,7 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func setQueue(tracks: bridge.std__vector_Track_, startIndex: bridge.std__optional_double_, startPositionMs: bridge.std__optional_double_) -> bridge.Result_void_ {
+  public final func setQueue(tracks: bridge.std__vector_Track_, startIndex: bridge.std__optional_double_, startPosition: bridge.std__optional_double_) -> bridge.Result_void_ {
     do {
       try self.__implementation.setQueue(tracks: tracks.map({ __item in __item }), startIndex: { () -> Double? in
         if bridge.has_value_std__optional_double_(startIndex) {
@@ -2122,9 +2121,9 @@ open class HybridAudioBrowserSpec_cxx {
         } else {
           return nil
         }
-      }(), startPositionMs: { () -> Double? in
-        if bridge.has_value_std__optional_double_(startPositionMs) {
-          let __unwrapped = bridge.get_std__optional_double_(startPositionMs)
+      }(), startPosition: { () -> Double? in
+        if bridge.has_value_std__optional_double_(startPosition) {
+          let __unwrapped = bridge.get_std__optional_double_(startPosition)
           return __unwrapped
         } else {
           return nil
@@ -2221,6 +2220,28 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
+  public final func flashNowPlaying(update: NowPlayingUpdate, durationMs: Double) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.flashNowPlaying(update: update, durationMs: durationMs)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func clearNowPlayingFlash() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.clearNowPlayingFlash()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func getNowPlaying() -> bridge.Result_std__optional_NowPlayingMetadata__ {
     do {
       let __result = try self.__implementation.getNowPlaying()
@@ -2274,31 +2295,43 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func getIosOutput() -> bridge.Result_std__optional_IosOutput__ {
+  public final func getOutput() -> bridge.Result_std__optional_Output__ {
     do {
-      let __result = try self.__implementation.getIosOutput()
-      let __resultCpp = { () -> bridge.std__optional_IosOutput_ in
+      let __result = try self.__implementation.getOutput()
+      let __resultCpp = { () -> bridge.std__optional_Output_ in
         if let __unwrappedValue = __result {
-          return bridge.create_std__optional_IosOutput_(__unwrappedValue)
+          return bridge.create_std__optional_Output_(__unwrappedValue)
         } else {
           return .init()
         }
       }()
-      return bridge.create_Result_std__optional_IosOutput__(__resultCpp)
+      return bridge.create_Result_std__optional_Output__(__resultCpp)
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
-      return bridge.create_Result_std__optional_IosOutput__(__exceptionPtr)
+      return bridge.create_Result_std__optional_Output__(__exceptionPtr)
     }
   }
   
   @inline(__always)
-  public final func openIosOutputPicker() -> bridge.Result_void_ {
+  public final func openOutputPicker() -> bridge.Result_void_ {
     do {
-      try self.__implementation.openIosOutputPicker()
+      try self.__implementation.openOutputPicker()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func supportsOutputSwitcher() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.supportsOutputSwitcher()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
   

@@ -8,184 +8,162 @@ extension MPRemoteCommandCenter: @retroactive @unchecked Sendable {}
 
 /// Controller for managing Now Playing info.
 ///
-/// On iOS 16+, uses `MPNowPlayingSession` with `automaticallyPublishNowPlayingInfo` to let the system
-/// automatically update elapsed time, playback rate, and duration. We still manually set metadata
-/// (title, artist, artwork) which the automatic publishing doesn't handle.
-///
-/// On iOS 15.x, falls back to manual `MPNowPlayingInfoCenter` updates for all properties.
+/// A `MPNowPlayingSession` bound to the linked AVPlayer publishes now-playing info
+/// automatically: the system derives elapsed time, playback rate, and duration from
+/// the player, so the per-second clock stays out of our code (it extrapolates the
+/// scrubber). We supply the two things automatic publishing does NOT provide:
+/// metadata (title/artist/artwork), attached to `AVPlayerItem.nowPlayingInfo` (the
+/// supported channel under automatic publishing); and the explicit `playbackState`
+/// that CarPlay / Control Center read for their play/pause button (see `setPlaybackState`).
 @MainActor
 class NowPlayingInfoController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "NowPlayingInfoController")
 
-  private(set) var infoCenter: NowPlayingInfoCenter
   private var _info: [String: Any] = [:]
 
-  /// Wrapper for MPNowPlayingSession (iOS 16+) to avoid @available on stored property
-  private var _nowPlayingSession: Any?
+  /// Last play/pause state pushed to the session's center, to skip redundant writes.
+  private var _playbackState: MPNowPlayingPlaybackState?
 
-  /// The linked AVPlayer (iOS 16+)
-  private weak var _linkedPlayer: AVPlayer?
+  /// The session bound to the linked AVPlayer; held so it stays alive while publishing.
+  private var nowPlayingSession: MPNowPlayingSession?
 
-  /// Whether automatic publishing is currently active (iOS 16+ with linked player)
-  private var isAutomaticPublishingEnabled: Bool = false
+  /// The linked AVPlayer — metadata is attached to its current item.
+  private weak var linkedPlayer: AVPlayer?
 
-  /// The current remote command center - either the session's (iOS 16+) or shared
+  /// The current remote command center - the session's while linked, else the shared one.
   private(set) var remoteCommandCenter: MPRemoteCommandCenter = .shared()
 
-  /// The current Now Playing info dictionary
-  var info: [String: Any] { _info }
+  required init() {}
 
-  required init() {
-    infoCenter = MPNowPlayingInfoCenter.default()
-  }
-
-  required init(infoCenter: NowPlayingInfoCenter) {
-    self.infoCenter = infoCenter
-  }
-
-  /// Callback invoked when the remote command center changes (iOS 16+ session created/destroyed)
+  /// Callback invoked when the remote command center changes (session created/destroyed).
   var onRemoteCommandCenterChanged: ((MPRemoteCommandCenter) -> Void)?
 
-  /// Links an AVPlayer to enable automatic Now Playing publishing on iOS 16+.
-  /// On older iOS versions, this is a no-op.
+  /// Binds an AVPlayer to a new auto-publishing `MPNowPlayingSession`.
   ///
-  /// When linked:
-  /// - System automatically updates elapsed time, playback rate, and duration
-  /// - Metadata (title, artist, artwork) is set via `AVPlayerItem.nowPlayingInfo`
-  /// - The session's `remoteCommandCenter` must be used for remote commands
-  ///
-  /// - Important: On iOS 16+, this creates an `MPNowPlayingSession` with its own `remoteCommandCenter`.
-  ///   The `onRemoteCommandCenterChanged` callback will be invoked with the new command center.
+  /// - Important: This creates an `MPNowPlayingSession` with its own `remoteCommandCenter`;
+  ///   the `onRemoteCommandCenterChanged` callback is invoked with the new command center.
   func linkPlayer(_ player: AVPlayer) {
-    if #available(iOS 16.0, *) {
-      logger.info("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
+    logger.notice("Linking AVPlayer to MPNowPlayingSession for automatic publishing")
 
-      _linkedPlayer = player
+    linkedPlayer = player
 
-      let session = MPNowPlayingSession(players: [player])
-      _nowPlayingSession = session
+    let session = MPNowPlayingSession(players: [player])
+    nowPlayingSession = session
+    _playbackState = nil // new center starts at .unknown; force the next write
+    remoteCommandCenter = session.remoteCommandCenter
 
-      remoteCommandCenter = session.remoteCommandCenter
+    session.automaticallyPublishesNowPlayingInfo = true
 
-      session.automaticallyPublishesNowPlayingInfo = true
+    session.becomeActiveIfPossible { success in
+      self.logger.notice("MPNowPlayingSession becomeActiveIfPossible: \(success)")
+    }
 
-      session.becomeActiveIfPossible { success in
-        self.logger.info("MPNowPlayingSession becomeActiveIfPossible: \(success)")
-      }
+    onRemoteCommandCenterChanged?(remoteCommandCenter)
+  }
 
-      isAutomaticPublishingEnabled = true
-      onRemoteCommandCenterChanged?(remoteCommandCenter)
-    } else {
-      logger.debug("linkPlayer: iOS 16+ required for automatic publishing, using manual updates")
+  /// Re-requests now-playing activation for the linked session.
+  ///
+  /// `linkPlayer` runs at player setup, before the audio session is active, and the
+  /// system can decline the election at that point. Without a later re-request the
+  /// session stays unfeatured until actual audio output elects the app through the
+  /// system's own path — which never happens when the first-ever load fails (a cold
+  /// start onto a dead stream showed no now-playing surface at all). Call whenever
+  /// the audio session (re)activates; no-op while already active.
+  func reactivateSessionIfNeeded() {
+    guard let session = nowPlayingSession, !session.isActive else { return }
+    logger.notice("MPNowPlayingSession inactive (canBecomeActive: \(session.canBecomeActive)) — re-requesting activation")
+    session.becomeActiveIfPossible { success in
+      self.logger.notice("MPNowPlayingSession re-activation: \(success)")
     }
   }
 
-  /// Unlinks the AVPlayer, disabling automatic publishing.
+  /// Unlinks the AVPlayer, tearing down the session and restoring the shared command center.
   func unlinkPlayer() {
-    if #available(iOS 16.0, *) {
-      logger.info("Unlinking AVPlayer from MPNowPlayingSession")
+    logger.info("Unlinking AVPlayer from MPNowPlayingSession")
 
-      _linkedPlayer = nil
+    linkedPlayer = nil
+    nowPlayingSession?.automaticallyPublishesNowPlayingInfo = false
+    nowPlayingSession = nil
+    _playbackState = nil
 
-      if let session = _nowPlayingSession as? MPNowPlayingSession {
-        session.automaticallyPublishesNowPlayingInfo = false
-      }
-      _nowPlayingSession = nil
-      isAutomaticPublishingEnabled = false
-
-      remoteCommandCenter = MPRemoteCommandCenter.shared()
-      onRemoteCommandCenterChanged?(remoteCommandCenter)
-    }
+    remoteCommandCenter = MPRemoteCommandCenter.shared()
+    onRemoteCommandCenterChanged?(remoteCommandCenter)
   }
 
-  /// Keys that are automatically published by MPNowPlayingSession on iOS 16+.
-  /// When automatic publishing is enabled, we skip setting these manually.
+  /// Keys the session derives from the player itself — we never set these manually,
+  /// the system owns elapsed/duration/rate.
   private static let autoPublishedKeys: Set<String> = [
     MPNowPlayingInfoPropertyElapsedPlaybackTime,
     MPMediaItemPropertyPlaybackDuration,
     MPNowPlayingInfoPropertyPlaybackRate,
   ]
 
-  /// Returns true if the key is auto-published and automatic publishing is enabled
-  private func shouldSkipKey(_ key: String) -> Bool {
-    isAutomaticPublishingEnabled && Self.autoPublishedKeys.contains(key)
+  /// Whether a new value matches what's already in `_info` — used to avoid
+  /// re-publishing unchanged metadata. Compares the comparable scalar types we
+  /// store (title/artist/album strings, isLiveStream); non-comparable values
+  /// (e.g. artwork) are treated as changed.
+  private func valueUnchanged(_ key: String, _ newValue: Any?) -> Bool {
+    switch (_info[key], newValue) {
+    case (nil, nil): true
+    case let (a as String, b as String): a == b
+    case let (a as Bool, b as Bool): a == b
+    case let (a as NSNumber, b as NSNumber): a == b
+    default: false
+    }
   }
 
-  /// Sets key-values and immediately updates the Now Playing Info Center.
-  /// When automatic publishing is enabled (iOS 16+), playback-related keys are skipped.
+  /// Sets key-values and immediately updates Now Playing.
+  /// Playback-dynamics keys (elapsed/duration/rate) are owned by the session and skipped.
   func set(keyValues: [NowPlayingInfoKeyValue]) {
-    for kv in keyValues {
-      if !shouldSkipKey(kv.key) {
-        _info[kv.key] = kv.value
-      }
+    var changed = false
+    for kv in keyValues where !Self.autoPublishedKeys.contains(kv.key) && !valueUnchanged(kv.key, kv.value) {
+      _info[kv.key] = kv.value
+      changed = true
     }
-    performUpdate()
+    if changed { performUpdate() }
   }
 
-  /// Sets key-values without updating the Now Playing Info Center.
-  /// Useful for batching multiple updates - call update() when ready to commit.
-  /// When automatic publishing is enabled (iOS 16+), playback-related keys are skipped.
-  func setWithoutUpdate(keyValues: [NowPlayingInfoKeyValue]) {
-    for kv in keyValues {
-      if !shouldSkipKey(kv.key) {
-        _info[kv.key] = kv.value
-      }
-    }
-  }
-
-  /// Sets a single key-value and immediately updates the Now Playing Info Center.
-  /// When automatic publishing is enabled (iOS 16+), playback-related keys are skipped.
+  /// Sets a single key-value and immediately updates Now Playing.
   func set(keyValue: NowPlayingInfoKeyValue) {
-    if !shouldSkipKey(keyValue.key) {
-      _info[keyValue.key] = keyValue.value
-      performUpdate()
-    }
-  }
-
-  /// Explicitly updates the Now Playing Info Center with the current info.
-  /// Use after calling setWithoutUpdate() to commit batched changes.
-  func update() {
+    guard !Self.autoPublishedKeys.contains(keyValue.key), !valueUnchanged(keyValue.key, keyValue.value) else { return }
+    _info[keyValue.key] = keyValue.value
     performUpdate()
   }
 
-  /// Pushes the current info to the appropriate Now Playing target.
-  ///
-  /// On iOS 16+ with automatic publishing:
-  /// - Sets metadata on `AVPlayerItem.nowPlayingInfo`
-  /// - Skips elapsed time and duration (system handles these)
-  ///
-  /// On iOS 15.x or without automatic publishing:
-  /// - Sets all info on `MPNowPlayingInfoCenter.default().nowPlayingInfo`
+  /// Attaches metadata to the current item — the supported channel under automatic publishing.
+  /// While no item exists (the media URL resolve is still in flight), publishes to the
+  /// session's center directly so the Now Playing surface isn't blank between load
+  /// intent and item creation; the item channel takes over via `prepareItem`.
   private func performUpdate() {
-    if #available(iOS 16.0, *), isAutomaticPublishingEnabled {
-      _linkedPlayer?.currentItem?.nowPlayingInfo = _info
-    } else {
-      infoCenter.nowPlayingInfo = _info
-    }
-  }
-
-  /// Prepares an AVPlayerItem with stored metadata before it becomes current.
-  /// Call this before `replaceCurrentItem(with:)` so the item has metadata from the start.
-  func prepareItem(_ item: AVPlayerItem) {
-    if #available(iOS 16.0, *), isAutomaticPublishingEnabled {
+    if let item = linkedPlayer?.currentItem {
       item.nowPlayingInfo = _info
+    } else {
+      nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = _info
     }
   }
 
-  /// Clears all Now Playing info
+  /// Prepares an AVPlayerItem with stored metadata before it becomes current, so the
+  /// session has metadata from the moment the item starts playing.
+  /// Call this before `replaceCurrentItem(with:)`.
+  func prepareItem(_ item: AVPlayerItem) {
+    item.nowPlayingInfo = _info
+  }
+
+  /// Clears all Now Playing info.
   func clear() {
     _info = [:]
-
-    // With automatic publishing, the session handles clearing when the player stops
-    // Without automatic publishing, we need to clear MPNowPlayingInfoCenter manually
-    if !isAutomaticPublishingEnabled {
-      infoCenter.nowPlayingInfo = nil
-    }
+    linkedPlayer?.currentItem?.nowPlayingInfo = nil
+    nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = nil
   }
 
-  /// Sets the playback state (required for CarPlay Now Playing to show correct play/pause state)
-  func setPlaybackState(_ state: MPNowPlayingPlaybackState) {
-    logger.debug("setPlaybackState: \(state.rawValue)")
-    infoCenter.playbackState = state
+  /// Sets the play/pause state CarPlay / Control Center show for their transport
+  /// button. Automatic publishing fills the info dict (metadata/elapsed/rate) but
+  /// not the explicit `playbackState`, so the coordinator pushes the user's
+  /// play/pause intent here on intent/state changes.
+  func setPlaybackState(playing: Bool) {
+    let state: MPNowPlayingPlaybackState = playing ? .playing : .paused
+    guard state != _playbackState else { return }
+    _playbackState = state
+    nowPlayingSession?.nowPlayingInfoCenter.playbackState = state
   }
 }

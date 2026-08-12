@@ -14,12 +14,14 @@ data class PlaybackMetadata(
 ) {
   companion object {
     /**
-     * Creates PlaybackMetadata from raw Metadata entries.
-     * Handles ICY streams specially, uses Media3's unified approach for everything else.
+     * Creates PlaybackMetadata from raw Metadata entries. Handles ICY streams specially, uses
+     * Media3's unified approach for everything else.
      */
     fun from(metadata: Metadata): PlaybackMetadata? {
       // Try ICY first (streaming-specific)
-      fromIcy(metadata)?.let { return it }
+      fromIcy(metadata)?.let {
+        return it
+      }
 
       // Use Media3's unified approach for ID3, Vorbis, QuickTime, etc.
       val builder = MediaMetadata.Builder()
@@ -69,12 +71,6 @@ data class PlaybackMetadata(
   }
 
   fun toNitro(): TimedMetadata {
-    return TimedMetadata(
-      title = title,
-      artist = artist,
-      album = album,
-      date = date,
-      genre = genre,
-    )
+    return TimedMetadata(title = title, artist = artist, album = album, date = date, genre = genre)
   }
 }

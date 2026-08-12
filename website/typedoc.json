@@ -6,7 +6,17 @@
     "../src/types/*.ts"
   ],
   "entryPointStrategy": "expand",
-  "exclude": ["**/features/index.ts"],
+  "exclude": [
+    "**/features/index.ts",
+    "**/features/browser-config.ts",
+    "**/*.test.ts",
+    "**/browser-native.ts"
+  ],
+  "intentionallyNotExported": [
+    "LazyNativeEmitter",
+    "NativeUpdatedValue",
+    "NativeRequestConfigResolver"
+  ],
   "out": "./api",
   "plugin": [
     "typedoc-plugin-markdown",
@@ -21,6 +31,7 @@
   "useCodeBlocks": true,
   "entryFileName": "index",
   "excludeNotDocumented": false,
+  "excludeInternal": true,
   "sort": ["source-order"],
   "excludeGroups": true,
   "docsRoot": ".",

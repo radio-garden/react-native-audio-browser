@@ -7,14 +7,29 @@ import os.log
 /// This is a convenience wrapper around NativeBrowserConfiguration that
 /// provides easier access to configuration properties.
 struct BrowserConfig {
-  /// Base HTTP request configuration
+  /// Base HTTP request configuration (applied to every request kind)
   let request: TransformableRequestConfig?
+
+  /// Browse-kind request configuration (applied to every browse request,
+  /// layered request → browse → route)
+  let browse: TransformableRequestConfig?
+
+  /// Resolver for the shared request layer (resolved once per content generation).
+  let requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?
+
+  /// Resolver for the browse layer (resolved once per content generation).
+  let browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?
 
   /// Media URL transformation configuration
   let media: MediaRequestConfig?
 
   /// Artwork URL transformation configuration
   let artwork: ArtworkRequestConfig?
+
+  /// Now-playing-only artwork configuration (lock screen / CarPlay / Android Auto
+  /// now-playing). A distinct kind from `artwork`; the now-playing path falls back to
+  /// `artwork` when this is nil.
+  let nowPlayingArtwork: ArtworkRequestConfig?
 
   /// Routes as array with flattened entries
   /// Includes __tabs__, __search__, and __default__ special routes
@@ -28,11 +43,14 @@ struct BrowserConfig {
 
   // MARK: - CarPlay Options
 
-  /// Enable the "Up Next" button on CarPlay Now Playing screen
-  let carPlayUpNextButton: Bool
+  /// App-localized title for CarPlay loading screens (shown as the centered
+  /// empty state while content resolves; nil leaves them blank)
+  let carPlayLoadingTitle: String?
 
-  /// Custom buttons for CarPlay Now Playing screen (e.g., .repeat, .favorite)
-  let carPlayNowPlayingButtons: [CarPlayNowPlayingButton]
+  /// Resolves a browse path for the CarPlay Now Playing album line when the
+  /// active track has no albumUrl. Invoked on track changes (not at tap) so
+  /// the album line only becomes tappable when a destination exists.
+  let resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)?
 
   /// Custom handler for track load events (overrides default load behavior)
   let handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
@@ -43,39 +61,51 @@ struct BrowserConfig {
 
   init(
     request: TransformableRequestConfig? = nil,
+    browse: TransformableRequestConfig? = nil,
+    requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)? = nil,
+    browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)? = nil,
     media: MediaRequestConfig? = nil,
     artwork: ArtworkRequestConfig? = nil,
+    nowPlayingArtwork: ArtworkRequestConfig? = nil,
     routes: [NativeRouteEntry]? = nil,
     singleTrack: Bool = false,
     handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)? = nil,
     androidControllerOfflineError: Bool = true,
-    carPlayUpNextButton: Bool = true,
-    carPlayNowPlayingButtons: [CarPlayNowPlayingButton] = [],
+    carPlayLoadingTitle: String? = nil,
+    resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)? = nil,
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
+    self.browse = browse
+    self.requestResolver = requestResolver
+    self.browseResolver = browseResolver
     self.media = media
     self.artwork = artwork
+    self.nowPlayingArtwork = nowPlayingArtwork
     self.routes = routes
     self.singleTrack = singleTrack
     self.handleTrackLoad = handleTrackLoad
     self.androidControllerOfflineError = androidControllerOfflineError
-    self.carPlayUpNextButton = carPlayUpNextButton
-    self.carPlayNowPlayingButtons = carPlayNowPlayingButtons
+    self.carPlayLoadingTitle = carPlayLoadingTitle
+    self.resolveAlbumUrl = resolveAlbumUrl
     self.formatNavigationError = formatNavigationError
   }
 
   /// Create from NativeBrowserConfiguration
   init(from config: NativeBrowserConfiguration) {
     request = config.request
+    browse = config.browse
+    requestResolver = config.requestResolver
+    browseResolver = config.browseResolver
     media = config.media
     artwork = config.artwork
+    nowPlayingArtwork = config.nowPlayingArtwork
     routes = config.routes
     singleTrack = config.singleTrack ?? false
     handleTrackLoad = config.handleTrackLoad
     androidControllerOfflineError = config.androidControllerOfflineError ?? true
-    carPlayUpNextButton = config.carPlayUpNextButton ?? true
-    carPlayNowPlayingButtons = config.carPlayNowPlayingButtons ?? []
+    carPlayLoadingTitle = config.carPlayLoadingTitle
+    resolveAlbumUrl = config.resolveAlbumUrl
     formatNavigationError = config.formatNavigationError
   }
 

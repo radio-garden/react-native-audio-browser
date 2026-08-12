@@ -36,9 +36,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> title = this->getFieldValue(fieldTitle);
       static const auto fieldArtist = clazz->getField<jni::JString>("artist");
       jni::local_ref<jni::JString> artist = this->getFieldValue(fieldArtist);
+      static const auto fieldAlbum = clazz->getField<jni::JString>("album");
+      jni::local_ref<jni::JString> album = this->getFieldValue(fieldAlbum);
       return NowPlayingUpdate(
         title != nullptr ? std::make_optional(title->toStdString()) : std::nullopt,
-        artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt
+        artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
+        album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt
       );
     }
 
@@ -48,13 +51,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNowPlayingUpdate::javaobject> fromCpp(const NowPlayingUpdate& value) {
-      using JSignature = JNowPlayingUpdate(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JNowPlayingUpdate(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.title.has_value() ? jni::make_jstring(value.title.value()) : nullptr,
-        value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr
+        value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
+        value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr
       );
     }
   };

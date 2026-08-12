@@ -1,8 +1,6 @@
-/** @internal */
 type Callback<T> = (arg: T) => void
 
 /**
- * @internal
  * A lightweight event emitter that lazily bridges native callbacks to multiple JavaScript listeners.
  *
  * The native callback is only assigned when the first listener is added, making the emitter
@@ -14,9 +12,11 @@ type Callback<T> = (arg: T) => void
  *
  * @example
  * ```typescript
- * export const onRemotePlay = LazyEmitter.emitterize<void>(
+ * export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
  *   (cb) => (nativeBrowser.onRemotePlay = cb)
  * )
+ *
+ * const unsubscribe = onRemotePlay.addListener(() => console.log('play'))
  * ```
  */
 export class LazyNativeEmitter<T> {
@@ -45,14 +45,15 @@ export class LazyNativeEmitter<T> {
   }
 
   /**
-   * Creates a lazy emitter subscription function for a native callback.
+   * Creates a lazy emitter for a native callback.
+   *
    * @param setter - Function that sets the native callback property
-   * @returns A subscription function that returns an unsubscribe function
+   * @returns The emitter instance — subscribe with `addListener`, which returns
+   * an unsubscribe function
    */
   static emitterize<T>(
     setter: (callback: (data: T) => void) => void
-  ): (callback: Callback<T>) => () => void {
-    const emitter = new LazyNativeEmitter(setter)
-    return (callback: Callback<T>) => emitter.addListener(callback)
+  ): LazyNativeEmitter<T> {
+    return new LazyNativeEmitter(setter)
   }
 }

@@ -46,10 +46,23 @@ class RemoteCommandController {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "RemoteCommandController")
   private var center: MPRemoteCommandCenter
 
-  weak var callbacks: TrackPlayerCallbacks?
+  weak var callbacks: RemoteCommandCallbacks?
 
   var commandTargetPointers: [String: Any] = [:]
   private var enabledCommands: [RemoteCommand] = []
+
+  /// Whether there's a next/previous track to skip to. Stored so it survives
+  /// command (re)enable and iOS-16 command-center switches; the next/previous
+  /// commands are enabled in this state rather than unconditionally.
+  private var canNext = true
+  private var canPrevious = true
+
+  /// Shuffle/repeat display state, stored so it survives a command-center switch
+  /// (iOS-16 MPNowPlayingSession re-creation). A new center defaults these to
+  /// off; without re-applying, the CarPlay/lock-screen shuffle & repeat buttons
+  /// flash off on every switch.
+  private var shuffleEnabled = false
+  private var repeatMode: RepeatMode = .off
 
   /**
    Create a new RemoteCommandController.
@@ -59,7 +72,7 @@ class RemoteCommandController {
    */
   init(
     remoteCommandCenter: MPRemoteCommandCenter = MPRemoteCommandCenter.shared(),
-    callbacks: TrackPlayerCallbacks? = nil,
+    callbacks: RemoteCommandCallbacks? = nil,
   ) {
     center = remoteCommandCenter
     self.callbacks = callbacks
@@ -90,17 +103,25 @@ class RemoteCommandController {
     // Re-enable commands on the new center
     enable(commands: commandsToReEnable)
 
+    // Restore shuffle/repeat display state — the new center defaults them to off,
+    // so without this the shuffle & repeat buttons flash off on every switch.
+    center.changeShuffleModeCommand.currentShuffleType = shuffleEnabled.mpShuffleType
+    center.changeRepeatModeCommand.currentRepeatType = repeatMode.mpRepeatType
+
     logger.info("Switched command center, re-enabled \(commandsToReEnable.count) commands")
   }
 
   func enable(commands: [RemoteCommand]) {
-    let commandsToDisable = enabledCommands.filter { command in
-      !commands.contains(command)
-    }
+    let commandsToDisable = RemoteCommand.commandsToDisable(
+      enabled: enabledCommands, replacedBy: commands,
+    )
 
     enabledCommands = commands
-    commands.forEach { self.enable(command: $0) }
+    // Disable first. The key diff already makes the two sets disjoint, so this
+    // is belt-and-braces: it keeps a disable from tearing down a command the
+    // enable pass just configured should the two ever overlap again.
     disable(commands: commandsToDisable)
+    commands.forEach { self.enable(command: $0) }
   }
 
   func disable(commands: [RemoteCommand]) {
@@ -156,12 +177,14 @@ class RemoteCommandController {
         key: command.key,
         handler: handleNextTrackCommand,
       )
+      center.nextTrackCommand.isEnabled = canNext
     case .previous:
       enableRemoteCommand(
         center.previousTrackCommand,
         key: command.key,
         handler: handlePreviousTrackCommand,
       )
+      center.previousTrackCommand.isEnabled = canPrevious
     case .changePlaybackPosition:
       enableRemoteCommand(
         center.changePlaybackPositionCommand,
@@ -182,11 +205,6 @@ class RemoteCommandController {
         key: command.key,
         handler: handleSkipBackwardCommand,
       )
-    case let .like(isActive, localizedTitle, localizedShortTitle):
-      center.likeCommand.isActive = isActive
-      center.likeCommand.localizedTitle = localizedTitle
-      center.likeCommand.localizedShortTitle = localizedShortTitle
-      enableRemoteCommand(center.likeCommand, key: command.key, handler: handleLikeCommand)
     case .changeRepeatMode:
       enableRemoteCommand(
         center.changeRepeatModeCommand,
@@ -229,8 +247,6 @@ class RemoteCommandController {
       disableRemoteCommand(center.skipForwardCommand, key: command.key)
     case .skipBackward:
       disableRemoteCommand(center.skipBackwardCommand, key: command.key)
-    case .like:
-      disableRemoteCommand(center.likeCommand, key: command.key)
     case .changeRepeatMode:
       disableRemoteCommand(center.changeRepeatModeCommand, key: command.key)
     case .changeShuffleMode:
@@ -244,12 +260,23 @@ class RemoteCommandController {
 
   /// Updates the repeat mode state shown on CarPlay and lock screen
   func updateRepeatMode(_ mode: RepeatMode) {
+    repeatMode = mode
     center.changeRepeatModeCommand.currentRepeatType = mode.mpRepeatType
   }
 
   /// Updates the shuffle mode state shown on CarPlay and lock screen
   func updateShuffleMode(_ enabled: Bool) {
+    shuffleEnabled = enabled
     center.changeShuffleModeCommand.currentShuffleType = enabled.mpShuffleType
+  }
+
+  /// Greys out next/previous (lock screen / Control Center / CarPlay) when the
+  /// queue has nowhere to skip. Applied live when those commands are configured.
+  func setSkipAvailability(canNext: Bool, canPrevious: Bool) {
+    self.canNext = canNext
+    self.canPrevious = canPrevious
+    if enabledCommands.contains(.next) { center.nextTrackCommand.isEnabled = canNext }
+    if enabledCommands.contains(.previous) { center.previousTrackCommand.isEnabled = canPrevious }
   }
 
   // MARK: - Handlers
@@ -266,7 +293,6 @@ class RemoteCommandController {
   lazy var handleNextTrackCommand: RemoteCommandHandler = handleNextTrackCommandDefault
   lazy var handlePreviousTrackCommand: RemoteCommandHandler =
     handlePreviousTrackCommandDefault
-  lazy var handleLikeCommand: RemoteCommandHandler = handleLikeCommandDefault
   lazy var handleChangeRepeatModeCommand: RemoteCommandHandler =
     handleChangeRepeatModeCommandDefault
   lazy var handleChangeShuffleModeCommand: RemoteCommandHandler =
@@ -349,13 +375,6 @@ class RemoteCommandController {
     -> MPRemoteCommandHandlerStatus
   {
     callbacks?.remotePrevious()
-    return MPRemoteCommandHandlerStatus.success
-  }
-
-  private func handleLikeCommandDefault(event _: MPRemoteCommandEvent)
-    -> MPRemoteCommandHandlerStatus
-  {
-    callbacks?.remoteLike()
     return MPRemoteCommandHandlerStatus.success
   }
 

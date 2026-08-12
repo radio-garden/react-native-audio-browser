@@ -35,7 +35,7 @@ export function setPlayWhenReady(playWhenReady: boolean): void {
 /**
  * Subscribes to play when ready changes.
  * @param callback - Called when playWhenReady changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onPlayWhenReadyChanged =
   NativeUpdatedValue.emitterize<PlaybackPlayWhenReadyChangedEvent>(

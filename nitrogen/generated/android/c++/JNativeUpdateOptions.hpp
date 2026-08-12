@@ -11,19 +11,26 @@
 #include "NativeUpdateOptions.hpp"
 
 #include "AppKilledPlaybackBehavior.hpp"
+#include "CarPlayNowPlayingButton.hpp"
+#include "FavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
+#include "JCarPlayNowPlayingButton.hpp"
+#include "JFavoriteConfig.hpp"
+#include "JFavoritesMatchMode.hpp"
 #include "JNitroAndroidUpdateOptions.hpp"
-#include "JNotificationButton.hpp"
-#include "JNotificationButtonLayout.hpp"
+#include "JNitroIOSUpdateOptions.hpp"
 #include "JPlayerCapabilities.hpp"
-#include "JRatingType.hpp"
+#include "JRemoteButton.hpp"
+#include "JRemoteButtonLayout.hpp"
+#include "JVariant_Boolean_FavoriteConfig.hpp"
 #include "JVariant_NullType_Double.hpp"
-#include "JVariant_NullType_NotificationButtonLayout.hpp"
+#include "JVariant_NullType_RemoteButtonLayout.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
-#include "NotificationButton.hpp"
-#include "NotificationButtonLayout.hpp"
+#include "NitroIOSUpdateOptions.hpp"
 #include "PlayerCapabilities.hpp"
-#include "RatingType.hpp"
+#include "RemoteButton.hpp"
+#include "RemoteButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>
@@ -51,6 +58,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldAndroid = clazz->getField<JNitroAndroidUpdateOptions>("android");
       jni::local_ref<JNitroAndroidUpdateOptions> android = this->getFieldValue(fieldAndroid);
+      static const auto fieldIos = clazz->getField<JNitroIOSUpdateOptions>("ios");
+      jni::local_ref<JNitroIOSUpdateOptions> ios = this->getFieldValue(fieldIos);
       static const auto fieldForwardJumpInterval = clazz->getField<jni::JDouble>("forwardJumpInterval");
       jni::local_ref<jni::JDouble> forwardJumpInterval = this->getFieldValue(fieldForwardJumpInterval);
       static const auto fieldBackwardJumpInterval = clazz->getField<jni::JDouble>("backwardJumpInterval");
@@ -59,20 +68,13 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JVariant_NullType_Double> progressUpdateEventInterval = this->getFieldValue(fieldProgressUpdateEventInterval);
       static const auto fieldCapabilities = clazz->getField<JPlayerCapabilities>("capabilities");
       jni::local_ref<JPlayerCapabilities> capabilities = this->getFieldValue(fieldCapabilities);
-      static const auto fieldIosPlaybackRates = clazz->getField<jni::JArrayDouble>("iosPlaybackRates");
-      jni::local_ref<jni::JArrayDouble> iosPlaybackRates = this->getFieldValue(fieldIosPlaybackRates);
       return NativeUpdateOptions(
         android != nullptr ? std::make_optional(android->toCpp()) : std::nullopt,
+        ios != nullptr ? std::make_optional(ios->toCpp()) : std::nullopt,
         forwardJumpInterval != nullptr ? std::make_optional(forwardJumpInterval->value()) : std::nullopt,
         backwardJumpInterval != nullptr ? std::make_optional(backwardJumpInterval->value()) : std::nullopt,
         progressUpdateEventInterval != nullptr ? std::make_optional(progressUpdateEventInterval->toCpp()) : std::nullopt,
-        capabilities != nullptr ? std::make_optional(capabilities->toCpp()) : std::nullopt,
-        iosPlaybackRates != nullptr ? std::make_optional([&]() {
-          size_t __size = iosPlaybackRates->size();
-          std::vector<double> __vector(__size);
-          iosPlaybackRates->getRegion(0, __size, __vector.data());
-          return __vector;
-        }()) : std::nullopt
+        capabilities != nullptr ? std::make_optional(capabilities->toCpp()) : std::nullopt
       );
     }
 
@@ -82,22 +84,17 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativeUpdateOptions::javaobject> fromCpp(const NativeUpdateOptions& value) {
-      using JSignature = JNativeUpdateOptions(jni::alias_ref<JNitroAndroidUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<JPlayerCapabilities>, jni::alias_ref<jni::JArrayDouble>);
+      using JSignature = JNativeUpdateOptions(jni::alias_ref<JNitroAndroidUpdateOptions>, jni::alias_ref<JNitroIOSUpdateOptions>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JVariant_NullType_Double>, jni::alias_ref<JPlayerCapabilities>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.android.has_value() ? JNitroAndroidUpdateOptions::fromCpp(value.android.value()) : nullptr,
+        value.ios.has_value() ? JNitroIOSUpdateOptions::fromCpp(value.ios.value()) : nullptr,
         value.forwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.forwardJumpInterval.value()) : nullptr,
         value.backwardJumpInterval.has_value() ? jni::JDouble::valueOf(value.backwardJumpInterval.value()) : nullptr,
         value.progressUpdateEventInterval.has_value() ? JVariant_NullType_Double::fromCpp(value.progressUpdateEventInterval.value()) : nullptr,
-        value.capabilities.has_value() ? JPlayerCapabilities::fromCpp(value.capabilities.value()) : nullptr,
-        value.iosPlaybackRates.has_value() ? [&]() {
-          size_t __size = value.iosPlaybackRates.value().size();
-          jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
-          __array->setRegion(0, __size, value.iosPlaybackRates.value().data());
-          return __array;
-        }() : nullptr
+        value.capabilities.has_value() ? JPlayerCapabilities::fromCpp(value.capabilities.value()) : nullptr
       );
     }
   };

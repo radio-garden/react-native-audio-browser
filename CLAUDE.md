@@ -1,5 +1,7 @@
 # Claude Development Notes
 
+Domain vocabulary lives in [`CONTEXT.md`](CONTEXT.md) — the glossary for terms used across the codebase. Follow it when naming things. Architectural decisions, when recorded, live as ADRs in [`docs/adr/`](docs/adr/).
+
 ## Building
 
 ### Codegen (Nitrogen)

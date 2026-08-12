@@ -17,7 +17,7 @@ export function getOnline(): boolean {
 /**
  * Subscribes to network connectivity changes.
  * @param callback - Called when network state changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onOnlineChanged = NativeUpdatedValue.emitterize<boolean>(
   (cb) => (nativeBrowser.onOnlineChanged = cb)

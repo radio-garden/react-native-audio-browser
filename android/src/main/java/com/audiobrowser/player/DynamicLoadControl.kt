@@ -3,6 +3,7 @@ package com.audiobrowser.player
 import androidx.media3.common.C
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.LoadControl
+import androidx.media3.exoplayer.analytics.PlayerId
 import androidx.media3.exoplayer.source.TrackGroupArray
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.upstream.Allocator
@@ -46,6 +47,15 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
   // Track startup timing
   @Volatile private var prepareStartTimeMs: Long = 0
   @Volatile private var playbackStarted: Boolean = false
+
+  // ExoPlayer's own rebuffering signal (buffer depletion mid-playback, as opposed to an initial
+  // connect, a seek, or a track transition). Mirrored from LoadControl.Parameters so consumers
+  // (e.g. the now-playing "Buffering…" subtitle) can tell a rebuffer apart from an initial connect.
+  @Volatile private var rebuffering: Boolean = false
+
+  /** Whether playback is currently rebuffering due to buffer depletion (not initial start/seek). */
+  val isRebuffering: Boolean
+    get() = rebuffering
 
   // Mutable buffer thresholds - can be updated at runtime
   @Volatile private var minBufferUs: Long = initialConfig.minBufferMs * 1000L
@@ -97,17 +107,23 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     updateBufferConfig(BufferConfig())
   }
 
-  override fun getAllocator(): Allocator = allocator
+  // media3 1.10 added a PlayerId parameter for multi-player allocator sharing. This LoadControl is
+  // only ever attached to a single ExoPlayer, so we return the same allocator regardless of player.
+  override fun getAllocator(playerId: PlayerId): Allocator = allocator
 
   override fun getBackBufferDurationUs(): Long = backBufferUs
 
   override fun retainBackBufferFromKeyframe(): Boolean = false
 
   override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+    // Refreshed on every load-control poll (all playback states) so the flag clears once a
+    // rebuffer recovers, not just while buffering.
+    rebuffering = parameters.rebuffering
     return parameters.bufferedDurationUs < maxBufferUs
   }
 
   override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
+    rebuffering = parameters.rebuffering
     val bufferedDurationUs = parameters.bufferedDurationUs
     val targetUs =
       adjustForPlaybackSpeed(
@@ -141,6 +157,7 @@ class DynamicLoadControl(initialConfig: BufferConfig = BufferConfig()) : LoadCon
     allocator.reset()
     prepareStartTimeMs = System.currentTimeMillis()
     playbackStarted = false
+    rebuffering = false
   }
 
   override fun onTracksSelected(

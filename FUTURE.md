@@ -550,14 +550,14 @@ const track = {
 - API becomes "input can be X or Y, output is always Y"
 - May not be worth it if global artwork config covers most cases
 
-## Custom Notification Buttons
+## Custom Remote Buttons
 
-Currently `ButtonCapability` only supports predefined actions: `skip-to-previous`, `skip-to-next`, `jump-backward`, `jump-forward`, `favorite`. Users may want custom actions (e.g., "sleep timer", "playback speed", "share").
+Currently `RemoteButton` only supports predefined actions: `skip-to-previous`, `skip-to-next`, `jump-backward`, `jump-forward`, `favorite`. Users may want custom actions (e.g., "sleep timer", "playback speed", "share").
 
 **Potential API:**
 
 ```typescript
-notificationButtons: {
+remoteButtonLayout: {
   back: 'skip-to-previous',
   forward: 'skip-to-next',
   overflow: [
@@ -657,16 +657,6 @@ Tap artist on Now Playing screen to search/browse related content.
 - Our approach: search for artist and show results list (more user control)
 - Requires search to be configured in browser config
 
-## CarPlay Image Row Items
-
-Support `CPListImageRowItem` / `CPListImageRowItemCardElement` for list items with multiple images.
-
-**Use cases:**
-
-- Album row showing multiple cover arts
-- Playlist preview with track thumbnails
-- "Recently played" with visual history
-
 ## CarPlay Grid Template
 
 Support `CPGridButton` / `CPGridTemplate` for grid-based navigation with image buttons.
@@ -758,5 +748,13 @@ Surface explicit error codes for business logic failures. Currently using Media3
 - `ERROR_CODE_NOT_AVAILABLE_IN_REGION` - Content geo-restricted
 
 **Implementation:** Add `setPlaybackError(code, message)` API for JS to report these conditions
+
+**Note:** the *read* direction already exists. `PlaybackErrorClassifier` maps
+`ERROR_CODE_AUTHENTICATION_EXPIRED`, `ERROR_CODE_PREMIUM_ACCOUNT_REQUIRED` and
+`ERROR_CODE_NOT_AVAILABLE_IN_REGION` to `PlaybackErrorKind.REJECTED`, and
+`ERROR_CODE_NOT_SUPPORTED` to `UNPLAYABLE`, so errors set through this API would
+surface to JS with a sensible `kind` without further work. What is missing is
+only the JS→session direction. If these need to be told apart from an ordinary
+403, that argues for new `kind` values rather than making apps read `code`.
 
 **Reference:** https://developer.android.com/reference/androidx/media3/common/PlaybackException

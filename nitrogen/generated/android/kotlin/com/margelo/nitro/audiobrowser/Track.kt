@@ -19,16 +19,22 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class Track(
   @DoNotStrip
   @Keep
+  val id: String?,
+  @DoNotStrip
+  @Keep
   val url: String?,
   @DoNotStrip
   @Keep
   val src: String?,
   @DoNotStrip
   @Keep
-  val artwork: String?,
+  val artwork: Variant_String_ArtworkVariants?,
   @DoNotStrip
   @Keep
   val artworkSource: ImageSource?,
+  @DoNotStrip
+  @Keep
+  val request: TrackRequest?,
   @DoNotStrip
   @Keep
   val artworkCarPlayTinted: Boolean?,
@@ -41,6 +47,9 @@ data class Track(
   @DoNotStrip
   @Keep
   val artist: String?,
+  @DoNotStrip
+  @Keep
+  val albumUrl: String?,
   @DoNotStrip
   @Keep
   val album: String?,
@@ -82,8 +91,8 @@ data class Track(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): Track {
-      return Track(url, src, artwork, artworkSource, artworkCarPlayTinted, title, subtitle, artist, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
+    private fun fromCpp(id: String?, url: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumUrl: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): Track {
+      return Track(id, url, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumUrl, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
     }
   }
 }

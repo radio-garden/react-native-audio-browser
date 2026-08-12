@@ -1,14 +1,13 @@
 package com.audiobrowser.model
 
-import com.margelo.nitro.audiobrowser.AndroidUpdateOptions
+import com.margelo.nitro.audiobrowser.AndroidOptions
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
-import com.margelo.nitro.audiobrowser.NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.Options
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
-import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType
-import com.margelo.nitro.audiobrowser.UpdateOptions
+import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.Variant_NullType_Double
-import com.margelo.nitro.audiobrowser.Variant_NullType_NotificationButtonLayout
+import com.margelo.nitro.audiobrowser.Variant_NullType_RemoteButtonLayout
 
 /**
  * Update options for the AudioBrowser that can be changed at runtime. These options control player
@@ -22,23 +21,29 @@ data class PlayerUpdateOptions(
 
   // Player capabilities - most enabled by default, only false values disable
   // Exceptions: bookmark, jumpForward, jumpBackward default to false
-  var capabilities: PlayerCapabilities = PlayerCapabilities(
-    play = null, pause = null, stop = null, seekTo = null,
-    skipToNext = null, skipToPrevious = null,
-    jumpForward = false, jumpBackward = false,
-    favorite = null,
-    shuffleMode = null, repeatMode = null, playbackRate = null
-  ),
+  var capabilities: PlayerCapabilities =
+    PlayerCapabilities(
+      play = null,
+      pause = null,
+      stop = null,
+      seekTo = null,
+      skipToNext = null,
+      skipToPrevious = null,
+      jumpForward = false,
+      jumpBackward = false,
+      favorite = null,
+      shuffleMode = null,
+      repeatMode = null,
+      playbackRate = null,
+    ),
 
-  // Notification button layout (null = derive from capabilities)
-  var notificationButtons: NotificationButtonLayout? = null,
+  // Ordered button layout (null = derive from capabilities)
+  var remoteButtonLayout: RemoteButtonLayout? = null,
 
   // Android-specific runtime options (all under android.* in JS)
-  var ratingType: NitroRatingType? = null,
   var appKilledPlaybackBehavior: AppKilledPlaybackBehavior =
     AppKilledPlaybackBehavior.STOP_PLAYBACK_AND_REMOVE_NOTIFICATION,
   var skipSilence: Boolean = false,
-  var shuffle: Boolean = false,
 ) {
   fun updateFromBridge(options: NativeUpdateOptions) {
     options.forwardJumpInterval?.let { forwardJumpInterval = it }
@@ -52,60 +57,49 @@ data class PlayerUpdateOptions(
         }
     }
 
-    options.capabilities?.let { newCaps ->
-      capabilities = mergeCapabilities(capabilities, newCaps)
-    }
+    options.capabilities?.let { newCaps -> capabilities = mergeCapabilities(capabilities, newCaps) }
 
     // Update Android-specific options
     options.android?.let { androidOptions ->
-      // Convert rating type
-      androidOptions.ratingType?.let { ratingType = it }
-
       androidOptions.appKilledPlaybackBehavior?.let { appKilledPlaybackBehavior = it }
 
       // Update boolean options
       androidOptions.skipSilence?.let { skipSilence = it }
 
-      androidOptions.shuffle?.let { shuffle = it }
-
-      // Handle notificationButtons - variant allows distinguishing undefined from null
-      androidOptions.notificationButtons?.let { variant ->
-        notificationButtons =
+      // Handle remoteButtonLayout - variant allows distinguishing undefined from null
+      androidOptions.remoteButtonLayout?.let { variant ->
+        remoteButtonLayout =
           when (variant) {
-            is Variant_NullType_NotificationButtonLayout.First -> null
-            is Variant_NullType_NotificationButtonLayout.Second -> variant.value
+            is Variant_NullType_RemoteButtonLayout.First -> null
+            is Variant_NullType_RemoteButtonLayout.Second -> variant.value
           }
       }
     }
   }
 
-  fun toNitro(): UpdateOptions {
-    // Create Android options
-    val androidOptions =
-      AndroidUpdateOptions(
-        appKilledPlaybackBehavior = appKilledPlaybackBehavior,
-        skipSilence = skipSilence,
-        shuffle = shuffle,
-        ratingType = ratingType,
-        notificationButtons =
-          notificationButtons?.let { Variant_NullType_NotificationButtonLayout.create(it) },
-      )
-
-    return UpdateOptions(
-      android = androidOptions,
+  /** The resolved options in their wire shape (what getOptions/onOptionsChanged report). */
+  fun toNitro(): Options {
+    return Options(
+      android =
+        AndroidOptions(
+          appKilledPlaybackBehavior = appKilledPlaybackBehavior,
+          skipSilence = skipSilence,
+          remoteButtonLayout =
+            remoteButtonLayout?.let { Variant_NullType_RemoteButtonLayout.create(it) },
+        ),
       forwardJumpInterval = forwardJumpInterval,
       backwardJumpInterval = backwardJumpInterval,
       progressUpdateEventInterval =
         progressUpdateEventInterval?.let { Variant_NullType_Double.create(it) },
       capabilities = capabilities,
-      iosPlaybackRates = null, // iOS-only option
+      ios = null, // iOS-only options
     )
   }
 
   /** Merge incoming capabilities with existing - only explicitly set values override */
   private fun mergeCapabilities(
     existing: PlayerCapabilities,
-    incoming: PlayerCapabilities
+    incoming: PlayerCapabilities,
   ): PlayerCapabilities {
     return PlayerCapabilities(
       play = incoming.play ?: existing.play,
@@ -119,7 +113,7 @@ data class PlayerUpdateOptions(
       favorite = incoming.favorite ?: existing.favorite,
       shuffleMode = incoming.shuffleMode ?: existing.shuffleMode,
       repeatMode = incoming.repeatMode ?: existing.repeatMode,
-      playbackRate = incoming.playbackRate ?: existing.playbackRate
+      playbackRate = incoming.playbackRate ?: existing.playbackRate,
     )
   }
 }

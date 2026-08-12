@@ -23,6 +23,12 @@ namespace margelo::nitro::audiobrowser { struct NavigationErrorEvent; }
 namespace margelo::nitro::audiobrowser { struct FormattedNavigationError; }
 // Forward declaration of `NativeBrowserConfiguration` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeBrowserConfiguration; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
@@ -59,8 +65,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 // Forward declaration of `RemoteSeekEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -69,8 +73,8 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
-// Forward declaration of `IosOutput` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IosOutput; }
+// Forward declaration of `Output` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Output; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -79,12 +83,12 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `NavigationError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NavigationError; }
-// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
+// Forward declaration of `Gate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Gate; }
+// Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeSetupPlayerOptions; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
 // Forward declaration of `Progress` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Progress; }
 // Forward declaration of `RepeatMode` to properly resolve imports.
@@ -105,6 +109,10 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "NavigationErrorEvent.hpp"
 #include "FormattedNavigationError.hpp"
 #include "NativeBrowserConfiguration.hpp"
+#include "GateDecision.hpp"
+#include <NitroModules/Promise.hpp>
+#include "NativeGateRequest.hpp"
+#include "GateEvent.hpp"
 #include "ChapterMetadata.hpp"
 #include "TrackMetadata.hpp"
 #include "TimedMetadata.hpp"
@@ -125,20 +133,18 @@ namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
-#include "IosOutput.hpp"
+#include "Output.hpp"
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
-#include <NitroModules/Promise.hpp>
 #include "NavigationError.hpp"
-#include "PartialSetupPlayerOptions.hpp"
+#include "Gate.hpp"
+#include "NativeSetupPlayerOptions.hpp"
 #include "NativeUpdateOptions.hpp"
-#include "UpdateOptions.hpp"
 #include "Progress.hpp"
 #include "RepeatMode.hpp"
 #include "PlaybackError.hpp"
@@ -188,6 +194,12 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnFormattedNavigationError(const std::function<void(const std::optional<FormattedNavigationError>& /* formattedError */)>& onFormattedNavigationError) = 0;
       virtual NativeBrowserConfiguration getConfiguration() = 0;
       virtual void setConfiguration(const NativeBrowserConfiguration& configuration) = 0;
+      virtual std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> getResolveGate() = 0;
+      virtual void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) = 0;
+      virtual std::function<void(const GateEvent& /* event */)> getOnGate() = 0;
+      virtual void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) = 0;
+      virtual std::function<void(bool /* connected */)> getOnCarConnectedChanged() = 0;
+      virtual void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) = 0;
       virtual std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() = 0;
       virtual void setOnChapterMetadata(const std::function<void(const std::vector<ChapterMetadata>& /* chapters */)>& onChapterMetadata) = 0;
       virtual std::function<void(const TrackMetadata& /* metadata */)> getOnTrackMetadata() = 0;
@@ -204,6 +216,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnPlaybackPlayingState(const std::function<void(const PlayingState& /* data */)>& onPlaybackPlayingState) = 0;
       virtual std::function<void(const PlaybackProgressUpdatedEvent& /* data */)> getOnPlaybackProgressUpdated() = 0;
       virtual void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) = 0;
+      virtual std::function<void()> getOnPlaybackInterval() = 0;
+      virtual void setOnPlaybackInterval(const std::function<void()>& onPlaybackInterval) = 0;
       virtual std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() = 0;
       virtual void setOnPlaybackQueueEnded(const std::function<void(const PlaybackQueueEndedEvent& /* data */)>& onPlaybackQueueEnded) = 0;
       virtual std::function<void(const std::vector<Track>& /* queue */)> getOnPlaybackQueueChanged() = 0;
@@ -216,16 +230,10 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnSleepTimerChanged(const std::function<void(const std::optional<std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack>>& /* data */)>& onSleepTimerChanged) = 0;
       virtual std::function<void(const Playback& /* data */)> getOnPlaybackChanged() = 0;
       virtual void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) = 0;
-      virtual std::function<void()> getOnRemoteBookmark() = 0;
-      virtual void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) = 0;
-      virtual std::function<void()> getOnRemoteDislike() = 0;
-      virtual void setOnRemoteDislike(const std::function<void()>& onRemoteDislike) = 0;
       virtual std::function<void(const RemoteJumpBackwardEvent& /* event */)> getOnRemoteJumpBackward() = 0;
       virtual void setOnRemoteJumpBackward(const std::function<void(const RemoteJumpBackwardEvent& /* event */)>& onRemoteJumpBackward) = 0;
       virtual std::function<void(const RemoteJumpForwardEvent& /* event */)> getOnRemoteJumpForward() = 0;
       virtual void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) = 0;
-      virtual std::function<void()> getOnRemoteLike() = 0;
-      virtual void setOnRemoteLike(const std::function<void()>& onRemoteLike) = 0;
       virtual std::function<void()> getOnRemoteNext() = 0;
       virtual void setOnRemoteNext(const std::function<void()>& onRemoteNext) = 0;
       virtual std::function<void()> getOnRemotePause() = 0;
@@ -240,8 +248,6 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnRemotePrevious(const std::function<void()>& onRemotePrevious) = 0;
       virtual std::function<void(const RemoteSeekEvent& /* event */)> getOnRemoteSeek() = 0;
       virtual void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) = 0;
-      virtual std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() = 0;
-      virtual void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) = 0;
       virtual std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() = 0;
       virtual void setOnRemoteSkip(const std::function<void(const RemoteSkipEvent& /* event */)>& onRemoteSkip) = 0;
       virtual std::function<void()> getOnRemoteStop() = 0;
@@ -252,16 +258,10 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnFavoriteChanged(const std::function<void(const FavoriteChangedEvent& /* event */)>& onFavoriteChanged) = 0;
       virtual std::function<void(const NowPlayingMetadata& /* metadata */)> getOnNowPlayingChanged() = 0;
       virtual void setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteBookmark() = 0;
-      virtual void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteDislike() = 0;
-      virtual void setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) = 0;
       virtual std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> getHandleRemoteJumpBackward() = 0;
       virtual void setHandleRemoteJumpBackward(const std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>>& handleRemoteJumpBackward) = 0;
       virtual std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>> getHandleRemoteJumpForward() = 0;
       virtual void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) = 0;
-      virtual std::optional<std::function<void()>> getHandleRemoteLike() = 0;
-      virtual void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) = 0;
       virtual std::optional<std::function<void()>> getHandleRemoteNext() = 0;
       virtual void setHandleRemoteNext(const std::optional<std::function<void()>>& handleRemoteNext) = 0;
       virtual std::optional<std::function<void()>> getHandleRemotePause() = 0;
@@ -284,8 +284,8 @@ namespace margelo::nitro::audiobrowser {
       virtual void setOnOnlineChanged(const std::function<void(bool /* online */)>& onOnlineChanged) = 0;
       virtual std::function<void(double /* volume */)> getOnSystemVolumeChanged() = 0;
       virtual void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) = 0;
-      virtual std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() = 0;
-      virtual void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) = 0;
+      virtual std::function<void(const Output& /* output */)> getOnOutputChanged() = 0;
+      virtual void setOnOutputChanged(const std::function<void(const Output& /* output */)>& onOutputChanged) = 0;
       virtual std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() = 0;
       virtual void setOnEqualizerChanged(const std::function<void(const EqualizerSettings& /* settings */)>& onEqualizerChanged) = 0;
       virtual std::function<void(const BatteryWarningPendingChangedEvent& /* event */)> getOnBatteryWarningPendingChanged() = 0;
@@ -302,10 +302,14 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<NavigationError> getNavigationError() = 0;
       virtual std::optional<FormattedNavigationError> getFormattedNavigationError() = 0;
       virtual void notifyContentChanged(const std::string& path) = 0;
+      virtual void invalidateAllContent() = 0;
       virtual void setFavorites(const std::vector<std::string>& favorites) = 0;
-      virtual std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) = 0;
+      virtual void setGate(const std::optional<Gate>& gate, bool hasResolver) = 0;
+      virtual void clearGate() = 0;
+      virtual bool isCarConnected() = 0;
+      virtual std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) = 0;
       virtual void updateOptions(const NativeUpdateOptions& options) = 0;
-      virtual UpdateOptions getOptions() = 0;
+      virtual Options getOptions() = 0;
       virtual void load(const Track& track) = 0;
       virtual void reset() = 0;
       virtual void play() = 0;
@@ -316,11 +320,13 @@ namespace margelo::nitro::audiobrowser {
       virtual bool getPlayWhenReady() = 0;
       virtual void seekTo(double position) = 0;
       virtual void seekBy(double offset) = 0;
+      virtual void seekToLiveEdge() = 0;
       virtual void setVolume(double level) = 0;
       virtual double getVolume() = 0;
       virtual void setRate(double rate) = 0;
       virtual double getRate() = 0;
       virtual Progress getProgress() = 0;
+      virtual void setPlaybackIntervalEnabled(bool enabled) = 0;
       virtual Playback getPlayback() = 0;
       virtual PlayingState getPlayingState() = 0;
       virtual RepeatMode getRepeatMode() = 0;
@@ -330,7 +336,7 @@ namespace margelo::nitro::audiobrowser {
       virtual std::optional<PlaybackError> getPlaybackError() = 0;
       virtual void retry() = 0;
       virtual std::variant<nitro::NullType, SleepTimerTime, SleepTimerEndOfTrack> getSleepTimer() = 0;
-      virtual void setSleepTimer(double seconds) = 0;
+      virtual void setSleepTimer(double seconds, std::optional<double> fadeDuration) = 0;
       virtual void setSleepTimerToEndOfTrack() = 0;
       virtual bool clearSleepTimer() = 0;
       virtual void add(const std::vector<Track>& tracks, std::optional<double> insertBeforeIndex) = 0;
@@ -342,18 +348,21 @@ namespace margelo::nitro::audiobrowser {
       virtual void skipToPrevious(std::optional<double> initialPosition) = 0;
       virtual void setActiveTrackFavorited(bool favorited) = 0;
       virtual void toggleActiveTrackFavorited() = 0;
-      virtual void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) = 0;
+      virtual void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) = 0;
       virtual std::vector<Track> getQueue() = 0;
       virtual std::optional<Track> getTrack(double index) = 0;
       virtual std::optional<double> getActiveTrackIndex() = 0;
       virtual std::optional<Track> getActiveTrack() = 0;
       virtual void updateNowPlaying(const std::optional<NowPlayingUpdate>& update) = 0;
+      virtual void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) = 0;
+      virtual void clearNowPlayingFlash() = 0;
       virtual std::optional<NowPlayingMetadata> getNowPlaying() = 0;
       virtual bool getOnline() = 0;
       virtual double getSystemVolume() = 0;
       virtual void setSystemVolume(double volume) = 0;
-      virtual std::optional<IosOutput> getIosOutput() = 0;
-      virtual void openIosOutputPicker() = 0;
+      virtual std::optional<Output> getOutput() = 0;
+      virtual void openOutputPicker() = 0;
+      virtual bool supportsOutputSwitcher() = 0;
       virtual std::optional<EqualizerSettings> getEqualizerSettings() = 0;
       virtual void setEqualizerEnabled(bool enabled) = 0;
       virtual void setEqualizerPreset(const std::string& preset) = 0;

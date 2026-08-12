@@ -9,10 +9,11 @@ import NitroModules
 /// Note: Method names are prefixed to avoid conflicts with JS callback property names.
 /// All callbacks are called from the main actor since TrackPlayer is @MainActor.
 ///
-/// Extends PlaybackCoordinatorCallbacks for the state machine / coordinator callbacks,
-/// then adds metadata, seek, remote, and configuration callbacks that are TrackPlayer-specific.
+/// Extends PlaybackCoordinatorCallbacks for the state machine / coordinator callbacks
+/// and RemoteCommandCallbacks for the remote-command events, then adds metadata,
+/// seek, and configuration callbacks that are TrackPlayer-specific.
 @MainActor
-protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks {
+protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks, RemoteCommandCallbacks {
   // MARK: - Metadata Events
 
   /// Called when common metadata is received.
@@ -34,56 +35,16 @@ protocol TrackPlayerCallbacks: PlaybackCoordinatorCallbacks {
 
   // MARK: - Remote Control Events
 
-  /// Called when play is triggered remotely.
-  func remotePlay()
-
-  /// Called when pause is triggered remotely.
-  func remotePause()
-
-  /// Called when stop is triggered remotely.
-  func remoteStop()
-
-  /// Called when toggle play/pause is triggered remotely.
-  func remotePlayPause()
-
-  /// Called when next is triggered remotely.
-  func remoteNext()
-
-  /// Called when previous is triggered remotely.
-  func remotePrevious()
-
-  /// Called when jump forward is triggered remotely.
-  func remoteJumpForward(interval: Double)
-
-  /// Called when jump backward is triggered remotely.
-  func remoteJumpBackward(interval: Double)
-
-  /// Called when seek is triggered remotely.
-  func remoteSeek(position: Double)
+  // The command-center events live in RemoteCommandCallbacks, inherited above.
 
   /// Called when change playback position is triggered remotely.
   func remoteChangePlaybackPosition(position: Double)
-
-  /// Called when set rating is triggered remotely.
-  func remoteSetRating(rating: Any)
 
   /// Called when play from ID is triggered remotely.
   func remotePlayId(id: String, index: Int?)
 
   /// Called when play from search is triggered remotely.
   func remotePlaySearch(query: String)
-
-  /// Called when like is triggered remotely.
-  func remoteLike()
-
-  /// Called when repeat mode change is triggered remotely (CarPlay/lock screen).
-  func remoteChangeRepeatMode(mode: RepeatMode)
-
-  /// Called when shuffle mode change is triggered remotely (CarPlay/lock screen).
-  func remoteChangeShuffleMode(enabled: Bool)
-
-  /// Called when playback rate change is triggered remotely (CarPlay/lock screen).
-  func remoteChangePlaybackRate(rate: Float)
 
   // MARK: - Configuration Events
 

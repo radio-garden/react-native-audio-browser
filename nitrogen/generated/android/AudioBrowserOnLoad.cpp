@@ -22,12 +22,20 @@
 #include "JFunc_void_NavigationErrorEvent.hpp"
 #include "JFunc_void_std__optional_FormattedNavigationError_.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig____.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams.hpp"
-#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam.hpp"
+#include "JFunc_std__shared_ptr_Promise_RequestConfig___MediaTransformParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_std__string____Track.hpp"
 #include "JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest.hpp"
+#include "JFunc_void_GateEvent.hpp"
+#include "JFunc_void_bool.hpp"
 #include "JFunc_void_std__vector_ChapterMetadata_.hpp"
 #include "JFunc_void_TrackMetadata.hpp"
 #include "JFunc_void_TimedMetadata.hpp"
@@ -36,27 +44,26 @@
 #include "JFunc_void_PlaybackPlayWhenReadyChangedEvent.hpp"
 #include "JFunc_void_PlayingState.hpp"
 #include "JFunc_void_PlaybackProgressUpdatedEvent.hpp"
+#include "JFunc_void.hpp"
 #include "JFunc_void_PlaybackQueueEndedEvent.hpp"
 #include "JFunc_void_RepeatModeChangedEvent.hpp"
-#include "JFunc_void_bool.hpp"
 #include "JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack__.hpp"
 #include "JFunc_void_Playback.hpp"
-#include "JFunc_void.hpp"
 #include "JFunc_void_RemoteJumpBackwardEvent.hpp"
 #include "JFunc_void_RemoteJumpForwardEvent.hpp"
 #include "JFunc_void_RemotePlayIdEvent.hpp"
 #include "JFunc_void_RemotePlaySearchEvent.hpp"
 #include "JFunc_void_RemoteSeekEvent.hpp"
-#include "JFunc_void_RemoteSetRatingEvent.hpp"
 #include "JFunc_void_RemoteSkipEvent.hpp"
 #include "JFunc_void_Options.hpp"
 #include "JFunc_void_FavoriteChangedEvent.hpp"
 #include "JFunc_void_NowPlayingMetadata.hpp"
 #include "JFunc_void_double.hpp"
-#include "JFunc_void_IosOutput.hpp"
+#include "JFunc_void_Output.hpp"
 #include "JFunc_void_EqualizerSettings.hpp"
 #include "JFunc_void_BatteryWarningPendingChangedEvent.hpp"
 #include "JFunc_void_BatteryOptimizationStatusChangedEvent.hpp"
+#include "JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::audiobrowser {
@@ -88,12 +95,20 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_NavigationErrorEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__optional_FormattedNavigationError__cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_TransformableRequestConfig_____cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_RequestConfig___Track_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____MediaTransformParams_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError______BrowserSourceCallbackParam_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_RequestConfig___MediaTransformParams_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError__std__shared_ptr_Promise_std__variant_ResolvedTrack__BrowseError_______BrowserSourceCallbackParam_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__vector_Track______SearchParams_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_GateDecision_____NativeGateRequest_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_GateEvent_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__vector_ChapterMetadata__cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_TrackMetadata_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_TimedMetadata_cxx::registerNatives();
@@ -102,27 +117,26 @@ void registerAllNatives() {
   margelo::nitro::audiobrowser::JFunc_void_PlaybackPlayWhenReadyChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_PlayingState_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_PlaybackProgressUpdatedEvent_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_PlaybackQueueEndedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RepeatModeChangedEvent_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_bool_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_std__optional_std__variant_nitro__NullType__SleepTimerTime__SleepTimerEndOfTrack___cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_Playback_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteJumpBackwardEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteJumpForwardEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemotePlayIdEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemotePlaySearchEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteSeekEvent_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_RemoteSetRatingEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_RemoteSkipEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_Options_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_FavoriteChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_NowPlayingMetadata_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_double_cxx::registerNatives();
-  margelo::nitro::audiobrowser::JFunc_void_IosOutput_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_void_Output_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_EqualizerSettings_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryWarningPendingChangedEvent_cxx::registerNatives();
   margelo::nitro::audiobrowser::JFunc_void_BatteryOptimizationStatusChangedEvent_cxx::registerNatives();
+  margelo::nitro::audiobrowser::JFunc_std__shared_ptr_Promise_std__optional_NowPlayingUpdate____FormatNowPlayingParams_cxx::registerNatives();
 
   // Register Nitro Hybrid Objects
   HybridObjectRegistry::registerHybridObjectConstructor(

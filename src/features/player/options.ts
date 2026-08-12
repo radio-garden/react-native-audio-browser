@@ -1,6 +1,7 @@
-import type { RatingType } from '../metadata'
-import type { RepeatMode } from '../queue/repeatMode'
+import type { FavoriteConfig } from '../../types'
+import type { CarPlayNowPlayingButton } from '../../types/browser'
 import { nativeBrowser } from '../../native'
+import { validateIOSUpdateOptions } from './validateOptions'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
@@ -8,7 +9,8 @@ import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
 /**
  * Player capabilities control which media controls are available to the user.
- * All capabilities are enabled by default - only specify ones you want to disable.
+ * Most capabilities are enabled by default - only specify the ones you want to change.
+ * Exceptions that default to off: `jumpForward`, `jumpBackward`, and `favorite`.
  *
  * @example
  * ```typescript
@@ -65,12 +67,39 @@ export interface PlayerCapabilities {
    */
   jumpBackward?: boolean
   /**
-   * Enable favorite/like control.
-   * On iOS: appears in Control Center.
-   * On Android: can be assigned to notification button slots.
-   * @default true
+   * Enable track favoriting.
+   *
+   * Turns on the favorite/like heart across all surfaces:
+   * - iOS: Control Center + CarPlay now-playing.
+   * - Android: a place in the {@link RemoteButtonLayout} — the notification,
+   *   Android Auto and the Android 13+ system media controls — and an
+   *   (empty or filled) heart on playable browse rows.
+   *
+   * `match` controls how the ids from `setFavorites` are
+   * compared against a track's `src` to decide its `favorited` state
+   * (see `FavoritesMatchMode`); `true` is shorthand for `'exact'`.
+   *
+   * - `false` / omitted: favoriting off everywhere.
+   * - `true`: on, with `'exact'` id matching.
+   * - `{ match }`: on, with the given match mode.
+   *
+   * @example
+   * ```ts
+   * // 'exact': a favorite id must equal the track's src.
+   * favorite: { match: 'exact' }
+   * setFavorites(['https://cdn.example.com/audio/track-42.mp3'])
+   * // → favorited when src === 'https://cdn.example.com/audio/track-42.mp3'
+   *
+   * // 'partial': a favorite id matches when it is a full path segment of src.
+   * favorite: { match: 'partial' }
+   * setFavorites(['track-42'])
+   * // → favorited when src is '/library/track-42' or '/stream/track-42?hq=1',
+   * //   but NOT '/library/track-420'
+   * ```
+   *
+   * @default false
    */
-  favorite?: boolean
+  favorite?: boolean | FavoriteConfig
   /**
    * Enable shuffle mode toggle.
    * @default true
@@ -90,10 +119,11 @@ export interface PlayerCapabilities {
 }
 
 /**
- * Buttons that can be assigned to Android notification button slots.
- * These represent the interactive buttons users can tap in the notification.
+ * Buttons that can be placed in the Android button layout — the interactive
+ * controls a listener taps in the notification, on the Android Auto Now Playing
+ * screen, and in the Android 13+ system media controls.
  */
-export type NotificationButton =
+export type RemoteButton =
   | 'skip-to-previous'
   | 'skip-to-next'
   | 'jump-backward'
@@ -101,43 +131,71 @@ export type NotificationButton =
   | 'favorite'
 
 /**
- * Configuration for notification button layout on Android.
- * Allows explicit control over which buttons appear in which slots.
+ * Where each button sits on Android.
  *
- * Slot behavior:
- * - **Omit a slot**: Derive from capabilities (smart default)
- * - **Set to null**: Explicitly empty slot
- * - **Set to button**: Show that button in that slot
+ * Android offers exactly three positions, and play/pause always occupies the
+ * centre — you cannot move it, and you cannot put two buttons on the same side
+ * of it:
+ *
+ * ```
+ *   back  │  ▶ play/pause  │  forward        overflow ⋯
+ * ```
+ *
+ * - **`back`** — the single position left of play/pause
+ * - **`forward`** — the single position right of play/pause
+ * - **`overflow`** — everything else, in priority order
+ *
+ * **A layout describes the whole arrangement.** All three fields are required —
+ * there is no per-field merge with the capability defaults, so what you write is
+ * exactly what renders. Use `undefined` for an empty position and `[]` for no
+ * overflow. To go back to the derived defaults, omit `remoteButtonLayout`
+ * entirely (or set it to `null`); that is the only switch.
+ *
+ * **Overflow order is priority, not coordinates.** Each surface renders as many
+ * buttons as it has room for, taking them from the front — a phone
+ * notification, the Android 13+ system media controls, and a car head unit all
+ * have different budgets. A head unit with a spare slot may promote the first
+ * overflow entry onto the main row, and a long list gets truncated by whichever
+ * surface is showing it. Put what matters most first.
+ *
+ * Placement never changes what a control *can* do: a button left out entirely
+ * still responds to a Bluetooth remote or headset, as long as its
+ * {@link PlayerCapabilities} entry is enabled.
  *
  * @example
  * ```typescript
- * // Podcast-style: jump buttons as primary
- * notificationButtons: {
+ * // Podcast-style: jump either side of play/pause
+ * remoteButtonLayout: {
  *   back: 'jump-backward',
  *   forward: 'jump-forward',
+ *   overflow: ['skip-to-previous', 'skip-to-next', 'favorite']
+ * }
+ *
+ * // Music-style: skip either side of play/pause
+ * remoteButtonLayout: {
+ *   back: 'skip-to-previous',
+ *   forward: 'skip-to-next',
  *   overflow: ['favorite']
  * }
  *
- * // Music-style: skip as primary, jump as secondary
- * notificationButtons: {
- *   back: 'skip-to-previous',
+ * // Live radio: forward only, nothing to the left
+ * remoteButtonLayout: {
+ *   back: undefined,
  *   forward: 'skip-to-next',
- *   backSecondary: 'jump-backward',
- *   forwardSecondary: 'jump-forward'
+ *   overflow: []
  * }
  * ```
  */
-export type NotificationButtonLayout = {
-  /** Primary back position (SLOT_BACK) - typically previous track or jump backward */
-  back?: NotificationButton | null
-  /** Primary forward position (SLOT_FORWARD) - typically next track or jump forward */
-  forward?: NotificationButton | null
-  /** Secondary back position (SLOT_BACK_SECONDARY) */
-  backSecondary?: NotificationButton | null
-  /** Secondary forward position (SLOT_FORWARD_SECONDARY) */
-  forwardSecondary?: NotificationButton | null
-  /** Additional buttons in overflow area (SLOT_OVERFLOW) */
-  overflow?: NotificationButton[]
+export type RemoteButtonLayout = {
+  /** The single position left of play/pause. `undefined` leaves it empty. */
+  back: RemoteButton | undefined
+  /** The single position right of play/pause. `undefined` leaves it empty. */
+  forward: RemoteButton | undefined
+  /**
+   * Everything else, most important first — surfaces promote and truncate from
+   * the front. `[]` for none.
+   */
+  overflow: RemoteButton[]
 }
 
 /**
@@ -166,10 +224,9 @@ export type AppKilledPlaybackBehavior =
  * @example
  * ```typescript
  * const options = getOptions();
- * console.log(options.repeatMode); // 'off'
+ * console.log(options.forwardJumpInterval); // 15
  * console.log(options.capabilities); // { shuffleMode: false } - only disabled caps shown
  * console.log(options.android?.skipSilence); // true (Android only)
- * console.log(options.ios?.likeOptions); // { isActive: false, title: 'Like' } (iOS only)
  * ```
  */
 export interface Options {
@@ -178,12 +235,22 @@ export interface Options {
 
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval: number
@@ -197,23 +264,37 @@ export interface Options {
 
   /**
    * The capabilities that the player has.
-   * All capabilities are enabled by default - this shows which ones are disabled.
+   * Most capabilities are enabled by default - this shows which ones are disabled.
    */
   capabilities: PlayerCapabilities
 
-  /**
-   * The current repeat mode of the player.
-   * @default RepeatMode.Off
-   */
-  repeatMode: RepeatMode
+  /** iOS-specific player options with resolved defaults (only present on iOS). */
+  ios?: IOSOptions
 }
 
-export interface FeedbackOptions {
-  /** Marks wether the option should be marked as active or "done" */
-  isActive: boolean
+/**
+ * iOS-specific player options with resolved defaults (from {@link getOptions}).
+ * Only present on iOS.
+ */
+export interface IOSOptions {
+  /**
+   * Supported playback rates for the playback-rate capability.
+   * Used by CarPlay and lock screen rate controls.
+   * @default [0.5, 1.0, 1.5, 2.0]
+   */
+  playbackRates: number[]
 
-  /** The title to give the action (relevant for iOS) */
-  title: string
+  /**
+   * Whether the "Up Next" button is enabled on the CarPlay Now Playing screen.
+   * @default true
+   */
+  carPlayUpNextButton: boolean
+
+  /**
+   * Buttons shown on the CarPlay Now Playing screen (left-to-right, up to 5).
+   * @default []
+   */
+  carPlayNowPlayingButtons: CarPlayNowPlayingButton[]
 }
 
 export interface AndroidOptions {
@@ -233,28 +314,14 @@ export interface AndroidOptions {
   skipSilence: boolean
 
   /**
-   * Whether shuffle mode is enabled for queue playback.
-   * When enabled, tracks will be played in random order.
+   * Ordered button layout, applied to the notification, Android Auto, and the
+   * Android 13+ system media controls. See {@link RemoteButtonLayout}.
    *
-   * @default false
-   */
-  shuffle: boolean
-
-  /**
-   * The rating type to use for ratings.
-   * Determines how star ratings and thumbs up/down are handled.
-   */
-  ratingType: RatingType
-
-  /**
-   * Slot-based button layout for Android notifications.
-   * Provides explicit control over which buttons appear in which positions.
-   *
-   * When not specified, button layout is derived from capabilities.
+   * When not specified, the layout is derived from capabilities.
    *
    * @platform android
    */
-  notificationButtons: NotificationButtonLayout | null
+  remoteButtonLayout: RemoteButtonLayout | null
 }
 
 export interface AndroidUpdateOptions {
@@ -274,36 +341,66 @@ export interface AndroidUpdateOptions {
   skipSilence?: boolean
 
   /**
-   * Whether shuffle mode is enabled for queue playback.
-   * When enabled, tracks will be played in random order.
+   * Ordered button layout, applied to the notification, Android Auto, and the
+   * Android 13+ system media controls. See {@link RemoteButtonLayout}.
    *
-   * @default false
-   */
-  shuffle?: boolean
-
-  /**
-   * The rating type to use for ratings.
-   * Determines how star ratings and thumbs up/down are handled.
-   */
-  ratingType?: RatingType
-
-  /**
-   * Slot-based button layout for Android notifications.
-   * Provides explicit control over which buttons appear in which positions.
-   *
-   * When not specified, button layout is derived from capabilities.
+   * When not specified, the layout is derived from capabilities.
    *
    * @platform android
    */
-  notificationButtons?: NotificationButtonLayout | null
+  remoteButtonLayout?: RemoteButtonLayout | null
 }
 
+/**
+ * Wire shape of {@link AndroidUpdateOptions} — what crosses the Nitro bridge.
+ * @internal
+ */
 export interface NitroAndroidUpdateOptions {
   appKilledPlaybackBehavior?: AppKilledPlaybackBehavior
   skipSilence?: boolean
-  shuffle?: boolean
-  ratingType?: RatingType
-  notificationButtons?: NotificationButtonLayout | null
+  remoteButtonLayout?: RemoteButtonLayout | null
+}
+
+/**
+ * iOS-specific player options that can be changed at runtime via {@link updateOptions}.
+ * @platform ios
+ */
+export interface IOSUpdateOptions {
+  /**
+   * Supported playback rates for the playback-rate capability.
+   * Used by CarPlay and lock screen rate controls.
+   * @default [0.5, 1.0, 1.5, 2.0]
+   */
+  playbackRates?: number[]
+
+  /**
+   * Enable the "Up Next" button on the CarPlay Now Playing screen. The button is
+   * automatically hidden when the queue has only one track.
+   * @default true
+   */
+  carPlayUpNextButton?: boolean
+
+  /**
+   * Configure up to 5 buttons on the CarPlay Now Playing screen, arranged in
+   * array order (left to right).
+   *
+   * @example
+   * ```typescript
+   * updateOptions({ ios: { carPlayNowPlayingButtons: ['repeat'] } })
+   * ```
+   * @default []
+   */
+  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+}
+
+/**
+ * Wire shape of {@link IOSUpdateOptions} — what crosses the Nitro bridge.
+ * @internal
+ */
+export interface NitroIOSUpdateOptions {
+  playbackRates?: number[]
+  carPlayUpNextButton?: boolean
+  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 }
 
 /**
@@ -313,9 +410,6 @@ export interface NitroAndroidUpdateOptions {
  *
  * @example
  * ```typescript
- * // Update only repeat mode
- * updateOptions({ repeatMode: 'track' });
- *
  * // Disable specific capabilities
  * updateOptions({
  *   capabilities: { shuffleMode: false, repeatMode: false }
@@ -328,8 +422,7 @@ export interface NitroAndroidUpdateOptions {
  *
  * // Platform-specific options
  * updateOptions({
- *   android: { skipSilence: true },
- *   ios: { likeOptions: { isActive: true, title: 'Love' } }
+ *   android: { skipSilence: true }
  * });
  * ```
  */
@@ -337,14 +430,27 @@ export interface UpdateOptions {
   /** Android-specific configuration options */
   android?: AndroidUpdateOptions
 
+  /** iOS-specific configuration options */
+  ios?: IOSUpdateOptions
+
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval?: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval?: number
@@ -372,28 +478,37 @@ export interface UpdateOptions {
    * ```
    */
   capabilities?: PlayerCapabilities
-
-  /**
-   * Supported playback rates for the playback-rate capability.
-   * Used by CarPlay and lock screen rate controls.
-   * @platform ios
-   * @default [0.5, 1.0, 1.5, 2.0]
-   */
-  iosPlaybackRates?: number[]
 }
 
+/**
+ * Wire shape of {@link UpdateOptions} — what crosses the Nitro bridge.
+ * @internal
+ */
 export interface NativeUpdateOptions {
   /** Android-specific configuration options */
   android?: NitroAndroidUpdateOptions
 
+  /** iOS-specific configuration options */
+  ios?: NitroIOSUpdateOptions
+
   /**
    * Jump forward interval in seconds when using jump forward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   forwardJumpInterval?: number
 
   /**
    * Jump backward interval in seconds when using jump backward controls.
+   *
+   * On Android, an interval of exactly 5, 10, 15 or 30 seconds gets an icon
+   * showing that number; any other interval gets an icon without one. Other
+   * values are perfectly valid — the interval also sets the seek distance.
+   *
    * @default 15
    */
   backwardJumpInterval?: number
@@ -406,12 +521,6 @@ export interface NativeUpdateOptions {
   progressUpdateEventInterval?: number | null
 
   capabilities?: PlayerCapabilities
-
-  /**
-   * Supported playback rates for the playback-rate capability.
-   * @platform ios
-   */
-  iosPlaybackRates?: number[]
 }
 
 // MARK: - Functions
@@ -424,9 +533,6 @@ export interface NativeUpdateOptions {
  * @see {@link getOptions} to get current options
  * @example
  * ```typescript
- * // Update single property
- * updateOptions({ repeatMode: 'track' });
- *
  * // Disable specific capabilities
  * updateOptions({
  *   capabilities: { shuffleMode: false },
@@ -435,6 +541,7 @@ export interface NativeUpdateOptions {
  * ```
  */
 export function updateOptions(options: UpdateOptions): void {
+  validateIOSUpdateOptions(options.ios)
   nativeBrowser.updateOptions(options)
 }
 
@@ -448,13 +555,13 @@ export function updateOptions(options: UpdateOptions): void {
  * @example
  * ```typescript
  * const options = getOptions();
- * if (options.repeatMode === 'track') {
- *   // Handle track repeat mode
+ * if (options.capabilities.shuffleMode === false) {
+ *   // Shuffle is disabled
  * }
  * ```
  */
 export function getOptions(): Options {
-  return nativeBrowser.getOptions() as Options
+  return nativeBrowser.getOptions()
 }
 
 // MARK: - Event Callbacks
@@ -462,7 +569,7 @@ export function getOptions(): Options {
 /**
  * Subscribes to player options changes.
  * @param callback - Called when the player options change
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onOptionsChanged = NativeUpdatedValue.emitterize<Options>(
   (cb) => (nativeBrowser.onOptionsChanged = cb)

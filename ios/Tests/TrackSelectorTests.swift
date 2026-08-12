@@ -7,8 +7,8 @@ import Testing
 @MainActor
 private final class BrowserMock: TrackSelectionBrowser {
   var trackLoadHandlerResult = false
-  var expandQueueResult: (tracks: [Track], selectedIndex: Int)? = nil
-  var expandQueueError: Error? = nil
+  var expandQueueResult: (tracks: [Track], selectedIndex: Int)?
+  var expandQueueError: Error?
 
   // Record calls for verification
   var trackLoadEvents: [TrackLoadEvent] = []
@@ -31,7 +31,7 @@ private final class BrowserMock: TrackSelectionBrowser {
 @MainActor
 private final class PlayerMock: TrackSelectionPlayer {
   var tracks: [Track] = []
-  var queueSourcePath: String? = nil
+  var queueSourcePath: String?
 }
 
 private enum MockError: Error {
@@ -57,7 +57,7 @@ struct BrowsableTrackTests {
     let (selector, _, player) = makeSelector()
     let track = Track(id: "t1", url: "/some/path")
     let result = await selector.select(track: track, player: player)
-    guard case .browse(let url) = result else {
+    guard case let .browse(url) = result else {
       Issue.record("expected .browse, got \(result)")
       return
     }
@@ -90,11 +90,11 @@ struct PlayableTrackTests {
     let (selector, browser, player) = makeSelector()
     let track = Track(id: "t1", src: "https://example.com/audio.mp3")
     let result = await selector.select(track: track, player: player)
-    guard case .play(let intent) = result else {
+    guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
       return
     }
-    guard case .loadTrack(let loaded) = intent else {
+    guard case let .loadTrack(loaded) = intent else {
       Issue.record("expected .loadTrack, got \(intent)")
       return
     }
@@ -135,11 +135,11 @@ struct ContextualUrlQueueReuseTests {
 
     let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
     let result = await selector.select(track: track, player: player)
-    guard case .play(let intent) = result else {
+    guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
       return
     }
-    guard case .skipTo(let index) = intent else {
+    guard case let .skipTo(index) = intent else {
       Issue.record("expected .skipTo, got \(intent)")
       return
     }
@@ -189,11 +189,11 @@ struct ContextualUrlExpansionTests {
 
     let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
     let result = await selector.select(track: track, player: player)
-    guard case .play(let intent) = result else {
+    guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
       return
     }
-    guard case .setQueue(let tracks, let startIndex, let sourcePath) = intent else {
+    guard case let .setQueue(tracks, startIndex, sourcePath) = intent else {
       Issue.record("expected .setQueue, got \(intent)")
       return
     }
@@ -213,7 +213,7 @@ struct ContextualUrlExpansionTests {
 
     browser.expandQueueResult = (
       tracks: [Track(id: "a", src: "song.mp3")],
-      selectedIndex: 0
+      selectedIndex: 0,
     )
 
     let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
@@ -234,11 +234,11 @@ struct ContextualUrlExpansionTests {
 
     let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
     let result = await selector.select(track: track, player: player)
-    guard case .play(let intent) = result else {
+    guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
       return
     }
-    guard case .loadTrack(let loaded) = intent else {
+    guard case let .loadTrack(loaded) = intent else {
       Issue.record("expected .loadTrack, got \(intent)")
       return
     }
@@ -255,11 +255,11 @@ struct ContextualUrlExpansionTests {
 
     let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
     let result = await selector.select(track: track, player: player)
-    guard case .play(let intent) = result else {
+    guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
       return
     }
-    guard case .loadTrack(let loaded) = intent else {
+    guard case let .loadTrack(loaded) = intent else {
       Issue.record("expected .loadTrack, got \(intent)")
       return
     }

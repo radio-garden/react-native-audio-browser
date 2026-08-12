@@ -115,11 +115,22 @@ export function skipToPrevious(initialPosition?: number): void {
 }
 
 /**
- * Sets the queue.
+ * Sets (replaces) the queue.
+ *
+ * This does not change the play/pause state: the player keeps playing if it was
+ * playing and stays paused if it was paused. Call `play` explicitly to
+ * start playback.
+ *
  * @param tracks - The tracks to set as the queue.
+ * @param startIndex - (Optional) The index of the track to make active.
+ * @param startPosition - (Optional) The position in seconds to start the active track from.
  */
-export function setQueue(tracks: Track[]): void {
-  nativeBrowser.setQueue(tracks)
+export function setQueue(
+  tracks: Track[],
+  startIndex?: number,
+  startPosition?: number
+): void {
+  nativeBrowser.setQueue(tracks, startIndex, startPosition)
 }
 
 // MARK: - Getters
@@ -145,7 +156,7 @@ export function getQueue(): Track[] {
 /**
  * Subscribes to playback queue ended events.
  * @param callback - Called when playback has paused due to reaching the end of the queue
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onQueueEnded =
   NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
@@ -156,7 +167,7 @@ export const onQueueEnded =
  * Subscribes to queue change events.
  * Called when tracks are added, removed, reordered, or when track metadata changes.
  * @param callback - Called with the updated queue
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onQueueChanged = NativeUpdatedValue.emitterize<Track[]>(
   (cb) => (nativeBrowser.onPlaybackQueueChanged = cb)

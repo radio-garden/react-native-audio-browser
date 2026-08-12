@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AppState } from 'react-native'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
@@ -45,7 +46,7 @@ export function getProgress(): Progress {
 /**
  * Subscribes to playback progress updates.
  * @param callback - Called periodically with playback progress updates
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onProgressUpdated =
   NativeUpdatedValue.emitterize<PlaybackProgressUpdatedEvent>(
@@ -69,6 +70,9 @@ export function useProgress(): Progress {
  *
  * Use this when you need custom polling behavior instead of event-based updates.
  *
+ * Skips updates while the app is backgrounded and refreshes once it becomes
+ * active again.
+ *
  * @param updateInterval - Update interval in milliseconds (default: 1000)
  * @returns The current playback progress
  */
@@ -80,12 +84,12 @@ export function usePolledProgress(updateInterval = 1000): Progress {
   })
 
   useEffect(() => {
-    let mounted = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let unsubscribeState: (() => void) | undefined
 
     const update = () => {
       try {
         const { position, duration, buffered } = getProgress()
-        if (!mounted) return
 
         setState((currentState) =>
           position === currentState.position &&
@@ -99,22 +103,37 @@ export function usePolledProgress(updateInterval = 1000): Progress {
       }
     }
 
-    // Update immediately on playback state changes
-    const unsubscribeState = onPlaybackChanged.addListener(update)
-
     const poll = () => {
       update()
-      if (!mounted) return
-      setTimeout(() => {
-        if (mounted) poll()
-      }, updateInterval)
+      timer = setTimeout(poll, updateInterval)
     }
 
-    poll()
+    // We only poll and listen for playback changes while the app is active. On
+    // return to the foreground we update once and restart the loop so the
+    // interval timing stays correct.
+    const start = () => {
+      if (timer !== undefined) return
+      unsubscribeState = onPlaybackChanged.addListener(update)
+      poll()
+    }
+
+    const stop = () => {
+      clearTimeout(timer)
+      timer = undefined
+      unsubscribeState?.()
+      unsubscribeState = undefined
+    }
+
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') start()
+      else stop()
+    })
+
+    if (AppState.currentState === 'active') start()
 
     return () => {
-      mounted = false
-      unsubscribeState()
+      stop()
+      appStateSub.remove()
     }
   }, [updateInterval])
 

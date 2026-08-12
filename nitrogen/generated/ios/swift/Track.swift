@@ -18,8 +18,14 @@ public extension Track {
   /**
    * Create a new instance of `Track`.
    */
-  init(url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
+  init(id: String?, url: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumUrl: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
     self.init({ () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = id {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = url {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
@@ -31,15 +37,28 @@ public extension Track {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
+    }(), { () -> bridge.std__optional_std__variant_std__string__ArtworkVariants__ in
       if let __unwrappedValue = artwork {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        return bridge.create_std__optional_std__variant_std__string__ArtworkVariants__({ () -> bridge.std__variant_std__string__ArtworkVariants_ in
+          switch __unwrappedValue {
+            case .first(let __value):
+              return bridge.create_std__variant_std__string__ArtworkVariants_(std.string(__value))
+            case .second(let __value):
+              return bridge.create_std__variant_std__string__ArtworkVariants_(__value)
+          }
+        }().variant)
       } else {
         return .init()
       }
     }(), { () -> bridge.std__optional_ImageSource_ in
       if let __unwrappedValue = artworkSource {
         return bridge.create_std__optional_ImageSource_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_TrackRequest_ in
+      if let __unwrappedValue = request {
+        return bridge.create_std__optional_TrackRequest_(__unwrappedValue)
       } else {
         return .init()
       }
@@ -57,6 +76,12 @@ public extension Track {
       }
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = artist {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = albumUrl {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -131,6 +156,18 @@ public extension Track {
   }
 
   @inline(__always)
+  var id: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__id) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__id)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
   var url: String? {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__url) {
@@ -155,11 +192,23 @@ public extension Track {
   }
   
   @inline(__always)
-  var artwork: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__artwork) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__artwork)
-        return String(__unwrapped)
+  var artwork: Variant_String_ArtworkVariants? {
+    return { () -> Variant_String_ArtworkVariants? in
+      if bridge.has_value_std__optional_std__variant_std__string__ArtworkVariants__(self.__artwork) {
+        let __unwrapped = bridge.get_std__optional_std__variant_std__string__ArtworkVariants__(self.__artwork)
+        return { () -> Variant_String_ArtworkVariants in
+          let __variant = bridge.std__variant_std__string__ArtworkVariants_(__unwrapped)
+          switch __variant.index() {
+            case 0:
+              let __actual = __variant.get_0()
+              return .first(String(__actual))
+            case 1:
+              let __actual = __variant.get_1()
+              return .second(__actual)
+            default:
+              fatalError("Variant can never have index \(__variant.index())!")
+          }
+        }()
       } else {
         return nil
       }
@@ -169,6 +218,11 @@ public extension Track {
   @inline(__always)
   var artworkSource: ImageSource? {
     return self.__artworkSource.value
+  }
+  
+  @inline(__always)
+  var request: TrackRequest? {
+    return self.__request.value
   }
   
   @inline(__always)
@@ -205,6 +259,18 @@ public extension Track {
     return { () -> String? in
       if bridge.has_value_std__optional_std__string_(self.__artist) {
         let __unwrapped = bridge.get_std__optional_std__string_(self.__artist)
+        return String(__unwrapped)
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var albumUrl: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__albumUrl) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__albumUrl)
         return String(__unwrapped)
       } else {
         return nil

@@ -4,7 +4,7 @@ import Testing
 
 private func makeResolvedTrack(
   url: String = "/test",
-  title: String = "Test Track"
+  title: String = "Test Track",
 ) -> ResolvedTrack {
   ResolvedTrack(
     url: url,
@@ -26,7 +26,7 @@ private func makeResolvedTrack(
     favorited: nil,
     groupTitle: nil,
     live: nil,
-    imageRow: nil
+    imageRow: nil,
   )
 }
 
@@ -35,8 +35,9 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     url: "/original",
     children: [Track(id: "t1", url: "/t1")],
     carPlaySiriListButton: .top,
+    id: "original-id",
     src: "src.mp3",
-    artwork: "art.jpg",
+    artwork: .first("art.jpg"),
     artworkSource: ImageSource(uri: "resolved-art.jpg"),
     artworkCarPlayTinted: true,
     title: "Original Title",
@@ -51,7 +52,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     favorited: true,
     groupTitle: "Group A",
     live: false,
-    imageRow: [ImageRowItem(title: "Row 1")]
+    imageRow: [ImageRowItem(title: "Row 1")],
   )
 }
 
@@ -95,10 +96,16 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.src == "new-src.mp3")
 }
 
+@Test func copyingOverridesId() {
+  let original = makeResolvedTrack()
+  let copy = original.copying(id: "new-id")
+  #expect(copy.id == "new-id")
+}
+
 @Test func copyingOverridesArtwork() {
   let original = makeResolvedTrack()
-  let copy = original.copying(artwork: "new-art.jpg")
-  #expect(copy.artwork == "new-art.jpg")
+  let copy = original.copying(artwork: .some(.first("new-art.jpg")))
+  #expect(copy.artwork?.url == "new-art.jpg")
 }
 
 @Test func copyingOverridesArtworkSource() {
@@ -203,7 +210,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     title: "Updated Title",
     artist: "New Artist",
     duration: 240.0,
-    favorited: true
+    favorited: true,
   )
   #expect(copy.url == "/updated")
   #expect(copy.title == "Updated Title")
@@ -227,7 +234,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.children?.count == 1)
   #expect(copy.carPlaySiriListButton == .top)
   #expect(copy.src == "src.mp3")
-  #expect(copy.artwork == "art.jpg")
+  #expect(copy.artwork?.url == "art.jpg")
   #expect(copy.artworkSource == ImageSource(uri: "resolved-art.jpg"))
   #expect(copy.artworkCarPlayTinted == true)
   #expect(copy.subtitle == "Original Subtitle")

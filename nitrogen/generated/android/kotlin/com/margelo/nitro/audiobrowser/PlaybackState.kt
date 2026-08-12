@@ -17,12 +17,12 @@ import com.facebook.proguard.annotations.DoNotStrip
 @Keep
 enum class PlaybackState(@DoNotStrip @Keep val value: Int) {
   NONE(0),
-  READY(1),
-  PLAYING(2),
-  PAUSED(3),
-  STOPPED(4),
-  LOADING(5),
-  BUFFERING(6),
+  BUFFERING(1),
+  READY(2),
+  PLAYING(3),
+  PAUSED(4),
+  STOPPED(5),
+  LOADING(6),
   ERROR(7),
   ENDED(8);
 

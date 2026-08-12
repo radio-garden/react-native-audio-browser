@@ -12,7 +12,10 @@ struct MediaResolvedUrl {
 final class MediaLoader {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "MediaLoader")
 
-  var mediaUrlResolver: ((String) async -> MediaResolvedUrl)?
+  /// Resolves a playback src into a concrete URL + headers/user-agent.
+  /// The `Track` is threaded through so the resolver can invoke the
+  /// consumer-supplied `media.resolve(track)` as the final media layer.
+  var mediaUrlResolver: ((String, Track?) async -> MediaResolvedUrl)?
 
   /// Internal access so TrackPlayer can read it for observer guards.
   private(set) var asset: AVURLAsset?
@@ -22,7 +25,9 @@ final class MediaLoader {
 
   weak var delegate: MediaLoaderDelegate?
 
-  private var mediaResolverTask: Task<Void, Never>?
+  /// The in-flight resolve. Readable so tests can await the resolve-then-load
+  /// chain instead of sleeping past it; only this type starts and cancels it.
+  private(set) var mediaResolverTask: Task<Void, Never>?
   private var metadataLoadTask: Task<Void, Never>?
   private var playableLoadTask: Task<Void, Never>?
   private var url: URL?
@@ -30,7 +35,7 @@ final class MediaLoader {
 
   // MARK: - Public API
 
-  func resolveAndLoad(src: String) {
+  func resolveAndLoad(src: String, track: Track? = nil) {
     if let resolver = mediaUrlResolver {
       mediaResolverTask?.cancel()
       mediaResolverTask = Task {
@@ -42,7 +47,7 @@ final class MediaLoader {
         }
 
         self.logger.debug("resolveAndLoad: calling resolver...")
-        let resolved = await resolver(src)
+        let resolved = await resolver(src, track)
 
         guard !Task.isCancelled else {
           self.logger.debug("resolveAndLoad: cancelled after resolver returned")
@@ -72,7 +77,12 @@ final class MediaLoader {
   }
 
   func loadAsset() {
-    guard let url else { return }
+    guard let url else {
+      // Callers (reload-from-terminal) have already transitioned to .loading;
+      // a silent return would strand that state with no load in flight.
+      delegate?.mediaLoaderDidFailWithError(.invalidSourceUrl("nil"))
+      return
+    }
     let pendingAsset = AVURLAsset(url: url, options: urlOptions)
     asset = pendingAsset
 
@@ -171,6 +181,21 @@ final class MediaLoader {
     asset = nil
   }
 
+  /// Builds AVURLAsset options, merging any explicit headers with a resolved
+  /// User-Agent. An explicit `User-Agent` in `headers` wins (mirrors the artwork
+  /// path in BrowserManager+URLResolution). A nil/empty userAgent contributes
+  /// nothing, so "no UA configured" still falls through to AVPlayer's default.
+  nonisolated static func buildAssetOptions(
+    headers: [String: String]?,
+    userAgent: String?,
+  ) -> [String: Any]? {
+    var merged = headers ?? [:]
+    if let userAgent, !userAgent.isEmpty, merged["User-Agent"] == nil {
+      merged["User-Agent"] = userAgent
+    }
+    return merged.isEmpty ? nil : ["AVURLAssetHTTPHeaderFieldsKey": merged]
+  }
+
   // MARK: - Private
 
   private func loadWithResolvedUrl(_ resolved: MediaResolvedUrl) {
@@ -180,14 +205,9 @@ final class MediaLoader {
       return
     }
 
-    var options: [String: Any] = [:]
-    if let headers = resolved.headers, !headers.isEmpty {
-      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
-    }
-
     let isLocalFile = mediaUrl.isFileURL
     url = isLocalFile ? URL(fileURLWithPath: mediaUrl.path) : mediaUrl
-    urlOptions = options.isEmpty ? nil : options
+    urlOptions = Self.buildAssetOptions(headers: resolved.headers, userAgent: resolved.userAgent)
 
     logger.debug("  final playbackUrl: \(mediaUrl.absoluteString)")
     logger.debug("  isLocalFile: \(isLocalFile)")

@@ -29,6 +29,14 @@ import Testing
   #expect(result == "http://example.com/api")
 }
 
+@Test func buildUrlEmptyPathReturnsBaseWithoutTrailingSlash() {
+  // An endpoint whose baseUrl already includes the full path (e.g. search,
+  // `https://host/api/search`) passes an empty path — the base IS the URL, and
+  // must not gain a dangling trailing slash.
+  let result = BrowserPathHelper.buildUrl(baseUrl: "http://example.com/api/search", path: "")
+  #expect(result == "http://example.com/api/search")
+}
+
 // MARK: - appendQuery
 
 @Test func appendQueryAddsParamsWithQuestionMark() {
@@ -107,4 +115,24 @@ import Testing
 
 @Test func isContextualReturnsTrueWithAmpersandSeparator() {
   #expect(BrowserPathHelper.isContextual("/lib?q=1&__trackId=x") == true)
+}
+
+// MARK: - containsSegment
+
+@Test func containsSegmentMatchesFullSegments() {
+  let path = "/listen/amsterdam-funk-channel/Gw0LGB8j"
+  #expect(BrowserPathHelper.containsSegment(path, "Gw0LGB8j"))
+  #expect(BrowserPathHelper.containsSegment(path, "amsterdam-funk-channel"))
+  #expect(BrowserPathHelper.containsSegment(path, "listen"))
+  #expect(BrowserPathHelper.containsSegment("/listen/x/Gw0LGB8j?hl=en", "Gw0LGB8j"))
+  #expect(BrowserPathHelper.containsSegment("/listen/x/Gw0LGB8j#frag", "Gw0LGB8j"))
+}
+
+@Test func containsSegmentRejectsPartialAndMissing() {
+  let path = "/listen/amsterdam-funk-channel/Gw0LGB8j"
+  #expect(!BrowserPathHelper.containsSegment(path, "Gw0LGB8"))
+  #expect(!BrowserPathHelper.containsSegment(path, "funk"))
+  #expect(!BrowserPathHelper.containsSegment(path, "msterdam-funk-channe"))
+  #expect(!BrowserPathHelper.containsSegment(path, "NopeNope"))
+  #expect(!BrowserPathHelper.containsSegment(path, ""))
 }

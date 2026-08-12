@@ -14,10 +14,14 @@ namespace AudioBrowser { class HybridAudioBrowserSpec_cxx; }
 
 // Forward declaration of `Track` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct Track; }
+// Forward declaration of `ArtworkVariants` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct ArtworkVariants; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `HttpMethod` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
+// Forward declaration of `TrackRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
 // Forward declaration of `ImageRowItem` to properly resolve imports.
@@ -60,12 +64,22 @@ namespace margelo::nitro::audiobrowser { struct BrowserSourceCallbackParam; }
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
 // Forward declaration of `SearchMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
+// Forward declaration of `MediaReference` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class MediaReference; }
 // Forward declaration of `TrackLoadEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct TrackLoadEvent; }
-// Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FormatNavigationErrorParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FormatNavigationErrorParams; }
+// Forward declaration of `GateDecision` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateDecision; }
+// Forward declaration of `NativeGateRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeGateRequest; }
+// Forward declaration of `Gate` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Gate; }
+// Forward declaration of `GateReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class GateReason; }
+// Forward declaration of `GateEvent` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct GateEvent; }
 // Forward declaration of `ChapterMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ChapterMetadata; }
 // Forward declaration of `TrackMetadata` to properly resolve imports.
@@ -78,6 +92,8 @@ namespace margelo::nitro::audiobrowser { struct PlaybackActiveTrackChangedEvent;
 namespace margelo::nitro::audiobrowser { struct PlaybackErrorEvent; }
 // Forward declaration of `PlaybackError` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackError; }
+// Forward declaration of `PlaybackErrorKind` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class PlaybackErrorKind; }
 // Forward declaration of `PlaybackPlayWhenReadyChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlaybackPlayWhenReadyChangedEvent; }
 // Forward declaration of `PlayingState` to properly resolve imports.
@@ -108,16 +124,6 @@ namespace margelo::nitro::audiobrowser { struct RemotePlayIdEvent; }
 namespace margelo::nitro::audiobrowser { struct RemotePlaySearchEvent; }
 // Forward declaration of `RemoteSeekEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSeekEvent; }
-// Forward declaration of `RemoteSetRatingEvent` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RemoteSetRatingEvent; }
-// Forward declaration of `HeartRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct HeartRating; }
-// Forward declaration of `ThumbsRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ThumbsRating; }
-// Forward declaration of `StarRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct StarRating; }
-// Forward declaration of `PercentageRating` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PercentageRating; }
 // Forward declaration of `RemoteSkipEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct RemoteSkipEvent; }
 // Forward declaration of `Options` to properly resolve imports.
@@ -126,22 +132,28 @@ namespace margelo::nitro::audiobrowser { struct Options; }
 namespace margelo::nitro::audiobrowser { struct AndroidOptions; }
 // Forward declaration of `AppKilledPlaybackBehavior` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AppKilledPlaybackBehavior; }
-// Forward declaration of `RatingType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class RatingType; }
-// Forward declaration of `NotificationButtonLayout` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct NotificationButtonLayout; }
-// Forward declaration of `NotificationButton` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class NotificationButton; }
+// Forward declaration of `RemoteButtonLayout` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RemoteButtonLayout; }
+// Forward declaration of `RemoteButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class RemoteButton; }
 // Forward declaration of `PlayerCapabilities` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct PlayerCapabilities; }
+// Forward declaration of `FavoriteConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FavoriteConfig; }
+// Forward declaration of `FavoritesMatchMode` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class FavoritesMatchMode; }
+// Forward declaration of `IOSOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct IOSOptions; }
+// Forward declaration of `CarPlayNowPlayingButton` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class CarPlayNowPlayingButton; }
 // Forward declaration of `FavoriteChangedEvent` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct FavoriteChangedEvent; }
 // Forward declaration of `NowPlayingMetadata` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingMetadata; }
-// Forward declaration of `IosOutput` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct IosOutput; }
-// Forward declaration of `IosOutputType` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { enum class IosOutputType; }
+// Forward declaration of `Output` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Output; }
+// Forward declaration of `OutputType` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class OutputType; }
 // Forward declaration of `EqualizerSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct EqualizerSettings; }
 // Forward declaration of `BatteryWarningPendingChangedEvent` to properly resolve imports.
@@ -150,18 +162,18 @@ namespace margelo::nitro::audiobrowser { struct BatteryWarningPendingChangedEven
 namespace margelo::nitro::audiobrowser { struct BatteryOptimizationStatusChangedEvent; }
 // Forward declaration of `BatteryOptimizationStatus` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class BatteryOptimizationStatus; }
-// Forward declaration of `PartialSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialSetupPlayerOptions; }
-// Forward declaration of `PartialAndroidSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialAndroidSetupPlayerOptions; }
+// Forward declaration of `NativeSetupPlayerOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeSetupPlayerOptions; }
+// Forward declaration of `NativeAndroidSetupOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeAndroidSetupOptions; }
 // Forward declaration of `AndroidAudioOffloadSettings` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct AndroidAudioOffloadSettings; }
 // Forward declaration of `AndroidAudioContentType` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidAudioContentType; }
 // Forward declaration of `AndroidPlayerWakeMode` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class AndroidPlayerWakeMode; }
-// Forward declaration of `PartialIOSSetupPlayerOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct PartialIOSSetupPlayerOptions; }
+// Forward declaration of `NativeIOSSetupOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NativeIOSSetupOptions; }
 // Forward declaration of `IOSCategory` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategory; }
 // Forward declaration of `IOSCategoryMode` to properly resolve imports.
@@ -170,28 +182,33 @@ namespace margelo::nitro::audiobrowser { enum class IOSCategoryMode; }
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryOptions; }
 // Forward declaration of `IOSCategoryPolicy` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class IOSCategoryPolicy; }
-// Forward declaration of `RetryConfig` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 // Forward declaration of `NativeUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NativeUpdateOptions; }
 // Forward declaration of `NitroAndroidUpdateOptions` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NitroAndroidUpdateOptions; }
-// Forward declaration of `UpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct UpdateOptions; }
-// Forward declaration of `AndroidUpdateOptions` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct AndroidUpdateOptions; }
-// Forward declaration of `Progress` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct Progress; }
+// Forward declaration of `NitroIOSUpdateOptions` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct NitroIOSUpdateOptions; }
 // Forward declaration of `NowPlayingUpdate` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
+// Forward declaration of `FormatNowPlayingParams` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct FormatNowPlayingParams; }
+// Forward declaration of `StallReason` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class StallReason; }
+// Forward declaration of `RetryConfig` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct RetryConfig; }
+// Forward declaration of `Progress` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Progress; }
 
 #include <string>
 #include <optional>
 #include "Track.hpp"
 #include <vector>
+#include "ArtworkVariants.hpp"
+#include <variant>
 #include "ImageSource.hpp"
 #include "HttpMethod.hpp"
 #include <unordered_map>
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "ImageRowItem.hpp"
 #include <functional>
@@ -212,19 +229,24 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "ImageQueryParams.hpp"
 #include "NativeRouteEntry.hpp"
 #include "BrowseError.hpp"
-#include <variant>
 #include "BrowserSourceCallbackParam.hpp"
 #include "SearchParams.hpp"
 #include "SearchMode.hpp"
+#include "MediaReference.hpp"
 #include "TrackLoadEvent.hpp"
-#include "CarPlayNowPlayingButton.hpp"
 #include "FormatNavigationErrorParams.hpp"
+#include "GateDecision.hpp"
+#include "NativeGateRequest.hpp"
+#include "Gate.hpp"
+#include "GateReason.hpp"
+#include "GateEvent.hpp"
 #include "ChapterMetadata.hpp"
 #include "TrackMetadata.hpp"
 #include "TimedMetadata.hpp"
 #include "PlaybackActiveTrackChangedEvent.hpp"
 #include "PlaybackErrorEvent.hpp"
 #include "PlaybackError.hpp"
+#include "PlaybackErrorKind.hpp"
 #include "PlaybackPlayWhenReadyChangedEvent.hpp"
 #include "PlayingState.hpp"
 #include "PlaybackProgressUpdatedEvent.hpp"
@@ -241,44 +263,43 @@ namespace margelo::nitro::audiobrowser { struct NowPlayingUpdate; }
 #include "RemotePlayIdEvent.hpp"
 #include "RemotePlaySearchEvent.hpp"
 #include "RemoteSeekEvent.hpp"
-#include "RemoteSetRatingEvent.hpp"
-#include "HeartRating.hpp"
-#include "ThumbsRating.hpp"
-#include "StarRating.hpp"
-#include "PercentageRating.hpp"
 #include "RemoteSkipEvent.hpp"
 #include "Options.hpp"
 #include "AndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
-#include "RatingType.hpp"
-#include "NotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
+#include "RemoteButtonLayout.hpp"
+#include "RemoteButton.hpp"
 #include "PlayerCapabilities.hpp"
+#include "FavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
+#include "IOSOptions.hpp"
+#include "CarPlayNowPlayingButton.hpp"
 #include "FavoriteChangedEvent.hpp"
 #include "NowPlayingMetadata.hpp"
-#include "IosOutput.hpp"
-#include "IosOutputType.hpp"
+#include "Output.hpp"
+#include "OutputType.hpp"
 #include "EqualizerSettings.hpp"
 #include "BatteryWarningPendingChangedEvent.hpp"
 #include "BatteryOptimizationStatusChangedEvent.hpp"
 #include "BatteryOptimizationStatus.hpp"
-#include "PartialSetupPlayerOptions.hpp"
-#include "PartialAndroidSetupPlayerOptions.hpp"
+#include "NativeSetupPlayerOptions.hpp"
+#include "NativeAndroidSetupOptions.hpp"
 #include "AndroidAudioOffloadSettings.hpp"
 #include "AndroidAudioContentType.hpp"
 #include "AndroidPlayerWakeMode.hpp"
-#include "PartialIOSSetupPlayerOptions.hpp"
+#include "NativeIOSSetupOptions.hpp"
 #include "IOSCategory.hpp"
 #include "IOSCategoryMode.hpp"
 #include "IOSCategoryOptions.hpp"
 #include "IOSCategoryPolicy.hpp"
-#include "RetryConfig.hpp"
 #include "NativeUpdateOptions.hpp"
 #include "NitroAndroidUpdateOptions.hpp"
-#include "UpdateOptions.hpp"
-#include "AndroidUpdateOptions.hpp"
-#include "Progress.hpp"
+#include "NitroIOSUpdateOptions.hpp"
 #include "NowPlayingUpdate.hpp"
+#include "FormatNowPlayingParams.hpp"
+#include "StallReason.hpp"
+#include "RetryConfig.hpp"
+#include "Progress.hpp"
 
 #include "AudioBrowser-Swift-Cxx-Umbrella.hpp"
 
@@ -381,6 +402,27 @@ namespace margelo::nitro::audiobrowser {
     inline void setConfiguration(const NativeBrowserConfiguration& configuration) noexcept override {
       _swiftPart.setConfiguration(std::forward<decltype(configuration)>(configuration));
     }
+    inline std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)> getResolveGate() noexcept override {
+      auto __result = _swiftPart.getResolveGate();
+      return __result;
+    }
+    inline void setResolveGate(const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<GateDecision>>>>(const NativeGateRequest& /* request */)>& resolveGate) noexcept override {
+      _swiftPart.setResolveGate(resolveGate);
+    }
+    inline std::function<void(const GateEvent& /* event */)> getOnGate() noexcept override {
+      auto __result = _swiftPart.getOnGate();
+      return __result;
+    }
+    inline void setOnGate(const std::function<void(const GateEvent& /* event */)>& onGate) noexcept override {
+      _swiftPart.setOnGate(onGate);
+    }
+    inline std::function<void(bool /* connected */)> getOnCarConnectedChanged() noexcept override {
+      auto __result = _swiftPart.getOnCarConnectedChanged();
+      return __result;
+    }
+    inline void setOnCarConnectedChanged(const std::function<void(bool /* connected */)>& onCarConnectedChanged) noexcept override {
+      _swiftPart.setOnCarConnectedChanged(onCarConnectedChanged);
+    }
     inline std::function<void(const std::vector<ChapterMetadata>& /* chapters */)> getOnChapterMetadata() noexcept override {
       auto __result = _swiftPart.getOnChapterMetadata();
       return __result;
@@ -437,6 +479,13 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackProgressUpdated(const std::function<void(const PlaybackProgressUpdatedEvent& /* data */)>& onPlaybackProgressUpdated) noexcept override {
       _swiftPart.setOnPlaybackProgressUpdated(onPlaybackProgressUpdated);
     }
+    inline std::function<void()> getOnPlaybackInterval() noexcept override {
+      auto __result = _swiftPart.getOnPlaybackInterval();
+      return __result;
+    }
+    inline void setOnPlaybackInterval(const std::function<void()>& onPlaybackInterval) noexcept override {
+      _swiftPart.setOnPlaybackInterval(onPlaybackInterval);
+    }
     inline std::function<void(const PlaybackQueueEndedEvent& /* data */)> getOnPlaybackQueueEnded() noexcept override {
       auto __result = _swiftPart.getOnPlaybackQueueEnded();
       return __result;
@@ -479,20 +528,6 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnPlaybackChanged(const std::function<void(const Playback& /* data */)>& onPlaybackChanged) noexcept override {
       _swiftPart.setOnPlaybackChanged(onPlaybackChanged);
     }
-    inline std::function<void()> getOnRemoteBookmark() noexcept override {
-      auto __result = _swiftPart.getOnRemoteBookmark();
-      return __result;
-    }
-    inline void setOnRemoteBookmark(const std::function<void()>& onRemoteBookmark) noexcept override {
-      _swiftPart.setOnRemoteBookmark(onRemoteBookmark);
-    }
-    inline std::function<void()> getOnRemoteDislike() noexcept override {
-      auto __result = _swiftPart.getOnRemoteDislike();
-      return __result;
-    }
-    inline void setOnRemoteDislike(const std::function<void()>& onRemoteDislike) noexcept override {
-      _swiftPart.setOnRemoteDislike(onRemoteDislike);
-    }
     inline std::function<void(const RemoteJumpBackwardEvent& /* event */)> getOnRemoteJumpBackward() noexcept override {
       auto __result = _swiftPart.getOnRemoteJumpBackward();
       return __result;
@@ -506,13 +541,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setOnRemoteJumpForward(const std::function<void(const RemoteJumpForwardEvent& /* event */)>& onRemoteJumpForward) noexcept override {
       _swiftPart.setOnRemoteJumpForward(onRemoteJumpForward);
-    }
-    inline std::function<void()> getOnRemoteLike() noexcept override {
-      auto __result = _swiftPart.getOnRemoteLike();
-      return __result;
-    }
-    inline void setOnRemoteLike(const std::function<void()>& onRemoteLike) noexcept override {
-      _swiftPart.setOnRemoteLike(onRemoteLike);
     }
     inline std::function<void()> getOnRemoteNext() noexcept override {
       auto __result = _swiftPart.getOnRemoteNext();
@@ -563,13 +591,6 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnRemoteSeek(const std::function<void(const RemoteSeekEvent& /* event */)>& onRemoteSeek) noexcept override {
       _swiftPart.setOnRemoteSeek(onRemoteSeek);
     }
-    inline std::function<void(const RemoteSetRatingEvent& /* event */)> getOnRemoteSetRating() noexcept override {
-      auto __result = _swiftPart.getOnRemoteSetRating();
-      return __result;
-    }
-    inline void setOnRemoteSetRating(const std::function<void(const RemoteSetRatingEvent& /* event */)>& onRemoteSetRating) noexcept override {
-      _swiftPart.setOnRemoteSetRating(onRemoteSetRating);
-    }
     inline std::function<void(const RemoteSkipEvent& /* event */)> getOnRemoteSkip() noexcept override {
       auto __result = _swiftPart.getOnRemoteSkip();
       return __result;
@@ -605,20 +626,6 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnNowPlayingChanged(const std::function<void(const NowPlayingMetadata& /* metadata */)>& onNowPlayingChanged) noexcept override {
       _swiftPart.setOnNowPlayingChanged(onNowPlayingChanged);
     }
-    inline std::optional<std::function<void()>> getHandleRemoteBookmark() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteBookmark();
-      return __result;
-    }
-    inline void setHandleRemoteBookmark(const std::optional<std::function<void()>>& handleRemoteBookmark) noexcept override {
-      _swiftPart.setHandleRemoteBookmark(handleRemoteBookmark);
-    }
-    inline std::optional<std::function<void()>> getHandleRemoteDislike() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteDislike();
-      return __result;
-    }
-    inline void setHandleRemoteDislike(const std::optional<std::function<void()>>& handleRemoteDislike) noexcept override {
-      _swiftPart.setHandleRemoteDislike(handleRemoteDislike);
-    }
     inline std::optional<std::function<void(const RemoteJumpBackwardEvent& /* event */)>> getHandleRemoteJumpBackward() noexcept override {
       auto __result = _swiftPart.getHandleRemoteJumpBackward();
       return __result;
@@ -632,13 +639,6 @@ namespace margelo::nitro::audiobrowser {
     }
     inline void setHandleRemoteJumpForward(const std::optional<std::function<void(const RemoteJumpForwardEvent& /* event */)>>& handleRemoteJumpForward) noexcept override {
       _swiftPart.setHandleRemoteJumpForward(handleRemoteJumpForward);
-    }
-    inline std::optional<std::function<void()>> getHandleRemoteLike() noexcept override {
-      auto __result = _swiftPart.getHandleRemoteLike();
-      return __result;
-    }
-    inline void setHandleRemoteLike(const std::optional<std::function<void()>>& handleRemoteLike) noexcept override {
-      _swiftPart.setHandleRemoteLike(handleRemoteLike);
     }
     inline std::optional<std::function<void()>> getHandleRemoteNext() noexcept override {
       auto __result = _swiftPart.getHandleRemoteNext();
@@ -717,12 +717,12 @@ namespace margelo::nitro::audiobrowser {
     inline void setOnSystemVolumeChanged(const std::function<void(double /* volume */)>& onSystemVolumeChanged) noexcept override {
       _swiftPart.setOnSystemVolumeChanged(onSystemVolumeChanged);
     }
-    inline std::function<void(const IosOutput& /* output */)> getOnIosOutputChanged() noexcept override {
-      auto __result = _swiftPart.getOnIosOutputChanged();
+    inline std::function<void(const Output& /* output */)> getOnOutputChanged() noexcept override {
+      auto __result = _swiftPart.getOnOutputChanged();
       return __result;
     }
-    inline void setOnIosOutputChanged(const std::function<void(const IosOutput& /* output */)>& onIosOutputChanged) noexcept override {
-      _swiftPart.setOnIosOutputChanged(onIosOutputChanged);
+    inline void setOnOutputChanged(const std::function<void(const Output& /* output */)>& onOutputChanged) noexcept override {
+      _swiftPart.setOnOutputChanged(onOutputChanged);
     }
     inline std::function<void(const EqualizerSettings& /* settings */)> getOnEqualizerChanged() noexcept override {
       auto __result = _swiftPart.getOnEqualizerChanged();
@@ -798,13 +798,39 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void invalidateAllContent() override {
+      auto __result = _swiftPart.invalidateAllContent();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline void setFavorites(const std::vector<std::string>& favorites) override {
       auto __result = _swiftPart.setFavorites(favorites);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
     }
-    inline std::shared_ptr<Promise<void>> setupPlayer(const PartialSetupPlayerOptions& options) override {
+    inline void setGate(const std::optional<Gate>& gate, bool hasResolver) override {
+      auto __result = _swiftPart.setGate(gate, std::forward<decltype(hasResolver)>(hasResolver));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void clearGate() override {
+      auto __result = _swiftPart.clearGate();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline bool isCarConnected() override {
+      auto __result = _swiftPart.isCarConnected();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::shared_ptr<Promise<void>> setupPlayer(const NativeSetupPlayerOptions& options) override {
       auto __result = _swiftPart.setupPlayer(std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
@@ -818,7 +844,7 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline UpdateOptions getOptions() override {
+    inline Options getOptions() override {
       auto __result = _swiftPart.getOptions();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
@@ -888,6 +914,12 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void seekToLiveEdge() override {
+      auto __result = _swiftPart.seekToLiveEdge();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline void setVolume(double level) override {
       auto __result = _swiftPart.setVolume(std::forward<decltype(level)>(level));
       if (__result.hasError()) [[unlikely]] {
@@ -923,6 +955,12 @@ namespace margelo::nitro::audiobrowser {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline void setPlaybackIntervalEnabled(bool enabled) override {
+      auto __result = _swiftPart.setPlaybackIntervalEnabled(std::forward<decltype(enabled)>(enabled));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline Playback getPlayback() override {
       auto __result = _swiftPart.getPlayback();
@@ -990,8 +1028,8 @@ namespace margelo::nitro::audiobrowser {
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void setSleepTimer(double seconds) override {
-      auto __result = _swiftPart.setSleepTimer(std::forward<decltype(seconds)>(seconds));
+    inline void setSleepTimer(double seconds, std::optional<double> fadeDuration) override {
+      auto __result = _swiftPart.setSleepTimer(std::forward<decltype(seconds)>(seconds), fadeDuration);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
@@ -1064,8 +1102,8 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPositionMs) override {
-      auto __result = _swiftPart.setQueue(tracks, startIndex, startPositionMs);
+    inline void setQueue(const std::vector<Track>& tracks, std::optional<double> startIndex, std::optional<double> startPosition) override {
+      auto __result = _swiftPart.setQueue(tracks, startIndex, startPosition);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
@@ -1108,6 +1146,18 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void flashNowPlaying(const NowPlayingUpdate& update, double durationMs) override {
+      auto __result = _swiftPart.flashNowPlaying(std::forward<decltype(update)>(update), std::forward<decltype(durationMs)>(durationMs));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void clearNowPlayingFlash() override {
+      auto __result = _swiftPart.clearNowPlayingFlash();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline std::optional<NowPlayingMetadata> getNowPlaying() override {
       auto __result = _swiftPart.getNowPlaying();
       if (__result.hasError()) [[unlikely]] {
@@ -1138,19 +1188,27 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline std::optional<IosOutput> getIosOutput() override {
-      auto __result = _swiftPart.getIosOutput();
+    inline std::optional<Output> getOutput() override {
+      auto __result = _swiftPart.getOutput();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
       auto __value = std::move(__result.value());
       return __value;
     }
-    inline void openIosOutputPicker() override {
-      auto __result = _swiftPart.openIosOutputPicker();
+    inline void openOutputPicker() override {
+      auto __result = _swiftPart.openOutputPicker();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
+    }
+    inline bool supportsOutputSwitcher() override {
+      auto __result = _swiftPart.supportsOutputSwitcher();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
     }
     inline std::optional<EqualizerSettings> getEqualizerSettings() override {
       auto __result = _swiftPart.getEqualizerSettings();

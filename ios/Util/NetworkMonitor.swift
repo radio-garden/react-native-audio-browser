@@ -15,13 +15,15 @@ final class NetworkMonitor: @unchecked Sendable {
   private(set) var isOnline: Bool = false {
     didSet {
       if oldValue != isOnline {
-        logger.info("Network status changed: \(oldValue) -> \(self.isOnline)")
+        logger.notice("Network status changed: \(oldValue) -> \(self.isOnline)")
         onChanged?(isOnline)
       }
     }
   }
 
-  /// Callback invoked when network state changes
+  /// Invoked on every connectivity change. Wired centrally in `HybridAudioBrowser.setupPlayer` and
+  /// fans out to the JS event bridge, the now-playing re-render (so the offline/online label tracks
+  /// connectivity), and the player's reconnect-reload.
   var onChanged: ((Bool) -> Void)?
 
   // MARK: - Initialization
@@ -42,7 +44,7 @@ final class NetworkMonitor: @unchecked Sendable {
 
     // Read initial state after starting (currentPath is now valid)
     let initialStatus = monitor.currentPath.status == .satisfied
-    logger.info("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
+    logger.notice("NetworkMonitor initialized, initial isOnline=\(initialStatus)")
     isOnline = initialStatus
   }
 
@@ -63,3 +65,5 @@ final class NetworkMonitor: @unchecked Sendable {
     destroy()
   }
 }
+
+extension NetworkMonitor: NetworkStatusProviding {}

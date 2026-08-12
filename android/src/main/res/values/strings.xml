@@ -3,4 +3,8 @@
     <!-- Error message shown in Android Auto when network is offline -->
     <string name="audio_browser_offline_error">No internet connection</string>
     <string name="audio_browser_offline_error_subtitle">Check your connection and try again</string>
+
+    <!-- Generic error message shown in Android Auto when browsing fails -->
+    <string name="audio_browser_browse_error">Something went wrong</string>
+    <string name="audio_browser_browse_error_subtitle">Please try again later</string>
 </resources>

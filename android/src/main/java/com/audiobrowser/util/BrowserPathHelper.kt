@@ -32,6 +32,12 @@ object BrowserPathHelper {
   /** Offline error placeholder media ID */
   const val OFFLINE_PATH = "/__offline"
 
+  /** Generic browse error placeholder media ID */
+  const val ERROR_PATH = "/__error"
+
+  /** Browse Gate placeholder media ID (subscription/login/region block) */
+  const val GATE_PATH = "/__gate"
+
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 
@@ -151,5 +157,23 @@ object BrowserPathHelper {
     val normalizedBase = "${baseUrl.trimEnd('/')}/"
     val normalizedPath = path.trimStart('/')
     return "$normalizedBase$normalizedPath"
+  }
+
+  /**
+   * True if [segment] appears in [path] as a complete path segment — bounded on the left by the
+   * string start or `/`, and on the right by the string end or one of `/`, `?`, `#`.
+   */
+  fun containsSegment(path: String, segment: String): Boolean {
+    if (segment.isEmpty()) return false
+    var from = 0
+    while (true) {
+      val idx = path.indexOf(segment, from)
+      if (idx < 0) return false
+      val beforeOk = idx == 0 || path[idx - 1] == '/'
+      val end = idx + segment.length
+      val afterOk = end == path.length || path[end] == '/' || path[end] == '?' || path[end] == '#'
+      if (beforeOk && afterOk) return true
+      from = idx + 1
+    }
   }
 }

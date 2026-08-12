@@ -37,7 +37,10 @@ data class SearchParams(
   val title: String?,
   @DoNotStrip
   @Keep
-  val playlist: String?
+  val playlist: String?,
+  @DoNotStrip
+  @Keep
+  val reference: MediaReference
 ) {
   /* primary constructor */
 
@@ -49,8 +52,8 @@ data class SearchParams(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(mode: SearchMode?, query: String, genre: String?, artist: String?, album: String?, title: String?, playlist: String?): SearchParams {
-      return SearchParams(mode, query, genre, artist, album, title, playlist)
+    private fun fromCpp(mode: SearchMode?, query: String, genre: String?, artist: String?, album: String?, title: String?, playlist: String?, reference: MediaReference): SearchParams {
+      return SearchParams(mode, query, genre, artist, album, title, playlist, reference)
     }
   }
 }

@@ -50,7 +50,7 @@ struct CaptureTests {
   @Test func setsStateToPendingSeek() {
     let c = makeCoordinator()
     c.capture(position: 42.0)
-    guard case .pendingSeek(let time) = c.state else {
+    guard case let .pendingSeek(time) = c.state else {
       Issue.record("expected .pendingSeek, got \(c.state)")
       return
     }
@@ -87,7 +87,7 @@ struct CaptureTests {
       return
     }
     c.capture(position: 30.0)
-    guard case .pendingSeek(let time) = c.state else {
+    guard case let .pendingSeek(time) = c.state else {
       Issue.record("expected .pendingSeek, got \(c.state)")
       return
     }
@@ -118,7 +118,7 @@ struct ExecuteIfPendingTests {
     let player = AVPlayer()
     c.capture(position: 15.0)
     _ = c.executeIfPending(on: player, delegate: nil)
-    guard case .seekInFlight(let time) = c.state else {
+    guard case let .seekInFlight(time) = c.state else {
       Issue.record("expected .seekInFlight, got \(c.state)")
       return
     }
@@ -170,7 +170,7 @@ struct SeekDidCompleteTests {
     c.capture(position: 20.0)
     // Complete the first seek — should re-execute
     #expect(c.seekDidComplete(on: player, delegate: nil) == false)
-    guard case .seekInFlight(let time) = c.state else {
+    guard case let .seekInFlight(time) = c.state else {
       Issue.record("expected .seekInFlight, got \(c.state)")
       return
     }
@@ -220,6 +220,39 @@ struct ResetTests {
       return
     }
   }
+
+  @Test func invalidatesTheGenerationOfSeeksInFlight() {
+    let c = makeCoordinator()
+    let issuedAgainst = c.generation
+    #expect(c.isCurrentGeneration(issuedAgainst))
+    c.reset()
+    #expect(!c.isCurrentGeneration(issuedAgainst))
+  }
+
+  /// The cross-item race: a seek is in flight when a queue change resets the
+  /// coordinator and captures the new track's start position. The old item's
+  /// cancelled completion (now a stale generation) must be dropped — not
+  /// delivered as a completion that would consume the fresh pending seek.
+  @Test func staleCompletionAfterResetIsDroppedAndKeepsThePendingSeek() async {
+    let c = makeCoordinator()
+    let player = AVPlayer()
+    let spy = SeekCompletionSpy()
+
+    c.capture(position: 10.0)
+    _ = c.executeIfPending(on: player, delegate: spy)
+
+    // Queue change: reset, then capture the new track's start position.
+    c.reset()
+    c.capture(position: 25.0)
+
+    // Let the (immediately-cancelled, itemless) seek completion drain.
+    for _ in 0 ..< 20 {
+      await Task.yield()
+    }
+
+    #expect(spy.calls.isEmpty)
+    #expect(c.pendingTime == 25.0)
+  }
 }
 
 // MARK: - Integration
@@ -260,7 +293,7 @@ struct IntegrationTests {
     // First seek
     c.capture(position: 10.0)
     _ = c.executeIfPending(on: player, delegate: nil)
-    guard case .seekInFlight(let t1) = c.state else {
+    guard case let .seekInFlight(t1) = c.state else {
       Issue.record("expected .seekInFlight")
       return
     }
@@ -268,7 +301,7 @@ struct IntegrationTests {
 
     // Override while in-flight
     c.capture(position: 50.0)
-    guard case .pendingSeek(let t2) = c.state else {
+    guard case let .pendingSeek(t2) = c.state else {
       Issue.record("expected .pendingSeek")
       return
     }
@@ -277,7 +310,7 @@ struct IntegrationTests {
     // First seek "completes" — should auto re-execute
     let done = c.seekDidComplete(on: player, delegate: nil)
     #expect(done == false)
-    guard case .seekInFlight(let t3) = c.state else {
+    guard case let .seekInFlight(t3) = c.state else {
       Issue.record("expected .seekInFlight after re-execute")
       return
     }

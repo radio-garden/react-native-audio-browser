@@ -42,15 +42,6 @@ namespace margelo::nitro::audiobrowser {
     static jni::alias_ref<JSearchMode> fromCpp(SearchMode value) {
       static const auto clazz = javaClassStatic();
       switch (value) {
-        case SearchMode::ARTIST:
-          static const auto fieldARTIST = clazz->getStaticField<JSearchMode>("ARTIST");
-          return clazz->getStaticFieldValue(fieldARTIST);
-        case SearchMode::ALBUM:
-          static const auto fieldALBUM = clazz->getStaticField<JSearchMode>("ALBUM");
-          return clazz->getStaticFieldValue(fieldALBUM);
-        case SearchMode::GENRE:
-          static const auto fieldGENRE = clazz->getStaticField<JSearchMode>("GENRE");
-          return clazz->getStaticFieldValue(fieldGENRE);
         case SearchMode::ANY:
           static const auto fieldANY = clazz->getStaticField<JSearchMode>("ANY");
           return clazz->getStaticFieldValue(fieldANY);
@@ -60,6 +51,33 @@ namespace margelo::nitro::audiobrowser {
         case SearchMode::PLAYLIST:
           static const auto fieldPLAYLIST = clazz->getStaticField<JSearchMode>("PLAYLIST");
           return clazz->getStaticFieldValue(fieldPLAYLIST);
+        case SearchMode::STATION:
+          static const auto fieldSTATION = clazz->getStaticField<JSearchMode>("STATION");
+          return clazz->getStaticFieldValue(fieldSTATION);
+        case SearchMode::PODCAST:
+          static const auto fieldPODCAST = clazz->getStaticField<JSearchMode>("PODCAST");
+          return clazz->getStaticFieldValue(fieldPODCAST);
+        case SearchMode::AUDIOBOOK:
+          static const auto fieldAUDIOBOOK = clazz->getStaticField<JSearchMode>("AUDIOBOOK");
+          return clazz->getStaticFieldValue(fieldAUDIOBOOK);
+        case SearchMode::NEWS:
+          static const auto fieldNEWS = clazz->getStaticField<JSearchMode>("NEWS");
+          return clazz->getStaticFieldValue(fieldNEWS);
+        case SearchMode::MUSIC:
+          static const auto fieldMUSIC = clazz->getStaticField<JSearchMode>("MUSIC");
+          return clazz->getStaticFieldValue(fieldMUSIC);
+        case SearchMode::MUSIC_VIDEO:
+          static const auto fieldMUSIC_VIDEO = clazz->getStaticField<JSearchMode>("MUSIC_VIDEO");
+          return clazz->getStaticFieldValue(fieldMUSIC_VIDEO);
+        case SearchMode::MOVIE:
+          static const auto fieldMOVIE = clazz->getStaticField<JSearchMode>("MOVIE");
+          return clazz->getStaticFieldValue(fieldMOVIE);
+        case SearchMode::TV_SHOW:
+          static const auto fieldTV_SHOW = clazz->getStaticField<JSearchMode>("TV_SHOW");
+          return clazz->getStaticFieldValue(fieldTV_SHOW);
+        case SearchMode::TV_SHOW_EPISODE:
+          static const auto fieldTV_SHOW_EPISODE = clazz->getStaticField<JSearchMode>("TV_SHOW_EPISODE");
+          return clazz->getStaticFieldValue(fieldTV_SHOW_EPISODE);
         default:
           std::string stringValue = std::to_string(static_cast<int>(value));
           throw std::invalid_argument("Invalid enum value (" + stringValue + "!");

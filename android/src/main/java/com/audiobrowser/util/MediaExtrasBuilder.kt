@@ -39,7 +39,7 @@ object MediaExtrasBuilder {
       groupTitle = track.groupTitle,
       style = track.style,
       childrenStyle = track.childrenStyle,
-      artwork = track.artwork,
+      artwork = track.artwork?.url,
     )
 
   fun build(resolvedTrack: ResolvedTrack): Bundle =
@@ -47,7 +47,7 @@ object MediaExtrasBuilder {
       groupTitle = resolvedTrack.groupTitle,
       style = resolvedTrack.style,
       childrenStyle = resolvedTrack.childrenStyle,
-      artwork = resolvedTrack.artwork,
+      artwork = resolvedTrack.artwork?.url,
     )
 
   private fun build(

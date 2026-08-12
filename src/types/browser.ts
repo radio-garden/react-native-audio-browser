@@ -56,66 +56,123 @@ export type BrowseResult = ResolvedTrack | BrowseError
 
 export type BrowserSourceCallback = (
   param: BrowserSourceCallbackParam
-) => Promise<BrowseResult>
+) => BrowseResult | Promise<BrowseResult>
 
 /**
- * Search mode types for structured voice search.
+ * Search mode — the *container vertical*: what KIND of result the user asked
+ * for. Orthogonal to the filter props (`genre`/`artist`/`album`/`title`/
+ * `playlist`), which say *which* item. `mode` is optional: when absent, the
+ * request is unstructured (text-search `query`) or unclassified.
  *
- * - `any`: Play any content - smart shuffle or last playlist (query will be empty string)
- * - `genre`: Search by genre
- * - `artist`: Search by artist
- * - `album`: Search by album
- * - `song`: Search by song/track title
- * - `playlist`: Search by playlist name
+ * - `any`: play anything sensible — "play something" / smart shuffle (query
+ *   empty). Android also maps its generic "play music" focus here, since it
+ *   can't isolate the music vertical the way iOS can.
+ * - `song`: an individual track
+ * - `playlist`: a named playlist / mix
+ * - `station`: a live radio station / channel
+ * - `podcast`: a podcast (series, episode, or station)
+ * - `audiobook`: an audiobook
+ * - `news`: news content
+ * - `music`: the music vertical, as opposed to talk/podcasts/audiobooks
+ *   ("play music" on iOS, via the music media type)
+ * - `music-video` / `movie` / `tv-show` / `tv-show-episode`: video kinds
+ *   (an audio app cannot play these; surfaced so consumers may special-case —
+ *   ignoring them degrades to an unstructured search)
+ *
+ * NOTE: there is intentionally no `genre`/`artist`/`album` member — those are
+ * filters, not result shapes. Read them from `SearchParams.genre`/`.artist`/
+ * `.album` directly.
  *
  * @see BrowserConfiguration.search
  * @see SearchParams
  */
 export type SearchMode =
   | 'any'
-  | 'genre'
-  | 'artist'
-  | 'album'
   | 'song'
   | 'playlist'
+  | 'station'
+  | 'podcast'
+  | 'audiobook'
+  | 'news'
+  | 'music'
+  | 'music-video'
+  | 'movie'
+  | 'tv-show'
+  | 'tv-show-episode'
 
 /**
- * Structured search parameters from voice commands.
+ * The media-reference axis from a voice intent.
  *
- * Voice commands are parsed by Android into structured parameters:
- * - "play something" → mode=null, query="something"
- * - "play music" → mode='any', query=""
- * - "play jazz" → mode='genre', genre="jazz", query="jazz"
- * - "play michael jackson" → mode='artist', artist="michael jackson", query="michael jackson"
- * - "play thriller by michael jackson" → mode='album', album="thriller", artist="michael jackson"
- * - "play billie jean" → mode='song', title="billie jean", query="billie jean"
+ * - `my`: the user's own collection ("play my favorites") — routed to the
+ *   `search` source so the consumer resolves it against their library.
+ * - `unknown`: no reference (the default; Android always emits this).
+ *
+ * NOTE: "currently playing" ("play this") is resolved natively (resume) and
+ * never reaches the consumer, so it is not a value here.
+ */
+export type MediaReference = 'my' | 'unknown'
+
+/**
+ * Structured search parameters normalized from a voice/search intent — one
+ * cross-platform shape (iOS SiriKit + Android MediaSession). `mode` is the
+ * container vertical; the remaining fields are filters. Example mappings:
+ * - "play something"              → mode='any', query="" (smart shuffle)
+ * - "play music"                  → mode='music' (iOS) / 'any' (Android), query=""
+ * - "play jazz"                   → genre="jazz", query="jazz" (mode undefined)
+ * - "play the radishes"           → artist="the radishes", query="the radishes"
+ * - "play greens by the radishes" → album="greens", artist="the radishes"
+ * - "play sweet pea"              → mode='song', title="sweet pea", query="sweet pea"
+ * - "play my favorites"           → reference='my', query=""
+ * - "play a jazz podcast"         → mode='podcast', genre="jazz"
  */
 export interface SearchParams {
-  /** The search mode indicating what type of search is being performed, or null for unstructured search */
+  /** Container vertical, or undefined for an unstructured / unclassified search. */
   mode?: SearchMode
   /**
    * The original search query string (always present, but may be empty string "").
-   * When mode='any' with empty string query, return any content you think the user would like
+   * With mode='any' and empty query, return any content the user would like
    * (e.g., recently played, favorites, or smart shuffle).
    */
   query: string
-  /** Genre name for genre-specific search */
+  /** Genre filter, when the intent named one. */
   genre?: string
-  /** Artist name for artist/album/song search */
+  /** Artist filter (artist / album / song intents). */
   artist?: string
-  /** Album name for album-specific search */
+  /** Album filter. */
   album?: string
-  /** Song title for song-specific search */
+  /** Track title, for a song intent. */
   title?: string
-  /** Playlist name for playlist-specific search */
+  /** Playlist name, for a playlist intent. */
   playlist?: string
+  /**
+   * Media-reference axis. `'my'` = resolve against the user's own collection
+   * ("play my favorites"); `'unknown'` = no reference (the default). Android
+   * always emits `'unknown'`.
+   *
+   * Resolve it however your collection lives: a `SearchSourceCallback` can read
+   * `params.reference` and return the matching tracks directly, or — when using
+   * an HTTP `TransformableRequestConfig` — branch in `transform` on
+   * `request.query.reference === 'my'` to rewrite the request toward a
+   * favorites endpoint (e.g. injecting locally-stored identifiers into the body).
+   */
+  reference: MediaReference
 }
 
 export type SearchSourceCallback = (params: SearchParams) => Promise<Track[]>
+// Sync and async transforms are SEPARATE fields (`transform` / `transformSync`),
+// never a `T | Promise<T>` union. A union lowers to a Nitro `variant<Struct,
+// Promise<Struct>>`, and an all-optional struct's `canConvert` also accepts a
+// Promise — so the async case is silently misread as an empty config. Two
+// single-typed fields keep both paths unambiguous, and the sync field allocates
+// no Promise. When both are set they run as a pipeline: async first, then sync.
 export type RequestConfigTransformer = (
   request: RequestConfig,
   routeParams?: Record<string, string>
 ) => Promise<RequestConfig>
+export type RequestConfigTransformerSync = (
+  request: RequestConfig,
+  routeParams?: Record<string, string>
+) => RequestConfig
 
 export type HttpMethod =
   | 'GET'
@@ -215,9 +272,13 @@ export interface MediaTransformParams {
  * }
  * ```
  */
+// Split sync/async — see RequestConfigTransformer. Set `transform` and/or `transformSync`.
 export type MediaRequestConfigTransformer = (
   params: MediaTransformParams
 ) => Promise<RequestConfig>
+export type MediaRequestConfigTransformerSync = (
+  params: MediaTransformParams
+) => RequestConfig
 
 /**
  * Request configuration that supports async transformation.
@@ -226,6 +287,11 @@ export type MediaRequestConfigTransformer = (
  * The transform callback receives the merged request config and can modify it
  * before the request is made. This is useful for adding dynamic headers,
  * signing URLs, or other request-time modifications.
+ *
+ * Note: when a layer provides a transform, the layer's other static fields
+ * are NOT merged — the transform receives the merged config from the layers
+ * below it, and its return value replaces that config entirely. Spread the
+ * incoming request (`{ ...request, ... }`) to keep its fields.
  *
  * @example
  * ```typescript
@@ -242,8 +308,45 @@ export type MediaRequestConfigTransformer = (
  * ```
  */
 export interface TransformableRequestConfig extends RequestConfig {
+  /** Async per-request transform. When both are set, runs BEFORE `transformSync`. */
   transform?: RequestConfigTransformer
+  /** Sync per-request transform (no Promise allocation). When both are set, runs AFTER `transform`. */
+  transformSync?: RequestConfigTransformerSync
 }
+
+/**
+ * Lazily builds the config for a `request` or `browse` layer. Reach for it when
+ * the config depends on a value that changes now and then — a base URL, a
+ * locale — but not on every request.
+ *
+ * How it differs from a `transform`: **a resolver runs once and its result is
+ * cached**, then reused for every browse/search/media/artwork request — whereas a
+ * `transform` runs on *every* request. The resolver re-runs only when you call
+ * `invalidateAllContent()`, so call that after (say) an environment or locale
+ * switch to pick up the new value.
+ *
+ * Return the config directly — no `async`/Promise needed in the common case — or
+ * a `Promise` when you must await (e.g. fetching a token). The cached config
+ * flows through the normal layering, so its `query` merges additively and its
+ * `baseUrl` overrides, exactly like a static config; it may also include a
+ * `transform` if you additionally need genuine per-request logic.
+ *
+ * @example
+ * ```typescript
+ * configureBrowser({
+ *   // Read once and cached; re-read after the next invalidateAllContent().
+ *   request: () => ({ baseUrl: currentBaseUrl() }),
+ *   // Browse-only locale param, merged into every browse request's query.
+ *   browse: () => ({ query: { hl: currentLocale() } }),
+ * })
+ *
+ * // Async resolver (e.g. awaiting a token) — still runs once, then cached:
+ * request: async () => ({ headers: { authorization: await freshToken() } })
+ * ```
+ */
+export type RequestConfigResolver = () =>
+  | TransformableRequestConfig
+  | Promise<TransformableRequestConfig>
 
 /**
  * Configuration for artwork image requests
@@ -372,13 +475,13 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    *
    * Called for each track to generate the final request configuration.
    * Receives the full Track object, allowing URL generation based on
-   * track metadata (artist, album, src, etc.).
+   * track metadata (id, artist, album, src, etc.).
    *
    * The returned config is merged with base configs, then passed to
    * `transform` if provided.
    *
    * @param track - The track being requested
-   * @returns Request configuration for this specific track
+   * @returns Request configuration for this specific track (sync or async)
    *
    * @example
    * ```typescript
@@ -388,7 +491,10 @@ export interface MediaRequestConfig extends TransformableRequestConfig {
    * })
    * ```
    */
+  /** Async per-track resolution. When both are set, runs (merged) BEFORE `resolveSync`. */
   resolve?: (track: Track) => Promise<RequestConfig>
+  /** Sync per-track resolution (no Promise allocation). When both are set, runs (merged) AFTER `resolve`. */
+  resolveSync?: (track: Track) => RequestConfig
 }
 
 export interface ArtworkRequestConfig extends RequestConfig {
@@ -396,7 +502,7 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * Per-track request resolution callback.
    *
    * Called for each track to generate the request configuration based on
-   * track metadata (artist, album, src, etc.).
+   * track metadata (id, artist, album, src, etc.).
    *
    * The returned config is merged with base configs, then passed to
    * `transform` if provided.
@@ -414,7 +520,10 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
+  /** Async per-track resolution. When both are set, runs (merged) BEFORE `resolveSync`. */
   resolve?: (track: Track) => Promise<RequestConfig>
+  /** Sync per-track resolution (no Promise allocation). When both are set, runs (merged) AFTER `resolve`. */
+  resolveSync?: (track: Track) => RequestConfig
 
   /**
    * Final transformation callback for media/artwork requests.
@@ -445,7 +554,10 @@ export interface ArtworkRequestConfig extends RequestConfig {
    * }
    * ```
    */
+  /** Async final transform. When both are set, runs BEFORE `transformSync`. */
   transform?: MediaRequestConfigTransformer
+  /** Sync final transform (no Promise allocation). When both are set, runs AFTER `transform`. */
+  transformSync?: MediaRequestConfigTransformerSync
 
   /**
    * Query parameter names for automatic context injection from CarPlay/Android Auto.
@@ -473,6 +585,19 @@ export interface ArtworkRequestConfig extends RequestConfig {
   imageQueryParams?: ImageQueryParams
 }
 
+/**
+ * Source for a browse container's contents.
+ *
+ * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
+ * return a single **page object** — a {@link ResolvedTrack}
+ * (`{ title, url?, children: Track[] }`). The `children` array holds the rows
+ * shown for the container; each child is a playable leaf (`src`) or a navigable
+ * sub-container (`url`). A callback / static `ResolvedTrack` returns the same
+ * page object directly.
+ *
+ * {@link SearchSource} and {@link TabsSource} HTTP endpoints return this same
+ * page shape; only the meaning of `children` differs (results / tabs).
+ */
 export type BrowserSource =
   | ResolvedTrack
   | BrowserSourceCallback
@@ -503,12 +628,15 @@ export type RouteConfig = {
   artwork?: ArtworkRequestConfig
 }
 
-export type TabsSourceCallback = () => Promise<Track[]>
+export type TabsSourceCallback = () => Track[] | Promise<Track[]>
 /**
  * Tab source configuration for navigation tabs.
  *
- * When using API configuration (TransformableRequestConfig), the request path defaults to '/'
- * and should return an array of Track objects with urls representing the tabs.
+ * When using API configuration (TransformableRequestConfig), the request path
+ * defaults to '/' and the endpoint must return a page object
+ * `{ title?, children: Track[] }` whose `children` are the tabs — the same
+ * shape a browse endpoint returns. Callback/static sources provide `Track[]`
+ * directly.
  */
 export type TabsSource =
   | Track[]
@@ -518,30 +646,103 @@ export type TabsSource =
 /**
  * Search source configuration for handling search requests.
  *
+ * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
+ * return a page object — `{ title?, children: Track[] }` — whose `children`
+ * are the result rows, the same shape a browse endpoint returns. (The web
+ * implementation additionally accepts a bare `Track[]` for back-compat;
+ * iOS/Android do not.) Callback sources return `Track[]` directly.
+ *
  * @see BrowserConfiguration.search
  */
 export type SearchSource = SearchSourceCallback | TransformableRequestConfig
 
+/**
+ * How ids passed to `setFavorites` are matched against a
+ * track's `src` to hydrate its `favorited` flag.
+ *
+ * - `'exact'`: the id must equal `src`.
+ * - `'partial'`: the id matches if it appears as a complete path segment within
+ *   `src` (delimited by `/`, `?`, `#`, or the string boundaries). Useful when
+ *   favorites are stored as a stable identifier that is embedded in — but not
+ *   equal to — the playable `src` URL.
+ *
+ * @example
+ * ```text
+ * setFavorites(['abc123'])  +  track.src = '/stream/jazz-fm/abc123'
+ *
+ *   'exact'    'abc123' === '/stream/jazz-fm/abc123'   → not favorited
+ *   'partial'  'abc123' is the last segment of the src → favorited
+ *
+ * setFavorites(['https://cdn.example.com/jazz-fm/abc123.mp3'])
+ *
+ *   'exact'    id === src                              → favorited
+ *   'partial'  id is a full segment of src             → favorited
+ * ```
+ */
+export type FavoritesMatchMode = 'exact' | 'partial'
+
+/**
+ * Object form of the `favorite` capability — enables favoriting with an explicit
+ * {@link FavoritesMatchMode}. (A bare `true` is shorthand for `{ match: 'exact' }`.)
+ */
+export interface FavoriteConfig {
+  match: FavoritesMatchMode
+}
+
 export type BrowserConfiguration = {
   /**
-   * Initial navigation path. Setting this triggers initial navigation to the specified path.
+   * Initial navigation path. Setting this triggers initial navigation to the
+   * specified path. When unset, the first tab's URL is used; when there are
+   * no tabs either, `/`.
    */
   path?: string | undefined
 
   // ─── Request Defaults (applied to all requests) ────────────────────────────
 
   /**
-   * Shared request settings applied to all HTTP requests (browse, search, media, artwork).
-   * Specific configs override these defaults.
+   * Shared request settings applied to every HTTP request (browse, search,
+   * media, artwork). Layered before the per-kind config and (for browse) the
+   * route — so request → `<kind>` → route. Specific configs override these
+   * defaults.
+   *
+   * Either a static {@link TransformableRequestConfig} (its optional `transform`
+   * runs per request), or a {@link RequestConfigResolver} thunk resolved once per
+   * content generation and re-resolved on `invalidateAllContent()`. Reach for the
+   * resolver when a value changes rarely (a base URL, an auth host) so it is read
+   * once per generation and merged natively — rather than recomputed on every
+   * browse/search/media/artwork request via a `transform`.
    */
-  request?: TransformableRequestConfig
+  request?: TransformableRequestConfig | RequestConfigResolver
 
-  // ─── Content Configuration ─────────────────────────────────────────────────
+  // ─── Per-kind request configuration ─────────────────────────────────────────
 
-  /** Default browse source when no matching route is found. */
-  browse?: BrowserSource
+  /**
+   * Request shaping applied to every browse request (all routes, including the
+   * implicit default), layered between `request` and the matched route:
+   * `request` → `browse` → route. This is the browse-kind analogue of `media`
+   * and `artwork` — the place for browse-only concerns (e.g. a content-type
+   * marker query, or a locale param) that should not leak onto media/artwork.
+   *
+   * A browse path with no matching `routes` entry is fetched using
+   * `request` + `browse` applied to the path, so this also defines the default
+   * browse behaviour. Register a `routes['*']` entry only to override that
+   * default with a callback / static / bespoke config.
+   *
+   * Like `request`, this may be a static {@link TransformableRequestConfig} or a
+   * {@link RequestConfigResolver} thunk (resolved once per content generation) —
+   * e.g. a locale query param that only changes when `invalidateAllContent()` is
+   * called. A resolver's `query` is merged additively into each browse request's
+   * query, exactly as a static `query` would be.
+   */
+  browse?: TransformableRequestConfig | RequestConfigResolver
 
-  /** Media/audio stream request configuration. */
+  /**
+   * Media/audio stream request configuration.
+   *
+   * Unlike `request`/`browse`, this does not accept a resolver thunk. For
+   * values that change at runtime, use the shared `request` resolver (it
+   * applies to media requests too), a per-track `resolve`, or a `transform`.
+   */
   media?: MediaRequestConfig
 
   /**
@@ -552,8 +753,9 @@ export type BrowserConfiguration = {
    * Artwork URLs are transformed when tracks are processed (before being passed to media controllers
    * like Android Auto). This is different from media requests which are transformed at playback time.
    *
-   * Note: Since media controllers load images directly from URLs, HTTP headers cannot be applied
-   * to artwork requests. Use query parameters for authentication tokens if your CDN supports it.
+   * Headers ARE applied to artwork requests: the library fetches CarPlay and
+   * Android Auto images in-process, and in-app consumers receive them via
+   * `artworkSource` (which carries the headers for React Native's `<Image>`).
    *
    * @example
    * ```typescript
@@ -575,41 +777,82 @@ export type BrowserConfiguration = {
    */
   artwork?: ArtworkRequestConfig
 
+  /**
+   * Artwork configuration for the NOW-PLAYING surface only (lock screen / CarPlay /
+   * Android Auto now-playing) — distinct from `artwork`, which configures browse-list
+   * thumbnails. When set, the now-playing artwork is resolved from THIS config instead of
+   * `artwork`; browse lists never read it, so they're unaffected. When unset, now-playing
+   * falls back to `artwork` / the track's own `artwork`.
+   *
+   * Being a full `RequestConfig`, it supports `path`, `query`, and `headers`. The token
+   * `{id}` in any of those values is replaced with the track's `id` during resolution, and
+   * the result flows through the shared `request` layer (so a relative path gets `baseUrl`
+   * prepended). For logic that can't be expressed as a template, use `resolve(track)`.
+   *
+   * The `{id}` templating is specific to `nowPlayingArtwork` — static values
+   * in other configs are not templated. Not implemented by the web
+   * implementation.
+   *
+   * @example
+   * // 302-redirect endpoint keyed by the track id:
+   * nowPlayingArtwork: { path: '/artwork/{id}' }
+   */
+  nowPlayingArtwork?: ArtworkRequestConfig
+
   // ─── Navigation ────────────────────────────────────────────────────────────
 
   /**
    * Configuration for search functionality.
    * Enables search capabilities in the media browser, typically accessed through voice commands or search UI.
    *
+   * See the [Search guide](https://audiobrowser.dev/guide/search) for a walkthrough of
+   * modes, filters, the `reference` axis, and mixed audio/video.
+   *
    * Optional - if not provided, search functionality will be disabled.
    * Required for Android Auto/CarPlay voice search integration with support for structured voice commands.
    *
    * Search receives structured parameters from voice commands like:
-   * - "play music" → mode='any', query=""
-   * - "play jazz" → mode='genre', genre="jazz", query="jazz"
-   * - "play michael jackson" → mode='artist', artist="michael jackson", query="michael jackson"
-   * - "play thriller by michael jackson" → mode='album', album="thriller", artist="michael jackson"
-   * - "play billie jean" → mode='song', title="billie jean", query="billie jean"
+   * - "play something"          → mode='any', query="" (smart shuffle)
+   * - "play music"              → mode='music' (iOS) / 'any' (Android), query=""
+   * - "play jazz"               → genre="jazz", query="jazz" (genre is a filter, no mode)
+   * - "play the radishes"       → artist="the radishes", query="the radishes"
+   * - "play sweet pea"          → mode='song', title="sweet pea", query="sweet pea"
+   * - "play my favorites"       → reference='my', query=""
    *
    * Can be either:
-   * - SearchSourceCallback: Receives SearchParams with query, and optional mode/artist/album/genre/title/playlist fields
-   * - TransformableRequestConfig: API endpoint where all search parameters are automatically added to request.query:
+   * - SearchSourceCallback: Receives SearchParams with query + reference, plus the
+   *   optional container-vertical `mode` and the genre/artist/album/title/playlist filters
+   * - TransformableRequestConfig: API endpoint where search parameters are automatically added to request.query:
    *   - q: search query string (always present)
-   *   - mode: search mode (any/genre/artist/album/song/playlist) - omitted for unstructured search
-   *   - artist, album, genre, title, playlist: included when present
+   *   - mode: container vertical (any/song/playlist/station/podcast/audiobook/news/music/
+   *     music-video/movie/tv-show/tv-show-episode) - omitted for unstructured search
+   *   - reference: 'my' when the user asked for their own collection ("play my
+   *     favorites"); omitted otherwise
+   *   - artist, album, genre, title, playlist: filters, included when present
+   *
+   * These query-param keys are fixed (not configurable). If your endpoint
+   * expects different names, rename them in `transform` — it receives the params
+   * already on `request.query`, e.g. `query: { search: request.query?.q }`.
+   *
+   * Response shape: the endpoint must return a page object
+   * `{ children: Track[] }` — see {@link SearchSource}.
    *
    * @example
    * ```typescript
    * // Callback approach - direct access to structured parameters
    * search: async (params) => {
-   *   // Use structured fields for precise searches
-   *   if (params.mode === 'artist' && params.artist) {
-   *     return await db.query('SELECT * FROM tracks WHERE artist = ?', [params.artist]);
-   *   }
-   *   if (params.mode === 'album' && params.album && params.artist) {
+   *   // "play my favorites" → resolve against the user's own collection
+   *   if (params.reference === 'my') return await getFavorites();
+   *   // Filters are read directly from their props (not derived from `mode`)
+   *   if (params.album && params.artist) {
    *     return await db.query('SELECT * FROM tracks WHERE album = ? AND artist = ?',
    *       [params.album, params.artist]);
    *   }
+   *   if (params.artist) {
+   *     return await db.query('SELECT * FROM tracks WHERE artist = ?', [params.artist]);
+   *   }
+   *   // `mode` is the container vertical — narrow by it when present
+   *   if (params.mode === 'podcast') return await searchPodcasts(params.query);
    *   // Fall back to full-text search
    *   return await searchByQuery(params.query);
    * }
@@ -617,11 +860,11 @@ export type BrowserConfiguration = {
    * // API configuration - parameters automatically added to query string
    * search: {
    *   baseUrl: 'https://api.example.com/search',
-   *   // GET /search?q=thriller&mode=album&album=thriller&artist=michael+jackson&limit=20
+   *   // GET /search?q=greens&mode=album&album=greens&artist=the+radishes&limit=20
    *   transform(request) {
    *     return {
    *       ...request,
-   *       query: { ...request.query, limit: 20 }
+   *       query: { ...request.query, limit: '20' }
    *     };
    *   }
    * }
@@ -641,20 +884,47 @@ export type BrowserConfiguration = {
   tabs?: TabsSource
 
   /**
-   * Route-specific configurations. Maps URL paths to browse sources.
-   * Routes match by prefix, most specific (most slashes) wins.
+   * Route-specific configurations. Maps URL path patterns to browse sources.
    *
-   * Can be a simple `BrowserSource` or extended `RouteConfig` with media/artwork overrides.
+   * ## Matching
+   *
+   * Patterns match on **exact segment count** — `/artists` does NOT match
+   * `/artists/123`. Segments may be:
+   * - a constant: `/favorites`
+   * - a parameter: `/albums/{id}` — captured into `routeParams.id` and passed
+   *   to callbacks and transforms
+   * - a single-segment wildcard: `*`
+   * - a tail wildcard: `/files/**` — matches any depth; the remainder is
+   *   captured into `routeParams.tail`
+   *
+   * When several patterns match, the most specific wins
+   * (constants > parameters > wildcards > tail wildcard).
+   *
+   * ## Defaults and reserved keys
+   *
+   * A path matching no route is fetched over HTTP via the `request` →
+   * `browse` layers with the path applied — most APIs only need explicit
+   * routes for exceptions. The special key `'*'` overrides that default with
+   * its own source. Keys starting with `__` are reserved for internal use.
+   *
+   * Note: a static `path` on a route's request config does not rewrite the
+   * request path (the navigated path is used); remap paths in a `transform`,
+   * which receives `routeParams` as its second argument.
+   *
+   * Values can be a `BrowserSource` (callback, request config, or static page
+   * object) or a `RouteConfig` with per-route `media`/`artwork` overrides.
    *
    * @example
    * ```typescript
    * routes: {
-   *   '/favorites': async () => getFavorites(),
-   *   '/artists': { baseUrl: 'https://music-api.com' },
+   *   '/favorites': async () => getFavoritesPage(),
+   *   '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams?.id),
    *   '/premium': {
-   *     browse: { baseUrl: 'https://premium-api.com' },
-   *     artwork: { baseUrl: 'https://premium-images.cdn.com' }
-   *   }
+   *     browse: { baseUrl: 'https://premium-api.example.com' },
+   *     artwork: { baseUrl: 'https://premium-images.example.com' }
+   *   },
+   *   // Custom default for anything no other route matches:
+   *   '*': { baseUrl: 'https://api.example.com' }
    * }
    * ```
    */
@@ -693,34 +963,42 @@ export type BrowserConfiguration = {
    */
   androidControllerOfflineError?: boolean
 
-  // ─── CarPlay Options ──────────────────────────────────────────────────────────
-
   /**
-   * Enable the "Up Next" button on the CarPlay Now Playing screen.
+   * Title shown (as the list's centered empty state) on CarPlay screens whose
+   * content is still loading — browse destinations while they resolve, and the
+   * startup screen while tabs load. Supply your app's localized "Loading…"
+   * string. On iOS 18.4+ the system loading spinner is shown instead.
    *
-   * When enabled, tapping "Up Next" shows the current playback queue,
-   * allowing users to see upcoming tracks and jump to a specific position.
-   *
-   * The button is automatically hidden when the queue has only one track.
-   *
-   * @default true
-   * @platform ios
-   */
-  carPlayUpNextButton?: boolean
-
-  /**
-   * Configure up to 5 buttons on the CarPlay Now Playing screen. These buttons
-   * are arranged using the array order from left to right.
+   * When unset, loading screens are left blank (apart from the spinner on
+   * iOS 18.4+) rather than showing un-localized copy.
    *
    * @example
    * ```typescript
-   * carPlayNowPlayingButtons: ['repeat']
+   * carPlayLoadingTitle: t('loading')
    * ```
    *
-   * @default []
    * @platform ios
    */
-  carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
+  carPlayLoadingTitle?: string
+
+  /**
+   * Called when the album line on the CarPlay Now Playing screen is tapped
+   * and the active track has no {@link Track.albumUrl}. Return a browse path
+   * to navigate the CarPlay browse stack there, or `undefined` if the tap was
+   * handled (or should do nothing).
+   *
+   * The album line is tappable whenever the active track has an `albumUrl`
+   * or this callback is configured.
+   *
+   * @example
+   * ```typescript
+   * resolveAlbumUrl: (track) =>
+   *   track.album ? `/album/${slugify(track.album)}` : undefined
+   * ```
+   *
+   * @platform ios
+   */
+  resolveAlbumUrl?: ResolveAlbumUrlCallback
 
   /**
    * Callback to customize error messages for navigation errors.
@@ -730,12 +1008,15 @@ export type BrowserConfiguration = {
    *
    * @example
    * ```typescript
-   * formatNavigationError: (error) => ({
-   *   title: t(`error.${error.code}`),
-   *   message: error.code === 'http-error'
-   *     ? t('error.httpMessage', { status: error.statusCode })
-   *     : error.message
-   * })
+   * formatNavigationError: ({ error, defaultFormatted }) => {
+   *   if (error.code === 'http-error') {
+   *     return {
+   *       title: t('error.serverError'),
+   *       message: t('error.httpMessage', { status: error.statusCode })
+   *     }
+   *   }
+   *   return defaultFormatted
+   * }
    * ```
    */
   formatNavigationError?: FormatNavigationErrorCallback
@@ -781,11 +1062,12 @@ export type FormattedNavigationError = {
    */
   title: string
   /**
-   * Message body shown below the title in the error action sheet.
+   * Optional second line — the body in the error action sheet, the subtitle in
+   * the browse error/empty view. Omit it to show a title only.
    *
-   * Default value: `error.message`
+   * Default value: `error.message` (omitted when that is empty).
    */
-  message: string
+  message?: string
 }
 
 /**
@@ -826,3 +1108,9 @@ export type FormatNavigationErrorParams = {
 export type FormatNavigationErrorCallback = (
   params: FormatNavigationErrorParams
 ) => FormattedNavigationError | undefined
+
+/**
+ * Maps the tapped active track to a browse path for the CarPlay album line,
+ * or `undefined` to do nothing. See `resolveAlbumUrl`.
+ */
+export type ResolveAlbumUrlCallback = (track: Track) => string | undefined

@@ -10,21 +10,27 @@
 #include <fbjni/fbjni.h>
 #include "ResolvedTrack.hpp"
 
+#include "ArtworkVariants.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "HttpMethod.hpp"
 #include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
+#include "JArtworkVariants.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
 #include "JHttpMethod.hpp"
 #include "JImageRowItem.hpp"
 #include "JImageSource.hpp"
 #include "JTrack.hpp"
+#include "JTrackRequest.hpp"
 #include "JTrackStyle.hpp"
+#include "JVariant_String_ArtworkVariants.hpp"
 #include "Track.hpp"
+#include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace margelo::nitro::audiobrowser {
@@ -52,12 +58,16 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JArrayClass<JTrack>> children = this->getFieldValue(fieldChildren);
       static const auto fieldCarPlaySiriListButton = clazz->getField<JCarPlaySiriListButtonPosition>("carPlaySiriListButton");
       jni::local_ref<JCarPlaySiriListButtonPosition> carPlaySiriListButton = this->getFieldValue(fieldCarPlaySiriListButton);
+      static const auto fieldId = clazz->getField<jni::JString>("id");
+      jni::local_ref<jni::JString> id = this->getFieldValue(fieldId);
       static const auto fieldSrc = clazz->getField<jni::JString>("src");
       jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
-      static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
-      jni::local_ref<jni::JString> artwork = this->getFieldValue(fieldArtwork);
+      static const auto fieldArtwork = clazz->getField<JVariant_String_ArtworkVariants>("artwork");
+      jni::local_ref<JVariant_String_ArtworkVariants> artwork = this->getFieldValue(fieldArtwork);
       static const auto fieldArtworkSource = clazz->getField<JImageSource>("artworkSource");
       jni::local_ref<JImageSource> artworkSource = this->getFieldValue(fieldArtworkSource);
+      static const auto fieldRequest = clazz->getField<JTrackRequest>("request");
+      jni::local_ref<JTrackRequest> request = this->getFieldValue(fieldRequest);
       static const auto fieldArtworkCarPlayTinted = clazz->getField<jni::JBoolean>("artworkCarPlayTinted");
       jni::local_ref<jni::JBoolean> artworkCarPlayTinted = this->getFieldValue(fieldArtworkCarPlayTinted);
       static const auto fieldTitle = clazz->getField<jni::JString>("title");
@@ -66,6 +76,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> subtitle = this->getFieldValue(fieldSubtitle);
       static const auto fieldArtist = clazz->getField<jni::JString>("artist");
       jni::local_ref<jni::JString> artist = this->getFieldValue(fieldArtist);
+      static const auto fieldAlbumUrl = clazz->getField<jni::JString>("albumUrl");
+      jni::local_ref<jni::JString> albumUrl = this->getFieldValue(fieldAlbumUrl);
       static const auto fieldAlbum = clazz->getField<jni::JString>("album");
       jni::local_ref<jni::JString> album = this->getFieldValue(fieldAlbum);
       static const auto fieldDescription = clazz->getField<jni::JString>("description");
@@ -99,13 +111,16 @@ namespace margelo::nitro::audiobrowser {
           return __vector;
         }()) : std::nullopt,
         carPlaySiriListButton != nullptr ? std::make_optional(carPlaySiriListButton->toCpp()) : std::nullopt,
+        id != nullptr ? std::make_optional(id->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
-        artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
+        artwork != nullptr ? std::make_optional(artwork->toCpp()) : std::nullopt,
         artworkSource != nullptr ? std::make_optional(artworkSource->toCpp()) : std::nullopt,
+        request != nullptr ? std::make_optional(request->toCpp()) : std::nullopt,
         artworkCarPlayTinted != nullptr ? std::make_optional(static_cast<bool>(artworkCarPlayTinted->value())) : std::nullopt,
         title->toStdString(),
         subtitle != nullptr ? std::make_optional(subtitle->toStdString()) : std::nullopt,
         artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
+        albumUrl != nullptr ? std::make_optional(albumUrl->toStdString()) : std::nullopt,
         album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
         description != nullptr ? std::make_optional(description->toStdString()) : std::nullopt,
         genre != nullptr ? std::make_optional(genre->toStdString()) : std::nullopt,
@@ -134,7 +149,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JResolvedTrack::javaobject> fromCpp(const ResolvedTrack& value) {
-      using JSignature = JResolvedTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>, jni::alias_ref<JCarPlaySiriListButtonPosition>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JImageSource>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JImageRowItem>>);
+      using JSignature = JResolvedTrack(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JArrayClass<JTrack>>, jni::alias_ref<JCarPlaySiriListButtonPosition>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<JVariant_String_ArtworkVariants>, jni::alias_ref<JImageSource>, jni::alias_ref<JTrackRequest>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JDouble>, jni::alias_ref<JTrackStyle>, jni::alias_ref<JTrackStyle>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JArrayClass<JImageRowItem>>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -151,13 +166,16 @@ namespace margelo::nitro::audiobrowser {
           return __array;
         }() : nullptr,
         value.carPlaySiriListButton.has_value() ? JCarPlaySiriListButtonPosition::fromCpp(value.carPlaySiriListButton.value()) : nullptr,
+        value.id.has_value() ? jni::make_jstring(value.id.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
-        value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
+        value.artwork.has_value() ? JVariant_String_ArtworkVariants::fromCpp(value.artwork.value()) : nullptr,
         value.artworkSource.has_value() ? JImageSource::fromCpp(value.artworkSource.value()) : nullptr,
+        value.request.has_value() ? JTrackRequest::fromCpp(value.request.value()) : nullptr,
         value.artworkCarPlayTinted.has_value() ? jni::JBoolean::valueOf(value.artworkCarPlayTinted.value()) : nullptr,
         jni::make_jstring(value.title),
         value.subtitle.has_value() ? jni::make_jstring(value.subtitle.value()) : nullptr,
         value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
+        value.albumUrl.has_value() ? jni::make_jstring(value.albumUrl.value()) : nullptr,
         value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
         value.description.has_value() ? jni::make_jstring(value.description.value()) : nullptr,
         value.genre.has_value() ? jni::make_jstring(value.genre.value()) : nullptr,

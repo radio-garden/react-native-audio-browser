@@ -68,6 +68,21 @@ struct MediaLoaderInitialStateTests {
   }
 }
 
+// MARK: - loadAsset
+
+@Suite("loadAsset")
+@MainActor
+struct LoadAssetTests {
+  /// A silent return here stranded the player: reload-from-terminal has
+  /// already transitioned to .loading, so no-oping leaves a spinner forever
+  /// with no load in flight and no error.
+  @Test func withoutResolvedUrl_reportsError() {
+    let (loader, spy) = makeLoader()
+    loader.loadAsset()
+    #expect(spy.playbackErrors.count == 1)
+  }
+}
+
 // MARK: - resolveAndLoad
 
 @Suite("resolveAndLoad")
@@ -77,7 +92,7 @@ struct ResolveAndLoadTests {
     let (loader, spy) = makeLoader()
     loader.resolveAndLoad(src: "")
     #expect(spy.playbackErrors.count == 1)
-    if case .invalidSourceUrl(let url) = spy.playbackErrors.first {
+    if case let .invalidSourceUrl(url) = spy.playbackErrors.first {
       #expect(url == "")
     } else {
       Issue.record("expected .invalidSourceUrl, got \(String(describing: spy.playbackErrors.first))")
@@ -102,34 +117,30 @@ struct ResolveAndLoadTests {
   @Test func withResolver_callsResolver() async {
     let (loader, _) = makeLoader()
     var resolverCalled = false
-    loader.mediaUrlResolver = { src in
+    loader.mediaUrlResolver = { src, _ in
       resolverCalled = true
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
 
-    // Allow the resolver task to run
-    await Task.yield()
+    await loader.mediaResolverTask?.value
 
     #expect(resolverCalled == true)
   }
 
   @Test func withResolver_returningInvalidUrl_callsErrorDelegate() async {
     let (loader, spy) = makeLoader()
-    loader.mediaUrlResolver = { _ in
+    loader.mediaUrlResolver = { _, _ in
       MediaResolvedUrl(url: "", headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
 
-    // The resolver runs in a Task that awaits the resolver then does MainActor.run,
-    // so we need multiple yields for the full chain to settle.
-    for _ in 0..<10 {
-      await Task.yield()
-      if !spy.playbackErrors.isEmpty { break }
-    }
+    // The task awaits the resolver then hops back to the main actor, so the
+    // delegate call has landed by the time the task itself completes.
+    await loader.mediaResolverTask?.value
 
     #expect(spy.playbackErrors.count == 1)
-    if case .invalidSourceUrl(let url) = spy.playbackErrors.first {
+    if case let .invalidSourceUrl(url) = spy.playbackErrors.first {
       #expect(url == "")
     } else {
       Issue.record("expected .invalidSourceUrl")
@@ -139,7 +150,7 @@ struct ResolveAndLoadTests {
   @Test func cancelsPreviousResolverTask() async {
     let (loader, _) = makeLoader()
     var callCount = 0
-    loader.mediaUrlResolver = { src in
+    loader.mediaUrlResolver = { src, _ in
       callCount += 1
       // Simulate slow resolution
       try? await Task.sleep(for: .milliseconds(100))
@@ -151,8 +162,8 @@ struct ResolveAndLoadTests {
     // Immediately start second — should cancel first
     loader.resolveAndLoad(src: "https://example.com/second.mp3")
 
-    // Wait for both to settle
-    try? await Task.sleep(for: .milliseconds(200))
+    // Await the surviving task; the cancelled one bailed before its resolver.
+    await loader.mediaResolverTask?.value
 
     // Only the second resolver should have run (first was cancelled before calling resolver)
     #expect(callCount == 1)
@@ -168,15 +179,16 @@ struct ResolveAndLoadTests {
 struct CancelAllTests {
   @Test func preventsDelegateCallbacksAfterResolveAndLoad() async {
     let (loader, spy) = makeLoader()
-    loader.mediaUrlResolver = { src in
+    loader.mediaUrlResolver = { src, _ in
       try? await Task.sleep(for: .milliseconds(50))
       return MediaResolvedUrl(url: src, headers: nil, userAgent: nil)
     }
     loader.resolveAndLoad(src: "https://example.com/audio.mp3")
+    // cancelAll() drops the handle, so grab it first to await the point where
+    // the callback would have fired.
+    let resolve = loader.mediaResolverTask
     loader.cancelAll()
-
-    // Wait for what would have been the callback
-    try? await Task.sleep(for: .milliseconds(100))
+    await resolve?.value
 
     #expect(spy.preparedItems.isEmpty)
     #expect(spy.playbackErrors.isEmpty)
@@ -214,7 +226,7 @@ struct AsyncLoadingTests {
     loader.resolveAndLoad(src: "file:///nonexistent/path.mp3")
 
     // Poll for delegate callback — asset loading is async
-    for _ in 0..<50 {
+    for _ in 0 ..< 50 {
       if !spy.retryableErrors.isEmpty || !spy.playbackErrors.isEmpty || !spy.preparedItems.isEmpty {
         break
       }

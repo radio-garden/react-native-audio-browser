@@ -1,5 +1,5 @@
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Protocol through which PlaybackCoordinator triggers AVPlayer-specific operations.
@@ -9,6 +9,9 @@ import NitroModules
   func startPlayback()
   func pausePlayback()
   func setTimePitchingAlgorithmForCurrentItem()
+
+  // Player volume (0-1); ramped by the sleep-timer fade
+  var volume: Float { get set }
 
   // AVPlayer state queries
   var currentTime: Double { get }
@@ -20,8 +23,11 @@ import NitroModules
   func clearCurrentItem()
   func stopObservingCurrentItem()
 
-  // Track loading
-  func loadTrack(src: String)
+  // Track loading. The full `track` is threaded alongside `src` so the
+  // media-URL resolver can invoke the consumer's `media.resolve(track)`.
+  func loadTrack(src: String, track: Track)
+  /// Reloads the current track, re-running the media-URL resolver so a
+  /// short-lived/expired URL is refreshed rather than replayed.
   func reloadTrack(startFromCurrentTime: Bool)
   func unloadTrack()
   func cancelMediaLoading()
@@ -30,15 +36,19 @@ import NitroModules
   func seekToStart()
   func replayCurrentTrack()
 
-  // Now Playing (behind protocol to avoid MediaPlayer import)
-  func updateNowPlayingValues(duration: Double, rate: Float, currentTime: Double)
-  func updateNowPlayingState(playWhenReady: Bool)
-  func loadNowPlayingMetadata(for track: Track, rate: Float)
-  func resetNowPlayingValues()
+  // Now Playing (behind protocol to avoid MediaPlayer import).
+  // Elapsed/rate/duration are published automatically by MPNowPlayingSession;
+  // only metadata and the explicit play/pause state flow through here.
+  func loadNowPlayingMetadata(for track: Track)
   func clearNowPlaying()
-  func setNowPlayingCurrentTime(seconds: Double)
+  /// Reflects play/pause intent in the now-playing center. Auto-publishing fills
+  /// the info dict but not the explicit playback state CarPlay reads for its button.
+  func updateNowPlayingState(playWhenReady: Bool)
 
   // Remote commands (behind protocol to avoid MediaPlayer import)
   func updateRemoteRepeatMode(_ mode: RepeatMode)
   func updateRemoteShuffleMode(_ enabled: Bool)
+  /// Greys out the remote/CarPlay next/previous buttons when the queue has no
+  /// next/previous track to skip to.
+  func updateSkipAvailability(canNext: Bool, canPrevious: Bool)
 }

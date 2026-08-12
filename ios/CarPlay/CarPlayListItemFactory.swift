@@ -7,6 +7,7 @@ import os.log
 
 /// Typed metadata stored on CPListItems, replacing stringly-typed userInfo dictionaries.
 struct CarPlayItemInfo {
+  let id: String?
   let src: String?
 }
 
@@ -28,12 +29,12 @@ final class CarPlayListItemFactory {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "CarPlayListItemFactory")
 
   var imageLoader: CarPlayImageLoader?
-  private let isActiveTrack: (String) -> Bool
+  private let isActiveTrack: (_ id: String?, _ src: String?) -> Bool
   private let onItemSelected: (Track, @escaping () -> Void) -> Void
 
   init(
-    isActiveTrack: @escaping (String) -> Bool,
-    onItemSelected: @escaping (Track, @escaping () -> Void) -> Void
+    isActiveTrack: @escaping (_ id: String?, _ src: String?) -> Bool,
+    onItemSelected: @escaping (Track, @escaping () -> Void) -> Void,
   ) {
     self.isActiveTrack = isActiveTrack
     self.onItemSelected = onItemSelected
@@ -49,49 +50,44 @@ final class CarPlayListItemFactory {
     let maxSections = CPListTemplate.maximumSectionCount
     let maxTotalItems = CPListTemplate.maximumItemCount
 
-    // Group by groupTitle if present
-    var groups: [String?: [Track]] = [:]
+    // Contiguous runs sharing a groupTitle form a section (the same semantics
+    // Android Auto's GROUP_TITLE hint has), so sections — titled or not —
+    // render in exact source (server) order. Ungrouped runs become headerless
+    // sections in place rather than being hoisted to the top.
+    var runs: [(title: String?, tracks: [Track])] = []
     for track in children {
-      let groupKey = track.groupTitle
-      groups[groupKey, default: []].append(track)
+      if let last = runs.indices.last, runs[last].title == track.groupTitle {
+        runs[last].tracks.append(track)
+      } else {
+        runs.append((track.groupTitle, [track]))
+      }
     }
 
     // Create sections (respecting both section and total item limits)
     var sections: [CPListSection] = []
     var totalItemCount = 0
 
-    // Ungrouped items first
-    if let ungrouped = groups[nil], !ungrouped.isEmpty {
-      let availableSlots = maxTotalItems - totalItemCount
-      let items: [CPListTemplateItem] = ungrouped.prefix(availableSlots).map { track in
-        if track.imageRow != nil {
-          return createImageRowItem(for: track)
-        }
-        return createListItem(for: track)
-      }
-      if !items.isEmpty {
-        sections.append(CPListSection(items: items))
-        totalItemCount += items.count
-      }
-    }
-
-    // Then grouped items (respecting section and item limits)
-    for (groupTitle, tracks) in groups.sorted(by: { ($0.key ?? "") < ($1.key ?? "") }) {
+    for run in runs {
       guard sections.count < maxSections else { break }
       guard totalItemCount < maxTotalItems else { break }
-      guard groupTitle != nil else { continue }
 
       let availableSlots = maxTotalItems - totalItemCount
-      let items: [CPListTemplateItem] = tracks.prefix(availableSlots).map { track in
-        if track.imageRow != nil {
+      let items: [CPListTemplateItem] = run.tracks.prefix(availableSlots).map { track in
+        // Empty image rows fall through to a plain list item: zero-image
+        // CPListImageRowItem init is undocumented territory, and a header-only
+        // row is a dead end regardless (a "popular" row with no entries yet).
+        if let imageRow = track.imageRow, !imageRow.isEmpty {
           return createImageRowItem(for: track)
         }
         return createListItem(for: track)
       }
-      if !items.isEmpty {
-        sections.append(CPListSection(items: items, header: groupTitle, sectionIndexTitle: nil))
-        totalItemCount += items.count
+      guard !items.isEmpty else { continue }
+      if let title = run.title {
+        sections.append(CPListSection(items: items, header: title, sectionIndexTitle: nil))
+      } else {
+        sections.append(CPListSection(items: items))
       }
+      totalItemCount += items.count
     }
 
     return sections
@@ -105,21 +101,28 @@ final class CarPlayListItemFactory {
   ///   - handler: Optional custom handler. If nil, uses default browse/play handling.
   func createListItem(
     for track: Track,
-    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil
+    handler: ((CPSelectableListItem, @escaping () -> Void) -> Void)? = nil,
   ) -> CPListItem {
     let item = CPListItem(
       text: track.title,
-      detailText: track.subtitle ?? track.artist
+      detailText: track.subtitle,
     )
 
     // Store typed info for updatePlayingIndicators()
-    item.setCarPlayItemInfo(CarPlayItemInfo(src: track.src))
+    item.setCarPlayItemInfo(CarPlayItemInfo(id: track.id, src: track.src))
 
     // Set accessory type based on whether track is browsable or playable
     if let src = track.src {
       // Playable track - check if it's currently playing
       item.accessoryType = .none
-      item.isPlaying = isActiveTrack(src)
+      // Leading (the system default, set explicitly to make the choice
+      // deliberate): the indicator draws in the artwork slot. Note the
+      // indicator's rendering is owned by the phone's CarPlay service, and on
+      // some iOS/CarPlay-Simulator combinations it isn't drawn at all — for
+      // ANY third-party app. Verify on a real head unit before assuming a
+      // logic bug here.
+      item.playingIndicatorLocation = .leading
+      item.isPlaying = isActiveTrack(track.id, src)
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
       }
@@ -173,8 +176,14 @@ final class CarPlayListItemFactory {
       CPListImageRowItem(text: track.title, images: placeholders)
     }
 
-    // Handler for row header tap → navigate to track.url if present
+    // Handler for row header tap → navigate to track.url if present. A row
+    // without a url (pure preview) has nothing to open, so its header tap is
+    // a no-op rather than a selection that can't resolve.
     item.handler = { [onItemSelected] _, completion in
+      guard track.url != nil else {
+        completion()
+        return
+      }
       onItemSelected(track, completion)
     }
 

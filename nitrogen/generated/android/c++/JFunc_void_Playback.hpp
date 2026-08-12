@@ -19,6 +19,8 @@
 #include "PlaybackError.hpp"
 #include <optional>
 #include "JPlaybackError.hpp"
+#include "PlaybackErrorKind.hpp"
+#include "JPlaybackErrorKind.hpp"
 #include <string>
 
 namespace margelo::nitro::audiobrowser {

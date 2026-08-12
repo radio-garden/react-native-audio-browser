@@ -22,7 +22,7 @@ data class FormattedNavigationError(
   val title: String,
   @DoNotStrip
   @Keep
-  val message: String
+  val message: String?
 ) {
   /* primary constructor */
 
@@ -34,7 +34,7 @@ data class FormattedNavigationError(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(title: String, message: String): FormattedNavigationError {
+    private fun fromCpp(title: String, message: String?): FormattedNavigationError {
       return FormattedNavigationError(title, message)
     }
   }

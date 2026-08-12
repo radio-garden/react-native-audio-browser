@@ -12,13 +12,11 @@
 
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "JNotificationButton.hpp"
-#include "JNotificationButtonLayout.hpp"
-#include "JRatingType.hpp"
-#include "JVariant_NullType_NotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
-#include "NotificationButtonLayout.hpp"
-#include "RatingType.hpp"
+#include "JRemoteButton.hpp"
+#include "JRemoteButtonLayout.hpp"
+#include "JVariant_NullType_RemoteButtonLayout.hpp"
+#include "RemoteButton.hpp"
+#include "RemoteButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
 #include <NitroModules/Null.hpp>
 #include <optional>
@@ -48,18 +46,12 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<JAppKilledPlaybackBehavior> appKilledPlaybackBehavior = this->getFieldValue(fieldAppKilledPlaybackBehavior);
       static const auto fieldSkipSilence = clazz->getField<jni::JBoolean>("skipSilence");
       jni::local_ref<jni::JBoolean> skipSilence = this->getFieldValue(fieldSkipSilence);
-      static const auto fieldShuffle = clazz->getField<jni::JBoolean>("shuffle");
-      jni::local_ref<jni::JBoolean> shuffle = this->getFieldValue(fieldShuffle);
-      static const auto fieldRatingType = clazz->getField<JRatingType>("ratingType");
-      jni::local_ref<JRatingType> ratingType = this->getFieldValue(fieldRatingType);
-      static const auto fieldNotificationButtons = clazz->getField<JVariant_NullType_NotificationButtonLayout>("notificationButtons");
-      jni::local_ref<JVariant_NullType_NotificationButtonLayout> notificationButtons = this->getFieldValue(fieldNotificationButtons);
+      static const auto fieldRemoteButtonLayout = clazz->getField<JVariant_NullType_RemoteButtonLayout>("remoteButtonLayout");
+      jni::local_ref<JVariant_NullType_RemoteButtonLayout> remoteButtonLayout = this->getFieldValue(fieldRemoteButtonLayout);
       return NitroAndroidUpdateOptions(
         appKilledPlaybackBehavior != nullptr ? std::make_optional(appKilledPlaybackBehavior->toCpp()) : std::nullopt,
         skipSilence != nullptr ? std::make_optional(static_cast<bool>(skipSilence->value())) : std::nullopt,
-        shuffle != nullptr ? std::make_optional(static_cast<bool>(shuffle->value())) : std::nullopt,
-        ratingType != nullptr ? std::make_optional(ratingType->toCpp()) : std::nullopt,
-        notificationButtons != nullptr ? std::make_optional(notificationButtons->toCpp()) : std::nullopt
+        remoteButtonLayout != nullptr ? std::make_optional(remoteButtonLayout->toCpp()) : std::nullopt
       );
     }
 
@@ -69,16 +61,14 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JNitroAndroidUpdateOptions::javaobject> fromCpp(const NitroAndroidUpdateOptions& value) {
-      using JSignature = JNitroAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JRatingType>, jni::alias_ref<JVariant_NullType_NotificationButtonLayout>);
+      using JSignature = JNitroAndroidUpdateOptions(jni::alias_ref<JAppKilledPlaybackBehavior>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JVariant_NullType_RemoteButtonLayout>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
         clazz,
         value.appKilledPlaybackBehavior.has_value() ? JAppKilledPlaybackBehavior::fromCpp(value.appKilledPlaybackBehavior.value()) : nullptr,
         value.skipSilence.has_value() ? jni::JBoolean::valueOf(value.skipSilence.value()) : nullptr,
-        value.shuffle.has_value() ? jni::JBoolean::valueOf(value.shuffle.value()) : nullptr,
-        value.ratingType.has_value() ? JRatingType::fromCpp(value.ratingType.value()) : nullptr,
-        value.notificationButtons.has_value() ? JVariant_NullType_NotificationButtonLayout::fromCpp(value.notificationButtons.value()) : nullptr
+        value.remoteButtonLayout.has_value() ? JVariant_NullType_RemoteButtonLayout::fromCpp(value.remoteButtonLayout.value()) : nullptr
       );
     }
   };

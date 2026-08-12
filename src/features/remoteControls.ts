@@ -1,9 +1,3 @@
-import type {
-  HeartRating,
-  PercentageRating,
-  StarRating,
-  ThumbsRating
-} from './rating'
 import { nativeBrowser } from '../native'
 import { LazyNativeEmitter } from '../utils/LazyNativeEmitter'
 
@@ -52,13 +46,6 @@ export interface RemoteSeekEvent {
 }
 
 /**
- * Remote set rating event.
- */
-export interface RemoteSetRatingEvent {
-  rating: HeartRating | ThumbsRating | StarRating | PercentageRating
-}
-
-/**
  * Remote skip event (Android only).
  */
 export interface RemoteSkipEvent {
@@ -66,90 +53,11 @@ export interface RemoteSkipEvent {
   index: number
 }
 
-// MARK: - Default Handlers
-
-// Install remote control handlers with default behavior immediately when module loads
-// Custom handlers can override the defaults using handleRemote* functions
-
-// Basic playback controls
-// AudioBrowser.onRemotePlay(() => {
-//   const customHandler = customHandlers.get('play')
-//   if (customHandler) {
-//     customHandler()
-//   } else {
-//     play()
-//   }
-// })
-
-// AudioBrowser.onRemotePause(() => {
-//   const customHandler = customHandlers.get('pause')
-//   if (customHandler) {
-//     customHandler()
-//   } else {
-//     pause()
-//   }
-// })
-
-// AudioBrowser.onRemoteNext(() => {
-//   const customHandler = customHandlers.get('next')
-//   if (customHandler) {
-//     customHandler()
-//   } else {
-//     skipToNext()
-//   }
-// })
-
-// AudioBrowser.onRemotePrevious(() => {
-//   const customHandler = customHandlers.get('previous')
-//   if (customHandler) {
-//     customHandler()
-//   } else {
-//     skipToPrevious()
-//   }
-// })
-
-// AudioBrowser.onRemoteStop(() => {
-//   const customHandler = customHandlers.get('stop')
-//   if (customHandler) {
-//     customHandler()
-//   } else {
-//     stop()
-//   }
-// })
-
-// // Seek controls
-// AudioBrowser.onRemoteSeek((event: any) => {
-//   const customHandler = customHandlers.get('seek')
-//   if (customHandler) {
-//     customHandler(event)
-//   } else {
-//     seekTo(event.position)
-//   }
-// })
-
-// AudioBrowser.onRemoteJumpForward((event: any) => {
-//   const customHandler = customHandlers.get('jumpForward')
-//   if (customHandler) {
-//     customHandler(event)
-//   } else {
-//     seekBy(event.interval)
-//   }
-// })
-
-// AudioBrowser.onRemoteJumpBackward((event: any) => {
-//   const customHandler = customHandlers.get('jumpBackward')
-//   if (customHandler) {
-//     customHandler(event)
-//   } else {
-//     seekBy(-event.interval)
-//   }
-// })
-
 // MARK: - Handler Override Functions
 //
 // Use these functions when you want to OVERRIDE the default remote control behavior.
 // These will replace the default handlers with your custom logic.
-// If you just want to listen to events for debugging/logging, use the onRemote* functions below.
+// If you just want to listen to events for debugging/logging, use the onRemote* emitters below.
 
 /**
  * Sets a custom handler for remote play events, overriding the default behavior.
@@ -223,7 +131,7 @@ export function handleRemoteJumpBackward(
 
 // MARK: - Event Callbacks (for listening/debugging only)
 //
-// Use these functions when you want to LISTEN to remote control events without overriding
+// Use these emitters when you want to LISTEN to remote control events without overriding
 // the default behavior. These are perfect for logging, analytics, or debugging.
 // Multiple listeners can be registered for the same event.
 // To override the default behavior, use the handleRemote* functions above.
@@ -231,7 +139,7 @@ export function handleRemoteJumpBackward(
 /**
  * Subscribes to remote jump backward events.
  * @param callback - Called when the user presses the jump backward button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemoteJumpBackward =
   LazyNativeEmitter.emitterize<RemoteJumpBackwardEvent>(
@@ -241,7 +149,7 @@ export const onRemoteJumpBackward =
 /**
  * Subscribes to remote jump forward events.
  * @param callback - Called when the user presses the jump forward button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemoteJumpForward =
   LazyNativeEmitter.emitterize<RemoteJumpForwardEvent>(
@@ -251,7 +159,7 @@ export const onRemoteJumpForward =
 /**
  * Subscribes to remote next events.
  * @param callback - Called when the user presses the next track button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemoteNext = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativeBrowser.onRemoteNext = cb)
@@ -260,7 +168,7 @@ export const onRemoteNext = LazyNativeEmitter.emitterize<void>(
 /**
  * Subscribes to remote pause events.
  * @param callback - Called when the user presses the pause button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemotePause = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativeBrowser.onRemotePause = cb)
@@ -269,7 +177,7 @@ export const onRemotePause = LazyNativeEmitter.emitterize<void>(
 /**
  * Subscribes to remote play events.
  * @param callback - Called when the user presses the play button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativeBrowser.onRemotePlay = cb)
@@ -278,7 +186,7 @@ export const onRemotePlay = LazyNativeEmitter.emitterize<void>(
 /**
  * Subscribes to remote play ID events (Android only).
  * @param callback - Called when the user selects a track from an external device
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemotePlayId = LazyNativeEmitter.emitterize<RemotePlayIdEvent>(
   (cb) => (nativeBrowser.onRemotePlayId = cb)
@@ -287,7 +195,7 @@ export const onRemotePlayId = LazyNativeEmitter.emitterize<RemotePlayIdEvent>(
 /**
  * Subscribes to remote play search events (Android only).
  * @param callback - Called when the user searches for a track (usually voice search)
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemotePlaySearch =
   LazyNativeEmitter.emitterize<RemotePlaySearchEvent>(
@@ -297,7 +205,7 @@ export const onRemotePlaySearch =
 /**
  * Subscribes to remote previous events.
  * @param callback - Called when the user presses the previous track button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemotePrevious = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativeBrowser.onRemotePrevious = cb)
@@ -306,26 +214,16 @@ export const onRemotePrevious = LazyNativeEmitter.emitterize<void>(
 /**
  * Subscribes to remote seek events.
  * @param callback - Called when the user changes the position of the timeline
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemoteSeek = LazyNativeEmitter.emitterize<RemoteSeekEvent>(
   (cb) => (nativeBrowser.onRemoteSeek = cb)
 )
 
 /**
- * Subscribes to remote set rating events.
- * @param callback - Called when the user changes the rating for the track remotely
- * @returns Cleanup function to unsubscribe
- */
-export const onRemoteSetRating =
-  LazyNativeEmitter.emitterize<RemoteSetRatingEvent>(
-    (cb) => (nativeBrowser.onRemoteSetRating = cb)
-  )
-
-/**
  * Subscribes to remote skip events (Android only).
  * @param callback - Called when the user presses the skip button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemoteSkip = LazyNativeEmitter.emitterize<RemoteSkipEvent>(
   (cb) => (nativeBrowser.onRemoteSkip = cb)
@@ -334,7 +232,7 @@ export const onRemoteSkip = LazyNativeEmitter.emitterize<RemoteSkipEvent>(
 /**
  * Subscribes to remote stop events.
  * @param callback - Called when the user presses the stop button
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRemoteStop = LazyNativeEmitter.emitterize<void>(
   (cb) => (nativeBrowser.onRemoteStop = cb)

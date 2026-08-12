@@ -18,12 +18,21 @@ public extension TransformableRequestConfig {
   /**
    * Create a new instance of `TransformableRequestConfig`.
    */
-  init(transform: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
+  init(transform: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<Promise<RequestConfig>>)?, transformSync: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<RequestConfig>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Dictionary<String, String>?, query: Dictionary<String, String>?, body: String?, contentType: String?, userAgent: String?) {
     self.init({ () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ in
       if let __unwrappedValue = transform {
         return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______({ () -> bridge.Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__ in
           let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrappedValue)
           return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__closureWrapper.toUnsafe())
+        }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______ in
+      if let __unwrappedValue = transformSync {
+        return bridge.create_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______({ () -> bridge.Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__ in
+          let __closureWrapper = Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrappedValue)
+          return bridge.create_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__closureWrapper.toUnsafe())
         }())
       } else {
         return .init()
@@ -129,6 +138,56 @@ public extension TransformableRequestConfig {
                 return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
               }()
               let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig____(__result)
+              __promiseHolder.addOnResolvedListener(__resolverCpp)
+              __promiseHolder.addOnRejectedListener(__rejecterCpp)
+              return __promise
+            }()
+          }
+        }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var transformSync: ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<RequestConfig>)? {
+    return { () -> ((_ request: RequestConfig, _ routeParams: Dictionary<String, String>?) -> Promise<RequestConfig>)? in
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(self.__transformSync) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_RequestConfig___const_RequestConfig_____request_____const_std__optional_std__unordered_map_std__string__std__string_______routeParams______(self.__transformSync)
+        return { () -> (RequestConfig, Dictionary<String, String>?) -> Promise<RequestConfig> in
+          let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__(__unwrapped)
+          return { (__request: RequestConfig, __routeParams: Dictionary<String, String>?) -> Promise<RequestConfig> in
+            let __result = __wrappedFunction.call(__request, { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
+              if let __unwrappedValue = __routeParams {
+                return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
+                  var __map = bridge.create_std__unordered_map_std__string__std__string_(__unwrappedValue.count)
+                  for (__k, __v) in __unwrappedValue {
+                    bridge.emplace_std__unordered_map_std__string__std__string_(&__map, std.string(__k), std.string(__v))
+                  }
+                  return __map
+                }())
+              } else {
+                return .init()
+              }
+            }())
+            return { () -> Promise<RequestConfig> in
+              let __promise = Promise<RequestConfig>()
+              let __resolver = { (__result: RequestConfig) in
+                __promise.resolve(withResult: __result)
+              }
+              let __rejecter = { (__error: Error) in
+                __promise.reject(withError: __error)
+              }
+              let __resolverCpp = { () -> bridge.Func_void_RequestConfig in
+                let __closureWrapper = Func_void_RequestConfig(__resolver)
+                return bridge.create_Func_void_RequestConfig(__closureWrapper.toUnsafe())
+              }()
+              let __rejecterCpp = { () -> bridge.Func_void_std__exception_ptr in
+                let __closureWrapper = Func_void_std__exception_ptr(__rejecter)
+                return bridge.create_Func_void_std__exception_ptr(__closureWrapper.toUnsafe())
+              }()
+              let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_RequestConfig__(__result)
               __promiseHolder.addOnResolvedListener(__resolverCpp)
               __promiseHolder.addOnRejectedListener(__rejecterCpp)
               return __promise

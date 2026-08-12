@@ -43,7 +43,7 @@ data class PlayerCapabilities(
   val jumpBackward: Boolean?,
   @DoNotStrip
   @Keep
-  val favorite: Boolean?,
+  val favorite: Variant_Boolean_FavoriteConfig?,
   @DoNotStrip
   @Keep
   val shuffleMode: Boolean?,
@@ -64,7 +64,7 @@ data class PlayerCapabilities(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(play: Boolean?, pause: Boolean?, stop: Boolean?, seekTo: Boolean?, skipToNext: Boolean?, skipToPrevious: Boolean?, jumpForward: Boolean?, jumpBackward: Boolean?, favorite: Boolean?, shuffleMode: Boolean?, repeatMode: Boolean?, playbackRate: Boolean?): PlayerCapabilities {
+    private fun fromCpp(play: Boolean?, pause: Boolean?, stop: Boolean?, seekTo: Boolean?, skipToNext: Boolean?, skipToPrevious: Boolean?, jumpForward: Boolean?, jumpBackward: Boolean?, favorite: Variant_Boolean_FavoriteConfig?, shuffleMode: Boolean?, repeatMode: Boolean?, playbackRate: Boolean?): PlayerCapabilities {
       return PlayerCapabilities(play, pause, stop, seekTo, skipToNext, skipToPrevious, jumpForward, jumpBackward, favorite, shuffleMode, repeatMode, playbackRate)
     }
   }

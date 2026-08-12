@@ -8,70 +8,131 @@ extension BrowserManager {
 
   /// Resolves a media URL using the configured media transform.
   /// Returns the transformed URL, headers, and user-agent for playback.
-  func resolveMediaUrl(_ originalUrl: String) async -> MediaResolvedUrl {
-    guard let mediaConfig = config.media else {
-      logger.debug("No media config, using original URL: \(originalUrl)")
+  ///
+  /// Resolution layers, least- to most-specific: shared `request` layer →
+  /// `media` transform / static fields → `media.resolve(track)`. The final
+  /// `resolve` layer (if configured) is merged last via `mergeRequestConfig`,
+  /// so its fields win. The `track` is only used to feed `resolve`; we do NOT
+  /// auto-merge `track.request` here.
+  func resolveMediaUrl(_ originalUrl: String, track: Track? = nil) async -> MediaResolvedUrl {
+    logger.debug("Resolving media URL: \(originalUrl)")
+
+    // Apply the shared `request` layer first (its transform runs for media too,
+    // per the documented contract — e.g. a dynamic baseUrl), then the media
+    // transform / static fields on top. The request layer applies even when no
+    // `media` config is present, so a relative src still gets baseUrl.
+    let baseRequest: RequestConfig
+    do {
+      try await ensureLayersResolved()
+      baseRequest = try await applyLayer(
+        resolvedRequestLayer,
+        to: RequestConfig(
+          method: nil, path: originalUrl, baseUrl: nil, headers: nil,
+          query: nil, body: nil, contentType: nil, userAgent: nil,
+        ),
+        params: [:],
+      )
+    } catch {
+      logger.error("Media request layer failed: \(error.localizedDescription)")
       return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
 
-    logger.debug("Resolving media URL: \(originalUrl)")
-
-    // If there's a transform function, call it
-    if let transform = mediaConfig.transform {
-      do {
-        // Create base request config with original URL as path
-        let baseRequest = RequestConfig(
-          method: config.request?.method,
-          path: originalUrl,
-          baseUrl: config.request?.baseUrl,
-          headers: config.request?.headers,
-          query: config.request?.query,
-          body: config.request?.body,
-          contentType: config.request?.contentType,
-          userAgent: config.request?.userAgent,
-        )
-
-        logger.debug("resolveMediaUrl: calling transform callback...")
-        let outerPromise = transform(baseRequest, nil)
-        logger.debug("resolveMediaUrl: awaiting outer promise...")
-        let innerPromise = try await outerPromise.await()
-        logger.debug("resolveMediaUrl: awaiting inner promise...")
-        let transformedConfig = try await innerPromise.await()
-        logger.debug("resolveMediaUrl: transform complete")
-
-        // Extract values immediately to Swift native types to avoid
-        // memory corruption in Nitro's Swift-C++ bridge when the
-        // Promise<RequestConfig> is deallocated
-        let finalUrl = buildUrl(from: transformedConfig)
-        let headers = transformedConfig.headers
-        let userAgent = transformedConfig.userAgent
-
-        logger.debug("Media URL transformed: \(originalUrl) -> \(finalUrl)")
-
-        return MediaResolvedUrl(
-          url: finalUrl,
-          headers: headers,
-          userAgent: userAgent,
-        )
-      } catch {
-        logger.error("Media transform failed: \(error.localizedDescription)")
-        return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
-      }
+    // Resolve the consumer-supplied final media layer once, up front. This is the
+    // most-specific layer and is merged over every branch's result below.
+    let resolveLayer: RequestConfig?
+    do {
+      resolveLayer = try await resolveMediaTrackConfig(track)
+    } catch {
+      logger.error("Media resolve callback failed: \(error.localizedDescription)")
+      resolveLayer = nil
     }
 
-    // No transform, just apply baseUrl if configured
-    let baseUrl = mediaConfig.baseUrl ?? config.request?.baseUrl
-    if let baseUrl {
-      let finalUrl = BrowserPathHelper.buildUrl(baseUrl: baseUrl, path: originalUrl)
-      logger.debug("Media URL with baseUrl: \(originalUrl) -> \(finalUrl)")
+    // request → media (kind layer) → media.resolve(track), resolve winning.
+    // Matches the web stub and Android. (The old static branch dropped a media
+    // config's static query/method/body/contentType, and dropped its headers
+    // entirely when no baseUrl was configured anywhere.)
+    do {
+      var merged = baseRequest
+      if let mediaConfig = config.media {
+        merged = try await applyMediaLayer(mediaConfig, to: merged)
+      }
+      merged = applyMediaResolveLayer(base: merged, resolve: resolveLayer)
+      let finalUrl = buildUrl(from: merged)
+      logger.debug("Media URL resolved: \(originalUrl) -> \(finalUrl)")
       return MediaResolvedUrl(
         url: finalUrl,
-        headers: mediaConfig.headers ?? config.request?.headers,
-        userAgent: mediaConfig.userAgent ?? config.request?.userAgent,
+        headers: merged.headers,
+        userAgent: merged.userAgent,
       )
+    } catch {
+      logger.error("Media transform failed: \(error.localizedDescription)")
+      return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
     }
+  }
 
-    return MediaResolvedUrl(url: originalUrl, headers: nil, userAgent: nil)
+  /// Media-kind Request-Config Layer application: a transform (async and/or sync)
+  /// wins completely — async first, then sync, each result copied out of the Nitro
+  /// bridge immediately (extractConfig, via awaitAsync/SyncConfig) — otherwise the
+  /// media config's static fields merge over the base with `path` carried from the
+  /// base (only a transform may change it). The same rule as `applyLayer`; matches
+  /// the web stub and Android.
+  private func applyMediaLayer(_ media: MediaRequestConfig, to base: RequestConfig) async throws -> RequestConfig {
+    if media.transform != nil || media.transformSync != nil {
+      var result = base
+      if let transform = media.transform {
+        result = try await awaitAsyncConfig(transform(result, nil))
+      }
+      if let transformSync = media.transformSync {
+        result = try await awaitSyncConfig(transformSync(result, nil))
+      }
+      return result
+    }
+    let staticMerged = mergeRequestConfig(
+      base: base,
+      override: RequestConfig(
+        method: media.method,
+        path: media.path,
+        baseUrl: media.baseUrl,
+        headers: media.headers,
+        query: media.query,
+        body: media.body,
+        contentType: media.contentType,
+        userAgent: media.userAgent,
+      ),
+    )
+    return RequestConfig(
+      method: staticMerged.method,
+      path: base.path,
+      baseUrl: staticMerged.baseUrl,
+      headers: staticMerged.headers,
+      query: staticMerged.query,
+      body: staticMerged.body,
+      contentType: staticMerged.contentType,
+      userAgent: staticMerged.userAgent,
+    )
+  }
+
+  /// Invokes the consumer-supplied `media.resolve`/`resolveSync(track)` and merges
+  /// the results (async first, then sync, sync winning) into a concrete
+  /// `RequestConfig`. Returns `nil` when neither is configured or no track is
+  /// available. Each result is copied out of the Nitro bridge immediately.
+  func resolveMediaTrackConfig(_ track: Track?) async throws -> RequestConfig? {
+    guard let track, let media = config.media else { return nil }
+    var asyncResolved: RequestConfig?
+    if let resolve = media.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
+    var syncResolved: RequestConfig?
+    if let resolveSync = media.resolveSync { syncResolved = try await awaitSyncConfig(resolveSync(track)) }
+    return MediaResolveComposer.composeResolved(
+      async: asyncResolved, sync: syncResolved,
+      combine: { self.mergeRequestConfig(base: $0, override: $1) },
+    )
+  }
+
+  /// Merges the resolve layer (most specific, override-wins) over `base`.
+  /// A no-op when `resolve` is nil.
+  private func applyMediaResolveLayer(base: RequestConfig, resolve: RequestConfig?) -> RequestConfig {
+    guard let resolve else { return base }
+    return mergeRequestConfig(base: base, override: resolve)
   }
 
   // MARK: - Artwork URL Resolution
@@ -85,7 +146,7 @@ extension BrowserManager {
   ///   - imageContext: Optional size context for CDN URL generation (nil at browse-time)
   /// - Returns: ImageSource ready for image loading, or nil if no artwork
   func resolveArtworkUrl(track: Track, perRouteConfig: ArtworkRequestConfig?, imageContext: ImageContext? = nil) async -> ImageSource? {
-    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
+    if let artwork = track.artwork?.url, SFSymbolRenderer.isSFSymbol(artwork) {
       let canvasSize: CGSize = if let w = imageContext?.width, let h = imageContext?.height {
         CGSize(width: w, height: h)
       } else {
@@ -107,41 +168,55 @@ extension BrowserManager {
 
     // If no artwork config, return original artwork URL as simple ImageSource
     guard let artworkConfig = effectiveArtworkConfig else {
-      guard let artwork = track.artwork else { return nil }
+      guard let artwork = track.artwork?.url else { return nil }
       return ImageSource(uri: artwork, method: nil, headers: nil, body: nil)
     }
 
     do {
-      // Create base config from global request config
-      var mergedConfig = RequestConfig(
-        method: config.request?.method,
-        path: track.artwork, // Use track.artwork as default path
-        baseUrl: config.request?.baseUrl,
-        headers: config.request?.headers,
-        query: config.request?.query,
-        body: config.request?.body,
-        contentType: config.request?.contentType,
-        userAgent: config.request?.userAgent,
+      // Base config via the shared `request` layer (its transform runs for
+      // artwork too), with track.artwork as the default path. Artwork then
+      // shapes further via its own resolve / static fields / transform.
+      try await ensureLayersResolved()
+      var mergedConfig = try await applyLayer(
+        resolvedRequestLayer,
+        to: RequestConfig(
+          method: nil, path: track.artwork?.url, baseUrl: nil, headers: nil,
+          query: nil, body: nil, contentType: nil, userAgent: nil,
+        ),
+        params: [:],
       )
 
-      if let resolve = artworkConfig.resolve {
-        let outerPromise = resolve(track)
-        let innerPromise = try await outerPromise.await()
-        let resolvedConfig = try await innerPromise.await()
+      // Artwork config's static fields always apply (not resolve/transform — those
+      // run separately), with the per-track resolve merged over them — resolve
+      // wins. Matches the web stub and Android (the old either/or skipped static
+      // fields whenever a resolver was configured).
+      let artworkStaticConfig = RequestConfig(
+        method: artworkConfig.method,
+        path: artworkConfig.path,
+        baseUrl: artworkConfig.baseUrl,
+        headers: artworkConfig.headers,
+        query: artworkConfig.query,
+        body: artworkConfig.body,
+        contentType: artworkConfig.contentType,
+        userAgent: artworkConfig.userAgent,
+      )
+      mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
 
-        mergedConfig = mergeRequestConfig(base: mergedConfig, override: extractConfig(resolvedConfig))
-      } else {
-        let artworkStaticConfig = RequestConfig(
-          method: artworkConfig.method,
-          path: artworkConfig.path,
-          baseUrl: artworkConfig.baseUrl,
-          headers: artworkConfig.headers,
-          query: artworkConfig.query,
-          body: artworkConfig.body,
-          contentType: artworkConfig.contentType,
-          userAgent: artworkConfig.userAgent,
-        )
-        mergedConfig = mergeRequestConfig(base: mergedConfig, override: artworkStaticConfig)
+      if artworkConfig.resolve != nil || artworkConfig.resolveSync != nil {
+        var asyncResolved: RequestConfig?
+        if let resolve = artworkConfig.resolve { asyncResolved = try await awaitAsyncConfig(resolve(track)) }
+        var syncResolved: RequestConfig?
+        if let resolveSync = artworkConfig.resolveSync { syncResolved = try await awaitSyncConfig(resolveSync(track)) }
+        if let resolved = MediaResolveComposer.composeResolved(
+          async: asyncResolved, sync: syncResolved,
+          combine: { self.mergeRequestConfig(base: $0, override: $1) },
+        ) {
+          mergedConfig = mergeRequestConfig(base: mergedConfig, override: resolved)
+        } else if track.artwork == nil {
+          // A resolver ran but produced nothing, and there's no artwork URL either
+          // → no artwork (matches the web stub).
+          return nil
+        }
       }
 
       // Apply image query params if configured and imageContext is provided
@@ -174,13 +249,22 @@ extension BrowserManager {
         }
       }
 
-      // Skip transform at browse-time (no size context) — applied at load-time
-      let hasSize = imageContext?.width != nil || imageContext?.height != nil
-      if let transform = artworkConfig.transform, hasSize {
-        let outerPromise = transform(MediaTransformParams(request: mergedConfig, context: imageContext))
-        let innerPromise = try await outerPromise.await()
-        let transformedConfig = try await innerPromise.await()
-        mergedConfig = extractConfig(transformedConfig)
+      // Transform (async first, then sync), receiving the image context — which is
+      // nil at browse time, matching the web stub and Android. (Previously skipped
+      // without a size, leaving browse-time `artworkSource` untransformed for JS
+      // consumers; load-time surfaces re-resolve Track-first with the real size,
+      // so running it here cannot double-transform.)
+      if let transform = artworkConfig.transform {
+        mergedConfig = try await awaitAsyncConfig(transform(MediaTransformParams(request: mergedConfig, context: imageContext)))
+      }
+      if let transformSync = artworkConfig.transformSync {
+        mergedConfig = try await awaitSyncConfig(transformSync(MediaTransformParams(request: mergedConfig, context: imageContext)))
+      }
+
+      // Substitute the `{id}` template token with the track's id across path/query/header values.
+      // (Configs without the token are unaffected — e.g. browse artwork.) Only when the track has an id.
+      if let id = track.id, !id.isEmpty {
+        mergedConfig = substituteTrackId(in: mergedConfig, id: id)
       }
 
       // Build final URL - if no path after merging, no artwork to transform
@@ -196,7 +280,7 @@ extension BrowserManager {
         headers["User-Agent"] = userAgent
       }
 
-      logger.debug("Artwork URL transformed: \(track.artwork ?? "nil") -> \(uri)")
+      logger.debug("Artwork URL transformed: \(track.artwork?.url ?? "nil") -> \(uri)")
 
       return ImageSource(
         uri: uri,
@@ -229,9 +313,45 @@ extension BrowserManager {
 
   // MARK: - Config Utilities
 
+  /// Replaces the `{id}` token with the track id in a request config's path, query values, and
+  /// header values. Used so a `nowPlayingArtwork` like `{ path: "/artwork/{id}" }` resolves.
+  private func substituteTrackId(in config: RequestConfig, id: String) -> RequestConfig {
+    func sub(_ s: String?) -> String? { s?.replacingOccurrences(of: "{id}", with: id) }
+    func subDict(_ d: [String: String]?) -> [String: String]? {
+      guard let d else { return nil }
+      return d.mapValues { $0.replacingOccurrences(of: "{id}", with: id) }
+    }
+    return RequestConfig(
+      method: config.method,
+      path: sub(config.path),
+      baseUrl: config.baseUrl,
+      headers: subDict(config.headers),
+      query: subDict(config.query),
+      body: config.body,
+      contentType: config.contentType,
+      userAgent: config.userAgent,
+    )
+  }
+
+  /// Awaits an **async** config callback and copies the result out of the Nitro
+  /// bridge. The callback lowers to `Promise<Promise<RequestConfig>>` (bridge hop →
+  /// JS promise), so it is a DOUBLE await. This await depth is the bug-prone part
+  /// (single-awaiting an async callback hands a `Promise` downstream — the original
+  /// "empty config" bug), so it lives in exactly one place. Pairs with `awaitSyncConfig`.
+  func awaitAsyncConfig(_ promise: Promise<Promise<RequestConfig>>) async throws -> RequestConfig {
+    try await extractConfig(promise.await().await())
+  }
+
+  /// Awaits a **sync** config callback (lowers to `Promise<RequestConfig>` — a single
+  /// bridge await) and copies the result out. Pairs with `awaitAsyncConfig`.
+  func awaitSyncConfig(_ promise: Promise<RequestConfig>) async throws -> RequestConfig {
+    try await extractConfig(promise.await())
+  }
+
   /// Extracts all values from a RequestConfig into a new instance to avoid
   /// memory corruption in Nitro's Swift-C++ bridge when the Promise is deallocated.
-  private func extractConfig(_ config: RequestConfig) -> RequestConfig {
+  /// Internal so `applyLayer` (in BrowserManager.swift) can copy transform results.
+  func extractConfig(_ config: RequestConfig) -> RequestConfig {
     RequestConfig(
       method: config.method,
       path: config.path,

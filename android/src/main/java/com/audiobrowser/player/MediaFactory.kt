@@ -15,7 +15,7 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.audiobrowser.model.RetryPolicy
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
-import timber.log.Timber
+import java.io.IOException
 
 class MediaFactory(
   private val context: Context,
@@ -23,7 +23,8 @@ class MediaFactory(
   private val retryPolicy: RetryPolicy,
   private val shouldRetry: () -> Boolean,
   private val isOnline: () -> Boolean = { true },
-  private val onRetryPending: ((isNetworkError: Boolean) -> Unit)? = null,
+  private val hasPlayed: () -> Boolean = { false },
+  private val onRetryPending: ((exception: IOException, isNetworkError: Boolean) -> Unit)? = null,
   private val transferListener: TransferListener? = null,
   private val getRequestConfig: (originalUrl: String) -> MediaRequestConfig?,
 ) : MediaSource.Factory {
@@ -45,16 +46,20 @@ class MediaFactory(
         RetryLoadErrorHandlingPolicy(
           maxRetries = null,
           maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
+          firstConnectMaxRetryDurationMs = retryPolicy.firstConnectMaxRetryDurationMs,
           shouldRetry = shouldRetry,
           isOnline = isOnline,
+          hasPlayed = hasPlayed,
           onRetryPending = onRetryPending,
         )
       is RetryPolicy.Limited ->
         RetryLoadErrorHandlingPolicy(
           maxRetries = retryPolicy.maxRetries,
           maxRetryDurationMs = retryPolicy.maxRetryDurationMs,
+          firstConnectMaxRetryDurationMs = retryPolicy.firstConnectMaxRetryDurationMs,
           shouldRetry = shouldRetry,
           isOnline = isOnline,
+          hasPlayed = hasPlayed,
           onRetryPending = onRetryPending,
         )
     }
@@ -92,7 +97,14 @@ class MediaFactory(
     // JS thread to resolve.
     val httpFactory =
       DefaultHttpDataSource.Factory().apply {
-        setUserAgent(DEFAULT_USER_AGENT)
+        // Deliberately NOT setUserAgent(): DefaultHttpDataSource applies the factory
+        // user-agent as a FINAL setRequestProperty("User-Agent", …) that runs after —
+        // and overrides — the per-request DataSpec headers. That would clobber the
+        // User-Agent TransformingDataSource sets per request (the whole point of the
+        // per-request userAgent override). Supplying the same value as a default
+        // request property keeps the default for un-overridden requests while letting
+        // the per-request DataSpec header win.
+        setDefaultRequestProperties(mapOf("User-Agent" to DEFAULT_USER_AGENT))
         setAllowCrossProtocolRedirects(true)
         // Connect transfer listener for bandwidth measurement
         transferListener?.let { setTransferListener(it) }

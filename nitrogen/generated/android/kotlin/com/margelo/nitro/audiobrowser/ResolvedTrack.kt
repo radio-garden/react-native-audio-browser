@@ -28,13 +28,19 @@ data class ResolvedTrack(
   val carPlaySiriListButton: CarPlaySiriListButtonPosition?,
   @DoNotStrip
   @Keep
+  val id: String?,
+  @DoNotStrip
+  @Keep
   val src: String?,
   @DoNotStrip
   @Keep
-  val artwork: String?,
+  val artwork: Variant_String_ArtworkVariants?,
   @DoNotStrip
   @Keep
   val artworkSource: ImageSource?,
+  @DoNotStrip
+  @Keep
+  val request: TrackRequest?,
   @DoNotStrip
   @Keep
   val artworkCarPlayTinted: Boolean?,
@@ -47,6 +53,9 @@ data class ResolvedTrack(
   @DoNotStrip
   @Keep
   val artist: String?,
+  @DoNotStrip
+  @Keep
+  val albumUrl: String?,
   @DoNotStrip
   @Keep
   val album: String?,
@@ -88,8 +97,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, src: String?, artwork: String?, artworkSource: ImageSource?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): ResolvedTrack {
-      return ResolvedTrack(url, children, carPlaySiriListButton, src, artwork, artworkSource, artworkCarPlayTinted, title, subtitle, artist, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
+    private fun fromCpp(url: String, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumUrl: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): ResolvedTrack {
+      return ResolvedTrack(url, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumUrl, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
     }
   }
 }

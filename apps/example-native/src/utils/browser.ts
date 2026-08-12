@@ -64,7 +64,6 @@ const configuration: BrowserConfiguration = {
   async search({ query }) {
     return searchArchive(query)
   },
-  carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate'],
 
   formatNavigationError({ error, defaultFormatted, path }) {
     if (error.code === 'network-error' && path.startsWith('/api')) {
@@ -82,12 +81,25 @@ export const setupBrowser = async () => {
   setPlayWhenReady(true)
 
   AudioBrowser.updateOptions({
+    // Enable favoriting (now-playing heart + browse-row hearts). Favorites are
+    // stored as full `src` strings here, so 'exact' matching (`true`) fits.
+    // jumpForward/jumpBackward default to off, and an explicit layout is
+    // filtered by capability - so the jump buttons below need these on or they
+    // are silently dropped from the layout.
+    capabilities: { favorite: true, jumpForward: true, jumpBackward: true },
     android: {
-      notificationButtons: {
-        back: 'skip-to-previous',
-        forward: 'skip-to-next',
+      // Jump either side of play/pause. Claiming back/forward is what makes
+      // Media3 tell the car to stop reserving space for skip-prev/next.
+      // Overflow is priority-ordered: a head unit with a spare slot promotes
+      // the first entry onto the main row.
+      remoteButtonLayout: {
+        back: 'jump-backward',
+        forward: 'jump-forward',
         overflow: ['favorite']
       }
+    },
+    ios: {
+      carPlayNowPlayingButtons: ['favorite', 'repeat', 'playback-rate']
     }
   })
 

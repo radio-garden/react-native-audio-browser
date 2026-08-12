@@ -9,38 +9,11 @@
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-AudioBrowserExample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-AudioBrowserExample.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		65EC80C5AF0B20B61CAE10DF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66BB1DDB771A58DD1A06D77E /* Foundation.framework */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		761780EE2CA45675006654EE /* PhoneSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EF2CA45675006654EE /* PhoneSceneDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		995C74706B9B6341BCCE7743 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		D715130ED7051760D932C4F4 /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF56EE9AFC046781457CC49 /* IntentHandler.swift */; };
-		E8E9C5CD8C5149B2F896F064 /* SiriIntentExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B96FD64DFC7DF1AB87253940 /* SiriIntentExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		107FFC41A18854CE7ACAA685 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5D76D0F33C8CB697316CEFD7;
-			remoteInfo = SiriIntentExtension;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		33F8FF657A61127649FB936B /* Embed App Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				E8E9C5CD8C5149B2F896F064 /* SiriIntentExtension.appex in Embed App Extensions */,
-			);
-			name = "Embed App Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* AudioBrowserExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioBrowserExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -48,15 +21,12 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = AudioBrowserExample/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = AudioBrowserExample/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-AudioBrowserExample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AudioBrowserExample.debug.xcconfig"; path = "Target Support Files/Pods-AudioBrowserExample/Pods-AudioBrowserExample.debug.xcconfig"; sourceTree = "<group>"; };
-		3BF56EE9AFC046781457CC49 /* IntentHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IntentHandler.swift; path = IntentHandler.swift; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-AudioBrowserExample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AudioBrowserExample.release.xcconfig"; path = "Target Support Files/Pods-AudioBrowserExample/Pods-AudioBrowserExample.release.xcconfig"; sourceTree = "<group>"; };
-		5845478A07BBB549A332DBE3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-AudioBrowserExample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-AudioBrowserExample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		66BB1DDB771A58DD1A06D77E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = AudioBrowserExample/AppDelegate.swift; sourceTree = "<group>"; };
 		761780EF2CA45675006654EE /* PhoneSceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PhoneSceneDelegate.swift; path = AudioBrowserExample/PhoneSceneDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = AudioBrowserExample/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		B96FD64DFC7DF1AB87253940 /* SiriIntentExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SiriIntentExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -66,14 +36,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-AudioBrowserExample.a in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		55A58C4310F6D66F3AAD2949 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				65EC80C5AF0B20B61CAE10DF /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,16 +65,6 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		2E2E8311BD21F8B07E952EE8 /* SiriIntentExtension */ = {
-			isa = PBXGroup;
-			children = (
-				3BF56EE9AFC046781457CC49 /* IntentHandler.swift */,
-				5845478A07BBB549A332DBE3 /* Info.plist */,
-			);
-			name = SiriIntentExtension;
-			path = SiriIntentExtension;
-			sourceTree = "<group>";
-		};
 		51ECC0AC9DF6379F7E0C88F4 /* iOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -136,7 +88,6 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
-				2E2E8311BD21F8B07E952EE8 /* SiriIntentExtension */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -147,7 +98,6 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* AudioBrowserExample.app */,
-				B96FD64DFC7DF1AB87253940 /* SiriIntentExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -175,34 +125,15 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
-				33F8FF657A61127649FB936B /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				F025A147CE0FB6AE82336123 /* PBXTargetDependency */,
 			);
 			name = AudioBrowserExample;
 			productName = AudioBrowserExample;
 			productReference = 13B07F961A680F5B00A75B9A /* AudioBrowserExample.app */;
 			productType = "com.apple.product-type.application";
-		};
-		5D76D0F33C8CB697316CEFD7 /* SiriIntentExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 52A5E6F1F233AFD27128EB5F /* Build configuration list for PBXNativeTarget "SiriIntentExtension" */;
-			buildPhases = (
-				48B45F1E965200E0E4373807 /* Sources */,
-				55A58C4310F6D66F3AAD2949 /* Frameworks */,
-				B1CD7474EA80622F4BAD98AA /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = SiriIntentExtension;
-			productName = SiriIntentExtension;
-			productReference = B96FD64DFC7DF1AB87253940 /* SiriIntentExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -231,7 +162,6 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* AudioBrowserExample */,
-				5D76D0F33C8CB697316CEFD7 /* SiriIntentExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -244,13 +174,6 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				995C74706B9B6341BCCE7743 /* PrivacyInfo.xcprivacy in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B1CD7474EA80622F4BAD98AA /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,24 +264,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		48B45F1E965200E0E4373807 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D715130ED7051760D932C4F4 /* IntentHandler.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		F025A147CE0FB6AE82336123 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = SiriIntentExtension;
-			target = 5D76D0F33C8CB697316CEFD7 /* SiriIntentExtension */;
-			targetProxy = 107FFC41A18854CE7ACAA685 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -369,9 +275,10 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AudioBrowserExample/AudioBrowserExample.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6BDTBS5VSY;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = AudioBrowserExample/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -399,8 +306,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AudioBrowserExample/AudioBrowserExample.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6BDTBS5VSY;
 				INFOPLIST_FILE = AudioBrowserExample/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -468,7 +376,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -538,7 +446,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -565,49 +473,6 @@
 			};
 			name = Release;
 		};
-		D789B894BA8AEA7A90C64905 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6BDTBS5VSY;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = SiriIntentExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.audiobrowserexample.SiriIntentExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
-		F56B5D8947010688176FC1CF /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6BDTBS5VSY;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = SiriIntentExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.audiobrowserexample.SiriIntentExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -616,15 +481,6 @@
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
 				13B07F951A680F5B00A75B9A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		52A5E6F1F233AFD27128EB5F /* Build configuration list for PBXNativeTarget "SiriIntentExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D789B894BA8AEA7A90C64905 /* Release */,
-				F56B5D8947010688176FC1CF /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,5 +1,5 @@
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 extension ResolvedTrack {
@@ -15,13 +15,16 @@ extension ResolvedTrack {
     url: String? = nil,
     children: [Track]?? = nil,
     carPlaySiriListButton: CarPlaySiriListButtonPosition?? = nil,
+    id: String?? = nil,
     src: String?? = nil,
-    artwork: String?? = nil,
+    artwork: Variant_String_ArtworkVariants?? = nil,
     artworkSource: ImageSource?? = nil,
+    request: TrackRequest?? = nil,
     artworkCarPlayTinted: Bool?? = nil,
     title: String? = nil,
     subtitle: String?? = nil,
     artist: String?? = nil,
+    albumUrl: String?? = nil,
     album: String?? = nil,
     description: String?? = nil,
     genre: String?? = nil,
@@ -31,19 +34,22 @@ extension ResolvedTrack {
     favorited: Bool?? = nil,
     groupTitle: String?? = nil,
     live: Bool?? = nil,
-    imageRow: [ImageRowItem]?? = nil
+    imageRow: [ImageRowItem]?? = nil,
   ) -> ResolvedTrack {
     ResolvedTrack(
       url: url ?? self.url,
       children: children ?? self.children,
       carPlaySiriListButton: carPlaySiriListButton ?? self.carPlaySiriListButton,
+      id: id ?? self.id,
       src: src ?? self.src,
       artwork: artwork ?? self.artwork,
       artworkSource: artworkSource ?? self.artworkSource,
+      request: request ?? self.request,
       artworkCarPlayTinted: artworkCarPlayTinted ?? self.artworkCarPlayTinted,
       title: title ?? self.title,
       subtitle: subtitle ?? self.subtitle,
       artist: artist ?? self.artist,
+      albumUrl: albumUrl ?? self.albumUrl,
       album: album ?? self.album,
       description: description ?? self.description,
       genre: genre ?? self.genre,
@@ -53,7 +59,7 @@ extension ResolvedTrack {
       favorited: favorited ?? self.favorited,
       groupTitle: groupTitle ?? self.groupTitle,
       live: live ?? self.live,
-      imageRow: imageRow ?? self.imageRow
+      imageRow: imageRow ?? self.imageRow,
     )
   }
 }

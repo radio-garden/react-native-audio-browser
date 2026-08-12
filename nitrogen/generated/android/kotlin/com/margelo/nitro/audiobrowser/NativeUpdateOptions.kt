@@ -22,6 +22,9 @@ data class NativeUpdateOptions(
   val android: NitroAndroidUpdateOptions?,
   @DoNotStrip
   @Keep
+  val ios: NitroIOSUpdateOptions?,
+  @DoNotStrip
+  @Keep
   val forwardJumpInterval: Double?,
   @DoNotStrip
   @Keep
@@ -31,10 +34,7 @@ data class NativeUpdateOptions(
   val progressUpdateEventInterval: Variant_NullType_Double?,
   @DoNotStrip
   @Keep
-  val capabilities: PlayerCapabilities?,
-  @DoNotStrip
-  @Keep
-  val iosPlaybackRates: DoubleArray?
+  val capabilities: PlayerCapabilities?
 ) {
   /* primary constructor */
 
@@ -46,8 +46,8 @@ data class NativeUpdateOptions(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(android: NitroAndroidUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities?, iosPlaybackRates: DoubleArray?): NativeUpdateOptions {
-      return NativeUpdateOptions(android, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities, iosPlaybackRates)
+    private fun fromCpp(android: NitroAndroidUpdateOptions?, ios: NitroIOSUpdateOptions?, forwardJumpInterval: Double?, backwardJumpInterval: Double?, progressUpdateEventInterval: Variant_NullType_Double?, capabilities: PlayerCapabilities?): NativeUpdateOptions {
+      return NativeUpdateOptions(android, ios, forwardJumpInterval, backwardJumpInterval, progressUpdateEventInterval, capabilities)
     }
   }
 }

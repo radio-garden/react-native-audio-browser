@@ -1,207 +1,14 @@
-import type {
-  BrowserConfiguration,
-  BrowserSource,
-  BrowserSourceCallback,
-  ResolvedTrack,
-  RouteConfig,
-  SearchSource,
-  SearchSourceCallback,
-  TabsSource,
-  Track,
-  TransformableRequestConfig
-} from '../types'
-import type {
-  NativeBrowserConfiguration,
-  NativeRouteEntry
-} from '../types/browser-native'
+import type { BrowserConfiguration, ResolvedTrack, Track } from '../types'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../utils/useNativeUpdatedValue'
+import {
+  SEARCH_ROUTE_PATH,
+  toNativeConfig,
+  validateBrowserConfiguration
+} from './browser-config'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Configuration Transformation
-// ─────────────────────────────────────────────────────────────────────────────
-
-function isCallback(
-  source: unknown
-): source is (...args: unknown[]) => unknown {
-  return typeof source === 'function'
-}
-
-function isTransformableRequestConfig(
-  source: unknown
-): source is TransformableRequestConfig {
-  if (typeof source !== 'object' || source === null) return false
-  const obj = source as Record<string, unknown>
-  // Has request config properties (not a ResolvedTrack which has 'title')
-  return (
-    'baseUrl' in obj ||
-    'path' in obj ||
-    'headers' in obj ||
-    'query' in obj ||
-    'transform' in obj
-  )
-}
-
-function isRouteConfig(source: unknown): source is RouteConfig {
-  if (typeof source !== 'object' || source === null) return false
-  const obj = source as Record<string, unknown>
-  // RouteConfig has browse/media/artwork properties at the top level
-  return 'browse' in obj || ('media' in obj && !('baseUrl' in obj))
-}
-
-function flattenBrowseSource(source: BrowserSource | undefined): {
-  browseCallback?: NativeRouteEntry['browseCallback']
-  browseConfig?: NativeRouteEntry['browseConfig']
-  browseStatic?: NativeRouteEntry['browseStatic']
-} {
-  if (!source) return {}
-  if (isCallback(source))
-    return { browseCallback: source as NativeRouteEntry['browseCallback'] }
-  if (isTransformableRequestConfig(source))
-    return { browseConfig: source as NativeRouteEntry['browseConfig'] }
-  return { browseStatic: source as NativeRouteEntry['browseStatic'] }
-}
-
-/**
- * Converts a SearchSource to a NativeRouteEntry for the __search__ path.
- */
-function searchSourceToRouteEntry(source: SearchSource): NativeRouteEntry {
-  if (isCallback(source)) {
-    return {
-      path: SEARCH_ROUTE_PATH,
-      searchCallback: source as SearchSourceCallback
-    }
-  }
-  return {
-    path: SEARCH_ROUTE_PATH,
-    searchConfig: source as TransformableRequestConfig
-  }
-}
-
-/**
- * Wraps a Track[] into a ResolvedTrack for tabs.
- * Tabs are represented as a special route that returns children.
- */
-function wrapTracksAsResolvedTrack(tracks: Track[]): ResolvedTrack {
-  return {
-    url: TABS_ROUTE_PATH,
-    title: 'Tabs',
-    children: tracks
-  }
-}
-
-/**
- * Converts a TabsSource to a NativeRouteEntry for the __tabs__ path.
- * Track[] is wrapped in ResolvedTrack, callbacks are wrapped to return ResolvedTrack.
- */
-function tabsSourceToRouteEntry(source: TabsSource): NativeRouteEntry {
-  if (Array.isArray(source)) {
-    // Static Track[] - wrap as ResolvedTrack
-    return {
-      path: TABS_ROUTE_PATH,
-      browseStatic: wrapTracksAsResolvedTrack(source)
-    }
-  }
-
-  if (isCallback(source)) {
-    // Callback returning Track[] - wrap to return ResolvedTrack
-    const wrappedCallback: BrowserSourceCallback = async () => {
-      const tracks = await source()
-      return wrapTracksAsResolvedTrack(tracks)
-    }
-    return {
-      path: TABS_ROUTE_PATH,
-      browseCallback: wrappedCallback
-    }
-  }
-
-  // TransformableRequestConfig - native will handle wrapping the response
-  return {
-    path: TABS_ROUTE_PATH,
-    browseConfig: source
-  }
-}
-
-function flattenRouteEntry(
-  path: string,
-  source: BrowserSource | RouteConfig
-): NativeRouteEntry {
-  if (isRouteConfig(source)) {
-    return {
-      path,
-      ...flattenBrowseSource(source.browse),
-      media: source.media,
-      artwork: source.artwork
-    }
-  }
-  return { path, ...flattenBrowseSource(source) }
-}
-
-/** Internal path used for the default/root browse source */
-const DEFAULT_ROUTE_PATH = '__default__'
-
-/** Internal path used for navigation tabs */
-const TABS_ROUTE_PATH = '__tabs__'
-
-/** Internal path used for search */
-const SEARCH_ROUTE_PATH = '__search__'
-
-function flattenRoutes(
-  routes: Record<string, BrowserSource | RouteConfig> | undefined,
-  rootBrowse: BrowserSource | undefined,
-  tabs: TabsSource | undefined,
-  search: SearchSource | undefined
-): NativeRouteEntry[] | undefined {
-  const entries: NativeRouteEntry[] = []
-
-  // Add explicit routes
-  if (routes) {
-    for (const [path, source] of Object.entries(routes)) {
-      entries.push(flattenRouteEntry(path, source))
-    }
-  }
-
-  // Add root browse as default fallback
-  if (rootBrowse) {
-    entries.push(flattenRouteEntry(DEFAULT_ROUTE_PATH, rootBrowse))
-  }
-
-  // Add tabs as special route
-  if (tabs) {
-    entries.push(tabsSourceToRouteEntry(tabs))
-  }
-
-  // Add search as special route
-  if (search) {
-    entries.push(searchSourceToRouteEntry(search))
-  }
-
-  return entries.length > 0 ? entries : undefined
-}
-
-function toNativeConfig(
-  config: BrowserConfiguration
-): NativeBrowserConfiguration {
-  return {
-    path: config.path,
-    request: config.request,
-    media: config.media,
-    artwork: config.artwork,
-    routes: flattenRoutes(
-      config.routes,
-      config.browse,
-      config.tabs,
-      config.search
-    ),
-    singleTrack: config.singleTrack,
-    handleTrackLoad: config.handleTrackLoad,
-    androidControllerOfflineError: config.androidControllerOfflineError,
-    carPlayUpNextButton: config.carPlayUpNextButton,
-    carPlayNowPlayingButtons: config.carPlayNowPlayingButtons,
-    formatNavigationError: config.formatNavigationError
-  }
-}
+let currentConfiguration: BrowserConfiguration | undefined
 
 /**
  * Configures the browser with routes, tabs, and other settings.
@@ -210,13 +17,30 @@ function toNativeConfig(
  * - Android Auto / CarPlay browsing integration
  * - Playback of browsable tracks via navigate()
  *
+ * Calling this again REPLACES the entire configuration (no merging) and
+ * re-runs initial navigation — external browse UIs such as CarPlay reset to
+ * the first tab. For values that change at runtime (base URL, locale, auth
+ * token), don't reconfigure: read them inside a `request`/`browse` resolver
+ * or a `transform`, and call {@link invalidateAllContent} so every surface
+ * re-fetches in place.
+ *
  * @param configuration - Browser configuration including routes, tabs, media config, etc.
  *
  * @example
  * ```ts
  * configureBrowser({
+ *   request: { baseUrl: 'https://api.example.com' },
  *   routes: {
- *     '/albums/:id': { path: '/api/albums/:id' }
+ *     // `{id}` is a route parameter — see the `routes` docs for matching rules.
+ *     '/albums/{id}': async ({ routeParams }) => fetchAlbumPage(routeParams?.id),
+ *     // Remapping a browse path to a different API path requires a transform;
+ *     // a static `path` on a request config does NOT rewrite the path.
+ *     '/artists/{id}': {
+ *       transformSync: (request, routeParams) => ({
+ *         ...request,
+ *         path: `/api/v2/artists/${routeParams?.id}`
+ *       })
+ *     }
  *   },
  *   tabs: [
  *     { title: 'Home', url: '/' },
@@ -226,7 +50,24 @@ function toNativeConfig(
  * ```
  */
 export function configureBrowser(configuration: BrowserConfiguration): void {
+  // __DEV__ is a React Native global; absent under plain node (vitest).
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    validateBrowserConfiguration(configuration)
+  }
+  currentConfiguration = configuration
   nativeBrowser.configuration = toNativeConfig(configuration)
+}
+
+/**
+ * Returns the configuration last passed to {@link configureBrowser}, in its
+ * original public shape (the native getter exposes only the lowered internal
+ * form). `undefined` until the browser is configured.
+ *
+ * Treat the returned object as read-only: it is the live reference, and
+ * mutating it does NOT reconfigure the browser — call configureBrowser again.
+ */
+export function getBrowserConfiguration(): BrowserConfiguration | undefined {
+  return currentConfiguration
 }
 
 export function navigate(pathOrTrack: string | Track) {
@@ -286,6 +127,22 @@ export function useTabs(): Track[] | undefined {
  */
 export const notifyContentChanged = (path: string): void => {
   nativeBrowser.notifyContentChanged(path)
+}
+
+/**
+ * Invalidates all cached browse content and refreshes every currently-displayed
+ * browse surface. Use when something app-wide changed (locale switch, sign-out,
+ * etc.) and every browse path should re-fetch from its route handler — unlike
+ * {@link notifyContentChanged}, which targets a single path.
+ *
+ * @example
+ * ```ts
+ * // After the user changes the app language
+ * invalidateAllContent()
+ * ```
+ */
+export const invalidateAllContent = (): void => {
+  nativeBrowser.invalidateAllContent()
 }
 
 /**

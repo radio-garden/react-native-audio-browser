@@ -68,7 +68,7 @@ namespace margelo::nitro::audiobrowser {
   struct NativeRouteEntry final {
   public:
     std::string path     SWIFT_PRIVATE;
-    std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>> browseCallback     SWIFT_PRIVATE;
+    std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>> browseCallback     SWIFT_PRIVATE;
     std::optional<TransformableRequestConfig> browseConfig     SWIFT_PRIVATE;
     std::optional<ResolvedTrack> browseStatic     SWIFT_PRIVATE;
     std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> searchCallback     SWIFT_PRIVATE;
@@ -78,7 +78,7 @@ namespace margelo::nitro::audiobrowser {
 
   public:
     NativeRouteEntry() = default;
-    explicit NativeRouteEntry(std::string path, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>(const BrowserSourceCallbackParam& /* param */)>> browseCallback, std::optional<TransformableRequestConfig> browseConfig, std::optional<ResolvedTrack> browseStatic, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> searchCallback, std::optional<TransformableRequestConfig> searchConfig, std::optional<MediaRequestConfig> media, std::optional<ArtworkRequestConfig> artwork): path(path), browseCallback(browseCallback), browseConfig(browseConfig), browseStatic(browseStatic), searchCallback(searchCallback), searchConfig(searchConfig), media(media), artwork(artwork) {}
+    explicit NativeRouteEntry(std::string path, std::optional<std::function<std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError, std::shared_ptr<Promise<std::variant<ResolvedTrack, BrowseError>>>>>>(const BrowserSourceCallbackParam& /* param */)>> browseCallback, std::optional<TransformableRequestConfig> browseConfig, std::optional<ResolvedTrack> browseStatic, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<Track>>>>>(const SearchParams& /* params */)>> searchCallback, std::optional<TransformableRequestConfig> searchConfig, std::optional<MediaRequestConfig> media, std::optional<ArtworkRequestConfig> artwork): path(path), browseCallback(browseCallback), browseConfig(browseConfig), browseStatic(browseStatic), searchCallback(searchCallback), searchConfig(searchConfig), media(media), artwork(artwork) {}
 
   public:
     // NativeRouteEntry is not equatable because these properties are not equatable: browseCallback, browseConfig, searchCallback, searchConfig, media, artwork
@@ -95,7 +95,7 @@ namespace margelo::nitro {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::NativeRouteEntry(
         JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path"))),
-        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError>>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseCallback"))),
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError, std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError>>>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseCallback"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::TransformableRequestConfig>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseConfig"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ResolvedTrack>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseStatic"))),
         JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>(const margelo::nitro::audiobrowser::SearchParams&)>>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "searchCallback"))),
@@ -107,7 +107,7 @@ namespace margelo::nitro {
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::NativeRouteEntry& arg) {
       jsi::Object obj(runtime);
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "path"), JSIConverter<std::string>::toJSI(runtime, arg.path));
-      obj.setProperty(runtime, PropNameIDCache::get(runtime, "browseCallback"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError>>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>>>::toJSI(runtime, arg.browseCallback));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "browseCallback"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError, std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError>>>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>>>::toJSI(runtime, arg.browseCallback));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "browseConfig"), JSIConverter<std::optional<margelo::nitro::audiobrowser::TransformableRequestConfig>>::toJSI(runtime, arg.browseConfig));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "browseStatic"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ResolvedTrack>>::toJSI(runtime, arg.browseStatic));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "searchCallback"), JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>(const margelo::nitro::audiobrowser::SearchParams&)>>>::toJSI(runtime, arg.searchCallback));
@@ -125,7 +125,7 @@ namespace margelo::nitro {
         return false;
       }
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "path")))) return false;
-      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError>>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseCallback")))) return false;
+      if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError, std::shared_ptr<Promise<std::variant<margelo::nitro::audiobrowser::ResolvedTrack, margelo::nitro::audiobrowser::BrowseError>>>>>>(const margelo::nitro::audiobrowser::BrowserSourceCallbackParam&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseCallback")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TransformableRequestConfig>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseConfig")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ResolvedTrack>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "browseStatic")))) return false;
       if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::vector<margelo::nitro::audiobrowser::Track>>>>>(const margelo::nitro::audiobrowser::SearchParams&)>>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "searchCallback")))) return false;

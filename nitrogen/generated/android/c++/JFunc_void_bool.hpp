@@ -18,7 +18,7 @@ namespace margelo::nitro::audiobrowser {
   using namespace facebook;
 
   /**
-   * Represents the Java/Kotlin callback `(enabled: Boolean) -> Unit`.
+   * Represents the Java/Kotlin callback `(connected: Boolean) -> Unit`.
    * This can be passed around between C++ and Java/Kotlin.
    */
   struct JFunc_void_bool: public jni::JavaClass<JFunc_void_bool> {
@@ -29,9 +29,9 @@ namespace margelo::nitro::audiobrowser {
     /**
      * Invokes the function this `JFunc_void_bool` instance holds through JNI.
      */
-    void invoke(bool enabled) const {
-      static const auto method = javaClassStatic()->getMethod<void(jboolean /* enabled */)>("invoke");
-      method(self(), enabled);
+    void invoke(bool connected) const {
+      static const auto method = javaClassStatic()->getMethod<void(jboolean /* connected */)>("invoke");
+      method(self(), connected);
     }
   };
 
@@ -40,7 +40,7 @@ namespace margelo::nitro::audiobrowser {
    */
   class JFunc_void_bool_cxx final: public jni::HybridClass<JFunc_void_bool_cxx, JFunc_void_bool> {
   public:
-    static jni::local_ref<JFunc_void_bool::javaobject> fromCpp(const std::function<void(bool /* enabled */)>& func) {
+    static jni::local_ref<JFunc_void_bool::javaobject> fromCpp(const std::function<void(bool /* connected */)>& func) {
       return JFunc_void_bool_cxx::newObjectCxxArgs(func);
     }
 
@@ -48,13 +48,13 @@ namespace margelo::nitro::audiobrowser {
     /**
      * Invokes the C++ `std::function<...>` this `JFunc_void_bool_cxx` instance holds.
      */
-    void invoke_cxx(jboolean enabled) {
-      _func(static_cast<bool>(enabled));
+    void invoke_cxx(jboolean connected) {
+      _func(static_cast<bool>(connected));
     }
 
   public:
     [[nodiscard]]
-    inline const std::function<void(bool /* enabled */)>& getFunction() const {
+    inline const std::function<void(bool /* connected */)>& getFunction() const {
       return _func;
     }
 
@@ -65,11 +65,11 @@ namespace margelo::nitro::audiobrowser {
     }
 
   private:
-    explicit JFunc_void_bool_cxx(const std::function<void(bool /* enabled */)>& func): _func(func) { }
+    explicit JFunc_void_bool_cxx(const std::function<void(bool /* connected */)>& func): _func(func) { }
 
   private:
     friend HybridBase;
-    std::function<void(bool /* enabled */)> _func;
+    std::function<void(bool /* connected */)> _func;
   };
 
 } // namespace margelo::nitro::audiobrowser

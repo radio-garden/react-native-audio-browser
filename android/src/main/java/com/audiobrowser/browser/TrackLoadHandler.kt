@@ -1,7 +1,7 @@
 package com.audiobrowser.browser
 
-import com.margelo.nitro.audiobrowser.TrackLoadEvent
 import com.margelo.nitro.audiobrowser.Track
+import com.margelo.nitro.audiobrowser.TrackLoadEvent
 import com.margelo.nitro.core.Promise
 import timber.log.Timber
 
@@ -11,8 +11,8 @@ import timber.log.Timber
  * If the handler is present, awaits it and returns [intercepted]. Otherwise runs [default].
  *
  * Nitro wraps value-returning JS callbacks in Promise<T> for thread safety, so a JS callback
- * returning Promise<void> becomes Promise<Promise<Unit>> on the native side. Both layers
- * must be awaited to properly wait for the JS work to complete.
+ * returning Promise<void> becomes Promise<Promise<Unit>> on the native side. Both layers must be
+ * awaited to properly wait for the JS work to complete.
  *
  * @param handler The handleTrackLoad callback from NativeBrowserConfiguration, or null
  * @param track The track being loaded
@@ -27,7 +27,7 @@ suspend fun <T> handleTrackLoad(
   track: Track,
   queue: Array<Track>,
   startIndex: Double,
-  intercepted: () -> T,
+  intercepted: suspend () -> T,
   defaultBehavior: suspend () -> T,
 ): T {
   if (handler != null) {

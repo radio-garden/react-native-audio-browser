@@ -1,5 +1,19 @@
 import Foundation
 
+/// Guards a continuation that two racing tasks may try to resume, so exactly
+/// one wins (see `OnceValue.wait(timeout:)`).
+private final class OneShot: @unchecked Sendable {
+  private let lock = NSLock()
+  private var claimed = false
+  func claim() -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    if claimed { return false }
+    claimed = true
+    return true
+  }
+}
+
 /// A thread-safe primitive that resolves to a value once, allowing multiple waiters.
 /// Once resolved, all current and future `wait()` calls return immediately with the value.
 final class OnceValue<T: Sendable>: @unchecked Sendable {
@@ -56,6 +70,26 @@ final class OnceValue<T: Sendable>: @unchecked Sendable {
       } else {
         continuations.append(continuation)
         lock.unlock()
+      }
+    }
+  }
+
+  /// Waits for the value to be resolved, giving up after `timeout`.
+  /// Returns the value, or nil if the timeout elapses first.
+  ///
+  /// Continuations aren't cancellable, so the internal waiter stays registered
+  /// past a timeout; it resumes harmlessly (into a one-shot guard) if the value
+  /// resolves later.
+  func wait(timeout: Duration) async -> T? {
+    let oneShot = OneShot()
+    return await withCheckedContinuation { continuation in
+      Task {
+        let value = await self.wait()
+        if oneShot.claim() { continuation.resume(returning: value) }
+      }
+      Task {
+        try? await Task.sleep(for: timeout)
+        if oneShot.claim() { continuation.resume(returning: nil) }
       }
     }
   }

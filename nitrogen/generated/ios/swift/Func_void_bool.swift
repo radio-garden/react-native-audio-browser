@@ -8,21 +8,21 @@
 import NitroModules
 
 /**
- * Wraps a Swift `(_ enabled: Bool) -> Void` as a class.
+ * Wraps a Swift `(_ connected: Bool) -> Void` as a class.
  * This class can be used from C++, e.g. to wrap the Swift closure as a `std::function`.
  */
 public final class Func_void_bool {
   public typealias bridge = margelo.nitro.audiobrowser.bridge.swift
 
-  private let closure: (_ enabled: Bool) -> Void
+  private let closure: (_ connected: Bool) -> Void
 
-  public init(_ closure: @escaping (_ enabled: Bool) -> Void) {
+  public init(_ closure: @escaping (_ connected: Bool) -> Void) {
     self.closure = closure
   }
 
   @inline(__always)
-  public func call(enabled: Bool) -> Void {
-    self.closure(enabled)
+  public func call(connected: Bool) -> Void {
+    self.closure(connected)
   }
 
   /**

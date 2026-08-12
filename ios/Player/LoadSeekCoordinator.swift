@@ -17,6 +17,17 @@ final class LoadSeekCoordinator {
   private let logger = Logger(subsystem: "com.audiobrowser", category: "LoadSeekCoordinator")
   private(set) var state: State = .idle
 
+  /// Identifies the item epoch a seek was issued against. `reset()` (called on
+  /// track/queue changes) bumps it, so the completion of a seek issued against
+  /// the previous item can recognize itself as stale and be dropped — a
+  /// cancelled cross-item completion arriving after the new track's start
+  /// position was captured would otherwise consume or prematurely resolve it.
+  private(set) var generation = 0
+
+  func isCurrentGeneration(_ generation: Int) -> Bool {
+    generation == self.generation
+  }
+
   /// Used by `seekBy()` to offset from the deferred position.
   var pendingTime: TimeInterval? {
     switch state {
@@ -49,9 +60,12 @@ final class LoadSeekCoordinator {
     state = .seekInFlight(time: time)
 
     let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
+    let generation = generation
     player
-      .seek(to: cmTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { finished in
+      .seek(to: cmTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) {
+        [weak self] finished in
         Task { @MainActor in
+          guard let self, self.isCurrentGeneration(generation) else { return }
           delegate?.handleSeekCompleted(to: time, didFinish: finished)
         }
       }
@@ -80,5 +94,6 @@ final class LoadSeekCoordinator {
 
   func reset() {
     state = .idle
+    generation += 1
   }
 }

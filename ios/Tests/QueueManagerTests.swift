@@ -390,16 +390,16 @@ struct AddAtTests {
     #expect(try q.addAt([], at: 0) == false)
   }
 
-  @Test func singleExistingTrack_insertBeforeCurrent_doesNotShift() throws {
+  @Test func singleExistingTrack_insertBeforeCurrent_shifts() throws {
     let q = QueueManager()
     q.setQueue(tracks("a"))
-    // guard `tracks.count > 1` is false (count is 1), so currentIndex is NOT shifted.
-    // The original track moves to index 1 but currentIndex stays 0.
     let changed = try q.addAt(tracks("x"), at: 0)
     #expect(changed == false)
-    #expect(q.currentIndex == 0)
-    // currentTrack is now "x" (the inserted track), not "a"
-    #expect(q.currentTrack?.id == "x")
+    // The pointer follows the playing track — the old `tracks.count > 1`
+    // guard silently swapped currentTrack to the inserted track while the
+    // player kept playing the old one.
+    #expect(q.currentIndex == 1)
+    #expect(q.currentTrack?.id == "a")
   }
 
   @Test func atExactCurrentIndex_shiftsCurrentIndex() throws {
@@ -524,13 +524,17 @@ struct RemoveTests {
 @Suite("move()")
 @MainActor
 struct MoveTests {
-  @Test func currentTrack_returnsTrue_updatesIndex() throws {
+  // A move never changes which track is current — the pointer follows the
+  // track, and no move returns true (true triggers a reload at the caller,
+  // which would restart playback on a reorder).
+
+  @Test func currentTrack_pointerFollows() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
     let changed = try q.move(fromIndex: 0, toIndex: 2)
-    #expect(changed == true)
+    #expect(changed == false)
     #expect(q.currentIndex == 2)
-    #expect(q.tracks[2].id == "a")
+    #expect(q.currentTrack?.id == "a")
   }
 
   @Test func nonCurrent_returnsFalse() throws {
@@ -548,26 +552,37 @@ struct MoveTests {
     }
   }
 
-  @Test func nonCurrent_acrossCurrent_doesNotAdjustIndex() throws {
+  @Test func nonCurrent_acrossCurrent_keepsPointerOnSameTrack() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
-    // Move track from before current to after current.
-    // currentIndex is NOT adjusted (only adjusted when fromIndex == currentIndex).
     let changed = try q.move(fromIndex: 0, toIndex: 2)
     #expect(changed == false)
-    #expect(q.currentIndex == 1)
-    // After remove(0): [b, c], insert at min(2,2)=2: [b, c, a]
-    // currentIndex 1 now points to "c", not "b"
-    #expect(q.currentTrack?.id == "c")
+    // [a,b,c] → [b,c,a]; "b" is now index 0.
+    #expect(q.currentTrack?.id == "b")
+    #expect(q.currentIndex == 0)
   }
 
-  @Test func toIndexBeyondCount_clampsToEnd() throws {
+  @Test func nonCurrent_acrossCurrentBackwards_keepsPointerOnSameTrack() throws {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
+    let changed = try q.move(fromIndex: 2, toIndex: 0)
+    #expect(changed == false)
+    // [a,b,c] → [c,a,b]; "b" is now index 2.
+    #expect(q.currentTrack?.id == "b")
+    #expect(q.currentIndex == 2)
+  }
+
+  @Test func toIndexBeyondCount_clampsPointerToo() throws {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
     let changed = try q.move(fromIndex: 0, toIndex: 99)
-    #expect(changed == true)
+    #expect(changed == false)
     // remove(0): [b, c], insert at min(2, 99)=2: [b, c, a]
     #expect(q.tracks[2].id == "a")
+    // The unclamped assignment left currentIndex at 99 → currentTrack nil →
+    // a reorder unloaded playback.
+    #expect(q.currentIndex == 2)
+    #expect(q.currentTrack?.id == "a")
   }
 
   @Test func invalidFromIndex_throws() {
@@ -606,6 +621,23 @@ struct ClearTests {
     let q = QueueManager()
     #expect(q.clear() == false)
   }
+
+  /// clear() and removeUpcomingTracks() were the only mutations not
+  /// maintaining the shuffle order — a stale order over a rebuilt queue
+  /// navigates to phantom indices, nil-ing currentTrack and unloading
+  /// playback mid-session.
+  @Test func clear_alsoClearsShuffleOrder() {
+    let q = QueueManager()
+    q.shuffleEnabled = true
+    q.setQueue(tracks("a", "b", "c", "d", "e"))
+
+    q.clear()
+
+    #expect(q.shuffleOrder.shuffled.isEmpty)
+
+    _ = try? q.addAt(tracks("x", "y"), at: 0)
+    #expect(q.shuffleOrder.shuffled.count == q.tracks.count)
+  }
 }
 
 // MARK: - Other: replace, removeUpcomingTracks
@@ -618,6 +650,16 @@ struct OtherMutationTests {
     q.setQueue(tracks("a", "b", "c"))
     q.replace(1, Track(id: "B"))
     #expect(q.tracks[1].id == "B")
+  }
+
+  @Test func removeUpcomingTracks_alsoTrimsShuffleOrder() {
+    let q = QueueManager()
+    q.shuffleEnabled = true
+    q.setQueue(tracks("a", "b", "c", "d", "e"), initialIndex: 1)
+
+    q.removeUpcomingTracks()
+
+    #expect(q.shuffleOrder.shuffled.count == q.tracks.count)
   }
 
   @Test func removeUpcomingTracks_keepsCurrentAndBefore() {
@@ -876,5 +918,94 @@ struct DelegateTests {
     _ = q.previous()
     try q.skipTo(2)
     #expect(spy.calls.isEmpty)
+  }
+}
+
+// MARK: - canNext / canPrevious
+
+@Suite("canNext / canPrevious")
+@MainActor
+struct SkipAvailabilityTests {
+  @Test func emptyQueue_bothFalse() {
+    let q = QueueManager()
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func singleTrack_repeatOff_bothFalse() {
+    let q = QueueManager()
+    q.setQueue(tracks("a"))
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func singleTrack_repeatQueue_bothFalse() {
+    let q = QueueManager()
+    q.setQueue(tracks("a"))
+    q.repeatMode = .queue
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func firstOfMany_nextOnly() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == false)
+  }
+
+  @Test func middleOfMany_both() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 1)
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func lastOfMany_repeatOff_previousOnly() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
+    #expect(q.canNext == false)
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func lastOfMany_repeatQueue_bothTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 2)
+    q.repeatMode = .queue
+    #expect(q.canNext == true) // wraps to first
+    #expect(q.canPrevious == true)
+  }
+
+  @Test func firstOfMany_repeatQueue_bothTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c"), initialIndex: 0)
+    q.repeatMode = .queue
+    #expect(q.canNext == true)
+    #expect(q.canPrevious == true) // wraps to last
+  }
+
+  // Shuffle wraps the playback order unconditionally (even with repeat off), so
+  // next()/previous() always move when count > 1 — canNext/canPrevious must
+  // agree at the shuffle-order boundaries, not grey out.
+  @Test func shuffleEnd_repeatOff_canNextTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"))
+    q.shuffleEnabled = true
+    q.repeatMode = .off
+    while !q.isLastInPlaybackOrder {
+      _ = q.next()
+    } // advance to last in shuffle order
+    #expect(q.canNext == true) // next() wraps to the first shuffle position
+  }
+
+  @Test func shuffleStart_repeatOff_canPreviousTrue() {
+    let q = QueueManager()
+    q.setQueue(tracks("a", "b", "c", "d"))
+    q.shuffleEnabled = true
+    q.repeatMode = .off
+    while !q.previousTracks.isEmpty {
+      _ = q.previous()
+    } // back to first in shuffle order
+    #expect(q.canPrevious == true) // previous() wraps to the last shuffle position
   }
 }

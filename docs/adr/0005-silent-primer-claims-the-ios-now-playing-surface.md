@@ -1,0 +1,24 @@
+# A silence burst claims the iOS now-playing surface when the first load fails
+
+**Status:** accepted
+
+On iOS, when a load fails before the app has ever rendered audio, the player plays ~0.3s of generated silence (zero-valued PCM samples) through the already-active audio session (`SilentAudioPrimer`), and attaches the failed asset's `AVPlayerItem` as an unobserved *publishing carrier*. Together these make the system now-playing surfaces (lock screen, Control Center, the CarPlay now-playing template) show the current track's metadata, the failure line, and working transport controls — instead of staying completely blank until some other stream plays.
+
+This is a deliberate workaround for a platform rule with no sanctioned alternative. iOS elects an app onto the system now-playing surfaces only once its audio session actually renders output. Device logs verified each layer of the sanctioned path working and still failing: the `MPNowPlayingSession` activates (`becomeActiveIfPossible: true`), a complete metadata dictionary (title, artist, artwork) is accepted by MediaRemote, the now-playing item registers — and the surface stays empty, because no audio ever rendered. The declarative escape hatch does not exist for third parties: `MPNowPlayingInfoCenter.playbackState` writes are dropped on iOS without the private `com.apple.mediaremote.set-playback-state` entitlement (the OS logs an explicit "Ignoring setPlaybackState" error). A working stream never hits any of this — real playback elects the app through the front door — which is why the gap only shows on a cold start whose *first* load fails, precisely when a car user is left staring at an empty template with no way to pick another station from it.
+
+The primer fires at most once per load, only on failures with play intent, and its samples are zeros — inaudible by construction, no volume manipulation involved. The carrier item exists because `MPNowPlayingSession` auto-publishing reads metadata from the linked player's current item (`item.nowPlayingInfo`); a failed load otherwise leaves the player item-less and the framework warns that direct info-center writes are unsupported under automatic publishing. The carrier is deliberately not observed at the item level, so its `.failed` status cannot double-report the error the loader already delivered; retry reloads leave it in place, and a successful load replaces it with the real, observed item.
+
+## Considered options
+
+- **Publish harder through sanctioned APIs** — carrier item alone, session re-activation on audio-session activation, direct info-center writes. All implemented or tested; none surfaced the panel without rendered audio. The election rule is about audio I/O, not publishing.
+- **Disable auto-publishing and publish manually while item-less** — the framework logs manual center writes as unsupported under `MPNowPlayingSession` auto-publishing, and manual mode cannot claim election without audio either. It would reintroduce the manual publishing path (owning elapsed/rate) for no gain.
+- **Present failures through a CarPlay-native alert instead** — honest, but it only patches one surface: lock screen and Control Center stay blank, and the empty now-playing template still exists behind the alert.
+- **Accept the blank surface** — defensible for phone use (the in-app UI shows the failure), rejected for automotive: a driver who started a dead stream from the car gets an empty template with no next/previous, a dead end at the wheel.
+- **Silence burst + carrier item (chosen)** — the established industry workaround, scoped to exactly the broken case: it cannot fire during normal playback, costs 0.3s of inaudible output, and every other layer it depends on (metadata publishing, remote commands) uses sanctioned APIs.
+
+## Consequences
+
+- **The now-playing surfaces work from a cold start even when the first stream is dead** — metadata, the advisory/terminal failure line, and next/previous all appear, verified on-device via CarPlay.
+- **This is an election hack and should be re-audited on major iOS releases**: if Apple ever honors `becomeActiveIfPossible` without rendered audio, or opens the playback-state entitlement, the primer (and possibly the carrier) can be deleted — `SilentAudioPrimer`'s doc comment records the evidence to re-test against.
+- **The carrier item slightly overloads `currentItem` semantics** (an item that is known unplayable, deliberately unobserved). The eventual clean resolution is attaching items eagerly at load time, ExoPlayer-style, and letting item status drive failure detection — a larger refactor recorded here as the known better shape, not blocked on.
+- **Android is untouched**: ExoPlayer's model keeps the `MediaItem` in the playlist regardless of load state, so its media notification never had this gap.

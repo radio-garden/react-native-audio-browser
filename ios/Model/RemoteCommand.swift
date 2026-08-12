@@ -1,6 +1,10 @@
 import Foundation
 
-public enum RemoteCommand: CustomStringConvertible, Equatable {
+// Internal on purpose: nothing outside the module uses this, and a public
+// declaration gets printed into the generated -Swift.h C++ interop section,
+// where the [NSNumber] associated values don't compile for plain-C++
+// consumers of the header (Xcode 26.2 / Swift 6.2).
+enum RemoteCommand: CustomStringConvertible, Equatable {
   case play
 
   case pause
@@ -19,15 +23,13 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
 
   case skipBackward(preferredIntervals: [NSNumber])
 
-  case like(isActive: Bool, localizedTitle: String, localizedShortTitle: String)
-
   case changeRepeatMode
 
   case changeShuffleMode
 
   case changePlaybackRate(supportedPlaybackRates: [NSNumber])
 
-  public var description: String {
+  var description: String {
     switch self {
     case .play: "play"
     case .pause: "pause"
@@ -38,7 +40,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
     case .changePlaybackPosition: "changePlaybackPosition"
     case .skipForward: "skipForward"
     case .skipBackward: "skipBackward"
-    case .like: "like"
     case .changeRepeatMode: "changeRepeatMode"
     case .changeShuffleMode: "changeShuffleMode"
     case .changePlaybackRate: "changePlaybackRate"
@@ -46,6 +47,24 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
   }
 
   var key: String { description }
+
+  /**
+   Commands in `self` that are absent from `next` and so should be disabled.
+
+   Compared by `key`, not by `==`. `RemoteCommand` is `Equatable` including its
+   associated values, but every case with associated values maps onto a single
+   `MPRemoteCommand` addressed by `key`: `.skipForward([15])` and
+   `.skipForward([30])` are two different values of one command. Diffing by `==`
+   would report the old interval as removed and disable the command that the new
+   interval had just re-enabled.
+   */
+  static func commandsToDisable(
+    enabled: [RemoteCommand],
+    replacedBy next: [RemoteCommand],
+  ) -> [RemoteCommand] {
+    let nextKeys = Set(next.map(\.key))
+    return enabled.filter { !nextKeys.contains($0.key) }
+  }
 
   /**
    All values in an array for convenience.
@@ -62,7 +81,6 @@ public enum RemoteCommand: CustomStringConvertible, Equatable {
       .changePlaybackPosition,
       .skipForward(preferredIntervals: []),
       .skipBackward(preferredIntervals: []),
-      .like(isActive: false, localizedTitle: "", localizedShortTitle: ""),
       .changeRepeatMode,
       .changeShuffleMode,
       .changePlaybackRate(supportedPlaybackRates: []),

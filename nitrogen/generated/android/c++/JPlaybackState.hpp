@@ -45,6 +45,9 @@ namespace margelo::nitro::audiobrowser {
         case PlaybackState::NONE:
           static const auto fieldNONE = clazz->getStaticField<JPlaybackState>("NONE");
           return clazz->getStaticFieldValue(fieldNONE);
+        case PlaybackState::BUFFERING:
+          static const auto fieldBUFFERING = clazz->getStaticField<JPlaybackState>("BUFFERING");
+          return clazz->getStaticFieldValue(fieldBUFFERING);
         case PlaybackState::READY:
           static const auto fieldREADY = clazz->getStaticField<JPlaybackState>("READY");
           return clazz->getStaticFieldValue(fieldREADY);
@@ -60,9 +63,6 @@ namespace margelo::nitro::audiobrowser {
         case PlaybackState::LOADING:
           static const auto fieldLOADING = clazz->getStaticField<JPlaybackState>("LOADING");
           return clazz->getStaticFieldValue(fieldLOADING);
-        case PlaybackState::BUFFERING:
-          static const auto fieldBUFFERING = clazz->getStaticField<JPlaybackState>("BUFFERING");
-          return clazz->getStaticFieldValue(fieldBUFFERING);
         case PlaybackState::ERROR:
           static const auto fieldERROR = clazz->getStaticField<JPlaybackState>("ERROR");
           return clazz->getStaticFieldValue(fieldERROR);

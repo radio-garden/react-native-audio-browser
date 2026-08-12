@@ -46,7 +46,7 @@ export function setEqualizerLevels(levels: number[]): void {
 /**
  * Subscribes to equalizer settings changes (Android only).
  * @param callback - Called when equalizer settings change
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onEqualizerChanged =
   NativeUpdatedValue.emitterize<EqualizerSettings>(

@@ -22,7 +22,13 @@ data class MediaRequestConfig(
   val resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?,
   @DoNotStrip
   @Keep
+  val resolveSync: Func_std__shared_ptr_Promise_RequestConfig___Track?,
+  @DoNotStrip
+  @Keep
   val transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?,
+  @DoNotStrip
+  @Keep
+  val transformSync: Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__?,
   @DoNotStrip
   @Keep
   val method: HttpMethod?,
@@ -51,8 +57,8 @@ data class MediaRequestConfig(
   /**
    * Create a new instance of MediaRequestConfig from Kotlin
    */
-  constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
-         this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
+  constructor(resolve: ((track: Track) -> Promise<Promise<RequestConfig>>)?, resolveSync: ((track: Track) -> Promise<RequestConfig>)?, transform: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<Promise<RequestConfig>>)?, transformSync: ((request: RequestConfig, routeParams: Map<String, String>?) -> Promise<RequestConfig>)?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?):
+         this(resolve?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track_java(it) }, resolveSync?.let { Func_std__shared_ptr_Promise_RequestConfig___Track_java(it) }, transform?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, transformSync?.let { Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string___java(it) }, method, path, baseUrl, headers, query, body, contentType, userAgent)
 
   companion object {
     /**
@@ -62,8 +68,8 @@ data class MediaRequestConfig(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): MediaRequestConfig {
-      return MediaRequestConfig(resolve, transform, method, path, baseUrl, headers, query, body, contentType, userAgent)
+    private fun fromCpp(resolve: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____Track?, resolveSync: Func_std__shared_ptr_Promise_RequestConfig___Track?, transform: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_RequestConfig_____RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, transformSync: Func_std__shared_ptr_Promise_RequestConfig___RequestConfig_std__optional_std__unordered_map_std__string__std__string__?, method: HttpMethod?, path: String?, baseUrl: String?, headers: Map<String, String>?, query: Map<String, String>?, body: String?, contentType: String?, userAgent: String?): MediaRequestConfig {
+      return MediaRequestConfig(resolve, resolveSync, transform, transformSync, method, path, baseUrl, headers, query, body, contentType, userAgent)
     }
   }
 }

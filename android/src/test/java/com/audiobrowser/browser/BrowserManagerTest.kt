@@ -8,6 +8,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 // TODO: Most tests disabled — BrowserConfig API changed (routes is now Array<NativeRouteEntry>).
+// When revived, add expandQueueFromContextualUrl glue tests: found id → its
+// SectionScope section as the queue; vanished id → null (single-track
+// fallback). The section logic and the caller fallback are covered
+// (SectionScopeTest, TrackSelectorTests); the wiring between them is not.
 // Tests that used BrowserSource/BrowserList need to be rewritten.
 
 @RunWith(RobolectricTestRunner::class)

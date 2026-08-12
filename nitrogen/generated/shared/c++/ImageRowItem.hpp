@@ -30,10 +30,13 @@
 
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
+// Forward declaration of `TrackRequest` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 
 #include <string>
 #include <optional>
 #include "ImageSource.hpp"
+#include "TrackRequest.hpp"
 
 namespace margelo::nitro::audiobrowser {
 
@@ -42,14 +45,21 @@ namespace margelo::nitro::audiobrowser {
    */
   struct ImageRowItem final {
   public:
+    std::optional<std::string> id     SWIFT_PRIVATE;
     std::optional<std::string> url     SWIFT_PRIVATE;
+    std::optional<std::string> src     SWIFT_PRIVATE;
     std::optional<std::string> artwork     SWIFT_PRIVATE;
     std::optional<ImageSource> artworkSource     SWIFT_PRIVATE;
     std::string title     SWIFT_PRIVATE;
+    std::optional<std::string> artist     SWIFT_PRIVATE;
+    std::optional<std::string> album     SWIFT_PRIVATE;
+    std::optional<std::string> albumUrl     SWIFT_PRIVATE;
+    std::optional<bool> live     SWIFT_PRIVATE;
+    std::optional<TrackRequest> request     SWIFT_PRIVATE;
 
   public:
     ImageRowItem() = default;
-    explicit ImageRowItem(std::optional<std::string> url, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::string title): url(url), artwork(artwork), artworkSource(artworkSource), title(title) {}
+    explicit ImageRowItem(std::optional<std::string> id, std::optional<std::string> url, std::optional<std::string> src, std::optional<std::string> artwork, std::optional<ImageSource> artworkSource, std::string title, std::optional<std::string> artist, std::optional<std::string> album, std::optional<std::string> albumUrl, std::optional<bool> live, std::optional<TrackRequest> request): id(id), url(url), src(src), artwork(artwork), artworkSource(artworkSource), title(title), artist(artist), album(album), albumUrl(albumUrl), live(live), request(request) {}
 
   public:
     friend bool operator==(const ImageRowItem& lhs, const ImageRowItem& rhs) = default;
@@ -65,18 +75,32 @@ namespace margelo::nitro {
     static inline margelo::nitro::audiobrowser::ImageRowItem fromJSI(jsi::Runtime& runtime, const jsi::Value& arg) {
       jsi::Object obj = arg.asObject(runtime);
       return margelo::nitro::audiobrowser::ImageRowItem(
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "id"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "url"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "src"))),
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artwork"))),
         JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageSource>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkSource"))),
-        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))
+        JSIConverter<std::string>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artist"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "album"))),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "albumUrl"))),
+        JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "live"))),
+        JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackRequest>>::fromJSI(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "request")))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::audiobrowser::ImageRowItem& arg) {
       jsi::Object obj(runtime);
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "id"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.id));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "url"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.url));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "src"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.src));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "artwork"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artwork));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "artworkSource"), JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageSource>>::toJSI(runtime, arg.artworkSource));
       obj.setProperty(runtime, PropNameIDCache::get(runtime, "title"), JSIConverter<std::string>::toJSI(runtime, arg.title));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "artist"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.artist));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "album"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.album));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "albumUrl"), JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.albumUrl));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "live"), JSIConverter<std::optional<bool>>::toJSI(runtime, arg.live));
+      obj.setProperty(runtime, PropNameIDCache::get(runtime, "request"), JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackRequest>>::toJSI(runtime, arg.request));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -87,10 +111,17 @@ namespace margelo::nitro {
       if (!nitro::isPlainObject(runtime, obj)) {
         return false;
       }
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "id")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "url")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "src")))) return false;
       if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artwork")))) return false;
       if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::ImageSource>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artworkSource")))) return false;
       if (!JSIConverter<std::string>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "title")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "artist")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "album")))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "albumUrl")))) return false;
+      if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "live")))) return false;
+      if (!JSIConverter<std::optional<margelo::nitro::audiobrowser::TrackRequest>>::canConvert(runtime, obj.getProperty(runtime, PropNameIDCache::get(runtime, "request")))) return false;
       return true;
     }
   };

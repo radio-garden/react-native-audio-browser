@@ -10,7 +10,13 @@
 #include <fbjni/fbjni.h>
 #include "PlayerCapabilities.hpp"
 
+#include "FavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
+#include "JFavoriteConfig.hpp"
+#include "JFavoritesMatchMode.hpp"
+#include "JVariant_Boolean_FavoriteConfig.hpp"
 #include <optional>
+#include <variant>
 
 namespace margelo::nitro::audiobrowser {
 
@@ -47,8 +53,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> jumpForward = this->getFieldValue(fieldJumpForward);
       static const auto fieldJumpBackward = clazz->getField<jni::JBoolean>("jumpBackward");
       jni::local_ref<jni::JBoolean> jumpBackward = this->getFieldValue(fieldJumpBackward);
-      static const auto fieldFavorite = clazz->getField<jni::JBoolean>("favorite");
-      jni::local_ref<jni::JBoolean> favorite = this->getFieldValue(fieldFavorite);
+      static const auto fieldFavorite = clazz->getField<JVariant_Boolean_FavoriteConfig>("favorite");
+      jni::local_ref<JVariant_Boolean_FavoriteConfig> favorite = this->getFieldValue(fieldFavorite);
       static const auto fieldShuffleMode = clazz->getField<jni::JBoolean>("shuffleMode");
       jni::local_ref<jni::JBoolean> shuffleMode = this->getFieldValue(fieldShuffleMode);
       static const auto fieldRepeatMode = clazz->getField<jni::JBoolean>("repeatMode");
@@ -64,7 +70,7 @@ namespace margelo::nitro::audiobrowser {
         skipToPrevious != nullptr ? std::make_optional(static_cast<bool>(skipToPrevious->value())) : std::nullopt,
         jumpForward != nullptr ? std::make_optional(static_cast<bool>(jumpForward->value())) : std::nullopt,
         jumpBackward != nullptr ? std::make_optional(static_cast<bool>(jumpBackward->value())) : std::nullopt,
-        favorite != nullptr ? std::make_optional(static_cast<bool>(favorite->value())) : std::nullopt,
+        favorite != nullptr ? std::make_optional(favorite->toCpp()) : std::nullopt,
         shuffleMode != nullptr ? std::make_optional(static_cast<bool>(shuffleMode->value())) : std::nullopt,
         repeatMode != nullptr ? std::make_optional(static_cast<bool>(repeatMode->value())) : std::nullopt,
         playbackRate != nullptr ? std::make_optional(static_cast<bool>(playbackRate->value())) : std::nullopt
@@ -77,7 +83,7 @@ namespace margelo::nitro::audiobrowser {
      */
     [[maybe_unused]]
     static jni::local_ref<JPlayerCapabilities::javaobject> fromCpp(const PlayerCapabilities& value) {
-      using JSignature = JPlayerCapabilities(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
+      using JSignature = JPlayerCapabilities(jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<JVariant_Boolean_FavoriteConfig>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>, jni::alias_ref<jni::JBoolean>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -90,7 +96,7 @@ namespace margelo::nitro::audiobrowser {
         value.skipToPrevious.has_value() ? jni::JBoolean::valueOf(value.skipToPrevious.value()) : nullptr,
         value.jumpForward.has_value() ? jni::JBoolean::valueOf(value.jumpForward.value()) : nullptr,
         value.jumpBackward.has_value() ? jni::JBoolean::valueOf(value.jumpBackward.value()) : nullptr,
-        value.favorite.has_value() ? jni::JBoolean::valueOf(value.favorite.value()) : nullptr,
+        value.favorite.has_value() ? JVariant_Boolean_FavoriteConfig::fromCpp(value.favorite.value()) : nullptr,
         value.shuffleMode.has_value() ? jni::JBoolean::valueOf(value.shuffleMode.value()) : nullptr,
         value.repeatMode.has_value() ? jni::JBoolean::valueOf(value.repeatMode.value()) : nullptr,
         value.playbackRate.has_value() ? jni::JBoolean::valueOf(value.playbackRate.value()) : nullptr

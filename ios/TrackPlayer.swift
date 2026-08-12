@@ -17,6 +17,12 @@ class TrackPlayer {
   let nowPlayingInfoController: NowPlayingInfoController
   let remoteCommandController: RemoteCommandController
   private let retryManager = RetryManager()
+  private let playbackStateStore = PlaybackStateStore()
+
+  // MARK: - Periodic Persist
+
+  /// Cancelled when playback stops; recreated when it starts.
+  private var periodicSaveTask: Task<Void, Never>?
 
   /// Retry configuration for load errors (network failures, timeouts, etc.)
   var retryConfig: Variant_Bool_RetryConfig? {
@@ -52,23 +58,27 @@ class TrackPlayer {
   )
 
   private lazy var playerTimeObserver: PlayerTimeObserver = .init(
-    periodicObserverTimeInterval: CMTime(seconds: 1, preferredTimescale: 1000),
     onAudioDidStart: { [weak self] in
+      // Audio rendered: this load has proven itself — retries from here on get
+      // the full recovery budget, not the short first-connect one.
+      self?.retryManager.hasPlayed = true
       self?.coordinator.audioDidStart()
-    },
-    onSecondElapsed: { [weak self] seconds in
-      self?.nowPlayingUpdater.setCurrentTime(seconds: seconds)
     },
   )
 
   private lazy var playerItemNotificationObserver: PlayerItemNotificationObserver = .init(
-    onDidPlayToEndTime: { [weak self] in
-      self?.coordinator.handleTrackDidPlayToEndTime()
-    },
+    onDidPlayToEndTime: { [weak self] in self?.handleDidPlayToEndTime() },
     onFailedToPlayToEndTime: { [weak self] error in
       let effectiveError = error ?? self?.avPlayer.currentItem?.error
-      self?.coordinator.errorHandler.handleError(effectiveError, context: .playback)
+      self?.coordinator.errorHandler.handleError(
+        effectiveError,
+        context: .playback,
+        httpStatusCode: self?.currentItemHttpStatusCode,
+      )
     },
+    // Buffer emptied mid-playback: nudge the player, but don't reconnect — a
+    // genuine drop is recovered by the retry / network-restore paths.
+    onPlaybackStalled: { [weak self] in self?.recoverFromStall(reconnectIfLive: false) },
   )
 
   private lazy var playerItemObserver: PlayerItemPropertyObserver = .init(
@@ -86,6 +96,12 @@ class TrackPlayer {
     },
   )
 
+  // MARK: - Now-Playing Election
+
+  private let silentAudioPrimer = SilentAudioPrimer()
+  /// Latched on the first failure of each load; reset when a new track loads.
+  private var didPrimeNowPlayingElection = false
+
   // MARK: - Callbacks
 
   weak var callbacks: TrackPlayerCallbacks? {
@@ -101,14 +117,17 @@ class TrackPlayer {
     get { coordinator.playbackError }
     set { coordinator.playbackError = newValue }
   }
+
   var lastIndex: Int {
     get { coordinator.lastIndex }
     set { coordinator.lastIndex = newValue }
   }
+
   var lastTrack: Track? {
     get { coordinator.lastTrack }
     set { coordinator.lastTrack = newValue }
   }
+
   var tracks: [Track] { coordinator.tracks }
   var currentIndex: Int { coordinator.currentIndex }
   var currentTrack: Track? { coordinator.currentTrack }
@@ -136,6 +155,19 @@ class TrackPlayer {
   var playWhenReady: Bool {
     get { coordinator.playWhenReady }
     set { coordinator.playWhenReady = newValue }
+  }
+
+  /// Time playback must have progressed before a buffer dip counts as a stall, so the initial
+  /// connect / a seek doesn't read as one. iOS has no native rebuffer-vs-initial signal.
+  private static let stallGraceSeconds: TimeInterval = 0.5
+
+  /// True while ongoing playback has stalled waiting for data. Approximated from
+  /// `isPlaybackLikelyToKeepUp`, gated on having actually started and the play intent (so an
+  /// initial connect / seek doesn't read as a stall). Mirrors the Android `stalled` signal, which
+  /// the load control distinguishes natively.
+  var isStalled: Bool {
+    guard let item = avPlayer.currentItem else { return false }
+    return currentTime > Self.stallGraceSeconds && playWhenReady && !item.isPlaybackLikelyToKeepUp
   }
 
   /**
@@ -222,7 +254,6 @@ class TrackPlayer {
     set {
       coordinator.rate = newValue
       avPlayer.rate = newValue
-      nowPlayingUpdater.updatePlaybackValues(duration: duration, rate: newValue, currentTime: currentTime)
     }
   }
 
@@ -249,7 +280,9 @@ class TrackPlayer {
       self?.playWhenReady ?? false
     }
     retryManager.onRetry = { [weak self] startFromCurrentTime in
-      self?.reload(startFromCurrentTime: startFromCurrentTime)
+      // Re-resolve rather than replay the cached URL: a retry may be recovering
+      // from an expired short-lived URL/token that only a fresh resolve fixes.
+      self?.reloadResolving(startFromCurrentTime: startFromCurrentTime)
     }
 
     // Handle command center changes when MPNowPlayingSession is created/destroyed (iOS 16+)
@@ -270,6 +303,7 @@ class TrackPlayer {
   func handlePlayWhenReady(_ playWhenReady: Bool?, action: () throws -> Void) rethrows {
     try coordinator.handlePlayWhenReady(playWhenReady, action: action)
   }
+
   func transition(_ event: PlaybackEvent) { coordinator.transition(event) }
 
   // MARK: - Player Actions
@@ -293,6 +327,13 @@ class TrackPlayer {
   func pause() { coordinator.pause() }
   func togglePlayback() { coordinator.togglePlayback() }
 
+  func handleInterruptionBegan() { coordinator.handleInterruptionBegan() }
+  func handleRouteDisconnected() { coordinator.handleRouteDisconnected() }
+  var willResumeAfterInterruption: Bool { coordinator.willResumeAfterInterruption }
+  func handleInterruptionEnded(shouldResume: Bool) {
+    coordinator.handleInterruptionEnded(shouldResume: shouldResume)
+  }
+
   func stop() {
     coordinator.stop()
     if currentTrack?.live != true {
@@ -301,17 +342,59 @@ class TrackPlayer {
   }
 
   func reload(startFromCurrentTime: Bool) {
-    var time: Double? = nil
-    if startFromCurrentTime {
-      if let currentItem = avPlayer.currentItem {
-        if !currentItem.duration.isIndefinite {
-          time = currentItem.currentTime().seconds
-        }
-      }
-    }
+    let time = startFromCurrentTime ? resumeTime() : nil
     loadAVPlayer()
     if let time {
       seekTo(time)
+    }
+  }
+
+  /// Playback position to resume from on reload, or nil when there is nothing
+  /// seekable to resume (no item, or an indefinite/live duration).
+  private func resumeTime() -> Double? {
+    guard let currentItem = avPlayer.currentItem, !currentItem.duration.isIndefinite else {
+      return nil
+    }
+    return currentItem.currentTime().seconds
+  }
+
+  /// Re-establish a stalled stream when connectivity is restored.
+  ///
+  /// AVPlayer doesn't reliably surface a mid-stream connectivity loss on a live stream as an item
+  /// failure — it sits in `.waitingToPlayAtSpecifiedRate` (a buffering stall) with no error, so the
+  /// error-driven `RetryManager` never engages. Without this, the stream stays "reconnecting"
+  /// indefinitely after the network returns. Mirrors Android, where ExoPlayer surfaces the drop as a
+  /// retryable load error and re-prepares on restore.
+  ///
+  /// Guards: reload only while actually stalled (`.buffering`) with play intent — so a user-initiated
+  /// pause, or a retry that already gave up (`.error`, past the max retry duration) isn't surprisingly
+  /// resumed. Skipped when `RetryManager` is already parked waiting for the network: an error *did*
+  /// schedule a retry that owns its own reload, so we'd otherwise load twice.
+  func handleNetworkRestored() {
+    guard playWhenReady,
+          coordinator.state == .buffering,
+          !retryManager.isWaitingForNetwork
+    else { return }
+    logger.info("Connectivity restored while stalled — re-resolving to reconnect")
+    // Re-resolve rather than replay the cached URL: a resolver that mints a short-lived URL/token
+    // may have had it expire during the offline gap, so reconnecting with the stale URL would just
+    // fail (then recover only via the error path). Matches the error-retry path here, and Android,
+    // which re-resolves on its network-error reconnect. `reloadResolving` falls back to a plain
+    // reload when there's no track `src` to resolve.
+    reloadResolving(startFromCurrentTime: true)
+  }
+
+  /// Jump to the live edge. No-op for non-live tracks. Live with a seekable
+  /// window (HLS) seeks to the window end; live without one (non-seekable, e.g.
+  /// ICY) has no window to seek within, so reconnect to rejoin live.
+  func seekToLiveEdge() {
+    guard currentTrack?.live == true, let item = avPlayer.currentItem else { return }
+    if let range = item.seekableTimeRanges.last?.timeRangeValue, range.duration.seconds > 0 {
+      avPlayer.seek(to: range.end, toleranceBefore: .zero, toleranceAfter: .zero)
+    } else {
+      // Re-resolve on reconnect: this is the stall-recovery path for non-seekable live
+      // streams, where a short-lived stream URL may have expired during the outage.
+      reloadResolving(startFromCurrentTime: false)
     }
   }
 
@@ -326,10 +409,22 @@ class TrackPlayer {
     } else if avPlayer.currentItem != nil {
       let time = CMTime(seconds: seconds, preferredTimescale: 1000)
       let seekSeconds = seconds
+      let generation = loadSeekCoordinator.generation
       avPlayer
         .seek(to: time, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { [weak self] finished in
           Task { @MainActor in
-            self?.handleSeekCompleted(to: Double(seekSeconds), didFinish: finished)
+            guard let self else {
+              completion(false)
+              return
+            }
+            // A completion from before a track change (reset() bumped the
+            // generation) belongs to the old item — delivering it would emit a
+            // bogus seek-completed and consume the new track's pending start seek.
+            guard self.loadSeekCoordinator.isCurrentGeneration(generation) else {
+              completion(false)
+              return
+            }
+            self.handleSeekCompleted(to: Double(seekSeconds), didFinish: finished)
             completion(finished)
           }
         }
@@ -354,6 +449,11 @@ class TrackPlayer {
 
   func enableRemoteCommands(_ commands: [RemoteCommand]) {
     remoteCommandController.enable(commands: commands)
+    // Apply current next/previous availability so re-/late-configured commands
+    // start in the correct enabled state (not unconditionally enabled).
+    remoteCommandController.setSkipAvailability(
+      canNext: coordinator.canNext, canPrevious: coordinator.canPrevious,
+    )
   }
 
   func clear() {
@@ -370,6 +470,10 @@ class TrackPlayer {
 
   func setProgressUpdateInterval(_ interval: TimeInterval?) {
     coordinator.setProgressUpdateInterval(interval)
+  }
+
+  func setPlaybackIntervalEnabled(_ enabled: Bool) {
+    coordinator.setPlaybackIntervalEnabled(enabled)
   }
 
   // MARK: - AVPlayer Management
@@ -409,7 +513,6 @@ class TrackPlayer {
   private func recreateAVPlayer() {
     coordinator.playbackError = nil
     playerTimeObserver.unregisterForBoundaryTimeEvents()
-    playerTimeObserver.unregisterForPeriodicEvents()
     playerObserver.stopObserving()
     stopObservingAVPlayerItem()
     clearCurrentAVItem()
@@ -420,6 +523,17 @@ class TrackPlayer {
     setupAVPlayer()
   }
 
+  /// Recover from a media-services reset (`mediaserverd` crashed/reset): every
+  /// AVPlayer/session handle is invalid, so recreate the player and reload the
+  /// current track, preserving play intent, so a live stream reconnects instead
+  /// of going permanently silent. No-op when nothing is loaded.
+  func handleMediaServicesReset() {
+    guard currentTrack != nil else { return }
+    logger.info("Media services were reset — recreating player and reloading current track")
+    recreateAVPlayer()
+    reloadResolving(startFromCurrentTime: false)
+  }
+
   private func setupAVPlayer() {
     avPlayer.allowsExternalPlayback = false
 
@@ -428,21 +542,31 @@ class TrackPlayer {
 
     playerTimeObserver.avPlayer = avPlayer
     playerTimeObserver.registerForBoundaryTimeEvents()
-    playerTimeObserver.registerForPeriodicTimeEvents()
 
     nowPlayingInfoController.linkPlayer(avPlayer)
 
     if playWhenReady {
       startPlayback()
     } else {
-      if #available(iOS 16.0, *) {
-        avPlayer.defaultRate = rate
-      }
+      avPlayer.defaultRate = rate
     }
   }
 
   func loadAVPlayer() {
+    prepareForReload()
+    mediaLoader.loadAsset()
+  }
+
+  /// Teardown shared by the two reload paths: recreate the player after a
+  /// terminal error, otherwise cancel in-flight loading and drop the current
+  /// asset, then enter the loading state.
+  private func prepareForReload() {
     if state == .error {
+      // A restart from terminal error begins a new load of the same track:
+      // fresh budgets, unproven playback (see resetForNewLoad). Automatic
+      // retries never enter this branch — the retry loop keeps the state
+      // non-terminal — so only retry() / play-from-error land here.
+      coordinator.errorHandler.resetForNewLoad()
       recreateAVPlayer()
     } else {
       mediaLoader.cancelAll()
@@ -451,7 +575,25 @@ class TrackPlayer {
       mediaLoader.clearAsset()
     }
     transition(.trackLoading)
-    mediaLoader.loadAsset()
+  }
+
+  /// Reload by re-running the resolver (fresh URL / headers / user-agent)
+  /// instead of recreating the asset from the already-resolved URL. Used by the
+  /// retry path so consumers whose resolver mints short-lived URLs or auth
+  /// tokens recover once those expire — a plain `reload()` would replay the
+  /// stale URL and keep failing. Falls back to `reload()` when there's no track
+  /// `src` to resolve.
+  func reloadResolving(startFromCurrentTime: Bool) {
+    guard let track = currentTrack, let src = track.src else {
+      reload(startFromCurrentTime: startFromCurrentTime)
+      return
+    }
+    let time = startFromCurrentTime ? resumeTime() : nil
+    prepareForReload()
+    mediaLoader.resolveAndLoad(src: src, track: track)
+    if let time {
+      seekTo(time)
+    }
   }
 
   func unloadAVPlayer() {
@@ -461,6 +603,47 @@ class TrackPlayer {
 
   // MARK: - Observer Callbacks (map AVFoundation → coordinator)
 
+  /// Resolve an end-of-item notification: a genuine end advances the queue; a
+  /// dropped live stream or a mid-stream underrun reported as EOF is recovered
+  /// instead of advancing/stopping (see `EndOfTrackJudgement`).
+  private func handleDidPlayToEndTime() {
+    let judgement = EndOfTrackJudgement(
+      isLive: currentTrack?.live == true,
+      currentTime: currentTime,
+      duration: duration,
+    )
+    switch judgement.outcome {
+    case .ended:
+      coordinator.handleTrackDidPlayToEndTime()
+    case .stalled:
+      recoverFromStall(reconnectIfLive: true)
+    }
+  }
+
+  /// Recover from a stall while the play intent still holds. A live stream that
+  /// ran out of data (`reconnectIfLive`) rejoins the edge — reloading when there
+  /// is no seekable window; otherwise just re-issue play() to un-park AVPlayer
+  /// from `.waitingToPlayAtSpecifiedRate` (data may resume on the same
+  /// connection; a genuine drop is handled by the retry / network-restore paths).
+  private func recoverFromStall(reconnectIfLive: Bool) {
+    guard playWhenReady else { return }
+    if reconnectIfLive, currentTrack?.live == true {
+      seekToLiveEdge()
+    } else {
+      startPlayback()
+    }
+  }
+
+  /// Previous time-control transition + whether its wait reason was
+  /// `.noItemToPlay`, retained to detect the AirPlay waiting→paused stall.
+  private var previousTimeControlStatus: PlayerTimeControlStatus?
+  private var previousWaitingReasonWasNoItemToPlay = false
+
+  /// True when the active audio route is AirPlay.
+  private var isAirPlayRoute: Bool {
+    AVAudioSession.sharedInstance().currentRoute.outputs.contains { $0.portType == .airPlay }
+  }
+
   private func avPlayerDidChangeTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
     let mapped: PlayerTimeControlStatus
     switch status {
@@ -469,12 +652,36 @@ class TrackPlayer {
     case .playing: mapped = .playing
     @unknown default: return
     }
+    recoverIfAirPlayStalled(transitioningTo: mapped)
     coordinator.avPlayerDidChangeTimeControlStatus(mapped)
+  }
+
+  /// AVPlayer can silently strand us in .paused after a `.noItemToPlay` wait
+  /// over AirPlay while we still intend to play — re-issue play() on exactly
+  /// that transition. Also records this transition for the next comparison.
+  private func recoverIfAirPlayStalled(transitioningTo current: PlayerTimeControlStatus) {
+    let stalled = AirPlayStallJudgement(
+      previous: previousTimeControlStatus,
+      current: current,
+      previousWaitingReasonWasNoItemToPlay: previousWaitingReasonWasNoItemToPlay,
+      isAirPlay: isAirPlayRoute,
+      playWhenReady: playWhenReady,
+    ).shouldNudge
+    previousTimeControlStatus = current
+    previousWaitingReasonWasNoItemToPlay =
+      current == .waitingToPlayAtSpecifiedRate && avPlayer.reasonForWaitingToPlay == .noItemToPlay
+    if stalled {
+      logger.info("AirPlay waiting→paused stall detected — nudging play()")
+      startPlayback()
+    }
   }
 
   private func avPlayerStatusDidChange(_ status: AVPlayer.Status) {
     if status == .failed {
-      coordinator.avPlayerStatusDidFail(error: avPlayer.currentItem?.error)
+      coordinator.avPlayerStatusDidFail(
+        error: avPlayer.currentItem?.error,
+        httpStatusCode: currentItemHttpStatusCode,
+      )
     }
   }
 
@@ -486,7 +693,25 @@ class TrackPlayer {
     case .failed: mapped = .failed
     @unknown default: return
     }
-    coordinator.avItemStatusDidChange(mapped, error: error ?? avPlayer.currentItem?.error)
+    coordinator.avItemStatusDidChange(
+      mapped,
+      error: error ?? avPlayer.currentItem?.error,
+      httpStatusCode: currentItemHttpStatusCode,
+    )
+  }
+
+  /// The HTTP status the server last answered the current item with, if any.
+  ///
+  /// `AVPlayerItem.error` never carries it — a 404 arrives as an opaque
+  /// CoreMedia error — so the error log is the only place it surfaces. The log
+  /// is per-item, so its entries belong to the track that just failed; picking
+  /// among them is `PlaybackErrorHandler`'s job, where it is testable
+  /// (`AVPlayerItemErrorLogEvent` cannot be constructed).
+  private var currentItemHttpStatusCode: Int? {
+    guard let events = avPlayer.currentItem?.errorLog()?.events else { return nil }
+    return PlaybackErrorHandler.httpStatusCode(
+      fromErrorStatusCodes: events.map(\.errorStatusCode),
+    )
   }
 
   private func avItemDidUpdatePlaybackLikelyToKeepUp(_ playbackLikelyToKeepUp: Bool) {
@@ -504,11 +729,61 @@ class TrackPlayer {
   func handleSeekCompleted(to seconds: Double, didFinish: Bool) {
     if loadSeekCoordinator.seekDidComplete(on: avPlayer, delegate: self), state == .loading {
       coordinator.handleSeekCompleted(to: seconds, didFinish: didFinish)
-    } else {
-      // Not a load-seek, just update now playing
-      nowPlayingUpdater.setCurrentTime(seconds: seconds)
     }
     callbacks?.playerDidCompleteSeek(position: seconds, didFinish: didFinish)
+  }
+}
+
+// MARK: - Playback State Persistence
+
+extension TrackPlayer {
+  /// Snapshot the current player state to UserDefaults so a cold-start resume
+  /// can restore it without the JS runtime. Live streams persist `positionMs = nil`.
+  private func persistPlaybackState() {
+    guard let track = currentTrack else { return }
+    // At .ended the position equals the duration — persisting it would make a
+    // cold-start resume seek to the end and instantly re-end (Android twin:
+    // savePositionZero).
+    let positionMs: Double? =
+      (track.live == true) ? nil : (state == .ended ? 0 : currentTime * 1000)
+    playbackStateStore.save(
+      PersistedPlaybackState(
+        track: JsonTrack(from: track),
+        positionMs: positionMs,
+        repeatMode: repeatMode.persistedString,
+        shuffleEnabled: shuffleEnabled,
+        playbackSpeed: rate,
+      ),
+    )
+  }
+
+  /// Start a 5 s repeating save while playback is active. A previous task is
+  /// cancelled first so there is never more than one running at a time.
+  private func startPeriodicSave() {
+    periodicSaveTask?.cancel()
+    periodicSaveTask = Task { @MainActor [weak self] in
+      while !Task.isCancelled {
+        try? await Task.sleep(nanoseconds: 5_000_000_000)
+        guard !Task.isCancelled else { return }
+        self?.persistPlaybackState()
+      }
+    }
+  }
+
+  private func stopPeriodicSave() {
+    periodicSaveTask?.cancel()
+    periodicSaveTask = nil
+  }
+}
+
+private extension RepeatMode {
+  /// String representation stored in `PersistedPlaybackState.repeatMode`.
+  var persistedString: String {
+    switch self {
+    case .off: "off"
+    case .track: "track"
+    case .queue: "queue"
+    }
   }
 }
 
@@ -527,12 +802,20 @@ extension TrackPlayer: PlaybackEffectHandler {
     stopObservingAVPlayerItem()
   }
 
-  func loadTrack(src: String) {
-    mediaLoader.resolveAndLoad(src: src)
+  func loadTrack(src: String, track: Track) {
+    didPrimeNowPlayingElection = false
+    // A new track starts unproven: its failures get the short first-connect
+    // budget until it renders audio. Reloads of the current track (retry,
+    // play-from-error) deliberately keep the flag.
+    retryManager.hasPlayed = false
+    mediaLoader.resolveAndLoad(src: src, track: track)
   }
 
   func reloadTrack(startFromCurrentTime: Bool) {
-    reload(startFromCurrentTime: startFromCurrentTime)
+    // Re-resolve rather than replay the cached URL: play-from-.error typically happens long
+    // after the failure (an expired signed URL would just re-fail, often non-retryably),
+    // matching every other retry path (retry, network restore, media-services reset).
+    reloadResolving(startFromCurrentTime: startFromCurrentTime)
   }
 
   func unloadTrack() {
@@ -553,35 +836,23 @@ extension TrackPlayer: PlaybackEffectHandler {
     }
   }
 
-  func updateNowPlayingValues(duration: Double, rate: Float, currentTime: Double) {
-    nowPlayingUpdater.updatePlaybackValues(duration: duration, rate: rate, currentTime: currentTime)
-  }
-
   func updateNowPlayingState(playWhenReady: Bool) {
-    nowPlayingUpdater.updatePlaybackState(playWhenReady: playWhenReady)
+    nowPlayingInfoController.setPlaybackState(playing: playWhenReady)
+    if playWhenReady {
+      startPeriodicSave()
+    } else {
+      stopPeriodicSave()
+      persistPlaybackState()
+    }
   }
 
-  func loadNowPlayingMetadata(for track: Track, rate: Float) {
-    // Reset playback values without updating, because that will happen in
-    // the nowPlayingUpdater.loadMetaValues call straight after:
-    nowPlayingInfoController.setWithoutUpdate(keyValues: [
-      MediaItemProperty.duration(nil),
-      NowPlayingInfoProperty.playbackRate(nil),
-      NowPlayingInfoProperty.elapsedPlaybackTime(nil),
-    ])
-    nowPlayingUpdater.loadMetaValues(for: track, rate: rate)
-  }
-
-  func resetNowPlayingValues() {
-    // Intentionally empty — loadNowPlayingMetadata handles the reset
+  func loadNowPlayingMetadata(for track: Track) {
+    nowPlayingUpdater.loadMetaValues(for: track)
+    persistPlaybackState()
   }
 
   func clearNowPlaying() {
     nowPlayingInfoController.clear()
-  }
-
-  func setNowPlayingCurrentTime(seconds: Double) {
-    nowPlayingUpdater.setCurrentTime(seconds: seconds)
   }
 
   func updateRemoteRepeatMode(_ mode: RepeatMode) {
@@ -590,6 +861,10 @@ extension TrackPlayer: PlaybackEffectHandler {
 
   func updateRemoteShuffleMode(_ enabled: Bool) {
     remoteCommandController.updateShuffleMode(enabled)
+  }
+
+  func updateSkipAvailability(canNext: Bool, canPrevious: Bool) {
+    remoteCommandController.setSkipAvailability(canNext: canNext, canPrevious: canPrevious)
   }
 }
 
@@ -608,8 +883,20 @@ extension TrackPlayer {
     coordinator.replace(index, track)
   }
 
-  func setQueue(_ newTracks: [Track], initialIndex: Int = 0, playWhenReady: Bool? = nil, sourcePath: String? = nil) {
-    coordinator.setQueue(newTracks, initialIndex: initialIndex, playWhenReady: playWhenReady, sourcePath: sourcePath)
+  func setQueue(
+    _ newTracks: [Track],
+    initialIndex: Int = 0,
+    startPositionMs: Double? = nil,
+    playWhenReady: Bool? = nil,
+    sourcePath: String? = nil,
+  ) {
+    coordinator.setQueue(
+      newTracks,
+      initialIndex: initialIndex,
+      startPositionMs: startPositionMs,
+      playWhenReady: playWhenReady,
+      sourcePath: sourcePath,
+    )
   }
 
   func add(_ tracks: [Track], initialIndex: Int? = nil, playWhenReady: Bool? = nil) {
@@ -666,14 +953,50 @@ extension TrackPlayer: MediaLoaderDelegate {
   }
 
   func mediaLoaderDidFailWithRetryableError(_ error: Error) {
+    attachPublishingCarrierItemIfNeeded()
+    primeNowPlayingElectionIfNeeded()
     coordinator.errorHandler.handleError(error, context: .mediaLoad)
   }
 
   func mediaLoaderDidFailWithUnplayableTrack() {
+    attachPublishingCarrierItemIfNeeded()
+    primeNowPlayingElectionIfNeeded()
     transition(.errorOccurred(.trackWasUnplayable))
   }
 
+  /// `MPNowPlayingSession` publishes only through the linked player's current item, so
+  /// a load that fails before item creation (a dead host on a cold start) leaves the
+  /// player item-less: the system never surfaces the app on the lock screen / CarPlay
+  /// — no metadata, no transport buttons — and the failure line has nowhere to appear.
+  /// Attach the failed asset's item purely as a publishing carrier. Deliberately not
+  /// observed: its `.failed` status must not re-report the error the loader already
+  /// delivered. A successful load (retry, or the next track) replaces it with the
+  /// real, observed item via `mediaLoaderDidPrepareItem`; retry reloads leave it in
+  /// place (`prepareForReload` drops only the asset), so the surface doesn't flicker.
+  private func attachPublishingCarrierItemIfNeeded() {
+    guard avPlayer.currentItem == nil, let asset = mediaLoader.asset else { return }
+    logger.notice("Attaching publishing-carrier item for failed load")
+    let item = AVPlayerItem(asset: asset)
+    nowPlayingInfoController.prepareItem(item)
+    avPlayer.replaceCurrentItem(with: item)
+  }
+
+  /// A failed load renders no audio, and without rendered audio iOS never elects the
+  /// app onto the system now-playing surfaces — the published failure metadata and
+  /// transport controls stay invisible (see `SilentAudioPrimer`). On the first
+  /// failure of a play-intended load, render a silence burst to claim the surface.
+  /// Once per load: the retry loop re-fails every few seconds, and one burst either
+  /// elected us or never will. Does not touch the retry loop itself.
+  private func primeNowPlayingElectionIfNeeded() {
+    guard playWhenReady, !didPrimeNowPlayingElection else { return }
+    didPrimeNowPlayingElection = true
+    silentAudioPrimer.prime()
+  }
+
   func mediaLoaderDidFailWithError(_ error: TrackPlayerError.PlaybackError) {
+    // No carrier here: an invalid/missing src never produced an asset. The
+    // direct-center publish still carries the metadata once elected.
+    primeNowPlayingElectionIfNeeded()
     transition(.errorOccurred(error))
   }
 
@@ -689,4 +1012,3 @@ extension TrackPlayer: MediaLoaderDelegate {
     callbacks?.playerDidReceiveTimedMetadata(groups)
   }
 }
-

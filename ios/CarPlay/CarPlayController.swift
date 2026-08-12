@@ -29,16 +29,48 @@ public final class RNABCarPlayController: NSObject {
   private var isStarted = false
   private var listenerRemovals: [() -> Void] = []
 
-  /// Current navigation stack paths (for back navigation context)
-  private var navigationStack: [String] = []
+  /// Paths whose loading template has been pushed but not yet appeared. Guards a
+  /// rapid double-tap from pushing the same destination twice (the first push is
+  /// async, so `topTemplate` may not reflect it yet). Cleared when it appears.
+  private var navigatingPaths: Set<String> = []
 
-  /// Key (src ?? url) of the item currently being selected.
-  /// Prevents duplicate taps from triggering parallel async operations.
-  private var pendingSelectionKey: String?
+  /// Templates with a content load in flight. Guards a re-entrant load when a
+  /// still-loading template re-appears (back-and-forth navigation) from spawning
+  /// a second resolve + watchdog.
+  private var loadingTemplates: Set<ObjectIdentifier> = []
 
-  /// URLs currently being resolved for navigation.
-  /// Prevents duplicate taps from pushing the same template twice.
-  private var pendingNavigationUrls: Set<String> = []
+  /// Tabs received while the user had templates pushed. Rebuilding the tab bar
+  /// replaces the root template, which tears down the pushed navigation stack —
+  /// so the rebuild is deferred until the user is back at the tab bar.
+  private var pendingTabs: [Track]?
+
+  /// Whether a gate is active. While set, tabs keep their tab-bar entries but
+  /// each path is resolved per-request via `gateDecision(for:)`: a gated path
+  /// renders the gate page instead of content; an allowed path shows real
+  /// content. Mirrors `audioBrowser.isGateActive`; seeded in start() so a gate
+  /// set before the scene connects renders at connect.
+  private var isGated = false
+
+  /// Drops a stale tab-bar build when a newer build supersedes it
+  /// (latest-build-wins). Shared across BOTH the gated and non-gated `showTabBar`
+  /// paths: each bumps and captures this at entry and bails before any
+  /// `setRootTemplate` / `updateTemplates` once it's been bumped past their
+  /// captured value. A build suspends the main actor at its `await` points
+  /// (per-tab `gateDecision` when gated, first-tab `loadContent` when not), so a
+  /// gate change can interleave a build of the opposite kind — most importantly a
+  /// `clearGate` kicking the non-gated build while a gated build is mid-await.
+  /// Covering both paths with one token means that clear-vs-gated interleave is
+  /// caught too (not just gated-vs-gated), so a stale gated build can't paint a
+  /// gate page over just-cleared content. Mirrors `albumArtistGeneration` in
+  /// `CarPlayNowPlayingManager`.
+  private var gateBuildGeneration: UInt = 0
+
+  /// How long a browse resolve may run before the destination's loading spinner
+  /// is replaced with an error state. The selection completion is fired
+  /// immediately (so CarPlay never blocks the list — per Apple's async handler
+  /// guidance we push the destination and fill it in), so this only bounds how
+  /// long the *destination screen* spins. Backing out and re-tapping retries.
+  private let resolveTimeout: Duration = .seconds(15)
 
   /// Helper object for CPInterfaceControllerDelegate conformance
   private var interfaceDelegate: InterfaceControllerDelegate?
@@ -57,9 +89,21 @@ public final class RNABCarPlayController: NSObject {
     audioBrowser?.browserManager.config ?? BrowserConfig()
   }
 
-  /// Checks if the given src matches the currently active (loaded) track
-  private func isActiveTrack(src: String) -> Bool {
-    audioBrowser?.getPlayer()?.currentTrack?.src == src
+  /// Whether a list item identifies the currently active (loaded) track.
+  ///
+  /// Identity is the stable `Track.id` when both sides carry one — the active
+  /// track may have been loaded outside the browse tree (the consumer's own
+  /// `load`/`setQueue`) with a `src` that differs textually from the browse
+  /// row's (absolute vs relative, extra query params) while being the same
+  /// item. Exact `src` equality remains the fallback for consumers that don't
+  /// assign ids.
+  private func isActiveTrack(id: String?, src: String?) -> Bool {
+    guard let currentTrack = audioBrowser?.getPlayer()?.currentTrack else { return false }
+    if let id, !id.isEmpty, let currentId = currentTrack.id, !currentId.isEmpty {
+      return id == currentId
+    }
+    guard let src else { return false }
+    return currentTrack.src == src
   }
 
   // MARK: - Initialization
@@ -74,9 +118,21 @@ public final class RNABCarPlayController: NSObject {
       self?.listItemFactory?.createListItem(for: track, handler: handler)
         ?? CPListItem(text: track.title, detailText: nil)
     }
+    nowPlayingManager.navigateToUrl = { [weak self] url, title in
+      Task { @MainActor in await self?.navigateToUrl(url, title: title) }
+    }
   }
 
   // MARK: - Lifecycle
+
+  /// Reports CarPlay scene connection to the library (drives the JS-side
+  /// `isCarPlayConnected` / `onCarPlayConnectedChanged`). Called by
+  /// RNABCarPlaySceneDelegate on scene connect/disconnect — deliberately not
+  /// from start()/stop(), which also cycle on a JS runtime reload.
+  @objc
+  public static func setConnected(_ connected: Bool) {
+    HybridAudioBrowser.setCarPlayConnected(connected)
+  }
 
   @objc
   public func start() {
@@ -90,6 +146,18 @@ public final class RNABCarPlayController: NSObject {
     interfaceDelegate = delegate
     interfaceController.delegate = delegate
 
+    // Restart when a new HybridAudioBrowser replaces the shared instance
+    // (JS runtime reload) — our subscriptions point at the old instance's
+    // emitters and would otherwise go silent.
+    let instanceToken = HybridAudioBrowser.instanceChangedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.restart()
+      }
+    }
+    listenerRemovals.append {
+      HybridAudioBrowser.instanceChangedEmitter.removeListener(instanceToken)
+    }
+
     // Show loading template while waiting
     showLoadingTemplate()
 
@@ -99,20 +167,21 @@ public final class RNABCarPlayController: NSObject {
       guard self.isStarted else { return }
       self.logger.debug("AudioBrowser and player ready, setting up CarPlay")
       self.audioBrowser = browser
+      self.isGated = browser.isGateActive
       self.trackSelector = TrackSelector(browserManager: browser.browserManager)
 
       // Create image loader with CarPlay display traits
       self.imageLoader = CarPlayImageLoader(
         carTraitCollection: self.interfaceController.carTraitCollection,
-        browserManager: browser.browserManager
+        browserManager: browser.browserManager,
       )
 
       // Create list item factory
       let factory = CarPlayListItemFactory(
-        isActiveTrack: { [weak self] src in self?.isActiveTrack(src: src) ?? false },
+        isActiveTrack: { [weak self] id, src in self?.isActiveTrack(id: id, src: src) ?? false },
         onItemSelected: { [weak self] track, completion in
           self?.handleItemSelection(track: track, completion: completion)
-        }
+        },
       )
       factory.imageLoader = self.imageLoader
       self.listItemFactory = factory
@@ -134,18 +203,33 @@ public final class RNABCarPlayController: NSObject {
     logger.info("Stopping CarPlay controller")
 
     // Remove all emitter listeners
-    for removal in listenerRemovals { removal() }
+    for removal in listenerRemovals {
+      removal()
+    }
     listenerRemovals.removeAll()
 
     // Clear config callback
     audioBrowser?.browserManager.onConfigChanged = nil
+    audioBrowser?.browserManager.onFavoritesChanged = nil
 
     nowPlayingManager.teardown()
     listItemFactory = nil
 
-    navigationStack.removeAll()
-    pendingSelectionKey = nil
-    pendingNavigationUrls.removeAll()
+    navigatingPaths.removeAll()
+    loadingTemplates.removeAll()
+    pendingTabs = nil
+  }
+
+  /// Full stop/start cycle. Used when the JS runtime reloads: the new
+  /// HybridAudioBrowser instance replaces the emitters this controller is
+  /// subscribed to and resets the readiness gate, so everything must be
+  /// re-subscribed against the live instance (start() waits for it).
+  @MainActor
+  private func restart() {
+    guard isStarted else { return }
+    logger.info("AudioBrowser instance changed — restarting CarPlay controller")
+    stop()
+    start()
   }
 
   // MARK: - Content Subscriptions
@@ -176,10 +260,35 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.contentChangedEmitter.removeListener(contentToken)
     }
 
-    // Subscribe to config changes (for Now Playing buttons)
+    // Subscribe to config changes (for Now Playing buttons and per-track
+    // button state — e.g. resolveAlbumUrl appearing/disappearing)
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.setupNowPlayingButtons()
+        self?.nowPlayingManager.updateNowPlayingButtonStates()
+      }
+    }
+
+    // Now-playing buttons + Up Next are runtime-updatable via updateOptions();
+    // refresh them when player options change (configureBrowser is no longer
+    // the only path that can change them).
+    let optionsToken = audioBrowser.playerOptionsChangedEmitter.addListener { [weak self] in
+      Task { @MainActor in
+        self?.nowPlayingManager.setupNowPlayingButtons()
+        self?.nowPlayingManager.updateNowPlayingButtonStates()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.playerOptionsChangedEmitter.removeListener(optionsToken)
+    }
+
+    // Refresh the Now Playing heart when favorites change externally (app /
+    // webview). The favorite/active-track emitters only fire for the player's
+    // own toggles, so without this an in-app favorite leaves the CarPlay heart
+    // stale.
+    audioBrowser.browserManager.onFavoritesChanged = { [weak self] in
+      Task { @MainActor in
+        self?.nowPlayingManager.updateFavoriteButtonState()
       }
     }
 
@@ -193,12 +302,52 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.favoriteChangedEmitter.removeListener(favoriteToken)
     }
 
-    // Subscribe to external content changes (from notifyContentChanged)
+    // Repeat/shuffle mode changes re-stamp the now-playing buttons' serialized
+    // `isSelected` (a rebuild, skipped when unchanged) so CarPlay re-renders
+    // draw the correct selected background on the first frame — see
+    // CarPlayNowPlayingManager.BuiltButtonRow.
+    let repeatToken = audioBrowser.repeatModeChangedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.nowPlayingManager.setupNowPlayingButtons()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.repeatModeChangedEmitter.removeListener(repeatToken)
+    }
+    let shuffleToken = audioBrowser.shuffleChangedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.nowPlayingManager.setupNowPlayingButtons()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.shuffleChangedEmitter.removeListener(shuffleToken)
+    }
+
+    // Subscribe to external content changes (notifyContentChanged /
+    // invalidateAllContent).
     let externalContentToken = audioBrowser.externalContentChangedEmitter.addListener { [weak self] path in
-      self?.notifyContentChanged(path: path)
+      // Hop to the main actor like the sibling listeners — the emitter runs
+      // listeners synchronously on the emitting (JS) thread.
+      Task { @MainActor in
+        if path == HybridAudioBrowser.invalidateAllSentinel {
+          self?.invalidateAllContent()
+        } else {
+          self?.notifyContentChanged(path: path)
+        }
+      }
     }
     listenerRemovals.append { [weak audioBrowser] in
       audioBrowser?.externalContentChangedEmitter.removeListener(externalContentToken)
+    }
+
+    // Subscribe to gate changes (set / in-place update / clear)
+    let gateToken = audioBrowser.gateChangedEmitter.addListener { [weak self] active in
+      Task { @MainActor in
+        self?.handleGateChanged(active)
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.gateChangedEmitter.removeListener(gateToken)
     }
 
     // Subscribe to active track changes (for playing indicator in lists)
@@ -221,6 +370,17 @@ public final class RNABCarPlayController: NSObject {
       audioBrowser?.queueChangedEmitter.removeListener(queueToken)
     }
 
+    // A voice media intent started playback — surface Now Playing so the user
+    // lands on the playing station (Up Next holds the rest of the results).
+    let showNowPlayingToken = audioBrowser.showNowPlayingRequestedEmitter.addListener { [weak self] _ in
+      Task { @MainActor in
+        self?.nowPlayingManager.showNowPlaying()
+      }
+    }
+    listenerRemovals.append { [weak audioBrowser] in
+      audioBrowser?.showNowPlayingRequestedEmitter.removeListener(showNowPlayingToken)
+    }
+
     // Subscribe to navigation errors (from browser layer)
     let navErrorToken = audioBrowser.navigationErrorEmitter.addListener { [weak self] event in
       Task { @MainActor in
@@ -237,8 +397,9 @@ public final class RNABCarPlayController: NSObject {
   private func handleNavigationError(_ event: NavigationErrorEvent) {
     guard let error = event.error else { return }
     logger.warning("Navigation error: \(error.code.stringValue) - \(error.message)")
-    // Use current path from navigation stack, or "/" as fallback
-    let path = navigationStack.last ?? "/"
+    // Derive the current path from the live top template (authoritative) rather
+    // than a hand-maintained stack that goes stale on back navigation.
+    let path = interfaceController.topTemplate.flatMap { getPath(from: $0) } ?? "/"
     showNavigationError(error, path: path)
   }
 
@@ -248,7 +409,9 @@ public final class RNABCarPlayController: NSObject {
   private func buildInitialInterface() async {
     guard let audioBrowser else {
       logger.error("AudioBrowser not available")
-      showErrorTemplate(message: "Audio browser not initialized")
+      await showRootNavigationError(
+        NavigationError(code: .unknownError, message: "", statusCode: nil, statusCodeSuccess: nil),
+      )
       return
     }
 
@@ -260,33 +423,65 @@ public final class RNABCarPlayController: NSObject {
     } else {
       // No tabs yet - query them
       logger.info("No tabs available, querying...")
+      // Config exists by now (start() waited for it), so re-show the loading
+      // root to pick up the app's localized loading title — the first loading
+      // template was created before config was available.
+      if config.carPlayLoadingTitle != nil {
+        showLoadingTemplate()
+      }
       do {
         let queriedTabs = try await audioBrowser.browserManager.queryTabs()
         if !queriedTabs.isEmpty {
           await showTabBar(tabs: queriedTabs)
         } else {
-          showErrorTemplate(message: "No content available")
+          // Empty is a navigation error (.emptyContent) so it formats through
+          // the app's formatNavigationError like every other failure (ADR 0001).
+          await showRootNavigationError(
+            NavigationError(code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil),
+          )
         }
       } catch {
         logger.error("Failed to query tabs: \(error.localizedDescription)")
-        showErrorTemplate(message: "Failed to load content")
+        await showRootNavigationError(NavigationError.from(error))
       }
     }
   }
 
-  /// Shows a loading template while waiting for initialization
+  /// Shows a loading template as root while waiting for initialization. Before
+  /// the browser is configured this can only show the spinner (iOS 18.4+) — the
+  /// app's `carPlayLoadingTitle` isn't known yet; `buildInitialInterface`
+  /// re-shows it once config is available.
   private func showLoadingTemplate() {
-    let template = CPListTemplate(
-      title: nil,
-      sections: [],
-    )
-    interfaceController.setRootTemplate(template, animated: false, completion: nil)
+    let template = makeLoadingTemplate(title: nil, path: nil)
+    interfaceController.safeSetRoot(template, animated: false)
   }
 
   // MARK: - Tab Bar
 
   @MainActor
   private func showTabBar(tabs: [Track]) async {
+    // Serialize concurrent tab-bar builds across BOTH the gated and non-gated
+    // paths with one shared generation token: bump at entry, capture, and bail
+    // before any template mutation once a newer build supersedes us. Both paths
+    // suspend the main actor at `await` points (per-tab `gateDecision` when
+    // gated, first-tab `loadContent` when not), so a gate change can interleave
+    // a build of the opposite kind — a `clearGate` kicking the non-gated build
+    // while a gated build is mid-await, or vice versa. A single token covers the
+    // clear-vs-gated interleave too, not just gated-vs-gated: the superseding
+    // build bumps it, and the in-flight build bails before painting (preventing
+    // a stale gate page over just-cleared content, or a clobbered root template).
+    gateBuildGeneration &+= 1
+    let generation = gateBuildGeneration
+
+    // While gated, each tab path is resolved per-request: a gated tab renders
+    // the gate page with that request's chrome; an allowed tab shows real
+    // content. This generalizes the old "all tabs show the gate" — a path the
+    // resolver allows now shows real content.
+    if isGated {
+      await showGatedTabBar(tabs: tabs, generation: generation)
+      return
+    }
+
     logger.info("Building tab bar with \(tabs.count) tabs")
 
     let maxTabs = CPTabBarTemplate.maximumTabCount
@@ -296,10 +491,14 @@ public final class RNABCarPlayController: NSObject {
       createTabTemplate(for: tab)
     }
 
+    // A newer build (e.g. a gate raised mid-clear) superseded us — don't clobber
+    // its root template.
+    guard gateBuildGeneration == generation else { return }
+
     // Set the tab bar immediately so UI appears fast
     logger.info("Setting tab bar root template with \(tabTemplates.count) templates")
     let tabBar = CPTabBarTemplate(templates: tabTemplates)
-    interfaceController.setRootTemplate(tabBar, animated: true, completion: nil)
+    interfaceController.safeSetRoot(tabBar, animated: true)
 
     // Load content for the first tab only - others load lazily when selected
     if let firstTemplate = tabTemplates.first, let firstTab = tabs.first, let url = firstTab.url {
@@ -307,27 +506,93 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  /// Creates a tab template shell without loading content (synchronous)
-  private func createTabTemplate(for track: Track) -> CPListTemplate {
-    let template = CPListTemplate(
-      title: track.title,
-      sections: [],
-    )
+  /// Builds the tab bar while a gate is active. Each tab's path is run through
+  /// the single gate choke point (`gateDecision(for:)`): a gated tab becomes a
+  /// gate page carrying that decision's chrome (and fires `onGate`); an allowed
+  /// tab becomes a normal content shell that lazy-loads. With a static gate (no
+  /// resolver) every tab is gated with the default chrome — today's behaviour.
+  ///
+  /// `generation` is the shared `gateBuildGeneration` captured by the calling
+  /// `showTabBar`; we bail before any template mutation once a newer build (of
+  /// either kind) bumps it past `generation`.
+  @MainActor
+  private func showGatedTabBar(tabs: [Track], generation: UInt) async {
+    guard let audioBrowser else { return }
 
+    guard !tabs.isEmpty else {
+      // Tabs unknown (config not loaded yet, or none) — resolve the root path
+      // and show a single gate page (or, if allowed, fall back to a normal
+      // build once tabs arrive).
+      let outcome = await audioBrowser.gateDecision(
+        for: NativeGateRequest(reason: .browse, path: nil, search: nil),
+      )
+      guard gateBuildGeneration == generation else { return } // superseded by a newer build
+      if outcome.gated {
+        audioBrowser.onGate(GateEvent(reason: .browse))
+        interfaceController.safeSetRoot(
+          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true,
+        )
+      }
+      return
+    }
+
+    let limitedTabs = Array(tabs.prefix(CPTabBarTemplate.maximumTabCount))
+    var templates: [CPListTemplate] = []
+    for tab in limitedTabs {
+      let outcome = await audioBrowser.gateDecision(
+        for: NativeGateRequest(reason: .browse, path: tab.url, search: nil),
+      )
+      guard gateBuildGeneration == generation else { return } // superseded by a newer build
+      if outcome.gated {
+        audioBrowser.onGate(GateEvent(reason: .browse))
+        templates.append(makeGateTemplate(gate: outcome.chrome, tab: tab))
+      } else {
+        // This path is allowed even though a gate is active — show real content.
+        templates.append(createTabTemplate(for: tab))
+      }
+    }
+
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+       tabBar.templates.count == templates.count
+    {
+      // Equal-count in-place swap keeps the selected tab index.
+      tabBar.updateTemplates(templates)
+    } else {
+      interfaceController.safeSetRoot(
+        CPTabBarTemplate(templates: templates), animated: true,
+      )
+    }
+
+    // Eagerly fill any allowed (content) tabs: templateDidAppear isn't
+    // guaranteed to re-fire for templates swapped in via updateTemplates.
+    for (tab, template) in zip(limitedTabs, templates) {
+      guard getPath(from: template) != nil, let url = tab.url else { continue }
+      await loadContent(for: url, into: template)
+    }
+  }
+
+  /// Creates a tab template shell without loading content (synchronous).
+  /// The shell carries the loading state (spinner / `carPlayLoadingTitle`)
+  /// until its content lazy-loads on first appearance.
+  private func createTabTemplate(for track: Track) -> CPListTemplate {
+    // The path stored on the template drives lazy loading and refresh.
+    let template = makeLoadingTemplate(title: track.title, path: track.url)
+    applyTabBarEntry(to: template, for: track)
+    return template
+  }
+
+  /// Stamps a template's tab-bar entry: title and image (default, SF Symbol,
+  /// or loaded artwork). Shared by content tabs and gate-page tabs so a gate
+  /// keeps the familiar tab bar.
+  private func applyTabBarEntry(to template: CPTemplate, for track: Track) {
     // Set tab title explicitly (required for tab bar display)
     template.tabTitle = track.title
 
-    // Store path for lazy loading and refresh
-    if let url = track.url {
-      template.userInfo = ["path": url] as [String: Any]
-    }
-
-    // Set tab image - CarPlay requires an image for proper tab display
-    // Tab bar icons are 24pt x 24pt per CarPlay Developer Guide
-    // https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
-    template.tabImage = imageLoader?.defaultTabImage()
-
-    if let artwork = track.artwork, SFSymbolRenderer.isSFSymbol(artwork) {
+    // Set tab image only when the tab supplies one (SF Symbol / artwork /
+    // artworkSource). A tab with no icon stays title-only — CPTemplate renders
+    // fine with just `tabTitle`. Tab bar icons are 24pt x 24pt per the CarPlay
+    // Developer Guide: https://developer.apple.com/download/files/CarPlay-Developer-Guide.pdf
+    if let artwork = track.artwork?.url, SFSymbolRenderer.isSFSymbol(artwork) {
       let (symbolName, _, _) = SFSymbolRenderer.parseArtwork(artwork)
       if let image = imageLoader?.sfSymbolImage(symbolName) {
         template.tabImage = image
@@ -342,27 +607,14 @@ public final class RNABCarPlayController: NSObject {
           }
         }
       }
+    } else {
+      // No icon supplied: clear any prior image so a restamp (handleTabsChanged)
+      // of an existing template doesn't leave a stale icon on a now title-only tab.
+      template.tabImage = nil
     }
-
-    return template
   }
 
   // MARK: - List Templates
-
-  @MainActor
-  private func createListTemplate(
-    for resolvedTrack: ResolvedTrack,
-    path: String,
-  ) -> CPListTemplate {
-    let template = CPListTemplate(
-      title: resolvedTrack.title,
-      sections: [],
-    )
-    updateTemplate(template, with: resolvedTrack)
-    template.userInfo = ["path": path] as [String: Any]
-
-    return template
-  }
 
   /// Finds the path associated with a template, if any
   private func getPath(from template: CPTemplate) -> String? {
@@ -379,7 +631,6 @@ public final class RNABCarPlayController: NSObject {
   /// Configures the assistant cell ("Ask Siri to Play Audio") on a template
   /// based on the `carPlaySiriListButton` property of the resolved content.
   private func configureAssistantCell(on template: CPListTemplate, from resolvedTrack: ResolvedTrack) {
-    guard #available(iOS 15.4, *) else { return }
     guard let position = resolvedTrack.carPlaySiriListButton else {
       template.assistantCellConfiguration = nil
       return
@@ -394,15 +645,96 @@ public final class RNABCarPlayController: NSObject {
 
   // MARK: - Content Loading
 
+  /// Resolves `path` and fills an empty (loading) template. Driven by
+  /// `templateDidAppear` → `loadContentIfNeeded`, so it runs once the template is
+  /// on screen — the timing where CarPlay actually applies updates (updates made
+  /// earlier, e.g. straight after push, are dropped). Shows a centered empty
+  /// state on empty/error/timeout.
   @MainActor
   private func loadContent(for path: String, into template: CPListTemplate) async {
     guard let audioBrowser else { return }
 
+    // Single-flight: don't start a second load if one is already in flight for
+    // this template (e.g. the user backed out and into a still-loading screen).
+    let templateId = ObjectIdentifier(template)
+    guard !loadingTemplates.contains(templateId) else { return }
+    loadingTemplates.insert(templateId)
+    defer { loadingTemplates.remove(templateId) }
+
+    // Watchdog: if still loading (no rows) after the timeout, show an error.
+    let timeout = resolveTimeout
+    let watchdog = Task { @MainActor [weak self] in
+      do { try await Task.sleep(for: timeout) } catch { return } // cancelled → abort
+      guard let self, template.sections.isEmpty else { return }
+      self.logger.error("loadContent: resolve timed out for \(path)")
+      // A timeout is a navigation error (code .timeout) too, so it formats through
+      // the app's formatNavigationError like every other browse failure.
+      let timedOut = NavigationError(
+        code: .timeout, message: "", statusCode: nil, statusCodeSuccess: nil,
+      )
+      await self.showNavigationErrorView(timedOut, path: path, on: template)
+    }
+
     do {
       let resolved = try await audioBrowser.browserManager.resolve(path, useCache: true)
-      updateTemplate(template, with: resolved)
+      watchdog.cancel()
+      // A page carrying an assistant cell (carPlaySiriListButton) is meaningful
+      // even with no rows — the "Ask Siri to Play" cell IS its content — so it
+      // renders rather than falling through to the empty-content state.
+      let hasAssistantCell = resolved.carPlaySiriListButton != nil
+      if resolved.children?.isEmpty ?? true, !hasAssistantCell {
+        // Empty is modeled as a navigation error (code .emptyContent) so it goes
+        // through the same path-aware formatter as failures — letting an app give
+        // an empty Favorites tab different copy than an empty search. ADR 0001.
+        let empty = NavigationError(
+          code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil,
+        )
+        await showNavigationErrorView(empty, path: path, on: template)
+      } else {
+        updateTemplate(template, with: resolved)
+      }
     } catch {
+      watchdog.cancel()
       logger.error("Failed to load content for \(path): \(error.localizedDescription)")
+      await showNavigationErrorView(NavigationError.from(error), path: path, on: template)
+    }
+  }
+
+  /// Renders a navigation error as the template's centered empty/error view,
+  /// formatted via the app's `formatNavigationError` (or the built-in default):
+  /// `title → view title`, `message → subtitle`. Used for both real failures and
+  /// the empty-content case (ADR 0001).
+  @MainActor
+  private func showNavigationErrorView(
+    _ navError: NavigationError,
+    path: String,
+    on template: CPListTemplate,
+  ) async {
+    let formatted = await formattedNavigationError(navError, path: path)
+    showMessage(
+      on: template,
+      title: formatted.title,
+      subtitle: formatted.message.flatMap { $0.isEmpty ? nil : $0 },
+    )
+  }
+
+  /// Resolves a navigation error to its display form via the app's
+  /// `formatNavigationError` callback, falling back to the default if unset/failed.
+  @MainActor
+  private func formattedNavigationError(
+    _ navError: NavigationError,
+    path: String,
+  ) async -> FormattedNavigationError {
+    let fallback = navError.defaultFormatted()
+    guard let formatter = config.formatNavigationError else { return fallback }
+    let params = FormatNavigationErrorParams(
+      error: navError, defaultFormatted: fallback, path: path,
+    )
+    do {
+      let custom = try await formatter(params).await()
+      return custom ?? fallback
+    } catch {
+      return fallback
     }
   }
 
@@ -416,17 +748,8 @@ public final class RNABCarPlayController: NSObject {
       return
     }
 
-    // Deduplicate: ignore if the same item is already being loaded
-    let key = track.src ?? track.url
-    if let key, key == pendingSelectionKey {
-      completion()
-      return
-    }
-    pendingSelectionKey = key
-
-    // If this track is already loaded, resume playback and show Now Playing
-    if let src = track.src, isActiveTrack(src: src) {
-      pendingSelectionKey = nil
+    // If this track is already loaded, resume playback and show Now Playing.
+    if track.src != nil, isActiveTrack(id: track.id, src: track.src) {
       try? audioBrowser.play()
       nowPlayingManager.showNowPlaying()
       completion()
@@ -434,78 +757,171 @@ public final class RNABCarPlayController: NSObject {
     }
 
     guard let player = audioBrowser.getPlayer(), let trackSelector else {
-      pendingSelectionKey = nil
       completion()
       return
     }
 
-    Task {
-      defer { self.pendingSelectionKey = nil }
+    // A playable track always lands on the Now Playing surface (selection
+    // resolves to .play or .intercepted, never .browse) — push it now and stamp
+    // the tapped track's metadata, instead of after selection resolves: queue
+    // expansion and the media URL resolve can both hit the network, and waiting
+    // animates in a blank Now Playing screen. The load pipeline re-publishes
+    // the same fields and dedupes.
+    if track.src != nil {
+      player.loadNowPlayingMetadata(for: track)
+      // Derive the album line's destination from the tapped track before the
+      // push — CarPlay reads isAlbumArtistButtonEnabled at display time.
+      nowPlayingManager.prepareAlbumArtistButton(for: track)
+      nowPlayingManager.showNowPlaying()
+    }
+
+    // Release CarPlay immediately so the list never locks up. Apple's handler
+    // guidance is to finish processing the tap promptly; for a browse we "finish"
+    // by pushing the destination and filling it in (see navigateToUrl), and for
+    // playback the Now Playing surface owns its own loading state.
+    completion()
+
+    Task { [weak self] in
       let result = await trackSelector.select(track: track, player: player)
+      guard let self else { return }
       switch result {
-      case .play(let intent):
+      case let .play(intent):
         self.executePlayback(intent, player: player)
-        self.nowPlayingManager.showNowPlaying()
+        self.nowPlayingManager.showNowPlaying(popToFront: false)
       case .intercepted:
-        self.nowPlayingManager.showNowPlaying()
-      case .browse(let url):
-        self.navigateToUrl(url, completion: completion)
-        return // navigateToUrl handles its own completion
+        self.nowPlayingManager.showNowPlaying(popToFront: false)
+      case let .browse(url):
+        await self.navigateToUrl(url, title: track.title)
       case .none:
         break
       }
-      completion()
     }
   }
 
   private func executePlayback(_ intent: TrackSelector.PlaybackIntent, player: TrackPlayer) {
     switch intent {
-    case .skipTo(let index):
+    case let .skipTo(index):
       try? player.skipTo(index, playWhenReady: true)
-    case .setQueue(let tracks, let startIndex, let sourcePath):
+    case let .setQueue(tracks, startIndex, sourcePath):
       player.setQueue(tracks, initialIndex: startIndex, playWhenReady: true, sourcePath: sourcePath)
-    case .loadTrack(let track):
+    case let .loadTrack(track):
       player.load(track, playWhenReady: true)
     }
   }
 
-  /// Navigates to a browsable URL path, showing error action sheet on failure with retry option.
-  private func navigateToUrl(_ url: String, completion: @escaping () -> Void) {
-    guard let audioBrowser else {
-      completion()
-      return
-    }
-
-    // Deduplicate: ignore if already navigating to this URL
-    guard !pendingNavigationUrls.contains(url) else {
-      completion()
-      return
-    }
-    pendingNavigationUrls.insert(url)
-
-    Task {
-      defer { self.pendingNavigationUrls.remove(url) }
-      do {
-        let resolved = try await audioBrowser.browserManager.resolve(url, useCache: true)
-
-        // Guard against duplicate push if top template already shows this path
-        if let top = self.interfaceController.topTemplate,
-           self.getPath(from: top) == url
-        {
-          completion()
-          return
-        }
-
-        let listTemplate = self.createListTemplate(for: resolved, path: url)
-        self.navigationStack.append(url)
-        self.interfaceController.pushTemplate(listTemplate, animated: true, completion: nil)
-        completion()
-      } catch {
-        logger.error("Failed to navigate to \(url): \(error.localizedDescription)")
-        let navError = NavigationError.from(error)
-        self.showNavigationError(navError, path: url)
-        completion()
+  /// Pushes a browsable URL's destination immediately as an empty, spinning list
+  /// template — so the list the user tapped from is never blocked. The content is
+  /// filled by `templateDidAppear` → `loadContentIfNeeded` → `loadContent`, which
+  /// runs once the template is on screen (the timing CarPlay needs: updates made
+  /// right after a push are dropped). Backing out and re-tapping retries.
+  @MainActor
+  private func navigateToUrl(_ url: String, title: String) async {
+    // The gate is resolved per-request: a gated path pushes the gate page
+    // (with this request's chrome) instead of browsing into content; this also
+    // blocks indirect entries like the Now Playing album line. An allowed path
+    // browses normally even while a gate is active.
+    if isGated, let audioBrowser {
+      let outcome = await audioBrowser.gateDecision(
+        for: NativeGateRequest(reason: .browse, path: url, search: nil),
+      )
+      if outcome.gated {
+        audioBrowser.onGate(GateEvent(reason: .browse))
+        if let top = interfaceController.topTemplate, getPath(from: top) == url { return }
+        interfaceController.safePush(
+          makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true,
+        )
+        return
       }
+    }
+    // Avoid pushing a duplicate if the top template already shows this path.
+    if let top = interfaceController.topTemplate, getPath(from: top) == url {
+      return
+    }
+    // …and guard a rapid double-tap whose first push hasn't appeared yet (so the
+    // check above can't see it). Cleared when the pushed template appears.
+    guard !navigatingPaths.contains(url) else { return }
+    navigatingPaths.insert(url)
+
+    let template = makeLoadingTemplate(title: title, path: url)
+    interfaceController.safePush(template, animated: true) { [weak self] pushed, error in
+      guard !pushed else { return }
+      // The push can fail (e.g. CarPlay's template stack depth limit). The
+      // appear callback that normally clears the guard will never fire, so
+      // clear it here — otherwise the destination stays unreachable until
+      // CarPlay reconnects.
+      self?.navigatingPaths.remove(url)
+      if let error {
+        self?.logger.error("pushTemplate failed for \(url): \(error.localizedDescription)")
+      }
+    }
+  }
+
+  /// Builds an empty list template for content that is still resolving.
+  /// On iOS 18.4+ it shows the system spinner (`showsSpinnerWhileEmpty`). On older
+  /// iOS it shows the app-localized `carPlayLoadingTitle` as the centered empty
+  /// state when configured; otherwise it stays blank rather than ship a
+  /// hardcoded, un-localized "Loading…". The empty view is set at creation —
+  /// the timing CarPlay renders reliably (see `replaceWithMessage`).
+  private func makeLoadingTemplate(title: String?, path: String?) -> CPListTemplate {
+    let template = CPListTemplate(title: title, sections: [])
+    if let path {
+      template.userInfo = ["path": path] as [String: Any]
+    }
+    if let loadingTitle = config.carPlayLoadingTitle {
+      // Subtitle slot on purpose: the title slot renders at CarPlay's large
+      // empty-state size, which is too heavy for a transient loading hint.
+      template.emptyViewSubtitleVariants = [loadingTitle]
+    }
+    if #available(iOS 18.4, *) {
+      template.showsSpinnerWhileEmpty = true
+    }
+    return template
+  }
+
+  /// Shows a centered empty/error message on a loading template. A *pushed*
+  /// template is replaced (see `replaceWithMessage`); a *tab root* can't be
+  /// popped, so its empty view is set in place (best-effort — a tab renders its
+  /// empty view when selected).
+  private func showMessage(on template: CPListTemplate, title: String, subtitle: String?) {
+    if isTabRoot(template) {
+      if #available(iOS 18.4, *) {
+        template.showsSpinnerWhileEmpty = false
+      }
+      template.emptyViewTitleVariants = [title.isEmpty ? "Couldn't load" : title]
+      template.emptyViewSubtitleVariants = subtitle.map { [$0] } ?? []
+      template.updateSections([])
+    } else {
+      replaceWithMessage(template, title: title, subtitle: subtitle)
+    }
+  }
+
+  /// Whether `template` is a tab's root template (a child of the tab bar). Such
+  /// templates can't be popped, so the replace-by-pop strategy doesn't apply.
+  private func isTabRoot(_ template: CPTemplate) -> Bool {
+    guard let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate else { return false }
+    return tabBar.templates.contains { $0 === template }
+  }
+
+  /// Replaces an on-screen loading template with a fresh list template showing a
+  /// centered empty-state message (empty result, or an error).
+  ///
+  /// We *replace* rather than mutate because CarPlay reliably renders a list
+  /// template's empty view only as its **initial** state at push time — changing
+  /// `emptyViewTitleVariants` / `showsSpinnerWhileEmpty` on an already-pushed
+  /// template is unreliable (it renders late, or not at all). The replacement
+  /// carries no `path`, so `loadContentIfNeeded` won't lazy-reload it; backing
+  /// out and re-tapping retries.
+  private func replaceWithMessage(_ loadingTemplate: CPListTemplate, title: String, subtitle: String?) {
+    // Only replace if the loading template is still the visible top template
+    // (the user may have backed out while the resolve was in flight).
+    guard interfaceController.topTemplate === loadingTemplate else { return }
+
+    let message = CPListTemplate(title: loadingTemplate.title, sections: [])
+    message.emptyViewTitleVariants = [title.isEmpty ? "Couldn't load" : title]
+    message.emptyViewSubtitleVariants = subtitle.map { [$0] } ?? []
+
+    interfaceController.safePop(animated: false) { [weak self] _, _ in
+      self?.interfaceController.safePush(message, animated: false)
     }
   }
 
@@ -514,10 +930,47 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func handleTabsChanged(_ tabs: [Track]) {
     logger.debug("Tabs changed: \(tabs.count) tabs")
-    // Rebuild tab bar if we're at the root
+    // Same tabs by URL while ungated → only the tab-bar entries changed
+    // (e.g. titles after a locale switch): restamp them in place. No rebuild,
+    // so the selected tab and any pushed navigation stack survive. (Gate
+    // templates carry no path, so a gated tab bar never matches here.)
+    if !isGated,
+       let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
+       tabBar.templates.count == min(tabs.count, CPTabBarTemplate.maximumTabCount),
+       zip(tabBar.templates, tabs).allSatisfy({ getPath(from: $0) == $1.url })
+    {
+      for (template, tab) in zip(tabBar.templates, tabs) {
+        applyTabBarEntry(to: template, for: tab)
+      }
+      pendingTabs = nil
+      return
+    }
+    // Rebuilding replaces the root template, tearing down any pushed
+    // navigation stack. If the user is browsing, defer until they're back at
+    // the tab bar (applied from templateDidAppear).
+    guard interfaceController.templates.count <= 1 else {
+      pendingTabs = tabs
+      return
+    }
+    pendingTabs = nil
     Task {
       await showTabBar(tabs: tabs)
     }
+  }
+
+  /// Applies a deferred tab change once the user has popped back to the tab
+  /// bar. Returns true if a rebuild was kicked off (the appeared template is
+  /// about to be replaced, so callers should skip further work on it).
+  @MainActor
+  fileprivate func applyPendingTabsIfAtRoot() -> Bool {
+    guard let tabs = pendingTabs, interfaceController.templates.count <= 1 else {
+      return false
+    }
+    pendingTabs = nil
+    Task {
+      await showTabBar(tabs: tabs)
+    }
+    return true
   }
 
   @MainActor
@@ -532,8 +985,9 @@ public final class RNABCarPlayController: NSObject {
   private func handleActiveTrackChanged(_ event: PlaybackActiveTrackChangedEvent) {
     logger.debug("handleActiveTrackChanged: \(event.lastTrack?.src ?? "nil") → \(event.track?.src ?? "nil")")
     updatePlayingIndicators()
-    // Update favorite button to reflect the new track's favorite state
-    nowPlayingManager.updateFavoriteButtonState()
+    // Refresh per-track button state: favorite heart, Up Next availability,
+    // and the album line's pre-resolved destination.
+    nowPlayingManager.handleActiveTrackChanged()
   }
 
   /// Updates the isPlaying state on all list items based on the current active track.
@@ -556,18 +1010,30 @@ public final class RNABCarPlayController: NSObject {
     }
 
     for template in templates {
+      var templateChanged = false
       for section in template.sections {
         for item in section.items {
           guard let listItem = item as? CPListItem,
-                let itemSrc = listItem.carPlayItemInfo?.src
+                let info = listItem.carPlayItemInfo,
+                info.src != nil
           else { continue }
 
-          let isPlaying = isActiveTrack(src: itemSrc)
+          let isPlaying = isActiveTrack(id: info.id, src: info.src)
           if listItem.isPlaying != isPlaying {
-            logger.debug("Updating isPlaying for \(itemSrc): \(listItem.isPlaying) → \(isPlaying)")
+            logger.debug(
+              "Updating isPlaying for \(info.id ?? info.src ?? ""): \(listItem.isPlaying) → \(isPlaying)")
             listItem.isPlaying = isPlaying
+            templateChanged = true
           }
         }
+      }
+      // Setting isPlaying on an already-displayed item does not reliably reach
+      // the CarPlay screen (rdar-known; the flag only renders when the item is
+      // pushed with it already set). Re-pushing the same sections re-serializes
+      // every item with its current flags — done only when something actually
+      // changed, so routine appear-time passes don't churn the display.
+      if templateChanged {
+        template.updateSections(template.sections)
       }
     }
   }
@@ -632,6 +1098,108 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
+  /// Refreshes every currently-displayed template (tabs + navigation stack) by
+  /// re-fetching each path with the cache bypassed. Called when all content was
+  /// invalidated app-wide (e.g. a locale change).
+  @MainActor
+  public func invalidateAllContent() {
+    guard isStarted else { return }
+    Task { @MainActor in await refreshAllDisplayedTemplates() }
+  }
+
+  @MainActor
+  private func refreshAllDisplayedTemplates() async {
+    guard let audioBrowser else { return }
+
+    var templates: [CPListTemplate] = []
+    if let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate {
+      for template in tabBar.templates {
+        if let listTemplate = template as? CPListTemplate {
+          templates.append(listTemplate)
+        }
+      }
+    }
+    for template in interfaceController.templates {
+      if let listTemplate = template as? CPListTemplate,
+         !templates.contains(where: { $0 === listTemplate })
+      {
+        templates.append(listTemplate)
+      }
+    }
+
+    for template in templates {
+      guard let path = getPath(from: template) else { continue }
+      do {
+        let resolved = try await audioBrowser.browserManager.resolve(path, useCache: false)
+        updateTemplate(template, with: resolved)
+      } catch {
+        logger.error("invalidateAllContent: failed to refresh \(path): \(error.localizedDescription)")
+      }
+    }
+  }
+
+  // MARK: - Gate
+
+  /// Applies a gate state change: set or clear. The per-request chrome is
+  /// obtained at render time via `gateDecision(for:)`, so this just tears down
+  /// any pushed navigation and rebuilds the tab bar — `showTabBar` routes to the
+  /// gated build while a gate is active and to the normal build once cleared.
+  /// Custom Now Playing buttons (e.g. favorite) hide while gated and return on
+  /// clear.
+  @MainActor
+  private func handleGateChanged(_ active: Bool) {
+    isGated = active
+    let tabs = audioBrowser?.browserManager.getTabs() ?? []
+    if tabs.isEmpty, !active {
+      // Never had tabs (gate was up since before config) — full initial build.
+      Task { await buildInitialInterface() }
+    } else {
+      // Tear down any pushed navigation — gated content must not stay reachable
+      // behind the gate, and on clear we return to the root. (No-op at root.)
+      interfaceController.safePopToRoot(animated: false)
+      Task { await showTabBar(tabs: tabs) }
+    }
+    nowPlayingManager.setupNowPlayingButtons()
+    nowPlayingManager.updateNowPlayingButtonStates()
+  }
+
+  /// Builds the gate page for one tab-bar slot, carrying the tab's entry so
+  /// the tab bar itself stays familiar.
+  ///
+  /// A CPListTemplate, NOT a CPInformationTemplate: CarPlay enforces
+  /// per-entitlement template allowances at runtime, and the audio
+  /// entitlement does not include the information template — handing one to
+  /// CPTabBarTemplate throws an unhandled ObjC exception (crash at init).
+  ///
+  /// Within a list, tab children never show navigation-bar buttons (the tab
+  /// bar owns that chrome), and the centered empty view renders only when the
+  /// list has NO rows. The gate is a plain centered message — `title` as the
+  /// empty-view title and `message` as its subtitle, where newlines collapse
+  /// to spaces (the "variants" are width alternatives, not lines). No action
+  /// button: a gate withholds content; the consumer surfaces any "subscribe"
+  /// affordance in its own UI, not on the car surface.
+  private func makeGateTemplate(gate gateChrome: Gate?, tab: Track?) -> CPListTemplate {
+    // A gated decision with neither an override nor a stored default chrome
+    // (resolver-only `true`) falls back to the built-in minimal gate.
+    let gate = gateChrome ?? HybridAudioBrowser.builtInGate
+    let template = CPListTemplate(title: gate.title, sections: [])
+    // Set at creation — the timing CarPlay renders the empty view reliably
+    // (see replaceWithMessage).
+    template.emptyViewTitleVariants = [gate.title]
+    if let message = gate.message, !message.isEmpty {
+      template.emptyViewSubtitleVariants = [
+        message.replacingOccurrences(of: "\n", with: " "),
+      ]
+    }
+    // Marks the page as a gate (vs. a content tab, which carries a `path`),
+    // so the lazy-loader and refresh paths never try to fill it.
+    template.userInfo = ["gate": true] as [String: Any]
+    if let tab {
+      applyTabBarEntry(to: template, for: tab)
+    }
+    return template
+  }
+
   // MARK: - Error Handling
 
   /// Shows a navigation error using CPActionSheetTemplate.
@@ -667,7 +1235,7 @@ public final class RNABCarPlayController: NSObject {
   private func presentErrorActionSheet(customDisplay: FormattedNavigationError) {
     // If another template is already presented, dismiss it first
     if interfaceController.presentedTemplate != nil {
-      interfaceController.dismissTemplate(animated: false) { [weak self] _, _ in
+      interfaceController.safeDismiss(animated: false) { [weak self] _, _ in
         self?.showErrorActionSheet(customDisplay: customDisplay)
       }
     } else {
@@ -680,7 +1248,7 @@ public final class RNABCarPlayController: NSObject {
     // OK action - dismiss the action sheet (use system-localized "OK")
     let okTitle = Bundle(for: UIAlertController.self).localizedString(forKey: "OK", value: "OK", table: nil)
     let ok = CPAlertAction(title: okTitle, style: .cancel) { [weak self] _ in
-      self?.interfaceController.dismissTemplate(animated: true, completion: nil)
+      self?.interfaceController.safeDismiss(animated: true)
     }
 
     let actionSheet = CPActionSheetTemplate(
@@ -689,19 +1257,20 @@ public final class RNABCarPlayController: NSObject {
       actions: [ok],
     )
 
-    interfaceController.presentTemplate(actionSheet, animated: true, completion: nil)
+    interfaceController.safePresent(actionSheet, animated: true)
   }
 
-  /// Shows a simple error template as root (for initialization errors when no other template exists)
-  private func showErrorTemplate(message: String) {
-    // CPAlertTemplate cannot be set as root - use a list template instead
-    let errorItem = CPListItem(text: message, detailText: nil)
-    errorItem.isEnabled = false
-    let template = CPListTemplate(
-      title: "Error",
-      sections: [CPListSection(items: [errorItem])],
-    )
-    interfaceController.setRootTemplate(template, animated: true, completion: nil)
+  /// Shows an initialization failure as the root template — a centered empty
+  /// view formatted via the app's `formatNavigationError` (path "/"), like every
+  /// other browse failure. The empty view renders reliably here because it's the
+  /// template's initial state at set-root time.
+  @MainActor
+  private func showRootNavigationError(_ navError: NavigationError) async {
+    let formatted = await formattedNavigationError(navError, path: "/")
+    let template = CPListTemplate(title: nil, sections: [])
+    template.emptyViewTitleVariants = [formatted.title]
+    template.emptyViewSubtitleVariants = formatted.message.flatMap { $0.isEmpty ? nil : [$0] } ?? []
+    interfaceController.safeSetRoot(template, animated: true)
   }
 }
 
@@ -717,13 +1286,30 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
   }
 
   func templateDidAppear(_ aTemplate: CPTemplate, animated _: Bool) {
-    guard let listTemplate = aTemplate as? CPListTemplate else { return }
+    // Popping back from Now Playing surfaces the tab bar (not a list), so the
+    // guard must let both through — the playing indicator was toggled while
+    // the list was covered, and this appearance is the moment to repaint it.
+    guard aTemplate is CPListTemplate || aTemplate is CPTabBarTemplate else { return }
+
+    // A tab change deferred while the user was browsing replaces the whole
+    // tab bar — no point updating a template that's about to be discarded.
+    if controller?.applyPendingTabsIfAtRoot() == true { return }
 
     // Update playing indicators when navigating back to a list template
     controller?.updatePlayingIndicators()
 
     // Lazy load content for tabs that haven't been loaded yet
-    controller?.loadContentIfNeeded(for: listTemplate)
+    if let listTemplate = aTemplate as? CPListTemplate {
+      controller?.loadContentIfNeeded(for: listTemplate)
+    }
+  }
+
+  func templateDidDisappear(_ aTemplate: CPTemplate, animated _: Bool) {
+    // The complement of the appear hook: whether popping Now Playing reports
+    // "tab bar appeared" or only "now playing disappeared" is a platform
+    // detail — cover both so the revealed list always repaints its indicator.
+    guard aTemplate is CPNowPlayingTemplate else { return }
+    controller?.updatePlayingIndicators()
   }
 }
 
@@ -732,11 +1318,15 @@ private final class InterfaceControllerDelegate: NSObject, CPInterfaceController
 private extension RNABCarPlayController {
   /// Loads content for a template if it hasn't been loaded yet (lazy loading for tabs)
   func loadContentIfNeeded(for template: CPListTemplate) {
-    // Skip if already has content
-    guard template.sections.isEmpty else { return }
-
     // Get path from userInfo
     guard let path = getPath(from: template) else { return }
+
+    // The template is now on screen, so a queued duplicate navigation to it is
+    // no longer a concern (the top-template check will catch any further taps).
+    navigatingPaths.remove(path)
+
+    // Skip if already has content (single-flight in loadContent guards re-entry).
+    guard template.sections.isEmpty else { return }
 
     logger.debug("Lazy loading content for tab: \(path)")
 

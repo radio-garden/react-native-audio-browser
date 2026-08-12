@@ -2,61 +2,59 @@ package com.audiobrowser.player
 
 import android.annotation.SuppressLint
 import android.content.Context
-import androidx.media3.common.AudioAttributes
+import android.os.Handler
+import android.os.Looper
+import androidx.core.net.toUri
 import androidx.media3.common.C
-import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.HeartRating
-import androidx.media3.common.MediaItem
-import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.common.MediaMetadata
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.audiobrowser.AudioBrowser
 import com.audiobrowser.Callbacks
+import com.audiobrowser.browser.displayArtworkSource
+import com.audiobrowser.browser.resolveArtworkUrl
+import com.audiobrowser.browser.unattributedArtworkSource
 import com.audiobrowser.extension.NumberExt.Companion.toSeconds
-import com.margelo.nitro.audiobrowser.ImageContext
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.model.PlayerUpdateOptions
-import com.audiobrowser.util.AndroidAudioContentTypeFactory
 import com.audiobrowser.util.CoilBitmapLoader
-import com.audiobrowser.util.EqualizerManager
 import com.audiobrowser.util.NetworkConnectivityMonitor
 import com.audiobrowser.util.PlayingStateFactory
 import com.audiobrowser.util.RepeatModeFactory
 import com.audiobrowser.util.TrackFactory
-import com.margelo.nitro.audiobrowser.AndroidPlayerWakeMode
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
 import com.margelo.nitro.audiobrowser.FavoriteChangedEvent
+import com.margelo.nitro.audiobrowser.GateEvent
+import com.margelo.nitro.audiobrowser.GateReason
+import com.margelo.nitro.audiobrowser.ImageContext
+import com.margelo.nitro.audiobrowser.ImageSource
+import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
-import com.margelo.nitro.audiobrowser.NowPlayingUpdate
 import com.margelo.nitro.audiobrowser.Playback
 import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
+import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
 import com.margelo.nitro.audiobrowser.PlaybackQueueEndedEvent
 import com.margelo.nitro.audiobrowser.PlaybackState
 import com.margelo.nitro.audiobrowser.PlayingState
-import com.margelo.nitro.audiobrowser.RatingType
-import com.margelo.nitro.audiobrowser.RemoteJumpBackwardEvent
-import com.margelo.nitro.audiobrowser.RemoteJumpForwardEvent
-import com.margelo.nitro.audiobrowser.RemoteSeekEvent
 import com.margelo.nitro.audiobrowser.RepeatMode
 import com.margelo.nitro.audiobrowser.SearchParams
-import com.margelo.nitro.audiobrowser.SleepTimer as NitroSleepTimer
-import com.margelo.nitro.audiobrowser.SleepTimerEndOfTrack
-import com.margelo.nitro.audiobrowser.SleepTimerTime
 import com.margelo.nitro.audiobrowser.Track
-import com.margelo.nitro.core.NullType
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
@@ -66,25 +64,50 @@ class Player(internal val context: Context) {
     get() = options.appKilledPlaybackBehavior
 
   private var options = PlayerUpdateOptions()
+  private val mainHandler = Handler(Looper.getMainLooper())
   internal var callbacks: Callbacks? = null
   private lateinit var mediaSession: MediaSession
   val networkMonitor: NetworkConnectivityMonitor = NetworkConnectivityMonitor(context)
-  private var equalizerManager: EqualizerManager? = null
+  internal val equalizer =
+    EqualizerController(onSettingsChanged = { settings -> callbacks?.onEqualizerChanged(settings) })
   private val mediaSessionCallback = MediaSessionCallback(this)
   internal val playbackStateStore = PlaybackStateStore(this)
-  private val sleepTimer =
-    object : SleepTimer() {
-      override fun onComplete() {
-        Timber.d("Sleep timer completed, stopping playback")
-        stop()
-        callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
-      }
-    }
+  internal val volumeFader = VolumeFader(getVolume = { volume }, setVolume = { volume = it })
+  internal val sleepTimer =
+    SleepTimerManager(
+      volumeFader,
+      pause = { pause() },
+      onChanged = { callbacks?.onSleepTimerChanged(it) },
+    )
 
   lateinit var exoPlayer: ExoPlayer
   lateinit var forwardingPlayer: androidx.media3.common.Player
   /** Thread-safe cache of playWhenReady for access from non-main threads (e.g., retry policy) */
   @Volatile internal var playWhenReadyCache = false
+
+  /**
+   * Whether the current load has ever produced audio — selects between the retry policy's
+   * first-connect and recovery budgets. Volatile: read from ExoPlayer's loader thread. Set when
+   * playback starts, cleared on media-item transition (a new load starts unproven); retry reloads
+   * of the same load keep it.
+   */
+  @Volatile internal var hasPlayedCache = false
+
+  /** Last playWhenReady value emitted to JS — see [emitPlayWhenReadyChanged]. */
+  private var lastEmittedPlayWhenReady: Boolean? = null
+
+  /**
+   * Emits the playWhenReady change to JS exactly once per value. Two producers exist: the
+   * synchronous clear at ENDED in [setPlaybackState] (ordered before the state / queue-ended
+   * callbacks, matching iOS) and the async media3 listener (authoritative for changes ExoPlayer
+   * makes on its own, e.g. audio focus); the guard deduplicates their overlap.
+   */
+  internal fun emitPlayWhenReadyChanged(value: Boolean) {
+    if (lastEmittedPlayWhenReady == value) return
+    lastEmittedPlayWhenReady = value
+    callbacks?.onPlaybackPlayWhenReadyChanged(PlaybackPlayWhenReadyChangedEvent(value))
+  }
+
   private lateinit var mediaFactory: MediaFactory
   private lateinit var loadControl: DynamicLoadControl
   private var automaticBufferManager: AutomaticBufferManager? = null
@@ -95,49 +118,39 @@ class Player(internal val context: Context) {
    */
   @Volatile private var pendingNetworkRetry = false
 
-  private var _browser: AudioBrowser? = null
   private var browserRegistered = CompletableDeferred<AudioBrowser>()
   private var _coilBitmapLoader: CoilBitmapLoader? = null
 
   /**
-   * Coil ImageLoader for SVG pre-rendering in Android Auto browse items.
-   * Set by Service after creation.
+   * Coil ImageLoader for SVG pre-rendering in Android Auto browse items. Set by Service after
+   * creation.
    */
   var imageLoader: coil3.ImageLoader? = null
 
+  /** Registry that maps content:// tokens to artwork URLs for the browse content provider. */
+  val browseArtworkRegistry = com.audiobrowser.browser.BrowseArtworkRegistry()
+
   /**
-   * Set the CoilBitmapLoader for artwork URL transformation. Called from Service after creation.
+   * Set the CoilBitmapLoader for display-time bitmap loading. Called from Service after creation.
    */
   var coilBitmapLoader: CoilBitmapLoader?
     get() = _coilBitmapLoader
     set(value) {
       _coilBitmapLoader = value
-      // If browser is already set, wire up the resolver
-      _browser?.let { audioBrowser -> wireUpArtworkResolver(audioBrowser, value) }
     }
 
-  var browser: AudioBrowser?
-    get() = _browser
-    set(value) {
-      _browser = value
-      value?.let { audioBrowser ->
-        // Wire up artwork URL resolver
-        // This ensures the resolver is available when onGetChildren resumes
-        wireUpArtworkResolver(audioBrowser, _coilBitmapLoader)
-
-        // NOTE: We do NOT complete browserRegistered here.
-        // Configuration (routes/tabs) must be set before Android Auto can browse.
-        // Call notifyBrowserConfigurationReady() after configuration is set.
-      }
-    }
+  // NOTE: setting the browser does NOT complete browserRegistered.
+  // Configuration (routes/tabs) must be set before Android Auto can browse.
+  // Call notifyBrowserConfigurationReady() after configuration is set.
+  var browser: AudioBrowser? = null
 
   /**
-   * Notifies that the browser configuration is ready (routes/tabs are configured).
-   * This should be called after setting the browser AND its configuration.
-   * Only then will Android Auto be able to browse content.
+   * Notifies that the browser configuration is ready (routes/tabs are configured). This should be
+   * called after setting the browser AND its configuration. Only then will Android Auto be able to
+   * browse content.
    */
   fun notifyBrowserConfigurationReady() {
-    val audioBrowser = _browser ?: return
+    val audioBrowser = browser ?: return
 
     if (!browserRegistered.isCompleted) {
       Timber.d("Browser configuration ready - completing deferred")
@@ -155,31 +168,12 @@ class Player(internal val context: Context) {
         mediaSessionCallback.updateMediaSession(
           mediaSession,
           options.capabilities,
-          options.notificationButtons,
+          options.remoteButtonLayout,
           searchAvailable,
+          options.forwardJumpInterval,
+          options.backwardJumpInterval,
         )
       }
-    }
-  }
-
-  /**
-   * Wires up the artwork URL resolver between BrowserManager and CoilBitmapLoader. This enables
-   * artwork URL transformation during browse-time (Phase 2).
-   */
-  private fun wireUpArtworkResolver(audioBrowser: AudioBrowser, loader: CoilBitmapLoader?) {
-    val browserManager = audioBrowser.browserManager
-    if (loader != null) {
-      Timber.d("Wiring up artwork URL resolver")
-      browserManager.artworkUrlResolver = { track, perRouteConfig, imageContext ->
-        loader.transformArtworkUrlForTrack(track, perRouteConfig, imageContext)
-      }
-      // Clear content cache so that content resolved before the resolver was wired up
-      // will be re-fetched with artwork transformation applied
-      browserManager.clearContentCache()
-      Timber.d("Cleared content cache after wiring artwork resolver")
-    } else {
-      Timber.d("CoilBitmapLoader not available - artwork URL transformation disabled")
-      browserManager.artworkUrlResolver = null
     }
   }
 
@@ -200,133 +194,16 @@ class Player(internal val context: Context) {
         throw e
       }
 
-  /**
-   * ForwardingPlayer that intercepts external player actions and dispatches them to callbacks.
-   *
-   * This class blocks all external media item modifications to delegate control to RNAB. These
-   * overrides prevent media controllers (like Android Auto, notifications) from directly modifying
-   * the queue, ensuring all queue changes go through the RNAB API for proper state management and
-   * event handling.
-   */
-  private inner class InterceptingPlayer(player: ExoPlayer) : ForwardingPlayer(player) {
-
-    override fun setMediaItems(mediaItems: MutableList<MediaItem>, resetPosition: Boolean) {
-      return super.setMediaItems(mediaItems, resetPosition)
-    }
-
-    override fun addMediaItems(mediaItems: MutableList<MediaItem>) {
-      return super.addMediaItems(mediaItems)
-    }
-
-    override fun addMediaItems(index: Int, mediaItems: MutableList<MediaItem>) {
-      return super.addMediaItems(index, mediaItems)
-    }
-
-    override fun setMediaItems(
-      mediaItems: MutableList<MediaItem>,
-      startIndex: Int,
-      startPositionMs: Long,
-    ) {
-      return super.setMediaItems(mediaItems, startIndex, startPositionMs)
-    }
-
-    override fun setMediaItems(mediaItems: MutableList<MediaItem>) {
-      return super.setMediaItems(mediaItems)
-    }
-
-    // Intercept playback controls and dispatch to callbacks or fall back to default behavior
-    override fun play() {
-      if (callbacks?.handleRemotePlay() != true) {
-        super.play()
-      }
-    }
-
-    override fun pause() {
-      if (callbacks?.handleRemotePause() != true) {
-        super.pause()
-      }
-    }
-
-    override fun seekToNext() {
-      Timber.Forest.d("InterceptingPlayer.seekToNext() called")
-      if (callbacks?.handleRemoteNext() != true) {
-        super.seekToNext()
-      }
-    }
-
-    override fun seekToNextMediaItem() {
-      Timber.Forest.d("InterceptingPlayer.seekToNextMediaItem() called")
-      if (callbacks?.handleRemoteNext() != true) {
-        super.seekToNextMediaItem()
-      }
-    }
-
-    override fun seekToPrevious() {
-      Timber.Forest.d("InterceptingPlayer.seekToPrevious() called")
-      if (callbacks?.handleRemotePrevious() != true) {
-        super.seekToPrevious()
-      }
-    }
-
-    override fun seekToPreviousMediaItem() {
-      Timber.Forest.d("InterceptingPlayer.seekToPreviousMediaItem() called")
-      if (callbacks?.handleRemotePrevious() != true) {
-        super.seekToPreviousMediaItem()
-      }
-    }
-
-    override fun seekForward() {
-      Timber.Forest.d("InterceptingPlayer.seekForward() called")
-      if (
-        callbacks?.handleRemoteJumpForward(
-          RemoteJumpForwardEvent(interval = options.forwardJumpInterval)
-        ) != true
-      ) {
-        super.seekForward()
-      }
-    }
-
-    override fun seekBack() {
-      if (
-        callbacks?.handleRemoteJumpBackward(
-          RemoteJumpBackwardEvent(interval = options.backwardJumpInterval)
-        ) != true
-      ) {
-        super.seekBack()
-      }
-    }
-
-    override fun stop() {
-      if (callbacks?.handleRemoteStop() != true) {
-        super.stop()
-      }
-    }
-
-    override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
-      if (
-        callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) !=
-          true
-      ) {
-        super.seekTo(mediaItemIndex, positionMs)
-      }
-    }
-
-    override fun seekTo(positionMs: Long) {
-      if (
-        callbacks?.handleRemoteSeek(RemoteSeekEvent(position = positionMs.toDouble() / 1000.0)) !=
-          true
-      ) {
-        super.seekTo(positionMs)
-      }
-    }
-  }
-
   private lateinit var playerListener: PlayerListener
   private var cache: SimpleCache? = null
 
-  private val progressUpdateManager: PlaybackProgressUpdateManager by lazy {
-    PlaybackProgressUpdateManager {
-      val index = currentIndex ?: return@PlaybackProgressUpdateManager
+  private val progressTimer: PlaybackTimer by lazy {
+    PlaybackTimer(
+      isActive = {
+        it == PlaybackState.LOADING || it == PlaybackState.BUFFERING || it == PlaybackState.PLAYING
+      }
+    ) {
+      val index = currentIndex ?: return@PlaybackTimer
       val event =
         PlaybackProgressUpdatedEvent(
           position = position.toSeconds(),
@@ -338,7 +215,12 @@ class Player(internal val context: Context) {
     }
   }
 
+  private val intervalTimer: PlaybackTimer by lazy {
+    PlaybackTimer(isActive = { it == PlaybackState.PLAYING }) { callbacks?.onPlaybackInterval() }
+  }
+
   internal var playingState: PlayingState = PlayingState(false, false)
+    private set
 
   val currentTrack: Track?
     get() = exoPlayer.currentMediaItem?.let { TrackFactory.fromMedia3(it) }
@@ -352,9 +234,6 @@ class Player(internal val context: Context) {
   internal var playbackState: PlaybackState = PlaybackState.NONE
     private set
 
-  /** Current now playing metadata override (null = use track metadata) */
-  private var nowPlayingOverride: NowPlayingUpdate? = null
-
   fun getPlayback(): Playback {
     return Playback(playbackState, playbackError)
   }
@@ -363,9 +242,33 @@ class Player(internal val context: Context) {
     return playingState
   }
 
+  /**
+   * Re-derives [playingState] from the current `playWhenReady` + [playbackState] and emits
+   * `onPlaybackPlayingState` when it changed. The only writer of [playingState] — called from the
+   * state machine ([setPlaybackState]) and from [PlayerListener.onPlayWhenReadyChanged], the change
+   * points of its two inputs.
+   */
+  internal fun refreshPlayingState() {
+    val newPlayingState = PlayingStateFactory.derive(playWhenReady, playbackState)
+    if (newPlayingState == playingState) return
+    Timber.d(
+      "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
+    )
+    playingState = newPlayingState
+    callbacks?.onPlaybackPlayingState(playingState)
+  }
+
   var playWhenReady: Boolean
     get() = exoPlayer.playWhenReady
     set(value) {
+      // Raising the intent at STATE_ENDED must replay, not silently no-op:
+      // ExoPlayer's setPlayWhenReady(true) never restarts an ended player (the
+      // ENDED→seekToDefaultPosition replay lives in media3's media-button
+      // path, not the Player API). In the setter so every writer gets it —
+      // play(), togglePlayback() and JS setPlayWhenReady alike.
+      if (value && exoPlayer.playbackState == ExoPlayer.STATE_ENDED) {
+        exoPlayer.seekToDefaultPosition()
+      }
       playWhenReadyCache = value
       exoPlayer.playWhenReady = value
     }
@@ -398,8 +301,6 @@ class Player(internal val context: Context) {
   val isPlaying
     get() = exoPlayer.isPlaying
 
-  var ratingType: RatingType = RatingType.NONE
-
   var repeatMode: RepeatMode
     get() = RepeatModeFactory.fromMedia3(exoPlayer.repeatMode)
     internal set(value) {
@@ -429,8 +330,14 @@ class Player(internal val context: Context) {
         .map { index -> TrackFactory.fromMedia3(exoPlayer.getMediaItemAt(index)) }
         .toTypedArray()
 
-  val isLastTrack: Boolean
-    get() = exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1
+  /**
+   * Whether nothing follows the current item in *playback order* — shuffle- and repeat-aware via
+   * media3's own order computation (the linear `currentMediaItemIndex == count - 1` check missed a
+   * shuffled queue whose playback order ends on a different linear index). Matches iOS's
+   * `isLastInPlaybackOrder`.
+   */
+  val isLastInPlaybackOrder: Boolean
+    get() = exoPlayer.nextMediaItemIndex == C.INDEX_UNSET
 
   /**
    * The source path from which the current queue was expanded (e.g., from a contextual URL). Used
@@ -467,6 +374,12 @@ class Player(internal val context: Context) {
   fun setup(setupOptions: PlayerSetupOptions) {
     Timber.Forest.d("Setting up player with new options")
 
+    nowPlaying.enabled = setupOptions.autoUpdateNowPlayingMetadata
+    // Wrap the Nitro Func into a plain suspend call so the updater (and its tests) never touch
+    // bridge types; the double-await depth is unchanged (invoke -> bridge Promise -> JS promise).
+    nowPlaying.formatter =
+      setupOptions.nowPlayingMetadataFormatter?.let { f -> { params -> f.invoke(params).await() } }
+
     val isInitialSetup = !::exoPlayer.isInitialized
 
     if (!isInitialSetup) {
@@ -476,6 +389,9 @@ class Player(internal val context: Context) {
     }
 
     if (setupOptions.maxCacheSize > 0) {
+      // SimpleCache locks its folder — re-setup must release the previous
+      // instance first or the constructor throws.
+      cache?.release()
       cache =
         SimpleCache(
           File(context.cacheDir, "RNAB"),
@@ -489,94 +405,46 @@ class Player(internal val context: Context) {
       cache = null
     }
 
-    // Recreate ExoPlayer with new setup options
-    val renderer = DefaultRenderersFactory(context)
-    renderer.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-
-    // Create bandwidth meter for adaptive bitrate selection in HLS/DASH
-    val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
-
-    loadControl = run {
-      val minBuffer = setupOptions.minBuffer.toInt()
-      val maxBuffer = setupOptions.maxBuffer.toInt()
-      val playBuffer = setupOptions.playBuffer.toInt()
-      // When automatic (rebufferBuffer is null), start at playBuffer and let AutomaticBufferManager
-      // adjust
-      // When fixed (rebufferBuffer is set), use that value
-      val playAfterRebuffer = setupOptions.rebufferBuffer?.toInt() ?: playBuffer
-      val backBuffer = setupOptions.backBuffer.toInt()
-      val config =
-        BufferConfig(
-          minBufferMs = minBuffer,
-          maxBufferMs = maxBuffer,
-          bufferForPlaybackMs = playBuffer,
-          bufferForPlaybackAfterRebufferMs = playAfterRebuffer,
-          backBufferMs = backBuffer,
-        )
-      DynamicLoadControl(initialConfig = config)
-    }
-    // Create MediaFactory with reference to browser for media URL transformation
-    // shouldRetry checks playWhenReady to avoid retrying when paused (e.g., another app took audio
-    // focus). Uses thread-safe cache since this is called from ExoPlayer's playback thread.
-    // isOnline and onRetryPending enable network-aware retry acceleration.
-    mediaFactory =
-      MediaFactory(
+    // One engine generation: load control, media factory, ExoPlayer (pure construction —
+    // see buildPlayerEngine; lifecycle and wiring stay here).
+    val engine =
+      buildPlayerEngine(
         context,
+        setupOptions,
         cache,
-        setupOptions.retryPolicy,
         shouldRetry = { playWhenReadyCache },
         isOnline = { networkMonitor.getOnline() },
-        onRetryPending = { isNetworkError ->
+        hasPlayed = { hasPlayedCache },
+        onRetryPending = { exception, isNetworkError ->
           // Track pending network retries for acceleration when connectivity returns
           pendingNetworkRetry = isNetworkError
           if (isNetworkError) {
             Timber.d("Network retry pending, will accelerate on connectivity restoration")
           }
+          reportRetryingError(exception)
         },
-        transferListener = bandwidthMeter,
-      ) { url ->
-        browser?.getMediaRequestConfig(url)
-      }
+        resolveMediaConfig = { url -> browser?.getMediaRequestConfig(url) },
+      )
+    loadControl = engine.loadControl
+    mediaFactory = engine.mediaFactory
+    exoPlayer = engine.exoPlayer
 
-    exoPlayer =
-      ExoPlayer.Builder(context)
-        .setRenderersFactory(renderer)
-        .setBandwidthMeter(bandwidthMeter)
-        .setHandleAudioBecomingNoisy(setupOptions.handleAudioBecomingNoisy)
-        .setMediaSourceFactory(mediaFactory)
-        .setWakeMode(
-          when (setupOptions.wakeMode) {
-            AndroidPlayerWakeMode.NONE -> C.WAKE_MODE_NONE
-            AndroidPlayerWakeMode.LOCAL -> C.WAKE_MODE_LOCAL
-            AndroidPlayerWakeMode.NETWORK -> C.WAKE_MODE_NETWORK
-          }
-        )
-        .setLoadControl(loadControl)
-        .setName("AudioBrowser")
-        .build()
-    exoPlayer.setAudioAttributes(
-      AudioAttributes.Builder()
-        .setUsage(C.USAGE_MEDIA)
-        .setContentType(AndroidAudioContentTypeFactory.toMedia3(setupOptions.audioContentType))
-        .build(),
-      true, // handle audio focus
-    )
-
-    // Apply setup-specific options
-    setupOptions.audioOffload?.let {
-      val audioOffloadPreferences =
-        TrackSelectionParameters.AudioOffloadPreferences.Builder()
-          .setAudioOffloadMode(
-            TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
-          )
-          .setIsGaplessSupportRequired(it.gaplessSupportRequired)
-          .setIsSpeedChangeSupportRequired(it.rateChangeSupportRequired)
-          .build()
-      exoPlayer.trackSelectionParameters.audioOffloadPreferences = audioOffloadPreferences
+    // A rebuilt engine starts paused and fires no change event — sync the
+    // eager cache and tell JS, or the stale true sticks (and the emit dedupe
+    // would swallow the next real rise).
+    if (!isInitialSetup) {
+      playWhenReadyCache = false
+      emitPlayWhenReadyChanged(false)
     }
 
     // Recreate forwarding player with new ExoPlayer
-    forwardingPlayer = InterceptingPlayer(exoPlayer)
+    forwardingPlayer =
+      InterceptingPlayer(
+        exoPlayer,
+        { callbacks },
+        { options },
+        keepSessionAliveOnError = setupOptions.keepSessionAliveOnError,
+      )
 
     if (isInitialSetup) {
       // Initial setup - create player listener and emit initial state
@@ -585,7 +453,7 @@ class Player(internal val context: Context) {
       callbacks?.onPlaybackChanged(Playback(PlaybackState.NONE, null))
 
       // Initialize equalizer with audio session ID
-      initializeEqualizer()
+      equalizer.initialize(exoPlayer.audioSessionId)
     } else {
       // Re-setup - re-add listener and update MediaSession
       forwardingPlayer.addListener(playerListener)
@@ -620,14 +488,18 @@ class Player(internal val context: Context) {
   }
 
   /**
-   * Starts observing network connectivity changes and invokes the callback when state changes.
-   * Also handles accelerating pending network retries when connectivity is restored.
+   * Starts observing network connectivity changes and invokes the callback when state changes. Also
+   * handles accelerating pending network retries when connectivity is restored.
    *
    * @param scope The coroutine scope to use for observation
    */
   fun observeNetworkConnectivity(scope: kotlinx.coroutines.CoroutineScope) {
     networkMonitor.observeOnline(scope) { isOnline ->
       callbacks?.onOnlineChanged(isOnline)
+
+      // Re-render now-playing so the formatter's stall classification (buffering vs offline) tracks
+      // connectivity immediately, not only on the next playback transition.
+      nowPlaying.render()
 
       // Accelerate pending network retry when connectivity is restored
       if (isOnline && pendingNetworkRetry) {
@@ -804,36 +676,18 @@ class Player(internal val context: Context) {
    * controllers without interrupting playback.
    */
   fun setActiveTrackFavorited(favorited: Boolean) {
+    val currentTrack = this.currentTrack ?: return
+
+    // Persist to the native favorites cache regardless of player state — the
+    // user's gesture is durable even when there's no active media item to
+    // update (queue tear-down, between-track gaps, etc.).
+    currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
+
     val index = exoPlayer.currentMediaItemIndex
     if (index == C.INDEX_UNSET) return
 
-    val currentTrack = this.currentTrack ?: return
-
-    // Update native favorites cache (only tracks with src can be favorited)
-    currentTrack.src?.let { src -> browser?.browserManager?.updateFavorite(src, favorited) }
-
     // Create updated Track with new favorited state
-    val updatedTrack =
-      Track(
-        url = currentTrack.url,
-        src = currentTrack.src,
-        artwork = currentTrack.artwork,
-        artworkSource = currentTrack.artworkSource,
-        artworkCarPlayTinted = currentTrack.artworkCarPlayTinted,
-        title = currentTrack.title,
-        subtitle = currentTrack.subtitle,
-        artist = currentTrack.artist,
-        album = currentTrack.album,
-        description = currentTrack.description,
-        genre = currentTrack.genre,
-        duration = currentTrack.duration,
-        style = currentTrack.style,
-        childrenStyle = currentTrack.childrenStyle,
-        favorited = favorited,
-        groupTitle = currentTrack.groupTitle,
-        live = currentTrack.live,
-        imageRow = currentTrack.imageRow,
-      )
+    val updatedTrack = currentTrack.copy(favorited = favorited)
 
     // Use buildUpon() on the existing MediaItem to update only the metadata
     // This preserves internal references and avoids playback interruption
@@ -881,78 +735,152 @@ class Player(internal val context: Context) {
   // MARK: - Now Playing Metadata
 
   /**
-   * Updates the now playing notification metadata. Pass null to clear overrides and revert to track
-   * metadata.
+   * Now Playing rendering (flash/override/formatter precedence, dedupe, stale guards, artwork
+   * keying) lives in [NowPlayingUpdater]; this object is its platform surface — current playback
+   * reads plus MediaItem stamping via [replaceMediaItem], and artwork resolution via the browser.
    */
-  fun updateNowPlaying(update: NowPlayingUpdate?) {
-    nowPlayingOverride = update
-    applyNowPlayingMetadata()
-  }
+  val nowPlaying: NowPlayingUpdater =
+    NowPlayingUpdater(
+      object : NowPlayingSurface {
+        override val currentIndex
+          get() = this@Player.currentIndex
 
-  /** Gets the current now playing metadata (override if set, else track metadata). */
-  fun getNowPlaying(): NowPlayingMetadata? {
-    val track = currentTrack ?: return null
-    val override = nowPlayingOverride
+        override val currentTrack
+          get() = this@Player.currentTrack
 
-    return NowPlayingMetadata(
-      elapsedTime = null,
-      title = override?.title ?: track.title,
-      album = track.album,
-      artist = override?.artist ?: track.artist,
-      duration = track.duration,
-      artwork = track.artwork,
-      description = track.description,
-      mediaId = track.src ?: track.url,
-      genre = track.genre,
-      rating = null, // TODO: map track.favorited to rating if needed
+        override val playbackState
+          get() = this@Player.playbackState
+
+        override val playbackError
+          get() = this@Player.playbackError
+
+        override val playWhenReady
+          get() = exoPlayer.playWhenReady
+
+        override val isRebuffering
+          get() = loadControl.isRebuffering
+
+        override val isOnline
+          get() = networkMonitor.getOnline()
+
+        override val hasNowPlayingArtworkConfig
+          get() = browser?.browserManager?.config?.nowPlayingArtwork != null
+
+        override fun stampFields(
+          index: Int,
+          track: Track,
+          title: String?,
+          secondaryLine: String?,
+          album: String?,
+        ) =
+          restampMediaItem(index, track) {
+            setTitle(title)
+              .setDisplayTitle(title)
+              .setArtist(secondaryLine)
+              // Android Auto reads DISPLAY_SUBTITLE (not ARTIST) once DISPLAY_TITLE is set, so
+              // mirror the line into `subtitle`; `artist` still drives the lock screen /
+              // notification.
+              .setSubtitle(secondaryLine)
+              .setAlbumTitle(album)
+          }
+
+        override fun stampArtwork(index: Int, track: Track, uri: String) =
+          restampMediaItem(index, track) { setArtworkUri(uri.toUri()) }
+
+        override suspend fun resolveNowPlayingArtwork(track: Track, sizePx: Double): String? {
+          val browserManager = browser?.browserManager ?: return null
+          val config = browserManager.config.nowPlayingArtwork ?: return null
+          val resolved =
+            try {
+              browserManager.resolveArtworkUrl(track, config, ImageContext(sizePx, sizePx))
+            } catch (e: Exception) {
+              Timber.e(e, "Failed to resolve now-playing artwork for track id=${track.id}")
+              null
+            }
+          val uri = resolved?.uri?.takeIf { it.isNotEmpty() } ?: return null
+          // Remember how this URI was produced: Media3 hands it back to the bitmap loader, which
+          // re-resolves Track-first (with the nowPlayingArtwork kind, not the global artwork
+          // config).
+          browserManager.artworkResolutions.register(uri, track, config)
+          return uri
+        }
+
+        override fun emitNowPlayingChanged(metadata: NowPlayingMetadata) {
+          callbacks?.onNowPlayingChanged(metadata)
+        }
+      },
+      MainScope(),
     )
-  }
 
-  /**
-   * Clears the now playing override when track changes. Called from
-   * PlayerListener.onMediaItemTransition.
-   */
-  internal fun clearNowPlayingOverride() {
-    nowPlayingOverride = null
+  /** Republishes the item at [index] with mutated metadata, preserving uri and Track tag. */
+  private fun restampMediaItem(
+    index: Int,
+    track: Track,
+    mutate: MediaMetadata.Builder.() -> MediaMetadata.Builder,
+  ) {
+    val currentMediaItem = exoPlayer.getMediaItemAt(index)
+    val updatedMediaItem =
+      currentMediaItem
+        .buildUpon()
+        .setUri(currentMediaItem.localConfiguration?.uri)
+        .setMediaMetadata(currentMediaItem.mediaMetadata.buildUpon().mutate().build())
+        .setTag(track)
+        .build()
+    exoPlayer.replaceMediaItem(index, updatedMediaItem)
   }
 
   /**
    * Resets the retry timer when track changes. Called from PlayerListener.onMediaItemTransition.
    */
+  /**
+   * A restart from a terminal error begins a new load of the same track: fresh retry budgets and
+   * unproven playback, so the user's tap yields a visible first-connect retry window instead of a
+   * single silent attempt — the same behavior as re-selecting the track (ADR 0004). Hooked off the
+   * player error clearing: every recovery path (retry(), play(), the transport controls' idle-error
+   * recovery) goes through exoPlayer.prepare(), which clears the error.
+   */
+  internal fun resetForNewLoad() {
+    resetRetryTimer()
+    hasPlayedCache = false
+  }
+
   internal fun resetRetryTimer() {
     mediaFactory.resetRetryTimer()
   }
 
   /**
-   * Applies the current now playing metadata to the media notification. Uses the override if set,
-   * otherwise uses track metadata.
+   * Finds the queue Track whose published artwork URI matches [uri], for display-time artwork
+   * resolution of app-supplied queue tracks that never went through browse (so they are not in the
+   * resolution registry). Must run on the main thread (ExoPlayer access).
    */
-  private fun applyNowPlayingMetadata() {
-    val index = currentIndex ?: return
-    val track = currentTrack ?: return
-    val override = nowPlayingOverride
+  private fun findQueueTrackByArtworkUri(uri: String): Track? {
+    for (i in 0 until exoPlayer.mediaItemCount) {
+      val item = exoPlayer.getMediaItemAt(i)
+      if (item.mediaMetadata.artworkUri?.toString() == uri) {
+        return item.localConfiguration?.tag as? Track
+      }
+    }
+    return null
+  }
 
-    val currentMediaItem = exoPlayer.getMediaItemAt(index)
-    val updatedMetadata =
-      currentMediaItem.mediaMetadata
-        .buildUpon()
-        .setTitle(override?.title ?: track.title)
-        .setDisplayTitle(override?.title ?: track.title)
-        .setArtist(override?.artist ?: track.artist)
-        .build()
-
-    val updatedMediaItem =
-      currentMediaItem
-        .buildUpon()
-        .setUri(currentMediaItem.localConfiguration?.uri)
-        .setMediaMetadata(updatedMetadata)
-        .setTag(track)
-        .build()
-
-    exoPlayer.replaceMediaItem(index, updatedMediaItem)
-
-    // Notify JS of the now playing metadata change
-    getNowPlaying()?.let { callbacks?.onNowPlayingChanged(it) }
+  /**
+   * Track-first display-time artwork resolution for [CoilBitmapLoader]: registry hit
+   * (browse/now-playing-resolved URIs) → queue-tag lookup (app-supplied tracks with raw artwork) →
+   * header-only fallback for unattributable URIs (registry eviction / process-death restore). Null
+   * means "fetch the URI as-is".
+   */
+  suspend fun resolveDisplayArtwork(uri: String, sizeHintPixels: Int?): ImageSource? {
+    val browserManager = browser?.browserManager ?: return null
+    val imageContext =
+      sizeHintPixels?.takeIf { it > 0 }?.let { ImageContext(it.toDouble(), it.toDouble()) }
+    browserManager.displayArtworkSource(uri, imageContext)?.let {
+      return it
+    }
+    withContext(Dispatchers.Main) { findQueueTrackByArtworkUri(uri) }
+      ?.let { track ->
+        return browserManager.resolveArtworkUrl(track, null, imageContext)
+      }
+    return browserManager.unattributedArtworkSource(uri)
   }
 
   /**
@@ -975,9 +903,22 @@ class Player(internal val context: Context) {
   }
 
   fun play() {
-    exoPlayer.play()
+    // Through the setter so the STATE_ENDED replay handling applies
+    // (ExoPlayer.play() is only setPlayWhenReady(true)).
+    playWhenReady = true
     if (currentTrack != null) {
+      // No-op unless the player is STATE_IDLE (ExoPlayer.prepare early-returns
+      // otherwise), so this only reconnects after a stop() or error and never
+      // re-buffers a healthy stream. Reconnecting is also how live streams
+      // rejoin the live edge on resume.
       exoPlayer.prepare()
+    }
+  }
+
+  /** Jump to the live edge (default position) of a live item; no-op otherwise. */
+  fun seekToLiveEdge() {
+    if (exoPlayer.isCurrentMediaItemLive) {
+      exoPlayer.seekToDefaultPosition()
     }
   }
 
@@ -990,7 +931,20 @@ class Player(internal val context: Context) {
    */
   suspend fun playFromSearch(params: SearchParams): Boolean {
     return try {
-      val browserManager = awaitBrowser().browserManager
+      val audioBrowser = awaitBrowser()
+      // A gate blocks external-surface "play" search too — otherwise voice search is a way around
+      // the gate (mirrors the iOS play-media intent guard). Resolved per request; a gated decision
+      // fires onGate(search) and refuses.
+      val gateOutcome =
+        audioBrowser.gateDecision(
+          NativeGateRequest(reason = GateReason.SEARCH, path = null, search = params)
+        )
+      if (gateOutcome.gated) {
+        Timber.i("playFromSearch refused — request is gated")
+        audioBrowser.onGate(GateEvent(GateReason.SEARCH))
+        return false
+      }
+      val browserManager = audioBrowser.browserManager
 
       Timber.d(
         "Executing voice search: mode=${params.mode}, query='${params.query}', artist='${params.artist}', album='${params.album}'"
@@ -1019,7 +973,10 @@ class Player(internal val context: Context) {
   }
 
   fun pause() {
-    exoPlayer.pause()
+    // Through the setter so the eager playWhenReadyCache write holds for the
+    // drop direction too — the retry policy reads it off-main before
+    // ExoPlayer's listener round-trip syncs it.
+    playWhenReady = false
   }
 
   fun togglePlayback() {
@@ -1036,8 +993,11 @@ class Player(internal val context: Context) {
    * required for playback.
    */
   fun stop() {
-    playbackState = PlaybackState.STOPPED
-    exoPlayer.playWhenReady = false
+    // State first so the machine's STOPPED guard suppresses the PAUSED transition
+    // from the playWhenReady drop below; through setPlaybackState so the change
+    // is emitted (direct field assignment bypasses events — see its docstring).
+    setPlaybackState(PlaybackState.STOPPED)
+    playWhenReady = false
     exoPlayer.stop()
   }
 
@@ -1051,7 +1011,15 @@ class Player(internal val context: Context) {
    * use [pause].
    */
   fun destroy() {
+    // Cancel without a final save: the loop would tick against the released
+    // player and persist position 0 over the real resumption position.
+    playbackStateStore.cancelPeriodicSave()
+    // An armed timer's Runnable would outlive the release and fire pause() into the
+    // released player. Cleared here, while a mid-ramp fade can still restore volume.
+    sleepTimer.clear()
     stop()
+    nowPlaying.destroy()
+    mediaSessionCallback.destroy()
     forwardingPlayer.removeListener(playerListener)
     automaticBufferManager?.detach()
     automaticBufferManager = null
@@ -1059,8 +1027,7 @@ class Player(internal val context: Context) {
     cache?.release()
     cache = null
     networkMonitor.destroy()
-    equalizerManager?.release()
-    equalizerManager = null
+    equalizer.release()
   }
 
   fun seekTo(duration: Long, unit: TimeUnit) {
@@ -1071,6 +1038,57 @@ class Player(internal val context: Context) {
   fun seekBy(offset: Long, unit: TimeUnit) {
     val positionMs = exoPlayer.currentPosition + TimeUnit.MILLISECONDS.convert(offset, unit)
     exoPlayer.seekTo(positionMs)
+  }
+
+  /**
+   * Invalidates in-flight [reportRetryingError] posts: bumped on track change so a report
+   * classified for the outgoing track can't land on the incoming one's spinner. Written on main,
+   * read on ExoPlayer's loader thread.
+   */
+  @Volatile private var retryingErrorGeneration = 0
+
+  /**
+   * Surfaces a load failure the retry policy is still working on: attached to the current
+   * (non-terminal) state via [Callbacks.onPlaybackChanged], so UIs can show the cause over the
+   * spinner. Not an ERROR transition, and not a [Callbacks.onPlaybackError] — that event stays
+   * reserved for terminal errors. Called from ExoPlayer's loader thread, hence the main hop.
+   */
+  private fun reportRetryingError(exception: IOException) {
+    val error = PlaybackErrorClassifier.retryingLoadError(exception, networkMonitor.getOnline())
+    val generation = retryingErrorGeneration
+    mainHandler.post {
+      // The track changed while this post was in flight — the error belongs to the old one.
+      if (generation != retryingErrorGeneration) return@post
+      // Only attach while the failure is what the listener is looking at. During PLAYING/READY
+      // buffered audio is still audibly fine, and ExoPlayer's in-place retry can succeed without
+      // any state change — an advisory attached there would never clear.
+      if (
+        playbackState != PlaybackState.LOADING &&
+          playbackState != PlaybackState.BUFFERING &&
+          playbackState != PlaybackState.PAUSED
+      ) {
+        return@post
+      }
+      // Each failed attempt re-reports; identical repeats add nothing (and would
+      // re-render now-playing every backoff tick).
+      if (playbackError == error) return@post
+      playbackError = error
+      callbacks?.onPlaybackChanged(Playback(playbackState, error))
+      nowPlaying.render()
+    }
+  }
+
+  /**
+   * Drops a retrying error whose track is gone. The new track may keep the state on
+   * LOADING/BUFFERING — no state-change emit — so the clear is emitted here, or the old track's
+   * error would linger over the new one's spinner.
+   */
+  internal fun clearRetryingError() {
+    retryingErrorGeneration++
+    if (playbackError?.retrying != true) return
+    playbackError = null
+    callbacks?.onPlaybackChanged(Playback(playbackState, null))
+    nowPlaying.render()
   }
 
   /**
@@ -1088,39 +1106,78 @@ class Player(internal val context: Context) {
       val oldState = playbackState
       playbackState = state
 
+      // Audio rendered: this load has proven itself — retries from here on get
+      // the retry policy's full recovery budget, not the short first-connect one.
+      if (state == PlaybackState.PLAYING) {
+        hasPlayedCache = true
+      }
+
+      // A natural end exhausts the play intent — nothing is left to play. Keeping
+      // playWhenReady true inverted the play/pause toggle, held audio focus forever
+      // (ExoPlayer abandons it only at IDLE or on the intent dropping), and kept the
+      // periodic position save running. Cleared and emitted before the state /
+      // queue-ended callbacks so JS observes the native order (intent → state →
+      // queueEnded); the media3 listener's later echo is deduplicated by
+      // emitPlayWhenReadyChanged. The state machine's ENDED guard keeps the drop
+      // from re-reporting the state as PAUSED.
+      if (state == PlaybackState.ENDED && playWhenReady) {
+        playWhenReady = false
+        emitPlayWhenReadyChanged(false)
+      }
+
+      // The last track fires no AUTO media-item transition, so an armed
+      // end-of-track sleep timer would stay set forever and pause the next
+      // track played instead.
+      if (state == PlaybackState.ENDED) {
+        sleepTimer.onTrackEnd()
+      }
+
       // Clear error when transitioning away from error state
       if (oldState == PlaybackState.ERROR) {
         playbackError = null
         callbacks?.onPlaybackError(null)
       }
 
+      // A retrying error rides along through LOADING/BUFFERING/PAUSED; a state that
+      // proves recovery (READY/PLAYING — data flowed) or abandons the attempt clears
+      // it, before the Playback below is built so the emitted event is already clean.
+      if (
+        playbackError?.retrying == true &&
+          state != PlaybackState.LOADING &&
+          state != PlaybackState.BUFFERING &&
+          state != PlaybackState.PAUSED
+      ) {
+        playbackError = null
+      }
+
       val playback = Playback(state, playbackError)
       callbacks?.onPlaybackChanged(playback)
 
-      // Emit queue ended event when playback ends on the last track
+      // Re-render the now-playing on every state change: the metadata formatter receives
+      // `playbackState` (plus isRebuffering / isOnline / error), so any transition can change its
+      // output — the live song while paused, a "Reconnecting…" line on a rebuffer, an offline/error
+      // line. The publish-dedupe in applyNowPlayingFields drops redundant updates, so re-running
+      // through the rapid startup sequence (none→loading→buffering→ready→playing) is cheap.
+      nowPlaying.render()
+
+      // Emit queue ended event when playback ends on the last track. Repeat modes never
+      // conceptually end the queue (matches web's endsQueue()): an ENDED that surfaces while
+      // repeating (e.g. a seek to the end) must not read as "playlist over".
       // This coupling ensures queue ended events are always triggered consistently with state
       // changes
-      if (state == PlaybackState.ENDED && isLastTrack) {
+      if (state == PlaybackState.ENDED && isLastInPlaybackOrder && repeatMode == RepeatMode.OFF) {
         currentIndex?.let { index ->
           val event =
             PlaybackQueueEndedEvent(track = index.toDouble(), position = position.toSeconds())
           callbacks?.onPlaybackQueueEnded(event)
         }
-        // Reset saved position to 0 so resumption starts from beginning (only when not repeating)
-        if (repeatMode == RepeatMode.OFF) {
-          playbackStateStore.savePositionZero()
-        }
+        // Reset saved position to 0 so resumption starts from beginning
+        playbackStateStore.savePositionZero()
       }
 
-      progressUpdateManager.onPlaybackStateChanged(state)
-      val newPlayingState = PlayingStateFactory.derive(playWhenReady, state)
-      if (newPlayingState != playingState) {
-        Timber.d(
-          "PlayingState changed: playing=${newPlayingState.playing}, buffering=${newPlayingState.buffering}"
-        )
-        playingState = newPlayingState
-        callbacks?.onPlaybackPlayingState(playingState)
-      }
+      progressTimer.onPlaybackStateChanged(state)
+      intervalTimer.onPlaybackStateChanged(state)
+      refreshPlayingState()
     }
   }
 
@@ -1130,7 +1187,11 @@ class Player(internal val context: Context) {
    * @param interval The interval in seconds, or null to disable progress updates
    */
   fun setProgressUpdateInterval(interval: Double?) {
-    progressUpdateManager.setUpdateInterval(interval)
+    progressTimer.setInterval(interval)
+  }
+
+  fun setPlaybackIntervalEnabled(enabled: Boolean) {
+    intervalTimer.setInterval(if (enabled) 1.0 else null)
   }
 
   /**
@@ -1149,8 +1210,6 @@ class Player(internal val context: Context) {
 
     // Check what changed
     val skipSilenceChanged = previousOptions.skipSilence != options.skipSilence
-    val ratingTypeChanged = previousOptions.ratingType != options.ratingType
-    val shuffleChanged = previousOptions.shuffle != options.shuffle
     val progressUpdateEventIntervalChanged =
       previousOptions.progressUpdateEventInterval != options.progressUpdateEventInterval
     val forwardJumpIntervalChanged =
@@ -1158,20 +1217,18 @@ class Player(internal val context: Context) {
     val backwardJumpIntervalChanged =
       previousOptions.backwardJumpInterval != options.backwardJumpInterval
     val capabilitiesChanged = previousOptions.capabilities != options.capabilities
-    val notificationButtonsChanged =
-      previousOptions.notificationButtons != options.notificationButtons
+    val remoteButtonLayoutChanged =
+      !previousOptions.remoteButtonLayout.sameAs(options.remoteButtonLayout)
     val appKilledPlaybackBehaviorChanged =
       previousOptions.appKilledPlaybackBehavior != options.appKilledPlaybackBehavior
 
     val hasChanged =
       skipSilenceChanged ||
-        ratingTypeChanged ||
-        shuffleChanged ||
         progressUpdateEventIntervalChanged ||
         forwardJumpIntervalChanged ||
         backwardJumpIntervalChanged ||
         capabilitiesChanged ||
-        notificationButtonsChanged ||
+        remoteButtonLayoutChanged ||
         appKilledPlaybackBehaviorChanged
 
     // Apply only changed properties
@@ -1179,25 +1236,32 @@ class Player(internal val context: Context) {
       skipSilence = options.skipSilence
     }
 
-    if (ratingTypeChanged) {
-      options.ratingType?.let { ratingType = it }
-    }
-
-    if (shuffleChanged) {
-      shuffleMode = options.shuffle
+    if (capabilitiesChanged) {
+      // The `favorite` capability is the single favoriting switch — propagate
+      // its match mode to the browser so it can hydrate row hearts.
+      browser?.browserManager?.setFavoriteMatch(options.capabilities.favoriteMatch)
     }
 
     if (progressUpdateEventIntervalChanged) {
       setProgressUpdateInterval(options.progressUpdateEventInterval)
     }
 
-    if (capabilitiesChanged || notificationButtonsChanged) {
+    // The jump intervals pick the button icons (ICON_SKIP_BACK_15 and friends), so a changed
+    // interval has to rebuild the layout even when capabilities and placement are untouched.
+    if (
+      capabilitiesChanged ||
+        remoteButtonLayoutChanged ||
+        forwardJumpIntervalChanged ||
+        backwardJumpIntervalChanged
+    ) {
       val searchAvailable = browser?.browserManager?.config?.hasSearch ?: false
       mediaSessionCallback.updateMediaSession(
         mediaSession,
         options.capabilities,
-        options.notificationButtons,
+        options.remoteButtonLayout,
         searchAvailable,
+        options.forwardJumpInterval,
+        options.backwardJumpInterval,
       )
     }
 
@@ -1239,187 +1303,6 @@ class Player(internal val context: Context) {
    */
   fun getOnline(): Boolean {
     return networkMonitor.getOnline()
-  }
-
-  /** Initializes the equalizer with the player's audio session ID. */
-  private fun initializeEqualizer() {
-    val audioSessionId = exoPlayer.audioSessionId
-    if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
-      Timber.d("Skipping equalizer init - no audio session yet, will init on first playback")
-      return
-    }
-
-    try {
-      equalizerManager =
-        EqualizerManager(audioSessionId).apply {
-          setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
-        }
-      Timber.d("Equalizer initialized with session ID: $audioSessionId")
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to initialize equalizer")
-      equalizerManager = null
-    }
-  }
-
-  /**
-   * Reinitializes the equalizer when the audio session ID changes. Preserves current settings
-   * (enabled state, preset, or custom levels). Also handles first-time initialization when the
-   * equalizer was skipped at startup due to unset audio session ID.
-   */
-  internal fun reinitializeEqualizer(newAudioSessionId: Int) {
-    val oldManager = equalizerManager
-
-    // First-time initialization (skipped at startup because session was unset)
-    if (oldManager == null) {
-      Timber.d("First-time equalizer initialization with session ID: $newAudioSessionId")
-      try {
-        equalizerManager =
-          EqualizerManager(newAudioSessionId).apply {
-            setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
-          }
-        Timber.d("Equalizer initialized with session ID: $newAudioSessionId")
-      } catch (e: Exception) {
-        Timber.e(e, "Failed to initialize equalizer")
-        equalizerManager = null
-      }
-      return
-    }
-
-    // Same session ID, no need to reinitialize
-    if (oldManager.audioSessionId == newAudioSessionId) {
-      return
-    }
-
-    try {
-      // Capture current settings before releasing old equalizer
-      val currentSettings = oldManager.getSettings()
-
-      // Release old equalizer
-      oldManager.release()
-
-      // Create new equalizer with new session ID
-      equalizerManager =
-        EqualizerManager(newAudioSessionId).apply {
-          setOnSettingsChanged { settings -> callbacks?.onEqualizerChanged(settings) }
-        }
-
-      // Restore previous settings if available
-      currentSettings?.let { settings ->
-        if (settings.activePreset != null) {
-          // Restore preset
-          equalizerManager?.setPreset(settings.activePreset)
-        } else if (settings.enabled) {
-          // Restore custom levels
-          equalizerManager?.setLevels(settings.bandLevels)
-        }
-        // Restore enabled state
-        equalizerManager?.setEnabled(settings.enabled)
-      }
-
-      Timber.d("Equalizer reinitialized for new session ID: $newAudioSessionId")
-    } catch (e: Exception) {
-      Timber.e(e, "Failed to reinitialize equalizer")
-      equalizerManager = null
-    }
-  }
-
-  /**
-   * Gets the current equalizer settings.
-   *
-   * @return Current equalizer settings or null if not available
-   */
-  fun getEqualizerSettings(): com.margelo.nitro.audiobrowser.EqualizerSettings? {
-    return equalizerManager?.getSettings()
-  }
-
-  /**
-   * Enables or disables the equalizer.
-   *
-   * @param enabled true to enable, false to disable
-   */
-  fun setEqualizerEnabled(enabled: Boolean) {
-    equalizerManager?.setEnabled(enabled)
-  }
-
-  /**
-   * Applies a preset to the equalizer.
-   *
-   * @param preset Name of the preset to apply
-   */
-  fun setEqualizerPreset(preset: String) {
-    equalizerManager?.setPreset(preset)
-  }
-
-  /**
-   * Sets custom band levels for the equalizer.
-   *
-   * @param levels Array of level values in millibels for each band
-   */
-  fun setEqualizerLevels(levels: DoubleArray) {
-    equalizerManager?.setLevels(levels)
-  }
-
-  // MARK: - Sleep Timer
-
-  /**
-   * Gets the current sleep timer state.
-   *
-   * @return Sleep timer state or null if no timer is active
-   */
-  fun getSleepTimer(): NitroSleepTimer {
-    return when {
-      sleepTimer.time != null -> {
-        NitroSleepTimer.create(SleepTimerTime(sleepTimer.time!!))
-      }
-      sleepTimer.sleepWhenPlayedToEnd -> {
-        NitroSleepTimer.create(SleepTimerEndOfTrack(true))
-      }
-      else -> {
-        NitroSleepTimer.create(NullType.NULL)
-      }
-    }
-  }
-
-  /**
-   * Sets a sleep timer to stop playback after the specified duration.
-   *
-   * @param seconds Number of seconds until playback stops
-   */
-  fun setSleepTimer(seconds: Double) {
-    sleepTimer.sleepAfter(seconds)
-    callbacks?.onSleepTimerChanged(getSleepTimer())
-  }
-
-  /** Sets a sleep timer to stop playback when the current track finishes playing. */
-  fun setSleepTimerToEndOfTrack() {
-    sleepTimer.sleepWhenPlayedToEnd()
-    callbacks?.onSleepTimerChanged(getSleepTimer())
-  }
-
-  /**
-   * Clears the active sleep timer.
-   *
-   * @return true if a timer was cleared, false if no timer was active
-   */
-  fun clearSleepTimer(): Boolean {
-    val wasRunning = sleepTimer.clear()
-    if (wasRunning) {
-      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
-    }
-    return wasRunning
-  }
-
-  /**
-   * Checks if the sleep timer is set to end on track completion and stops playback if so. Called
-   * when a track naturally finishes playing.
-   */
-  internal fun checkSleepTimerOnTrackEnd() {
-    if (sleepTimer.sleepWhenPlayedToEnd) {
-      Timber.d("Sleep timer triggered on track end, stopping playback")
-      sleepTimer.clear()
-      stop()
-      callbacks?.onSleepTimerChanged(NitroSleepTimer.create(NullType.NULL))
-    }
   }
 
   /**
@@ -1467,6 +1350,10 @@ class Player(internal val context: Context) {
    */
   fun notifyContentChanged(path: String) {
     mediaSessionCallback.notifyContentChanged(path)
+  }
+
+  fun invalidateAllContent() {
+    mediaSessionCallback.invalidateAllContent()
   }
 
   /**

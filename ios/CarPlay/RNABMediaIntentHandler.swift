@@ -2,59 +2,69 @@ import Foundation
 import Intents
 import os.log
 
-/// Handles INPlayMediaIntent for Siri voice search (e.g. from CarPlay).
-///
-/// The class is internal (not public) to avoid exposing Intents types in the
-/// generated AudioBrowser-Swift.h header, but is registered with the ObjC
-/// runtime via `@objc(RNABMediaIntentHandler)` for NSClassFromString lookup.
-///
-/// Host apps call the static method from `application(_:handle:completionHandler:)`:
-/// ```swift
-/// @objc private protocol RNABMediaIntentHandling {
-///   static func handleMediaIntent(_ intent: INIntent, completionHandler: @escaping (INIntentResponse) -> Void)
-/// }
-///
-/// func application(_ application: UIApplication, handle intent: INIntent, completionHandler: @escaping (INIntentResponse) -> Void) {
-///   (NSClassFromString("RNABMediaIntentHandler") as? RNABMediaIntentHandling.Type)?
-///     .handleMediaIntent(intent, completionHandler: completionHandler)
-/// }
-/// ```
+/// In-app INPlayMediaIntent handler (Siri / CarPlay voice). Internal so Intents
+/// types stay out of the generated header; exposed to the ObjC runtime via
+/// `@objc(RNABMediaIntentHandler)` and vended from `RNABAudioBrowser.handlerForIntent(_:)`.
 @objc(RNABMediaIntentHandler)
 class RNABMediaIntentHandler: NSObject, INPlayMediaIntentHandling {
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "MediaIntentHandler")
 
-  // MARK: - Static Entry Point
-
-  /// Convenience entry point for host apps. Handles the full INPlayMediaIntent flow:
-  /// type checking, search, queue, and playback.
-  @objc static func handleMediaIntent(_ intent: INIntent, completionHandler: @escaping @Sendable (INIntentResponse) -> Void) {
-    guard let playIntent = intent as? INPlayMediaIntent else {
-      completionHandler(INPlayMediaIntentResponse(code: .failure, userActivity: nil))
-      return
-    }
-    let handler = RNABMediaIntentHandler()
-    handler.handle(intent: playIntent) { response in
-      completionHandler(response)
-    }
-  }
-
   // MARK: - INPlayMediaIntentHandling
 
   func handle(intent: INPlayMediaIntent, completion: @escaping @Sendable (INPlayMediaIntentResponse) -> Void) {
-    let searchTerm = intent.mediaSearch?.mediaName ?? ""
-    Self.logger.info("Handling play media intent with search term: \(searchTerm)")
+    let s = intent.mediaSearch
+    let criteria = MediaIntentCriteria.from(
+      mediaName: s?.mediaName,
+      genreNames: s?.genreNames ?? [],
+      artistName: s?.artistName,
+      albumName: s?.albumName,
+      mediaTypeMode: Self.mediaTypeMode(s?.mediaType ?? .unknown),
+      reference: Self.reference(s?.reference ?? .unknown),
+      hasMediaType: (s?.mediaType ?? .unknown) != .unknown,
+      appName: Self.hostAppName(),
+    )
+    Self.logger.info("Play media intent — query=\(criteria.query) matchesApp=\(criteria.matchesAppName) resume=\(criteria.isResume)")
 
-    guard let browser = HybridAudioBrowser.shared else {
-      Self.logger.error("HybridAudioBrowser.shared is nil — app may not be initialized yet")
-      completion(INPlayMediaIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil))
-      return
+    // Static + gate-waiting, so it works even before the shared instance exists
+    // (background intent launch, RN not booted yet).
+    HybridAudioBrowser.handlePlayMediaIntent(criteria: criteria) { success in
+      completion(INPlayMediaIntentResponse(code: success ? .success : .failure, userActivity: nil))
     }
+  }
 
-    browser.handlePlayMediaIntent(searchTerm: searchTerm) { success in
-      completion(INPlayMediaIntentResponse(
-        code: success ? .success : .failure,
-        userActivity: nil,
-      ))
+  /// Collapse `INMediaItemType` to a `SearchMode` string (the container
+  /// vertical), or nil for filter-only / unclassified types. `genre`/`artist`/
+  /// `album` are filters, not verticals — they yield no mode.
+  private static func mediaTypeMode(_ type: INMediaItemType) -> String? {
+    switch type {
+    case .station, .radioStation, .algorithmicRadioStation, .musicStation: "station"
+    case .podcastShow, .podcastEpisode, .podcastPlaylist, .podcastStation: "podcast"
+    case .audioBook: "audiobook"
+    case .news: "news"
+    case .music: "music"
+    case .song: "song"
+    case .playlist: "playlist"
+    case .musicVideo: "music-video"
+    case .movie: "movie"
+    case .tvShow: "tv-show"
+    case .tvShowEpisode: "tv-show-episode"
+    default: nil // album/artist/genre/unknown
     }
+  }
+
+  /// Map the SiriKit reference to the pure criteria enum. `.currentlyPlaying`
+  /// routes to native resume; `.my` to the consumer; everything else is unknown.
+  private static func reference(_ ref: INMediaReference) -> MediaIntentCriteria.Reference {
+    switch ref {
+    case .currentlyPlaying: .currentlyPlaying
+    case .my: .my
+    default: .unknown
+    }
+  }
+
+  /// Host app's display name, used to recognise "Play «app»" as a resume.
+  private static func hostAppName() -> String? {
+    let info = Bundle.main.infoDictionary
+    return (info?["CFBundleDisplayName"] as? String) ?? (info?["CFBundleName"] as? String)
   }
 }

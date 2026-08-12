@@ -13,6 +13,12 @@ import type {
   PlaybackErrorEvent
 } from '../features/errors'
 import type {
+  NativeGate,
+  NativeGateRequest,
+  GateDecision,
+  GateEvent
+} from '../features/gate'
+import type {
   ChapterMetadata,
   NowPlayingMetadata,
   NowPlayingUpdate,
@@ -27,10 +33,9 @@ import type {
 } from '../features/playback/progress'
 import type { Playback } from '../features/playback/state'
 import type {
+  NativeSetupPlayerOptions,
   NativeUpdateOptions,
-  Options,
-  PartialSetupPlayerOptions,
-  UpdateOptions
+  Options
 } from '../features/player'
 import type { PlaybackActiveTrackChangedEvent } from '../features/queue/activeTrack'
 import type { PlaybackQueueEndedEvent } from '../features/queue/queue'
@@ -44,7 +49,6 @@ import type {
   RemotePlayIdEvent,
   RemotePlaySearchEvent,
   RemoteSeekEvent,
-  RemoteSetRatingEvent,
   RemoteSkipEvent
 } from '../features/remoteControls'
 import type { SleepTimer, SleepTimerChangedEvent } from '../features/sleepTimer'
@@ -62,31 +66,46 @@ export type EqualizerSettings = {
   upperBandLevelLimit: number
 }
 
-export type IosOutputType =
-  | 'built-in-speaker'
-  | 'built-in-receiver'
-  | 'airplay'
-  | 'bluetooth-a2dp'
-  | 'bluetooth-hfp'
-  | 'bluetooth-le'
-  | 'headphones'
-  | 'car-audio'
+/**
+ * Cross-platform audio output kind. Each platform maps its native ports into
+ * this shared set: iOS's granular Bluetooth ports (`bluetoothA2DP`/`HFP`/`LE`)
+ * all collapse to `'bluetooth'`. Note Android's *reading* (`getOutput`) reports
+ * the active local route only — `'airplay'`/`'cast'` come from iOS / are
+ * reserved for remote destinations and don't appear from Android reads.
+ */
+export type OutputType =
+  | 'speaker' // built-in loudspeaker
+  | 'receiver' // built-in earpiece (iOS)
+  | 'headphones' // wired headphones / headset
+  | 'bluetooth' // any Bluetooth audio
+  | 'airplay' // AirPlay (iOS)
+  | 'car' // car audio (CarPlay / Android Auto / car Bluetooth)
   | 'hdmi'
-  | 'usb-audio'
+  | 'usb'
+  | 'cast' // remote speaker / TV (reserved)
   | 'other'
 
 /**
- * Audio output information (iOS only).
+ * The current audio output. Read via `getOutput()` / `useOutput()` on every
+ * platform: iOS always reports one while a session is active; Android reports the
+ * actively-routed device on all versions (the `type` is accurate on API 33+ and
+ * coarse below that). Only the output *switcher* (`openOutputPicker`) is gated to
+ * Android 11+ — check `supportsOutputSwitcher()`.
  */
-export type IosOutput = {
-  /** The output port type */
-  type: IosOutputType
-  /** Human-readable device name (e.g., "AirPods Pro", "iPhone Speaker") */
+export type Output = {
+  /** The output kind */
+  type: OutputType
+  /** Human-readable device name (e.g., "AirPods Pro", "Kitchen speaker") */
   name: string
   /** Whether this is an external output (false for built-in speaker/receiver) */
   external: boolean
 }
 
+/**
+ * The Nitro hybrid-object spec — the bridge surface itself. Not consumer API;
+ * feature modules wrap every method.
+ * @internal
+ */
 export interface AudioBrowser extends HybridObject<{
   ios: 'swift'
   android: 'kotlin'
@@ -108,13 +127,41 @@ export interface AudioBrowser extends HybridObject<{
   ) => void
   getFormattedNavigationError(): FormattedNavigationError | undefined
   notifyContentChanged(path: string): void
+  invalidateAllContent(): void
   setFavorites(favorites: string[]): void
   configuration: NativeBrowserConfiguration
 
+  // MARK: gate
+  /**
+   * Records the gate's default chrome (undefined for resolver-only) and whether
+   * a per-request resolver is active. While a gate is set, the four car
+   * enforcement sites consult `resolveGate` per request (skipping the JS hop
+   * when `hasResolver` is false — every request is gated with the default).
+   */
+  setGate(gate: NativeGate | undefined, hasResolver: boolean): void
+  /** Clears the gate, restoring tab content and keeping selection. */
+  clearGate(): void
+  /** Per-request decision, set by JS; native awaits it at a serve site. */
+  resolveGate: (request: NativeGateRequest) => Promise<GateDecision>
+  /** Fired when a request is gated (the gate was served). */
+  onGate: (event: GateEvent) => void
+
+  // MARK: car connection
+  /**
+   * Whether a car is currently connected: a CarPlay scene on iOS, an
+   * Android Auto / Android Automotive connection on Android (via the
+   * androidx.car.app CarConnection provider).
+   */
+  isCarConnected(): boolean
+  /**
+   * Called when the car connects or disconnects.
+   */
+  onCarConnectedChanged: (connected: boolean) => void
+
   // MARK: player init and config
-  setupPlayer(options: PartialSetupPlayerOptions): Promise<void>
+  setupPlayer(options: NativeSetupPlayerOptions): Promise<void>
   updateOptions(options: NativeUpdateOptions): void
-  getOptions(): UpdateOptions
+  getOptions(): Options
 
   // // MARK: player events
   onChapterMetadata: (chapters: ChapterMetadata[]) => void
@@ -127,17 +174,21 @@ export interface AudioBrowser extends HybridObject<{
   ) => void
   onPlaybackPlayingState: (data: PlayingState) => void
   onPlaybackProgressUpdated: (data: PlaybackProgressUpdatedEvent) => void
+  /**
+   * Fired on a fixed internal cadence while playback is `playing`, once enabled
+   * via `setPlaybackIntervalEnabled`. Carries no payload — it is a tick, not a
+   * progress/position update. Independent of `onPlaybackProgressUpdated` and the
+   * `progressUpdateEventInterval` option.
+   */
+  onPlaybackInterval: () => void
   onPlaybackQueueEnded: (data: PlaybackQueueEndedEvent) => void
   onPlaybackQueueChanged: (queue: Track[]) => void
   onPlaybackRepeatModeChanged: (data: RepeatModeChangedEvent) => void
   onPlaybackShuffleModeChanged: (enabled: boolean) => void
   onSleepTimerChanged: (data: SleepTimerChangedEvent) => void
   onPlaybackChanged: (data: Playback) => void
-  onRemoteBookmark: () => void
-  onRemoteDislike: () => void
   onRemoteJumpBackward: (event: RemoteJumpBackwardEvent) => void
   onRemoteJumpForward: (event: RemoteJumpForwardEvent) => void
-  onRemoteLike: () => void
   onRemoteNext: () => void
   onRemotePause: () => void
   onRemotePlay: () => void
@@ -145,7 +196,6 @@ export interface AudioBrowser extends HybridObject<{
   onRemotePlaySearch: (event: RemotePlaySearchEvent) => void
   onRemotePrevious: () => void
   onRemoteSeek: (event: RemoteSeekEvent) => void
-  onRemoteSetRating: (event: RemoteSetRatingEvent) => void
   onRemoteSkip: (event: RemoteSkipEvent) => void
   onRemoteStop: () => void
   onOptionsChanged: (event: Options) => void
@@ -153,13 +203,10 @@ export interface AudioBrowser extends HybridObject<{
   onNowPlayingChanged: (metadata: NowPlayingMetadata) => void
 
   // MARK: remote handlers
-  handleRemoteBookmark: (() => void) | undefined
-  handleRemoteDislike: (() => void) | undefined
   handleRemoteJumpBackward:
     | ((event: RemoteJumpBackwardEvent) => void)
     | undefined
   handleRemoteJumpForward: ((event: RemoteJumpForwardEvent) => void) | undefined
-  handleRemoteLike: (() => void) | undefined
   handleRemoteNext: (() => void) | undefined
   handleRemotePause: (() => void) | undefined
   handleRemotePlay: (() => void) | undefined
@@ -181,11 +228,22 @@ export interface AudioBrowser extends HybridObject<{
   getPlayWhenReady(): boolean
   seekTo(position: number): void
   seekBy(offset: number): void
+  /**
+   * Jump to the live edge of the current track. No-op for non-live tracks.
+   * Live with a seekable window (HLS): seeks to the window end. Live without a
+   * window (non-seekable, e.g. ICY): reconnects to rejoin live.
+   */
+  seekToLiveEdge(): void
   setVolume(level: number): void
   getVolume(): number
   setRate(rate: number): void
   getRate(): number
   getProgress(): Progress
+  /**
+   * Enables or disables the internal playback tick that drives
+   * `onPlaybackInterval`. When disabled (default), no tick is emitted.
+   */
+  setPlaybackIntervalEnabled(enabled: boolean): void
   getPlayback(): Playback
   getPlayingState(): PlayingState
   getRepeatMode(): RepeatMode
@@ -195,7 +253,12 @@ export interface AudioBrowser extends HybridObject<{
   getPlaybackError(): PlaybackError | undefined
   retry(): void
   getSleepTimer(): SleepTimer
-  setSleepTimer(seconds: number): void
+  /**
+   * Stops playback after `seconds`. When `fadeDuration` is given, the volume
+   * ramps down over the final `fadeDuration` seconds so silence lands exactly
+   * at the deadline; the pre-fade volume is restored after pausing.
+   */
+  setSleepTimer(seconds: number, fadeDuration?: number): void
   setSleepTimerToEndOfTrack(): void
   clearSleepTimer(): boolean
 
@@ -216,7 +279,7 @@ export interface AudioBrowser extends HybridObject<{
    * Toggles the favorited state of the currently playing track.
    */
   toggleActiveTrackFavorited(): void
-  setQueue(tracks: Track[], startIndex?: number, startPositionMs?: number): void
+  setQueue(tracks: Track[], startIndex?: number, startPosition?: number): void
   getQueue(): Track[]
   getTrack(index: number): Track | undefined
   getActiveTrackIndex(): number | undefined
@@ -228,6 +291,18 @@ export interface AudioBrowser extends HybridObject<{
    * Pass null to clear overrides and revert to track metadata.
    */
   updateNowPlaying(update: NowPlayingUpdate | undefined): void
+  /**
+   * Temporarily replaces now-playing fields for `durationMs`, then reverts.
+   * Outranks the formatter and the `updateNowPlaying` override while active,
+   * and is reverted by a native timer (JS timers pause in a backgrounded
+   * host). Cleared early on track change. Repeated calls restart the window.
+   */
+  flashNowPlaying(update: NowPlayingUpdate, durationMs: number): void
+  /**
+   * Clears an active flash immediately, reverting to the live metadata.
+   * No-op when no flash is active.
+   */
+  clearNowPlayingFlash(): void
   /**
    * Gets the current now playing metadata (override if set, else track metadata).
    */
@@ -252,23 +327,38 @@ export interface AudioBrowser extends HybridObject<{
    */
   onSystemVolumeChanged: (volume: number) => void
 
-  // MARK: external audio output (iOS only)
+  // MARK: external audio output
   /**
-   * Gets the current audio output info.
-   * Always returns a value on iOS, undefined on Android.
+   * The current audio output, or undefined when unknown. iOS reports one while a
+   * session is active; Android reports the actively-routed media device via
+   * AudioManager — accurate on API 33+ (reflects manual reroutes); on older
+   * Android the `type` is coarse and can't detect a reroute while a device stays
+   * connected.
    */
-  getIosOutput(): IosOutput | undefined
+  getOutput(): Output | undefined
   /**
-   * Called when audio output changes (iOS only).
-   * Never fires on Android.
+   * Called when the current audio output changes (headphones unplugged, a
+   * Bluetooth speaker connected, AirPlay/route selected). Fires on iOS and
+   * Android; never on web.
    */
-  onIosOutputChanged: (output: IosOutput) => void
+  onOutputChanged: (output: Output) => void
   /**
-   * Opens the system output picker (iOS only).
-   * Allows users to select output device (speaker, AirPlay, Bluetooth, etc.).
-   * No-op on Android.
+   * Presents the system audio output switcher so the listener can move playback
+   * to another output — Bluetooth, AirPlay/Sonos-via-AirPlay, speaker (iOS), or
+   * the Bluetooth / speaker / Cast device list (Android). Cross-platform.
+   *
+   * iOS: the system route picker (always available).
+   * Android: the system Output Switcher (Android 11+); no-op below that — gate
+   * on `supportsOutputSwitcher()`.
+   * Web: no-op.
    */
-  openIosOutputPicker(): void
+  openOutputPicker(): void
+  /**
+   * Whether `openOutputPicker()` can present a system output switcher on this
+   * device — surface the output control in the UI only when this is true.
+   * iOS: true. Android: true on Android 11+ (API 30). Web: false.
+   */
+  supportsOutputSwitcher(): boolean
 
   // MARK: equalizer (Android only)
   getEqualizerSettings(): EqualizerSettings | undefined

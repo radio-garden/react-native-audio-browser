@@ -1,17 +1,7 @@
-import type { Rating } from './rating'
 import { nativeBrowser } from '../native'
 import { NativeUpdatedValue } from '../utils/NativeUpdatedValue'
 
 // MARK: - Types
-
-export type RatingType =
-  | 'heart'
-  | 'thumbs-up-down'
-  | 'three-stars'
-  | 'four-stars'
-  | 'five-stars'
-  | 'percentage'
-  | 'none'
 
 export interface TrackMetadataBase {
   /** The track title */
@@ -30,8 +20,6 @@ export interface TrackMetadataBase {
   mediaId?: string
   /** The track genre */
   genre?: string
-  /** The track rating */
-  rating?: Rating
 }
 
 export interface NowPlayingMetadata extends TrackMetadataBase {
@@ -48,6 +36,12 @@ export type NowPlayingUpdate = {
   title?: string
   /** Artist shown in notification */
   artist?: string
+  /**
+   * Album line, on surfaces that render one (CarPlay's third line, some
+   * Bluetooth head units). Never shown on the iOS lock screen or the Android
+   * notification.
+   */
+  album?: string
 }
 
 /**
@@ -105,7 +99,7 @@ export interface ChapterMetadata {
 /**
  * Subscribes to chapter metadata events.
  * @param callback - Called when chapter metadata is received
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onChapterMetadata = NativeUpdatedValue.emitterize<
   ChapterMetadata[]
@@ -114,7 +108,7 @@ export const onChapterMetadata = NativeUpdatedValue.emitterize<
 /**
  * Subscribes to track metadata events.
  * @param callback - Called when static track metadata is received
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
   (cb) => (nativeBrowser.onTrackMetadata = cb)
@@ -123,7 +117,7 @@ export const onTrackMetadata = NativeUpdatedValue.emitterize<TrackMetadata>(
 /**
  * Subscribes to timed metadata events (ICY/ID3 from live streams).
  * @param callback - Called when stream metadata is received (title, artist from ICY/ID3 tags)
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onTimedMetadata = NativeUpdatedValue.emitterize<TimedMetadata>(
   (cb) => (nativeBrowser.onTimedMetadata = cb)

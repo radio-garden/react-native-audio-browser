@@ -23,12 +23,19 @@ import coil3.disk.directory
 import coil3.svg.SvgDecoder
 import com.audiobrowser.model.PlayerSetupOptions
 import com.audiobrowser.player.Player
+import com.audiobrowser.util.ArtworkProviderDeps
 import com.audiobrowser.util.BatteryWarningStore
+import com.audiobrowser.util.CoilArtworkLoader
+import com.audiobrowser.util.CoilArtworkLoaderHolder
 import com.audiobrowser.util.CoilBitmapLoader
 import com.margelo.nitro.audiobrowser.AppKilledPlaybackBehavior
+import com.margelo.nitro.audiobrowser.MediaReference
 import com.margelo.nitro.audiobrowser.SearchMode
 import com.margelo.nitro.audiobrowser.SearchParams
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -52,7 +59,10 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   // Callback for battery warning events to notify JS layer
   var onBatteryWarningPendingChanged: ((Boolean) -> Unit)? = null
 
+  private var artworkProviderDeps: ArtworkProviderDeps? = null
+
   // Headless service binding
+  private var headlessBound = false
   private val headlessConnection: ServiceConnection =
     object : ServiceConnection {
       override fun onServiceConnected(className: ComponentName, service: IBinder) {}
@@ -103,13 +113,32 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       CoilBitmapLoader(
         context = this,
         imageLoader = imageLoader,
-        getArtworkConfig = { player.browser?.getArtworkConfig() },
+        resolveDisplayArtwork = { uri, sizeHint -> player.resolveDisplayArtwork(uri, sizeHint) },
         getArtworkSizeHint = { player.artworkSizeHintPixels },
       )
 
     // Store references in Player for artwork URL transformation and SVG pre-rendering
     player.coilBitmapLoader = coilBitmapLoader
     player.imageLoader = imageLoader
+
+    // Populate the artwork content provider holder so ArtworkContentProvider can serve
+    // browse artwork to Android Auto / AAOS over content:// URIs.
+    val artworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    artworkProviderDeps =
+      ArtworkProviderDeps(
+        loader = CoilArtworkLoader(this, imageLoader),
+        registry = player.browseArtworkRegistry,
+        scope = artworkScope,
+        artworkSizeHint = { player.artworkSizeHintPixels },
+      )
+    CoilArtworkLoaderHolder.set(artworkProviderDeps!!)
+    // Best-effort: clear stale artwork cache from previous process so the disk doesn't grow
+    // unboundedly across restarts. Fresh files will be re-fetched on demand.
+    runCatching {
+      java.io
+        .File(cacheDir, com.audiobrowser.util.ArtworkContentProvider.ARTWORK_SUBDIR)
+        .deleteRecursively()
+    }
 
     val openAppIntent =
       packageManager.getLaunchIntentForPackage(packageName)?.apply {
@@ -140,8 +169,8 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Bind headless service once at startup for JS task execution
     Intent(applicationContext, HeadlessTaskService::class.java).also { headlessIntent ->
       Timber.d("Binding to HeadlessTaskService for JS execution")
-      val bound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
-      Timber.d("HeadlessTaskService bind result: $bound")
+      headlessBound = bindService(headlessIntent, headlessConnection, BIND_AUTO_CREATE)
+      Timber.d("HeadlessTaskService bind result: $headlessBound")
     }
   }
 
@@ -182,19 +211,16 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     // Get the media focus type (what kind of media to search for)
     val mediaFocus = intent.getStringExtra(MediaStore.EXTRA_MEDIA_FOCUS)
 
-    // Determine search mode based on media focus type
+    // Determine search mode (container vertical) from the media focus. Genre/
+    // artist/album focuses are FILTERS, not verticals — they yield no mode; the
+    // extras below carry them. Android has no station/podcast/etc. focus, so
+    // those verticals are iOS-only.
     val mode =
       when (mediaFocus) {
-        "vnd.android.cursor.item/*" -> {
-          // Generic audio content - could be "play music" or unstructured search
-          if (query.isEmpty()) SearchMode.ANY else null
-        }
-        MediaStore.Audio.Genres.ENTRY_CONTENT_TYPE -> SearchMode.GENRE
-        MediaStore.Audio.Artists.ENTRY_CONTENT_TYPE -> SearchMode.ARTIST
-        MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE -> SearchMode.ALBUM
+        "vnd.android.cursor.item/*" -> if (query.isEmpty()) SearchMode.ANY else null
         "vnd.android.cursor.item/audio" -> SearchMode.SONG
         MediaStore.Audio.Playlists.ENTRY_CONTENT_TYPE -> SearchMode.PLAYLIST
-        else -> null // No media focus or unknown - unstructured search
+        else -> null // genre/artist/album/unknown focus → no vertical
       }
 
     // Extract structured metadata fields
@@ -212,6 +238,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
       album = album,
       title = title,
       playlist = playlist,
+      reference = MediaReference.UNKNOWN,
     )
   }
 
@@ -263,6 +290,7 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
             }
             player.clear()
             player.stop()
+            tearDownArtworkProvider()
             player.destroy()
             scope.cancel()
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -285,12 +313,12 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession {
     Timber.d("onGetSession requested by: ${controllerInfo.packageName}")
 
-    // Ensure player is properly set up for external controllers like Android Auto
-    // Only call setup if callbacks haven't been installed yet (meaning React Native hasn't
-    // connected)
+    // The player is always set up by onCreate. Don't re-run setup() here for controllers that
+    // connect before React Native does: setup() releases and recreates the ExoPlayer, which would
+    // kill in-progress playback (e.g. playback resumption from a car/Bluetooth controller) when a
+    // second controller connects while JS is still booting.
     if (player.getCallbacks() == null) {
       Timber.w("External controller connecting before React Native setup - using default options")
-      player.setup(PlayerSetupOptions())
     }
 
     return mediaSession
@@ -313,11 +341,32 @@ class Service : MediaLibraryService(), MediaSessionService.Listener {
     onBatteryWarningPendingChanged?.invoke(true)
   }
 
+  /**
+   * Cancels the artwork-provider coroutine scope and clears the Coil loader holder. Idempotent —
+   * safe to call more than once; the second call is a no-op because the field is null after the
+   * first. Must be called BEFORE player.destroy() on every teardown path.
+   */
+  private fun tearDownArtworkProvider() {
+    artworkProviderDeps?.let {
+      it.scope.cancel()
+      CoilArtworkLoaderHolder.clearIf(it)
+    }
+    artworkProviderDeps = null
+  }
+
   override fun onDestroy() {
     Timber.d("onDestroy called")
 
-    // Unbind from HeadlessTaskService to avoid ServiceConnection leak
-    unbindService(headlessConnection)
+    // Unbind from HeadlessTaskService to avoid ServiceConnection leak.
+    // Unbinding a connection that never bound throws IllegalArgumentException.
+    if (headlessBound) {
+      unbindService(headlessConnection)
+      headlessBound = false
+    }
+
+    // Tear down artwork provider deps before player is destroyed so no in-flight
+    // coroutine can deref a torn-down player.
+    tearDownArtworkProvider()
 
     Timber.d("Releasing media session and destroying player")
     if (::mediaSession.isInitialized) {

@@ -19,22 +19,27 @@
 #include "JAndroidOptions.hpp"
 #include "AppKilledPlaybackBehavior.hpp"
 #include "JAppKilledPlaybackBehavior.hpp"
-#include "RatingType.hpp"
-#include "JRatingType.hpp"
 #include <NitroModules/Null.hpp>
-#include "NotificationButtonLayout.hpp"
+#include "RemoteButtonLayout.hpp"
 #include <variant>
-#include "JVariant_NullType_NotificationButtonLayout.hpp"
+#include "JVariant_NullType_RemoteButtonLayout.hpp"
 #include <NitroModules/JNull.hpp>
-#include "JNotificationButtonLayout.hpp"
-#include "NotificationButton.hpp"
-#include "JNotificationButton.hpp"
+#include "JRemoteButtonLayout.hpp"
+#include "RemoteButton.hpp"
+#include "JRemoteButton.hpp"
 #include <vector>
 #include "JVariant_NullType_Double.hpp"
 #include "PlayerCapabilities.hpp"
 #include "JPlayerCapabilities.hpp"
-#include "RepeatMode.hpp"
-#include "JRepeatMode.hpp"
+#include "FavoriteConfig.hpp"
+#include "JVariant_Boolean_FavoriteConfig.hpp"
+#include "JFavoriteConfig.hpp"
+#include "FavoritesMatchMode.hpp"
+#include "JFavoritesMatchMode.hpp"
+#include "IOSOptions.hpp"
+#include "JIOSOptions.hpp"
+#include "CarPlayNowPlayingButton.hpp"
+#include "JCarPlayNowPlayingButton.hpp"
 
 namespace margelo::nitro::audiobrowser {
 

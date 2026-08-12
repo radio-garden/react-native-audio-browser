@@ -36,11 +36,13 @@ target_sources(
   ../nitrogen/generated/shared/c++/HybridAudioBrowserSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridAudioBrowserSpec.cpp
+  ../nitrogen/generated/android/c++/JVariant_String_ArtworkVariants.cpp
+  ../nitrogen/generated/android/c++/JVariant_ResolvedTrack_BrowseError_Promise_BrowseResult_.cpp
   ../nitrogen/generated/android/c++/JBrowseResult.cpp
   ../nitrogen/generated/android/c++/JSleepTimer.cpp
-  ../nitrogen/generated/android/c++/JVariant_HeartRating_ThumbsRating_StarRating_PercentageRating.cpp
-  ../nitrogen/generated/android/c++/JVariant_NullType_NotificationButtonLayout.cpp
+  ../nitrogen/generated/android/c++/JVariant_NullType_RemoteButtonLayout.cpp
   ../nitrogen/generated/android/c++/JVariant_NullType_Double.cpp
+  ../nitrogen/generated/android/c++/JVariant_Boolean_FavoriteConfig.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_AndroidAudioOffloadSettings.cpp
   ../nitrogen/generated/android/c++/JVariant_Boolean_RetryConfig.cpp
 )

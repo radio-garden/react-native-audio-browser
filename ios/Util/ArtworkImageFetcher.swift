@@ -1,7 +1,7 @@
 import Kingfisher
 import NitroModules
-import UIKit
 import os.log
+import UIKit
 
 /// Single entry point for loading artwork images from URLs via Kingfisher.
 enum ArtworkImageFetcher {
@@ -15,7 +15,9 @@ enum ArtworkImageFetcher {
     if let headers = source.headers, !headers.isEmpty {
       let modifier = AnyModifier { request in
         var request = request
-        for (key, value) in headers { request.setValue(value, forHTTPHeaderField: key) }
+        for (key, value) in headers {
+          request.setValue(value, forHTTPHeaderField: key)
+        }
         return request
       }
       options.append(.requestModifier(modifier))

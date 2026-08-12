@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Notifies the owner when the track list changes.
@@ -40,7 +40,7 @@ class QueueManager {
   }
 
   /// The shuffle order for randomized playback.
-  private var shuffleOrder = ShuffleOrder()
+  private(set) var shuffleOrder = ShuffleOrder()
 
   /// The repeat mode for the queue. Plain property — no side effects.
   var repeatMode: RepeatMode = .off
@@ -101,6 +101,14 @@ class QueueManager {
     return currentIndex == tracks.count - 1
   }
 
+  /// Whether `next()` would move to a distinct track — drives remote/CarPlay
+  /// next-button enablement. Shares `nextIndex` with `next()` so the button
+  /// state and the actual navigation can't diverge (shuffle/repeat-wrap aware).
+  var canNext: Bool { nextIndex != nil }
+
+  /// Whether `previous()` would move to a distinct track. Symmetric to `canNext`.
+  var canPrevious: Bool { previousIndex != nil }
+
   // MARK: - Validation
 
   private func throwIfQueueEmpty() throws {
@@ -113,82 +121,69 @@ class QueueManager {
     index: Int,
     name: String = "index",
     min: Int? = nil,
-    max: Int? = nil
+    max: Int? = nil,
   ) throws {
     guard index >= (min ?? 0), (max ?? tracks.count) > index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
-        message: "\(name) must be non-negative and less than \(tracks.count)"
+        message: "\(name) must be non-negative and less than \(tracks.count)",
       )
     }
   }
 
   // MARK: - Navigation (returns QueueNavigationResult)
 
+  /// The index `next()` will move to — a distinct track in playback order, or
+  /// nil when there's nowhere to go (empty/single-track queue, or a real end
+  /// with no wrap). Single source of truth shared by `next()` and `canNext`, so
+  /// the button state and the actual navigation can't disagree. Shuffle wraps
+  /// the order unconditionally (like Media3); sequential wraps only on repeat-all.
+  private var nextIndex: Int? {
+    guard currentTrack != nil, tracks.count > 1 else { return nil }
+    let candidate: Int? = if shuffleEnabled {
+      shuffleOrder.getNextIndex(after: currentIndex) ?? shuffleOrder.firstIndex
+    } else if currentIndex + 1 < tracks.count {
+      currentIndex + 1
+    } else {
+      repeatMode == .queue ? 0 : nil
+    }
+    guard let candidate, candidate != currentIndex else { return nil }
+    return candidate
+  }
+
+  /// The index `previous()` will move to. Symmetric to `nextIndex`.
+  private var previousIndex: Int? {
+    guard currentTrack != nil, tracks.count > 1 else { return nil }
+    let candidate: Int? = if shuffleEnabled {
+      shuffleOrder.getPreviousIndex(before: currentIndex) ?? shuffleOrder.lastIndex
+    } else if currentIndex - 1 >= 0 {
+      currentIndex - 1
+    } else {
+      repeatMode == .queue ? tracks.count - 1 : nil
+    }
+    guard let candidate, candidate != currentIndex else { return nil }
+    return candidate
+  }
+
   /// Step to the next track in the queue.
   func next() -> QueueNavigationResult {
     guard currentTrack != nil, !tracks.isEmpty else { return .noChange }
-
-    if tracks.count == 1 {
-      return repeatMode == .queue ? .sameTrackReplay : .noChange
-    }
-
-    var newIndex: Int?
-    if shuffleEnabled {
-      // Use shuffle order for navigation
-      newIndex = shuffleOrder.getNextIndex(after: currentIndex)
-      if newIndex == nil {
-        // Wrap to start of shuffle order unconditionally (same order, like Media3)
-        newIndex = shuffleOrder.firstIndex
-      }
-    } else {
-      // Sequential navigation
-      let nextIdx = currentIndex + 1
-      if nextIdx < tracks.count {
-        newIndex = nextIdx
-      } else if repeatMode == .queue {
-        newIndex = 0
-      }
-    }
-
-    if let newIndex, newIndex != currentIndex {
-      currentIndex = newIndex
+    if let nextIndex {
+      currentIndex = nextIndex
       return .trackChanged
     }
-    return .noChange
+    // No distinct next: single-track + repeat-all replays; otherwise a real end.
+    return tracks.count == 1 && repeatMode == .queue ? .sameTrackReplay : .noChange
   }
 
   /// Step to the previous track in the queue.
   func previous() -> QueueNavigationResult {
     guard currentTrack != nil, !tracks.isEmpty else { return .noChange }
-
-    if tracks.count == 1 {
-      return repeatMode == .queue ? .sameTrackReplay : .noChange
-    }
-
-    var newIndex: Int?
-    if shuffleEnabled {
-      // Use shuffle order for navigation
-      newIndex = shuffleOrder.getPreviousIndex(before: currentIndex)
-      if newIndex == nil {
-        // Wrap to end of shuffle order unconditionally (same order, like Media3)
-        newIndex = shuffleOrder.lastIndex
-      }
-    } else {
-      // Sequential navigation
-      let prevIdx = currentIndex - 1
-      if prevIdx >= 0 {
-        newIndex = prevIdx
-      } else if repeatMode == .queue {
-        newIndex = tracks.count - 1
-      }
-    }
-
-    if let newIndex, newIndex != currentIndex {
-      currentIndex = newIndex
+    if let previousIndex {
+      currentIndex = previousIndex
       return .trackChanged
     }
-    return .noChange
+    return tracks.count == 1 && repeatMode == .queue ? .sameTrackReplay : .noChange
   }
 
   /// Skip to a specific track in the queue.
@@ -239,12 +234,12 @@ class QueueManager {
     guard index >= 0, tracks.count >= index else {
       throw TrackPlayerError.QueueError.invalidIndex(
         index: index,
-        message: "Index to insert at has to be non-negative and equal to or smaller than the number of tracks: (\(tracks.count))"
+        message: "Index to insert at has to be non-negative and equal to or smaller than the number of tracks: (\(tracks.count))",
       )
     }
     let wasEmpty = tracks.isEmpty
     // Correct index when tracks were inserted in front of it:
-    if tracks.count > 1, currentIndex >= index {
+    if currentIndex >= 0, currentIndex >= index {
       currentIndex += newTracks.count
     }
     tracks.insert(contentsOf: newTracks, at: index)
@@ -283,11 +278,19 @@ class QueueManager {
     // Mutate a copy and assign once to trigger didSet only once
     var newTracks = tracks
     let track = newTracks.remove(at: fromIndex)
-    newTracks.insert(track, at: min(newTracks.count, toIndex))
+    let insertion = min(newTracks.count, toIndex)
+    newTracks.insert(track, at: insertion)
     tracks = newTracks
-    if fromIndex == currentIndex {
-      currentIndex = toIndex
-      return true
+    shuffleOrder.remove(from: fromIndex, to: fromIndex + 1)
+    shuffleOrder.insert(at: insertion, count: 1)
+    // The pointer follows the playing track; its identity never changes on a
+    // move, so no caller needs to reload (returning true reloads).
+    if currentIndex == fromIndex {
+      currentIndex = insertion
+    } else if fromIndex < currentIndex, insertion >= currentIndex {
+      currentIndex -= 1
+    } else if fromIndex > currentIndex, insertion <= currentIndex {
+      currentIndex += 1
     }
     return false
   }
@@ -299,6 +302,7 @@ class QueueManager {
     guard currentIndex != -1 else { return false }
     currentIndex = -1
     tracks.removeAll()
+    shuffleOrder.clear()
     queueSourcePath = nil
     return true
   }
@@ -315,6 +319,8 @@ class QueueManager {
     guard !tracks.isEmpty else { return }
     let nextIndex = currentIndex + 1
     guard nextIndex < tracks.count else { return }
-    tracks.removeSubrange(nextIndex ..< tracks.count)
+    let end = tracks.count
+    tracks.removeSubrange(nextIndex ..< end)
+    shuffleOrder.remove(from: nextIndex, to: end)
   }
 }

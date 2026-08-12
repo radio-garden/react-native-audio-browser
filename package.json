@@ -1,6 +1,6 @@
 {
   "name": "react-native-audio-browser",
-  "version": "0.1.1",
+  "version": "0.2.0-next.8",
   "description": "react-native-audio-browser is a react native package built with Nitro",
   "keywords": [
     "react-native",
@@ -45,15 +45,17 @@
   },
   "scripts": {
     "android:format": "yarn workspace example-native android:format",
+    "android:format:check": "yarn workspace example-native android:format:check",
     "android:ide": "yarn workspace example-native android:ide",
     "android:logs": "react-native log-android",
     "android:test": "yarn workspace example-native android:test",
     "build": "yarn prepare",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && yarn build",
+    "codegen": "node codegen/index.js --logLevel=\"debug\" && node post-script.cjs && node codegen/strip-struct-equality.cjs && yarn build",
     "prepare": "bob build",
     "example": "yarn workspace example-native",
     "ci:format": "oxfmt --check src",
+    "ci:format:ios": "swiftformat --lint ios",
     "ci:lint": "oxlint --type-aware src",
     "format": "oxfmt --write",
     "ios:format": "swiftformat ios",
@@ -69,6 +71,7 @@
     "@react-native-community/cli": "15.0.0-alpha.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
+    "@types/node": "^22",
     "@types/react": "19.1.1",
     "conventional-changelog-conventionalcommits": "^9.3.0",
     "del-cli": "^5.1.0",
@@ -83,7 +86,7 @@
     "react-native-nitro-modules": "0.35.0",
     "semantic-release": "^25.0.3",
     "shaka-player": "^4.15.4",
-    "typescript": "^5.8.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
@@ -97,17 +100,21 @@
       "optional": true
     }
   },
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.18.0",
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
+    "exclude": [
+      "**/{__tests__,__fixtures__,__mocks__}/**",
+      "**/*.{spec,test}.{js,jsx,ts,tsx}"
+    ],
     "targets": [
       "commonjs",
       "module",
       [
         "typescript",
         {
-          "project": "tsconfig.json"
+          "project": "tsconfig.build.json"
         }
       ]
     ]

@@ -1,5 +1,6 @@
-import Testing
 @testable import AudioBrowserTestable
+import Foundation
+import Testing
 
 /// Helper to build a coordinator with mocks for testing.
 @MainActor
@@ -7,7 +8,7 @@ private func makeCoordinator() -> (
   coordinator: PlaybackCoordinator,
   effectHandler: MockPlaybackEffectHandler,
   callbacks: MockPlaybackCoordinatorCallbacks,
-  sleepTimer: MockSleepTimerHandling
+  sleepTimer: MockSleepTimerHandling,
 ) {
   let retryHandler = MockRetryHandling()
   let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
@@ -26,7 +27,7 @@ private func loadTrack(
   _ coordinator: PlaybackCoordinator,
   id: String = "t1",
   src: String? = "https://example.com/audio.mp3",
-  title: String = "Test Track"
+  title: String = "Test Track",
 ) {
   let track = Track(id: id, src: src, title: title)
   coordinator.setQueue([track])
@@ -41,7 +42,7 @@ struct TransitionTests {
     let (c, eh, _, _) = makeCoordinator()
     loadTrack(c)
     c.playWhenReady = true
-    eh.startPlaybackCallCount = 0  // reset from playWhenReady setter
+    eh.startPlaybackCallCount = 0 // reset from playWhenReady setter
 
     c.transition(.bufferingSufficient)
 
@@ -106,19 +107,119 @@ struct TransitionTests {
     #expect(cb.playbackChanges.count == 1)
     #expect(cb.errorEvents.count == 1)
   }
+}
 
+// MARK: - Retrying Errors
+
+/// Advisory errors from the retry loop: attached to the current non-terminal
+/// state via `playerDidChangePlayback`, never a state transition and never a
+/// `playerDidError`.
+/// Builds a coordinator whose retry handler will accept the error and
+/// pretend the (instant) retry succeeded, so only the advisory path runs.
+/// The effect handler is returned solely to keep the weak reference alive.
+@MainActor
+private func makeRetrying() -> (
+  PlaybackCoordinator, MockRetryHandling, MockPlaybackCoordinatorCallbacks,
+  MockPlaybackEffectHandler,
+) {
+  let retryHandler = MockRetryHandling()
+  retryHandler.isRetryableResult = true
+  retryHandler.attemptRetryResult = true
+  let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+  let coordinator = PlaybackCoordinator(
+    errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+  )
+  let effectHandler = MockPlaybackEffectHandler()
+  coordinator.effectHandler = effectHandler
+  let callbacks = MockPlaybackCoordinatorCallbacks()
+  coordinator.callbacks = callbacks
+  return (coordinator, retryHandler, callbacks, effectHandler)
+}
+
+@Suite("PlaybackCoordinator - retrying errors")
+struct RetryingErrorTests {
   @Test @MainActor
-  func activeStates_updateNowPlayingValues() {
-    let (c, eh, _, _) = makeCoordinator()
-    eh.hasLoadedAsset = true
-    eh.duration = 120
-    eh.currentTime = 30
-
+  func retryingError_attachesToCurrentState() async {
+    let (c, _, cb, _) = makeRetrying()
     c.transition(.trackLoading)
-    #expect(eh.updateNowPlayingValuesCalls.count == 1)
+    cb.playbackChanges.removeAll()
 
-    c.transition(.bufferingSufficient)
-    #expect(eh.updateNowPlayingValuesCalls.count == 2)
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+
+    #expect(c.state == .loading)
+    #expect(c.playbackError == .hostUnreachable)
+    #expect(cb.playbackChanges.count == 1)
+    #expect(cb.playbackChanges.last?.state == .loading)
+    #expect(cb.playbackChanges.last?.error?.retrying == true)
+    // Advisory, not terminal: the error event is reserved for .error.
+    #expect(cb.errorEvents.isEmpty)
+    await c.errorHandler.pendingRetryTask?.value
+  }
+
+  /// Every failed attempt re-reports through `handleError`; identical repeats
+  /// must not re-emit (they'd re-render now-playing every backoff tick).
+  @Test @MainActor
+  func repeatedIdenticalFailure_emitsOnce() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    cb.playbackChanges.removeAll()
+
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    #expect(cb.playbackChanges.count == 1)
+  }
+
+  /// While .playing, buffered audio is still audibly fine — the advisory must
+  /// not replace the song line over working sound (matches Android's guard).
+  @Test @MainActor
+  func retryingErrorWhilePlaying_isSuppressed() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.avPlayerPlaying)
+    cb.playbackChanges.removeAll()
+
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .playback)
+
+    #expect(c.playbackError == nil)
+    #expect(cb.playbackChanges.isEmpty)
+    await c.errorHandler.pendingRetryTask?.value
+  }
+
+  /// Reaching .ready proves the retry recovered: the advisory error must not
+  /// survive into the clean state's emission.
+  @Test @MainActor
+  func recovery_clearsTheRetryingError() async {
+    let (c, _, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    c.transition(.loadSeekCompleted)
+
+    #expect(c.state == .ready)
+    #expect(c.playbackError == nil)
+    #expect(cb.playbackChanges.last?.error == nil)
+  }
+
+  /// Giving up hardens the advisory into a terminal error: same kind, state
+  /// .error, `retrying` gone.
+  @Test @MainActor
+  func exhaustion_hardensIntoTerminalError() async {
+    let (c, retryHandler, cb, _) = makeRetrying()
+    c.transition(.trackLoading)
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    retryHandler.attemptRetryResult = false
+    c.errorHandler.handleError(URLError(.cannotConnectToHost), context: .mediaLoad)
+    await c.errorHandler.pendingRetryTask?.value
+
+    #expect(c.state == .error)
+    #expect(cb.playbackChanges.last?.state == .error)
+    #expect(cb.playbackChanges.last?.error?.retrying == nil)
+    #expect(cb.errorEvents.count == 1)
   }
 }
 
@@ -253,7 +354,7 @@ struct ObserverGuardTests {
 
     c.avPlayerDidChangeTimeControlStatus(.waitingToPlayAtSpecifiedRate)
 
-    #expect(c.state == .playing)  // unchanged
+    #expect(c.state == .playing) // unchanged
   }
 
   @Test @MainActor
@@ -384,6 +485,60 @@ struct PlayWhenReadyTests {
   }
 }
 
+// MARK: - Skip availability (next/previous greying)
+
+@Suite("PlaybackCoordinator - skip availability")
+struct SkipAvailabilityCoordinatorTests {
+  private static func multiTrack() -> [Track] {
+    [
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
+    ]
+  }
+
+  @Test @MainActor
+  func singleTrack_disablesBoth() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue([Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1")])
+
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == false)
+  }
+
+  @Test @MainActor
+  func firstOfMany_nextOnly() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(Self.multiTrack())
+
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == true)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == false)
+  }
+
+  @Test @MainActor
+  func lastOfMany_previousOnly() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(Self.multiTrack())
+    try? c.skipTo(1)
+
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+
+  @Test @MainActor
+  func repeatAll_repushesAvailability_atEnd() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(Self.multiTrack())
+    try? c.skipTo(1) // last track
+    eh.updateSkipAvailabilityCalls.removeAll()
+
+    c.repeatMode = .queue
+
+    // repeat-all wraps, so Next becomes available again at the last track.
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == true)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+}
+
 // MARK: - handleCurrentTrackChanged
 
 @Suite("PlaybackCoordinator - handleCurrentTrackChanged")
@@ -447,11 +602,31 @@ struct HandleTrackDidPlayToEndTimeTests {
     let (c, eh, _, _) = makeCoordinator()
     loadTrack(c)
     c.repeatMode = .track
+    c.playWhenReady = true
 
     c.handleTrackDidPlayToEndTime()
 
     // replay delegates to effectHandler.replayCurrentTrack (seek to 0 + play)
     #expect(eh.replayCurrentTrackCallCount == 1)
+  }
+
+  /// The end-of-track sleep timer pauses (clears intent) just before this
+  /// handler runs — an unguarded replay would resume seconds after the sleep
+  /// timer paused. Without intent the track settles in .ended, where play()
+  /// reloads (a bare .paused would park at the end, where play() no-ops).
+  /// A repeating queue never conceptually ends, so no queue-ended reaches JS.
+  @Test @MainActor
+  func repeatTrack_withoutIntent_settlesEnded() {
+    let (c, eh, cb, _) = makeCoordinator()
+    loadTrack(c)
+    c.repeatMode = .track
+    c.playWhenReady = false
+
+    c.handleTrackDidPlayToEndTime()
+
+    #expect(cb.queueEndedEvents.isEmpty)
+    #expect(eh.replayCurrentTrackCallCount == 0)
+    #expect(c.state == .ended)
   }
 
   @Test @MainActor
@@ -482,5 +657,604 @@ struct HandleTrackDidPlayToEndTimeTests {
     #expect(c.currentIndex == 1)
     #expect(cb.activeTrackChanges.count == 1)
     #expect(cb.activeTrackChanges.first?.track?.id == "t2")
+  }
+}
+
+// MARK: - Natural end drops play intent
+
+/// A natural queue end exhausts the play intent: nothing is left to play, so
+/// `playWhenReady` must not stay true. Keeping it inverted the play/pause
+/// toggle, held the audio session forever, armed interruption auto-resume into
+/// silence, and made play-from-ended a silent no-op.
+@Suite("PlaybackCoordinator - natural end drops play intent")
+struct NaturalEndPlayIntentTests {
+  @Test @MainActor
+  func naturalEnd_clearsPlayWhenReady() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.handleTrackDidPlayToEndTime()
+
+    #expect(c.state == .ended)
+    #expect(c.playWhenReady == false)
+  }
+
+  @Test @MainActor
+  func naturalEnd_requestsSessionRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    callbacks.releaseSessionCount = 0
+
+    c.handleTrackDidPlayToEndTime()
+
+    #expect(callbacks.releaseSessionCount == 1)
+  }
+
+  /// play() from .ended must reload from the start — startPlayback() alone is a
+  /// silent no-op on a player parked at the end of its item.
+  @Test @MainActor
+  func playAfterNaturalEnd_reloadsFromStart() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleTrackDidPlayToEndTime()
+    eh.reloadTrackCalls.removeAll()
+
+    c.play()
+
+    #expect(eh.reloadTrackCalls == [false])
+  }
+
+  /// The cleared intent opens the call-site `!playWhenReady` gate, so a stray
+  /// timeControlStatus pause after the end reaches the state machine — the
+  /// table's .ended guard must hold the state.
+  @Test @MainActor
+  func strayPauseAfterNaturalEnd_staysEnded() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleTrackDidPlayToEndTime()
+    #expect(c.state == .ended)
+
+    c.avPlayerDidChangeTimeControlStatus(.paused)
+
+    #expect(c.state == .ended)
+  }
+
+  @Test @MainActor
+  func interruptionAfterNaturalEnd_doesNotArmResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleTrackDidPlayToEndTime()
+    eh.reloadTrackCalls.removeAll()
+
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false) // nothing was playing — never resume
+    #expect(eh.reloadTrackCalls.isEmpty)
+  }
+}
+
+// MARK: - Healthy playback refills the retry budget
+
+/// Sustained audible playback proves the stream recovered, so the retry
+/// window/attempt counters must refill (mirrors Android's healthy-playback
+/// refill) — otherwise a long-lived stream permanently loses retry after its
+/// first recovered blip.
+@Suite("PlaybackCoordinator - healthy playback resets retry budget")
+struct HealthyPlaybackRetryResetTests {
+  @Test @MainActor
+  func sustainedPlayback_resetsRetryBudget() async {
+    let retryHandler = MockRetryHandling()
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    coordinator.effectHandler = effectHandler
+    coordinator.healthyPlaybackDuration = 0.01
+
+    coordinator.transition(.avPlayerPlaying)
+    await coordinator.healthyPlaybackTask?.value
+
+    #expect(retryHandler.resetCallCount == 1)
+  }
+
+  /// resetRetry() cancels a pending retry — firing the refill mid-episode
+  /// would kill an in-flight reconnect silently (stuck .playing forever).
+  @Test @MainActor
+  func refill_skipsWhileRetryIsPending() async {
+    let retryHandler = MockRetryHandling()
+    retryHandler.isRetryableResult = true
+    retryHandler.attemptRetryDelayNs = 1_000_000_000
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    coordinator.effectHandler = effectHandler
+    coordinator.healthyPlaybackDuration = 0.01
+
+    coordinator.transition(.avPlayerPlaying)
+    errorHandler.handleError(URLError(.timedOut), context: .playback)
+    await coordinator.healthyPlaybackTask?.value
+
+    #expect(retryHandler.resetCallCount == 0)
+    #expect(errorHandler.pendingRetryTask != nil)
+  }
+
+  @Test @MainActor
+  func playbackInterruptedBeforeThreshold_doesNotReset() async {
+    let retryHandler = MockRetryHandling()
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    coordinator.effectHandler = effectHandler
+    effectHandler.hasLoadedAsset = true
+    coordinator.healthyPlaybackDuration = 0.5
+
+    coordinator.transition(.avPlayerPlaying)
+    let refill = coordinator.healthyPlaybackTask
+    coordinator.transition(.avPlayerWaiting) // stalls before the threshold
+
+    // Leaving .playing cancels the refill; awaiting the cancelled task is the
+    // deterministic way to reach the point where it would have fired.
+    await refill?.value
+
+    #expect(retryHandler.resetCallCount == 0)
+  }
+}
+
+@Suite("PlaybackCoordinator - now playing state")
+struct PlaybackCoordinatorNowPlayingStateTests {
+  @Test @MainActor
+  func change_updatesNowPlayingState_evenDuringLoading() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.transition(.trackLoading) // mid track-load; start/pause is deferred
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.playWhenReady = true
+
+    // The lock-screen / CarPlay play-pause button reflects the user's play
+    // *intent* immediately, even while the new item is still loading — otherwise
+    // it stays stuck showing "paused" until a later state transition repairs it.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
+
+  @Test @MainActor
+  func staysPlaying_whenBufferRunsDry() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.playWhenReady = true
+    c.transition(.avPlayerPlaying)
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.transition(.avPlayerWaiting) // buffer ran dry → .buffering
+
+    // A buffer underrun doesn't change play intent, so the button stays "playing"
+    // (the system shows buffering) — it must NOT flip to paused like a user pause.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
+
+  @Test @MainActor
+  func fallsBackToPaused_onError() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.playWhenReady = true
+    c.transition(.trackLoading) // active + intent → playing
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.transition(.errorOccurred(.playbackFailed))
+
+    // On a terminal error the button must fall back to paused — never stick on
+    // "playing" — even though playWhenReady is still true.
+    #expect(eh.updateNowPlayingStateCalls.last == false)
+  }
+
+  @Test @MainActor
+  func change_doesNotStampNowPlayingState_fromTerminalState() {
+    let (c, eh, _, _) = makeCoordinator()
+    c.transition(.errorOccurred(.playbackFailed)) // terminal, not playbackActive
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    c.playWhenReady = true
+
+    // Must NOT stamp .playing from a terminal state: the reload may fail and no
+    // active transition would repair a premature "playing", leaving a phantom
+    // playing button. The reload's own .loading/.ready transition stamps it.
+    #expect(eh.updateNowPlayingStateCalls.isEmpty)
+  }
+
+  @Test @MainActor
+  func selectingNewTrack_whileStopped_showsPlayingInNowPlaying() {
+    let (c, eh, _, _) = makeCoordinator()
+    let tracks = [
+      Track(id: "t1", src: "https://example.com/1.mp3", title: "Track 1"),
+      Track(id: "t2", src: "https://example.com/2.mp3", title: "Track 2"),
+    ]
+    c.setQueue(tracks) // loads t1 (playWhenReady defaults to false)
+    c.transition(.stopped) // user had paused/stopped
+    eh.updateNowPlayingStateCalls.removeAll()
+
+    // User selects another track, intending to play it.
+    try? c.skipTo(1, playWhenReady: true)
+
+    // Audio will play, so the now-playing button must end up "playing" — not the
+    // stale "paused" captured before playWhenReady flipped true during loading.
+    #expect(eh.updateNowPlayingStateCalls.last == true)
+  }
+}
+
+// MARK: - Sleep Timer Fade
+
+@Suite("PlaybackCoordinator - sleep timer fade")
+struct SleepTimerFadeTests {
+  @Test @MainActor
+  func fadeStart_capturesPreFadeVolume() {
+    let (c, eh, _, st) = makeCoordinator()
+    eh.volume = 0.8
+
+    st.onFadeStart?(10)
+
+    #expect(c.volumeFader.isActive)
+    #expect(c.volumeFader.originalVolume == 0.8)
+  }
+
+  @Test @MainActor
+  func completion_pausesThenRestoresPreFadeVolume() {
+    let (c, eh, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+    c.transition(.bufferingSufficient) // leave .loading so pause reaches the player
+    eh.pausePlaybackCallCount = 0
+
+    st.onFadeStart?(10)
+    eh.volume = 0.2 // mid-fade
+
+    st.onComplete?()
+
+    #expect(c.playWhenReady == false)
+    #expect(eh.pausePlaybackCallCount == 1)
+    #expect(eh.volume == 1.0)
+    #expect(!c.volumeFader.isActive)
+  }
+
+  @Test @MainActor
+  func completion_withoutFade_justPauses() {
+    let (c, eh, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+    eh.volume = 0.8
+
+    st.onComplete?()
+
+    #expect(c.playWhenReady == false)
+    #expect(eh.volume == 0.8) // untouched — no fade ran
+  }
+
+  @Test @MainActor
+  func fadeCancel_restoresPreFadeVolume() {
+    let (c, eh, _, st) = makeCoordinator()
+    eh.volume = 0.8
+
+    st.onFadeStart?(10)
+    eh.volume = 0.1 // mid-fade
+
+    st.onFadeCancel?()
+
+    #expect(eh.volume == 0.8)
+    #expect(!c.volumeFader.isActive)
+  }
+
+  @Test @MainActor
+  func pauseDuringFade_clearsSleepTimer() {
+    let (c, _, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+
+    st.onFadeStart?(10)
+    c.pause()
+
+    #expect(st.clearCallCount == 1)
+  }
+
+  @Test @MainActor
+  func pauseWithoutFade_leavesSleepTimerAlone() {
+    let (c, _, _, st) = makeCoordinator()
+    loadTrack(c)
+    c.playWhenReady = true
+
+    c.pause()
+
+    #expect(st.clearCallCount == 0)
+  }
+}
+
+// MARK: - Audio Session Interruptions
+
+/// Helper to drive the coordinator into an actively-playing state.
+@MainActor
+private func startPlaying(_ c: PlaybackCoordinator, _ eh: MockPlaybackEffectHandler) {
+  loadTrack(c)
+  eh.hasLoadedAsset = true
+  c.playWhenReady = true
+  c.transition(.avPlayerPlaying)
+}
+
+@Suite("PlaybackCoordinator - audio session interruptions")
+struct InterruptionTests {
+  @Test @MainActor
+  func began_whilePlaying_pauses() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    #expect(c.state == .playing)
+
+    c.handleInterruptionBegan()
+
+    #expect(c.state == .paused)
+    #expect(c.playWhenReady == false)
+  }
+
+  /// The bug: iOS pauses the AVPlayer first; that `timeControlStatus → paused`
+  /// is swallowed because `playWhenReady` is still true, so the state stays
+  /// `.playing`. The interruption handler must force the pause regardless.
+  @Test @MainActor
+  func began_afterSwallowedTimeControlPause_stillPauses() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.avPlayerDidChangeTimeControlStatus(.paused)
+    #expect(c.state == .playing) // swallowed — the symptom this fix targets
+
+    c.handleInterruptionBegan()
+
+    #expect(c.state == .paused)
+  }
+
+  @Test @MainActor
+  func ended_shouldResume_resumesWhenWasPlaying() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    #expect(c.playWhenReady == false)
+    eh.startPlaybackCallCount = 0
+
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == true)
+    #expect(eh.startPlaybackCallCount == 1)
+  }
+
+  @Test @MainActor
+  func ended_withoutShouldResume_staysPaused() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.handleInterruptionEnded(shouldResume: false)
+
+    #expect(c.state == .paused)
+    #expect(c.playWhenReady == false)
+  }
+
+  /// The host gates audio-session reactivation at interruption-end on this:
+  /// paused-when-interrupted must not grab a non-mixable session for a resume
+  /// that never happens.
+  @Test @MainActor
+  func willResumeAfterInterruption_reflectsCapturedIntent() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.handleInterruptionBegan()
+    #expect(c.willResumeAfterInterruption == true)
+
+    c.handleInterruptionEnded(shouldResume: false)
+    #expect(c.willResumeAfterInterruption == false)
+
+    // Paused before the interruption: no resume will happen.
+    c.handleInterruptionBegan()
+    #expect(c.willResumeAfterInterruption == false)
+  }
+
+  /// iOS can deliver nested interruptions (Siri, then a phone call) — a second
+  /// .began must not re-capture the now-false intent and wipe the resume flag.
+  @Test @MainActor
+  func doubleBegan_preservesResumeIntent() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+
+    c.handleInterruptionBegan()
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == true)
+  }
+
+  /// Unplugging headphones during a call is a deliberate output loss — the
+  /// call ending must not blast playback from the built-in speaker.
+  @Test @MainActor
+  func routeDisconnectDuringInterruption_cancelsResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.handleRouteDisconnected()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false)
+  }
+
+  /// An explicit stop during the interruption is a terminal command — the
+  /// interruption-end must not restart playback over it.
+  @Test @MainActor
+  func stopDuringInterruption_isNotOverriddenByResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.stop()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.state == .stopped)
+    #expect(c.playWhenReady == false)
+    #expect(eh.reloadTrackCalls.isEmpty)
+  }
+
+  /// A user who plays then pauses during the interruption has taken ownership
+  /// of the intent — interruption-end must not override their pause.
+  @Test @MainActor
+  func userPauseDuringInterruption_overridesResume() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+
+    c.play()
+    c.pause()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false)
+  }
+
+  @Test @MainActor
+  func ended_doesNotResume_whenNotPlayingBeforeInterruption() {
+    let (c, eh, _, _) = makeCoordinator()
+    startPlaying(c, eh)
+    // Pause before the interruption (e.g. user already paused).
+    c.playWhenReady = false
+    c.avPlayerDidChangeTimeControlStatus(.paused)
+    #expect(c.state == .paused)
+
+    c.handleInterruptionBegan()
+    c.handleInterruptionEnded(shouldResume: true)
+
+    #expect(c.playWhenReady == false) // never resumes — we weren't playing
+  }
+}
+
+// MARK: - Skip availability freshness
+
+/// tracks.didSet pushes availability mid-mutation, while currentIndex and the
+/// shuffle order are still stale — the coordinator must re-push after the
+/// mutation settles or the lock-screen buttons keep the wrong state.
+@Suite("PlaybackCoordinator - skip availability after mutations")
+struct MutationSkipAvailabilityTests {
+  @Test @MainActor
+  func move_pushesPostMutationAvailability() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue([
+      Track(id: "a", src: "https://example.com/a.mp3", title: "A"),
+      Track(id: "b", src: "https://example.com/b.mp3", title: "B"),
+    ])
+    eh.updateSkipAvailabilityCalls.removeAll()
+
+    try c.move(fromIndex: 0, toIndex: 1)
+
+    // Current track is now last: nothing to skip to.
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+  }
+
+  @Test @MainActor
+  func removeBeforeCurrent_pushesPostMutationAvailability() throws {
+    let (c, eh, _, _) = makeCoordinator()
+    c.setQueue(
+      [
+        Track(id: "a", src: "https://example.com/a.mp3", title: "A"),
+        Track(id: "b", src: "https://example.com/b.mp3", title: "B"),
+        Track(id: "c", src: "https://example.com/c.mp3", title: "C"),
+      ], initialIndex: 2,
+    )
+    eh.updateSkipAvailabilityCalls.removeAll()
+
+    try c.remove(0)
+
+    // Current settled at index 1 of 2: previous available, next not.
+    #expect(eh.updateSkipAvailabilityCalls.last?.canNext == false)
+    #expect(eh.updateSkipAvailabilityCalls.last?.canPrevious == true)
+  }
+}
+
+// MARK: - Stop cancels pending retry
+
+@Suite("PlaybackCoordinator - stop cancels pending retry")
+struct StopCancelsRetryTests {
+  /// A retry surviving stop() gives up later (intent dropped) and surfaced
+  /// .errorOccurred over the deliberate stop — the UI showed an error seconds
+  /// after the user stopped.
+  @Test @MainActor
+  func stop_cancelsPendingRetry_andStaysSilent() async {
+    let retryHandler = MockRetryHandling()
+    retryHandler.isRetryableResult = true
+    retryHandler.attemptRetryResult = false
+    retryHandler.attemptRetryDelayNs = 50_000_000
+    let errorHandler = PlaybackErrorHandler(retryHandler: retryHandler)
+    let coordinator = PlaybackCoordinator(
+      errorHandler: errorHandler, sleepTimerManager: MockSleepTimerHandling(),
+    )
+    let effectHandler = MockPlaybackEffectHandler()
+    let callbacks = MockPlaybackCoordinatorCallbacks()
+    coordinator.effectHandler = effectHandler
+    coordinator.callbacks = callbacks
+
+    errorHandler.handleError(URLError(.timedOut), context: .playback)
+    let task = errorHandler.pendingRetryTask
+    #expect(task != nil)
+
+    coordinator.stop()
+    #expect(errorHandler.pendingRetryTask == nil)
+
+    await task?.value
+    #expect(coordinator.state == .stopped)
+    #expect(callbacks.errorEvents.isEmpty)
+  }
+}
+
+// MARK: - Audio session release (#60)
+
+@Suite("PlaybackCoordinator - audio session release")
+struct SessionReleaseTests {
+  @Test @MainActor
+  func deliberatePause_requestsRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    callbacks.releaseSessionCount = 0
+    c.pause()
+    #expect(callbacks.releaseSessionCount == 1)
+  }
+
+  @Test @MainActor
+  func play_doesNotRequestRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    #expect(callbacks.releaseSessionCount == 0)
+  }
+
+  @Test @MainActor
+  func interruptionBegan_doesNotRequestRelease() {
+    // A phone call pauses (playWhenReady → false) but is meant to resume, so the session must be
+    // held — the exact race the intent-gating design exists to avoid.
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    callbacks.releaseSessionCount = 0
+    c.handleInterruptionBegan()
+    #expect(callbacks.releaseSessionCount == 0)
+  }
+
+  @Test @MainActor
+  func interruptionEnded_withResume_doesNotRequestRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    callbacks.releaseSessionCount = 0
+    c.handleInterruptionEnded(shouldResume: true)
+    #expect(callbacks.releaseSessionCount == 0)
+  }
+
+  @Test @MainActor
+  func interruptionEnded_withoutResume_requestsRelease() {
+    let (c, eh, callbacks, _) = makeCoordinator()
+    startPlaying(c, eh)
+    c.handleInterruptionBegan()
+    callbacks.releaseSessionCount = 0
+    c.handleInterruptionEnded(shouldResume: false)
+    #expect(callbacks.releaseSessionCount == 1)
   }
 }

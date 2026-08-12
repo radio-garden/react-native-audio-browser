@@ -1,9 +1,25 @@
 import Foundation
-import NitroModules
+#if canImport(NitroModules)
+  import NitroModules
+#endif
 import os.log
+
+/// Abstracts `NetworkMonitor` so tests can fake connectivity. Sendable because
+/// the network-restore race reads it from a task-group child.
+protocol NetworkStatusProviding: AnyObject, Sendable {
+  var isOnline: Bool { get }
+}
 
 /// Manages retry logic for media load errors with exponential backoff.
 /// Similar to Android's RetryLoadErrorHandlingPolicy.
+///
+/// Two duration budgets apply, chosen by whether the current load has ever
+/// produced audio (`hasPlayed`): a short first-connect budget — a stream that
+/// fails before ever playing is usually dead, and the listener is actively
+/// waiting for a verdict — and the full recovery budget for a stream that
+/// played and then dropped (tunnels, handovers, encoder restarts). The short
+/// budget counts only online time, so a station tapped in a tunnel still gets
+/// its online seconds once connectivity returns.
 ///
 /// When a network monitor is provided and the device is offline, the retry will
 /// trigger immediately when connectivity is restored instead of waiting for the
@@ -19,21 +35,45 @@ class RetryManager {
   }
 
   private static let defaultMaxRetryDurationMs: Double = 120_000 // 2 minutes
+  private static let defaultFirstConnectMaxRetryDurationMs: Double = 12_000
 
   /// Prevents surprising playback resumption after long periods offline.
   private var maxRetryDuration: TimeInterval = defaultMaxRetryDurationMs / 1000
+
+  /// Bounds retries of a load that has never produced audio, while online.
+  private var firstConnectMaxRetryDuration: TimeInterval = defaultFirstConnectMaxRetryDurationMs / 1000
+
+  /// True once the current load has produced audio; selects between the
+  /// first-connect and recovery budgets. Set by the owner when audio starts and
+  /// cleared by the owner when a new track loads — deliberately NOT cleared in
+  /// `reset()`, which the healthy-playback budget refill also calls mid-play.
+  var hasPlayed = false
+
+  /// First failure observed while online for the current load — the
+  /// first-connect budget's clock. Never set while offline, and wiped by any
+  /// offline observation, so an offline stretch cannot burn the short budget:
+  /// the clock restarts at the next failure observed online.
+  private var firstOnlineRetryTime: Date?
 
   private var policy: Policy = .disabled
   private var attemptCount = 0
   private var firstRetryTime: Date?
 
-  weak var networkMonitor: NetworkMonitor?
-  private var isWaitingForNetwork = false
+  weak var networkMonitor: (any NetworkStatusProviding)?
+  /// True only while a scheduled retry is parked polling for connectivity to return. Exposed so the
+  /// player's stall-driven reconnect can defer to an in-flight error retry (which owns its own
+  /// reload) and avoid a double load.
+  private(set) var isWaitingForNetwork = false
   /// Invalidates in-flight retries when reset() is called (e.g. track change)
   private var generation: Int = 0
 
   var shouldRetry: () -> Bool = { true }
   var onRetry: ((Bool) -> Void)?
+
+  var isEnabled: Bool {
+    if case .disabled = policy { return false }
+    return true
+  }
 
   // MARK: - Configuration
 
@@ -41,6 +81,7 @@ class RetryManager {
     guard let config else {
       policy = .disabled
       maxRetryDuration = Self.defaultMaxRetryDurationMs / 1000
+      firstConnectMaxRetryDuration = Self.defaultFirstConnectMaxRetryDurationMs / 1000
       logger.debug("Retry policy: disabled")
       return
     }
@@ -49,13 +90,22 @@ class RetryManager {
     case let .first(enabled):
       policy = enabled ? .infinite : .disabled
       maxRetryDuration = Self.defaultMaxRetryDurationMs / 1000
+      firstConnectMaxRetryDuration = Self.defaultFirstConnectMaxRetryDurationMs / 1000
       logger.debug("Retry policy: \(enabled ? "infinite" : "disabled")")
     case let .second(retryConfig):
-      let maxRetries = Int(retryConfig.maxRetries)
-      policy = .limited(maxRetries: maxRetries)
       let durationMs = retryConfig.maxRetryDurationMs ?? Self.defaultMaxRetryDurationMs
       maxRetryDuration = durationMs / 1000
-      logger.debug("Retry policy: limited to \(maxRetries) retries, max duration \(self.maxRetryDuration)s")
+      let firstConnectMs = retryConfig.firstConnectMaxRetryDurationMs
+        ?? Self.defaultFirstConnectMaxRetryDurationMs
+      firstConnectMaxRetryDuration = firstConnectMs / 1000
+      // No attempt cap = retry indefinitely, bounded only by the duration.
+      if let maxRetries = retryConfig.maxRetries.map(Int.init) {
+        policy = .limited(maxRetries: maxRetries)
+        logger.debug("Retry policy: limited to \(maxRetries) retries, max duration \(self.maxRetryDuration)s")
+      } else {
+        policy = .infinite
+        logger.debug("Retry policy: infinite, max duration \(self.maxRetryDuration)s")
+      }
     }
   }
 
@@ -103,9 +153,28 @@ class RetryManager {
   func reset() {
     attemptCount = 0
     firstRetryTime = nil
+    firstOnlineRetryTime = nil
     isWaitingForNetwork = false
     generation += 1
     logger.debug("Retry count reset (generation \(self.generation))")
+  }
+
+  private var isOnline: Bool { networkMonitor?.isOnline ?? true }
+
+  /// A description of the exhausted budget, or nil while budget remains.
+  /// The recovery duration bounds everything (including offline waits); the
+  /// first-connect duration additionally bounds never-played loads, online only.
+  private func exhaustedBudget() -> String? {
+    let now = Date()
+    if let start = firstRetryTime, now.timeIntervalSince(start) >= maxRetryDuration {
+      return "max retry duration (\(maxRetryDuration)s)"
+    }
+    if !hasPlayed, isOnline, let start = firstOnlineRetryTime,
+       now.timeIntervalSince(start) >= firstConnectMaxRetryDuration
+    {
+      return "first-connect retry duration (\(firstConnectMaxRetryDuration)s)"
+    }
+    return nil
   }
 
   func attemptRetry(startFromCurrentTime: Bool) async -> Bool {
@@ -129,14 +198,20 @@ class RetryManager {
     if firstRetryTime == nil {
       firstRetryTime = Date()
     }
+    if isOnline {
+      if firstOnlineRetryTime == nil { firstOnlineRetryTime = Date() }
+    } else {
+      // Seeing the device offline restarts the first-connect clock: a station
+      // that lost connectivity mid-budget gets its full online seconds again
+      // after restoration, instead of the offline gap counting against it.
+      firstOnlineRetryTime = nil
+    }
 
-    // Check if we've been retrying too long (prevents surprising resumption after long offline periods)
-    if let startTime = firstRetryTime {
-      let elapsed = Date().timeIntervalSince(startTime)
-      if elapsed >= maxRetryDuration {
-        logger.info("Max retry duration (\(self.maxRetryDuration)s) exceeded after \(elapsed)s, giving up")
-        return false
-      }
+    // Check if we've been retrying too long (prevents surprising resumption
+    // after long offline periods, and grants dead-on-arrival streams a fast verdict)
+    if let budget = exhaustedBudget() {
+      logger.info("\(budget) exceeded, giving up")
+      return false
     }
 
     let delaySeconds = calculateDelaySeconds()
@@ -157,18 +232,20 @@ class RetryManager {
       return false
     }
 
+    // Cancellation can land after the sleep completed — without this check a
+    // replaced retry (new error right as the old backoff expires) still fires
+    // onRetry, double-reloading and burning the attempt count twice.
+    guard !Task.isCancelled else { return false }
+
     guard shouldRetry() else {
       logger.debug("shouldRetry returned false after delay, cancelling retry")
       return false
     }
 
-    // Re-check duration — we may have waited a long time for network restoration
-    if let startTime = firstRetryTime {
-      let elapsed = Date().timeIntervalSince(startTime)
-      if elapsed >= maxRetryDuration {
-        logger.info("Max retry duration (\(self.maxRetryDuration)s) exceeded after waiting (\(elapsed)s), giving up")
-        return false
-      }
+    // Re-check the budgets — we may have waited a long time for network restoration
+    if let budget = exhaustedBudget() {
+      logger.info("\(budget) exceeded after waiting, giving up")
+      return false
     }
 
     attemptCount += 1
@@ -218,7 +295,7 @@ class RetryManager {
 
   /// Returns false when network is restored, true if cancelled.
   @MainActor
-  private func waitForNetworkRestored(monitor: NetworkMonitor) async -> Bool {
+  private func waitForNetworkRestored(monitor: any NetworkStatusProviding) async -> Bool {
     if monitor.isOnline {
       return false
     }

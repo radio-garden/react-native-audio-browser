@@ -1,5 +1,9 @@
 import type { NavigationErrorType } from '../../features'
-import type { Track, ResolvedTrack } from '../../types'
+import type {
+  Track,
+  ResolvedTrack,
+  TransformableRequestConfig
+} from '../../types'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
@@ -8,6 +12,8 @@ import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
+import { assertBrowsePageShape } from './assertBrowsePageShape'
+import { parseSearchResponse } from './parseSearchResponse'
 
 /**
  * Manages browser navigation, route resolution, and content loading.
@@ -20,6 +26,19 @@ export class BrowserManager {
   private _content: ResolvedTrack | undefined
   private _configuration: NativeBrowserConfiguration = {}
   private router = new SimpleRouter()
+
+  // Layer resolution: any present request/browse resolver is invoked once per
+  // content generation, and the resolved TransformableRequestConfig is cached
+  // and fed into applyLayers in place of the static request/browse config. The
+  // generation bumps on config-set and on invalidateAllContent().
+  private _layerGeneration = 0
+  private _resolvedLayerGeneration = -1
+  private _resolvedRequest?: TransformableRequestConfig
+  private _resolvedBrowse?: TransformableRequestConfig
+  // Dedupes concurrent resolution within a generation (config-set triggers an
+  // initial navigate that can overlap with an explicit navigatePath), so a
+  // resolver is invoked exactly once per generation even under concurrency.
+  private _layerResolution?: { generation: number; promise: Promise<void> }
 
   // Navigation tracking to prevent race conditions (matches Android's @Volatile currentNavigationId)
   private currentNavigationId = 0
@@ -132,13 +151,9 @@ export class BrowserManager {
    */
   set configuration(value: NativeBrowserConfiguration) {
     this._configuration = value
+    this._layerGeneration += 1
     this.navigationErrorManager.clearNavigationError()
     this.navigationErrorManager.setFormatCallback(value.formatNavigationError)
-
-    // Update HTTP client base config
-    if (value.request) {
-      this.httpClient.setBaseRequestConfig(value.request)
-    }
 
     // Determine initial path
     let initialPath = value.path
@@ -186,6 +201,18 @@ export class BrowserManager {
   notifyContentChanged(path: string): void {
     if (this._path === path) {
       void this.navigate(path)
+    }
+  }
+
+  /**
+   * Invalidates all browse content. Web shows a single path at a time and
+   * doesn't keep a content cache, so this just re-navigates the current path
+   * to re-resolve it.
+   */
+  invalidateAllContent(): void {
+    this._layerGeneration += 1
+    if (this._path) {
+      void this.navigate(this._path)
     }
   }
 
@@ -319,21 +346,20 @@ export class BrowserManager {
 
     // Handle callback-based search
     if (searchRoute.searchCallback) {
-      searchResults = await searchRoute.searchCallback({ query })
+      searchResults = await searchRoute.searchCallback({
+        query,
+        reference: 'unknown'
+      })
     }
-    // Handle request config-based search
+    // Handle request config-based search via the shared layered fetch.
     else if (searchRoute.searchConfig) {
-      const searchQueryParams: Record<string, string> = { q: query }
-      const requestConfig = this.httpClient.mergeRequestConfig(
-        searchRoute.searchConfig,
-        {
-          query: searchQueryParams
-        }
-      )
-
       try {
-        const response = await this.httpClient.executeRequest(requestConfig)
-        searchResults = Array.isArray(response) ? (response as Track[]) : []
+        searchResults = await this.fetchSearchResults(
+          searchRoute.searchConfig,
+          {
+            q: query
+          }
+        )
       } catch (error) {
         console.error('Search failed:', error)
         return undefined
@@ -361,11 +387,16 @@ export class BrowserManager {
     if (!artworkConfig) {
       return content
     }
+    // The shared request layer applies to artwork too — use the resolved layer
+    // (resolver result or static config) so a resolver-only config still works.
+    await this.ensureLayersResolved()
+    const requestConfig = this._resolvedRequest
 
     // Transform parent artwork
     const parentArtworkSource =
       await RequestConfigBuilder.resolveArtworkSourceAsync(
         content,
+        requestConfig,
         artworkConfig
       )
 
@@ -377,6 +408,7 @@ export class BrowserManager {
           const artworkSource =
             await RequestConfigBuilder.resolveArtworkSourceAsync(
               track,
+              requestConfig,
               artworkConfig
             )
           if (artworkSource && !track.artworkSource) {
@@ -446,15 +478,16 @@ export class BrowserManager {
       return route.browseStatic
     }
 
-    // Handle request config-based route
+    // Handle request config-based route via the layered request → browse → route
+    // chain (matches native's resolveRouteEntry → resolveFromConfig).
     if (route.browseConfig) {
-      const requestConfig = this.httpClient.mergeRequestConfig(
-        route.browseConfig,
-        { path }
-      )
       try {
-        const response = await this.httpClient.executeRequest(requestConfig)
-        return response as ResolvedTrack
+        return await this.resolveFromConfig(
+          this._configuration.browse,
+          route.browseConfig,
+          path,
+          routeParams
+        )
       } catch (error: unknown) {
         console.error(`Failed to resolve ${errorContext}:`, error)
         this.handleNavigationError(error, path)
@@ -466,56 +499,176 @@ export class BrowserManager {
   }
 
   /**
+   * Ensures the request/browse layer configs are resolved for the current
+   * generation. Any present resolver is invoked once per generation and the
+   * result cached; a static config (no resolver) passes through unchanged.
+   */
+  private async ensureLayersResolved(): Promise<void> {
+    if (this._resolvedLayerGeneration === this._layerGeneration) return
+    // Reuse an in-flight resolution for the same generation so concurrent
+    // navigations (e.g. config-set's initial navigate overlapping an explicit
+    // navigatePath) don't each invoke the resolver.
+    if (this._layerResolution?.generation === this._layerGeneration) {
+      return this._layerResolution.promise
+    }
+    const generation = this._layerGeneration
+    const promise = (async () => {
+      const cfg = this._configuration
+      const resolvedRequest = cfg.requestResolver
+        ? await cfg.requestResolver()
+        : cfg.request
+      const resolvedBrowse = cfg.browseResolver
+        ? await cfg.browseResolver()
+        : cfg.browse
+      // Only commit if no newer generation superseded us mid-resolution.
+      if (this._layerGeneration === generation) {
+        this._resolvedRequest = resolvedRequest
+        this._resolvedBrowse = resolvedBrowse
+        this._resolvedLayerGeneration = generation
+      }
+    })().catch((err) => {
+      // A failed resolution must not wedge the generation — clear the in-flight
+      // cache so the next navigation retries (e.g. a transient async resolver error).
+      if (this._layerResolution?.generation === generation) {
+        this._layerResolution = undefined
+      }
+      throw err
+    })
+    this._layerResolution = { generation, promise }
+    return promise
+  }
+
+  /**
+   * Resolves content from the layered request config chain:
+   * `request` (shared) → `kindConfig` (browse/search) → `routeConfig` (route).
+   * Each layer's transform receives the previous layer's output; a layer with no
+   * transform merges its static fields. `routeConfig` is undefined for the
+   * implicit browse default; `kindConfig` is undefined for search.
+   *
+   * Mirrors native's BrowserManager.resolveFromConfig.
+   */
+  private async resolveFromConfig(
+    kindConfig: TransformableRequestConfig | undefined,
+    routeConfig: TransformableRequestConfig | undefined,
+    path: string,
+    params: Record<string, string>
+  ): Promise<ResolvedTrack> {
+    await this.ensureLayersResolved()
+    const merged = await RequestConfigBuilder.applyLayers(
+      { path },
+      [
+        this._resolvedRequest,
+        // fall back to the route's kind config when no browse layer is configured
+        this._resolvedBrowse ?? kindConfig,
+        routeConfig
+      ],
+      params
+    )
+    const response = await this.httpClient.executeRequest(merged)
+    return assertBrowsePageShape(response, path)
+  }
+
+  /**
+   * Fetches search results from a `searchConfig` via the layered
+   * `request → search` chain (search is its own kind — no browse layer). The
+   * query params are seeded on the base so they survive both the static merge
+   * and a search `transform`. Shared by `resolveSearchContent` (navigating to a
+   * search path) and `SearchManager` (the voice/`onSearch` API), so the ladder
+   * isn't duplicated. Errors propagate to the caller.
+   */
+  async fetchSearchResults(
+    searchConfig: TransformableRequestConfig,
+    queryParams: Record<string, string>
+  ): Promise<Track[]> {
+    await this.ensureLayersResolved()
+    const merged = await RequestConfigBuilder.applyLayers(
+      { path: searchConfig.path, query: queryParams },
+      [this._resolvedRequest, searchConfig],
+      queryParams
+    )
+    const response = await this.httpClient.executeRequest(merged)
+    return parseSearchResponse(response)
+  }
+
+  /**
    * Resolves content for a specific path using configured routes.
    */
   private async resolveContent(
     path: string
   ): Promise<ResolvedTrack | undefined> {
     const routes = this._configuration.routes
-    if (!routes || routes.length === 0) {
-      return undefined
-    }
 
-    // Convert routes array to record for SimpleRouter
-    const routePatterns: Record<
-      string,
-      {
-        browseCallback?: (typeof routes)[0]['browseCallback']
-        browseConfig?: (typeof routes)[0]['browseConfig']
-        browseStatic?: (typeof routes)[0]['browseStatic']
+    if (routes && routes.length > 0) {
+      // Convert routes array to record for SimpleRouter
+      const routePatterns: Record<
+        string,
+        {
+          browseCallback?: (typeof routes)[0]['browseCallback']
+          browseConfig?: (typeof routes)[0]['browseConfig']
+          browseStatic?: (typeof routes)[0]['browseStatic']
+        }
+      > = {}
+
+      for (const route of routes) {
+        // Skip special routes
+        if (route.path.startsWith('__')) continue
+
+        routePatterns[route.path] = {
+          browseCallback: route.browseCallback,
+          browseConfig: route.browseConfig,
+          browseStatic: route.browseStatic
+        }
       }
-    > = {}
 
-    for (const route of routes) {
-      // Skip special routes
-      if (route.path.startsWith('__')) continue
-
-      routePatterns[route.path] = {
-        browseCallback: route.browseCallback,
-        browseConfig: route.browseConfig,
-        browseStatic: route.browseStatic
+      // Try to match route
+      const match = this.router.findBestMatch(path, routePatterns)
+      if (match) {
+        const [matchedPattern, routeMatch] = match
+        const matchedRoute = routes.find((r) => r.path === matchedPattern)
+        if (matchedRoute) {
+          return this.resolveRouteContent(
+            matchedRoute,
+            path,
+            routeMatch.params,
+            'Route'
+          )
+        }
       }
-    }
 
-    // Try to match route
-    const match = this.router.findBestMatch(path, routePatterns)
-    if (match) {
-      const [matchedPattern, routeMatch] = match
-      const matchedRoute = routes.find((r) => r.path === matchedPattern)
-      if (matchedRoute) {
+      // Fall back to the custom __default__ route ('*') if configured
+      const defaultRoute = routes.find((r) => r.path === '__default__')
+      if (defaultRoute) {
         return this.resolveRouteContent(
-          matchedRoute,
+          defaultRoute,
           path,
-          routeMatch.params,
-          'Route'
+          { path },
+          'Default route'
         )
       }
     }
 
-    // Fall back to __default__ route
-    const defaultRoute = routes.find((r) => r.path === '__default__')
-    if (defaultRoute) {
-      return this.resolveRouteContent(defaultRoute, path, {}, 'Default route')
+    // Implicit default — no matching route, fetch the path via the layered
+    // request → browse chain. Only attempt this when there's something to fetch
+    // (a configured request or browse layer, static or resolver); otherwise
+    // there's no content.
+    if (
+      this._configuration.request ||
+      this._configuration.requestResolver ||
+      this._configuration.browse ||
+      this._configuration.browseResolver
+    ) {
+      try {
+        return await this.resolveFromConfig(
+          this._configuration.browse,
+          undefined,
+          path,
+          { path }
+        )
+      } catch (error: unknown) {
+        console.error('Failed to resolve default browse content:', error)
+        this.handleNavigationError(error, path)
+        return undefined
+      }
     }
 
     return undefined
@@ -535,10 +688,26 @@ export class BrowserManager {
     const result = await this.resolveRouteContent(tabsRoute, '/', {}, 'Tabs')
     const tabs = result?.children ?? []
 
-    // Transform artwork URLs on tabs
-    return RequestConfigBuilder.transformTracksArtwork(
-      tabs,
-      this._configuration.artwork
+    // Transform artwork URLs on tabs via the async resolver so the shared
+    // request layer (incl. its transform) applies, matching content/search.
+    const artworkConfig = this._configuration.artwork
+    if (!artworkConfig) return tabs
+    // Resolved request layer (resolver or static), matching content/search.
+    await this.ensureLayersResolved()
+    const requestConfig = this._resolvedRequest
+    return Promise.all(
+      tabs.map(async (track) => {
+        const artworkSource =
+          await RequestConfigBuilder.resolveArtworkSourceAsync(
+            track,
+            requestConfig,
+            artworkConfig
+          )
+        if (artworkSource && !track.artworkSource) {
+          return { ...track, artworkSource }
+        }
+        return track
+      })
     )
   }
 

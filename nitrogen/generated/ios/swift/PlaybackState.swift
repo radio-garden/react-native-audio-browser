@@ -19,6 +19,8 @@ public extension PlaybackState {
     switch string {
       case "none":
         self = .none
+      case "buffering":
+        self = .buffering
       case "ready":
         self = .ready
       case "playing":
@@ -29,8 +31,6 @@ public extension PlaybackState {
         self = .stopped
       case "loading":
         self = .loading
-      case "buffering":
-        self = .buffering
       case "error":
         self = .error
       case "ended":
@@ -47,6 +47,8 @@ public extension PlaybackState {
     switch self {
       case .none:
         return "none"
+      case .buffering:
+        return "buffering"
       case .ready:
         return "ready"
       case .playing:
@@ -57,8 +59,6 @@ public extension PlaybackState {
         return "stopped"
       case .loading:
         return "loading"
-      case .buffering:
-        return "buffering"
       case .error:
         return "error"
       case .ended:

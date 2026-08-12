@@ -2,48 +2,28 @@ import AVFoundation
 import Foundation
 
 /**
- Observes time-based player events and invokes callbacks passed at initialization.
+ Observes the player's audio-start boundary and invokes the callback passed at initialization.
  */
 @MainActor class PlayerTimeObserver {
   /// The time to use as start boundary time. Cannot be zero.
   private static let startBoundaryTime: CMTime = .init(value: 1, timescale: 1000)
 
   var boundaryTimeStartObserverToken: Any?
-  var periodicTimeObserverToken: Any?
 
   weak var avPlayer: AVPlayer? {
     willSet {
       unregisterForBoundaryTimeEvents()
-      unregisterForPeriodicEvents()
-    }
-  }
-
-  /// The frequency to receive periodic time events.
-  /// Setting this to a new value will trigger a re-registering to the periodic events of the
-  /// player.
-  var periodicObserverTimeInterval: CMTime {
-    didSet {
-      if oldValue != periodicObserverTimeInterval {
-        registerForPeriodicTimeEvents()
-      }
     }
   }
 
   private let onAudioDidStart: @MainActor () -> Void
-  private let onSecondElapsed: @MainActor (Double) -> Void
 
-  init(
-    periodicObserverTimeInterval: CMTime,
-    onAudioDidStart: @escaping @MainActor () -> Void,
-    onSecondElapsed: @escaping @MainActor (Double) -> Void,
-  ) {
-    self.periodicObserverTimeInterval = periodicObserverTimeInterval
+  init(onAudioDidStart: @escaping @MainActor () -> Void) {
     self.onAudioDidStart = onAudioDidStart
-    self.onSecondElapsed = onSecondElapsed
   }
 
   /**
-   Will register for the AVPlayer BoundaryTimeEvents, to trigger start and complete events.
+   Will register for the AVPlayer BoundaryTimeEvents, to trigger the audio-start event.
    */
   func registerForBoundaryTimeEvents() {
     guard let avPlayer else {
@@ -71,35 +51,5 @@ import Foundation
     else { return }
     avPlayer.removeTimeObserver(boundaryTimeStartObserverToken)
     self.boundaryTimeStartObserverToken = nil
-  }
-
-  /**
-   Start observing periodic time events.
-   Will trigger unregisterForPeriodicEvents() first to avoid multiple subscriptions.
-   */
-  func registerForPeriodicTimeEvents() {
-    guard let avPlayer else {
-      return
-    }
-    unregisterForPeriodicEvents()
-    periodicTimeObserverToken = avPlayer.addPeriodicTimeObserver(
-      forInterval: periodicObserverTimeInterval,
-      queue: nil,
-      using: { [weak self] time in
-        let seconds = time.seconds
-        Task { @MainActor in self?.onSecondElapsed(seconds) }
-      },
-    )
-  }
-
-  /**
-   Unregister for periodic events.
-   */
-  func unregisterForPeriodicEvents() {
-    guard let avPlayer, let periodicTimeObserverToken else {
-      return
-    }
-    avPlayer.removeTimeObserver(periodicTimeObserverToken)
-    self.periodicTimeObserverToken = nil
   }
 }

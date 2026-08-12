@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(NitroModules)
-import NitroModules
+  import NitroModules
 #endif
 
 /// Manages the playing state (playing and buffering flags) and notifies when they change.
@@ -16,7 +16,8 @@ class PlayingStateManager {
   }
 
   func update(playWhenReady: Bool, state: PlaybackState) {
-    let newPlaying = playWhenReady && !(state == .error || state == .ended || state == .none)
+    let newPlaying =
+      playWhenReady && !(state == .error || state == .ended || state == .none || state == .stopped)
     let newBuffering = playWhenReady && (state == .loading || state == .buffering)
 
     if newPlaying != playing || newBuffering != buffering {

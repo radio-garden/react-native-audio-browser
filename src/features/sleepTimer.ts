@@ -40,11 +40,30 @@ export function getSleepTimer(): SleepTimer {
 }
 
 /**
- * Sets a sleep timer to stop playback after the specified duration.
- * @param seconds - Number of seconds until playback stops
+ * Options for `setSleepTimer`.
  */
-export function setSleepTimer(seconds: number): void {
-  nativeBrowser.setSleepTimer(seconds)
+export type SleepTimerOptions = {
+  /**
+   * Seconds over which to fade the volume out before the timer completes.
+   * The fade ends exactly at the deadline (clamped to the timer duration if
+   * longer), playback is paused, and the pre-fade volume is restored so the
+   * next play starts at normal loudness. During the fade the timer wins:
+   * skips and seeks play into the remaining ramp; only pausing or
+   * clearing/replacing the timer cancels it.
+   */
+  fadeDuration?: number
+}
+
+/**
+ * Sets a sleep timer to pause playback after the specified duration.
+ * @param seconds - Number of seconds until playback pauses
+ * @param options - Optional fade-out configuration
+ */
+export function setSleepTimer(
+  seconds: number,
+  options?: SleepTimerOptions
+): void {
+  nativeBrowser.setSleepTimer(seconds, options?.fadeDuration)
 }
 
 /**
@@ -67,7 +86,7 @@ export function clearSleepTimer(): boolean {
 /**
  * Subscribes to sleep timer changes.
  * @param callback - Called when the sleep timer state changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
   (cb) => (nativeBrowser.onSleepTimerChanged = cb)

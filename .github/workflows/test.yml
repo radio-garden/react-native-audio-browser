@@ -45,7 +45,7 @@ jobs:
         run: yarn test
 
   ios:
-    name: iOS (swift test)
+    name: iOS (format, swift test)
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
@@ -54,13 +54,32 @@ jobs:
         with:
           xcode-version: 26.2
 
+      # Pinned, not `brew install`: formatter output shifts between releases, so
+      # an unpinned version turns an unrelated PR into a repo-wide reformat. Keep
+      # in step with whatever contributors run locally.
+      - name: Install SwiftFormat
+        env:
+          SWIFTFORMAT_VERSION: 0.58.2
+        run: |
+          curl -fsSL -o swiftformat.zip \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip"
+          unzip -q swiftformat.zip
+          chmod +x swiftformat
+          sudo mv swiftformat /usr/local/bin/swiftformat
+          swiftformat --version
+
+      # `yarn ci:format:ios` locally; called directly here because this job has
+      # no Node/Corepack setup.
+      - name: Format
+        run: swiftformat --lint ios
+
       # No --disable-sandbox here: CI runners are unsandboxed, so SwiftPM can
       # shell out to sandbox-exec to compile the manifest. See CLAUDE.md.
       - name: Test
         run: swift test
 
   android:
-    name: Android (unit tests)
+    name: Android (format, unit tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -93,6 +112,12 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('apps/example-native/android/**/*.gradle*') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
+      # ktfmt's version is pinned by the Gradle plugin in android/build.gradle,
+      # so this needs no separate install.
+      - name: Format
+        working-directory: apps/example-native/android
+        run: ./gradlew :react-native-audio-browser:formatCheck --no-daemon --build-cache
 
       - name: Test
         working-directory: apps/example-native/android

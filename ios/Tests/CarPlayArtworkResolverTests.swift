@@ -13,7 +13,7 @@ struct SFSymbolTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .sfSymbol(artwork: "sf:heart.fill", width: 40, height: 40))
   }
@@ -25,7 +25,7 @@ struct SFSymbolTests {
       artworkCarPlayTinted: nil,
       targetWidth: 24, targetHeight: 24,
       displayScale: 3.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .sfSymbol(artwork: "sf:play.circle?bg=#000&fg=#fff", width: 24, height: 24))
   }
@@ -41,7 +41,7 @@ struct SFSymbolTests {
       urlResolver: { _, _ in
         resolverCalled = true
         return ArtworkResolvedImage(uri: "https://example.com/img.jpg", headers: nil)
-      }
+      },
     )
     #expect(action == .sfSymbol(artwork: "sf:music.note", width: 40, height: 40))
     #expect(!resolverCalled)
@@ -54,7 +54,7 @@ struct SFSymbolTests {
       artworkCarPlayTinted: nil,
       targetWidth: 20, targetHeight: 20,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .sfSymbol(artwork: "sf:star.fill", width: 20, height: 20))
   }
@@ -71,7 +71,7 @@ struct NoArtworkTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .none)
   }
@@ -83,7 +83,7 @@ struct NoArtworkTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: { _, _ in nil }
+      urlResolver: { _, _ in nil },
     )
     #expect(action == .none)
   }
@@ -105,15 +105,15 @@ struct URLResolutionTests {
         #expect(pixelHeight == 80)
         return ArtworkResolvedImage(
           uri: "https://cdn.example.com/art_80x80.jpg",
-          headers: ["Authorization": "Bearer token"]
+          headers: ["Authorization": "Bearer token"],
         )
-      }
+      },
     )
     #expect(action == .fetch(
       uri: "https://cdn.example.com/art_80x80.jpg",
       headers: ["Authorization": "Bearer token"],
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -126,13 +126,13 @@ struct URLResolutionTests {
       displayScale: 3.0,
       urlResolver: { _, _ in
         ArtworkResolvedImage(uri: "https://cdn.example.com/resized.jpg", headers: nil)
-      }
+      },
     )
     #expect(action == .fetch(
       uri: "https://cdn.example.com/resized.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -143,13 +143,13 @@ struct URLResolutionTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: { _, _ in nil }
+      urlResolver: { _, _ in nil },
     )
     #expect(action == .fetch(
       uri: "https://example.com/art.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -163,14 +163,14 @@ struct URLResolutionTests {
       urlResolver: { _, _ in
         // Return an invalid URI that URL(string:) would reject
         ArtworkResolvedImage(uri: "", headers: nil)
-      }
+      },
     )
     // Should fall back to direct artwork URL
     #expect(action == .fetch(
       uri: "https://example.com/fallback.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -187,7 +187,7 @@ struct URLResolutionTests {
         receivedWidth = w
         receivedHeight = h
         return ArtworkResolvedImage(uri: "https://cdn.example.com/art.jpg", headers: nil)
-      }
+      },
     )
     #expect(receivedWidth == 125) // 50 * 2.5
     #expect(receivedHeight == 75) // 30 * 2.5
@@ -205,13 +205,13 @@ struct DirectFallbackTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/artwork.png",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -222,13 +222,13 @@ struct DirectFallbackTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/source.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -239,13 +239,13 @@ struct DirectFallbackTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/artwork.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -256,7 +256,7 @@ struct DirectFallbackTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .none)
   }
@@ -273,13 +273,13 @@ struct SVGDetectionTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/icon.svg",
       headers: nil,
       shouldTint: false,
-      isSvg: true
+      isSvg: true,
     ))
   }
 
@@ -290,13 +290,13 @@ struct SVGDetectionTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/icon.SVG",
       headers: nil,
       shouldTint: false,
-      isSvg: true
+      isSvg: true,
     ))
   }
 
@@ -309,13 +309,13 @@ struct SVGDetectionTests {
       displayScale: 2.0,
       urlResolver: { _, _ in
         ArtworkResolvedImage(uri: "https://cdn.example.com/icon.svg", headers: nil)
-      }
+      },
     )
     #expect(action == .fetch(
       uri: "https://cdn.example.com/icon.svg",
       headers: nil,
       shouldTint: false,
-      isSvg: true
+      isSvg: true,
     ))
   }
 
@@ -326,13 +326,13 @@ struct SVGDetectionTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/photo.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 }
@@ -348,13 +348,13 @@ struct TintingTests {
       artworkCarPlayTinted: true,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/icon.png",
       headers: nil,
       shouldTint: true,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -365,13 +365,13 @@ struct TintingTests {
       artworkCarPlayTinted: false,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/photo.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -382,13 +382,13 @@ struct TintingTests {
       artworkCarPlayTinted: nil,
       targetWidth: 40, targetHeight: 40,
       displayScale: 2.0,
-      urlResolver: nil
+      urlResolver: nil,
     )
     #expect(action == .fetch(
       uri: "https://example.com/photo.jpg",
       headers: nil,
       shouldTint: false,
-      isSvg: false
+      isSvg: false,
     ))
   }
 
@@ -401,13 +401,13 @@ struct TintingTests {
       displayScale: 2.0,
       urlResolver: { _, _ in
         ArtworkResolvedImage(uri: "https://cdn.example.com/icon.png", headers: nil)
-      }
+      },
     )
     #expect(action == .fetch(
       uri: "https://cdn.example.com/icon.png",
       headers: nil,
       shouldTint: true,
-      isSvg: false
+      isSvg: false,
     ))
   }
 }

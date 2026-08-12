@@ -9,8 +9,8 @@ import android.media.AudioManager
 /**
  * Monitors system volume state and notifies listeners when the volume changes.
  *
- * Uses a BroadcastReceiver for VOLUME_CHANGED_ACTION to detect volume changes.
- * Reports volume as a normalized value between 0.0 and 1.0.
+ * Uses a BroadcastReceiver for VOLUME_CHANGED_ACTION to detect volume changes. Reports volume as a
+ * normalized value between 0.0 and 1.0.
  */
 class SystemVolumeMonitor(private val context: Context) {
   private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -35,16 +35,30 @@ class SystemVolumeMonitor(private val context: Context) {
     return if (maxVolume > 0) currentVolume.toDouble() / maxVolume else 0.0
   }
 
-  private val volumeReceiver = object : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-      val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
-      if (streamType == AudioManager.STREAM_MUSIC) {
-        onVolumeChanged?.invoke(getCurrentVolume())
+  private val volumeReceiver =
+    object : BroadcastReceiver() {
+      override fun onReceive(context: Context, intent: Intent) {
+        val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+        if (streamType == AudioManager.STREAM_MUSIC) {
+          onVolumeChanged?.invoke(getCurrentVolume())
+        }
       }
     }
-  }
 
   init {
     context.registerReceiver(volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+  }
+
+  /**
+   * Unregisters the volume receiver. Must be called when the owner is torn down
+   * (AudioBrowser.dispose) — without it the receiver leaks across JS runtime reloads. Safe to call
+   * more than once.
+   */
+  fun destroy() {
+    try {
+      context.unregisterReceiver(volumeReceiver)
+    } catch (_: IllegalArgumentException) {
+      // already unregistered
+    }
   }
 }

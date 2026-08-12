@@ -32,13 +32,49 @@ export function getNowPlaying(): NowPlayingMetadata | undefined {
   return nativeBrowser.getNowPlaying() ?? undefined
 }
 
+/**
+ * Temporarily replaces now-playing fields for `durationMs`, then reverts to
+ * the live metadata. The flash outranks the now-playing formatter and the
+ * `updateNowPlaying` override while active (live metadata can't stomp it),
+ * and the revert runs on a native timer — JS timers pause in a backgrounded
+ * host (the lock screen case) — so it fires reliably. A track change clears
+ * the flash early; repeated calls restart the window.
+ *
+ * The feedback channel for refused remote commands: external surfaces have
+ * no toast primitive, so a transient metadata swap is the only way to talk
+ * to the user there.
+ *
+ * @example
+ * ```ts
+ * // A radio product with an hourly skip allowance:
+ * handleRemoteNext(() => {
+ *   if (skipsRemaining() > 0) skipToNext()
+ *   else flashNowPlaying({ artist: 'Skip limit reached' }, 3000)
+ * })
+ * ```
+ */
+export function flashNowPlaying(
+  update: NowPlayingUpdate,
+  durationMs: number
+): void {
+  nativeBrowser.flashNowPlaying(update, durationMs)
+}
+
+/**
+ * Clears an active flash immediately, reverting to the live metadata.
+ * No-op when no flash is active.
+ */
+export function clearNowPlayingFlash(): void {
+  nativeBrowser.clearNowPlayingFlash()
+}
+
 // MARK: - Event Callbacks
 
 /**
  * Subscribes to now playing metadata change events.
  * Fires when updateNowPlaying is called or when the track changes.
  * @param callback - Called when now playing metadata changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onNowPlayingChanged =
   NativeUpdatedValue.emitterize<NowPlayingMetadata>(
