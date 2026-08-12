@@ -1,3 +1,16 @@
+## [0.2.0-next.11](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.10...v0.2.0-next.11) (2026-08-12)
+
+### Bug Fixes
+
+* **android:** bound the chase itself, not just each fetch ([6aa429e](https://github.com/radio-garden/react-native-audio-browser/commit/6aa429e5dc20e501a07b5083da15e3200ecfd3a8))
+* **android:** chase AIA only when the chain is actually missing something ([d9d7d6d](https://github.com/radio-garden/react-native-audio-browser/commit/d9d7d6d15ecae8df7d8903efbd560c20142a2fc6))
+* **android:** put the whole AIA fetch inside one budget ([d138342](https://github.com/radio-garden/react-native-audio-browser/commit/d13834204abe63744df242a882e3fe4a190a7624))
+* **android:** thread the chase deadline through every fetch ([8ca7e48](https://github.com/radio-garden/react-native-audio-browser/commit/8ca7e48328934f89f90c604ab86c8f82dc39ca0f))
+
+### Documentation
+
+* **android:** state what installing AIA chasing opts you into ([0ec97b4](https://github.com/radio-garden/react-native-audio-browser/commit/0ec97b47e6a1078410429e3651a8678e180189a9))
+
 ## [0.2.0-next.10](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.9...v0.2.0-next.10) (2026-08-12)
 
 ### Bug Fixes
