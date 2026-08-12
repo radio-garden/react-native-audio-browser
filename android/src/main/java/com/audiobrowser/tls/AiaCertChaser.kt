@@ -15,10 +15,16 @@ import javax.security.auth.x500.X500Principal
  * found".
  */
 object AiaCertChaser {
-  /** How many CA-Issuers URLs from one certificate are worth trying. */
+  /** How many distinct CA-Issuers URLs from one certificate are worth trying. */
   const val MAX_URLS_PER_CERT = 3
 
-  /** Wall-clock ceiling on one chain-completion attempt, across all of its fetches. */
+  /**
+   * Wall-clock ceiling on one chain-completion attempt, across all of its fetches. The deadline it
+   * implies is handed to every fetch, whose connects, handshakes, reads and redirects are all
+   * clipped to the time remaining — so the whole walk ends at the deadline. The one thing it cannot
+   * cut short is a DNS lookup already in flight (Java exposes no timeout for resolution), so the
+   * true bound is this budget plus at most one lookup's duration.
+   */
   const val MAX_CHASE_MILLIS = 20_000L
 
   /** Authority Information Access extension. */
@@ -93,15 +99,18 @@ object AiaCertChaser {
    *   any other non-path failure from triggering a chase, and it stops the genuine
    *   missing-intermediate case one hop early, where the chain reaches a root the caller already
    *   trusts. Empty means "unknown", and the walk runs to one of the other stopping conditions.
-   * @param maxUrlsPerCert how many of a certificate's CA-Issuers URLs are tried before giving up on
-   *   it. The extension is authored by the same server that failed validation and nothing limits
-   *   how many URLs it may list — a leaf can carry hundreds — while each one costs a blocking
-   *   connect on the handshake thread. Real CAs publish one.
-   * @param budgetMs wall-clock ceiling on the whole walk, checked before each fetch. Per-fetch
-   *   limits bound one round trip; this bounds their sum, so no arrangement of URLs and hops can
-   *   hold the handshake thread indefinitely.
+   * @param maxUrlsPerCert how many of a certificate's distinct CA-Issuers URLs are tried before
+   *   giving up on it. The extension is authored by the same server that failed validation and
+   *   nothing limits how many URLs it may list — a leaf can carry hundreds — while each one costs a
+   *   blocking connect on the handshake thread. Real CAs publish one. Duplicates are collapsed
+   *   before the cap, so the cap buys distinct hosts, not repeat visits to one dead one.
+   * @param budgetMs wall-clock ceiling on the whole walk. It is checked before each fetch, and the
+   *   deadline it implies is passed to [fetch], which is expected to clip its own connects,
+   *   handshakes, reads and redirects to the time remaining — so the budget bounds the fetches
+   *   themselves, not just how many of them start.
    * @param fetch resolves a CA-Issuers URL to its candidate certificates (e.g. every certificate in
-   *   a PKCS#7 bundle); empty if nothing could be retrieved.
+   *   a PKCS#7 bundle), giving up no later than `deadlineNanos` (absolute, [nowNanos] origin);
+   *   empty if nothing could be retrieved.
    */
   fun completeChain(
     presented: List<X509Certificate>,
@@ -110,7 +119,7 @@ object AiaCertChaser {
     maxUrlsPerCert: Int = MAX_URLS_PER_CERT,
     budgetMs: Long = MAX_CHASE_MILLIS,
     nowNanos: () -> Long = System::nanoTime,
-    fetch: (url: String) -> List<X509Certificate>,
+    fetch: (url: String, deadlineNanos: Long) -> List<X509Certificate>,
   ): List<X509Certificate> {
     if (presented.isEmpty()) return presented
     val chain = presented.toMutableList()
@@ -124,10 +133,11 @@ object AiaCertChaser {
       val issuer =
         extractCaIssuerUrls(last)
           .asSequence()
+          .distinct()
           .take(maxUrlsPerCert)
           // Subtraction, not `>`: overflow-safe across nanoTime's arbitrary origin.
           .takeWhile { nowNanos() - deadline < 0 }
-          .flatMap { url -> runCatching { fetch(url) }.getOrElse { emptyList() } }
+          .flatMap { url -> runCatching { fetch(url, deadline) }.getOrElse { emptyList() } }
           .firstOrNull { it.subjectX500Principal == last.issuerX500Principal } ?: break
       if (!seen.add(issuer)) break // cycle guard
       chain.add(issuer)

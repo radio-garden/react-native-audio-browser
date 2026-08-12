@@ -34,8 +34,8 @@ class AiaChasingTrustManagerTest {
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     val delegate = FakeDelegate(trustsChainOfSize = 2)
     val tm =
-      AiaChasingTrustManager(delegate) {
-        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      AiaChasingTrustManager(delegate) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
     // Must not throw: the leaf-only chain is rejected, AIA fills in R13, the [leaf, R13] chain
@@ -49,7 +49,7 @@ class AiaChasingTrustManagerTest {
   fun `rethrows the original failure when no intermediate can be fetched`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val delegate = FakeDelegate(trustsChainOfSize = 2)
-    val tm = AiaChasingTrustManager(delegate) { emptyList() }
+    val tm = AiaChasingTrustManager(delegate) { _, _ -> emptyList() }
 
     assertThrows(CertificateException::class.java) { tm.checkServerTrusted(arrayOf(leaf), "RSA") }
 
@@ -63,7 +63,7 @@ class AiaChasingTrustManagerTest {
     val delegate = FakeDelegate(trustsChainOfSize = 1)
     var fetches = 0
     val tm =
-      AiaChasingTrustManager(delegate) {
+      AiaChasingTrustManager(delegate) { _, _ ->
         fetches++
         emptyList()
       }
@@ -142,7 +142,7 @@ class AiaChasingTrustManagerTest {
       }
     var fetches = 0
     val tm =
-      AiaChasingTrustManager(delegate) {
+      AiaChasingTrustManager(delegate) { _, _ ->
         fetches++
         emptyList()
       }
@@ -162,7 +162,7 @@ class AiaChasingTrustManagerTest {
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     // Trusts no chain of any size, so the retry fails as well.
     val delegate = FakeDelegate(trustsChainOfSize = -1)
-    val tm = AiaChasingTrustManager(delegate) { listOf(r13) }
+    val tm = AiaChasingTrustManager(delegate) { _, _ -> listOf(r13) }
 
     val thrown =
       assertThrows(CertificateException::class.java) { tm.checkServerTrusted(arrayOf(leaf), "RSA") }
@@ -213,7 +213,7 @@ class AiaChasingTrustManagerTest {
 
         override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
       }
-    val tm = AiaChasingExtendedTrustManager(delegate) { emptyList() }
+    val tm = AiaChasingExtendedTrustManager(delegate) { _, _ -> emptyList() }
 
     tm.checkClientTrusted(arrayOf(leaf), "RSA")
     tm.checkClientTrusted(arrayOf(leaf), "RSA", null as Socket?)
@@ -253,8 +253,8 @@ class AiaChasingTrustManagerTest {
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     val delegate = HostAwareDelegate(trustsChainOfSize = 2)
     val tm =
-      AiaChasingExtendedTrustManager(delegate) {
-        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      AiaChasingExtendedTrustManager(delegate) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
     // The method X509TrustManagerExtensions looks up reflectively must exist on the wrapper...
@@ -275,13 +275,71 @@ class AiaChasingTrustManagerTest {
   }
 
   @Test
+  fun `the host-aware signature falls back to the extended overloads when the delegate lacks it`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    // An extended delegate without the Android-specific String-host method, whose two-argument
+    // form refuses outright — the domain-config case. The fallback must route through its
+    // extended overloads, and must report the AIA-completed chain that actually validated.
+    val delegate = FakeDomainConfigDelegate(trustsChainOfSize = 2)
+    val tm =
+      AiaChasingExtendedTrustManager(delegate) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      }
+
+    val accepted = tm.checkServerTrusted(arrayOf(leaf), "RSA", "ca.example")
+
+    assertEquals(listOf(leaf, r13), accepted)
+    assertEquals(listOf(1, 2), delegate.hostnameAwareChecks)
+  }
+
+  /** A host-aware delegate that validates fine but reports an empty accepted chain. */
+  @Suppress("unused")
+  private class SilentHostAwareDelegate(private val trustsChainOfSize: Int) : X509TrustManager {
+    fun checkServerTrusted(
+      chain: Array<X509Certificate>,
+      authType: String,
+      host: String,
+    ): List<X509Certificate> {
+      if (chain.size != trustsChainOfSize) {
+        throw CertificateException("Trust anchor for certification path not found.")
+      }
+      return emptyList()
+    }
+
+    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) =
+      throw CertificateException("the host-aware overload should have been used")
+
+    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) = Unit
+
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+  }
+
+  @Test
+  fun `a delegate reporting an empty accepted chain still yields the chain that validated`() {
+    val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
+    val r13 = CertFixtures.cert("letsencrypt-r13.pem")
+    val delegate = SilentHostAwareDelegate(trustsChainOfSize = 2)
+    val tm =
+      AiaChasingExtendedTrustManager(delegate) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      }
+
+    // An empty list from the delegate on success must not be passed through: the checked chain
+    // is what it accepted, and a pinning consumer given [] would fail a valid connection.
+    val accepted = tm.checkServerTrusted(arrayOf(leaf), "RSA", "ca.example")
+
+    assertEquals(listOf(leaf, r13), accepted)
+  }
+
+  @Test
   fun `forwards to the hostname-aware overload the platform requires`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     val delegate = FakeDomainConfigDelegate(trustsChainOfSize = 2)
     val tm =
-      AiaChasingExtendedTrustManager(delegate) {
-        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      AiaChasingExtendedTrustManager(delegate) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
     // The socket overload must reach the delegate's socket overload. Routing it through the
@@ -297,7 +355,7 @@ class AiaChasingTrustManagerTest {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val delegate = FakeDomainConfigDelegate(trustsChainOfSize = 1)
 
-    AiaChasingExtendedTrustManager(delegate) { emptyList() }
+    AiaChasingExtendedTrustManager(delegate) { _, _ -> emptyList() }
       .checkServerTrusted(arrayOf(leaf), "RSA", null as SSLEngine?)
 
     assertEquals(listOf(1), delegate.hostnameAwareChecks)
@@ -309,8 +367,8 @@ class AiaChasingTrustManagerTest {
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     val delegate = FakeDelegate(trustsChainOfSize = 2)
     val tm =
-      AiaChasingExtendedTrustManager(delegate) {
-        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      AiaChasingExtendedTrustManager(delegate) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
 
     tm.checkServerTrusted(arrayOf(leaf), "RSA", null as Socket?)
@@ -324,7 +382,7 @@ class AiaChasingTrustManagerTest {
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     // Trusts nothing, whatever the chain.
     val delegate = FakeDomainConfigDelegate(trustsChainOfSize = -1)
-    val tm = AiaChasingExtendedTrustManager(delegate) { listOf(r13) }
+    val tm = AiaChasingExtendedTrustManager(delegate) { _, _ -> listOf(r13) }
 
     assertThrows(CertificateException::class.java) {
       tm.checkServerTrusted(arrayOf(leaf), "RSA", null as Socket?)

@@ -113,7 +113,7 @@ class AiaCertChaserTest {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
     val r13 = CertFixtures.cert("letsencrypt-r13.pem")
     // Fetcher knows only the R13 URL (the leaf's AIA pointer); empty for the root URL.
-    val fetch = { url: String ->
+    val fetch = { url: String, _: Long ->
       if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
     }
 
@@ -130,8 +130,8 @@ class AiaCertChaserTest {
 
     // A PKCS#7-style bundle where the genuine issuer is not first must still be selected.
     val completed =
-      AiaCertChaser.completeChain(listOf(leaf)) {
-        if (it == "http://r13.i.lencr.org/") listOf(unrelated, r13) else emptyList()
+      AiaCertChaser.completeChain(listOf(leaf)) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(unrelated, r13) else emptyList()
       }
 
     assertEquals(listOf(leaf, r13), completed)
@@ -143,7 +143,7 @@ class AiaCertChaserTest {
     var fetches = 0
 
     val completed =
-      AiaCertChaser.completeChain(listOf(root)) {
+      AiaCertChaser.completeChain(listOf(root)) { _, _ ->
         fetches++
         emptyList()
       }
@@ -162,9 +162,12 @@ class AiaCertChaserTest {
     // R13's own AIA points at the ISRG root, so without knowing the anchors this walks one hop
     // too far and pays for a second blocking fetch on the ordinary rescue path.
     val completed =
-      AiaCertChaser.completeChain(listOf(leaf), anchorSubjects = setOf(root.subjectX500Principal)) {
-        fetched.add(it)
-        if (it == "http://r13.i.lencr.org/") listOf(r13) else listOf(root)
+      AiaCertChaser.completeChain(
+        listOf(leaf),
+        anchorSubjects = setOf(root.subjectX500Principal),
+      ) { url, _ ->
+        fetched.add(url)
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else listOf(root)
       }
 
     assertEquals(listOf(leaf, r13), completed)
@@ -184,7 +187,7 @@ class AiaCertChaserTest {
       AiaCertChaser.completeChain(
         listOf(leaf, r13),
         anchorSubjects = setOf(root.subjectX500Principal),
-      ) {
+      ) { _, _ ->
         fetches++
         emptyList()
       }
@@ -202,8 +205,8 @@ class AiaCertChaserTest {
     val cert = certWithAia(aiaExtension(manyUrls))
     val fetched = mutableListOf<String>()
 
-    AiaCertChaser.completeChain(listOf(cert)) {
-      fetched.add(it)
+    AiaCertChaser.completeChain(listOf(cert)) { url, _ ->
+      fetched.add(url)
       emptyList()
     }
 
@@ -211,10 +214,27 @@ class AiaCertChaserTest {
   }
 
   @Test
+  fun `duplicate CA-Issuers URLs do not consume the URL cap`() {
+    // 500 copies of one dead URL followed by a distinct one: the cap must buy distinct hosts,
+    // not three visits to the same dead one.
+    val urls = List(500) { "http://ca.example/issuer.crt" } + "http://ca-b.example/issuer.crt"
+    val cert = certWithAia(aiaExtension(urls))
+    val fetched = mutableListOf<String>()
+
+    AiaCertChaser.completeChain(listOf(cert)) { url, _ ->
+      fetched.add(url)
+      emptyList()
+    }
+
+    assertEquals(listOf("http://ca.example/issuer.crt", "http://ca-b.example/issuer.crt"), fetched)
+  }
+
+  @Test
   fun `completeChain stops fetching once its wall-clock budget is spent`() {
     val cert = certWithAia(aiaExtension((1..500).map { "http://ca$it.example/issuer.crt" }))
     var fetches = 0
     var nanos = 0L
+    val deadlines = mutableListOf<Long>()
 
     // Each fetch "takes" 8s against a 20s budget, so the walk must stop after a handful even
     // though the URL cap alone would have allowed more.
@@ -223,20 +243,24 @@ class AiaCertChaserTest {
       maxUrlsPerCert = 500,
       budgetMs = 20_000,
       nowNanos = { nanos },
-    ) {
+    ) { _, deadline ->
       fetches++
+      deadlines.add(deadline)
       nanos += 8_000_000_000
       emptyList()
     }
 
     assertEquals(3, fetches)
+    // Every fetch is handed the same walk-wide deadline, so it can clip its own I/O to it —
+    // the budget bounds the fetches themselves, not just how many of them start.
+    assertEquals(listOf(20_000_000_000L, 20_000_000_000L, 20_000_000_000L), deadlines)
   }
 
   @Test
   fun `completeChain stops when the issuer cannot be fetched`() {
     val leaf = CertFixtures.cert("stationplaylist-leaf.pem")
 
-    val completed = AiaCertChaser.completeChain(listOf(leaf)) { emptyList() }
+    val completed = AiaCertChaser.completeChain(listOf(leaf)) { _, _ -> emptyList() }
 
     assertEquals(listOf(leaf), completed)
   }
@@ -254,8 +278,8 @@ class AiaCertChaserTest {
 
     // After AIA chasing splices in R13, the chain validates to the trusted root.
     val completed =
-      AiaCertChaser.completeChain(listOf(leaf)) {
-        if (it == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
+      AiaCertChaser.completeChain(listOf(leaf)) { url, _ ->
+        if (url == "http://r13.i.lencr.org/") listOf(r13) else emptyList()
       }
     validatePath(completed, root, date) // must not throw
   }

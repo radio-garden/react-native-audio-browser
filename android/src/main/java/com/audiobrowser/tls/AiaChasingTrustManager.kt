@@ -11,8 +11,11 @@ import javax.security.auth.x500.X500Principal
  *
  * Wraps a [delegate] (typically the platform default trust manager). On the happy path the delegate
  * accepts the server-presented chain on the first try and this adds nothing. Only when the delegate
- * rejects the chain *and* the chain is genuinely missing an intermediate does it attempt AIA
- * chasing — and the *completed* chain is still validated by the same delegate against the system
+ * rejects the chain *and* the top of the chain is not already issued by one of the delegate's
+ * anchors does it attempt AIA chasing. That gate is an issuer-name test, not a diagnosis: it rules
+ * out the common non-path failures (an expired leaf, a hostname mismatch on a complete chain), but
+ * a chain topping at a root the device does not carry is still chased whatever its real problem
+ * was. Either way the *completed* chain is still validated by the same delegate against the system
  * trust anchors, so trust can never be weakened: an untrusted root still fails. See
  * [AiaCertChaser].
  *
@@ -21,7 +24,7 @@ import javax.security.auth.x500.X500Principal
  */
 class AiaChasingTrustManager(
   private val delegate: X509TrustManager,
-  private val fetch: (url: String) -> List<X509Certificate>,
+  private val fetch: (url: String, deadlineNanos: Long) -> List<X509Certificate>,
 ) : X509TrustManager {
 
   private val anchorSubjects: Set<X500Principal> by lazy { delegate.anchorSubjects() }
@@ -43,12 +46,13 @@ internal fun X509TrustManager.anchorSubjects(): Set<X500Principal> =
 /**
  * Runs [check], and on rejection retries it once against the AIA-completed chain.
  *
- * Nothing is fetched unless the chain is actually missing an intermediate — see
+ * Nothing is fetched when the presented chain already reaches one of the caller's anchors — see
  * [AiaCertChaser.completeChain]'s `anchorSubjects`. Without that test *every* failed handshake in
  * the process, whatever the cause, would make a blocking outbound request to a host named by the
  * certificate that just failed: an expired certificate, a hostname mismatch and a
  * certificate-transparency refusal all arrive here as a [CertificateException] from a delegate that
- * is perfectly happy with the path.
+ * is perfectly happy with the path. (The test is on issuer names, so a chain topping at an unknown
+ * root is still chased even when its real failure was something else.)
  *
  * The completed chain goes through the same [check], so trust is never weakened: whatever the
  * delegate would have refused, it still refuses.
@@ -56,7 +60,7 @@ internal fun X509TrustManager.anchorSubjects(): Set<X500Principal> =
 internal inline fun withAiaRetry(
   chain: Array<X509Certificate>,
   anchorSubjects: Set<X500Principal>,
-  noinline fetch: (url: String) -> List<X509Certificate>,
+  noinline fetch: (url: String, deadlineNanos: Long) -> List<X509Certificate>,
   check: (Array<X509Certificate>) -> Unit,
 ) {
   try {

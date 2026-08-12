@@ -334,8 +334,16 @@ It is bounded rather than absent:
   even if its real problem is expiry.)
 - the URL is rejected unless it is free of control characters, so it cannot
   inject request lines of its own;
-- a response is capped at 1 MiB and 10 seconds, and at most 5 redirects are
-  followed;
+- at most 3 distinct `CA Issuers` URLs per certificate are tried, a response is
+  capped at 1 MiB, and at most 5 redirects are followed per fetch;
+- the whole chase runs under a single 20-second wall-clock budget — every
+  connect, TLS handshake, read and redirect hop is clipped to the time
+  remaining, and nothing new starts once it has expired. So the worst case a
+  hostile certificate can inflict on one failed handshake is roughly those
+  20 seconds, plus at most one DNS lookup that was already in flight when the
+  budget expired (Java offers no timeout for name resolution, so a lookup can
+  overrun the budget by its own duration — but a new one is never started past
+  it);
 - the cache holds at most 32 entries, and only successful fetches;
 - responses are never trusted on their say-so: a fetched certificate is used
   only if it is the genuine issuer of the certificate below it, and the

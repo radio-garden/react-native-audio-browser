@@ -32,12 +32,13 @@ import javax.security.auth.x500.X500Principal
  * themselves API 24+, so the plain variant on 23 loses nothing.
  *
  * @param delegate the wrapped trust manager, normally the platform default.
- * @param fetch resolves a CA-Issuers URL to its candidate certificates.
+ * @param fetch resolves a CA-Issuers URL to its candidate certificates, giving up no later than
+ *   `deadlineNanos`.
  */
 @RequiresApi(Build.VERSION_CODES.N)
 class AiaChasingExtendedTrustManager(
   private val delegate: X509TrustManager,
-  private val fetch: (url: String) -> List<X509Certificate>,
+  private val fetch: (url: String, deadlineNanos: Long) -> List<X509Certificate>,
 ) : X509ExtendedTrustManager() {
 
   /** The delegate's own extended overloads, when it has them. */
@@ -106,10 +107,16 @@ class AiaChasingExtendedTrustManager(
     withAiaRetry(chain, anchorSubjects, fetch) { checked ->
       // Whichever chain passed is the one to report — reporting the originally presented chain
       // would hand a pinning consumer a chain missing the intermediate that made it validate.
+      // `ifEmpty` guards a delegate that reports nothing on success; the checked chain is what
+      // it accepted, so that is the answer.
       accepted =
-        if (method != null) invokeHostAware(method, checked, authType, host)
+        if (method != null)
+          invokeHostAware(method, checked, authType, host).ifEmpty { checked.toList() }
         else {
-          delegate.checkServerTrusted(checked, authType)
+          // Same routing as the other overloads: an extended delegate may refuse its
+          // two-argument form outright (the domain-config case), so prefer its socket overload.
+          extended?.checkServerTrusted(checked, authType, null as Socket?)
+            ?: delegate.checkServerTrusted(checked, authType)
           checked.toList()
         }
     }

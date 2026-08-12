@@ -22,8 +22,11 @@ import javax.net.ssl.X509TrustManager
  * make an outbound request to a host, port and path of that server's choosing, over cleartext, not
  * subject to the app's `NetworkSecurityPolicy`. That is inherent to AIA chasing and is what
  * browsers and Apple's Secure Transport do too, but it is a real consequence of installing this,
- * and it is bounded rather than absent: see [CachingCertificateFetcher] for the limits, and note
- * that the fetch only happens when the chain is genuinely short of an intermediate.
+ * and it is bounded rather than absent: see [CachingCertificateFetcher] for the per-fetch limits
+ * and [AiaCertChaser.MAX_CHASE_MILLIS] for the wall-clock ceiling on the whole chase. The fetch is
+ * skipped when the chain already reaches one of the system anchors — an issuer-name test, so it
+ * spares the common expired-leaf and hostname-mismatch failures, but a chain topping at a root the
+ * device does not carry is still chased whatever its real problem was.
  *
  * Installing them as a process default (e.g.
  * `HttpsURLConnection.setDefaultSSLSocketFactory(AiaTls.socketFactory())`) applies that to every
@@ -49,7 +52,7 @@ object AiaTls {
    */
   fun trustManager(): X509TrustManager {
     val fetcher = CachingCertificateFetcher()
-    val fetch = { url: String -> fetcher.fetch(url) }
+    val fetch = { url: String, deadlineNanos: Long -> fetcher.fetch(url, deadlineNanos) }
     val system = systemTrustManager()
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       AiaChasingExtendedTrustManager(system, fetch)
