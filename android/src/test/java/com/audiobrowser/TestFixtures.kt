@@ -6,6 +6,8 @@ import com.margelo.nitro.audiobrowser.ImageQueryParams
 import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
+import com.margelo.nitro.audiobrowser.NativeRouteEntry
+import com.margelo.nitro.audiobrowser.ResolvedTrack
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 
@@ -139,6 +141,56 @@ object TestFixtures {
       groupTitle = null,
       live = null,
       imageRow = null,
+    )
+
+  /** A container [ResolvedTrack] — what a browse route hands back for a path. */
+  fun resolvedTrack(
+    url: String = "/container",
+    title: String = "Container",
+    children: Array<Track>? = null,
+    imageRow: Array<ImageRowItem>? = null,
+  ) =
+    ResolvedTrack(
+      url = url,
+      children = children,
+      carPlaySiriListButton = null,
+      id = null,
+      src = null,
+      artwork = null,
+      artworkSource = null,
+      request = null,
+      artworkCarPlayTinted = null,
+      title = title,
+      subtitle = null,
+      artist = null,
+      albumUrl = null,
+      album = null,
+      description = null,
+      genre = null,
+      duration = null,
+      style = null,
+      childrenStyle = null,
+      favorited = null,
+      groupTitle = null,
+      live = null,
+      imageRow = imageRow,
+    )
+
+  /**
+   * A route serving [browseStatic] verbatim. `browseStatic` is the only one of the three browse
+   * arms (callback > config > static) that needs neither the JNI bridge nor HTTP, so it is how a
+   * unit test gives [com.audiobrowser.browser.BrowserManager] page content to resolve.
+   */
+  fun staticRoute(path: String, browseStatic: ResolvedTrack) =
+    NativeRouteEntry(
+      path = path,
+      browseCallback = null,
+      browseConfig = null,
+      browseStatic = browseStatic,
+      searchCallback = null,
+      searchConfig = null,
+      media = null,
+      artwork = null,
     )
 
   fun artworkConfig(
