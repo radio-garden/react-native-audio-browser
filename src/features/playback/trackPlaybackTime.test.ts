@@ -13,11 +13,25 @@ vi.mock('../queue/activeTrack', () => ({
   onActiveTrackChanged: { addListener: vi.fn(() => () => {}) }
 }))
 
-import { trackPlaybackTime, __emitTickForTests } from './trackPlaybackTime'
+import { trackPlaybackTime } from './trackPlaybackTime'
 
 beforeEach(() => {
   nativeMock.setPlaybackIntervalEnabled.mockClear()
 })
+
+/**
+ * Drives the fan-out through the same slot the native side does: `install()`
+ * assigns `onPlaybackInterval`, so calling it here also asserts that wiring
+ * exists — a dedicated test-only export would skip it.
+ */
+function tick(times = 1) {
+  for (let i = 0; i < times; i++) {
+    if (!nativeMock.onPlaybackInterval) {
+      throw new Error('trackPlaybackTime never installed onPlaybackInterval')
+    }
+    nativeMock.onPlaybackInterval()
+  }
+}
 
 describe('trackPlaybackTime', () => {
   it('enables native tick on first subscriber, disables on last', () => {
@@ -38,17 +52,17 @@ describe('trackPlaybackTime', () => {
       (e) => calls.push({ total: e.total, sinceLast: e.sinceLast }),
       3
     )
-    __emitTickForTests(2)
+    tick(2)
     expect(calls).toEqual([])
-    __emitTickForTests(1) // total now 3 → fires
+    tick(1) // total now 3 → fires
     expect(calls).toEqual([{ total: 3, sinceLast: 3 }])
-    __emitTickForTests(3) // total now 6 → fires again
+    tick(3) // total now 6 → fires again
     expect(calls).toEqual([
       { total: 3, sinceLast: 3 },
       { total: 6, sinceLast: 3 }
     ])
     cancel()
-    __emitTickForTests(3)
+    tick(3)
     expect(calls).toHaveLength(2) // cancelled
   })
 
@@ -57,7 +71,7 @@ describe('trackPlaybackTime', () => {
     const slow: number[] = []
     const cancelFast = trackPlaybackTime((e) => fast.push(e.total), 1)
     const cancelSlow = trackPlaybackTime((e) => slow.push(e.total), 2)
-    __emitTickForTests(2)
+    tick(2)
     expect(fast).toEqual([1, 2])
     expect(slow).toEqual([2])
     cancelFast()

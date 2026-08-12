@@ -99,8 +99,3 @@ export function trackPlaybackTime(
     if (handles.size === 0) nativeBrowser.setPlaybackIntervalEnabled(false)
   }
 }
-
-/** @internal test hook — drives the fan-out without a native tick. */
-export function __emitTickForTests(ticks = 1) {
-  for (let i = 0; i < ticks; i++) onTick()
-}

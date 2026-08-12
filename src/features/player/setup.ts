@@ -11,7 +11,7 @@ import type {
   UpdateOptions
 } from './options'
 import { nativeBrowser } from '../../native'
-import { validateIOSUpdateOptions } from './options'
+import { validateIOSUpdateOptions } from './validateOptions'
 
 /**
  * Parameters passed to the {@link FormatNowPlayingCallback}.

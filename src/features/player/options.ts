@@ -1,6 +1,7 @@
 import type { FavoriteConfig } from '../../types'
 import type { CarPlayNowPlayingButton } from '../../types/browser'
 import { nativeBrowser } from '../../native'
+import { validateIOSUpdateOptions } from './validateOptions'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
 import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
 
@@ -523,25 +524,6 @@ export interface NativeUpdateOptions {
 }
 
 // MARK: - Functions
-
-const MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5
-
-/**
- * Warns when more CarPlay now-playing buttons are configured than CarPlay renders.
- * Shared by {@link updateOptions} and `setupPlayer` (both can carry `ios` options).
- *
- * @internal Validation helper, not public API — `stripInternal` removes it from
- * the published types and typedoc hides it from the docs.
- */
-export function validateIOSUpdateOptions(ios?: IOSUpdateOptions): void {
-  const buttons = ios?.carPlayNowPlayingButtons
-  if (buttons && buttons.length > MAX_CARPLAY_NOW_PLAYING_BUTTONS) {
-    console.warn(
-      `[react-native-audio-browser] ${buttons.length} CarPlay now-playing ` +
-        `buttons configured; CarPlay shows at most ${MAX_CARPLAY_NOW_PLAYING_BUTTONS}.`
-    )
-  }
-}
 
 /**
  * Updates the configuration for the components.
