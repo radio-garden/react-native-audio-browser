@@ -62,6 +62,7 @@ class CachingCertificateFetcher(
 
   private fun download(url: String, redirectsLeft: Int = MAX_REDIRECTS): ByteArray? =
     try {
+      require(isSafeUrl(url)) { "AIA URL contains characters that are not valid in a URL" }
       val parsed = URL(url)
       when (parsed.protocol) {
         "http" -> downloadCleartext(parsed, redirectsLeft)
@@ -125,15 +126,43 @@ class CachingCertificateFetcher(
   companion object {
     private const val MAX_REDIRECTS = 5
 
-    /** Ceiling on a single AIA response, headers included. */
+    /**
+     * Whether [url] is free of characters that have no business in a URL.
+     *
+     * The cleartext fetch writes the path into a request line on a raw socket, and the URL is an
+     * IA5String copied verbatim out of a certificate a hostile server presented. `java.net.URL`
+     * preserves control characters — `URL("http://host:6379/\r\nSET foo bar")` parses to that host
+     * and port with the CRLF intact in `file` — so without this check a certificate could inject
+     * request lines of its own, to any host and port the device can reach. Space is excluded too:
+     * it would split the request line's target from its HTTP version.
+     */
+    fun isSafeUrl(url: String): Boolean = url.none { it.code <= 0x20 || it.code == 0x7F }
+
+    /** Ceiling on a single AIA response body. */
     const val MAX_RESPONSE_BYTES = 1 shl 20 // 1 MiB
 
+    /** Ceiling on the wall-clock time spent reading one AIA response. */
+    const val MAX_RESPONSE_MILLIS = 10_000L
+
     /**
-     * Reads [input] to EOF, or returns null once it exceeds [limit] bytes. Null rather than a
-     * truncated buffer: a cut-off certificate is not parseable anyway, and "too big" is a failed
-     * fetch, which the caller already knows how to treat as "no AIA".
+     * Reads [input] to EOF, or returns null once it exceeds [limit] bytes or [budgetMs] of
+     * wall-clock time. Null rather than a truncated buffer: a cut-off certificate is not parseable
+     * anyway, and "too big" or "too slow" is a failed fetch, which the caller already knows how to
+     * treat as "no AIA".
+     *
+     * The byte cap alone would not bound the time. The socket's timeout is per-read, so a server
+     * returning one byte just inside it resets the clock on every iteration and holds the handshake
+     * thread for as long as it likes — a slow-drip stall in place of the unbounded buffer. Both
+     * limits are needed, and the deadline is checked against [nowNanos] (injectable so a test need
+     * not actually wait).
      */
-    fun readCapped(input: InputStream, limit: Int = MAX_RESPONSE_BYTES): ByteArray? {
+    fun readCapped(
+      input: InputStream,
+      limit: Int = MAX_RESPONSE_BYTES,
+      budgetMs: Long = MAX_RESPONSE_MILLIS,
+      nowNanos: () -> Long = System::nanoTime,
+    ): ByteArray? {
+      val deadline = nowNanos() + budgetMs * 1_000_000
       val out = ByteArrayOutputStream()
       val chunk = ByteArray(8 * 1024)
       while (true) {
@@ -141,6 +170,8 @@ class CachingCertificateFetcher(
         if (read < 0) return out.toByteArray()
         if (out.size() + read > limit) return null
         out.write(chunk, 0, read)
+        // Subtraction, not `>`: overflow-safe across nanoTime's arbitrary origin.
+        if (nowNanos() - deadline >= 0) return null
       }
     }
 

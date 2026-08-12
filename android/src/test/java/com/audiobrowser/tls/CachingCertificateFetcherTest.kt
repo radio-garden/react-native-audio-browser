@@ -77,6 +77,27 @@ class CachingCertificateFetcherTest {
 
   // -- response cap (the AIA URL, so the host serving it, comes from the presented cert) --
 
+  // -- URL validation (the AIA URL is attacker-supplied text from the presented cert) --
+
+  @Test
+  fun `accepts the URL form CAs actually serve`() {
+    assertTrue(CachingCertificateFetcher.isSafeUrl("http://r13.i.lencr.org/"))
+    assertTrue(CachingCertificateFetcher.isSafeUrl("http://ca.example:8080/issuer.crt?v=2"))
+  }
+
+  @Test
+  fun `rejects a URL carrying CRLF, which would inject request lines`() {
+    // java.net.URL keeps the CRLF in `file`, and the cleartext fetch writes `file` straight
+    // into "GET $path HTTP/1.0\r\n" on a raw socket.
+    assertTrue(!CachingCertificateFetcher.isSafeUrl("http://127.0.0.1:6379/\r\nSET foo bar\r\n"))
+    assertTrue(!CachingCertificateFetcher.isSafeUrl("http://ca.example/a\nX-Injected: 1"))
+  }
+
+  @Test
+  fun `rejects a URL carrying a space, which would split the request line`() {
+    assertTrue(!CachingCertificateFetcher.isSafeUrl("http://ca.example/a b"))
+  }
+
   @Test
   fun `reads a response that fits within the cap`() {
     val body = ByteArray(64) { it.toByte() }
@@ -106,5 +127,32 @@ class CachingCertificateFetcherTest {
       }
 
     assertNull(CachingCertificateFetcher.readCapped(endless, limit = 1 shl 16))
+  }
+
+  @Test
+  fun `a slow drip is cut off by the deadline, not left to exhaust the byte cap`() {
+    // One byte per read, each one landing just inside the socket's read timeout: the byte cap
+    // alone would let this run for a million reads. The clock advances 1s per read, so the
+    // 10s budget must end it after ~10 — far short of the 1 MiB cap.
+    var reads = 0
+    val drip =
+      object : InputStream() {
+        override fun read() = 0
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+          reads++
+          return 1
+        }
+      }
+    var nanos = 0L
+
+    val result =
+      CachingCertificateFetcher.readCapped(drip, budgetMs = 10_000) {
+        nanos += 1_000_000_000
+        nanos
+      }
+
+    assertNull(result)
+    assertTrue("gave up after $reads reads", reads < 20)
   }
 }
