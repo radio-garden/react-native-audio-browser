@@ -1,5 +1,6 @@
 package com.audiobrowser.http
 
+import com.audiobrowser.BuildConfig
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -27,13 +28,29 @@ class HttpClient {
     isLenient = true
   }
 
-  private val loggingInterceptor =
+  /**
+   * Full request/response logging, for debug builds only.
+   *
+   * Timber is exposed as `api`, so whatever this logs reaches the host app's tree — a Crashlytics
+   * or Sentry breadcrumb tree included. That means credentials attached by the request-transform
+   * layer and every response body, so the interceptor is not installed in release at all: `BODY`
+   * also buffers and stringifies each response whether or not anything reads the log.
+   *
+   * The redactions apply in debug too. Logcat is shared in bug reports and screen shares.
+   */
+  private fun loggingInterceptor() =
     HttpLoggingInterceptor { message -> Timber.d(message) }
-      .apply { level = HttpLoggingInterceptor.Level.BODY }
+      .apply {
+        level = HttpLoggingInterceptor.Level.BODY
+        redactHeader("Authorization")
+        redactHeader("Proxy-Authorization")
+        redactHeader("Cookie")
+        redactHeader("Set-Cookie")
+      }
 
   private val client =
     OkHttpClient.Builder()
-      .addInterceptor(loggingInterceptor)
+      .apply { if (BuildConfig.DEBUG) addInterceptor(loggingInterceptor()) }
       .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
       .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
       .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
