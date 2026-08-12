@@ -45,7 +45,10 @@ jobs:
         run: yarn test
 
   ios:
-    name: iOS (format, swift test)
+    # These three job names are the required status check contexts on main's
+    # ruleset. Renaming one leaves its context permanently pending and blocks
+    # every merge — put detail in step names instead.
+    name: iOS (swift test)
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
@@ -79,7 +82,7 @@ jobs:
         run: swift test
 
   android:
-    name: Android (format, unit tests)
+    name: Android (unit tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
