@@ -813,13 +813,13 @@ struct ComputedPropertyTests {
     let q = QueueManager()
     q.setQueue(tracks("a", "b", "c", "d"))
     q.shuffleEnabled = true
-    let nextFromProp = q.nextTracks.map(\.id)
+    let nextFromProp = q.nextTracks.map { $0.id! }
     // Navigate forward only as many times as nextTracks reports
     // (nextTracks does not include wrapped tracks)
     var nextFromNav: [String] = []
     for _ in 0 ..< nextFromProp.count {
       _ = q.next()
-      nextFromNav.append(q.currentTrack!.id)
+      nextFromNav.append(q.currentTrack!.id!)
     }
     #expect(nextFromProp == nextFromNav)
   }
@@ -832,12 +832,12 @@ struct ComputedPropertyTests {
     for _ in 0 ..< 3 {
       _ = q.next()
     }
-    let prevFromProp = q.previousTracks.map(\.id)
+    let prevFromProp = q.previousTracks.map { $0.id! }
     // Navigate backward the same number of times
     var prevFromNav: [String] = []
     for _ in 0 ..< prevFromProp.count {
       _ = q.previous()
-      prevFromNav.insert(q.currentTrack!.id, at: 0)
+      prevFromNav.insert(q.currentTrack!.id!, at: 0)
     }
     #expect(prevFromProp == prevFromNav)
   }

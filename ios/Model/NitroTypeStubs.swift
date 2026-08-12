@@ -5,6 +5,12 @@
   /// These stubs declare `Equatable` for test ergonomics — the generated
   /// Nitro types do NOT. Shared `ios/` sources must not rely on conformances
   /// that exist only here: `swift test` compiles, the app build breaks.
+  ///
+  /// Property names and types ARE checked against `nitrogen/generated/ios/swift`
+  /// by `src/nitro-stub-drift.test.ts`, which runs in the JS CI job — neither
+  /// native job can see both files at once. Declaring fewer properties than the
+  /// real type is fine and deliberate; spelling one differently is what that
+  /// test catches. Conformances and default values are still on you.
 
   struct ArtworkVariants: Equatable {
     var light: String
@@ -23,7 +29,7 @@
   }
 
   struct Track: Equatable {
-    var id: String
+    var id: String?
     var url: String?
     var src: String?
     var request: TrackRequest?
@@ -63,9 +69,19 @@
     }
   }
 
+  enum HttpMethod {
+    case get
+    case post
+    case put
+    case patch
+    case delete
+    case head
+    case options
+  }
+
   struct ImageSource: Equatable {
     var uri: String
-    var method: String?
+    var method: HttpMethod?
     var headers: [String: String]?
     var body: String?
   }
