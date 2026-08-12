@@ -173,7 +173,6 @@ ios/
 │   └── HttpClient.swift              # URLSession wrapper (JSON decoding with detailed errors)
 ├── Model/
 │   ├── TrackPlayerError.swift        # PlaybackError, QueueError
-│   ├── MediaURL.swift                # URL parsing utilities
 │   ├── RemoteCommand.swift           # Remote command enum with config
 │   ├── SourceType.swift              # file vs stream detection
 │   ├── PlayerUpdateOptions.swift     # Update options struct
