@@ -54,6 +54,7 @@ let package = Package(
         "Extension/ChapterMetadata+AVFoundation.swift",
         "Util/Emitter.swift",
         "Util/OnceValue.swift",
+        "Util/LRUCache.swift",
       ]
     ),
     .testTarget(

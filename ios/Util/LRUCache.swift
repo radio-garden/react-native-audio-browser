@@ -11,7 +11,10 @@ final class LRUCache<Key: Hashable, Value> {
   private final class Node {
     let key: Key
     var value: Value
-    var prev: Node?
+    /// Weak: with both directions strong, any two adjacent nodes form a reference cycle, so the
+    /// whole chain outlives `clear()` and the cache's own deinit. The list is kept alive from
+    /// `head` forwards.
+    weak var prev: Node?
     var next: Node?
 
     init(key: Key, value: Value) {
