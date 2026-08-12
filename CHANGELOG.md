@@ -1,3 +1,14 @@
+## [0.2.0-next.8](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.7...v0.2.0-next.8) (2026-08-12)
+
+### Bug Fixes
+
+* **ios:** keep remote commands enabled when their options change ([d749f7f](https://github.com/radio-garden/react-native-audio-browser/commit/d749f7fda718d4efe7d2b48619a3fd1cc5f7ab2b))
+
+### Code Refactors
+
+* **events:** one emitter shape for every on* export ([a8ff8dc](https://github.com/radio-garden/react-native-audio-browser/commit/a8ff8dc417c06713b689cbcf14cadb479b5d85d0)), closes [radio-garden/react-native-audio-browser#97](https://github.com/radio-garden/react-native-audio-browser/issues/97)
+* **surface:** keep internals out of the runtime export barrel ([1496452](https://github.com/radio-garden/react-native-audio-browser/commit/1496452667ebffd18bd9c9a97b75f35091748459)), closes [radio-garden/react-native-audio-browser#97](https://github.com/radio-garden/react-native-audio-browser/issues/97)
+
 ## [0.2.0-next.7](https://github.com/radio-garden/react-native-audio-browser/compare/v0.2.0-next.6...v0.2.0-next.7) (2026-08-11)
 
 ### Documentation
