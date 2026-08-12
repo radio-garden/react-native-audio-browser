@@ -31,7 +31,7 @@ export const Image = {
 
 export const Platform = {
   OS: 'web' as const,
-  select: <T,>(specifics: { web?: T; default?: T }) =>
+  select: <T>(specifics: { web?: T; default?: T }) =>
     specifics.web ?? specifics.default
 }
 

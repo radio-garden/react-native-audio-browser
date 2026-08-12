@@ -14,6 +14,6 @@ Unification won because the display is identical to an error and the existing fo
 
 ## Consequences
 
-- **"Error" is a misnomer for the empty case** — an empty result is a *successful* resolve, not a failure (cf. the "Track" naming). The name is kept because renaming `NavigationError` / `formatNavigationError` / `FormattedNavigationError` is a breaking public-API change not worth the precision.
+- **"Error" is a misnomer for the empty case** — an empty result is a _successful_ resolve, not a failure (cf. the "Track" naming). The name is kept because renaming `NavigationError` / `formatNavigationError` / `FormattedNavigationError` is a breaking public-API change not worth the precision.
 - **The `empty` code's default must be neutral** — `title: "Nothing here"`, no retry CTA — so a consumer who never implements `formatNavigationError` gets a clean empty state, not a "Couldn't load / try again" failure treatment on a healthy empty list.
 - **`empty` is distinct from `content-not-found`**: the latter is a 404-style failure (the path didn't resolve), the former is "resolved fine, zero children".

@@ -100,7 +100,7 @@ export function BrowserScreen() {
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {showSearch ? 'Search' : content?.title ?? ''}
+          {showSearch ? 'Search' : (content?.title ?? '')}
         </Text>
         {hasSearch() && (
           <TouchableOpacity
@@ -193,7 +193,6 @@ export function BrowserScreen() {
         visible={showPlayer}
         onClose={() => setShowPlayer(false)}
       />
-
     </View>
   )
 }
@@ -225,10 +224,10 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   content: {
-    flex: 1,
+    flex: 1
   },
   list: {
     flex: 1

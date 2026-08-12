@@ -3,7 +3,7 @@ import {
   onFavoriteChanged,
   ResolvedTrack,
   setFavorites,
-  Track,
+  Track
 } from 'react-native-audio-browser'
 import { createMMKV } from 'react-native-mmkv'
 

@@ -278,9 +278,9 @@ async function fetchCollectionTiles(
   limit = 12
 ): Promise<ImageRowItem[]> {
   const params = new URLSearchParams({
-    q: `mediatype:audio AND collection:${id}`,
-    output: 'json',
-    rows: String(limit),
+    'q': `mediatype:audio AND collection:${id}`,
+    'output': 'json',
+    'rows': String(limit),
     'sort[]': 'downloads desc',
     'fl[]': 'identifier,title'
   })

@@ -9,10 +9,11 @@ const libRoot = path.resolve(here, '../..')
 // Mirror the docs site's deploy base (see website/.vitepress/config.ts). The demo
 // is served at <docs-base>demo/, so its asset URLs must carry that prefix. Defaults
 // to '/demo/' for a root deploy; under a subpath set DOCS_BASE at build time.
-const docsBase = `/${(process.env.DOCS_BASE ?? '/').replace(/^\/+|\/+$/g, '')}/`.replace(
-  '//',
-  '/'
-)
+const docsBase =
+  `/${(process.env.DOCS_BASE ?? '/').replace(/^\/+|\/+$/g, '')}/`.replace(
+    '//',
+    '/'
+  )
 
 // Minimal serverless web build of the real react-native-audio-browser library.
 // - `react-native` is aliased to a ~30-line shim (the lib only touches AppState
@@ -22,7 +23,7 @@ const docsBase = `/${(process.env.DOCS_BASE ?? '/').replace(/^\/+|\/+$/g, '')}/`
 export default defineConfig({
   base: `${docsBase}demo/`,
   define: {
-    __DEV__: 'false',
+    '__DEV__': 'false',
     'process.env.NODE_ENV': '"production"'
   },
   resolve: {

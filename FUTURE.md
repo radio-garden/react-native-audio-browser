@@ -749,7 +749,7 @@ Surface explicit error codes for business logic failures. Currently using Media3
 
 **Implementation:** Add `setPlaybackError(code, message)` API for JS to report these conditions
 
-**Note:** the *read* direction already exists. `PlaybackErrorClassifier` maps
+**Note:** the _read_ direction already exists. `PlaybackErrorClassifier` maps
 `ERROR_CODE_AUTHENTICATION_EXPIRED`, `ERROR_CODE_PREMIUM_ACCOUNT_REQUIRED` and
 `ERROR_CODE_NOT_AVAILABLE_IN_REGION` to `PlaybackErrorKind.REJECTED`, and
 `ERROR_CODE_NOT_SUPPORTED` to `UNPLAYABLE`, so errors set through this API would

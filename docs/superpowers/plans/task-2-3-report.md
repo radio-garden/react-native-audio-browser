@@ -3,6 +3,7 @@
 ## What changed
 
 ### Task 2 — Nitro spec (`src/specs/audio-browser.nitro.ts`)
+
 - Line 49 import: `NativeBrowseGate from '../features/browseGate'` → `NativeGate, NativeGateRequest, GateDecision, GateEvent from '../features/gate'`
 - `// MARK: browse gate` block replaced with `// MARK: gate`:
   - `setBrowseGate(gate)` → `setGate(gate: NativeGate | undefined, hasResolver: boolean)`
@@ -13,6 +14,7 @@
   - Added: `onGate: (event: GateEvent) => void`
 
 ### Task 3 — `src/features/gate.ts` (renamed from `browseGate.ts`)
+
 - `git mv src/features/browseGate.ts src/features/gate.ts`
 - Rewrote the file:
   - Wire types: `NativeGate`, `NativeGateRequest` (flat struct with `reason`/`path`/`search`), `GateDecision`, `GateEvent`
@@ -25,9 +27,11 @@
   - Preserved useful doc comments from `browseGate.ts`, rewritten for the new shape
 
 ### `src/features/index.ts`
+
 - `export * from './browseGate'` → `export * from './gate'`
 
 ### `src/features/gate.test.ts` (new)
+
 - Vitest (not jest — matches the repo's existing test style using `vi.mock`, `vi.fn()`, etc.)
 - Tests placed at `src/features/gate.test.ts` (not `__tests__/` — matches where `browser.test.ts` lives)
 

@@ -7,11 +7,11 @@
 
 Today, gating is a **hard native refuse**: when a consumer sets a Browse Gate, the library refuses voice/external **search** (the funnel short-circuits and returns failure). Three problems:
 
-1. **It over-blocks.** On iOS, the play-media funnel checks the gate *before* the resume branch, so "resume" / "play this" / "play «App»" are also refused. But those are *hearing* an already-active/persisted track — which the gate's own contract says it must **never** block ("blocks finding content, never hearing it"). (Android's `playFromSearch` is search-only, so its resume path — `onPlay` — isn't affected; the over-block is iOS-specific.)
+1. **It over-blocks.** On iOS, the play-media funnel checks the gate _before_ the resume branch, so "resume" / "play this" / "play «App»" are also refused. But those are _hearing_ an already-active/persisted track — which the gate's own contract says it must **never** block ("blocks finding content, never hearing it"). (Android's `playFromSearch` is search-only, so its resume path — `onPlay` — isn't affected; the over-block is iOS-specific.)
 2. **No consumer control.** The library decides to refuse — but only the consumer knows which content is free vs premium, logged-in-only, region-locked, etc. The library is making a policy call without the information to make it.
 3. **It can't serve "free while gated."** A subscription-gated app may still want voice "play «free station»" to work while premium browse is gated. Hard-refuse blocks everything.
 
-A known, **inherent** limitation (not solved here): voice failure is opaque — the in-app funnel returns success/failure and can't *speak* the gate reason (no Intents extension / resolve phase, per ADR 0002). Browse shows the gate message; voice can only fail.
+A known, **inherent** limitation (not solved here): voice failure is opaque — the in-app funnel returns success/failure and can't _speak_ the gate reason (no Intents extension / resolve phase, per ADR 0002). Browse shows the gate message; voice can only fail.
 
 ## Background (what exists today)
 
@@ -26,7 +26,7 @@ Make **"gated" a value a consumer hook can return**, at every layer where the co
 
 ### Three layers (two are the same primitive)
 
-1. **Imperative Browse Gate** *(keep, unchanged)* — coarse, global, set-and-forget. Best for "gate everything" and for config-form consumers who don't want per-request logic.
+1. **Imperative Browse Gate** _(keep, unchanged)_ — coarse, global, set-and-forget. Best for "gate everything" and for config-form consumers who don't want per-request logic.
 2. **`GatedResult` from a content callback** (browse / search) — fine-grained, decided by what was resolved.
 3. **`GatedResult` from `transform`** (browse / search / media) — fine-grained, on the request pipeline. This is the config-form counterpart to (2): a `TransformableRequestConfig` consumer gates in `transform`, where they already branch. A **`media` transform** returning gated = per-track **playback** gating.
 
@@ -38,7 +38,9 @@ The consumer signals gating by **throwing a recognized error** from any hook,
 rather than widening every return type:
 
 ```ts
-class GatedError extends Error { /* optional: type / message */ }
+class GatedError extends Error {
+  /* optional: type / message */
+}
 
 // from any hook — transform, browse callback, search callback, resolve:
 throw new GatedError()
@@ -92,7 +94,7 @@ Gating lives on the **find / resolve** path. The native **resume** branch has no
 
 ## Open questions (for review)
 
-1. **Three mechanisms — too many?** Should the imperative gate eventually be expressible *as* a `GatedResult` (one model), or is the coarse imperative gate worth keeping distinct?
+1. **Three mechanisms — too many?** Should the imperative gate eventually be expressible _as_ a `GatedResult` (one model), or is the coarse imperative gate worth keeping distinct?
 2. **Shape.** `{ gated: true; message? }` vs folding into `BrowseError` (e.g. `{ error, gated? }`)? Should it carry its own message or reuse the imperative gate's message?
 3. **Scope of hooks.** Just `transform`, or also `resolve` (the per-track `RequestConfigResolver`)?
 4. **Media gating.** Per-track playback gating via the `media` transform — in scope now, or defer?
@@ -101,7 +103,7 @@ Gating lives on the **find / resolve** path. The native **resume** branch has no
 
 ## Review outcome & revised direction (2026-06-22)
 
-Three independent reviews (API-ergonomics, security/correctness, YAGNI) plus the product framing — keep Siri search free; gate the *car* experience and convert via a deferred upsell (GitLab radiogarden/mono#3302) — converged:
+Three independent reviews (API-ergonomics, security/correctness, YAGNI) plus the product framing — keep Siri search free; gate the _car_ experience and convert via a deferred upsell (GitLab radiogarden/mono#3302) — converged:
 
 - **Mechanism: `throw GatedError`** (see Shape), not a returned `GatedResult` / `gated` flag — preferred when a consumer needs per-request dynamic gating.
 - **Fail-closed default.** The imperative Browse Gate stays the default; throwing is opt-in. Don't silently shift bypass-prevention to the consumer.
@@ -113,4 +115,4 @@ Three independent reviews (API-ergonomics, security/correctness, YAGNI) plus the
 
 ## Separate change — DONE
 
-The iOS **resume over-block** is a straight bug: the funnel gated the resume branch, but resume is *hearing*. **Fixed** — gate only the search branch (iOS-only; Android's resume path never checked the gate).
+The iOS **resume over-block** is a straight bug: the funnel gated the resume branch, but resume is _hearing_. **Fixed** — gate only the search branch (iOS-only; Android's resume path never checked the gate).

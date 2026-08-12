@@ -71,12 +71,13 @@ device, self-protection is **mandatory, not optional**:
 ### Why a separate `BrowseArtworkRegistry` (not the existing `ArtworkResolutionRegistry`)
 
 `ArtworkResolutionRegistry` (`ArtworkResolutionRegistry.kt`) maps display URI → `Track`
-+ Nitro config handles, is bounded to **256 entries** to avoid pinning dead JS closures,
-and re-resolves Track-first at display time. Reusing it for the provider has two
-problems: (a) the 256-entry LRU evicts rows in lists larger than 256 — exactly the
-large-list case this feature targets — so a legitimate fetch could miss; (b) it pins
-Nitro closures and re-runs `resolveDisplayArtwork`, which hops to `Dispatchers.Main`
-(`Player.kt:807`) — letting an exported provider schedule main-thread work.
+
+- Nitro config handles, is bounded to **256 entries** to avoid pinning dead JS closures,
+  and re-resolves Track-first at display time. Reusing it for the provider has two
+  problems: (a) the 256-entry LRU evicts rows in lists larger than 256 — exactly the
+  large-list case this feature targets — so a legitimate fetch could miss; (b) it pins
+  Nitro closures and re-runs `resolveDisplayArtwork`, which hops to `Dispatchers.Main`
+  (`Player.kt:807`) — letting an exported provider schedule main-thread work.
 
 Instead, `BrowseArtworkRegistry` stores **plain resolved data** — `token → { finalUrl,
 headers, isSvg }` (an already-resolved `ImageSource` + svg flag, no Nitro handles, no
@@ -105,19 +106,19 @@ point two consumers at it: the now-playing `BitmapLoader`, and the new provider.
 
 ### Components (all in the library `android/`)
 
-| Component | Kind | Responsibility |
-|---|---|---|
-| `CoilArtworkLoader` | new | `suspend fun load(source: ImageSource, sizeHintPixels: Int?, isSvg: Boolean): Bitmap` — the Coil request build (data + headers + decoder + **`.size(sizeHintPixels ?: 512)`**, which the current raster path does NOT do → real downsample, prevents decode OOM). SVG forced via the `isSvg` flag carried from build time (not re-derived from a possibly-suffixless transformed URL). Single source of truth for "resolved source → bitmap". |
-| `CoilBitmapLoader` | refactor | Thin `BitmapLoader`; `loadBitmap` resolves the URI (existing `displayArtworkSource`/`unattributedArtworkSource` path, unchanged for now-playing) then delegates decode to `CoilArtworkLoader`. `decodeBitmap` (embedded bytes) stays. |
-| `BrowseArtworkRegistry` | new | `@Synchronized` map `token → { finalUrl, headers, isSvg }`. Plain data, no Nitro handles. Generously bounded / cleared on config invalidation. The provider's only data source. |
-| `ArtworkContentProvider` | new | Exported provider. `openFile` looks up the token → miss → `null`; hit (http/https only) → returns a `ParcelFileDescriptor` pipe **immediately**; a bounded writer coroutine resolves+decodes via `CoilArtworkLoader`, serves bytes, closes the FD in `finally`. `getType` → `image/png`. `query/insert/update/delete` → no-op (`null`/`0`). No `runBlocking`. |
-| `ArtworkUris` | new | Pure build/parse of `content://<pkg>.audiobrowser.artwork/art/<token>`. Opaque path segment (UAMP/Pocket-Casts style), not a query param. |
-| `CoilArtworkLoaderHolder` | new | Process-wide `@Volatile` holder for `CoilArtworkLoader` + `BrowseArtworkRegistry` (the provider may be constructed before the player). Identity-guarded clear; provider scope cancelled before `player.destroy()`. |
-| `TrackFactory` | change | New `toBrowseMediaItem(track, sizeHintPixels)`: **if `artwork` is http(s)** → resolve, register in `BrowseArtworkRegistry`, set `artworkUri = ArtworkUris.contentUri(token)`; **otherwise** (`android.resource://`, `file://`, …) → `setArtworkUri(rawUri)` unchanged (so vector/category icons survive). Existing `toMedia3(track)` (queue/now-playing) unchanged; `toMedia3WithSvgSupport` removed. |
-| `MediaSessionCallback` | change | The browse-delivery sites — `toMediaItems` (`onGetChildren`), `onGetItem`, `onGetSearchResult` — call `toBrowseMediaItem` with `player.artworkSizeHintPixels`. Queue/resumption/now-playing keep `toMedia3`. |
-| `SvgArtworkRenderer` | change | Retire `applyArtwork` + `renderSvgToBytes`; keep/relocate `isSvgUrl` (used at build time to set the `isSvg` flag). |
-| `Service.kt` / setup | change | Populate the holder + registry on create; identity-guarded clear and **cancel the provider scope before** `player.destroy()` on destroy. |
-| `AndroidManifest.xml` (library) | change | Declare `<provider exported="true">`. |
+| Component                       | Kind     | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CoilArtworkLoader`             | new      | `suspend fun load(source: ImageSource, sizeHintPixels: Int?, isSvg: Boolean): Bitmap` — the Coil request build (data + headers + decoder + **`.size(sizeHintPixels ?: 512)`**, which the current raster path does NOT do → real downsample, prevents decode OOM). SVG forced via the `isSvg` flag carried from build time (not re-derived from a possibly-suffixless transformed URL). Single source of truth for "resolved source → bitmap". |
+| `CoilBitmapLoader`              | refactor | Thin `BitmapLoader`; `loadBitmap` resolves the URI (existing `displayArtworkSource`/`unattributedArtworkSource` path, unchanged for now-playing) then delegates decode to `CoilArtworkLoader`. `decodeBitmap` (embedded bytes) stays.                                                                                                                                                                                                         |
+| `BrowseArtworkRegistry`         | new      | `@Synchronized` map `token → { finalUrl, headers, isSvg }`. Plain data, no Nitro handles. Generously bounded / cleared on config invalidation. The provider's only data source.                                                                                                                                                                                                                                                               |
+| `ArtworkContentProvider`        | new      | Exported provider. `openFile` looks up the token → miss → `null`; hit (http/https only) → returns a `ParcelFileDescriptor` pipe **immediately**; a bounded writer coroutine resolves+decodes via `CoilArtworkLoader`, serves bytes, closes the FD in `finally`. `getType` → `image/png`. `query/insert/update/delete` → no-op (`null`/`0`). No `runBlocking`.                                                                                 |
+| `ArtworkUris`                   | new      | Pure build/parse of `content://<pkg>.audiobrowser.artwork/art/<token>`. Opaque path segment (UAMP/Pocket-Casts style), not a query param.                                                                                                                                                                                                                                                                                                     |
+| `CoilArtworkLoaderHolder`       | new      | Process-wide `@Volatile` holder for `CoilArtworkLoader` + `BrowseArtworkRegistry` (the provider may be constructed before the player). Identity-guarded clear; provider scope cancelled before `player.destroy()`.                                                                                                                                                                                                                            |
+| `TrackFactory`                  | change   | New `toBrowseMediaItem(track, sizeHintPixels)`: **if `artwork` is http(s)** → resolve, register in `BrowseArtworkRegistry`, set `artworkUri = ArtworkUris.contentUri(token)`; **otherwise** (`android.resource://`, `file://`, …) → `setArtworkUri(rawUri)` unchanged (so vector/category icons survive). Existing `toMedia3(track)` (queue/now-playing) unchanged; `toMedia3WithSvgSupport` removed.                                         |
+| `MediaSessionCallback`          | change   | The browse-delivery sites — `toMediaItems` (`onGetChildren`), `onGetItem`, `onGetSearchResult` — call `toBrowseMediaItem` with `player.artworkSizeHintPixels`. Queue/resumption/now-playing keep `toMedia3`.                                                                                                                                                                                                                                  |
+| `SvgArtworkRenderer`            | change   | Retire `applyArtwork` + `renderSvgToBytes`; keep/relocate `isSvgUrl` (used at build time to set the `isSvg` flag).                                                                                                                                                                                                                                                                                                                            |
+| `Service.kt` / setup            | change   | Populate the holder + registry on create; identity-guarded clear and **cancel the provider scope before** `player.destroy()` on destroy.                                                                                                                                                                                                                                                                                                      |
+| `AndroidManifest.xml` (library) | change   | Declare `<provider exported="true">`.                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ### Concurrency & resource safety
 
@@ -144,7 +145,7 @@ point two consumers at it: the now-playing `BitmapLoader`, and the new provider.
 `${applicationId}` → unique authority per app, auto-merged (zero consumer config). The
 provider must run in the **same process** as the media `Service` (the `@Volatile` holder
 must be visible); consumers using a `:remote` service process are unsupported.
-**Consumer-facing note:** this adds a new *exported* component to every consuming app —
+**Consumer-facing note:** this adds a new _exported_ component to every consuming app —
 documented for store/privacy/pentest review; it is read-only, token-gated, and serves
 only artwork the app itself produced.
 
@@ -158,7 +159,7 @@ only artwork the app itself produced.
    (exported provider, cross-uid OK).
 3. `ArtworkContentProvider.openFile` looks up the token (miss → `null`), returns a pipe
    FD immediately; the bounded writer resolves `finalUrl` with the stored headers via
-   `CoilArtworkLoader` (headers + SVG + size in *our* process) → PNG → pipe → car.
+   `CoilArtworkLoader` (headers + SVG + size in _our_ process) → PNG → pipe → car.
 4. **Cold start** (provider hit before holder/registry populated): return `null`; the car
    re-requests on the next browse refresh. In practice closed already — `onGetChildren`
    gates on `awaitBrowser()`, and artwork is only requested after a list is delivered, by
@@ -206,8 +207,8 @@ visible pop-in/flicker on a head unit, so this is **in scope, not optional**:
 JUnit 4 + Mockito + kotlinx-coroutines-test + Robolectric 4.11.1 (`android/src/test`).
 
 - **Unit (pure):** `ArtworkUris` token round-trip; `BrowseArtworkRegistry` register/lookup
-  + eviction; `toBrowseMediaItem` routing (http(s) → content://; `android.resource://` →
-  passthrough).
+  - eviction; `toBrowseMediaItem` routing (http(s) → content://; `android.resource://` →
+    passthrough).
 - **Robolectric:** `ArtworkContentProvider.openFile` — happy path (readable PNG FD), token
   miss → `null`, non-http → `null`, holder absent → `null`, with a fake `CoilArtworkLoader`
   via the holder. `@Before`/`@After` reset the process-wide holder/registry to avoid
@@ -223,7 +224,7 @@ JUnit 4 + Mockito + kotlinx-coroutines-test + Robolectric 4.11.1 (`android/src/t
 
 The car's queue/Up-Next list is rendered from session `MediaItem` metadata via the same
 legacy path, and those items come from `toMedia3` (`MediaSessionCallback.kt:671,769,797`),
-which this spec leaves unchanged. So queue-list artwork *may* bypass Coil exactly as
+which this spec leaves unchanged. So queue-list artwork _may_ bypass Coil exactly as
 browse did. This spec does not change the queue path; DHU case (g) determines whether a
 follow-up is needed (apply `toBrowseMediaItem`-style treatment, or document why queue art
 is exempt). The problem statement's "list surfaces" wording reflects this uncertainty.

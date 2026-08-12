@@ -25,16 +25,16 @@ const episode: Track = {
 }
 ```
 
-This guide is the field-by-field reference. For *where* tracks come from (routes, callbacks, HTTP) see the [Browser](/guide/browser) guide.
+This guide is the field-by-field reference. For _where_ tracks come from (routes, callbacks, HTTP) see the [Browser](/guide/browser) guide.
 
 ## Browsable, playable, or both
 
-Two fields decide what a Track *does*. A Track must set at least one of them, and may set both:
+Two fields decide what a Track _does_. A Track must set at least one of them, and may set both:
 
-| Field | Makes the track | Effect |
-| --- | --- | --- |
-| `url` | **browsable** | a container — tapping it navigates into its children |
-| `src` | **playable** | a leaf — the player can stream it |
+| Field | Makes the track | Effect                                               |
+| ----- | --------------- | ---------------------------------------------------- |
+| `url` | **browsable**   | a container — tapping it navigates into its children |
+| `src` | **playable**    | a leaf — the player can stream it                    |
 
 ```ts
 // Browsable: a folder you navigate into
@@ -53,7 +53,7 @@ Two fields decide what a Track *does*. A Track must set at least one of them, an
 
 `id` is an **opaque, stable identifier** you control. The library never parses it — it round-trips verbatim through `setQueue`, the queue, `getActiveTrack`, and `onActiveTrackChanged`.
 
-Why it matters: when playback moves by an *external* control — a lock-screen / CarPlay / Android Auto / Bluetooth next-or-previous — you find out which of *your* items became active by matching its `id`, without re-parsing the `src`:
+Why it matters: when playback moves by an _external_ control — a lock-screen / CarPlay / Android Auto / Bluetooth next-or-previous — you find out which of _your_ items became active by matching its `id`, without re-parsing the `src`:
 
 ```ts
 // the callback gets a PlaybackActiveTrackChangedEvent — use event.track
@@ -75,20 +75,20 @@ If you key identity off `url`/`src`, you can skip it. One caveat: an Android Aut
 
 These set the text shown across surfaces. Only `title` is required.
 
-| Field | Shown where |
-| --- | --- |
-| `title` | primary line — browse rows **and** now-playing (required) |
-| `subtitle` | secondary line in **browse lists** only |
-| `artist` | secondary line on **now-playing / lock screen**; the head-unit "artist" slot |
-| `album` | album name (and gates the tappable album line — see `albumUrl`) |
-| `genre` / `description` | extra metadata |
-| `duration` | catalog metadata in seconds, for your UI |
+| Field                   | Shown where                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `title`                 | primary line — browse rows **and** now-playing (required)                    |
+| `subtitle`              | secondary line in **browse lists** only                                      |
+| `artist`                | secondary line on **now-playing / lock screen**; the head-unit "artist" slot |
+| `album`                 | album name (and gates the tappable album line — see `albumUrl`)              |
+| `genre` / `description` | extra metadata                                                               |
+| `duration`              | catalog metadata in seconds, for your UI                                     |
 
 ::: warning `subtitle` and `artist` are separate — neither falls back to the other
 `subtitle` drives browse-list rows; `artist` drives the now-playing line and Bluetooth metadata. Set each one for the surface you want it on.
 :::
 
-`duration` is **catalog metadata only** (e.g. an episode list) — it does *not* drive the now-playing scrubber. Every surface derives elapsed/remaining from the player itself.
+`duration` is **catalog metadata only** (e.g. an episode list) — it does _not_ drive the now-playing scrubber. Every surface derives elapsed/remaining from the player itself.
 
 ## Artwork
 
@@ -118,7 +118,7 @@ On CarPlay, an SF Symbol with no explicit colors adapts to light/dark mode autom
 
 ## Per-track request override
 
-[`request`](/api/types/browser-nodes/#trackrequest) is a **narrow** per-track override for *how* this track's audio request is made — merged last, after the shared `request` and `media` layers:
+[`request`](/api/types/browser-nodes/#trackrequest) is a **narrow** per-track override for _how_ this track's audio request is made — merged last, after the shared `request` and `media` layers:
 
 ```ts
 {
@@ -128,21 +128,21 @@ On CarPlay, an SF Symbol with no explicit colors adapts to light/dark mode autom
 }
 ```
 
-It carries only `userAgent`, `headers`, and `query` — deliberately **not** `baseUrl` / `path` / `method` / `body`, so a track (often server-sourced) can customise *how* it's fetched but can't repoint its own host or verb. Like every field, it round-trips verbatim through the queue.
+It carries only `userAgent`, `headers`, and `query` — deliberately **not** `baseUrl` / `path` / `method` / `body`, so a track (often server-sourced) can customise _how_ it's fetched but can't repoint its own host or verb. Like every field, it round-trips verbatim through the queue.
 
 ## Presentation on native surfaces
 
 Optional fields that change how a Track renders on CarPlay / Android Auto. They're no-ops where not applicable — set them where they help.
 
-| Field | Effect | Platform |
-| --- | --- | --- |
-| `style: 'list' \| 'grid'` | how this item renders | Android Auto / AAOS |
-| `childrenStyle: 'list' \| 'grid'` | how this container's children render | Android Auto / AAOS |
-| `groupTitle` | section header above contiguous same-group items (Android Auto / AAOS); also scopes the tap-to-play queue to the group on every surface (see [Playback behavior](/guide/browser#playback-behavior)) | all |
-| `favorited` | filled/empty heart (needs the `favorite` capability) | Android Auto, notification |
-| `live` | a "live" indicator | iOS now-playing |
-| `imageRow` | render as a horizontal thumbnail strip | CarPlay |
-| `albumUrl` | make the now-playing album line tappable | CarPlay |
+| Field                             | Effect                                                                                                                                                                                              | Platform                   |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `style: 'list' \| 'grid'`         | how this item renders                                                                                                                                                                               | Android Auto / AAOS        |
+| `childrenStyle: 'list' \| 'grid'` | how this container's children render                                                                                                                                                                | Android Auto / AAOS        |
+| `groupTitle`                      | section header above contiguous same-group items (Android Auto / AAOS); also scopes the tap-to-play queue to the group on every surface (see [Playback behavior](/guide/browser#playback-behavior)) | all                        |
+| `favorited`                       | filled/empty heart (needs the `favorite` capability)                                                                                                                                                | Android Auto, notification |
+| `live`                            | a "live" indicator                                                                                                                                                                                  | iOS now-playing            |
+| `imageRow`                        | render as a horizontal thumbnail strip                                                                                                                                                              | CarPlay                    |
+| `albumUrl`                        | make the now-playing album line tappable                                                                                                                                                            | CarPlay                    |
 
 A couple of constraints worth knowing:
 

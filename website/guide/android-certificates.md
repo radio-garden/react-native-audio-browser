@@ -170,8 +170,8 @@ dependency.
 
 ## The cleartext fetch is handled for you
 
-The completed-chain check happens over HTTPS — only the side fetch of the *missing
-intermediate* uses the leaf's `CA Issuers` URL, which CAs publish over plain
+The completed-chain check happens over HTTPS — only the side fetch of the _missing
+intermediate_ uses the leaf's `CA Issuers` URL, which CAs publish over plain
 `http://` (mandated by the CA/Browser Forum Baseline Requirements, to avoid a
 chicken-and-egg TLS dependency when fetching the very certificate needed to
 complete a TLS chain).
@@ -192,14 +192,14 @@ tampered response over plain HTTP can only fail the chain, never weaken it.
 A silent success is hard to tell apart from "my problem was something else," so
 confirm it explicitly:
 
-1. **Confirm the factory is installed.** The `catch` above only logs on *failure*,
+1. **Confirm the factory is installed.** The `catch` above only logs on _failure_,
    so **no warning at startup means it installed without throwing** — enough for a
-   simple app. But it is *not* enough if your app uses other networking libraries:
+   simple app. But it is _not_ enough if your app uses other networking libraries:
    `setDefaultSSLSocketFactory` is last-write-wins (see [Caveats](#caveats)), so
    another library setting its own default afterward silently deactivates the fix
    with no warning. The comparison below is the **only reliable check** in that
    case. `AiaTls.socketFactory()` returns a stock TLS socket factory configured
-   with the AIA-chasing trust manager, so its *class name* looks identical to the
+   with the AIA-chasing trust manager, so its _class name_ looks identical to the
    platform default — don't try to recognise it by class. Instead compare the
    process default against the reference the opt-in snippet stored in
    `installedSslFactory`. Put this **after** the install `try`/`catch` (so it
@@ -250,8 +250,9 @@ Work through these in order:
    This surfaces in `adb logcat` with **no logging setup on your side** — the
    library plants its own logger (warnings and above reach logcat in both debug and
    release builds). Filter for `AIA CA-issuer fetch failed`. If it appears, the
-   fetch was attempted but couldn't be reached — see the next point. (You do *not*
+   fetch was attempted but couldn't be reached — see the next point. (You do _not_
    need to enable cleartext; the library's fetch already bypasses that policy.)
+
 3. **Reachable from your environment?** The fetch is a plain outbound request to
    the `CA Issuers - URI` during the handshake, so a corporate proxy, VPN,
    firewall, or a locked-down emulator network can block it. Confirm the URL
@@ -265,7 +266,7 @@ Work through these in order:
 
 `AiaTls.socketFactory()` wraps the **platform default** trust manager. On the
 happy path the default accepts the server-presented chain on the first try and
-nothing extra happens. Only when the default *rejects* a chain does it:
+nothing extra happens. Only when the default _rejects_ a chain does it:
 
 1. read the leaf's AIA "CA Issuers" URL,
 2. fetch the missing intermediate (over a raw socket for `http` URLs, so it works
@@ -289,7 +290,7 @@ expired, or self-signed roots still fail exactly as before.
   intermediate during the TLS handshake. Well-configured servers pay no cost. The
   fetched intermediate is cached for the **process lifetime only**, so this
   one-time cost recurs once per cold start for each broken server.
-- **Not a cure-all.** It only rescues servers that omit an intermediate *and*
+- **Not a cure-all.** It only rescues servers that omit an intermediate _and_
   publish an AIA "CA Issuers" pointer that resolves to a trusted root. Servers
   with no AIA extension, an unreachable intermediate, or a genuinely untrusted
   root still fail.
@@ -300,7 +301,7 @@ expired, or self-signed roots still fail exactly as before.
   [Still failing after install?](#still-failing-after-install) to diagnose.
 - **Unrelated cause: custom Network Security Config.** A
   `res/xml/network_security_config.xml` with custom trust anchors or certificate
-  pinning is a *different* source of TLS failures that this fix does not address.
+  pinning is a _different_ source of TLS failures that this fix does not address.
 
 ## Advanced: custom OkHttp client
 

@@ -2,7 +2,7 @@
 
 **If a browse route resolver, search source, or request `transform` does its own
 networking with React Native's built-in `fetch` — and it works in your app but
-*hangs* when the device is asleep (browsing on CarPlay or Android Auto with the
+_hangs_ when the device is asleep (browsing on CarPlay or Android Auto with the
 screen off, or answering a voice intent) — you are in the right place.** The
 browse screen goes blank because the request never resolves. The fix is to fetch
 with

@@ -1,6 +1,6 @@
 # Hooks
 
-The library exposes its state as **React hooks** — call one in a component and it returns the current value and re-renders whenever that value changes. They keep your in-app UI in sync with playback, the queue, the browse tree, and the device, including changes driven from *outside* your app (the lock screen, CarPlay, Android Auto, Bluetooth).
+The library exposes its state as **React hooks** — call one in a component and it returns the current value and re-renders whenever that value changes. They keep your in-app UI in sync with playback, the queue, the browse tree, and the device, including changes driven from _outside_ your app (the lock screen, CarPlay, Android Auto, Bluetooth).
 
 ```tsx
 import { useActiveTrack, usePlayingState } from 'react-native-audio-browser'
@@ -8,7 +8,11 @@ import { useActiveTrack, usePlayingState } from 'react-native-audio-browser'
 function NowPlaying() {
   const track = useActiveTrack()
   const { playing } = usePlayingState()
-  return <Text>{playing ? 'Playing' : 'Paused'}: {track?.title}</Text>
+  return (
+    <Text>
+      {playing ? 'Playing' : 'Paused'}: {track?.title}
+    </Text>
+  )
 }
 ```
 
@@ -16,11 +20,11 @@ function NowPlaying() {
 
 Most state comes in three forms, so you can read it whichever way fits:
 
-| Form | Shape | Use it |
-| --- | --- | --- |
-| **Hook** | `useX()` | inside a component — re-renders on change |
-| **Getter** | `getX()` | a one-off synchronous read, anywhere |
-| **Event** | `on…` | subscribe outside React (returns an unsubscribe) |
+| Form       | Shape    | Use it                                           |
+| ---------- | -------- | ------------------------------------------------ |
+| **Hook**   | `useX()` | inside a component — re-renders on change        |
+| **Getter** | `getX()` | a one-off synchronous read, anywhere             |
+| **Event**  | `on…`    | subscribe outside React (returns an unsubscribe) |
 
 Most events are named `on<Thing>Changed`, but several aren't — `onProgressUpdated`, `onPlayingState`, `onPlaybackError`, `onNavigationError`. The exact event for each hook is in the [reference table](#all-hooks-at-a-glance), so don't guess the name.
 
@@ -109,10 +113,7 @@ import { useContent, navigate } from 'react-native-audio-browser'
 function Browse() {
   const page = useContent()
   return (
-    <List
-      data={page?.children ?? []}
-      onSelect={(track) => navigate(track)}
-    />
+    <List data={page?.children ?? []} onSelect={(track) => navigate(track)} />
   )
 }
 ```
@@ -135,12 +136,12 @@ const timer = useSleepTimer({ updateInterval: 1000 })
 
 ## Device and environment
 
-| Hook | Returns | Notes |
-| --- | --- | --- |
-| [`useOnline()`](/api/features/network/#useonline) | `boolean` | network connectivity |
-| [`useCarConnected()`](/api/features/carConnection/#usecarconnected) | `boolean` | CarPlay / Android Auto connected (`false` on web) |
-| [`useSystemVolume()`](/api/features/playback/#usesystemvolume) | `number` | device volume 0–1 |
-| [`useOutput()`](/api/features/output/#useoutput) | [`Output`](/api/features/output/#output)` \| undefined` | current audio output (iOS + Android) |
+| Hook                                                                | Returns                                                 | Notes                                             |
+| ------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------- |
+| [`useOnline()`](/api/features/network/#useonline)                   | `boolean`                                               | network connectivity                              |
+| [`useCarConnected()`](/api/features/carConnection/#usecarconnected) | `boolean`                                               | CarPlay / Android Auto connected (`false` on web) |
+| [`useSystemVolume()`](/api/features/playback/#usesystemvolume)      | `number`                                                | device volume 0–1                                 |
+| [`useOutput()`](/api/features/output/#useoutput)                    | [`Output`](/api/features/output/#output)` \| undefined` | current audio output (iOS + Android)              |
 
 ```tsx
 const output = useOutput() // { type, name, external } | undefined
@@ -195,35 +196,35 @@ The **Event** column is the emitter name for the getter/event form — handy bec
 
 The **Hook** name links to its full API entry; the **Returns** type links to its definition where it has one.
 
-| Hook | Returns | Event | Platform |
-| --- | --- | --- | --- |
-| [`usePlayback`](/api/features/playback/#useplayback) | `{ state, error? }` | `onPlaybackChanged` | all |
-| [`usePlayingState`](/api/features/playback/#useplayingstate) | `{ playing, buffering }` | `onPlayingState` | all |
-| [`useProgress`](/api/features/playback/#useprogress) | `{ position, duration, buffered }` | `onProgressUpdated` | all |
-| [`usePolledProgress`](/api/features/playback/#usepolledprogress) | `{ position, duration, buffered }` | _(polled)_ | all |
-| [`usePlayWhenReady`](/api/features/playback/#useplaywhenready) | `boolean` | `onPlayWhenReadyChanged` | all |
-| [`useSystemVolume`](/api/features/playback/#usesystemvolume) | `number` | `onSystemVolumeChanged` | all (read-only iOS) |
-| [`useActiveTrack`](/api/features/queue/#useactivetrack) | [`Track`](/api/types/browser-nodes/#track)` \| undefined` | `onActiveTrackChanged` | all |
-| [`useQueue`](/api/features/queue/#usequeue) | [`Track`](/api/types/browser-nodes/#track)`[]` | `onQueueChanged` | all |
-| [`useRepeatMode`](/api/features/queue/#userepeatmode) | [`RepeatMode`](/api/features/queue/#repeatmode) | `onRepeatModeChanged` | all |
-| [`useShuffle`](/api/features/queue/#useshuffle) | `boolean` | `onShuffleChanged` | all |
-| [`useNowPlaying`](/api/features/nowPlaying/#usenowplaying) | `NowPlayingMetadata \| undefined` | `onNowPlayingChanged` | all |
-| [`useTabs`](/api/features/browser/#usetabs) | [`Track`](/api/types/browser-nodes/#track)`[] \| undefined` | `onTabsChanged` | all |
-| [`usePath`](/api/features/browser/#usepath) | `string \| undefined` | `onPathChanged` | all |
-| [`useContent`](/api/features/browser/#usecontent) | [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack)` \| undefined` | `onContentChanged` | all |
-| [`useSleepTimerActive`](/api/features/sleepTimer/#usesleeptimeractive) | `boolean` | `onSleepTimerChanged` | all |
-| [`useSleepTimer`](/api/features/sleepTimer/#usesleeptimer) | [`SleepTimerState`](/api/features/sleepTimer/#sleeptimerstate)` \| undefined` | `onSleepTimerChanged` | all |
-| [`useOnline`](/api/features/network/#useonline) | `boolean` | `onOnlineChanged` | all |
-| [`useCarConnected`](/api/features/carConnection/#usecarconnected) | `boolean` | `onCarConnectedChanged` | all (`false` web) |
-| [`useOutput`](/api/features/output/#useoutput) | [`Output`](/api/features/output/#output)` \| undefined` | `onOutputChanged` | iOS, Android |
-| [`usePlaybackError`](/api/features/errors/#useplaybackerror) | [`PlaybackError`](/api/features/errors/#playbackerror)` \| undefined` | `onPlaybackError` | all |
-| [`useNavigationError`](/api/features/errors/#usenavigationerror) | [`NavigationError`](/api/features/errors/#navigationerror)` \| undefined` | `onNavigationError` | all |
-| [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror) | `{ title, message } \| undefined` | `onFormattedNavigationError` | all |
-| [`useOptions`](/api/features/player/#useoptions) | [`Options`](/api/features/player/#options) | `onOptionsChanged` | all |
-| [`useBatteryWarning`](/api/features/battery/#usebatterywarning) | `{ pending, status, dismiss, openSettings }` | _(composite)_ | Android |
-| [`useBatteryWarningPending`](/api/features/battery/#usebatterywarningpending) | `boolean` | `onBatteryWarningPendingChanged` | Android |
-| [`useBatteryOptimizationStatus`](/api/features/battery/#usebatteryoptimizationstatus) | [`BatteryOptimizationStatus`](/api/features/battery/#batteryoptimizationstatus) | `onBatteryOptimizationStatusChanged` | Android |
-| [`useEqualizerSettings`](/api/features/equalizer/#useequalizersettings) | [`EqualizerSettings`](/api/features/equalizer/#equalizersettings)` \| undefined` | `onEqualizerChanged` | Android |
-| `useDebug` | `{ state, logs, clear }` | _(composite)_ | all |
+| Hook                                                                                  | Returns                                                                          | Event                                | Platform            |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------ | ------------------- |
+| [`usePlayback`](/api/features/playback/#useplayback)                                  | `{ state, error? }`                                                              | `onPlaybackChanged`                  | all                 |
+| [`usePlayingState`](/api/features/playback/#useplayingstate)                          | `{ playing, buffering }`                                                         | `onPlayingState`                     | all                 |
+| [`useProgress`](/api/features/playback/#useprogress)                                  | `{ position, duration, buffered }`                                               | `onProgressUpdated`                  | all                 |
+| [`usePolledProgress`](/api/features/playback/#usepolledprogress)                      | `{ position, duration, buffered }`                                               | _(polled)_                           | all                 |
+| [`usePlayWhenReady`](/api/features/playback/#useplaywhenready)                        | `boolean`                                                                        | `onPlayWhenReadyChanged`             | all                 |
+| [`useSystemVolume`](/api/features/playback/#usesystemvolume)                          | `number`                                                                         | `onSystemVolumeChanged`              | all (read-only iOS) |
+| [`useActiveTrack`](/api/features/queue/#useactivetrack)                               | [`Track`](/api/types/browser-nodes/#track)` \| undefined`                        | `onActiveTrackChanged`               | all                 |
+| [`useQueue`](/api/features/queue/#usequeue)                                           | [`Track`](/api/types/browser-nodes/#track)`[]`                                   | `onQueueChanged`                     | all                 |
+| [`useRepeatMode`](/api/features/queue/#userepeatmode)                                 | [`RepeatMode`](/api/features/queue/#repeatmode)                                  | `onRepeatModeChanged`                | all                 |
+| [`useShuffle`](/api/features/queue/#useshuffle)                                       | `boolean`                                                                        | `onShuffleChanged`                   | all                 |
+| [`useNowPlaying`](/api/features/nowPlaying/#usenowplaying)                            | `NowPlayingMetadata \| undefined`                                                | `onNowPlayingChanged`                | all                 |
+| [`useTabs`](/api/features/browser/#usetabs)                                           | [`Track`](/api/types/browser-nodes/#track)`[] \| undefined`                      | `onTabsChanged`                      | all                 |
+| [`usePath`](/api/features/browser/#usepath)                                           | `string \| undefined`                                                            | `onPathChanged`                      | all                 |
+| [`useContent`](/api/features/browser/#usecontent)                                     | [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack)` \| undefined`        | `onContentChanged`                   | all                 |
+| [`useSleepTimerActive`](/api/features/sleepTimer/#usesleeptimeractive)                | `boolean`                                                                        | `onSleepTimerChanged`                | all                 |
+| [`useSleepTimer`](/api/features/sleepTimer/#usesleeptimer)                            | [`SleepTimerState`](/api/features/sleepTimer/#sleeptimerstate)` \| undefined`    | `onSleepTimerChanged`                | all                 |
+| [`useOnline`](/api/features/network/#useonline)                                       | `boolean`                                                                        | `onOnlineChanged`                    | all                 |
+| [`useCarConnected`](/api/features/carConnection/#usecarconnected)                     | `boolean`                                                                        | `onCarConnectedChanged`              | all (`false` web)   |
+| [`useOutput`](/api/features/output/#useoutput)                                        | [`Output`](/api/features/output/#output)` \| undefined`                          | `onOutputChanged`                    | iOS, Android        |
+| [`usePlaybackError`](/api/features/errors/#useplaybackerror)                          | [`PlaybackError`](/api/features/errors/#playbackerror)` \| undefined`            | `onPlaybackError`                    | all                 |
+| [`useNavigationError`](/api/features/errors/#usenavigationerror)                      | [`NavigationError`](/api/features/errors/#navigationerror)` \| undefined`        | `onNavigationError`                  | all                 |
+| [`useFormattedNavigationError`](/api/features/errors/#useformattednavigationerror)    | `{ title, message } \| undefined`                                                | `onFormattedNavigationError`         | all                 |
+| [`useOptions`](/api/features/player/#useoptions)                                      | [`Options`](/api/features/player/#options)                                       | `onOptionsChanged`                   | all                 |
+| [`useBatteryWarning`](/api/features/battery/#usebatterywarning)                       | `{ pending, status, dismiss, openSettings }`                                     | _(composite)_                        | Android             |
+| [`useBatteryWarningPending`](/api/features/battery/#usebatterywarningpending)         | `boolean`                                                                        | `onBatteryWarningPendingChanged`     | Android             |
+| [`useBatteryOptimizationStatus`](/api/features/battery/#usebatteryoptimizationstatus) | [`BatteryOptimizationStatus`](/api/features/battery/#batteryoptimizationstatus)  | `onBatteryOptimizationStatusChanged` | Android             |
+| [`useEqualizerSettings`](/api/features/equalizer/#useequalizersettings)               | [`EqualizerSettings`](/api/features/equalizer/#equalizersettings)` \| undefined` | `onEqualizerChanged`                 | Android             |
+| `useDebug`                                                                            | `{ state, logs, clear }`                                                         | _(composite)_                        | all                 |
 
 For the exact return types, see the [API reference](/api/).

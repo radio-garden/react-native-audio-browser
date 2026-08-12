@@ -289,7 +289,7 @@ Use Nitro's Promise helpers for async operations.
 When you invoke a JS callback that returns a `Promise<T>` (a `formatNavigationError` / now-playing
 formatter, etc.) and chain `.then`/`.catch`, **Nitro resolves that promise on the JS thread**, not
 on main. `Promise.then(_:)` takes a non-`@Sendable` closure, so inside an `@MainActor` type the
-resolver is *inferred* `@MainActor`-isolated — and running a main-isolated closure off-main traps:
+resolver is _inferred_ `@MainActor`-isolated — and running a main-isolated closure off-main traps:
 `_swift_task_checkIsolated` → `dispatch_assert_queue_fail` (crashes on the
 `com.facebook.react.runtime.JavaScript` thread).
 
@@ -309,7 +309,7 @@ formatter(params)
 ```
 
 This is the same reason the artwork callback in `NowPlayingUpdater` is `@Sendable`. A direct
-`self?.someMainActorMethod(...)` call inside `.then` only *appears* to work when that particular
+`self?.someMainActorMethod(...)` call inside `.then` only _appears_ to work when that particular
 promise happens to resolve on main — it's a latent crash otherwise.
 **`CarPlayController.showNavigationError` currently has that latent shape; don't copy it.**
 

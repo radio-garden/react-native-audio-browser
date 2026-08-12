@@ -7,7 +7,7 @@ moving between tracks, and reading it back for an "up next" UI.
 
 For the first-time setup and the browse-tree concept, see
 [Basic Usage](/guide/basic-usage#the-queue). For transport (play / pause / seek
-*within* the active track), see [Playback](/guide/playback). The system
+_within_ the active track), see [Playback](/guide/playback). The system
 surfaces (lock screen, car) are in [Now Playing](/guide/now-playing).
 
 The UI snippets below import `View` / `Text` / `Button` / `FlatList` from
@@ -85,7 +85,7 @@ function NowPlaying() {
 
 Outside React, use [`getActiveTrack()`](/api/features/queue/#getactivetrack) and
 [`getActiveTrackIndex()`](/api/features/queue/#getactivetrackindex). To react to
-*changes* — e.g. for per-track analytics — subscribe to
+_changes_ — e.g. for per-track analytics — subscribe to
 [`onActiveTrackChanged`](/api/features/queue/#onactivetrackchanged), which also
 reports the track you're leaving:
 
@@ -104,11 +104,7 @@ Jump to a track by index, or step to the next/previous one. Each optionally
 takes a start position **in seconds**:
 
 ```ts
-import {
-  skip,
-  skipToNext,
-  skipToPrevious
-} from 'react-native-audio-browser'
+import { skip, skipToNext, skipToPrevious } from 'react-native-audio-browser'
 
 skip(3) // jump to index 3
 skipToNext() // next track
@@ -116,10 +112,10 @@ skipToPrevious() // previous track
 skipToNext(10) // next track, starting 10 seconds in
 ```
 
-This is how you move *between* tracks
+This is how you move _between_ tracks
 ([`skip`](/api/features/queue/#skip),
 [`skipToNext`](/api/features/queue/#skiptonext),
-[`skipToPrevious`](/api/features/queue/#skiptoprevious)); seeking *within* the
+[`skipToPrevious`](/api/features/queue/#skiptoprevious)); seeking _within_ the
 active track (`seekTo` / `seekBy`) lives in [Playback](/guide/playback).
 
 ## Editing the queue
@@ -170,11 +166,11 @@ active, or — if you removed the last one — the first track does.
 [Repeat mode](/api/features/queue/#userepeatmode) is one of `'off'`, `'track'`,
 or `'queue'`:
 
-| Mode | Behavior |
-| --- | --- |
-| `'off'` | Stop when the last track finishes (the default). |
-| `'track'` | Repeat the active track forever. |
-| `'queue'` | Loop the whole queue. |
+| Mode      | Behavior                                         |
+| --------- | ------------------------------------------------ |
+| `'off'`   | Stop when the last track finishes (the default). |
+| `'track'` | Repeat the active track forever.                 |
+| `'queue'` | Loop the whole queue.                            |
 
 ```tsx
 import {
@@ -188,10 +184,7 @@ function RepeatButton() {
   const mode = useRepeatMode()
   const next = mode === 'off' ? 'queue' : mode === 'queue' ? 'track' : 'off'
   return (
-    <Button
-      title={`Repeat: ${mode}`}
-      onPress={() => setRepeatMode(next)}
-    />
+    <Button title={`Repeat: ${mode}`} onPress={() => setRepeatMode(next)} />
   )
 }
 
@@ -286,18 +279,18 @@ All position arguments are **seconds** — `seekTo`, `seekBy`, the
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `setQueue(tracks, startIndex?, startPosition?)` | Replace the queue (doesn't auto-play; position in **seconds**). |
-| `add(track \| tracks, insertBeforeIndex?)` | Append, or insert before an index. |
-| `load(track)` | Replace the active track (or start the queue if empty). |
-| `move(from, to)` | Reorder; `to` past the end → end. |
-| `remove(index \| indexes)` | Remove track(s); active removal advances. |
-| `removeUpcomingTracks()` | Drop everything after the active track. |
-| `skip(index, initialPosition?)` | Jump to a track (position in **seconds**). |
-| `skipToNext()` / `skipToPrevious()` | Step between tracks. |
-| `useQueue()` / `getQueue()` / `getTrack(i)` | Read the queue. |
-| `useActiveTrack()` / `getActiveTrack()` / `getActiveTrackIndex()` | Read the active track. |
-| `onActiveTrackChanged` / `onQueueChanged` / `onQueueEnded` | Subscribe to changes. |
-| `setRepeatMode(mode)` / `useRepeatMode()` | `'off'` / `'track'` / `'queue'`. |
-| `setShuffle(bool)` / `toggleShuffle()` / `useShuffle()` | Shuffle order. |
+| API                                                               | Purpose                                                         |
+| ----------------------------------------------------------------- | --------------------------------------------------------------- |
+| `setQueue(tracks, startIndex?, startPosition?)`                   | Replace the queue (doesn't auto-play; position in **seconds**). |
+| `add(track \| tracks, insertBeforeIndex?)`                        | Append, or insert before an index.                              |
+| `load(track)`                                                     | Replace the active track (or start the queue if empty).         |
+| `move(from, to)`                                                  | Reorder; `to` past the end → end.                               |
+| `remove(index \| indexes)`                                        | Remove track(s); active removal advances.                       |
+| `removeUpcomingTracks()`                                          | Drop everything after the active track.                         |
+| `skip(index, initialPosition?)`                                   | Jump to a track (position in **seconds**).                      |
+| `skipToNext()` / `skipToPrevious()`                               | Step between tracks.                                            |
+| `useQueue()` / `getQueue()` / `getTrack(i)`                       | Read the queue.                                                 |
+| `useActiveTrack()` / `getActiveTrack()` / `getActiveTrackIndex()` | Read the active track.                                          |
+| `onActiveTrackChanged` / `onQueueChanged` / `onQueueEnded`        | Subscribe to changes.                                           |
+| `setRepeatMode(mode)` / `useRepeatMode()`                         | `'off'` / `'track'` / `'queue'`.                                |
+| `setShuffle(bool)` / `toggleShuffle()` / `useShuffle()`           | Shuffle order.                                                  |

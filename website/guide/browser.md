@@ -2,7 +2,7 @@
 
 The **Browser** is the subsystem that turns one declarative description of your content into a navigable tree — the same tree that powers your in-app browse UI, CarPlay, and Android Auto. You describe it once with **`configureBrowser`**; the library resolves paths, fetches children, transforms requests, and renders the native surfaces for you.
 
-[Basic Usage](/guide/basic-usage) introduces the browse tree. This guide is the reference for *configuring* it: every source shape, every routing pattern, and every option on [`BrowserConfiguration`](/api/types/browser/#browserconfiguration).
+[Basic Usage](/guide/basic-usage) introduces the browse tree. This guide is the reference for _configuring_ it: every source shape, every routing pattern, and every option on [`BrowserConfiguration`](/api/types/browser/#browserconfiguration).
 
 ## A complete example
 
@@ -111,7 +111,7 @@ Return `{ error: 'message' }` instead of a page to signal a failure the Browser 
 
 A [`TransformableRequestConfig`](/api/types/browser/#transformablerequestconfig). The library issues the request **natively** (so browse works on a cold car start with your JS not yet running) and expects a page object — a `ResolvedTrack` — back.
 
-The key convenience: with a `baseUrl` set, **any path with no explicit route is fetched over HTTP automatically** — the navigated path becomes the request path. So a fully server-driven tree may need *no* `routes` at all:
+The key convenience: with a `baseUrl` set, **any path with no explicit route is fetched over HTTP automatically** — the navigated path becomes the request path. So a fully server-driven tree may need _no_ `routes` at all:
 
 ```ts
 configureBrowser({
@@ -122,7 +122,7 @@ configureBrowser({
 ```
 
 ::: warning A static `path` does not rewrite the request path
-On an HTTP route, the *navigated* path is used as the request path — a static `path` field is ignored for this. To remap (e.g. send `/favorites` to `/favorites/v2`), use a [transform](#transforms-per-request), which also receives `routeParams`.
+On an HTTP route, the _navigated_ path is used as the request path — a static `path` field is ignored for this. To remap (e.g. send `/favorites` to `/favorites/v2`), use a [transform](#transforms-per-request), which also receives `routeParams`.
 :::
 
 ::: tip Same three shapes, everywhere
@@ -174,7 +174,9 @@ configureBrowser({
 ```ts
 configureBrowser({
   path: '/home', // where browse opens; defaults to the first tab's url (or '/')
-  tabs: [/* … */]
+  tabs: [
+    /* … */
+  ]
 })
 ```
 
@@ -184,14 +186,14 @@ configureBrowser({
 
 ### Pattern syntax
 
-Patterns match on **exact segment count** first — `/artists` does *not* match `/artists/123`. Within that, a segment can be:
+Patterns match on **exact segment count** first — `/artists` does _not_ match `/artists/123`. Within that, a segment can be:
 
-| Pattern | Matches | Captured |
-| --- | --- | --- |
-| `/favorites` | exactly `/favorites` | — |
-| `/albums/{id}` | `/albums/floret`, `/albums/42` | `routeParams.id` |
-| `/artists/*` | any single segment at that position (`/artists/anything`) | — |
-| `/files/**` | `/files/...` at any depth below | `routeParams.tail` |
+| Pattern        | Matches                                                   | Captured           |
+| -------------- | --------------------------------------------------------- | ------------------ |
+| `/favorites`   | exactly `/favorites`                                      | —                  |
+| `/albums/{id}` | `/albums/floret`, `/albums/42`                            | `routeParams.id`   |
+| `/artists/*`   | any single segment at that position (`/artists/anything`) | —                  |
+| `/files/**`    | `/files/...` at any depth below                           | `routeParams.tail` |
 
 When several patterns match, **most specific wins**: constant > `{param}` > `*` > `**`. So `/albums/new` and `/albums/{id}` can coexist — `/albums/new` takes the literal route.
 
@@ -208,7 +210,7 @@ configureBrowser({
 })
 ```
 
-::: warning The bare `'*'` key is the *default*, not a wildcard segment
+::: warning The bare `'*'` key is the _default_, not a wildcard segment
 A single-segment wildcard only works as a `*` **segment inside a longer pattern** (e.g. `/artists/*`). The bare top-level key `'*'` is different: it's the **custom default** — the source used for any path no other route matches (and only needed if you want to override the built-in HTTP default).
 
 ```ts
@@ -219,6 +221,7 @@ routes: {
   '*': { baseUrl: 'https://api.example.com' }
 }
 ```
+
 :::
 
 ### Route parameters
@@ -276,21 +279,21 @@ configureBrowser({
 
 Every request layer is a [`RequestConfig`](/api/types/browser/#requestconfig) — set only the fields you need; they merge (query params merge additively, scalars override):
 
-| Field | Purpose |
-| --- | --- |
-| `baseUrl` / `path` | Where to send the request (note: `path` doesn't override the navigated browse path) |
-| `method` | `GET` (default), `POST`, … |
-| `headers` | HTTP headers |
-| `query` | Query parameters (merged additively) |
-| `body` / `contentType` | Request body, e.g. for `POST` |
-| `userAgent` | `User-Agent` override |
+| Field                  | Purpose                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `baseUrl` / `path`     | Where to send the request (note: `path` doesn't override the navigated browse path) |
+| `method`               | `GET` (default), `POST`, …                                                          |
+| `headers`              | HTTP headers                                                                        |
+| `query`                | Query parameters (merged additively)                                                |
+| `body` / `contentType` | Request body, e.g. for `POST`                                                       |
+| `userAgent`            | `User-Agent` override                                                               |
 
 ### Transforms — per request
 
-When a layer needs to change *per request* (read the captured `routeParams`, switch a `GET` to a `POST`, remap the path), add a `transform` (async) or `transformSync`. It receives the merged request and returns the final one:
+When a layer needs to change _per request_ (read the captured `routeParams`, switch a `GET` to a `POST`, remap the path), add a `transform` (async) or `transformSync`. It receives the merged request and returns the final one:
 
 ::: warning A transform replaces — it doesn't merge
-Your return value **becomes** the request; the layer's own static fields are *not* merged back in. Always **spread the incoming `request`** (`{ ...request, … }`) — a transform that returns a bare `{ method: 'POST' }` silently drops the inherited `baseUrl`, `headers`, and `query`.
+Your return value **becomes** the request; the layer's own static fields are _not_ merged back in. Always **spread the incoming `request`** (`{ ...request, … }`) — a transform that returns a bare `{ method: 'POST' }` silently drops the inherited `baseUrl`, `headers`, and `query`.
 :::
 
 ```ts
@@ -313,7 +316,7 @@ configureBrowser({
 
 ### Resolvers — values that change rarely
 
-When the *whole* config depends on runtime state — a domain that varies by environment, a locale, an auth host — make the layer a **resolver**: a thunk returning the config. It runs **once per content generation** and is cached until you call [`invalidateAllContent`](#updating-the-configuration), so it's the cheap place to read values that change rarely:
+When the _whole_ config depends on runtime state — a domain that varies by environment, a locale, an auth host — make the layer a **resolver**: a thunk returning the config. It runs **once per content generation** and is cached until you call [`invalidateAllContent`](#updating-the-configuration), so it's the cheap place to read values that change rarely:
 
 ```ts
 configureBrowser({
@@ -327,7 +330,7 @@ configureBrowser({
 ```
 
 ::: tip Resolver vs. transform
-**Resolver** (the layer *is* a function): runs once, cached — for values that change rarely. **Transform** (a `transform` field *on* the layer): runs every request — for per-request shaping. Reach for a resolver first; add a transform only when a single request genuinely differs.
+**Resolver** (the layer _is_ a function): runs once, cached — for values that change rarely. **Transform** (a `transform` field _on_ the layer): runs every request — for per-request shaping. Reach for a resolver first; add a transform only when a single request genuinely differs.
 :::
 
 ## Media and artwork
@@ -371,7 +374,7 @@ Two options control what happens when a playable Track is tapped.
 
 Two constraints of section scoping: the section is located **by the track's `src`**, so a src should appear in at most one section per page — when the same station sits in both an image row and a list, a tap resolves to the image row regardless of where it happened. And when the tapped src is already in the current queue from the same page, the player skips in place rather than requeueing the section.
 
-**`handleTrackLoad`** — intercept loading entirely. When set, tapping a track calls *your* handler **instead of** the library auto-playing, and native waits for your promise to resolve before continuing. The two branches differ:
+**`handleTrackLoad`** — intercept loading entirely. When set, tapping a track calls _your_ handler **instead of** the library auto-playing, and native waits for your promise to resolve before continuing. The two branches differ:
 
 ```ts
 import { configureBrowser, setQueue, play } from 'react-native-audio-browser'
@@ -390,7 +393,7 @@ configureBrowser({
 })
 ```
 
-In the video branch, returning without calling the player tells the library "handled — leave audio alone." In the audio branch you take over, so you must explicitly `setQueue` + `play`. Both are **synchronous** (they return `void`), so there's no promise to await — native resumes as soon as your handler returns. (The handler stays `async` because its type is `=> Promise<void>` and *your* work — an auth check, opening a video player — may be awaited; `setQueue`/`play` are covered in [Basic Usage](/guide/basic-usage).)
+In the video branch, returning without calling the player tells the library "handled — leave audio alone." In the audio branch you take over, so you must explicitly `setQueue` + `play`. Both are **synchronous** (they return `void`), so there's no promise to await — native resumes as soon as your handler returns. (The handler stays `async` because its type is `=> Promise<void>` and _your_ work — an auth check, opening a video player — may be awaited; `setQueue`/`play` are covered in [Basic Usage](/guide/basic-usage).)
 
 ## Reading and driving browse state
 
@@ -432,11 +435,11 @@ function BrowseScreen() {
 
 The tree isn't static — content changes, languages switch, environments move. Three tools, smallest blast radius first:
 
-| Need | Use |
-| --- | --- |
-| One path's children changed | `notifyContentChanged('/favorites')` |
-| Everything is stale (locale, domain, auth changed) | `invalidateAllContent()` |
-| The config *shape* itself changed | `configureBrowser(newConfig)` |
+| Need                                               | Use                                  |
+| -------------------------------------------------- | ------------------------------------ |
+| One path's children changed                        | `notifyContentChanged('/favorites')` |
+| Everything is stale (locale, domain, auth changed) | `invalidateAllContent()`             |
+| The config _shape_ itself changed                  | `configureBrowser(newConfig)`        |
 
 `notifyContentChanged(path)` refreshes a single path in place — external controllers re-fetch just that page. `invalidateAllContent()` clears every cache and re-resolves all visible surfaces (and re-runs your [resolvers](#resolvers-values-that-change-rarely)) — this is what you call after a language or domain switch. `configureBrowser` replaces everything wholesale.
 
@@ -477,17 +480,17 @@ The `code` values: `content-not-found`, `network-error`, `http-error`, `callback
 
 Optional Track fields and config options control how items render on the native surfaces. Set them where they help.
 
-| Field | On | Effect | Platform |
-| --- | --- | --- | --- |
-| `style: 'grid'` | an item | render this item as a grid cell | Android Auto / AAOS |
-| `childrenStyle: 'grid'` | a container | lay its children out as a grid | Android Auto / AAOS |
-| `groupTitle` | an item | section header above it | Android Auto / AAOS |
-| `artwork: 'sf:heart.fill'` | any item | SF Symbol icon (supports `?bg=…&fg=…`) | iOS |
-| `live: true` | a track | live indicator | iOS |
-| `imageRow` | a track | a horizontal artwork strip | CarPlay only* |
-| `artworkCarPlayTinted` | a track | tint artwork for CarPlay light/dark | iOS |
-| `carPlaySiriListButton: 'top' \| 'bottom'` | a page | place the Siri cell on the page | iOS |
-| `albumUrl` + `resolveAlbumUrl` | track + config | make the now-playing album line tappable | CarPlay |
+| Field                                      | On             | Effect                                   | Platform            |
+| ------------------------------------------ | -------------- | ---------------------------------------- | ------------------- |
+| `style: 'grid'`                            | an item        | render this item as a grid cell          | Android Auto / AAOS |
+| `childrenStyle: 'grid'`                    | a container    | lay its children out as a grid           | Android Auto / AAOS |
+| `groupTitle`                               | an item        | section header above it                  | Android Auto / AAOS |
+| `artwork: 'sf:heart.fill'`                 | any item       | SF Symbol icon (supports `?bg=…&fg=…`)   | iOS                 |
+| `live: true`                               | a track        | live indicator                           | iOS                 |
+| `imageRow`                                 | a track        | a horizontal artwork strip               | CarPlay only\*      |
+| `artworkCarPlayTinted`                     | a track        | tint artwork for CarPlay light/dark      | iOS                 |
+| `carPlaySiriListButton: 'top' \| 'bottom'` | a page         | place the Siri cell on the page          | iOS                 |
+| `albumUrl` + `resolveAlbumUrl`             | track + config | make the now-playing album line tappable | CarPlay             |
 
 ::: info Two caveats from the table
 **`albumUrl` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **`imageRow` is CarPlay-only** and CarPlay limits how many thumbnails are visible (extras are dropped); Android Auto ignores it.

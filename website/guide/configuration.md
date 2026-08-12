@@ -59,19 +59,19 @@ capabilities). Elsewhere, just omit a field to leave it unchanged.
 `updateOptions` can change only a subset. The rest are set in `setupPlayer`
 (call it again to change them later).
 
-| Option | `setupPlayer` | `updateOptions` |
-| --- | :---: | :---: |
-| `capabilities` | ✓ | ✓ |
-| `forwardJumpInterval` / `backwardJumpInterval` | ✓ | ✓ |
-| `progressUpdateEventInterval` | ✓ | ✓ |
-| `android.appKilledPlaybackBehavior` / `skipSilence` / `remoteButtonLayout` | ✓ | ✓ |
-| `ios.playbackRates` / `carPlayUpNextButton` / `carPlayNowPlayingButtons` | ✓ | ✓ |
-| `nowPlaying` (metadata formatter) | ✓ | — |
-| `playWhenReady`, `repeatMode` (initial values) | ✓ | — |
-| `retry`, `keepSessionAliveOnError` | ✓ | — |
-| `android` / `ios` audio engine & session (`audioContentType`, `wakeMode`, `category`, …) | ✓ | — |
+| Option                                                                                   | `setupPlayer` | `updateOptions` |
+| ---------------------------------------------------------------------------------------- | :-----------: | :-------------: |
+| `capabilities`                                                                           |       ✓       |        ✓        |
+| `forwardJumpInterval` / `backwardJumpInterval`                                           |       ✓       |        ✓        |
+| `progressUpdateEventInterval`                                                            |       ✓       |        ✓        |
+| `android.appKilledPlaybackBehavior` / `skipSilence` / `remoteButtonLayout`               |       ✓       |        ✓        |
+| `ios.playbackRates` / `carPlayUpNextButton` / `carPlayNowPlayingButtons`                 |       ✓       |        ✓        |
+| `nowPlaying` (metadata formatter)                                                        |       ✓       |        —        |
+| `playWhenReady`, `repeatMode` (initial values)                                           |       ✓       |        —        |
+| `retry`, `keepSessionAliveOnError`                                                       |       ✓       |        —        |
+| `android` / `ios` audio engine & session (`audioContentType`, `wakeMode`, `category`, …) |       ✓       |        —        |
 
-`playWhenReady` and `repeatMode` set the *initial* state; change them at runtime
+`playWhenReady` and `repeatMode` set the _initial_ state; change them at runtime
 with [`setPlayWhenReady`](/guide/playback#play-when-ready) /
 [`setRepeatMode`](/guide/queue#repeat-and-shuffle), not `updateOptions`.
 
@@ -89,23 +89,23 @@ updateOptions({
 })
 ```
 
-| Capability | Default | Notes |
-| --- | --- | --- |
-| `play` / `pause` / `stop` | `true` | Core transport. |
-| `seekTo` | `true` | Scrub the timeline. |
-| `skipToNext` / `skipToPrevious` | `true` | Move between queue items. |
-| `jumpForward` / `jumpBackward` | `false` | Podcast/audiobook seek by interval. |
-| `playbackRate` | `true` | Speed control (Control Center / CarPlay). |
-| `shuffleMode` / `repeatMode` | `true` | Shuffle / repeat toggles. |
-| `favorite` | `false` | The heart — see [Favorites](/guide/favorites). |
+| Capability                      | Default | Notes                                          |
+| ------------------------------- | ------- | ---------------------------------------------- |
+| `play` / `pause` / `stop`       | `true`  | Core transport.                                |
+| `seekTo`                        | `true`  | Scrub the timeline.                            |
+| `skipToNext` / `skipToPrevious` | `true`  | Move between queue items.                      |
+| `jumpForward` / `jumpBackward`  | `false` | Podcast/audiobook seek by interval.            |
+| `playbackRate`                  | `true`  | Speed control (Control Center / CarPlay).      |
+| `shuffleMode` / `repeatMode`    | `true`  | Shuffle / repeat toggles.                      |
+| `favorite`                      | `false` | The heart — see [Favorites](/guide/favorites). |
 
 ## Controls & progress
 
-| Option | Default | What |
-| --- | --- | --- |
-| `forwardJumpInterval` | `15` | Seconds for the jump-forward control. |
-| `backwardJumpInterval` | `15` | Seconds for the jump-backward control. |
-| `progressUpdateEventInterval` | `null` | Seconds between progress events; `null` disables them — see [Playback → Progress](/guide/playback#progress). |
+| Option                        | Default | What                                                                                                         |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `forwardJumpInterval`         | `15`    | Seconds for the jump-forward control.                                                                        |
+| `backwardJumpInterval`        | `15`    | Seconds for the jump-backward control.                                                                       |
+| `progressUpdateEventInterval` | `null`  | Seconds between progress events; `null` disables them — see [Playback → Progress](/guide/playback#progress). |
 
 ## Now Playing
 
@@ -120,22 +120,22 @@ It's **setup-only** (a function can't cross `updateOptions`). See
 
 ## Android options (`android`)
 
-| Option | Default | What |
-| --- | --- | --- |
-| `appKilledPlaybackBehavior` | `'continue-playback'` | What happens when the app is swiped away (`continue-playback` / `pause-playback` / `stop-playback-and-remove-notification`). |
-| `skipSilence` | `false` | Skip silent segments during playback. |
-| `remoteButtonLayout` | `null` | Explicit button placement (`back` / `forward` / `overflow`); `null` derives it from capabilities — see [Button layout](/guide/remote-controls#button-layout-android). |
-| `audioContentType` | `'music'` | Audio attributes content type (setup-only). |
-| `wakeMode` | `'none'` | CPU/network wake lock during playback (setup-only). |
+| Option                      | Default               | What                                                                                                                                                                  |
+| --------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `appKilledPlaybackBehavior` | `'continue-playback'` | What happens when the app is swiped away (`continue-playback` / `pause-playback` / `stop-playback-and-remove-notification`).                                          |
+| `skipSilence`               | `false`               | Skip silent segments during playback.                                                                                                                                 |
+| `remoteButtonLayout`        | `null`                | Explicit button placement (`back` / `forward` / `overflow`); `null` derives it from capabilities — see [Button layout](/guide/remote-controls#button-layout-android). |
+| `audioContentType`          | `'music'`             | Audio attributes content type (setup-only).                                                                                                                           |
+| `wakeMode`                  | `'none'`              | CPU/network wake lock during playback (setup-only).                                                                                                                   |
 
 ## iOS options (`ios`)
 
-| Option | Default | What |
-| --- | --- | --- |
-| `playbackRates` | `[0.5, 1.0, 1.5, 2.0]` | Rates offered by the rate control. |
-| `carPlayUpNextButton` | `true` | Show the "Up Next" button on CarPlay (auto-hidden when the queue has one track). |
-| `carPlayNowPlayingButtons` | `[]` | Buttons on the CarPlay now-playing screen (max **5**, left-to-right) — see [CarPlay](/guide/carplay). |
-| `category` | _(none)_ | iOS audio session category (setup-only). |
+| Option                     | Default                | What                                                                                                  |
+| -------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `playbackRates`            | `[0.5, 1.0, 1.5, 2.0]` | Rates offered by the rate control.                                                                    |
+| `carPlayUpNextButton`      | `true`                 | Show the "Up Next" button on CarPlay (auto-hidden when the queue has one track).                      |
+| `carPlayNowPlayingButtons` | `[]`                   | Buttons on the CarPlay now-playing screen (max **5**, left-to-right) — see [CarPlay](/guide/carplay). |
+| `category`                 | _(none)_               | iOS audio session category (setup-only).                                                              |
 
 ## Reading the current options
 
@@ -155,15 +155,15 @@ function JumpInterval() {
 }
 ```
 
-`getOptions` reports the *runtime* options above — it doesn't echo back the
+`getOptions` reports the _runtime_ options above — it doesn't echo back the
 setup-only `nowPlaying` / `playWhenReady` / `repeatMode` (read those via their
 own getters/hooks, e.g. [`useRepeatMode`](/guide/queue#repeat-and-shuffle)).
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `setupPlayer(options?)` | Initialize (and reconfigure) the player; `async`, once at startup. |
-| `updateOptions(options)` | Change runtime options later (merged over current); `null` disables on the two fields that support it. |
-| `getOptions()` / `useOptions()` | Read the resolved runtime options. |
-| `onOptionsChanged` | Subscribe to options changes outside React. |
+| API                             | Purpose                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `setupPlayer(options?)`         | Initialize (and reconfigure) the player; `async`, once at startup.                                     |
+| `updateOptions(options)`        | Change runtime options later (merged over current); `null` disables on the two fields that support it. |
+| `getOptions()` / `useOptions()` | Read the resolved runtime options.                                                                     |
+| `onOptionsChanged`              | Subscribe to options changes outside React.                                                            |

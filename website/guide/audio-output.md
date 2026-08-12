@@ -40,11 +40,11 @@ function OutputLabel() {
 
 An [`Output`](/api/features/output/#output) is:
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `name` | `string` | Human-readable device name, e.g. `"AirPods Pro"`, `"Kitchen speaker"`. |
-| `type` | `OutputType` | The output kind (see below). |
-| `external` | `boolean` | `false` only for the built-in speaker/receiver; `true` for everything external. |
+| Field      | Type         | Meaning                                                                         |
+| ---------- | ------------ | ------------------------------------------------------------------------------- |
+| `name`     | `string`     | Human-readable device name, e.g. `"AirPods Pro"`, `"Kitchen speaker"`.          |
+| `type`     | `OutputType` | The output kind (see below).                                                    |
+| `external` | `boolean`    | `false` only for the built-in speaker/receiver; `true` for everything external. |
 
 `type` is one of `'speaker'`, `'receiver'` (the iOS earpiece), `'headphones'`,
 `'bluetooth'`, `'airplay'`, `'car'`, `'hdmi'`, `'usb'`, `'cast'` (a remote
@@ -104,7 +104,7 @@ from showing a control that would do nothing.
 
 On Android the switcher is the system one (the picker from the media
 notification); selecting a Bluetooth speaker there routes audio at the OS level.
-The library can't force playback to a *specific* Bluetooth device itself — route
+The library can't force playback to a _specific_ Bluetooth device itself — route
 selection is the system's job, which is what this hands off to. Sonos appears on
 iOS (as an AirPlay target); on Android it isn't a system route, so it won't show.
 
@@ -115,17 +115,17 @@ speaker powered off — the player **pauses automatically** rather than blaring 
 of the built-in speaker (the convention every media app follows). It's a
 deliberate pause: the listener presses play again when ready. So you don't need
 to watch `onOutputChanged` just to handle unplugging — reach for these APIs to
-*display* the output or to *offer* a switcher.
+_display_ the output or to _offer_ a switcher.
 
 ## API summary
 
-| API | Platforms | Purpose |
-| --- | --- | --- |
-| `openOutputPicker()` | iOS, Android 11+ | Present the system output switcher (Bluetooth / AirPlay / speaker / Cast). |
-| `supportsOutputSwitcher()` | all | Whether a switcher can be shown — gate your output button on it. |
-| `useOutput()` | iOS, Android | Reactive current output (`Output \| undefined`). |
-| `getOutput()` | iOS, Android | One-off snapshot of the current output. |
-| `onOutputChanged` | iOS, Android | Subscribe outside React; `addListener(cb)` returns an unsubscribe fn. |
+| API                        | Platforms        | Purpose                                                                    |
+| -------------------------- | ---------------- | -------------------------------------------------------------------------- |
+| `openOutputPicker()`       | iOS, Android 11+ | Present the system output switcher (Bluetooth / AirPlay / speaker / Cast). |
+| `supportsOutputSwitcher()` | all              | Whether a switcher can be shown — gate your output button on it.           |
+| `useOutput()`              | iOS, Android     | Reactive current output (`Output \| undefined`).                           |
+| `getOutput()`              | iOS, Android     | One-off snapshot of the current output.                                    |
+| `onOutputChanged`          | iOS, Android     | Subscribe outside React; `addListener(cb)` returns an unsubscribe fn.      |
 
 The whole API is cross-platform; only the switcher needs Android 11+ (gate on
 `supportsOutputSwitcher()`), and Android reports coarser output `type`s than iOS.

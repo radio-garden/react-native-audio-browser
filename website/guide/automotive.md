@@ -20,15 +20,15 @@ handle the platform-specific **setup**: **[Android Auto](/guide/android-auto)**
 
 ## Shared vs platform-specific
 
-| Concern | Where it's handled |
-| --- | --- |
-| Browse tree / menus | Shared — [Browser](/guide/browser) |
-| Now-playing metadata & artwork | Shared — [Now Playing](/guide/now-playing) |
-| Player, queue, playback | Shared — [Playback](/guide/playback) |
-| Voice search ("play …") | Shared — your [`search`](/guide/search) source |
-| Favorites heart & "play my favorites" | Shared — [Favorites](/guide/favorites) |
-| App setup, entitlements, manifest | Per-platform — [Android Auto](/guide/android-auto) / [CarPlay](/guide/carplay) |
-| Now-playing buttons | Per-platform — [Button layout](/guide/remote-controls#button-layout-android) (Android) / [CarPlay](/guide/carplay) (iOS) |
+| Concern                               | Where it's handled                                                                                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Browse tree / menus                   | Shared — [Browser](/guide/browser)                                                                                       |
+| Now-playing metadata & artwork        | Shared — [Now Playing](/guide/now-playing)                                                                               |
+| Player, queue, playback               | Shared — [Playback](/guide/playback)                                                                                     |
+| Voice search ("play …")               | Shared — your [`search`](/guide/search) source                                                                           |
+| Favorites heart & "play my favorites" | Shared — [Favorites](/guide/favorites)                                                                                   |
+| App setup, entitlements, manifest     | Per-platform — [Android Auto](/guide/android-auto) / [CarPlay](/guide/carplay)                                           |
+| Now-playing buttons                   | Per-platform — [Button layout](/guide/remote-controls#button-layout-android) (Android) / [CarPlay](/guide/carplay) (iOS) |
 
 The takeaway: spend your effort on the shared content model; reach for a platform
 page only for that platform's setup and buttons.

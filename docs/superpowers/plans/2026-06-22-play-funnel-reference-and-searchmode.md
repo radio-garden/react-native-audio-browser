@@ -13,7 +13,7 @@
 - **`corepack yarn`, never bare `yarn`** — the library pins Yarn 4; global `yarn` is v1 and errors.
 - **`SearchMode` final value set (verbatim):** `'any' | 'song' | 'playlist' | 'station' | 'podcast' | 'audiobook' | 'news' | 'music' | 'music-video' | 'movie' | 'tv-show' | 'tv-show-episode'`. Dropped vs today: `'genre'`, `'artist'`, `'album'`. The video kinds stay granular (not collapsed to a single `'video'`) so consumers can special-case them; unhandled ones free-fall to the consumer's default. `mode` stays **optional** (`mode?`) — absence means unstructured/unclassified; `'any'` keeps its "play anything good / smart shuffle, empty query" meaning.
 - **`reference` is REQUIRED on `SearchParams`** with values `'my' | 'unknown'` (type `MediaReference`). Android always emits `'unknown'`. Adding a required field breaks every `SearchParams(...)` constructor — all sites must be updated (enumerated in Task 1/3/4).
-- **`mode` is the container vertical only** (what *kind* of result); `genre`/`artist`/`album`/`title`/`playlist` are *filter* props that ride alongside and are read directly by the consumer. `mode` is sourced **solely from `mediaType`** (iOS) / focus (Android) — never derived from which filter prop is set.
+- **`mode` is the container vertical only** (what _kind_ of result); `genre`/`artist`/`album`/`title`/`playlist` are _filter_ props that ride alongside and are read directly by the consumer. `mode` is sourced **solely from `mediaType`** (iOS) / focus (Android) — never derived from which filter prop is set.
 - **`.currentlyPlaying` is native-only:** it routes to the existing resume branch (warm play / cold restore / fail) and is NEVER placed on `SearchParams`. Only `.my` → `SearchParams.reference = 'my'`.
 - **Nitro coupling:** changing `SearchMode`/`SearchParams` requires `corepack yarn codegen` (regenerates `nitrogen/generated/` + rebuilds `lib/`) and, in the consuming app, `pod install`. `codegen` runs `tsc` over `src/` **including the web stub** (`src/web/`) — the web stub must compile. Swift/Kotlin are NOT compiled by codegen; native errors surface only at build. **Consequence:** after Task 1 the native build is temporarily red (native still references old `SearchMode.GENRE` etc.); it goes green again at Task 4. Each task is verified by its OWN signal (codegen+tsc / `swift test` / iOS build / Android build), not the full app build until Task 5.
 - **iOS `MediaIntentCriteria` stays `Intents`-free** (pure, in the `AudioBrowserTestable` target) so it's unit-testable via `swift test`. All `INMediaSearch`/`INMediaItemType`/`INMediaReference` mapping lives in `RNABMediaIntentHandler` (the `Intents`-aware layer), which passes plain `String`/enum values into the criteria.
@@ -21,20 +21,20 @@
 
 ## The `INMediaItemType` → `SearchMode` collapse table (canonical; used in Task 3)
 
-| `INMediaItemType` | → `SearchMode` string |
-|---|---|
-| `station`, `radioStation`, `algorithmicRadioStation`, `musicStation` | `"station"` |
-| `podcastShow`, `podcastEpisode`, `podcastPlaylist`, `podcastStation` | `"podcast"` |
-| `audioBook` | `"audiobook"` |
-| `news` | `"news"` |
-| `music` | `"music"` |
-| `song` | `"song"` |
-| `playlist` | `"playlist"` |
-| `musicVideo` | `"music-video"` |
-| `movie` | `"movie"` |
-| `tvShow` | `"tv-show"` |
-| `tvShowEpisode` | `"tv-show-episode"` |
-| `album`, `artist`, `genre`, `unknown`, (any other) | `nil` (filter or unclassified → no mode) |
+| `INMediaItemType`                                                    | → `SearchMode` string                    |
+| -------------------------------------------------------------------- | ---------------------------------------- |
+| `station`, `radioStation`, `algorithmicRadioStation`, `musicStation` | `"station"`                              |
+| `podcastShow`, `podcastEpisode`, `podcastPlaylist`, `podcastStation` | `"podcast"`                              |
+| `audioBook`                                                          | `"audiobook"`                            |
+| `news`                                                               | `"news"`                                 |
+| `music`                                                              | `"music"`                                |
+| `song`                                                               | `"song"`                                 |
+| `playlist`                                                           | `"playlist"`                             |
+| `musicVideo`                                                         | `"music-video"`                          |
+| `movie`                                                              | `"movie"`                                |
+| `tvShow`                                                             | `"tv-show"`                              |
+| `tvShowEpisode`                                                      | `"tv-show-episode"`                      |
+| `album`, `artist`, `genre`, `unknown`, (any other)                   | `nil` (filter or unclassified → no mode) |
 
 ---
 
@@ -55,11 +55,13 @@
 ## Task 1: Reshape the TypeScript types + web stub, run codegen
 
 **Files:**
+
 - Modify: `src/types/browser.ts:60-112` (SearchMode doc + enum; SearchParams + reference)
 - Modify: `src/web/NativeAudioBrowser.ts:506` (SearchParams wrap)
 - Test: `corepack yarn codegen` (tsc over `src/` + web stub) + `npx tsc --noEmit`
 
 **Interfaces:**
+
 - Produces: `SearchMode` (new 12-value union, no genre/artist/album), `MediaReference = 'my' | 'unknown'`, `SearchParams.reference: MediaReference` (required), `SearchParams.mode?: SearchMode` (still optional). Native tasks consume the regenerated `nitrogen/generated/**/SearchMode.{swift,kt}` and `MediaReference.{swift,kt}` enums and the `reference` field on the generated `SearchParams`.
 
 - [ ] **Step 1: Rewrite the `SearchMode` type + doc**
@@ -208,10 +210,12 @@ git commit -m "feat(search): reshape SearchMode to container verticals + add ref
 ## Task 2: iOS `MediaIntentCriteria` — `Reference` enum, 3-way `isResume`, mode = mediaType only
 
 **Files:**
+
 - Modify: `ios/Player/MediaIntentCriteria.swift` (whole struct)
 - Test: `ios/Tests/MediaIntentCriteriaTests.swift` (rewrite expectations)
 
 **Interfaces:**
+
 - Consumes: nothing from Task 1 at the Swift-test level (this type is `Intents`-free and string-based; it does not import the Nitro `SearchMode`).
 - Produces: `MediaIntentCriteria.Reference` (`.my`/`.currentlyPlaying`/`.unknown`); `MediaIntentCriteria(... reference: Reference ...)` initializer (replacing `hasReference: Bool`); `MediaIntentCriteria.from(..., reference: Reference, mediaTypeMode: String?, ...)` factory; `criteria.searchMode` now equals `mediaTypeMode` verbatim; `criteria.reference` exposed for the funnel. Task 3 consumes these.
 
@@ -560,12 +564,14 @@ git commit -m "feat(ios): MediaIntentCriteria reference enum + mode-from-mediaTy
 ## Task 3: iOS handler + funnel — map `INMediaReference`/`INMediaItemType`, assemble `reference`
 
 **Files:**
+
 - Modify: `ios/CarPlay/RNABMediaIntentHandler.swift` (the `handle` mapping)
 - Modify: `ios/HybridAudioBrowser.swift:1633-1645` (funnel `SearchParams` assembly)
 - Modify: `ios/Browser/BrowserManager.swift:627` (text-search `SearchParams` constructor)
 - Test: iOS app build (`swift test` covers the pure unit in Task 2; this task is integration, verified by a clean compile of the iOS target)
 
 **Interfaces:**
+
 - Consumes: `MediaIntentCriteria.Reference`, `MediaIntentCriteria.from(... mediaTypeMode:reference:hasMediaType: ...)` (Task 2); the regenerated Nitro `SearchParams` with its required `reference` field and `MediaReference` enum (Task 1).
 - Produces: a `SearchParams` whose `reference` is `.my` or `.unknown`; `.currentlyPlaying` never reaches assembly (resume handles it).
 
@@ -670,11 +676,13 @@ git commit -m "feat(ios): map reference + mediaType verticals into SearchParams"
 ## Task 4: Android `parseSearchIntent` — mode trim + `reference = 'unknown'`
 
 **Files:**
+
 - Modify: `android/src/main/java/com/audiobrowser/Service.kt:186-216` (mode mapping + `SearchParams` return)
 - Modify: `android/src/main/java/com/audiobrowser/browser/BrowserManager.kt:721`, `:777` (`SearchParams` constructors), `:1247` (optional serialization)
 - Test: Android build (`corepack yarn android:bundle` / gradle compile via the app)
 
 **Interfaces:**
+
 - Consumes: the regenerated Kotlin `SearchMode` (no `GENRE`/`ARTIST`/`ALBUM`; new vertical cases) and `MediaReference` enums, and the `reference` field on the generated `SearchParams` (Task 1).
 - Produces: Android `SearchParams` with `reference = MediaReference.UNKNOWN` always, and `mode` only ∈ {`ANY`, `SONG`, `PLAYLIST`, null}.
 
@@ -747,9 +755,11 @@ git commit -m "feat(android): trim mode to verticals + always-unknown reference"
 ## Task 5: Integration — `pod install`, full rebuild, device/sim voice verification
 
 **Files:**
+
 - No source changes expected; this task verifies the bundle end-to-end and captures any integration fixes.
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1–4.
 
 - [ ] **Step 1: Regenerate + reinstall pods in the consuming context**
@@ -770,6 +780,7 @@ Expected: `MediaIntentCriteria*` suites pass. (Pre-existing `PlaybackStateMachin
 - [ ] **Step 4: Device/simulator voice checks (manual, scripted phrases)**
 
 Build the example app to a device/simulator and verify each:
+
 - "Hey Siri, play my favorites" → `reference='my'`, empty query → consumer `search` returns favorites and they play (no longer a no-op). **This is the headline fix.**
 - "Hey Siri, play this" / "resume" → resumes the active or persisted track (native, no search).
 - "Hey Siri, play jazz" → `genre='jazz'`, `mode` undefined → consumer searches genre.

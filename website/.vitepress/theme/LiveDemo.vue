@@ -35,7 +35,9 @@ const demoSrc = import.meta.env.DEV
           </button>
         </div>
       </div>
-      <p class="caption">↑ Live &amp; interactive — go ahead, browse and play</p>
+      <p class="caption">
+        ↑ Live &amp; interactive — go ahead, browse and play
+      </p>
     </div>
   </div>
 </template>

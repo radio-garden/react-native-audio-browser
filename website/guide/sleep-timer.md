@@ -97,7 +97,11 @@ function SleepTimerLabel() {
 
   const minutes = Math.floor(timer.secondsLeft / 60)
   const seconds = timer.secondsLeft % 60
-  return <Text>Sleeping in {minutes}m {seconds}s</Text>
+  return (
+    <Text>
+      Sleeping in {minutes}m {seconds}s
+    </Text>
+  )
 }
 ```
 
@@ -199,7 +203,11 @@ function Status(props: {
 
   const minutes = Math.floor(timer.secondsLeft / 60)
   const seconds = timer.secondsLeft % 60
-  return <Text>Sleeping in {minutes}m {seconds}s</Text>
+  return (
+    <Text>
+      Sleeping in {minutes}m {seconds}s
+    </Text>
+  )
 }
 ```
 
@@ -245,12 +253,12 @@ unsubscribe()
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `setSleepTimer(seconds, { fadeDuration? })` | Pause playback after `seconds`, optionally fading out. |
-| `setSleepTimerToEndOfTrack()` | Pause when the current track finishes. |
-| `clearSleepTimer()` | Cancel the active timer; returns `true` if one was cleared. |
-| `getSleepTimer()` | Read the raw timer state (no `secondsLeft`). |
-| `onSleepTimerChanged` | Subscribe to timer changes outside React; returns a cleanup fn. |
-| `useSleepTimer({ updateInterval?, inactive? })` | Live state with a `secondsLeft` countdown. |
-| `useSleepTimerActive()` | Boolean: is any timer set? |
+| API                                             | Purpose                                                         |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| `setSleepTimer(seconds, { fadeDuration? })`     | Pause playback after `seconds`, optionally fading out.          |
+| `setSleepTimerToEndOfTrack()`                   | Pause when the current track finishes.                          |
+| `clearSleepTimer()`                             | Cancel the active timer; returns `true` if one was cleared.     |
+| `getSleepTimer()`                               | Read the raw timer state (no `secondsLeft`).                    |
+| `onSleepTimerChanged`                           | Subscribe to timer changes outside React; returns a cleanup fn. |
+| `useSleepTimer({ updateInterval?, inactive? })` | Live state with a `secondsLeft` countdown.                      |
+| `useSleepTimerActive()`                         | Boolean: is any timer set?                                      |

@@ -56,22 +56,22 @@ With the HTTP form the library appends to `request.query`: `q` (always, even whe
 
 Both forms receive the same structured `SearchParams`:
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `query` | `string` | The raw query (always present, may be `""`). |
-| `mode` | `SearchMode?` | The **container vertical** — what *kind* of result. Absent for an unstructured search. |
-| `genre` | `string?` | Genre **filter**. |
-| `artist` | `string?` | Artist **filter**. |
-| `album` | `string?` | Album **filter**. |
-| `title` | `string?` | Track-title filter (song intents). |
-| `playlist` | `string?` | Playlist-name filter. |
-| `reference` | `'my' \| 'unknown'` | Whether the user asked for *their own* collection. |
+| Field       | Type                | Meaning                                                                                |
+| ----------- | ------------------- | -------------------------------------------------------------------------------------- |
+| `query`     | `string`            | The raw query (always present, may be `""`).                                           |
+| `mode`      | `SearchMode?`       | The **container vertical** — what _kind_ of result. Absent for an unstructured search. |
+| `genre`     | `string?`           | Genre **filter**.                                                                      |
+| `artist`    | `string?`           | Artist **filter**.                                                                     |
+| `album`     | `string?`           | Album **filter**.                                                                      |
+| `title`     | `string?`           | Track-title filter (song intents).                                                     |
+| `playlist`  | `string?`           | Playlist-name filter.                                                                  |
+| `reference` | `'my' \| 'unknown'` | Whether the user asked for _their own_ collection.                                     |
 
 `query` and `reference` are **always present** (`reference` defaults to `'unknown'`); the short literals in the tables below omit them for brevity, but a real `SearchParams` always carries both.
 
-## Search modes are *verticals*, not filters
+## Search modes are _verticals_, not filters
 
-`mode` answers **"what kind of thing did the user ask for?"** — a station, a podcast, a song. It is orthogonal to the filter fields, which say *which* item:
+`mode` answers **"what kind of thing did the user ask for?"** — a station, a podcast, a song. It is orthogonal to the filter fields, which say _which_ item:
 
 ```ts
 // "play a jazz podcast"
@@ -81,17 +81,17 @@ Both forms receive the same structured `SearchParams`:
 
 The values:
 
-| Mode | Asked for |
-| --- | --- |
-| `any` | Anything sensible — smart shuffle / "play something" (empty query). |
-| `station` | A live radio station / channel. |
-| `podcast` | A podcast (show, episode, or station). |
-| `audiobook` | An audiobook. |
-| `news` | News content. |
-| `music` | The music vertical (as opposed to talk/podcasts). |
-| `song` | An individual track. |
-| `playlist` | A named playlist / mix. |
-| `music-video` / `movie` / `tv-show` / `tv-show-episode` | Video kinds (see [Mixed audio/video](#mixed-audio-video)). |
+| Mode                                                    | Asked for                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `any`                                                   | Anything sensible — smart shuffle / "play something" (empty query). |
+| `station`                                               | A live radio station / channel.                                     |
+| `podcast`                                               | A podcast (show, episode, or station).                              |
+| `audiobook`                                             | An audiobook.                                                       |
+| `news`                                                  | News content.                                                       |
+| `music`                                                 | The music vertical (as opposed to talk/podcasts).                   |
+| `song`                                                  | An individual track.                                                |
+| `playlist`                                              | A named playlist / mix.                                             |
+| `music-video` / `movie` / `tv-show` / `tv-show-episode` | Video kinds (see [Mixed audio/video](#mixed-audio-video)).          |
 
 ::: tip There is no `genre`/`artist`/`album` mode
 Those are **filters**, not result shapes — read them from `params.genre` / `params.artist` / `params.album` directly. A genre search arrives as `{ genre: 'jazz' }` with `mode` left unset.
@@ -106,25 +106,25 @@ The two voice platforms feed the **same** `SearchParams`; they just differ in ho
 - **iOS (SiriKit)** supplies the richer set — all the `mode` verticals and the `reference` axis.
 - **Android (`onPlayFromSearch`)** supplies the subset it can express: `query`, the music focuses (`song` / `playlist` and the genre/artist/album filters), and always `reference: 'unknown'`.
 
-Write your resolver against the *fields that are present* (`if (params.genre) …`), not against the platform. A field that's empty on one platform simply means "the assistant didn't provide it."
+Write your resolver against the _fields that are present_ (`if (params.genre) …`), not against the platform. A field that's empty on one platform simply means "the assistant didn't provide it."
 
 ## Voice playback (Siri & Google Assistant)
 
 A spoken command — "play jazz on «App»" — funnels to the **same `search` source** on both platforms, then the result is queued and played. Any active **[Gate](/guide/gate)** sees the search first, so voice can't slip past a paywall or region block unless your gate lets it through. You configure `search` once; both assistants use it.
 
 ::: tip A browsable first result is drilled into
-For voice playback specifically, the library inspects the **first** result. If it is a browsable-only container — a `url` (a place/genre page) with no `src` of its own — the library resolves that page and queues *its* playable children, so "play jazz" plays the first station *inside* the jazz page rather than the page itself. If the first result is already playable (has a `src`), or the drill-in finds nothing playable, the flat list of results is queued as-is. This applies on both platforms, and only to voice playback — an in-app search UI renders your results and lets the user pick.
+For voice playback specifically, the library inspects the **first** result. If it is a browsable-only container — a `url` (a place/genre page) with no `src` of its own — the library resolves that page and queues _its_ playable children, so "play jazz" plays the first station _inside_ the jazz page rather than the page itself. If the first result is already playable (has a `src`), or the drill-in finds nothing playable, the flat list of results is queued as-is. This applies on both platforms, and only to voice playback — an in-app search UI renders your results and lets the user pick.
 :::
 
 For ordinary queries ("play jazz", "play «station name»") the two behave identically — same resolver, same queue, same playback. The entry point and a few conveniences differ:
 
-| | iOS (Siri) | Android (Google Assistant) |
-| --- | --- | --- |
-| Delivered as | `INPlayMediaIntent` | `MEDIA_PLAY_FROM_SEARCH` intent |
-| "play my favorites" | `reference: 'my'` → resolves to the user's collection | no collection signal → searched as plain text; reach favorites by **browsing** the Favorites tab instead |
-| "play «App»" | recognised as a resume | searched literally (no app-name heuristic) |
-| bare "play" / "resume" | resumes the current/last track | separate resume path (`onPlay`), not a search |
-| "play music" (no query) | may send `mode: 'music'` | `mode: 'any'` → return smart-shuffle / recent content |
+|                         | iOS (Siri)                                            | Android (Google Assistant)                                                                               |
+| ----------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Delivered as            | `INPlayMediaIntent`                                   | `MEDIA_PLAY_FROM_SEARCH` intent                                                                          |
+| "play my favorites"     | `reference: 'my'` → resolves to the user's collection | no collection signal → searched as plain text; reach favorites by **browsing** the Favorites tab instead |
+| "play «App»"            | recognised as a resume                                | searched literally (no app-name heuristic)                                                               |
+| bare "play" / "resume"  | resumes the current/last track                        | separate resume path (`onPlay`), not a search                                                            |
+| "play music" (no query) | may send `mode: 'music'`                              | `mode: 'any'` → return smart-shuffle / recent content                                                    |
 
 The gaps are all iOS-only conveniences — collection-by-voice and resume-by-name. Everything in the shared column is fully cross-platform.
 
@@ -161,7 +161,7 @@ configureBrowser({
         contentType: 'application/json',
         body: JSON.stringify({
           q: request.query.q,
-          ids: getLocalFavoriteIds()   // your stored identifiers
+          ids: getLocalFavoriteIds() // your stored identifiers
         })
       }
     }
@@ -173,21 +173,21 @@ configureBrowser({
 
 ## Voice phrase → params
 
-These mappings are **illustrative, not guaranteed.** The assistant (Siri / Google Assistant) decides how to parse a spoken phrase, and the same words can arrive structured differently — or as a bare `query` — depending on the platform, locale, and the assistant's own interpretation. Treat the table as *plausible* shapes to handle, and always write your resolver against the fields actually present (see [Cross-platform differences](#cross-platform-differences)) rather than assuming a phrase produces a specific shape.
+These mappings are **illustrative, not guaranteed.** The assistant (Siri / Google Assistant) decides how to parse a spoken phrase, and the same words can arrive structured differently — or as a bare `query` — depending on the platform, locale, and the assistant's own interpretation. Treat the table as _plausible_ shapes to handle, and always write your resolver against the fields actually present (see [Cross-platform differences](#cross-platform-differences)) rather than assuming a phrase produces a specific shape.
 
-| Phrase | Resulting `SearchParams` |
-| --- | --- |
-| "play something" | `{ query: 'something' }` |
-| "play music" | `{ mode: 'any', query: '' }` *(iOS may send `mode: 'music'`)* |
-| "play jazz" | `{ genre: 'jazz', query: 'jazz' }` |
-| "play The Stalk 88.5" | `{ mode: 'station', query: 'The Stalk 88.5' }` |
-| "play a jazz podcast" | `{ mode: 'podcast', genre: 'jazz' }` |
-| "play my favorites" | `{ reference: 'my', query: '' }` |
-| "play my jazz" | `{ reference: 'my', genre: 'jazz' }` |
+| Phrase                | Resulting `SearchParams`                                      |
+| --------------------- | ------------------------------------------------------------- |
+| "play something"      | `{ query: 'something' }`                                      |
+| "play music"          | `{ mode: 'any', query: '' }` _(iOS may send `mode: 'music'`)_ |
+| "play jazz"           | `{ genre: 'jazz', query: 'jazz' }`                            |
+| "play The Stalk 88.5" | `{ mode: 'station', query: 'The Stalk 88.5' }`                |
+| "play a jazz podcast" | `{ mode: 'podcast', genre: 'jazz' }`                          |
+| "play my favorites"   | `{ reference: 'my', query: '' }`                              |
+| "play my jazz"        | `{ reference: 'my', genre: 'jazz' }`                          |
 
 ## Mixed audio/video
 
-This is an **audio** library — its player streams audio and has no video surface, and CarPlay / Android Auto forbid video playback while driving. So video is fundamentally an **in-app** concern: a search can *signal* a video request (via the video `mode` values), but the library will not render video.
+This is an **audio** library — its player streams audio and has no video surface, and CarPlay / Android Auto forbid video playback while driving. So video is fundamentally an **in-app** concern: a search can _signal_ a video request (via the video `mode` values), but the library will not render video.
 
 To play video from your in-app search, intercept the load with [`handleTrackLoad`](/api/types/browser/#handletrackload). It runs whenever a track is loaded through [`navigate(track)`](/api/features/browser/#navigate) (or the library's own browse UI) — so route your in-app search-result taps through `navigate(track)` rather than calling `setQueue` / `play` yourself, or this hook never fires. When set, it is called **instead of** the library auto-playing the track — for **every** such load, not just video — so your handler must either route the track elsewhere or hand it back to the library to play:
 
@@ -218,4 +218,4 @@ configureBrowser({
 
 `setQueue` and `play` are top-level named exports, like `configureBrowser` — not methods on a browser object. `setQueue` only loads the queue; it never changes play/pause state, which is why the audio branch calls `play()` after it.
 
-The `mode` you saw at **search** time (`music-video` / `movie` / …) is not carried onto the `Track`, and `handleTrackLoad` runs at **load** time with no `mode`. The tracks your `search` source returns for a video request are *yours*, though — so tag them with a recognizable `src` (as above) when you build them, and read that tag in `isVideo` here. On external surfaces (CarPlay / Android Auto), a video request falls back to audio or is declined — there is no video playback path there.
+The `mode` you saw at **search** time (`music-video` / `movie` / …) is not carried onto the `Track`, and `handleTrackLoad` runs at **load** time with no `mode`. The tracks your `search` source returns for a video request are _yours_, though — so tag them with a recognizable `src` (as above) when you build them, and read that tag in `isVideo` here. On external surfaces (CarPlay / Android Auto), a video request falls back to audio or is declined — there is no video playback path there.

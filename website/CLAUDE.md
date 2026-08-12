@@ -39,7 +39,7 @@ The anchor is the symbol name lowercased with no separators (`setQueue` →
 `#setqueue`, `useActiveTrack` → `#useactivetrack`). Prefer linking the symbol
 inline (e.g. ``[`setQueue`](/api/features/queue/#setqueue)``) over leaving it as
 bare code. Don't over-link — once per section per symbol is plenty, and
-cross-links to other *guides* (e.g. `/guide/playback`) are separate from these
+cross-links to other _guides_ (e.g. `/guide/playback`) are separate from these
 API-reference links.
 
 ## Sidebar & Page Ordering

@@ -4,7 +4,7 @@ This guide covers **controlling the active track** — transport (play / pause /
 stop), seeking, playback state, progress, rate, and volume. It's the toolkit for
 building your own player UI.
 
-Playback acts on whatever the **active track** is. *Which* track that is — and
+Playback acts on whatever the **active track** is. _Which_ track that is — and
 moving between tracks with next/previous — belongs to the [queue](/guide/basic-usage#the-queue);
 this page is about playing the one that's already active. The system surfaces
 (lock screen, notification, car) are covered in [Now Playing](/guide/now-playing).
@@ -38,11 +38,11 @@ import { reset } from 'react-native-audio-browser'
 reset() // tear down: stop + empty the queue
 ```
 
-| | Position | Track stays loaded | Queue |
-| --- | --- | --- | --- |
-| `pause()` | kept | yes | kept |
-| `stop()` | reset to start | yes | kept |
-| `reset()` | — | no | cleared |
+|           | Position       | Track stays loaded | Queue   |
+| --------- | -------------- | ------------------ | ------- |
+| `pause()` | kept           | yes                | kept    |
+| `stop()`  | reset to start | yes                | kept    |
+| `reset()` | —              | no                 | cleared |
 
 ## Seeking
 
@@ -72,17 +72,17 @@ Moving between tracks (next / previous / skip) is part of the
 
 `usePlayback` returns the current `{ state, error }`. The `state` is one of:
 
-| State | Meaning |
-| --- | --- |
-| `'none'` | Idle — no track loaded (initial state). |
-| `'loading'` | Loading the item before playback can begin. |
-| `'ready'` | Track loaded and ready, currently paused. |
-| `'playing'` | Currently playing. |
-| `'buffering'` | Loading more data before it can continue. |
-| `'paused'` | Paused. |
-| `'stopped'` | Stopped. |
-| `'ended'` | Reached the end of the queue. |
-| `'error'` | Playback failed — see [Errors](/guide/errors). |
+| State         | Meaning                                        |
+| ------------- | ---------------------------------------------- |
+| `'none'`      | Idle — no track loaded (initial state).        |
+| `'loading'`   | Loading the item before playback can begin.    |
+| `'ready'`     | Track loaded and ready, currently paused.      |
+| `'playing'`   | Currently playing.                             |
+| `'buffering'` | Loading more data before it can continue.      |
+| `'paused'`    | Paused.                                        |
+| `'stopped'`   | Stopped.                                       |
+| `'ended'`     | Reached the end of the queue.                  |
+| `'error'`     | Playback failed — see [Errors](/guide/errors). |
 
 ```tsx
 import { usePlayback, retry } from 'react-native-audio-browser'
@@ -107,10 +107,7 @@ For a play/pause button, drive it off `usePlayingState` — not
 states. It gives you two booleans and re-renders only when they flip:
 
 ```tsx
-import {
-  usePlayingState,
-  togglePlayback
-} from 'react-native-audio-browser'
+import { usePlayingState, togglePlayback } from 'react-native-audio-browser'
 
 function PlayPauseButton() {
   const { playing, buffering } = usePlayingState()
@@ -131,10 +128,7 @@ actually coming out yet (it may still be loading or buffering). Setting it is
 equivalent to calling `play()` / `pause()`:
 
 ```tsx
-import {
-  setPlayWhenReady,
-  usePlayWhenReady
-} from 'react-native-audio-browser'
+import { setPlayWhenReady, usePlayWhenReady } from 'react-native-audio-browser'
 
 setPlayWhenReady(true) // same as play()
 
@@ -149,7 +143,7 @@ function PlayToggle() {
 }
 ```
 
-Use `usePlayWhenReady` when your control should reflect the user's *intent*
+Use `usePlayWhenReady` when your control should reflect the user's _intent_
 immediately (the toggle flips the instant they tap, even while buffering); use
 `usePlayingState` when it should reflect whether sound is actually playing.
 
@@ -259,7 +253,7 @@ function VolumeSlider() {
 }
 ```
 
-System volume *does* have a hook, since the hardware buttons can change it
+System volume _does_ have a hook, since the hardware buttons can change it
 behind your back:
 
 ```tsx
@@ -298,27 +292,27 @@ cancel()
 
 `period` must be `>= 1` (it throws otherwise). The clock is cumulative across
 the whole session and
-counts *all* play time, not per-track — `total` keeps climbing through track
+counts _all_ play time, not per-track — `total` keeps climbing through track
 changes. To measure per track, cancel and re-subscribe whenever the
 [active track changes](/guide/now-playing). It's a coarse, ~1-second-resolution
 signal, not a precise timer.
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `play()` / `pause()` / `togglePlayback()` | Start, pause, or flip playback. |
-| `stop()` | Stop and reset position; track stays loaded. |
-| `reset()` | Stop **and** clear the queue. |
-| `seekTo(seconds)` / `seekBy(offset)` | Seek to an absolute / relative position. |
-| `seekToLiveEdge()` | Jump to the live edge (no-op if not live). |
-| `usePlayback()` / `getPlayback()` | Full `{ state, error }`; subscribe via `onPlaybackChanged`. |
-| `retry()` | Re-attempt the current item while in the `'error'` state. |
-| `usePlayingState()` | `{ playing, buffering }` booleans for a play/pause button. |
-| `setPlayWhenReady(bool)` / `usePlayWhenReady()` | Play/pause *intent*, independent of buffering. |
-| `usePolledProgress(intervalMs?)` | `{ position, duration, buffered }` via polling (ms) — works by default. |
-| `useProgress()` / `getProgress()` | Progress via events (enable `progressUpdateEventInterval` first). |
-| `getRate()` / `setRate(rate)` | Playback speed multiplier (`1` = normal). |
-| `getVolume()` / `setVolume(0..1)` | This player's volume. |
-| `getSystemVolume()` / `useSystemVolume()` | Device media volume (`setSystemVolume` is iOS no-op). |
-| `trackPlaybackTime(cb, period)` | Heartbeat every `period` seconds of real playback. |
+| API                                             | Purpose                                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `play()` / `pause()` / `togglePlayback()`       | Start, pause, or flip playback.                                         |
+| `stop()`                                        | Stop and reset position; track stays loaded.                            |
+| `reset()`                                       | Stop **and** clear the queue.                                           |
+| `seekTo(seconds)` / `seekBy(offset)`            | Seek to an absolute / relative position.                                |
+| `seekToLiveEdge()`                              | Jump to the live edge (no-op if not live).                              |
+| `usePlayback()` / `getPlayback()`               | Full `{ state, error }`; subscribe via `onPlaybackChanged`.             |
+| `retry()`                                       | Re-attempt the current item while in the `'error'` state.               |
+| `usePlayingState()`                             | `{ playing, buffering }` booleans for a play/pause button.              |
+| `setPlayWhenReady(bool)` / `usePlayWhenReady()` | Play/pause _intent_, independent of buffering.                          |
+| `usePolledProgress(intervalMs?)`                | `{ position, duration, buffered }` via polling (ms) — works by default. |
+| `useProgress()` / `getProgress()`               | Progress via events (enable `progressUpdateEventInterval` first).       |
+| `getRate()` / `setRate(rate)`                   | Playback speed multiplier (`1` = normal).                               |
+| `getVolume()` / `setVolume(0..1)`               | This player's volume.                                                   |
+| `getSystemVolume()` / `useSystemVolume()`       | Device media volume (`setSystemVolume` is iOS no-op).                   |
+| `trackPlaybackTime(cb, period)`                 | Heartbeat every `period` seconds of real playback.                      |

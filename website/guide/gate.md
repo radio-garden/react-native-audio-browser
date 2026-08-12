@@ -2,11 +2,11 @@
 
 When part of your catalog is premium, login-only, or region-locked, you need a way to block it on the car surfaces — without building a separate UI for them. That's what a **Gate** is: you hand the library a short message, and it shows that in place of the browse content on **CarPlay** and **Android Auto**, and can turn away voice searches.
 
-One rule worth keeping in mind: **a Gate blocks *finding*, never *hearing*.** Whatever is already playing keeps going, "resume" and "play this" still work by voice, and the queue and now-playing are left alone.
+One rule worth keeping in mind: **a Gate blocks _finding_, never _hearing_.** Whatever is already playing keeps going, "resume" and "play this" still work by voice, and the queue and now-playing are left alone.
 
 Two things it never touches:
 
-- **Your own in-app browse UI.** The Gate only covers content the *library* serves; the screens you draw in your app are yours to gate with your own paywall.
+- **Your own in-app browse UI.** The Gate only covers content the _library_ serves; the screens you draw in your app are yours to gate with your own paywall.
 - **Playback.** It lives on the find/resolve path, so audio is never interrupted.
 
 It follows that the Gate is **iOS and Android only**. On web `setGate` and `clearGate` are no-ops and `onGate` never fires — there's no CarPlay or Android Auto surface to cover, and in-app browse UI was never the Gate's job on any platform. Calling them from shared code is safe and does nothing.
@@ -55,7 +55,7 @@ The common case — **gate browsing, but leave search open** — so users can st
 ```ts
 setGate(
   { title: 'Premium', message: 'Subscribe to browse in the car.' },
-  (request) => request.kind === 'browse',
+  (request) => request.kind === 'browse'
 )
 ```
 
@@ -76,33 +76,28 @@ function onEntitlementChange(entitled: boolean) {
   entitled ? clearGate() : gateBrowsing() // refresh the car surfaces
 }
 ```
+
 :::
 
 Because the resolver sees the request, you can also gate by path — block one premium branch while the rest stays open — or show a different message per request:
 
 ```ts
-setGate(
-  { title: 'Premium', message: 'Subscribe to unlock.' },
-  (request) => {
-    if (request.kind === 'search') return false          // search allowed
-    if (request.path.startsWith('/premium')) return true // gate this branch
-    return false                                         // everything else
-  },
-)
+setGate({ title: 'Premium', message: 'Subscribe to unlock.' }, (request) => {
+  if (request.kind === 'search') return false // search allowed
+  if (request.path.startsWith('/premium')) return true // gate this branch
+  return false // everything else
+})
 ```
 
 A search request carries `request.params` — the parsed query (`query`, `genre`, `artist`, … — see [Search](/guide/search)) — so you can gate only premium queries:
 
 ```ts
-setGate(
-  { title: 'Premium', message: 'Subscribe to unlock.' },
-  (request) => {
-    if (request.kind === 'search') {
-      return request.params.genre === 'premium' // gate premium genres
-    }
-    return request.path.startsWith('/premium')
-  },
-)
+setGate({ title: 'Premium', message: 'Subscribe to unlock.' }, (request) => {
+  if (request.kind === 'search') {
+    return request.params.genre === 'premium' // gate premium genres
+  }
+  return request.path.startsWith('/premium')
+})
 ```
 
 You can also pass **only** a resolver, with no default message — return a gate object for full control, or `true` to fall back to the generic built-in chrome. That fallback is a title only (`"Unavailable"`, no body), so on CarPlay its message area is blank — pass a default gate or return a gate object if you want body copy.

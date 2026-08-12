@@ -9,7 +9,7 @@ exposes it three ways:
   changes outside React.
 
 All three report the same boolean: `true` when the device has a working internet
-connection. **"Online" means *validated* internet, not just "connected to a
+connection. **"Online" means _validated_ internet, not just "connected to a
 network".** Android is strict here — it requires the OS to confirm the network
 actually reaches the internet, so Wi-Fi with no real connectivity reads as
 `false`. iOS derives the signal from the system path monitor (`NWPathMonitor`),
@@ -67,10 +67,10 @@ offline banner, disabling a control, refetching a list on reconnect.
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `useOnline()` | Reactive `boolean`; re-renders on connectivity change. |
-| `getOnline()` | One-off snapshot `boolean`. |
+| API               | Purpose                                                               |
+| ----------------- | --------------------------------------------------------------------- |
+| `useOnline()`     | Reactive `boolean`; re-renders on connectivity change.                |
+| `getOnline()`     | One-off snapshot `boolean`.                                           |
 | `onOnlineChanged` | Subscribe outside React; `addListener(cb)` returns an unsubscribe fn. |
 
 `true` = validated internet connection; `false` = offline (including a network

@@ -27,14 +27,14 @@ The snippets below import from `react-native-audio-browser` unless noted.
 
 Without any wiring, each control drives the player:
 
-| Control | Default action |
-| --- | --- |
-| play / pause / stop | `play()` / `pause()` / `stop()` |
-| next / previous | `skipToNext()` / `skipToPrevious()` |
-| seek | `seekTo(position)` |
-| jump forward / backward | `seekBy(±interval)` |
+| Control                 | Default action                      |
+| ----------------------- | ----------------------------------- |
+| play / pause / stop     | `play()` / `pause()` / `stop()`     |
+| next / previous         | `skipToNext()` / `skipToPrevious()` |
+| seek                    | `seekTo(position)`                  |
+| jump forward / backward | `seekBy(±interval)`                 |
 
-So you only reach for the APIs below to *change* or *watch* that behavior.
+So you only reach for the APIs below to _change_ or _watch_ that behavior.
 
 ## Button layout (Android)
 
@@ -118,12 +118,12 @@ capability is enabled.
 `overflow` is an ordered list, and each surface renders as many buttons as it
 has room for, **taking them from the front**:
 
-| Surface | Roughly how many |
-| --- | --- |
-| Collapsed notification | 3 — back, play/pause, forward |
-| Expanded notification | all of them |
-| Android 13+ media controls | about 5 |
-| Android Auto | the head unit decides |
+| Surface                    | Roughly how many              |
+| -------------------------- | ----------------------------- |
+| Collapsed notification     | 3 — back, play/pause, forward |
+| Expanded notification      | all of them                   |
+| Android 13+ media controls | about 5                       |
+| Android Auto               | the head unit decides         |
 
 Two consequences worth knowing:
 
@@ -217,8 +217,8 @@ unsubscribe()
 ::: warning `onRemote*` fires even when overridden
 `onRemote*` reports that the **button was pressed**, not that the default action
 ran. It fires on every press — including when a `handleRemote*` override
-intercepted it (and even when that override refused to act). Use it to *observe*;
-use `handleRemote*` to *change behavior*.
+intercepted it (and even when that override refused to act). Use it to _observe_;
+use `handleRemote*` to _change behavior_.
 :::
 
 ## Voice commands ("play X")
@@ -232,20 +232,20 @@ through it). See [Search](/guide/search) for wiring voice intents.
 
 ## Payloads at a glance
 
-| Event | Payload |
-| --- | --- |
-| `play` / `pause` / `stop` / `next` / `previous` | _(none)_ |
-| `seek` | `{ position }` — seconds |
-| `jumpForward` / `jumpBackward` | `{ interval }` — seconds |
+| Event                                           | Payload                  |
+| ----------------------------------------------- | ------------------------ |
+| `play` / `pause` / `stop` / `next` / `previous` | _(none)_                 |
+| `seek`                                          | `{ position }` — seconds |
+| `jumpForward` / `jumpBackward`                  | `{ interval }` — seconds |
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `handleRemotePlay/Pause/Stop/Next/Previous(cb \| undefined)` | Override a control; `undefined` restores the default. |
-| `handleRemoteSeek(cb)` / `handleRemoteJumpForward/Backward(cb)` | Override, with a typed event payload. |
-| `onRemotePlay/Pause/Stop/Next/Previous.addListener(cb)` | Observe a press (fires even when overridden). |
-| `onRemoteSeek` / `onRemoteJumpForward` / `onRemoteJumpBackward` `.addListener(cb)` | Observe, with payload. |
+| API                                                                                | Purpose                                               |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `handleRemotePlay/Pause/Stop/Next/Previous(cb \| undefined)`                       | Override a control; `undefined` restores the default. |
+| `handleRemoteSeek(cb)` / `handleRemoteJumpForward/Backward(cb)`                    | Override, with a typed event payload.                 |
+| `onRemotePlay/Pause/Stop/Next/Previous.addListener(cb)`                            | Observe a press (fires even when overridden).         |
+| `onRemoteSeek` / `onRemoteJumpForward` / `onRemoteJumpBackward` `.addListener(cb)` | Observe, with payload.                                |
 
 Every `onRemote*` is an emitter: `.addListener(cb)` returns an unsubscribe
 function. Every `handleRemote*` is a setter: pass a callback, or `undefined` to

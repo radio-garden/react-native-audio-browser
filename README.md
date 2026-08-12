@@ -66,8 +66,8 @@ AudioBrowser.configureBrowser({
   tabs: [{ title: 'Browse', url: '/browse' }],
   routes: {
     // Every path under /browse is fetched from your API, on demand.
-    '/browse/**': { baseUrl: 'https://api.example.com' },
-  },
+    '/browse/**': { baseUrl: 'https://api.example.com' }
+  }
 })
 ```
 
@@ -79,7 +79,7 @@ Each route returns a page of children — a child with a `url` is browsable (ope
   "url": "/browse/jazz",
   "title": "Jazz",
   "children": [
-    { "title": "Smooth Floret FM", "url": "/browse/jazz/floret-fm" },           // url → open for children
+    { "title": "Smooth Floret FM", "url": "/browse/jazz/floret-fm" }, // url → open for children
     { "title": "The Stalk 88.5", "src": "https://stream.example.com/stalk.mp3" } // src → play this stream
   ]
 }
@@ -91,7 +91,9 @@ The player works standalone, too — no browse tree required:
 import AudioBrowser from 'react-native-audio-browser'
 
 await AudioBrowser.setupPlayer()
-AudioBrowser.setQueue([{ title: 'Track', artist: 'Artist', src: 'https://example.com/track.mp3' }])
+AudioBrowser.setQueue([
+  { title: 'Track', artist: 'Artist', src: 'https://example.com/track.mp3' }
+])
 AudioBrowser.play()
 ```
 
@@ -99,16 +101,16 @@ AudioBrowser.play()
 
 Reactive hooks for your in-app UI — they update automatically as playback, the queue, and browse state change. Call `setupPlayer()` once at startup, before rendering any component that uses them.
 
-| Hook | Returns |
-| --- | --- |
-| `usePlayingState()` | `{ playing, buffering }` |
-| `useProgress()` | `{ position, duration, buffered }` (seconds) |
-| `useActiveTrack()` | the current `Track` |
-| `useNowPlaying()` | now-playing metadata |
-| `useQueue()` | the current queue |
-| `useRepeatMode()` / `useShuffle()` | repeat / shuffle state |
-| `useSleepTimer()` | sleep-timer state |
-| `useCarConnected()` | whether a car is connected |
+| Hook                                       | Returns                                                              |
+| ------------------------------------------ | -------------------------------------------------------------------- |
+| `usePlayingState()`                        | `{ playing, buffering }`                                             |
+| `useProgress()`                            | `{ position, duration, buffered }` (seconds)                         |
+| `useActiveTrack()`                         | the current `Track`                                                  |
+| `useNowPlaying()`                          | now-playing metadata                                                 |
+| `useQueue()`                               | the current queue                                                    |
+| `useRepeatMode()` / `useShuffle()`         | repeat / shuffle state                                               |
+| `useSleepTimer()`                          | sleep-timer state                                                    |
+| `useCarConnected()`                        | whether a car is connected                                           |
 | `usePath()` / `useTabs()` / `useContent()` | current browse path, tabs, and the resolved page at the current path |
 
 …and more — see the [Hooks guide](https://audiobrowser.dev/guide/hooks) and the [API Reference](https://audiobrowser.dev/api/).
@@ -118,18 +120,20 @@ import { View, Text, Button } from 'react-native'
 import AudioBrowser, {
   usePlayingState,
   useProgress,
-  useActiveTrack,
+  useActiveTrack
 } from 'react-native-audio-browser'
 
 function PlayerBar() {
-  const { playing } = usePlayingState()        // { playing, buffering }
+  const { playing } = usePlayingState() // { playing, buffering }
   const { position, duration } = useProgress() // in seconds
-  const track = useActiveTrack()               // Track | undefined
+  const track = useActiveTrack() // Track | undefined
 
   return (
     <View>
       <Text>{track?.title}</Text>
-      <Text>{Math.floor(position)} / {Math.floor(duration)}s</Text>
+      <Text>
+        {Math.floor(position)} / {Math.floor(duration)}s
+      </Text>
       <Button
         title={playing ? 'Pause' : 'Play'}
         onPress={() => AudioBrowser.togglePlayback()}

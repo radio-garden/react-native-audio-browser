@@ -34,22 +34,26 @@ import { useEqualizerSettings } from 'react-native-audio-browser'
 function EqualizerStatus() {
   const eq = useEqualizerSettings()
   if (!eq) return <Text>Equalizer unavailable</Text>
-  return <Text>{eq.enabled ? 'On' : 'Off'} · {eq.bandCount} bands</Text>
+  return (
+    <Text>
+      {eq.enabled ? 'On' : 'Off'} · {eq.bandCount} bands
+    </Text>
+  )
 }
 ```
 
 The [`EqualizerSettings`](/api/features/equalizer/#equalizersettings) object:
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `enabled` | `boolean` | Whether the effect is currently applied. |
-| `bandCount` | `number` | Number of frequency bands. |
-| `bandLevels` | `number[]` | Current level per band, in **millibels**. |
-| `centerBandFrequencies` | `number[]` | Center frequency per band, in **milliHertz**. |
-| `lowerBandLevelLimit` | `number` | Minimum level (millibels) any band accepts. |
-| `upperBandLevelLimit` | `number` | Maximum level (millibels) any band accepts. |
-| `presets` | `string[]` | Available preset names. |
-| `activePreset` | `string \| undefined` | The applied preset, or `undefined` for custom levels. |
+| Field                   | Type                  | Meaning                                               |
+| ----------------------- | --------------------- | ----------------------------------------------------- |
+| `enabled`               | `boolean`             | Whether the effect is currently applied.              |
+| `bandCount`             | `number`              | Number of frequency bands.                            |
+| `bandLevels`            | `number[]`            | Current level per band, in **millibels**.             |
+| `centerBandFrequencies` | `number[]`            | Center frequency per band, in **milliHertz**.         |
+| `lowerBandLevelLimit`   | `number`              | Minimum level (millibels) any band accepts.           |
+| `upperBandLevelLimit`   | `number`              | Maximum level (millibels) any band accepts.           |
+| `presets`               | `string[]`            | Available preset names.                               |
+| `activePreset`          | `string \| undefined` | The applied preset, or `undefined` for custom levels. |
 
 See [the units note](#a-note-on-units) — both level and frequency values use
 "milli" units.
@@ -195,7 +199,7 @@ function EqualizerScreen() {
 }
 ```
 
-Note: `@react-native-community/slider`'s `value` is the *initial* value only —
+Note: `@react-native-community/slider`'s `value` is the _initial_ value only —
 the slider keeps its own state after mounting. That's fine here, but if you want
 the thumbs to jump when a preset is applied, give each `Slider` a
 `key={eq.activePreset}` so it remounts with the new levels.
@@ -212,12 +216,12 @@ The system equalizer works in "milli" units, so convert for display:
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `useEqualizerSettings()` / `getEqualizerSettings()` | Read settings (`undefined` if unavailable). |
-| `onEqualizerChanged` | Subscribe to settings changes outside React. |
-| `setEqualizerEnabled(bool)` | Turn the effect on or off. |
-| `setEqualizerPreset(name)` | Apply a preset from `settings.presets`. |
-| `setEqualizerLevels(millibels[])` | Set all bands; length must equal `bandCount`. |
+| API                                                 | Purpose                                       |
+| --------------------------------------------------- | --------------------------------------------- |
+| `useEqualizerSettings()` / `getEqualizerSettings()` | Read settings (`undefined` if unavailable).   |
+| `onEqualizerChanged`                                | Subscribe to settings changes outside React.  |
+| `setEqualizerEnabled(bool)`                         | Turn the effect on or off.                    |
+| `setEqualizerPreset(name)`                          | Apply a preset from `settings.presets`.       |
+| `setEqualizerLevels(millibels[])`                   | Set all bands; length must equal `bandCount`. |
 
 All are **Android-only** — no-ops / `undefined` on iOS.

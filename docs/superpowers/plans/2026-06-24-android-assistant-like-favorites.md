@@ -13,7 +13,7 @@
 - **`corepack yarn`, never bare `yarn`**, inside the library (`~/rg/_libraries/react-native-audio-browser`). The library pins Yarn 4; global `yarn` is v1 and errors.
 - **A Nitro spec change requires all surfaces consistent before `corepack yarn codegen`** (its `tsc` step fails otherwise): TS spec, `src/web/NativeAudioBrowser.ts`, iOS `HybridAudioBrowser.swift`, Android `AudioBrowser.kt`.
 - **No new public rating API.** The general rating concept (stars / percentage / thumbs, per-track `rating`, `RatingType`, `ratingType` option, `onRemoteSetRating`) is removed, not deferred. Keep only binary favorites.
-- **iOS behavior is unchanged** — Siri "I like this" already routes to favorites via `INUpdateMediaAffinityIntent`. No iOS rating wiring is added; the iOS rating *removal* is API cleanup only.
+- **iOS behavior is unchanged** — Siri "I like this" already routes to favorites via `INUpdateMediaAffinityIntent`. No iOS rating wiring is added; the iOS rating _removal_ is API cleanup only.
 - Library paths in this plan are relative to `~/rg/_libraries/react-native-audio-browser`. The consumer app is `~/rg/native-apps`.
 
 ---
@@ -23,10 +23,12 @@
 Extract the "does this controller rating mean favorite on/off?" decision into a pure, testable function. Only an explicitly-rated heart carries favorite intent.
 
 **Files:**
+
 - Create: `android/src/main/java/com/audiobrowser/util/RatingFavorites.kt`
 - Test: `android/src/test/java/com/audiobrowser/util/RatingFavoritesTest.kt`
 
 **Interfaces:**
+
 - Produces: `object RatingFavorites { fun favoritedFor(rating: androidx.media3.common.Rating): Boolean? }` — returns `true`/`false` for a rated `HeartRating` (by `isHeart`), `null` for an unrated heart or any non-heart rating.
 
 - [ ] **Step 1: Write the failing test**
@@ -117,11 +119,13 @@ git commit -m "feat(android): add RatingFavorites helper mapping heart rating to
 Rewire `onSetRating` to use `RatingFavorites` and drop the bridge-event emission, and add characterization tests for the heart-rateability advertisement (`TrackFactory`), including the capability-off case (no `userRating` when `favorited == null`).
 
 **Files:**
+
 - Modify: `android/src/main/java/com/audiobrowser/player/MediaSessionCallback.kt` (the `onSetRating` override + imports)
 - Modify: `android/src/test/java/com/audiobrowser/TestFixtures.kt` (add `favorited` param to `track(...)`)
 - Test: `android/src/test/java/com/audiobrowser/util/TrackFactoryRatingTest.kt` (new)
 
 **Interfaces:**
+
 - Consumes: `RatingFavorites.favoritedFor(rating)` from Task 1; `player.setActiveTrackFavorited(favorited: Boolean)` (existing — toggles the heart and fires `onFavoriteChanged`); `TrackFactory.toMedia3(track): MediaItem` (existing pure conversion).
 - Produces: `TestFixtures.track(..., favorited: Boolean? = null)` for downstream tests.
 
@@ -271,12 +275,14 @@ TrackFactory advertisement tests, including capability-off (favorited=null) -> n
 Mechanical removal mirroring the recent like/dislike/bookmark cleanup. Everything here is unused by the consumer and inert. All edits must land together — the codegen `tsc` step requires every surface to agree.
 
 **Files:**
+
 - Delete: `src/features/rating.ts`, `android/src/main/java/com/audiobrowser/util/RatingFactory.kt`
 - Modify (TS): `src/features/metadata.ts`, `src/features/remoteControls.ts`, `src/features/player/options.ts`, `src/features/player/setup.ts`, `src/specs/audio-browser.nitro.ts`, `src/web/NativeAudioBrowser.ts`
 - Modify (iOS): `ios/HybridAudioBrowser.swift`, `ios/TrackPlayerCallbacks.swift`
 - Modify (Android): `android/src/main/java/com/audiobrowser/AudioBrowser.kt`, `android/src/main/java/com/audiobrowser/Callbacks.kt`, `android/src/main/java/com/audiobrowser/model/PlayerUpdateOptions.kt`, `android/src/main/java/com/audiobrowser/player/Player.kt`
 
 **Interfaces:**
+
 - Consumes: nothing new. Removes `onRemoteSetRating` / `handleRemoteSetRating`, `RemoteSetRatingEvent`, `Rating`/`RatingType`, the `ratingType` option, and `TrackMetadataBase.rating` from the public surface.
 
 - [ ] **Step 1: Delete the standalone rating type module**
@@ -362,6 +368,7 @@ export const onRemoteSetRating =
 ```
 
 and remove the `import com.margelo.nitro.audiobrowser.RemoteSetRatingEvent`.
+
 - `android/src/main/java/com/audiobrowser/model/PlayerUpdateOptions.kt`: remove the `var ratingType: NitroRatingType? = null,` field, the `androidOptions.ratingType?.let { ratingType = it }` line, the `ratingType = ratingType,` argument, and the `import com.margelo.nitro.audiobrowser.RatingType as NitroRatingType`.
 - `android/src/main/java/com/audiobrowser/player/Player.kt`: remove `var ratingType: RatingType = RatingType.NONE`, the `val ratingTypeChanged = previousOptions.ratingType != options.ratingType` line, the `ratingTypeChanged ||` term in the `hasChanged` expression, the `if (ratingTypeChanged) { options.ratingType?.let { ratingType = it } }` block, and the `import com.margelo.nitro.audiobrowser.RatingType`.
 
@@ -412,6 +419,7 @@ setActiveTrackFavorited (see RatingFavorites). Refs the favorites design doc."
 Device-only behavior — add a tester walkthrough so the voice-like path is verified on real hardware.
 
 **Files:**
+
 - Modify: the appropriate file under `~/rg/native-apps/manual-testing/` (the Android Auto / favorites walkthrough; if none exists, create `manual-testing/android-auto-assistant-like.md`).
 
 - [ ] **Step 1: Add the walkthrough**
@@ -444,14 +452,15 @@ git commit -m "docs(manual-testing): Android Auto / Assistant 'like' toggles fav
 ## Self-Review
 
 **Spec coverage:**
+
 - Assistant "like" → favorite (binary toggle, mirror negative): Task 1 (mapping) + Task 2 (`onSetRating` rewire). ✅
 - Capability gating (no advertisement when favoriting disabled): Task 2 (`TrackFactoryRatingTest`, `favorited=null` → no `userRating`). ✅
 - Remove the public rating API (TS/iOS/Android, all listed symbols): Task 3. ✅
 - iOS unchanged / no rating wiring: Task 3 removes only the inert iOS stub; no behavior added. ✅
 - Testing (Android unit + compile gates + manual device): Tasks 1–4. ✅
 
-**Placeholder scan:** No TBD/TODO/"handle edge cases"; every code step shows the code. The one `// TODO` shown in Task 3 Step 6 is the *existing* stub being deleted, not a new placeholder. ✅
+**Placeholder scan:** No TBD/TODO/"handle edge cases"; every code step shows the code. The one `// TODO` shown in Task 3 Step 6 is the _existing_ stub being deleted, not a new placeholder. ✅
 
 **Type consistency:** `RatingFavorites.favoritedFor(rating: Rating): Boolean?` defined in Task 1 and consumed in Task 2 with the same name/signature. `TestFixtures.track(..., favorited: Boolean? = null)` added in Task 2 Step 1 and used in Task 2 Step 2. `player.setActiveTrackFavorited(Boolean)` is the existing API. ✅
 
-**Note on running Android tests:** the library has no standalone gradle wrapper. Its unit tests build through the `example-native` app — run from `~/rg/_libraries/react-native-audio-browser/apps/example-native/android` against module `:react-native-audio-browser` (confirmed via `./gradlew projects`). Task 3's *consumer* compile (`:app:compileDebugKotlin`) is a separate, real app build under `~/rg/native-apps/android`.
+**Note on running Android tests:** the library has no standalone gradle wrapper. Its unit tests build through the `example-native` app — run from `~/rg/_libraries/react-native-audio-browser/apps/example-native/android` against module `:react-native-audio-browser` (confirmed via `./gradlew projects`). Task 3's _consumer_ compile (`:app:compileDebugKotlin`) is a separate, real app build under `~/rg/native-apps/android`.

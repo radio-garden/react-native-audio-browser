@@ -5,4 +5,4 @@ import { setupBrowser } from './src/utils/browser'
 
 AppRegistry.registerComponent(appName, () => App)
 
-void setupBrowser();
+void setupBrowser()

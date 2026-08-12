@@ -60,11 +60,11 @@ manually:
 
 `status` is the device's current setting for your app:
 
-| Status | Meaning |
-| --- | --- |
-| `'unrestricted'` | The user allowed the app to run freely in the background. |
-| `'optimized'` | Default — the system may limit background work (Doze / App Standby). |
-| `'restricted'` | Background work is severely limited; services are blocked. |
+| Status           | Meaning                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| `'unrestricted'` | The user allowed the app to run freely in the background.            |
+| `'optimized'`    | Default — the system may limit background work (Doze / App Standby). |
+| `'restricted'`   | Background work is severely limited; services are blocked.           |
 
 Background resume is reliable only when `'unrestricted'`, which is why the "Fix"
 button sends users to settings to grant it.
@@ -99,13 +99,13 @@ two actions.
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `useBatteryWarning()` | Everything for a banner: `{ pending, status, dismiss, openSettings }`. |
-| `getBatteryWarningPending()` / `useBatteryWarningPending()` | Is a warning pending? (Android; `false` on iOS) |
-| `getBatteryOptimizationStatus()` / `useBatteryOptimizationStatus()` | Current status (Android; `'unrestricted'` on iOS) |
-| `onBatteryWarningPendingChanged` / `onBatteryOptimizationStatusChanged` | Subscribe outside React. |
-| `openBatterySettings()` | Open the app's system battery settings (Android). |
-| `dismissBatteryWarning()` | Dismiss the warning without changing settings (Android). |
+| API                                                                     | Purpose                                                                |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `useBatteryWarning()`                                                   | Everything for a banner: `{ pending, status, dismiss, openSettings }`. |
+| `getBatteryWarningPending()` / `useBatteryWarningPending()`             | Is a warning pending? (Android; `false` on iOS)                        |
+| `getBatteryOptimizationStatus()` / `useBatteryOptimizationStatus()`     | Current status (Android; `'unrestricted'` on iOS)                      |
+| `onBatteryWarningPendingChanged` / `onBatteryOptimizationStatusChanged` | Subscribe outside React.                                               |
+| `openBatterySettings()`                                                 | Open the app's system battery settings (Android).                      |
+| `dismissBatteryWarning()`                                               | Dismiss the warning without changing settings (Android).               |
 
 All are **Android-only** — inert (`false` / `'unrestricted'` / no-op) on iOS.

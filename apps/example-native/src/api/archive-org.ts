@@ -1,7 +1,7 @@
 import type {
   BrowserSource,
   ResolvedTrack,
-  Track,
+  Track
 } from 'react-native-audio-browser'
 
 const BASE = 'https://archive.org'
@@ -68,14 +68,18 @@ const AUDIO_FORMATS_PREFERRED = [
   '128Kbps MP3',
   '64Kbps MP3',
   'MP3',
-  'Ogg Vorbis',
+  'Ogg Vorbis'
 ]
 
 function filterAudioFiles(files: IAFile[]): IAFile[] {
   // Group files by base name (without extension) to pick best format per track
   const byBase = new Map<string, IAFile[]>()
   for (const f of files) {
-    if (!f.format || !AUDIO_FORMATS_PREFERRED.some((fmt) => f.format!.includes(fmt))) continue
+    if (
+      !f.format ||
+      !AUDIO_FORMATS_PREFERRED.some((fmt) => f.format!.includes(fmt))
+    )
+      continue
     const base = f.name.replace(/\.[^.]+$/, '')
     const group = byBase.get(base) ?? []
     group.push(f)
@@ -103,7 +107,9 @@ function cleanFilename(name: string): string {
     .trim()
 }
 
-function creatorString(creator: string | string[] | undefined): string | undefined {
+function creatorString(
+  creator: string | string[] | undefined
+): string | undefined {
   if (!creator) return undefined
   return Array.isArray(creator) ? creator.join(', ') : creator
 }
@@ -119,15 +125,15 @@ export function fetchCollections(prefix = '/archive'): ResolvedTrack {
         title: 'LibriVox Audiobooks',
         url: `${prefix}/collection/librivoxaudio`,
         artwork: `${BASE}/services/img/librivoxaudio`,
-        style: 'grid' as const,
+        style: 'grid' as const
       },
       {
         title: 'Folksoundomy',
         url: `${prefix}/folksoundomy`,
         artwork: `${BASE}/services/img/folksoundomy`,
-        style: 'grid' as const,
-      },
-    ],
+        style: 'grid' as const
+      }
+    ]
   }
 }
 
@@ -141,16 +147,18 @@ const FOLKSOUNDOMY_PICKS = [
   'iuma-archive',
   'dnalounge',
   'hiphopmixtapes',
-  'tvtunes',
+  'tvtunes'
 ]
 
-export async function fetchFolksoundomy(prefix = '/archive'): Promise<ResolvedTrack> {
+export async function fetchFolksoundomy(
+  prefix = '/archive'
+): Promise<ResolvedTrack> {
   const params = new URLSearchParams({
-    q: `collection:folksoundomy AND mediatype:collection`,
-    output: 'json',
-    rows: '100',
+    'q': `collection:folksoundomy AND mediatype:collection`,
+    'output': 'json',
+    'rows': '100',
     'fl[]': 'identifier,title',
-    'sort[]': 'downloads desc',
+    'sort[]': 'downloads desc'
   })
 
   const res = await fetch(`${BASE}/advancedsearch.php?${params}`)
@@ -161,8 +169,10 @@ export async function fetchFolksoundomy(prefix = '/archive'): Promise<ResolvedTr
   const picked = new Set(FOLKSOUNDOMY_PICKS)
   const docs = data.response.docs
   const sorted = [
-    ...FOLKSOUNDOMY_PICKS.map((id) => docs.find((d) => d.identifier === id)).filter(Boolean) as IASearchDoc[],
-    ...docs.filter((d) => !picked.has(d.identifier)),
+    ...(FOLKSOUNDOMY_PICKS.map((id) =>
+      docs.find((d) => d.identifier === id)
+    ).filter(Boolean) as IASearchDoc[]),
+    ...docs.filter((d) => !picked.has(d.identifier))
   ]
 
   return {
@@ -172,49 +182,59 @@ export async function fetchFolksoundomy(prefix = '/archive'): Promise<ResolvedTr
       title: doc.title ?? doc.identifier,
       url: `${prefix}/collection/${doc.identifier}`,
       artwork: `${BASE}/services/img/${doc.identifier}`,
-      style: 'grid' as const,
-    })),
+      style: 'grid' as const
+    }))
   }
 }
 
-export async function searchCollection(id: string, prefix = '/archive'): Promise<ResolvedTrack> {
+export async function searchCollection(
+  id: string,
+  prefix = '/archive'
+): Promise<ResolvedTrack> {
   const params = new URLSearchParams({
-    q: `mediatype:audio AND collection:${id}`,
-    output: 'json',
-    rows: '50',
+    'q': `mediatype:audio AND collection:${id}`,
+    'output': 'json',
+    'rows': '50',
     'sort[]': 'downloads desc',
-    'fl[]': 'identifier,title,creator,description,downloads',
+    'fl[]': 'identifier,title,creator,description,downloads'
   })
 
   const [searchRes, metaRes] = await Promise.all([
     fetch(`${BASE}/advancedsearch.php?${params}`),
-    fetch(`${BASE}/metadata/${id}/metadata`),
+    fetch(`${BASE}/metadata/${id}/metadata`)
   ])
-  if (!searchRes.ok) throw new Error(`Archive.org search failed: ${searchRes.status}`)
+  if (!searchRes.ok)
+    throw new Error(`Archive.org search failed: ${searchRes.status}`)
   const data: IASearchResponse = await searchRes.json()
-  const meta = metaRes.ok ? await metaRes.json() as { title?: string } : null
+  const meta = metaRes.ok
+    ? ((await metaRes.json()) as { title?: string })
+    : null
 
   const children: Track[] = data.response.docs.map((doc) => ({
     title: doc.title ?? doc.identifier,
     artist: creatorString(doc.creator),
     url: `${prefix}/item/${doc.identifier}`,
-    artwork: `${BASE}/services/img/${doc.identifier}`,
+    artwork: `${BASE}/services/img/${doc.identifier}`
   }))
 
   return {
     url: `${prefix}/collection/${id}`,
     title: meta?.title ?? id,
-    children,
+    children
   }
 }
 
-export async function fetchItem(id: string, prefix = '/archive'): Promise<ResolvedTrack> {
+export async function fetchItem(
+  id: string,
+  prefix = '/archive'
+): Promise<ResolvedTrack> {
   const res = await fetch(`${BASE}/metadata/${id}`)
   if (!res.ok) throw new Error(`Archive.org metadata failed: ${res.status}`)
   const data: IAItemMetadata = await res.json()
 
-  const audioFiles = filterAudioFiles(data.files)
-    .sort((a, b) => parseTrackNumber(a.track) - parseTrackNumber(b.track))
+  const audioFiles = filterAudioFiles(data.files).sort(
+    (a, b) => parseTrackNumber(a.track) - parseTrackNumber(b.track)
+  )
 
   const artwork = `${BASE}/services/img/${id}`
   const albumTitle = data.metadata.title ?? id
@@ -226,7 +246,7 @@ export async function fetchItem(id: string, prefix = '/archive'): Promise<Resolv
     duration: parseDuration(f.length),
     artist: f.artist || f.creator || albumArtist,
     album: f.album || albumTitle,
-    artwork,
+    artwork
   }))
 
   return {
@@ -234,7 +254,7 @@ export async function fetchItem(id: string, prefix = '/archive'): Promise<Resolv
     title: albumTitle,
     artist: albumArtist,
     artwork,
-    children,
+    children
   }
 }
 
@@ -243,7 +263,7 @@ export const archiveRoutes: Record<string, BrowserSource> = {
   '/archive/folksoundomy': () => fetchFolksoundomy(),
   '/archive/collection/{id}': ({ routeParams }) =>
     searchCollection(routeParams!.id),
-  '/archive/item/{id}': ({ routeParams }) => fetchItem(routeParams!.id),
+  '/archive/item/{id}': ({ routeParams }) => fetchItem(routeParams!.id)
 }
 
 export const archiveLibraryEntry: Track = {
@@ -253,28 +273,31 @@ export const archiveLibraryEntry: Track = {
     {
       title: 'LibriVox Audiobooks',
       url: '/archive/collection/librivoxaudio',
-      artwork: `${BASE}/services/img/librivoxaudio`,
+      artwork: `${BASE}/services/img/librivoxaudio`
     },
     {
       title: 'Cratediggers',
       url: '/archive/collection/cratediggers',
-      artwork: `${BASE}/services/img/cratediggers`,
+      artwork: `${BASE}/services/img/cratediggers`
     },
     {
       title: 'Folksoundomy',
       url: '/archive/folksoundomy',
-      artwork: `${BASE}/services/img/folksoundomy`,
-    },
-  ],
+      artwork: `${BASE}/services/img/folksoundomy`
+    }
+  ]
 }
 
-export async function searchArchive(query: string, prefix = '/archive'): Promise<Track[]> {
+export async function searchArchive(
+  query: string,
+  prefix = '/archive'
+): Promise<Track[]> {
   const params = new URLSearchParams({
-    q: `mediatype:audio AND (title:("${query}") OR creator:("${query}"))`,
-    output: 'json',
-    rows: '20',
+    'q': `mediatype:audio AND (title:("${query}") OR creator:("${query}"))`,
+    'output': 'json',
+    'rows': '20',
     'sort[]': 'downloads desc',
-    'fl[]': 'identifier,title,creator',
+    'fl[]': 'identifier,title,creator'
   })
 
   const res = await fetch(`${BASE}/advancedsearch.php?${params}`)
@@ -285,6 +308,6 @@ export async function searchArchive(query: string, prefix = '/archive'): Promise
     title: doc.title ?? doc.identifier,
     artist: creatorString(doc.creator),
     url: `${prefix}/item/${doc.identifier}`,
-    artwork: `${BASE}/services/img/${doc.identifier}`,
+    artwork: `${BASE}/services/img/${doc.identifier}`
   }))
 }

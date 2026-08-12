@@ -1,6 +1,6 @@
 # Metadata
 
-As a track plays, the player surfaces metadata it reads *from the media* — the
+As a track plays, the player surfaces metadata it reads _from the media_ — the
 live "now playing song" of a radio stream, the tags embedded in an audio file,
 and chapter markers. These arrive as three independent event streams:
 
@@ -11,7 +11,7 @@ and chapter markers. These arrive as three independent event streams:
 - [`onChapterMetadata`](/api/features/metadata/#onchaptermetadata) — chapter
   markers with time ranges, for podcasts and audiobooks.
 
-These are **read-only signals coming *in*** from the media — they don't change
+These are **read-only signals coming _in_** from the media — they don't change
 what's displayed anywhere. It's up to you to do something with them: feed the
 [Now Playing](/guide/now-playing) surfaces, render your own UI, or build a
 chapter list. (Each is subscription-only — there's no getter or hook; you
@@ -56,13 +56,13 @@ throughout a single track.
 
 [`TimedMetadata`](/api/features/metadata/#timedmetadata) — every field optional:
 
-| Field | Meaning |
-| --- | --- |
-| `title` | The song title (often "Artist - Song" in ICY). |
+| Field    | Meaning                                          |
+| -------- | ------------------------------------------------ |
+| `title`  | The song title (often "Artist - Song" in ICY).   |
 | `artist` | The artist, when the stream sends it separately. |
-| `album` | The album, when present. |
-| `date` | A date string, when present. |
-| `genre` | The genre, when present. |
+| `album`  | The album, when present.                         |
+| `date`   | A date string, when present.                     |
+| `genre`  | The genre, when present.                         |
 
 ::: warning ICY sends only a title
 Shoutcast / Icecast (ICY) radio populates **only `title`** — typically a combined
@@ -75,7 +75,7 @@ This is the signal behind a live station's "now playing" line. To show it on the
 lock screen / car, you usually don't subscribe here directly — you read it inside
 the Now Playing formatter, which is re-invoked on every timed-metadata update.
 See [Now Playing → the formatter](/guide/now-playing#the-formatter-derived-continuous).
-Subscribe to `onTimedMetadata` when you want the live song for *your own* UI.
+Subscribe to `onTimedMetadata` when you want the live song for _your own_ UI.
 
 ## Track metadata — the file's tags
 
@@ -88,24 +88,24 @@ yourself.
 [`TrackMetadata`](/api/features/metadata/#trackmetadata) is richer than the
 timed shape. **Every field is an optional `string`:**
 
-| Field | Meaning |
-| --- | --- |
-| `title` | Track title. |
-| `artist` | Track artist. |
-| `albumTitle` | Album name. |
-| `subtitle` | Secondary line. |
-| `description` | Long description / show notes. |
-| `artworkUri` | Artwork URL. |
-| `trackNumber` | Track number within the album. |
-| `composer` | Composer credit. |
-| `conductor` | Conductor credit. |
-| `genre` | Genre. |
-| `compilation` | Compilation name. |
-| `station` | Station/channel name. |
-| `mediaType` | Media type string. |
-| `creationDate` | Full creation date. |
-| `creationYear` | Creation year. |
-| `url` | A URL associated with the track. |
+| Field          | Meaning                          |
+| -------------- | -------------------------------- |
+| `title`        | Track title.                     |
+| `artist`       | Track artist.                    |
+| `albumTitle`   | Album name.                      |
+| `subtitle`     | Secondary line.                  |
+| `description`  | Long description / show notes.   |
+| `artworkUri`   | Artwork URL.                     |
+| `trackNumber`  | Track number within the album.   |
+| `composer`     | Composer credit.                 |
+| `conductor`    | Conductor credit.                |
+| `genre`        | Genre.                           |
+| `compilation`  | Compilation name.                |
+| `station`      | Station/channel name.            |
+| `mediaType`    | Media type string.               |
+| `creationDate` | Full creation date.              |
+| `creationYear` | Creation year.                   |
+| `url`          | A URL associated with the track. |
 
 ```tsx
 import { onTrackMetadata, type TrackMetadata } from 'react-native-audio-browser'
@@ -117,7 +117,9 @@ function FileInfo() {
   return (
     <>
       {meta.artworkUri && <Image source={{ uri: meta.artworkUri }} />}
-      <Text>{meta.title} — {meta.artist}</Text>
+      <Text>
+        {meta.title} — {meta.artist}
+      </Text>
       <Text>{meta.description}</Text>
     </>
   )
@@ -126,12 +128,13 @@ function FileInfo() {
 
 ::: tip Mind the field names
 Two traps when moving between the streams:
-- **title vs title:** `TimedMetadata.title` is the *song* (changes during a live
-  stream); `TrackMetadata.title` is the *file's* title (static, read once).
+
+- **title vs title:** `TimedMetadata.title` is the _song_ (changes during a live
+  stream); `TrackMetadata.title` is the _file's_ title (static, read once).
 - **album vs albumTitle:** timed metadata uses `album`; track metadata uses
   `albumTitle`. And `TimedMetadata` has no artwork field — only `TrackMetadata`
   carries `artworkUri`.
-:::
+  :::
 
 ## Chapter metadata — podcast & audiobook chapters
 
@@ -139,12 +142,12 @@ Two traps when moving between the streams:
 full list of chapters for the current track as a
 [`ChapterMetadata[]`](/api/features/metadata/#chaptermetadata):
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `startTime` | `number` | Chapter start, in **seconds**. |
-| `endTime` | `number` | Chapter end, in **seconds**. |
-| `title` | `string?` | Chapter title, if present. |
-| `url` | `string?` | A URL associated with the chapter, if present. |
+| Field       | Type      | Meaning                                        |
+| ----------- | --------- | ---------------------------------------------- |
+| `startTime` | `number`  | Chapter start, in **seconds**.                 |
+| `endTime`   | `number`  | Chapter end, in **seconds**.                   |
+| `title`     | `string?` | Chapter title, if present.                     |
+| `url`       | `string?` | A URL associated with the chapter, if present. |
 
 Because `startTime` is in seconds, it drops straight into
 [`seekTo`](/guide/playback#seeking) to make a tappable chapter list:
@@ -177,13 +180,13 @@ function ChapterList() {
 
 ## Which metadata is which
 
-| | `onTimedMetadata` | `onTrackMetadata` | `onChapterMetadata` |
-| --- | --- | --- | --- |
-| Source | Live stream (ICY / ID3) | Tags in the media file | Chapter markers in the file |
-| Changes | Throughout the track | Once, on load | Once, on load |
-| Shape | One `TimedMetadata` | One `TrackMetadata` | A `ChapterMetadata[]` |
-| Typical use | Live "now playing" song | Podcast/file info | Chapter navigation |
-| Platform | iOS, Android | iOS, Android | iOS, Android |
+|             | `onTimedMetadata`       | `onTrackMetadata`      | `onChapterMetadata`         |
+| ----------- | ----------------------- | ---------------------- | --------------------------- |
+| Source      | Live stream (ICY / ID3) | Tags in the media file | Chapter markers in the file |
+| Changes     | Throughout the track    | Once, on load          | Once, on load               |
+| Shape       | One `TimedMetadata`     | One `TrackMetadata`    | A `ChapterMetadata[]`       |
+| Typical use | Live "now playing" song | Podcast/file info      | Chapter navigation          |
+| Platform    | iOS, Android            | iOS, Android           | iOS, Android                |
 
 ::: warning Not available on web
 All three are iOS and Android only. On web they are subscribable but never
@@ -192,7 +195,7 @@ fire, so a listener sees nothing and
 stays `undefined`.
 
 ICY is the hard case: the browser strips the interleaved metadata before the
-player can reach it, and no API exposes it. In-band ID3 from HLS *is* reachable
+player can reach it, and no API exposes it. In-band ID3 from HLS _is_ reachable
 through the web player and simply isn't wired up yet — that part is tracked in
 [#118](https://github.com/radio-garden/react-native-audio-browser/issues/118).
 :::
@@ -223,10 +226,10 @@ event and the state type.
 
 ## API summary
 
-| API | Delivers |
-| --- | --- |
-| `onTimedMetadata` | Live `TimedMetadata` (the streaming "now playing" song). |
-| `onTrackMetadata` | Static `TrackMetadata` (the media file's embedded tags). |
+| API                 | Delivers                                                 |
+| ------------------- | -------------------------------------------------------- |
+| `onTimedMetadata`   | Live `TimedMetadata` (the streaming "now playing" song). |
+| `onTrackMetadata`   | Static `TrackMetadata` (the media file's embedded tags). |
 | `onChapterMetadata` | `ChapterMetadata[]` (chapter markers, times in seconds). |
 
 All three are subscriptions: `addListener(cb)` returns an unsubscribe function.

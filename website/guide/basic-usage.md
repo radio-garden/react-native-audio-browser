@@ -74,8 +74,8 @@ configureBrowser({
           title: 'Smooth Floret FM',
           // A src makes this playable — tapping it streams the track.
           src: 'https://example.com/floret.mp3'
-        },
-      ],
+        }
+      ]
     },
     '/browse/jazz': {
       url: '/browse/jazz',
@@ -84,10 +84,10 @@ configureBrowser({
         {
           title: 'The Stalk 88.5',
           src: 'https://example.com/stalk.mp3'
-        },
-      ],
-    },
-  },
+        }
+      ]
+    }
+  }
 })
 ```
 
@@ -100,9 +100,7 @@ On CarPlay and Android Auto, tapping a playable Track plays it for you. To drive
 ```ts
 import { setQueue, play } from 'react-native-audio-browser'
 
-setQueue([
-  { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' },
-])
+setQueue([{ title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }])
 play()
 ```
 

@@ -235,7 +235,7 @@ func application(
 
 As noted in the scene manifest above, the `delegateClass` you set here is what actually routes each scene; the Info.plist names are just the fallback. Seeing each delegate in both places is expected.
 
-One coupling that **is** load-bearing: the `name:` you pass to `UISceneConfiguration` (`"CarPlay"` / `"Phone"`) must match a `UISceneConfigurationName` in the manifest. Rename one without the other and iOS crashes at connect time with *"no UISceneConfiguration named …"*.
+One coupling that **is** load-bearing: the `name:` you pass to `UISceneConfiguration` (`"CarPlay"` / `"Phone"`) must match a `UISceneConfigurationName` in the manifest. Rename one without the other and iOS crashes at connect time with _"no UISceneConfiguration named …"_.
 
 ### The assembled `AppDelegate`
 
@@ -354,12 +354,12 @@ const browserConfig = {
   routes: {
     '/': async () => ({
       title: 'Home',
-      children: [{ title: 'Crunchy Greens FM', src: 'https://...' }],
-    }),
+      children: [{ title: 'Crunchy Greens FM', src: 'https://...' }]
+    })
   },
 
   // search: required for Siri voice search (omit for browse-only).
-  search: { baseUrl: 'https://api.example.com/search' },
+  search: { baseUrl: 'https://api.example.com/search' }
 }
 ```
 
@@ -404,8 +404,8 @@ configureBrowser({
     // `album`, `reference`) and expects a page object back:
     // { title?, children: Track[] }, where each playable child Track
     // needs at least `title` + `src`.
-    baseUrl: 'https://api.example.com/search',
-  },
+    baseUrl: 'https://api.example.com/search'
+  }
 })
 ```
 
@@ -427,11 +427,9 @@ configureBrowser({
     '/': async () => ({
       title: 'Home',
       carPlaySiriListButton: 'top',
-      children: [
-        { title: 'Crunchy Greens FM', src: 'https://...' },
-      ],
-    }),
-  },
+      children: [{ title: 'Crunchy Greens FM', src: 'https://...' }]
+    })
+  }
 })
 ```
 
@@ -560,7 +558,7 @@ Browse screens show a loading state while their content resolves — pushed dest
 
 ```ts
 configureBrowser({
-  carPlayLoadingTitle: t('loading'),
+  carPlayLoadingTitle: t('loading')
   // ...
 })
 ```
@@ -588,7 +586,7 @@ configureBrowser({
   // `slugify` here is your own helper (illustrative) — turn an album name
   // into a browse path that exists in your `routes`.
   resolveAlbumUrl: (track) =>
-    track.album ? `/album/${slugify(track.album)}` : undefined,
+    track.album ? `/album/${slugify(track.album)}` : undefined
   // ...
 })
 ```
@@ -605,13 +603,13 @@ Test your app in the `CarPlay Simulator.app`, which is part of the [Additional T
 
 ### Troubleshooting
 
-| Symptom | Likely cause |
-| --- | --- |
-| Siri mic opens but returns nothing | No [`search` source](#siri-voice-search) configured (Step 0). |
-| The "Ask Siri" cell does nothing | Siri entitlement / Info.plist keys / intent handler not wired (steps 1–4). |
-| CarPlay browse screens hang empty | `startReactNativeHeadless` missing or misnamed — the library calls it by exact selector. |
-| Build error: *module 'AudioBrowser' not found* | `pod install` hasn't linked the `AudioBrowser` pod. |
-| Crash: *no UISceneConfiguration named …* | The `name:` in `configurationForConnecting` doesn't match `UISceneConfigurationName` in the manifest. |
+| Symptom                                        | Likely cause                                                                                          |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Siri mic opens but returns nothing             | No [`search` source](#siri-voice-search) configured (Step 0).                                         |
+| The "Ask Siri" cell does nothing               | Siri entitlement / Info.plist keys / intent handler not wired (steps 1–4).                            |
+| CarPlay browse screens hang empty              | `startReactNativeHeadless` missing or misnamed — the library calls it by exact selector.              |
+| Build error: _module 'AudioBrowser' not found_ | `pod install` hasn't linked the `AudioBrowser` pod.                                                   |
+| Crash: _no UISceneConfiguration named …_       | The `name:` in `configurationForConnecting` doesn't match `UISceneConfigurationName` in the manifest. |
 
 ## Reference
 

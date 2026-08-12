@@ -22,9 +22,7 @@ export function TrackListItem({
   onPress
 }: TrackListItemProps) {
   if (track.imageRow) {
-    return (
-      <ImageRowListItem track={track} onPress={onPress} />
-    )
+    return <ImageRowListItem track={track} onPress={onPress} />
   }
 
   return (
@@ -41,7 +39,10 @@ export function TrackListItem({
         </View>
       )}
       <View style={styles.itemContent}>
-        <Text style={[styles.itemTitle, isActive && styles.activeItemTitle]} numberOfLines={2}>
+        <Text
+          style={[styles.itemTitle, isActive && styles.activeItemTitle]}
+          numberOfLines={2}
+        >
           {track.title}
         </Text>
         {track.subtitle && (
@@ -114,7 +115,9 @@ function ImageRowListItem({
                 style={styles.imageRowArtwork}
               />
             ) : (
-              <View style={[styles.imageRowArtwork, styles.imageRowPlaceholder]}>
+              <View
+                style={[styles.imageRowArtwork, styles.imageRowPlaceholder]}
+              >
                 <Icon
                   name="music"
                   size={32}

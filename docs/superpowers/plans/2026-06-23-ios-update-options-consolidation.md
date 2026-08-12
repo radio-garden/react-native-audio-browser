@@ -11,8 +11,8 @@
 ## Global Constraints
 
 - **Pre-1.0, no shipped consumers.** Breaking the config surface is acceptable; no deploy-ordering or forward-compat concerns. (CLAUDE.md)
-- **Keep the CarPlay-scoped names.** Fields stay `carPlayUpNextButton` and `carPlayNowPlayingButtons` (the issue's optional rename to `iosNowPlayingButtons` is explicitly deferred pending physical-device testing). Only their *location* changes.
-- **iOS-only behavior.** Android has no equivalent now-playing button UI. The wire types are shared, so Kotlin must still *compile* against the regenerated types, but gets no logic changes.
+- **Keep the CarPlay-scoped names.** Fields stay `carPlayUpNextButton` and `carPlayNowPlayingButtons` (the issue's optional rename to `iosNowPlayingButtons` is explicitly deferred pending physical-device testing). Only their _location_ changes.
+- **iOS-only behavior.** Android has no equivalent now-playing button UI. The wire types are shared, so Kotlin must still _compile_ against the regenerated types, but gets no logic changes.
 - **Nested wire field name is `playbackRates`,** not `iosPlaybackRates`, inside the new `ios` bag (the `ios` prefix is redundant once nested) — matching how `AndroidUpdateOptions.skipSilence` drops no prefix.
 - **CarPlay button cap stays 5** (`MAX_CARPLAY_NOW_PLAYING_BUTTONS = 5`); the validation warning moves with the field.
 - After any TS change run `yarn check`. After Swift changes run the iOS build + `swift test --disable-sandbox` (ignore pre-existing PlaybackStateMachineTests failures). After codegen run `yarn build`.
@@ -23,6 +23,7 @@
 ## File Structure
 
 **Library — TypeScript (`~/rg/_libraries/react-native-audio-browser/`):**
+
 - `src/features/player/options.ts` — add `IOSUpdateOptions`, `IOSOptions`, `NitroIOSUpdateOptions`; add `ios?` to `Options` / `UpdateOptions` / `NativeUpdateOptions`; remove `iosPlaybackRates` from all three; add `validateIOSUpdateOptions` + call it in `updateOptions`.
 - `src/features/player/setup.ts` — redefine `IOSSetupOptions` as `NativeIOSSetupOptions & IOSUpdateOptions`; split the runtime iOS fields into `options.ios` (was flat `iosPlaybackRates`); validate buttons.
 - `src/types/browser.ts` — remove `carPlayUpNextButton` + `carPlayNowPlayingButtons` from `BrowserConfiguration` (keep `CarPlayNowPlayingButton` type + `carPlayLoadingTitle`/`resolveAlbumUrl`/etc).
@@ -33,6 +34,7 @@
 - `src/features/player/options.test.ts` — **new** unit tests for `updateOptions({ ios: … })` forwarding + button-count validation.
 
 **Library — Swift (`ios/`):**
+
 - `ios/Browser/BrowserConfig.swift` — remove the two CarPlay fields (struct + both inits).
 - `ios/Model/PlayerUpdateOptions.swift` — add `carPlayUpNextButton` + `carPlayNowPlayingButtons`; read from `options.ios?…`; nest `toOptions()` under `ios`.
 - `ios/HybridAudioBrowser.swift` — fix the empty `NativeBrowserConfiguration` initializer; add `carPlayNowPlayingButtons` / `carPlayUpNextButton` accessors; add `playerOptionsChangedEmitter` and emit it from `updateOptions`.
@@ -40,10 +42,12 @@
 - `ios/CarPlay/CarPlayController.swift` — subscribe to `playerOptionsChangedEmitter` → refresh now-playing buttons + states.
 
 **Library — Kotlin (`android/`, compile-only):**
+
 - `android/src/main/java/com/audiobrowser/AudioBrowser.kt` — drop the two `carPlay…= null` lines from the default `NativeBrowserConfiguration`.
 - `android/src/main/java/com/audiobrowser/model/PlayerUpdateOptions.kt` — change `iosPlaybackRates = null` to `ios = null` in the `Options(…)` builder.
 
 **Consumer — native-apps (`~/rg/native-apps/`):**
+
 - `src/player/track-player/configuration.ts` — remove `carPlayNowPlayingButtons: ['favorite']`.
 - `src/player/track-player/setup.ts` — add `carPlayNowPlayingButtons: ['favorite']` to the `ios:` bag passed to `setupBrowserPlayer`.
 
@@ -54,6 +58,7 @@
 Define the iOS option trio, relocate the three options, split the setup wiring, and relocate the button-count validation. This is one task because the TS types, `setup.ts`, and the tests are mutually dependent and only `yarn check` as a whole proves them.
 
 **Files:**
+
 - Modify: `src/features/player/options.ts`
 - Modify: `src/features/player/setup.ts`
 - Modify: `src/types/browser.ts:980-994`
@@ -62,6 +67,7 @@ Define the iOS option trio, relocate the three options, split the setup wiring, 
 - Test: `src/features/player/options.test.ts` (new), `src/features/player/setup.test.ts`, `src/features/browser-config.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `interface IOSUpdateOptions { playbackRates?: number[]; carPlayUpNextButton?: boolean; carPlayNowPlayingButtons?: CarPlayNowPlayingButton[] }`
   - `interface IOSOptions { playbackRates: number[]; carPlayUpNextButton: boolean; carPlayNowPlayingButtons: CarPlayNowPlayingButton[] }`
@@ -75,15 +81,15 @@ Define the iOS option trio, relocate the three options, split the setup wiring, 
 In `src/features/player/setup.test.ts`, the test at line ~70 currently asserts the flat shape. Replace its body so it expects the nested `options.ios`:
 
 ```typescript
-  it('moves ios playbackRates into the runtime options', async () => {
-    await setupPlayer({
-      ios: { category: 'playback', playbackRates: [0.5, 1, 2] }
-    })
-
-    const sent = payload()
-    expect(sent.ios).toEqual({ category: 'playback' })
-    expect(sent.options).toEqual({ ios: { playbackRates: [0.5, 1, 2] } })
+it('moves ios playbackRates into the runtime options', async () => {
+  await setupPlayer({
+    ios: { category: 'playback', playbackRates: [0.5, 1, 2] }
   })
+
+  const sent = payload()
+  expect(sent.ios).toEqual({ category: 'playback' })
+  expect(sent.options).toEqual({ ios: { playbackRates: [0.5, 1, 2] } })
+})
 ```
 
 - [ ] **Step 2: Write the new options.test.ts (failing)**
@@ -189,7 +195,7 @@ export interface IOSOptions {
 
 c) Add `IOSUpdateOptions` next to `AndroidUpdateOptions` (after the `AndroidUpdateOptions` interface, before `NitroAndroidUpdateOptions`):
 
-```typescript
+````typescript
 /**
  * iOS-specific player options that can be changed at runtime via {@link updateOptions}.
  * @platform ios
@@ -221,7 +227,7 @@ export interface IOSUpdateOptions {
    */
   carPlayNowPlayingButtons?: CarPlayNowPlayingButton[]
 }
-```
+````
 
 d) Add `NitroIOSUpdateOptions` next to `NitroAndroidUpdateOptions`:
 
@@ -316,45 +322,45 @@ export type IOSSetupOptions = NativeIOSSetupOptions & IOSUpdateOptions
 c) In `setupPlayer` (line ~696), replace the iOS destructure + the flat `iosPlaybackRates` line. Change:
 
 ```typescript
-  const { playbackRates, ...iosSetup } = ios
+const { playbackRates, ...iosSetup } = ios
 ```
 
 to:
 
 ```typescript
-  const {
-    playbackRates,
-    carPlayUpNextButton,
-    carPlayNowPlayingButtons,
-    ...iosSetup
-  } = ios
-  const iosUpdate = definedFields({
-    playbackRates,
-    carPlayUpNextButton,
-    carPlayNowPlayingButtons
-  })
-  validateIOSUpdateOptions(iosUpdate)
+const {
+  playbackRates,
+  carPlayUpNextButton,
+  carPlayNowPlayingButtons,
+  ...iosSetup
+} = ios
+const iosUpdate = definedFields({
+  playbackRates,
+  carPlayUpNextButton,
+  carPlayNowPlayingButtons
+})
+validateIOSUpdateOptions(iosUpdate)
 ```
 
 d) In the `updates: NativeUpdateOptions = definedFields({…})` block (lines ~698-713), remove the `iosPlaybackRates: playbackRates,` line and add an `ios` nest alongside the existing `android` nest:
 
 ```typescript
-  const updates: NativeUpdateOptions = definedFields({
-    capabilities,
-    forwardJumpInterval,
-    backwardJumpInterval,
-    progressUpdateEventInterval,
-    ...nonEmpty(
-      'android',
-      definedFields({
-        appKilledPlaybackBehavior,
-        skipSilence,
-        ratingType,
-        notificationButtons
-      })
-    ),
-    ...nonEmpty('ios', iosUpdate)
-  })
+const updates: NativeUpdateOptions = definedFields({
+  capabilities,
+  forwardJumpInterval,
+  backwardJumpInterval,
+  progressUpdateEventInterval,
+  ...nonEmpty(
+    'android',
+    definedFields({
+      appKilledPlaybackBehavior,
+      skipSilence,
+      ratingType,
+      notificationButtons
+    })
+  ),
+  ...nonEmpty('ios', iosUpdate)
+})
 ```
 
 (`iosSetup` continues to flow to the top-level `ios` bag at line ~718 via `...nonEmpty('ios', definedFields(iosSetup))` — that carries only the audio-session fields now.)
@@ -386,13 +392,13 @@ a) Delete the two lines in `toNativeConfig` (lines ~300-301):
 b) Delete the `MAX_CARPLAY_NOW_PLAYING_BUTTONS` constant (line ~223) and the buttons-count warning block inside `validateBrowserConfiguration` (lines ~273-279):
 
 ```typescript
-  const buttons = config.carPlayNowPlayingButtons
-  if (buttons && buttons.length > MAX_CARPLAY_NOW_PLAYING_BUTTONS) {
-    warn(
-      `${buttons.length} CarPlay now-playing buttons configured; CarPlay ` +
-        `shows at most ${MAX_CARPLAY_NOW_PLAYING_BUTTONS}.`
-    )
-  }
+const buttons = config.carPlayNowPlayingButtons
+if (buttons && buttons.length > MAX_CARPLAY_NOW_PLAYING_BUTTONS) {
+  warn(
+    `${buttons.length} CarPlay now-playing buttons configured; CarPlay ` +
+      `shows at most ${MAX_CARPLAY_NOW_PLAYING_BUTTONS}.`
+  )
+}
 ```
 
 - [ ] **Step 9: Update browser-config.test.ts**
@@ -426,12 +432,14 @@ git commit -m "feat(ios): consolidate iOS player-UI options under ios update bag
 Regenerate the native structs from the new TS specs, then update the Swift readers so they compile and read the relocated options. iOS build is the gate.
 
 **Files:**
+
 - Run: `yarn codegen` (regenerates `nitrogen/generated/**`)
 - Modify: `ios/Browser/BrowserConfig.swift`
 - Modify: `ios/Model/PlayerUpdateOptions.swift`
 - Modify: `ios/HybridAudioBrowser.swift:147-152` (empty config init), accessors near `:63`
 
 **Interfaces:**
+
 - Consumes: generated `NativeUpdateOptions.ios: NitroIOSUpdateOptions?`, generated `IOSOptions`, generated `Options.ios: IOSOptions?`, generated `NativeBrowserConfiguration` (now without the two CarPlay fields).
 - Produces: `HybridAudioBrowser.carPlayNowPlayingButtons: [CarPlayNowPlayingButton]` and `HybridAudioBrowser.carPlayUpNextButton: Bool` accessors reading from `playerOptions`.
 
@@ -575,11 +583,13 @@ git commit -m "feat(ios): read CarPlay options + playbackRates from PlayerUpdate
 Make the CarPlay now-playing layer read the relocated options from the live player options and rebuild when they change at runtime via `updateOptions()`. This is the behavioral payoff: changing the buttons no longer requires `configureBrowser()` (which resets CarPlay to the first tab).
 
 **Files:**
+
 - Modify: `ios/CarPlay/CarPlayNowPlayingManager.swift:113,351`
 - Modify: `ios/HybridAudioBrowser.swift` (add emitter + emit in `updateOptions`)
 - Modify: `ios/CarPlay/CarPlayController.swift:240-258` (subscribe)
 
 **Interfaces:**
+
 - Consumes: `HybridAudioBrowser.carPlayNowPlayingButtons`, `HybridAudioBrowser.carPlayUpNextButton` (from Task 2).
 - Produces: `HybridAudioBrowser.playerOptionsChangedEmitter: Emitter<Void>` emitted from `updateOptions`.
 
@@ -664,10 +674,12 @@ git commit -m "feat(ios): refresh CarPlay now-playing buttons on updateOptions"
 Android has no equivalent UI, but shares the regenerated wire types. These two edits keep Kotlin compiling against the new struct shapes. No behavior changes.
 
 **Files:**
+
 - Modify: `android/src/main/java/com/audiobrowser/AudioBrowser.kt:129-130`
 - Modify: `android/src/main/java/com/audiobrowser/model/PlayerUpdateOptions.kt:102`
 
 **Interfaces:**
+
 - Consumes: regenerated Kotlin `NativeBrowserConfiguration` (no CarPlay fields) and `Options.ios`.
 
 - [ ] **Step 1: Drop the removed CarPlay fields from the default config in AudioBrowser.kt**
@@ -714,6 +726,7 @@ git commit -m "chore(android): compile against nested ios options wire type"
 Move the one consumer usage from the browser config into the player setup's `ios` bag.
 
 **Files:**
+
 - Modify: `~/rg/native-apps/src/player/track-player/configuration.ts:141`
 - Modify: `~/rg/native-apps/src/player/track-player/setup.ts:152-155`
 
@@ -762,6 +775,7 @@ git commit -m "feat: set CarPlay now-playing favorite via setupPlayer ios option
 Runtime CarPlay behavior can only be confirmed on a device/DHU. This task gates the "runtime-updatable" claim.
 
 **Files:**
+
 - Modify (if behavior notes change): `~/rg/native-apps/manual-testing/` and `~/rg/native-apps/docs/manual-tests.md`
 
 - [ ] **Step 1: Verify the favorite button still appears on CarPlay Now Playing**
@@ -795,6 +809,7 @@ Comment on / close `radio-garden/react-native-audio-browser#66` summarizing what
 ## Self-Review
 
 **1. Spec coverage:**
+
 - Issue proposal 1 (move `carPlayUpNextButton` + `carPlayNowPlayingButtons` to `IOSUpdateOptions`, runtime-updatable) → Task 1 (TS), Task 2 (Swift read), Task 3 (runtime refresh wiring). ✅
 - Issue proposal 2 (nest `iosPlaybackRates` under `ios: { playbackRates }`) → Task 1 (types + setup split), Task 2 (Swift `toOptions`/`update`). ✅
 - Issue proposal 3 (investigate rename) → explicitly deferred per the user's "Keep CarPlay-scoped name" decision; surfaced in Task 6 Step 5 and the Global Constraints. ✅
@@ -804,6 +819,7 @@ Comment on / close `radio-garden/react-native-audio-browser#66` summarizing what
 **2. Placeholder scan:** No TBD/TODO/"handle edge cases"/"similar to Task N" — each step shows exact code and exact commands. ✅
 
 **3. Type consistency:**
+
 - `IOSUpdateOptions` (optional fields) vs `IOSOptions` (resolved/required) vs `NitroIOSUpdateOptions` (wire, optional) — names and field sets consistent across Task 1 (TS), Task 2 (Swift `IOSOptions(...)` and `options.ios?...`), Task 4 (Kotlin `ios = null`). ✅
 - Wire field is `playbackRates` inside `ios` everywhere (Swift `ios.playbackRates`, TS `nonEmpty('ios', { playbackRates, … })`, test expects `options.ios: { playbackRates }`). ✅
 - `HybridAudioBrowser.carPlayNowPlayingButtons` / `.carPlayUpNextButton` accessor names match between Task 2 (definition) and Task 3 (use). ✅

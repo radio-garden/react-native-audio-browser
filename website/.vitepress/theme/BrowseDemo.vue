@@ -12,7 +12,12 @@ import { onMounted, onUnmounted, ref } from 'vue'
 
 // A leaf with a `duration` is a track (gets a timeline); a leaf without one is a
 // live radio station (gets a LIVE indicator). `art` is its now-playing artwork.
-type Item = { title: string; children?: Item[]; duration?: string; art?: string }
+type Item = {
+  title: string
+  children?: Item[]
+  duration?: string
+  art?: string
+}
 type Panel = Item | { player: true; station: Item }
 
 const ROW_H = 46
@@ -328,7 +333,11 @@ onUnmounted(() => {
   border-radius: 16px;
   font-size: 46px;
   line-height: 1;
-  background: linear-gradient(135deg, var(--vp-c-brand-soft), var(--vp-c-bg-soft));
+  background: linear-gradient(
+    135deg,
+    var(--vp-c-brand-soft),
+    var(--vp-c-bg-soft)
+  );
   border: 1px solid var(--vp-c-divider);
 }
 .stn {

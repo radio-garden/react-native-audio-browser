@@ -26,30 +26,32 @@
 
 ## File Structure
 
-| File | Responsibility |
-|---|---|
-| `util/ArtworkUris.kt` (new) | Build/parse `content://<authority>/art/<token>`; deterministic `tokenFor(url)`. Pure. |
-| `browser/BrowseArtworkRegistry.kt` (new) | `@Synchronized` map `token → ResolvedArtwork(finalUrl, headers, isSvg)`. Plain data, no Nitro handles. Bounded LRU. |
-| `util/CoilArtworkLoader.kt` (new) | `suspend fun load(finalUrl, headers, sizeHintPixels, isSvg): Bitmap`. The Coil request build (data + headers + `.size()` + forced SVG decoder). Shared decode core. |
-| `util/CoilBitmapLoader.kt` (modify) | Delegate the decode half of `loadBitmap` to `CoilArtworkLoader`; keep URI resolution + `decodeBitmap`. |
-| `util/CoilArtworkLoaderHolder.kt` (new) | Process-wide `@Volatile` holder: `CoilArtworkLoader` + `BrowseArtworkRegistry` + provider `CoroutineScope`. Identity-guarded clear. |
-| `util/ArtworkContentProvider.kt` (new) | Exported provider. `openFile` token lookup → pipe; bounded writer; `getType`=image/png; CRUD no-ops. |
-| `util/TrackFactory.kt` (modify) | New `toBrowseMediaItem(track, sizeHintPixels, registry, authority)`; scheme routing; register in registry. Remove `toMedia3WithSvgSupport` (Task 9). |
-| `util/SvgArtworkRenderer.kt` (modify) | Keep `isSvgUrl`; remove `applyArtwork` + `renderSvgToBytes` (Task 9). |
-| `player/MediaSessionCallback.kt` (modify) | Browse-delivery sites call `toBrowseMediaItem`. |
-| `Service.kt` (modify) | Populate holder+registry+scope on create; identity-guarded clear + cancel scope before `player.destroy()`. |
-| `android/src/main/AndroidManifest.xml` (modify) | Declare `<provider exported="true">`. |
-| `manual-testing/android-auto-artwork.md` (new) | DHU walkthrough (Task 9). |
+| File                                            | Responsibility                                                                                                                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `util/ArtworkUris.kt` (new)                     | Build/parse `content://<authority>/art/<token>`; deterministic `tokenFor(url)`. Pure.                                                                               |
+| `browser/BrowseArtworkRegistry.kt` (new)        | `@Synchronized` map `token → ResolvedArtwork(finalUrl, headers, isSvg)`. Plain data, no Nitro handles. Bounded LRU.                                                 |
+| `util/CoilArtworkLoader.kt` (new)               | `suspend fun load(finalUrl, headers, sizeHintPixels, isSvg): Bitmap`. The Coil request build (data + headers + `.size()` + forced SVG decoder). Shared decode core. |
+| `util/CoilBitmapLoader.kt` (modify)             | Delegate the decode half of `loadBitmap` to `CoilArtworkLoader`; keep URI resolution + `decodeBitmap`.                                                              |
+| `util/CoilArtworkLoaderHolder.kt` (new)         | Process-wide `@Volatile` holder: `CoilArtworkLoader` + `BrowseArtworkRegistry` + provider `CoroutineScope`. Identity-guarded clear.                                 |
+| `util/ArtworkContentProvider.kt` (new)          | Exported provider. `openFile` token lookup → pipe; bounded writer; `getType`=image/png; CRUD no-ops.                                                                |
+| `util/TrackFactory.kt` (modify)                 | New `toBrowseMediaItem(track, sizeHintPixels, registry, authority)`; scheme routing; register in registry. Remove `toMedia3WithSvgSupport` (Task 9).                |
+| `util/SvgArtworkRenderer.kt` (modify)           | Keep `isSvgUrl`; remove `applyArtwork` + `renderSvgToBytes` (Task 9).                                                                                               |
+| `player/MediaSessionCallback.kt` (modify)       | Browse-delivery sites call `toBrowseMediaItem`.                                                                                                                     |
+| `Service.kt` (modify)                           | Populate holder+registry+scope on create; identity-guarded clear + cancel scope before `player.destroy()`.                                                          |
+| `android/src/main/AndroidManifest.xml` (modify) | Declare `<provider exported="true">`.                                                                                                                               |
+| `manual-testing/android-auto-artwork.md` (new)  | DHU walkthrough (Task 9).                                                                                                                                           |
 
 ---
 
 ### Task 1: `ArtworkUris` — content URI build/parse (pure)
 
 **Files:**
+
 - Create: `android/src/main/java/com/audiobrowser/util/ArtworkUris.kt`
 - Test: `android/src/test/java/com/audiobrowser/util/ArtworkUrisTest.kt`
 
 **Interfaces:**
+
 - Produces:
   - `ArtworkUris.AUTHORITY_SUFFIX: String = "audiobrowser.artwork"`
   - `ArtworkUris.authorityFor(packageName: String): String` → `"$packageName.$AUTHORITY_SUFFIX"`
@@ -152,10 +154,12 @@ git commit -m "feat(android): ArtworkUris token-based content URI build/parse"
 ### Task 2: `BrowseArtworkRegistry` — token → resolved artwork (pure)
 
 **Files:**
+
 - Create: `android/src/main/java/com/audiobrowser/browser/BrowseArtworkRegistry.kt`
 - Test: `android/src/test/java/com/audiobrowser/browser/BrowseArtworkRegistryTest.kt`
 
 **Interfaces:**
+
 - Produces:
   - `data class ResolvedArtwork(val finalUrl: String, val headers: Map<String, String>?, val isSvg: Boolean)`
   - `class BrowseArtworkRegistry(maxEntries: Int = 2048)`
@@ -269,11 +273,13 @@ git commit -m "feat(android): BrowseArtworkRegistry (plain-data token store for 
 Extract the decode half of the existing `CoilBitmapLoader.loadBitmap` (`util/CoilBitmapLoader.kt:79-140`) into a reusable suspend core that takes an already-resolved URL + headers + svg flag, and **adds `.size()`** (the current code never downsamples raster — confirmed: `.size(` appears only in `SvgArtworkRenderer`).
 
 **Files:**
+
 - Create: `android/src/main/java/com/audiobrowser/util/CoilArtworkLoader.kt`
 - Modify: `android/src/main/java/com/audiobrowser/util/CoilBitmapLoader.kt`
 - Test: `android/src/test/java/com/audiobrowser/util/CoilArtworkLoaderTest.kt`
 
 **Interfaces:**
+
 - Consumes: `coil3.ImageLoader`, `android.content.Context`.
 - Produces:
   - `class CoilArtworkLoader(context: Context, imageLoader: ImageLoader, defaultSizePixels: Int = 512)`
@@ -433,10 +439,12 @@ git commit -m "refactor(android): extract CoilArtworkLoader decode core; downsam
 The system can construct a `ContentProvider` before the player exists, so the provider reads its dependencies from a `@Volatile` holder. The holder also owns the provider's bounded `CoroutineScope` so teardown can cancel in-flight writers.
 
 **Files:**
+
 - Create: `android/src/main/java/com/audiobrowser/util/CoilArtworkLoaderHolder.kt`
 - Test: `android/src/test/java/com/audiobrowser/util/CoilArtworkLoaderHolderTest.kt`
 
 **Interfaces:**
+
 - Consumes: `CoilArtworkLoader` (Task 3), `BrowseArtworkRegistry` (Task 2).
 - Produces:
   - `data class ArtworkProviderDeps(val loader: CoilArtworkLoader, val registry: BrowseArtworkRegistry, val scope: kotlinx.coroutines.CoroutineScope)`
@@ -542,10 +550,12 @@ git commit -m "feat(android): CoilArtworkLoaderHolder (process-wide provider dep
 ### Task 5: `ArtworkContentProvider` — token lookup, bounded pipe streaming
 
 **Files:**
+
 - Create: `android/src/main/java/com/audiobrowser/util/ArtworkContentProvider.kt`
 - Test: `android/src/test/java/com/audiobrowser/util/ArtworkContentProviderTest.kt`
 
 **Interfaces:**
+
 - Consumes: `CoilArtworkLoaderHolder` (Task 4), `BrowseArtworkRegistry`/`ResolvedArtwork` (Task 2), `ArtworkUris` (Task 1), `CoilArtworkLoader` (Task 3).
 - Produces: an exported `ContentProvider`. `openFile(uri, mode): ParcelFileDescriptor?` — null on token miss / non-http(s) / holder absent; otherwise a readable pipe streaming a PNG. `getType` = `"image/png"`. `query/insert/update/delete` = no-ops.
 - Concurrency: a `Semaphore(MAX_CONCURRENT)` gates resolve+decode+encode on the holder's scope; the write FD is closed in `finally`.
@@ -739,10 +749,12 @@ git commit -m "feat(android): exported token-gated ArtworkContentProvider with b
 ### Task 6: `TrackFactory.toBrowseMediaItem` — scheme routing + registration
 
 **Files:**
+
 - Modify: `android/src/main/java/com/audiobrowser/util/TrackFactory.kt`
 - Test: `android/src/test/java/com/audiobrowser/util/TrackFactoryBrowseTest.kt`
 
 **Interfaces:**
+
 - Consumes: `BrowseArtworkRegistry`/`ResolvedArtwork` (Task 2), `ArtworkUris` (Task 1), `SvgArtworkRenderer.isSvgUrl` (existing). `Track.artworkSource` (resolved `ImageSource` with `.uri`, `.headers`) is already populated at browse time by `BrowserManager.transformArtworkUrl` (`BrowserManager.kt:578`); `artworkUri(track) = track.artworkSource?.uri ?: track.artwork`.
 - Produces:
   - `fun TrackFactory.toBrowseMediaItem(track: Track, sizeHintPixels: Int?, registry: BrowseArtworkRegistry, authority: String): MediaItem`
@@ -861,9 +873,11 @@ git commit -m "feat(android): TrackFactory.toBrowseMediaItem (content:// for htt
 Switch the three browse callbacks to the new converter. The queue / now-playing / resumption sites keep `toMedia3`.
 
 **Files:**
+
 - Modify: `android/src/main/java/com/audiobrowser/player/MediaSessionCallback.kt`
 
 **Interfaces:**
+
 - Consumes: `TrackFactory.toBrowseMediaItem` (Task 6), the `BrowseArtworkRegistry` from the holder/Service, `player.artworkSizeHintPixels` (`Player.kt:1188`), `player.context.packageName`.
 
 - [ ] **Step 1: Replace `toMediaItems`** (`MediaSessionCallback.kt:415-423`). It currently maps via `toMedia3WithSvgSupport`. Change to:
@@ -900,11 +914,13 @@ git commit -m "feat(android): route browse-delivery (children/item/search) artwo
 ### Task 8: Manifest provider + Service wiring (populate/clear holder, registry, scope)
 
 **Files:**
+
 - Modify: `android/src/main/AndroidManifest.xml`
 - Modify: `android/src/main/java/com/audiobrowser/Service.kt`
 - Modify: `android/src/main/java/com/audiobrowser/player/Player.kt` (expose `browseArtworkRegistry`)
 
 **Interfaces:**
+
 - Consumes: all prior tasks.
 - Produces: `Player.browseArtworkRegistry: BrowseArtworkRegistry` (a `val`, created once, cleared on config invalidation alongside `artworkResolutions`); the holder populated with `{loader, registry, scope, artworkSizeHint}`.
 
@@ -974,6 +990,7 @@ git commit -m "feat(android): declare artwork provider + wire holder/registry/sc
 The provider is now live end-to-end. Verify on a real head unit BEFORE deleting the old SVG byte-embedding code (deleting earlier regresses SVG art to blank).
 
 **Files:**
+
 - Create: `manual-testing/android-auto-artwork.md`
 - Modify: `android/src/main/java/com/audiobrowser/util/TrackFactory.kt` (remove `toMedia3WithSvgSupport` x2)
 - Modify: `android/src/main/java/com/audiobrowser/util/SvgArtworkRenderer.kt` (remove `applyArtwork`, `renderSvgToBytes`; keep `isSvgUrl`)

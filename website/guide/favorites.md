@@ -1,6 +1,6 @@
 # Favorites
 
-**Favorites** let a listener mark the active track with a heart — on the now-playing screen, the notification, CarPlay, and Android Auto — and let you surface a "Favorites" tab and a "play my favorites" voice command. The library tracks favorite *state* (which track is favorited, and keeping the heart in sync everywhere); **your app owns the collection** (where favorites are stored and how they persist).
+**Favorites** let a listener mark the active track with a heart — on the now-playing screen, the notification, CarPlay, and Android Auto — and let you surface a "Favorites" tab and a "play my favorites" voice command. The library tracks favorite _state_ (which track is favorited, and keeping the heart in sync everywhere); **your app owns the collection** (where favorites are stored and how they persist).
 
 ## Enabling favorites
 
@@ -8,20 +8,24 @@ Favoriting is off until you enable the `favorite` capability in `setupPlayer` (o
 
 ```ts
 await AudioBrowser.setupPlayer({
-  capabilities: { favorite: true },
+  capabilities: { favorite: true }
 })
 ```
 
 `favorite: true` is shorthand for `{ match: 'exact' }`. The `match` mode controls how the identifiers you pass to [`setFavorites`](#hydrating-favorite-state) are compared against a track's `src` to decide whether it's favorited:
 
 - **`'exact'`** — the identifier must equal `src`. Use this when you store favorites as the full playable URL.
-- **`'partial'`** — the identifier matches if it appears as a complete path segment within `src` (delimited by `/`, `?`, `#`, or the string boundaries). Use this when your favorites are a stable ID that's *embedded in* — but not equal to — the `src` URL.
+- **`'partial'`** — the identifier matches if it appears as a complete path segment within `src` (delimited by `/`, `?`, `#`, or the string boundaries). Use this when your favorites are a stable ID that's _embedded in_ — but not equal to — the `src` URL.
 
 ```ts
 // setFavorites(['abc123']) with track.src = '/stream/jazz-fm/abc123'
 //   'exact'   → 'abc123' !== full src → not favorited
 //   'partial' → 'abc123' is the last path segment of src → favorited
-capabilities: { favorite: { match: 'partial' } }
+capabilities: {
+  favorite: {
+    match: 'partial'
+  }
+}
 ```
 
 ## Hydrating favorite state
@@ -62,7 +66,7 @@ await AudioBrowser.setupPlayer({
       overflow: ['favorite']
     }
   },
-  ios: { carPlayNowPlayingButtons: ['favorite'] },
+  ios: { carPlayNowPlayingButtons: ['favorite'] }
 })
 ```
 
@@ -73,7 +77,7 @@ const unsubscribe = AudioBrowser.onFavoriteChanged.addListener(
   ({ track, favorited }) => {
     if (favorited) addToFavorites(track)
     else removeFromFavorites(track)
-  },
+  }
 )
 ```
 
@@ -98,16 +102,16 @@ How you surface favorites in your [browse tree](/guide/basic-usage) is up to you
 AudioBrowser.configureBrowser({
   tabs: [
     { title: 'Browse', url: '/browse' },
-    { title: 'Favorites', url: '/favorites' },
+    { title: 'Favorites', url: '/favorites' }
   ],
   routes: {
     '/favorites': async () => ({
       url: '/favorites',
       title: 'Favorites',
       // your stored favorites, as a Track[]
-      children: await loadFavoriteTracks(),
-    }),
-  },
+      children: await loadFavoriteTracks()
+    })
+  }
 })
 ```
 
@@ -124,7 +128,7 @@ AudioBrowser.setFavorites(updatedIds)
 AudioBrowser.notifyContentChanged('/favorites')
 ```
 
-These hit two different caches: `setFavorites` updates the `favorited` flag wherever a track appears, while [`notifyContentChanged(path)`](/api/) re-runs the route handler for that one path and refreshes any surface currently showing it. (Use `invalidateAllContent()` instead only when *everything* should re-fetch — e.g. a locale switch or sign-out.) Driving both from a single place that observes your favorites list — rather than from each individual toggle — keeps every source of change covered.
+These hit two different caches: `setFavorites` updates the `favorited` flag wherever a track appears, while [`notifyContentChanged(path)`](/api/) re-runs the route handler for that one path and refreshes any surface currently showing it. (Use `invalidateAllContent()` instead only when _everything_ should re-fetch — e.g. a locale switch or sign-out.) Driving both from a single place that observes your favorites list — rather than from each individual toggle — keeps every source of change covered.
 
 ## Searching within favorites
 
@@ -132,14 +136,14 @@ Voice intents can target the favorites collection — both "play my favorites" a
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `capabilities: { favorite: true \| { match } }` | Enable favoriting and choose how ids match `src`. |
-| `setFavorites(ids)` | Hydrate the favorites cache on launch. |
-| `track.favorited` | Per-track flag; auto-populates the cache during browse. |
-| `setActiveTrackFavorited(bool)` / `toggleActiveTrackFavorited()` | Favorite the active track from your own UI. |
-| `onFavoriteChanged` | Subscribe to system heart taps to persist the change. |
-| `notifyContentChanged('/favorites')` | Re-fetch the `/favorites` content after the collection changes. |
-| `'favorite'` in `android.remoteButtonLayout` | Heart in the Android notification, Android Auto, and the system media controls. A layout replaces the defaults wholesale, so list the other buttons you still want. |
-| `ios.carPlayNowPlayingButtons: ['favorite']` | Heart on the CarPlay now-playing screen. |
-| `search` source with `reference: 'my'` | Resolve "play my favorites" / favorites search. |
+| API                                                              | Purpose                                                                                                                                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities: { favorite: true \| { match } }`                  | Enable favoriting and choose how ids match `src`.                                                                                                                   |
+| `setFavorites(ids)`                                              | Hydrate the favorites cache on launch.                                                                                                                              |
+| `track.favorited`                                                | Per-track flag; auto-populates the cache during browse.                                                                                                             |
+| `setActiveTrackFavorited(bool)` / `toggleActiveTrackFavorited()` | Favorite the active track from your own UI.                                                                                                                         |
+| `onFavoriteChanged`                                              | Subscribe to system heart taps to persist the change.                                                                                                               |
+| `notifyContentChanged('/favorites')`                             | Re-fetch the `/favorites` content after the collection changes.                                                                                                     |
+| `'favorite'` in `android.remoteButtonLayout`                     | Heart in the Android notification, Android Auto, and the system media controls. A layout replaces the defaults wholesale, so list the other buttons you still want. |
+| `ios.carPlayNowPlayingButtons: ['favorite']`                     | Heart on the CarPlay now-playing screen.                                                                                                                            |
+| `search` source with `reference: 'my'`                           | Resolve "play my favorites" / favorites search.                                                                                                                     |

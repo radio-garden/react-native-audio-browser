@@ -42,11 +42,11 @@ Current state in this library:
   `MediaMetadata.userRating = HeartRating(favorited)`, and `Player` updates it on
   toggle — so the now-playing item already advertises heart-rateability.
 - `MediaSessionCallback.onSetRating` already maps a `HeartRating` to
-  `setActiveTrackFavorited(rating.isHeart)` — and *also* converts via
+  `setActiveTrackFavorited(rating.isHeart)` — and _also_ converts via
   `RatingFactory` and emits the public `onRemoteSetRating` event.
 
 So the feature is largely already wired; the work is to make the
-favorite-routing the *only* job of `onSetRating`, gate advertisement on the
+favorite-routing the _only_ job of `onSetRating`, gate advertisement on the
 favorite capability, and delete the redundant public rating surface.
 
 The public rating API is confirmed unused and inert:
@@ -121,7 +121,7 @@ The public rating API is confirmed unused and inert:
 - `model/PlayerUpdateOptions.kt` / `player/Player.kt` — remove the `ratingType`
   field + its (no-op) change handling.
 
-This drops the *general* rating concept (stars / percentage / thumbs) and the
+This drops the _general_ rating concept (stars / percentage / thumbs) and the
 per-track `rating` field entirely, keeping only binary favorites.
 
 ## Edge cases / invariants

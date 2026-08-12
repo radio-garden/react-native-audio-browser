@@ -59,7 +59,7 @@ Two per-Track fields control how Android Auto renders a browsable's children:
 children: [
   { title: 'Morning Show', src: '…', groupTitle: 'Live now' },
   { title: 'Afternoon Drive', src: '…', groupTitle: 'Live now' },
-  { title: 'Late Night Jazz', src: '…', groupTitle: 'Up next' },
+  { title: 'Late Night Jazz', src: '…', groupTitle: 'Up next' }
 ]
 ```
 
@@ -81,7 +81,7 @@ the car, though:
 
 Test in a real car, or in Google's **Desktop Head Unit (DHU)** emulator:
 
-1. Install the **Android Auto Desktop Head Unit emulator** from the SDK Manager (*SDK Tools → Android Auto Desktop Head Unit emulator*).
+1. Install the **Android Auto Desktop Head Unit emulator** from the SDK Manager (_SDK Tools → Android Auto Desktop Head Unit emulator_).
 2. In the phone's **Android Auto** settings, enable Developer Mode (tap the version 10×), then **"Start head unit server"**.
 3. Connect the phone over USB and run the DHU.
 

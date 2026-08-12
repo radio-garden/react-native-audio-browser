@@ -19,23 +19,24 @@
 
 ## File structure
 
-| File | Responsibility | New/Modify |
-|---|---|---|
-| `ios/Player/MediaIntentCriteria.swift` | Plain struct: normalized "what to play" + `isResume`. No Intents types. | **Create** |
-| `ios/CarPlay/RNABMediaIntentHandler.swift` | Map `INPlayMediaIntent` → `MediaIntentCriteria`; call `handlePlayMediaIntent(criteria:)`. | Modify |
-| `ios/HybridAudioBrowser.swift` | `handlePlayMediaIntent(criteria:)` branch: resume / restore / search. Own a `PlaybackStateStore`. | Modify |
-| `ios/Player/PersistedPlaybackState.swift` | `Codable` snapshot (track + position + settings) + `JsonTrack(from:)`. | **Create** |
-| `ios/Player/PlaybackStateStore.swift` | `UserDefaults`-backed save/load/clear. | **Create** |
-| `ios/TrackPlayer.swift` | Call `store.save(...)` on pause / track-change / periodic 5s. | Modify |
-| `ios/Tests/MediaIntentCriteriaTests.swift` | Unit tests for `isResume`. | **Create** |
-| `ios/Tests/PlaybackStateStoreTests.swift` | Unit tests for round-trip + clear. | **Create** |
-| `Package.swift` | Add the three new `ios/Player/*.swift` sources to `AudioBrowserTestable`. | Modify |
+| File                                       | Responsibility                                                                                    | New/Modify |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------- |
+| `ios/Player/MediaIntentCriteria.swift`     | Plain struct: normalized "what to play" + `isResume`. No Intents types.                           | **Create** |
+| `ios/CarPlay/RNABMediaIntentHandler.swift` | Map `INPlayMediaIntent` → `MediaIntentCriteria`; call `handlePlayMediaIntent(criteria:)`.         | Modify     |
+| `ios/HybridAudioBrowser.swift`             | `handlePlayMediaIntent(criteria:)` branch: resume / restore / search. Own a `PlaybackStateStore`. | Modify     |
+| `ios/Player/PersistedPlaybackState.swift`  | `Codable` snapshot (track + position + settings) + `JsonTrack(from:)`.                            | **Create** |
+| `ios/Player/PlaybackStateStore.swift`      | `UserDefaults`-backed save/load/clear.                                                            | **Create** |
+| `ios/TrackPlayer.swift`                    | Call `store.save(...)` on pause / track-change / periodic 5s.                                     | Modify     |
+| `ios/Tests/MediaIntentCriteriaTests.swift` | Unit tests for `isResume`.                                                                        | **Create** |
+| `ios/Tests/PlaybackStateStoreTests.swift`  | Unit tests for round-trip + clear.                                                                | **Create** |
+| `Package.swift`                            | Add the three new `ios/Player/*.swift` sources to `AudioBrowserTestable`.                         | Modify     |
 
 ---
 
 ### Task 1: `MediaIntentCriteria` + warm resume (1a)
 
 **Files:**
+
 - Create: `ios/Player/MediaIntentCriteria.swift`
 - Create: `ios/Tests/MediaIntentCriteriaTests.swift`
 - Modify: `ios/CarPlay/RNABMediaIntentHandler.swift`
@@ -43,6 +44,7 @@
 - Modify: `Package.swift` (add `Player/MediaIntentCriteria.swift` to `AudioBrowserTestable` sources)
 
 **Interfaces:**
+
 - Produces: `struct MediaIntentCriteria { let query: String; let hasReference: Bool; let hasGenres: Bool; let hasMediaType: Bool; var isResume: Bool }`
 - Produces: `HybridAudioBrowser.handlePlayMediaIntent(criteria: MediaIntentCriteria, completion: @escaping @Sendable (Bool) -> Void)` (replaces the `searchTerm:` variant)
 
@@ -201,12 +203,14 @@ git commit -m "resume: warm resume for a no-criteria play intent via MediaIntent
 ### Task 2: `PersistedPlaybackState` snapshot + `JsonTrack(from:)` (1b)
 
 **Files:**
+
 - Create: `ios/Player/PersistedPlaybackState.swift`
 - Modify: `ios/Browser/JsonModels.swift` (add `JsonTrack(from track: Track)`)
 - Modify: `Package.swift` (add `Player/PersistedPlaybackState.swift`)
 - Test: covered in Task 3's round-trip test.
 
 **Interfaces:**
+
 - Produces: `struct PersistedPlaybackState: Codable { let track: JsonTrack; let positionMs: Double?; let repeatMode: String; let shuffleEnabled: Bool; let playbackSpeed: Float }`
 - Produces: `extension JsonTrack { init(from track: Track) }`
 
@@ -279,11 +283,13 @@ git commit -m "resume: PersistedPlaybackState snapshot + JsonTrack(from:)"
 ### Task 3: `PlaybackStateStore` (UserDefaults) (1b)
 
 **Files:**
+
 - Create: `ios/Player/PlaybackStateStore.swift`
 - Create: `ios/Tests/PlaybackStateStoreTests.swift`
 - Modify: `Package.swift` (add `Player/PlaybackStateStore.swift`)
 
 **Interfaces:**
+
 - Consumes: `PersistedPlaybackState` (Task 2)
 - Produces: `final class PlaybackStateStore { init(defaults: UserDefaults); func save(_:); func load() -> PersistedPlaybackState?; func clear() }`
 
@@ -398,9 +404,11 @@ git commit -m "resume: UserDefaults-backed PlaybackStateStore"
 ### Task 4: Save triggers in the player (1b)
 
 **Files:**
+
 - Modify: `ios/TrackPlayer.swift` (own a `PlaybackStateStore`; save on pause, on track change, periodic 5s)
 
 **Interfaces:**
+
 - Consumes: `PlaybackStateStore`, `PersistedPlaybackState`, `JsonTrack(from:)`
 - Produces: side effect only — a persisted snapshot kept current during playback.
 
@@ -448,9 +456,11 @@ git commit -m "resume: persist playback state on pause / track-change / periodic
 ### Task 5: Cold-start restore on the resume intent (1b)
 
 **Files:**
+
 - Modify: `ios/HybridAudioBrowser.swift` (own a `PlaybackStateStore`; restore in the `isResume` else-branch)
 
 **Interfaces:**
+
 - Consumes: `PlaybackStateStore.load()`, `JsonTrack.toNitro()`, `TrackPlayer.setQueue(_:initialIndex:startPositionMs:playWhenReady:)`
 
 - [ ] **Step 1: Give the browser a store**
@@ -496,12 +506,14 @@ git commit -m "resume: cold-start restore from PlaybackStateStore on a resume in
 ### Task 6: Queue-expansion restore — Android parity (1b)
 
 **Files:**
+
 - Modify: `ios/HybridAudioBrowser.swift` (the cold-start restore branch in `handlePlayMediaIntent`, added in Task 5)
 
 **Interfaces:**
+
 - Consumes: `browserManager.expandQueueFromContextualUrl(_ url: String) async throws -> (tracks: [Track], selectedIndex: Int)?` (`ios/Browser/BrowserManager.swift:736`); `PlaybackStateStore.load()`; `JsonTrack.url: String?`; `JsonTrack.toNitro() -> Track`; `TrackPlayer.setQueue(_:initialIndex:startPositionMs:playWhenReady:)`.
 
-**Why:** Android's resume re-derives the *full queue* from the saved track's contextual URL (`{parentPath}?__trackId={src}`) via `expandQueueFromContextualUrl` (resolve parent → siblings + selected index), not just the single track. iOS already stamps browse tracks with contextual URLs (`BrowserManager.swift:568-569`), so the persisted track carries one — match Android, falling back to the single track when the url isn't contextual (e.g. a bare live station) or expansion returns nil.
+**Why:** Android's resume re-derives the _full queue_ from the saved track's contextual URL (`{parentPath}?__trackId={src}`) via `expandQueueFromContextualUrl` (resolve parent → siblings + selected index), not just the single track. iOS already stamps browse tracks with contextual URLs (`BrowserManager.swift:568-569`), so the persisted track carries one — match Android, falling back to the single track when the url isn't contextual (e.g. a bare live station) or expansion returns nil.
 
 - [ ] **Step 1: Replace the Task 5 single-track restore block** — in `handlePlayMediaIntent(criteria:)`, the cold-start `else if let state = self.playbackStateStore.load()` branch:
 

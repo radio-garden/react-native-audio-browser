@@ -9,7 +9,7 @@ Two different things can fail, and they surface separately:
   [Navigation errors](#navigation-errors).
 
 For playback, the library can also **retry automatically** — transient failures
-recover on their own, and while it retries the error is surfaced as *advisory*
+recover on their own, and while it retries the error is surfaced as _advisory_
 so your UI can say what's wrong over the spinner. See
 [Automatic retry](#automatic-retry).
 
@@ -27,13 +27,13 @@ current error, or `undefined` once playback recovers.
 `PlaybackError` is `{ kind, code, message, statusCode?, retrying? }`. **Branch
 on `kind`**:
 
-| Field | Use it for |
-| --- | --- |
-| `kind` | Everything user-facing. A normalized classification both platforms map onto — see the table below. |
-| `code` | Diagnostics and telemetry **only**. Platform-specific and unstable: loader cases on iOS (`failed-to-load`, …), lower-cased ExoPlayer names on Android (`io-bad-http-status`, …). |
-| `message` | Logs. Hard-coded developer English, e.g. *"Failed to load audio track"*. |
-| `statusCode` | The HTTP status, when the failure came from a response. |
-| `retrying` | `true` while [automatic retry](#automatic-retry) is still working on the failure — the error is advisory, not final. See [Errors while retrying](#errors-while-retrying). |
+| Field        | Use it for                                                                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`       | Everything user-facing. A normalized classification both platforms map onto — see the table below.                                                                               |
+| `code`       | Diagnostics and telemetry **only**. Platform-specific and unstable: loader cases on iOS (`failed-to-load`, …), lower-cased ExoPlayer names on Android (`io-bad-http-status`, …). |
+| `message`    | Logs. Hard-coded developer English, e.g. _"Failed to load audio track"_.                                                                                                         |
+| `statusCode` | The HTTP status, when the failure came from a response.                                                                                                                          |
+| `retrying`   | `true` while [automatic retry](#automatic-retry) is still working on the failure — the error is advisory, not final. See [Errors while retrying](#errors-while-retrying).        |
 
 ::: warning Don't show `message` to listeners
 It is developer English and it is never localized. Map `kind` to your own copy
@@ -43,25 +43,25 @@ string is especially jarring.
 
 `kind` is one of:
 
-| `kind` | Meaning | Retrying help? |
-| --- | --- | --- |
-| `'offline'` | The device had no connection at the moment of failure. The stream may be fine. | Once back online |
-| `'unreachable'` | The host could not be reached: DNS failure, refused connection, timeout, or a connection dropped while loading. | Maybe |
-| `'not-found'` | The server said this stream is gone (HTTP 404 / 410). | No |
-| `'rejected'` | The server refused the request (HTTP 401 / 403) — geo-blocking, an expired token. | No |
-| `'server-error'` | The server responded 5xx. Usually transient. | Maybe |
-| `'unplayable'` | Fetched, but not playable: unknown container, unsupported codec, decoder failure. | No |
-| `'stalled'` | Playback had started, then stopped, and the player exhausted its recovery budget. | Maybe |
-| `'unknown'` | Could not be classified. Inspect `code`. | Maybe |
+| `kind`           | Meaning                                                                                                         | Retrying help?   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `'offline'`      | The device had no connection at the moment of failure. The stream may be fine.                                  | Once back online |
+| `'unreachable'`  | The host could not be reached: DNS failure, refused connection, timeout, or a connection dropped while loading. | Maybe            |
+| `'not-found'`    | The server said this stream is gone (HTTP 404 / 410).                                                           | No               |
+| `'rejected'`     | The server refused the request (HTTP 401 / 403) — geo-blocking, an expired token.                               | No               |
+| `'server-error'` | The server responded 5xx. Usually transient.                                                                    | Maybe            |
+| `'unplayable'`   | Fetched, but not playable: unknown container, unsupported codec, decoder failure.                               | No               |
+| `'stalled'`      | Playback had started, then stopped, and the player exhausted its recovery budget.                               | Maybe            |
+| `'unknown'`      | Could not be classified. Inspect `code`.                                                                        | Maybe            |
 
 Codes that name no cause stay `'unknown'` rather than being guessed into a
-friendlier bucket — a wrong classification misleads the listener *and* poisons
+friendlier bucket — a wrong classification misleads the listener _and_ poisons
 your telemetry aggregates.
 
 Map `kind` to your own localized copy. How finely you split is a product
 decision — collapsing several kinds onto one line is fine, as long as the
-listener can still tell *"fix your connection"* from *"this one is gone"* from
-*"try again in a minute"*:
+listener can still tell _"fix your connection"_ from _"this one is gone"_ from
+_"try again in a minute"_:
 
 ```tsx
 import { View, Text, Button } from 'react-native'
@@ -150,18 +150,18 @@ parsed or decoded.
 ### Two duration budgets
 
 Retry state is tracked per **load** — one track's playback session, created
-when a track becomes current (selection, queue advance, skip) *or restarted
-from a terminal error* (`retry()`, or any play command while in `'error'`),
+when a track becomes current (selection, queue advance, skip) _or restarted
+from a terminal error_ (`retry()`, or any play command while in `'error'`),
 and surviving every automatic retry of that track. A new load starts fresh
 budgets; retries within it don't.
 
 How long the player keeps trying depends on one piece of evidence: **has this
 load ever produced audio?**
 
-| Situation | Budget | Why |
-| --- | --- | --- |
-| **First connect** — the load has never played | `firstConnectMaxRetryDurationMs`, default **12s** | A stream that fails before ever playing is usually dead, and the listener is actively waiting for a verdict — seconds, not minutes. |
-| **Recovery** — the load played, then failed | `maxRetryDurationMs`, default **2 min** | Playback proved the stream works. Drops are usually transient (tunnels, network handovers, a station's encoder restarting) and patience recovers them unattended. |
+| Situation                                     | Budget                                            | Why                                                                                                                                                               |
+| --------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **First connect** — the load has never played | `firstConnectMaxRetryDurationMs`, default **12s** | A stream that fails before ever playing is usually dead, and the listener is actively waiting for a verdict — seconds, not minutes.                               |
+| **Recovery** — the load played, then failed   | `maxRetryDurationMs`, default **2 min**           | Playback proved the stream works. Drops are usually transient (tunnels, network handovers, a station's encoder restarting) and patience recovers them unattended. |
 
 While the device is **offline**, the first-connect budget does not apply: the
 player parks and retries the moment connectivity returns, so a stream started
@@ -206,7 +206,7 @@ if (error?.retrying) {
 ```
 
 `onPlaybackError` and `usePlaybackError()` stay **terminal-only**: they fire on
-*both* edges of the `'error'` state — entering it (with the error) and leaving
+_both_ edges of the `'error'` state — entering it (with the error) and leaving
 it (with `error: undefined`; the hook returns `undefined` again). Advisory
 errors never pass through them. The same advisory error also reaches the
 [Now Playing formatter](/guide/now-playing#the-formatter-derived-continuous),
@@ -230,15 +230,15 @@ with `onNavigationError` / snapshot with `getNavigationError()`.
 `NavigationError` is `{ code, message, statusCode?, statusCodeSuccess? }`, where
 `code` is one of:
 
-| `code` | Meaning |
-| --- | --- |
-| `'content-not-found'` | No route for the path, or the route returned no content (a config issue, not an HTTP 404). |
-| `'network-error'` | The request failed (connection error, timeout, no internet). |
-| `'http-error'` | Server returned non-2xx (or 2xx but parsing failed) — see `statusCode` / `statusCodeSuccess`. |
-| `'callback-error'` | Your browse callback returned an error (e.g. auth/subscription required). |
-| `'empty-content'` | The path resolved but the container has no children (empty Favorites, no search results). |
-| `'timeout'` | Resolution didn't finish in time. |
-| `'unknown-error'` | An unexpected error (e.g. invalid configuration). |
+| `code`                | Meaning                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `'content-not-found'` | No route for the path, or the route returned no content (a config issue, not an HTTP 404).    |
+| `'network-error'`     | The request failed (connection error, timeout, no internet).                                  |
+| `'http-error'`        | Server returned non-2xx (or 2xx but parsing failed) — see `statusCode` / `statusCodeSuccess`. |
+| `'callback-error'`    | Your browse callback returned an error (e.g. auth/subscription required).                     |
+| `'empty-content'`     | The path resolved but the container has no children (empty Favorites, no search results).     |
+| `'timeout'`           | Resolution didn't finish in time.                                                             |
+| `'unknown-error'`     | An unexpected error (e.g. invalid configuration).                                             |
 
 ### Showing navigation errors
 
@@ -256,7 +256,12 @@ function BrowseError() {
   const error = useFormattedNavigationError()
   if (!error) return null
   const detail = error.message ? ` — ${error.message}` : ''
-  return <Text>{error.title}{detail}</Text>
+  return (
+    <Text>
+      {error.title}
+      {detail}
+    </Text>
+  )
 }
 ```
 
@@ -288,13 +293,13 @@ message to render.
 
 ## API summary
 
-| API | Purpose |
-| --- | --- |
-| `usePlaybackError()` / `getPlaybackError()` | The current playback error (`{ kind, code, message, statusCode?, retrying? }`) — branch on `kind`. |
-| `onPlaybackError` | Subscribe to terminal playback errors outside React (fires on entering/leaving `'error'`; advisory retrying errors arrive via `onPlaybackChanged`). |
-| `retry()` | Re-attempt the current item (while state is `'error'`). |
-| `setupPlayer({ retry })` | Automatic retry with two duration budgets: first-connect (12s) and recovery (2 min). Off by default. |
-| `useNavigationError()` / `getNavigationError()` | The raw navigation error (`code`, `statusCode`, …). |
-| `onNavigationError` | Subscribe to navigation errors outside React. |
-| `useFormattedNavigationError()` / `getFormattedNavigationError()` | Display-ready `{ title, message? }`, shared with CarPlay / Android Auto. |
-| `configureBrowser({ formatNavigationError })` | Customize / localize the formatted messages. |
+| API                                                               | Purpose                                                                                                                                             |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `usePlaybackError()` / `getPlaybackError()`                       | The current playback error (`{ kind, code, message, statusCode?, retrying? }`) — branch on `kind`.                                                  |
+| `onPlaybackError`                                                 | Subscribe to terminal playback errors outside React (fires on entering/leaving `'error'`; advisory retrying errors arrive via `onPlaybackChanged`). |
+| `retry()`                                                         | Re-attempt the current item (while state is `'error'`).                                                                                             |
+| `setupPlayer({ retry })`                                          | Automatic retry with two duration budgets: first-connect (12s) and recovery (2 min). Off by default.                                                |
+| `useNavigationError()` / `getNavigationError()`                   | The raw navigation error (`code`, `statusCode`, …).                                                                                                 |
+| `onNavigationError`                                               | Subscribe to navigation errors outside React.                                                                                                       |
+| `useFormattedNavigationError()` / `getFormattedNavigationError()` | Display-ready `{ title, message? }`, shared with CarPlay / Android Auto.                                                                            |
+| `configureBrowser({ formatNavigationError })`                     | Customize / localize the formatted messages.                                                                                                        |
