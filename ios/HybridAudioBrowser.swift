@@ -483,7 +483,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  public func onSearch(query: String) throws -> Promise<[Track]> {
+  public func search(query: String) throws -> Promise<[Track]> {
     Promise.async { [weak self] in
       guard let self else { return [] }
       let resolved = try await browserManager.search(query)

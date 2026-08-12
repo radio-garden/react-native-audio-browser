@@ -71,7 +71,7 @@ public protocol HybridAudioBrowserSpec_protocol: HybridObject {
   // Methods
   func navigatePath(path: String) throws -> Void
   func navigateTrack(track: Track) throws -> Void
-  func onSearch(query: String) throws -> Promise<[Track]>
+  func search(query: String) throws -> Promise<[Track]>
   func getContent() throws -> ResolvedTrack?
   func getNavigationError() throws -> NavigationError?
   func getFormattedNavigationError() throws -> FormattedNavigationError?

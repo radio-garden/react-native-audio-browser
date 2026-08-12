@@ -115,7 +115,7 @@ export interface AudioBrowser extends HybridObject<{
   tabs: Track[] | undefined
   navigatePath(path: string): void
   navigateTrack(track: Track): void
-  onSearch(query: string): Promise<Track[]>
+  search(query: string): Promise<Track[]>
   getContent(): ResolvedTrack | undefined
   onPathChanged: (path: string) => void
   onContentChanged: (content: ResolvedTrack | undefined) => void

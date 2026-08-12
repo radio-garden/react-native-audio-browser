@@ -760,8 +760,8 @@ namespace margelo::nitro::audiobrowser {
         std::rethrow_exception(__result.error());
       }
     }
-    inline std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override {
-      auto __result = _swiftPart.onSearch(query);
+    inline std::shared_ptr<Promise<std::vector<Track>>> search(const std::string& query) override {
+      auto __result = _swiftPart.search(query);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

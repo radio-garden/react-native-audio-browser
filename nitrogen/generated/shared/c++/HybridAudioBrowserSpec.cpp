@@ -130,7 +130,7 @@ namespace margelo::nitro::audiobrowser {
       prototype.registerHybridSetter("onBatteryOptimizationStatusChanged", &HybridAudioBrowserSpec::setOnBatteryOptimizationStatusChanged);
       prototype.registerHybridMethod("navigatePath", &HybridAudioBrowserSpec::navigatePath);
       prototype.registerHybridMethod("navigateTrack", &HybridAudioBrowserSpec::navigateTrack);
-      prototype.registerHybridMethod("onSearch", &HybridAudioBrowserSpec::onSearch);
+      prototype.registerHybridMethod("search", &HybridAudioBrowserSpec::search);
       prototype.registerHybridMethod("getContent", &HybridAudioBrowserSpec::getContent);
       prototype.registerHybridMethod("getNavigationError", &HybridAudioBrowserSpec::getNavigationError);
       prototype.registerHybridMethod("getFormattedNavigationError", &HybridAudioBrowserSpec::getFormattedNavigationError);

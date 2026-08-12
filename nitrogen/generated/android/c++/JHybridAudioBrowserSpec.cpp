@@ -1453,8 +1453,8 @@ namespace margelo::nitro::audiobrowser {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JTrack> /* track */)>("navigateTrack");
     method(_javaPart, JTrack::fromCpp(track));
   }
-  std::shared_ptr<Promise<std::vector<Track>>> JHybridAudioBrowserSpec::onSearch(const std::string& query) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* query */)>("onSearch");
+  std::shared_ptr<Promise<std::vector<Track>>> JHybridAudioBrowserSpec::search(const std::string& query) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* query */)>("search");
     auto __result = method(_javaPart, jni::make_jstring(query));
     return [&]() {
       auto __promise = Promise<std::vector<Track>>::create();

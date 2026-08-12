@@ -169,7 +169,7 @@ namespace margelo::nitro::audiobrowser {
     // Methods
     void navigatePath(const std::string& path) override;
     void navigateTrack(const Track& track) override;
-    std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) override;
+    std::shared_ptr<Promise<std::vector<Track>>> search(const std::string& query) override;
     std::optional<ResolvedTrack> getContent() override;
     std::optional<NavigationError> getNavigationError() override;
     std::optional<FormattedNavigationError> getFormattedNavigationError() override;

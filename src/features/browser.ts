@@ -169,5 +169,5 @@ export function hasSearch(): boolean {
  * ```
  */
 export async function search(query: string): Promise<Track[]> {
-  return nativeBrowser.onSearch(query)
+  return nativeBrowser.search(query)
 }

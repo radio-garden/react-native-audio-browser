@@ -297,7 +297,7 @@ namespace margelo::nitro::audiobrowser {
       // Methods
       virtual void navigatePath(const std::string& path) = 0;
       virtual void navigateTrack(const Track& track) = 0;
-      virtual std::shared_ptr<Promise<std::vector<Track>>> onSearch(const std::string& query) = 0;
+      virtual std::shared_ptr<Promise<std::vector<Track>>> search(const std::string& query) = 0;
       virtual std::optional<ResolvedTrack> getContent() = 0;
       virtual std::optional<NavigationError> getNavigationError() = 0;
       virtual std::optional<FormattedNavigationError> getFormattedNavigationError() = 0;

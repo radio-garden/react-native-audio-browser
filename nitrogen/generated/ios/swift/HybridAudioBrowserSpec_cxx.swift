@@ -1445,9 +1445,9 @@ open class HybridAudioBrowserSpec_cxx {
   }
   
   @inline(__always)
-  public final func onSearch(query: std.string) -> bridge.Result_std__shared_ptr_Promise_std__vector_Track____ {
+  public final func search(query: std.string) -> bridge.Result_std__shared_ptr_Promise_std__vector_Track____ {
     do {
-      let __result = try self.__implementation.onSearch(query: String(query))
+      let __result = try self.__implementation.search(query: String(query))
       let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__vector_Track___ in
         let __promise = bridge.create_std__shared_ptr_Promise_std__vector_Track___()
         let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__vector_Track___(__promise)

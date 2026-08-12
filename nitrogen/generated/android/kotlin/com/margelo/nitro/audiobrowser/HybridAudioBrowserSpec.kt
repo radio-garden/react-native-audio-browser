@@ -812,7 +812,7 @@ abstract class HybridAudioBrowserSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
-  abstract fun onSearch(query: String): Promise<Array<Track>>
+  abstract fun search(query: String): Promise<Array<Track>>
   
   @DoNotStrip
   @Keep

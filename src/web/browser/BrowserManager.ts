@@ -573,7 +573,7 @@ export class BrowserManager {
    * `request → search` chain (search is its own kind — no browse layer). The
    * query params are seeded on the base so they survive both the static merge
    * and a search `transform`. Shared by `resolveSearchContent` (navigating to a
-   * search path) and `SearchManager` (the voice/`onSearch` API), so the ladder
+   * search path) and `SearchManager` (the voice/`search` API), so the ladder
    * isn't duplicated. Errors propagate to the caller.
    */
   async fetchSearchResults(
