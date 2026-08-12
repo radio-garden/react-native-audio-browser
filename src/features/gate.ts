@@ -120,12 +120,20 @@ nativeBrowser.resolveGate = async (
  * some surfaces (CarPlay) any gate change pops pushed navigation back to root,
  * so a page the user had drilled into is reset to the tab root. Set the gate
  * before the car connects and it'll be there the moment it does.
+ *
+ * @platform ios android
+ * A no-op on web, which has no CarPlay or Android Auto surfaces for the gate to
+ * cover. Nothing is lost: the gate never covered in-app browse UI on any
+ * platform — that stays yours to gate.
  */
 export function setGate(gate: Gate, resolve?: GateResolver): void
 /**
  * Raises the gate with a resolver only (no default chrome).
  * The resolver must return a {@link Gate} or `true` for gated requests;
  * native uses the built-in fallback chrome when `true` and no default is set.
+ *
+ * @platform ios android
+ * A no-op on web — the resolver is never consulted there.
  */
 export function setGate(resolve: GateResolver): void
 export function setGate(a: Gate | GateResolver, b?: GateResolver): void {
@@ -140,6 +148,9 @@ export function setGate(a: Gate | GateResolver, b?: GateResolver): void {
 
 /**
  * Drops the gate — the real content comes back, and the current tab is kept.
+ *
+ * @platform ios android
+ * A no-op on web, where no gate was ever raised.
  */
 export function clearGate(): void {
   resolver = undefined
@@ -148,6 +159,10 @@ export function clearGate(): void {
 
 /**
  * Subscribes to gate events (fired when a request is gated).
+ *
+ * @platform ios android
+ * Never fires on web — there are no gated serves to report.
+ *
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onGate = LazyNativeEmitter.emitterize<GateEvent>(

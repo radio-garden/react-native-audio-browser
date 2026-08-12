@@ -9,6 +9,8 @@ Two things it never touches:
 - **Your own in-app browse UI.** The Gate only covers content the *library* serves; the screens you draw in your app are yours to gate with your own paywall.
 - **Playback.** It lives on the find/resolve path, so audio is never interrupted.
 
+It follows that the Gate is **iOS and Android only**. On web `setGate` and `clearGate` are no-ops and `onGate` never fires — there's no CarPlay or Android Auto surface to cover, and in-app browse UI was never the Gate's job on any platform. Calling them from shared code is safe and does nothing.
+
 ::: warning Voice search isn't only a "car" thing
 A Siri request ("Hey Siri, play jazz on App") can come from the phone or lock screen, not just CarPlay — and it still goes through the Gate. That's why the common setup below **gates browsing but lets search through**: voice-play keeps working everywhere, while the car's browse tabs stay walled off.
 :::
@@ -118,7 +120,8 @@ You can't complete a purchase on CarPlay or Android Auto — so the pattern is t
 ```ts
 import { onGate } from 'react-native-audio-browser'
 
-// addListener returns an unsubscribe function — keep it and call it to clean up.
+// addListener returns an unsubscribe function — keep it and call it to
+// clean up.
 const unsubscribe = onGate.addListener((event) => {
   // event.reason ('browse' | 'search') is the same axis as the resolver's
   // request.kind. The event carries only the reason, not the path/params.
