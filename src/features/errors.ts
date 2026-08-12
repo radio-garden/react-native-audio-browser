@@ -134,7 +134,7 @@ export function getPlaybackError(): PlaybackError | undefined {
 /**
  * Subscribes to playback error events.
  * @param callback - Called when a playback error occurs
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onPlaybackError =
   NativeUpdatedValue.emitterize<PlaybackErrorEvent>(
@@ -165,7 +165,7 @@ export function getNavigationError(): NavigationError | undefined {
 /**
  * Subscribes to navigation error events.
  * @param callback - Called when a navigation error occurs
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onNavigationError =
   NativeUpdatedValue.emitterize<NavigationErrorEvent>(
@@ -198,7 +198,7 @@ export function getFormattedNavigationError():
 /**
  * Subscribes to formatted navigation error changes.
  * @param callback - Called when the formatted navigation error changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onFormattedNavigationError = NativeUpdatedValue.emitterize<
   FormattedNavigationError | undefined

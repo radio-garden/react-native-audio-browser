@@ -86,7 +86,7 @@ export function clearSleepTimer(): boolean {
 /**
  * Subscribes to sleep timer changes.
  * @param callback - Called when the sleep timer state changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onSleepTimerChanged = NativeUpdatedValue.emitterize<SleepTimer>(
   (cb) => (nativeBrowser.onSleepTimerChanged = cb)

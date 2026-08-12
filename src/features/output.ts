@@ -46,7 +46,7 @@ export function getOutput(): Output | undefined {
 /**
  * Subscribes to current-output changes (headphones unplugged, Bluetooth speaker
  * connected, AirPlay/route selected). Fires on iOS and Android 11+; never below.
- * @returns Cleanup function to unsubscribe.
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onOutputChanged = NativeUpdatedValue.emitterize<Output>(
   (cb) => (nativeBrowser.onOutputChanged = cb)

@@ -118,8 +118,8 @@ You can't complete a purchase on CarPlay or Android Auto — so the pattern is t
 ```ts
 import { onGate } from 'react-native-audio-browser'
 
-// onGate returns an unsubscribe function — keep it and call it to clean up.
-const unsubscribe = onGate((event) => {
+// addListener returns an unsubscribe function — keep it and call it to clean up.
+const unsubscribe = onGate.addListener((event) => {
   // event.reason ('browse' | 'search') is the same axis as the resolver's
   // request.kind. The event carries only the reason, not the path/params.
   recordGateHit() // your own persisted flag
@@ -129,7 +129,7 @@ const unsubscribe = onGate((event) => {
 In a component, wire it through `useEffect` so it unsubscribes on unmount:
 
 ```tsx
-useEffect(() => onGate((event) => recordGateHit()), [])
+useEffect(() => onGate.addListener((event) => recordGateHit()), [])
 ```
 
 `onGate` fires **once per gated serve**, whether the gate is static or resolver-driven. There's no de-duplication, so poking around a gated car UI fires several events — debounce on your side (once per session, per day, whatever fits) if you don't want them all.

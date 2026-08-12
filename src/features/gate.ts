@@ -148,7 +148,7 @@ export function clearGate(): void {
 
 /**
  * Subscribes to gate events (fired when a request is gated).
- * @returns Cleanup function to unsubscribe.
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onGate = LazyNativeEmitter.emitterize<GateEvent>(
   (cb) => (nativeBrowser.onGate = cb)

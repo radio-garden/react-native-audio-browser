@@ -46,7 +46,7 @@ export function getProgress(): Progress {
 /**
  * Subscribes to playback progress updates.
  * @param callback - Called periodically with playback progress updates
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onProgressUpdated =
   NativeUpdatedValue.emitterize<PlaybackProgressUpdatedEvent>(

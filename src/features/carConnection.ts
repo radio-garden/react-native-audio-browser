@@ -19,7 +19,7 @@ export function isCarConnected(): boolean {
  * Subscribes to car connection changes (CarPlay on iOS, Android Auto /
  * Android Automotive on Android). Never fires on web.
  * @param callback - Called with the new connection state
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onCarConnectedChanged = NativeUpdatedValue.emitterize<boolean>(
   (cb) => (nativeBrowser.onCarConnectedChanged = cb)

@@ -82,7 +82,7 @@ export interface FavoriteChangedEvent {
  * The native side has already updated the track's favorite state and UI.
  *
  * @param callback - Called with the track and its new favorite state
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  *
  * @example
  * ```ts

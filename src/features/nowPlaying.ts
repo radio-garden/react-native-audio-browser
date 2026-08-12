@@ -74,7 +74,7 @@ export function clearNowPlayingFlash(): void {
  * Subscribes to now playing metadata change events.
  * Fires when updateNowPlaying is called or when the track changes.
  * @param callback - Called when now playing metadata changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onNowPlayingChanged =
   NativeUpdatedValue.emitterize<NowPlayingMetadata>(

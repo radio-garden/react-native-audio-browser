@@ -156,7 +156,7 @@ export function getQueue(): Track[] {
 /**
  * Subscribes to playback queue ended events.
  * @param callback - Called when playback has paused due to reaching the end of the queue
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onQueueEnded =
   NativeUpdatedValue.emitterize<PlaybackQueueEndedEvent>(
@@ -167,7 +167,7 @@ export const onQueueEnded =
  * Subscribes to queue change events.
  * Called when tracks are added, removed, reordered, or when track metadata changes.
  * @param callback - Called with the updated queue
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onQueueChanged = NativeUpdatedValue.emitterize<Track[]>(
   (cb) => (nativeBrowser.onPlaybackQueueChanged = cb)

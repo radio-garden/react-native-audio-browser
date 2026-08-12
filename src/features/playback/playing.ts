@@ -23,7 +23,7 @@ export function getPlayingState(): PlayingState {
 /**
  * Subscribes to playing state changes.
  * @param callback - Called when playing or buffering state changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onPlayingState = NativeUpdatedValue.emitterize<PlayingState>(
   (cb) => (nativeBrowser.onPlaybackPlayingState = cb)

@@ -55,7 +55,7 @@ export function getPlayback(): Playback {
 /**
  * Subscribes to playback state changes.
  * @param callback - Called when the playback state changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onPlaybackChanged = NativeUpdatedValue.emitterize<Playback>(
   (cb) => (nativeBrowser.onPlaybackChanged = cb)

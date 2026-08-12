@@ -13,9 +13,9 @@
     "**/browser-native.ts"
   ],
   "intentionallyNotExported": [
+    "LazyNativeEmitter",
     "NativeUpdatedValue",
-    "NativeRequestConfigResolver",
-    "Callback"
+    "NativeRequestConfigResolver"
   ],
   "out": "./api",
   "plugin": [

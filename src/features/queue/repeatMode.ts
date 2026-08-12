@@ -40,7 +40,7 @@ export interface RepeatModeChangedEvent {
 /**
  * Subscribes to repeat mode changes.
  * @param callback - Called when repeat mode changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onRepeatModeChanged =
   NativeUpdatedValue.emitterize<RepeatModeChangedEvent>(

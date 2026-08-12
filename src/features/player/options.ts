@@ -587,7 +587,7 @@ export function getOptions(): Options {
 /**
  * Subscribes to player options changes.
  * @param callback - Called when the player options change
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onOptionsChanged = NativeUpdatedValue.emitterize<Options>(
   (cb) => (nativeBrowser.onOptionsChanged = cb)

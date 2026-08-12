@@ -41,7 +41,7 @@ export function getActiveTrackIndex(): number | undefined {
 /**
  * Subscribes to active track change events.
  * @param callback - Called when the active track changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onActiveTrackChanged =
   NativeUpdatedValue.emitterize<PlaybackActiveTrackChangedEvent>(

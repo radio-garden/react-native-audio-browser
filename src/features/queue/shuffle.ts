@@ -32,7 +32,7 @@ export function toggleShuffle(): void {
 /**
  * Subscribes to shuffle mode changes.
  * @param callback - Called when shuffle mode changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onShuffleChanged = NativeUpdatedValue.emitterize<boolean>(
   (cb) => (nativeBrowser.onPlaybackShuffleModeChanged = cb)

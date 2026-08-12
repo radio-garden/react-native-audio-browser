@@ -42,7 +42,7 @@ export function setSystemVolume(level: number): void {
 /**
  * Subscribes to system volume changes.
  * @param callback - Called when the system volume changes
- * @returns Cleanup function to unsubscribe
+ * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
 export const onSystemVolumeChanged = NativeUpdatedValue.emitterize<number>(
   (cb) => (nativeBrowser.onSystemVolumeChanged = cb)
