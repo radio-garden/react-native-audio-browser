@@ -463,6 +463,11 @@ class TrackPlayer {
 
   func destroy() {
     clear()
+    // An AVPlayer retains its time observers: one left registered is still attached when the
+    // player is released, and outlives this object.
+    playerTimeObserver.unregisterForBoundaryTimeEvents()
+    playerObserver.stopObserving()
+    stopObservingAVPlayerItem()
     remoteCommandController.disableAll()
   }
 

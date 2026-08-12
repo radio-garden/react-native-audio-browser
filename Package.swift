@@ -55,6 +55,7 @@ let package = Package(
         "Util/Emitter.swift",
         "Util/OnceValue.swift",
         "Util/LRUCache.swift",
+        "Observer/PlayerTimeObserver.swift",
       ]
     ),
     .testTarget(
