@@ -758,3 +758,79 @@ only the JS→session direction. If these need to be told apart from an ordinary
 403, that argues for new `kind` values rather than making apps read `code`.
 
 **Reference:** https://developer.android.com/reference/androidx/media3/common/PlaybackException
+
+## Per-Section Queue Policy
+
+Once sections are first-class (ADR 0010, issue #93), `Section` is the natural
+home for the queue-scope knob ADR 0006 deferred ("what becomes the queue when
+a child of this section is tapped"). Deliberately **not** part of the sections
+migration: an optional field is additive and lands compatibly at any time,
+even after production ship, so it must not spend the breaking-change window —
+and no surface varies yet.
+
+```ts
+interface Section {
+  // ...
+  queue?: 'section' | 'page' | 'track' | 'path'
+}
+```
+
+- `'section'` — the section's children (today's fixed behavior, stays the default)
+- `'page'` — the whole page's flattened children
+- `'track'` — the tapped track alone (per-section version of the global `singleTrack`;
+  if the enum lands at config level too, it can subsume that boolean)
+- `'path'` — the content of the section's linked `path` page. Makes a preview
+  section (a grid-row capped to N items) queue the _full_ collection it
+  previews, and unifies the two tap surfaces: tapping a track in the preview
+  and tapping it inside the view-all page produce the same queue and the same
+  `queueSourcePath`, so skip-in-place treats them as one source.
+
+`'path'` trade-offs, recorded from the design discussion: it is a cold resolve
+at tap time (today's expansion resolves the page being looked at — a cache hit
+by construction); the preview and the linked page can drift, in which case the
+vanished-identity rule falls back to the single track; the `__index`
+tie-breaker cannot be stamped against an unresolved page, so linked-page
+expansion is identity-first (ADR 0009 fallback semantics). Mechanically it is
+a stamp-time decision — the child's contextual path points at `section.path`
+instead of the current page — and the existing expansion/resumption/skip
+machinery works unchanged.
+
+The default stays `'section'` for every style: uniform, offline-safe, no added
+tap latency. A per-style default (grid-rows defaulting to `'path'`) was
+considered and rejected — it would couple `queue`'s meaning to `style`.
+
+## Surface Request Param (server-tailored pages per surface)
+
+An opt-in request-layer option stamping the requesting surface onto browse
+requests (`surface=carplay|android-auto|app`), so a server can tailor the
+_same collection_ per surface — e.g. cap a grid-row's children where CarPlay
+truncates rows, uncap where Android Auto wraps. A surface-tailored variant
+changes the _declared_ page, which composes cleanly with "queue scope is
+declared, never rendered" (ADR 0010). Additive.
+
+Requirements for honest semantics, recorded from the design discussion:
+
+- **Thread the requesting surface through resolve.** Every call site has an
+  answer: CarPlay template loads, external Android clients (Android Auto
+  detectable by package; bucket the rest deliberately), JS navigation; queue
+  expansion inherits the tapping surface.
+- **Partition the content cache by the param.** The cache key must include
+  whatever varies the response: `(path, surface)`. Note the existing
+  pattern split: params that vary the response _rarely and globally_ (`hl`)
+  are handled by `invalidateAllContent()`; params that vary _concurrently
+  per-request on one device_ (surface) must partition the key. For
+  consumers where only one surface browses per device (car-only browsing
+  apps), the partitioned cache never actually forks at runtime.
+- **Resumption has no surface.** Persist the stamping surface alongside the
+  persisted playback state (it already persists the contextual path), so a
+  resumed queue re-expands against the variant it came from.
+- **Same-collection contract.** Variants of one path must be the same
+  collection, differently presented (row caps, styles) — never different
+  content. Violations are safe but lossy: identity checking (ADR 0009)
+  degrades to first-match or the single-track fallback, never the wrong
+  track.
+- **Not analytics.** The param names who _triggered the fetch_, not who
+  _viewed the page_ — cache hits are invisible to the server. For "a car is
+  connected" telemetry, consumers can already stamp a connection-state param
+  via the request layer (`onCarConnectedChanged` + `invalidateAllContent()`
+  on change), no library change needed.
