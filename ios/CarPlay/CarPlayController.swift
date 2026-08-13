@@ -425,16 +425,10 @@ public final class RNABCarPlayController: NSObject {
         showLoadingTemplate()
       }
       do {
+        // An empty query result routes to the .emptyContent error page inside
+        // showTabBar, shared with runtime tab changes.
         let queriedTabs = try await audioBrowser.browserManager.queryTabs()
-        if !queriedTabs.isEmpty {
-          await showTabBar(tabs: queriedTabs)
-        } else {
-          // Empty is a navigation error (.emptyContent) so it formats through
-          // the app's formatNavigationError like every other failure (ADR 0001).
-          await showRootNavigationError(
-            NavigationError(code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil),
-          )
-        }
+        await showTabBar(tabs: queriedTabs)
       } catch {
         logger.error("Failed to query tabs: \(error.localizedDescription)")
         await showRootNavigationError(NavigationError.from(error))
@@ -467,6 +461,19 @@ public final class RNABCarPlayController: NSObject {
     // a stale gate page over just-cleared content, or a clobbered root template).
     gateBuildGeneration &+= 1
     let generation = gateBuildGeneration
+
+    // A zero-tab CPTabBarTemplate renders blank, with no copy, so empty routes
+    // to the .emptyContent error page like every other failure (formatted
+    // through the app's formatNavigationError, ADR 0001). The guard lives at
+    // this choke point — both the initial build and runtime tab changes pass
+    // through here — and sits before the gate check, since a gated build from
+    // zero tabs is equally blank.
+    guard !tabs.isEmpty else {
+      await showRootNavigationError(
+        NavigationError(code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil),
+      )
+      return
+    }
 
     // While gated, each tab path is resolved per-request: a gated tab renders
     // the gate page with that request's chrome; an allowed tab shows real
