@@ -642,7 +642,10 @@ class MediaSessionCallback(private val player: Player) :
       try {
         // Execute search (automatically caches results at /__search?q=query)
         val searchResults = browserManager.search(query)
-        val resultCount = searchResults.children?.size ?: 0
+        // Count the expanded list: onGetSearchResult delivers image-row tracks
+        // as their expanded items, and clients page against this count.
+        val resultCount =
+          searchResults.children?.let { TrackFactory.expandImageRows(it.toList()).size } ?: 0
 
         Timber.d("Search completed: $resultCount results for query '$query'")
 
@@ -695,14 +698,9 @@ class MediaSessionCallback(private val player: Player) :
       try {
         // Get cached search results from BrowserManager
         browserManager.getCachedSearchResults(query)?.let { tracks ->
-          // Convert to MediaItems
-          val searchAuthority =
-            com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
-          val mediaItems =
-            tracks.map { track ->
-              Timber.d("Search result: ${track.title} (path=${track.path}, src=${track.src})")
-              TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, searchAuthority)
-            }
+          // Through the shared browse conversion, so search results get the
+          // same image-row expansion and artwork routing as browse rows.
+          val mediaItems = toMediaItems(tracks.toList())
 
           val paginatedItems = mediaItems.paginate(page, pageSize)
           Timber.d("Returning ${paginatedItems.size} search results")
