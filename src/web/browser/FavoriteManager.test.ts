@@ -69,15 +69,16 @@ describe('FavoriteManager identity matching', () => {
     expect(manager.isFavorited(withId)).toBe(false)
   })
 
-  it('hydrateChildren stamps favorited across a page', () => {
+  it('hydrateChildren stamps favorited across a normalized page', () => {
     const manager = new FavoriteManager()
     manager.setFavorites(['abc123'])
     const page = manager.hydrateChildren({
       path: '/list',
       title: 'List',
-      children: [withId, srcOnly]
+      sections: [{ children: [withId, srcOnly] }]
     })
-    expect(page.children?.[0]?.favorited).toBe(true)
-    expect(page.children?.[1]?.favorited).toBeUndefined()
+    const tracks = page.sections?.[0]?.children
+    expect(tracks?.[0]?.favorited).toBe(true)
+    expect(tracks?.[1]?.favorited).toBeUndefined()
   })
 })

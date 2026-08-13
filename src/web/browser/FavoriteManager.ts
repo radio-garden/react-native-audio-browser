@@ -62,22 +62,23 @@ export class FavoriteManager {
   }
 
   /**
-   * Hydrates favorites on all children of a ResolvedTrack.
-   * Matches Android's hydrateChildren behavior.
+   * Hydrates favorites on all tracks of a resolved page.
+   * Matches Android's hydrateChildren behavior. Pages reach hydration
+   * normalized (ADR 0010), so `sections` is the only structure to walk.
    *
-   * @param resolvedTrack ResolvedTrack with children to hydrate
-   * @returns ResolvedTrack with favorited properties set on children
+   * @param resolvedTrack Resolved page to hydrate
+   * @returns Resolved page with favorited properties set on its tracks
    */
   hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {
-    const children = resolvedTrack.children
-    if (!children) return resolvedTrack
+    const { sections } = resolvedTrack
+    if (!sections) return resolvedTrack
 
-    const hydratedChildren = children.map((track) =>
-      this.hydrateFavorite(track)
-    )
     return {
       ...resolvedTrack,
-      children: hydratedChildren
+      sections: sections.map((section) => ({
+        ...section,
+        children: section.children.map((track) => this.hydrateFavorite(track))
+      }))
     }
   }
 }
