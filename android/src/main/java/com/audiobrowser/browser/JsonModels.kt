@@ -1,8 +1,9 @@
 package com.audiobrowser.browser
 
 import com.margelo.nitro.audiobrowser.CarPlaySiriListButtonPosition
-import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.ResolvedTrack
+import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackRequest
 import com.margelo.nitro.audiobrowser.TrackStyle
@@ -10,21 +11,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * JSON serializable models for parsing API responses. These will be converted to Nitro types after
- * parsing.
+ * parsing. Legacy `groupTitle`/`imageRow` keys in payloads are simply unknown to these models and
+ * decode as ignored dead weight (ADR 0010).
  */
-@Serializable
-data class JsonImageRowItem(
-  val id: String? = null,
-  val path: String? = null,
-  val src: String? = null,
-  val artwork: String? = null,
-  val title: String,
-  val artist: String? = null,
-  val album: String? = null,
-  val albumPath: String? = null,
-  val live: Boolean? = null,
-  val request: JsonTrackRequest? = null,
-)
 
 /** JSON model for a track's per-request HTTP override (identity/auth/signed-url). */
 @Serializable
@@ -35,6 +24,16 @@ data class JsonTrackRequest(
 ) {
   fun toNitro(): TrackRequest = TrackRequest(userAgent, headers, query)
 }
+
+/** JSON model for a page section (ADR 0010). */
+@Serializable
+data class JsonSection(
+  val title: String? = null,
+  val subtitle: String? = null,
+  val style: String? = null,
+  val path: String? = null,
+  val children: List<JsonTrack>,
+)
 
 @Serializable
 data class JsonResolvedTrack(
@@ -50,11 +49,11 @@ data class JsonResolvedTrack(
   val description: String? = null,
   val genre: String? = null,
   val duration: Double? = null,
+  val sections: List<JsonSection>? = null,
   val children: List<JsonTrack>? = null,
   val src: String? = null,
   val style: String? = null,
   val childrenStyle: String? = null,
-  val groupTitle: String? = null,
   val live: Boolean? = null,
   val carPlaySiriListButton: String? = null,
 )
@@ -77,9 +76,7 @@ data class JsonTrack(
   val request: JsonTrackRequest? = null,
   val style: String? = null,
   val childrenStyle: String? = null,
-  val groupTitle: String? = null,
   val live: Boolean? = null,
-  val imageRow: List<JsonImageRowItem>? = null,
 )
 
 /** Convert JSON models to Nitro types */
@@ -87,6 +84,15 @@ private fun String?.toTrackStyle(): TrackStyle? {
   return when (this?.lowercase()) {
     "list" -> TrackStyle.LIST
     "grid" -> TrackStyle.GRID
+    else -> null
+  }
+}
+
+private fun String?.toSectionStyle(): SectionStyle? {
+  return when (this?.lowercase()) {
+    "list" -> SectionStyle.LIST
+    "grid" -> SectionStyle.GRID
+    "grid-row" -> SectionStyle.GRID_ROW
     else -> null
   }
 }
@@ -99,19 +105,13 @@ private fun String?.toCarPlaySiriListButtonPosition(): CarPlaySiriListButtonPosi
   }
 }
 
-private fun JsonImageRowItem.toNitro(): ImageRowItem {
-  return ImageRowItem(
-    id = id,
-    path = path,
-    src = src,
-    artwork = artwork,
-    artworkSource = null,
+fun JsonSection.toNitro(): Section {
+  return Section(
     title = title,
-    artist = artist,
-    album = album,
-    albumPath = albumPath,
-    live = live,
-    request = request?.toNitro(),
+    subtitle = subtitle,
+    style = style.toSectionStyle(),
+    path = path,
+    children = children.map { it.toNitro() }.toTypedArray(),
   )
 }
 
@@ -119,6 +119,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
   return ResolvedTrack(
     id = id,
     path = path,
+    sections = sections?.map { it.toNitro() }?.toTypedArray(),
     children = children?.map { it.toNitro() }?.toTypedArray(),
     carPlaySiriListButton = carPlaySiriListButton.toCarPlaySiriListButtonPosition(),
     title = title,
@@ -138,9 +139,7 @@ fun JsonResolvedTrack.toNitro(): ResolvedTrack {
     style = style.toTrackStyle(),
     childrenStyle = childrenStyle.toTrackStyle(),
     favorited = null,
-    groupTitle = groupTitle,
     live = live,
-    imageRow = null,
   )
 }
 
@@ -164,8 +163,6 @@ fun JsonTrack.toNitro(): Track {
     style = style.toTrackStyle(),
     childrenStyle = childrenStyle.toTrackStyle(),
     favorited = null,
-    groupTitle = groupTitle,
     live = live,
-    imageRow = imageRow?.map { it.toNitro() }?.toTypedArray(),
   )
 }

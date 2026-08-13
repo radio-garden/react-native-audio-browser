@@ -166,7 +166,6 @@ class PlaybackStateStore(private val player: Player) {
         put("style", track.style?.name)
         put("childrenStyle", track.childrenStyle?.name)
         put("favorited", track.favorited)
-        put("groupTitle", track.groupTitle)
         put("live", track.live)
       }
       .toString()
@@ -203,13 +202,11 @@ class PlaybackStateStore(private val player: Player) {
           favorited =
             if (obj.has("favorited") && !obj.isNull("favorited")) obj.getBoolean("favorited")
             else null,
-          groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
           live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
           // Not persisted: on resumption the contextual path is re-browsed
           // (expandQueueFromContextualPath), which re-parses each track's request
           // from the API's current response and re-caches it.
           request = null,
-          imageRow = null, // Not persisted
         )
       }
       .onFailure { e -> Timber.w(e, "Failed to parse persisted track JSON") }

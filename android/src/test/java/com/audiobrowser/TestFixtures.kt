@@ -3,11 +3,12 @@ package com.audiobrowser
 import com.audiobrowser.util.artworkOf
 import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.ImageQueryParams
-import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.ResolvedTrack
+import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 
@@ -26,8 +27,6 @@ object TestFixtures {
     artist: String? = null,
     album: String? = null,
     favorited: Boolean? = null,
-    groupTitle: String? = null,
-    imageRow: Array<ImageRowItem>? = null,
   ) =
     Track(
       id = id,
@@ -48,25 +47,17 @@ object TestFixtures {
       style = null,
       childrenStyle = null,
       favorited = favorited,
-      groupTitle = groupTitle,
       live = null,
-      imageRow = imageRow,
     )
 
-  fun imageRowItem(src: String, title: String = src, id: String? = null) =
-    ImageRowItem(
-      id = id,
-      path = null,
-      src = src,
-      artwork = null,
-      artworkSource = null,
-      title = title,
-      artist = null,
-      album = null,
-      albumPath = null,
-      live = null,
-      request = null,
-    )
+  /** A page [Section] — plain list by default. */
+  fun section(
+    children: Array<Track>,
+    title: String? = null,
+    subtitle: String? = null,
+    style: SectionStyle? = null,
+    path: String? = null,
+  ) = Section(title = title, subtitle = subtitle, style = style, path = path, children = children)
 
   fun transformableConfig(
     baseUrl: String? = null,
@@ -138,9 +129,7 @@ object TestFixtures {
       style = null,
       childrenStyle = null,
       favorited = null,
-      groupTitle = null,
       live = null,
-      imageRow = null,
     )
 
   /** A container [ResolvedTrack] — what a browse route hands back for a path. */
@@ -148,10 +137,11 @@ object TestFixtures {
     path: String = "/container",
     title: String = "Container",
     children: Array<Track>? = null,
-    imageRow: Array<ImageRowItem>? = null,
+    sections: Array<Section>? = null,
   ) =
     ResolvedTrack(
       path = path,
+      sections = sections,
       children = children,
       carPlaySiriListButton = null,
       id = null,
@@ -171,9 +161,7 @@ object TestFixtures {
       style = null,
       childrenStyle = null,
       favorited = null,
-      groupTitle = null,
       live = null,
-      imageRow = imageRow,
     )
 
   /**

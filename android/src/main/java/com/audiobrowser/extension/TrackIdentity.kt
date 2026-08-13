@@ -1,6 +1,5 @@
 package com.audiobrowser.extension
 
-import com.margelo.nitro.audiobrowser.ImageRowItem
 import com.margelo.nitro.audiobrowser.Track
 
 /**
@@ -13,8 +12,4 @@ import com.margelo.nitro.audiobrowser.Track
  * `trackIdentity` helper.
  */
 val Track.identity: String?
-  get() = id?.takeUnless { it.isBlank() } ?: src
-
-/** [Track.identity] for image-row items, which carry the same `id`/`src` pair. */
-val ImageRowItem.identity: String?
   get() = id?.takeUnless { it.isBlank() } ?: src

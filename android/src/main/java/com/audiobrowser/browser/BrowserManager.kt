@@ -200,11 +200,20 @@ class BrowserManager {
   private fun isFavorite(track: Track): Boolean =
     track.identity?.let { favoriteIds.contains(it) } == true
 
-  /** Hydrates favorites on all children of a ResolvedTrack. */
+  /**
+   * Hydrates favorites on all tracks of a resolved page. Pages reach hydration normalized (ADR
+   * 0010), so `sections` is the only structure to walk.
+   */
   private fun hydrateChildren(resolvedTrack: ResolvedTrack): ResolvedTrack {
-    val children = resolvedTrack.children ?: return resolvedTrack
-    val hydratedChildren = children.map { hydrateFavorite(it) }.toTypedArray()
-    return resolvedTrack.copy(children = hydratedChildren)
+    val sections = resolvedTrack.sections ?: return resolvedTrack
+    return resolvedTrack.copy(
+      sections =
+        sections
+          .map { section ->
+            section.copy(children = section.children.map { hydrateFavorite(it) }.toTypedArray())
+          }
+          .toTypedArray()
+    )
   }
 
   /** Cache a track by id, path, and src for O(1) lookup from any mediaId form. */
@@ -215,15 +224,7 @@ class BrowserManager {
   }
 
   private fun cacheChildren(resolvedTrack: ResolvedTrack) {
-    resolvedTrack.children?.forEach { track ->
-      cacheTrack(track)
-      // Image-row items are playable surfaces of their own: cache them (with
-      // their stamped contextual paths) so an id-keyed mediaId from an
-      // expanded Android Auto tile can find its way back to queue expansion.
-      track.imageRow?.forEach { item ->
-        cacheTrack(with(TrackFactory) { item.toTrack(groupTitle = track.title) })
-      }
-    }
+    resolvedTrack.flattenedChildren?.forEach { cacheTrack(it) }
   }
 
   /**
@@ -317,9 +318,7 @@ class BrowserManager {
           style = null,
           childrenStyle = null,
           favorited = null,
-          groupTitle = null,
           live = null,
-          imageRow = null,
         )
       )
     }
@@ -359,7 +358,7 @@ class BrowserManager {
 
         // Execute search (will hit cache if already performed)
         val searchResults = search(searchQuery)
-        val searchTracks = searchResults.children
+        val searchTracks = searchResults.flattenedChildren?.toTypedArray()
 
         if (searchTracks != null && searchTracks.isNotEmpty()) {
           // Find the selected track in search results (mediaId is the stable id
@@ -520,18 +519,27 @@ class BrowserManager {
       effectiveArtworkConfig = config.artwork
     }
 
-    // Transform children: generate contextual paths and transform artwork URLs
-    val transformedChildren =
-      resolvedTrack.children?.let { children ->
-        coroutineScope {
-          children
-            .mapIndexed { index, track ->
+    // Normalize to the canonical sectioned shape (children sugar → one untitled
+    // section — ADR 0010), then generate contextual paths and transform artwork
+    // URLs. The output never carries `children`.
+    val sections = resolvedTrack.normalizedSections ?: return resolvedTrack
+    // The contextual index is the flat page position — children concatenated in
+    // section order (ADR 0009/0010).
+    var flatIndex = 0
+    // One scope for the whole page: every child's transform (which can suspend
+    // on artwork resolution) launches up front across all sections, then the
+    // sections reassemble — a slow section doesn't serialize the ones after it.
+    val transformedSections = coroutineScope {
+      sections
+        .map { section ->
+          val base = flatIndex
+          flatIndex += section.children.size
+          section to
+            section.children.mapIndexed { offset, track ->
               async {
-                // Validate that track has stable identifier. A track carrying an
-                // imageRow is exempt: a path-less row is a pure preview — never
-                // selected, navigated to, or cached (its items carry their own
-                // identity; on Android Auto it expands into them).
-                if (track.imageRow.isNullOrEmpty()) validateTrack(track, "Child track")
+                val index = base + offset
+                // Validate that track has stable identifier.
+                validateTrack(track, "Child track")
 
                 var transformedTrack = track
 
@@ -540,7 +548,7 @@ class BrowserManager {
                 // context
                 // (e.g., a track favorited from an album should use /favorites context when browsed
                 // there)
-                // The page position rides along as a duplicate-identity tie-breaker.
+                // The flat page position rides along as a duplicate-identity tie-breaker.
                 val trackIdentity = track.identity
                 if (track.src != null && trackIdentity != null) {
                   val contextualPath = BrowserPathHelper.build(path, trackIdentity, index)
@@ -555,66 +563,23 @@ class BrowserManager {
                   )
                 }
 
-                // Playable image-row items get contextual paths like any list
-                // row, so a tile tap expands into its section's queue instead
-                // of a queue of one (ADR 0006). The stamped index is the
-                // *row's* page position: it pins which section was tapped when
-                // the same identity also appears elsewhere on the page.
-                // They also run the artwork
-                // transform like any list row — via Track, since the transform
-                // and the artworkResolutions registry that display-time
-                // re-resolution reads are Track-keyed (matches the iOS child
-                // transform).
-                transformedTrack.imageRow?.let { items ->
-                  transformedTrack =
-                    transformedTrack.copy(
-                      imageRow =
-                        items
-                          .map { item ->
-                            val itemIdentity = item.identity
-                            val pathedItem =
-                              if (item.path == null && item.src != null && itemIdentity != null) {
-                                item.copy(path = BrowserPathHelper.build(path, itemIdentity, index))
-                              } else {
-                                item
-                              }
-                            val resolved =
-                              transformArtworkUrl(
-                                with(TrackFactory) { pathedItem.toTrack(groupTitle = null) },
-                                effectiveArtworkConfig,
-                                path,
-                                index,
-                                ImageContext(null, null),
-                              )
-                            pathedItem.copy(artworkSource = resolved.artworkSource)
-                          }
-                          .toTypedArray()
-                    )
-                }
-
                 // Transform artwork URL. At browse-time there is no display size info.
-                transformedTrack =
-                  transformArtworkUrl(
-                    transformedTrack,
-                    effectiveArtworkConfig,
-                    path,
-                    index,
-                    ImageContext(null, null),
-                  )
-
-                transformedTrack
+                transformArtworkUrl(
+                  transformedTrack,
+                  effectiveArtworkConfig,
+                  path,
+                  index,
+                  ImageContext(null, null),
+                )
               }
             }
-            .awaitAll()
         }
-      }
-
-    // Return resolved track with transformed children
-    return if (transformedChildren != null) {
-      resolvedTrack.copy(children = transformedChildren.toTypedArray())
-    } else {
-      resolvedTrack
+        .map { (section, transformedChildren) ->
+          section.copy(children = transformedChildren.awaitAll().toTypedArray())
+        }
     }
+
+    return resolvedTrack.copy(sections = transformedSections.toTypedArray(), children = null)
   }
 
   /**
@@ -690,28 +655,24 @@ class BrowserManager {
       // Resolve the parent container to get all siblings
       val parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       val parentResolvedTrack = resolve(parentPath)
-      val children = parentResolvedTrack.children
+      val sections = parentResolvedTrack.normalizedSections
 
-      if (children.isNullOrEmpty()) {
+      if (sections.isNullOrEmpty()) {
         Timber.w("Parent has no children, cannot expand queue")
         return null
       }
 
       // Queue scope is the tapped section, not the whole page (ADR 0006). The
-      // stamped page index pins which section (and which copy) was tapped when
+      // stamped flat index pins which section (and which copy) was tapped when
       // the same identity appears more than once; it is only a tie-breaker — a
       // stale index falls back to the first identity match. An id that no
       // longer appears on the page at all aborts the expansion — the caller
       // falls back to the stored single track; silently queueing the changed
       // list would resume the wrong station.
       val tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
-      val (sectionTracks, tappedOffset) =
-        when (val section = SectionScope.section(children.toList(), trackId, tappedIndex)) {
-          is SectionScope.Section.ImageRow ->
-            Pair(with(TrackFactory) { section.items.map { it.toTrack(groupTitle = null) } }, null)
-          is SectionScope.Section.Run -> Pair(section.tracks, section.tappedOffset)
-          null -> return null
-        }
+      val scoped = SectionScope.scoped(sections, trackId, tappedIndex) ?: return null
+      val sectionTracks = scoped.section.children.toList()
+      val tappedOffset = scoped.tappedOffset
 
       // Filter to only playable tracks (tracks with src)
       val playableTracks = sectionTracks.filter { track -> track.src != null }
@@ -742,7 +703,7 @@ class BrowserManager {
       }
 
       Timber.d(
-        "singleTrack=false - returning ${playableTracks.size} playable tracks (from ${children.size} total), starting at index $selectedIndex"
+        "singleTrack=false - returning ${playableTracks.size} playable tracks (from ${sectionTracks.size} in section), starting at index $selectedIndex"
       )
       return Pair(playableTracks.toTypedArray(), selectedIndex)
     } catch (e: Exception) {
@@ -848,7 +809,7 @@ class BrowserManager {
    */
   suspend fun searchPlayable(params: SearchParams): Array<Track>? {
     val searchResults = search(params)
-    val tracks = searchResults.children
+    val tracks = searchResults.flattenedChildren?.toTypedArray()
 
     if (tracks.isNullOrEmpty()) {
       return null
@@ -863,7 +824,7 @@ class BrowserManager {
       if (firstResult.src == null && firstResultPath != null) {
         Timber.d("First search result is browsable-only, resolving: $firstResultPath")
         val resolvedTrack = resolve(firstResultPath)
-        resolvedTrack.children
+        resolvedTrack.flattenedChildren
           ?.filter { it.src != null }
           ?.takeIf { it.isNotEmpty() }
           ?.toTypedArray() ?: tracks
@@ -923,13 +884,15 @@ class BrowserManager {
           }
           .toTypedArray()
 
-      // Create ResolvedTrack
+      // Search results are a flat list; as a resolved page they are one
+      // untitled section (ADR 0010).
       val searchResolvedTrack =
         ResolvedTrack(
           id = null,
           path = searchPath,
           title = "Search: ${params.query}",
-          children = searchResults,
+          sections = arrayOf(untitledSection(searchResults)),
+          children = null,
           carPlaySiriListButton = null,
           artwork = null,
           artworkSource = null,
@@ -946,9 +909,7 @@ class BrowserManager {
           style = null,
           childrenStyle = null,
           favorited = null,
-          groupTitle = null,
           live = null,
-          imageRow = null,
         )
 
       // Cache search results for getCachedSearchResults()
@@ -970,7 +931,8 @@ class BrowserManager {
           id = null,
           path = searchPath,
           title = "Search: ${params.query}",
-          children = emptyArray(),
+          sections = arrayOf(untitledSection(emptyArray())),
+          children = null,
           carPlaySiriListButton = null,
           artwork = null,
           artworkSource = null,
@@ -987,9 +949,7 @@ class BrowserManager {
           style = null,
           childrenStyle = null,
           favorited = null,
-          groupTitle = null,
           live = null,
-          imageRow = null,
         )
 
       return emptySearchResult
@@ -1204,7 +1164,8 @@ class BrowserManager {
     Timber.d("Resolving tabs via route entry")
     val resolvedTrack = resolveRouteEntry(tabsEntry, TABS_ROUTE_PATH, emptyMap())
 
-    return resolvedTrack.children ?: emptyArray()
+    // Tabs are a flat list, not a page — a sectioned tabs source flattens.
+    return resolvedTrack.flattenedChildren?.toTypedArray() ?: emptyArray()
   }
 
   /**

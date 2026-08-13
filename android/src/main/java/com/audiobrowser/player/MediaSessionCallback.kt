@@ -12,6 +12,8 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.audiobrowser.browser.handleTrackLoad
+import com.audiobrowser.browser.normalizedSections
+import com.audiobrowser.browser.untitledSection
 import com.audiobrowser.extension.indexOfTappedTrack
 import com.audiobrowser.extension.toTrack
 import com.audiobrowser.util.BrowserPathHelper
@@ -28,6 +30,8 @@ import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.PlayerCapabilities
 import com.margelo.nitro.audiobrowser.RemoteButtonLayout
 import com.margelo.nitro.audiobrowser.SearchParams
+import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -351,18 +355,15 @@ class MediaSessionCallback(private val player: Player) :
                 "Root has ${tabs.size} tabs; dropping ${tabs.size - 4} (Android Auto root limit)"
               )
             }
-            toMediaItems(tabs.take(4))
+            toFlatMediaItems(tabs.take(4))
           } else {
-            // Resolve the specific path and get its children
+            // Resolve the specific path and flatten its sections to MediaItems
+            // (paths are already set to contextual paths)
             val resolvedTrack = browserManager.resolve(parentId)
-
-            // Convert children to MediaItems (path is already set to contextual path)
-            val trackChildren =
-              resolvedTrack.children
-                ?: throw IllegalStateException(
-                  "Expected browsed ResolvedTrack to have a children array"
-                )
-            toMediaItems(trackChildren.toList())
+            val sections =
+              resolvedTrack.normalizedSections
+                ?: throw IllegalStateException("Expected browsed ResolvedTrack to have sections")
+            toMediaItems(sections)
           }
 
         LibraryResult.ofItemList(ImmutableList.copyOf(children.paginate(page, pageSize)), params)
@@ -416,18 +417,42 @@ class MediaSessionCallback(private val player: Player) :
   }
 
   /**
-   * Converts tracks to MediaItems for browse delivery, routing http(s) artwork through the
-   * content:// provider so Android Auto can load it via the ArtworkContentProvider. Image-row
-   * tracks (a CarPlay-only rendering) are expanded into their items as regular grouped rows first —
-   * see [TrackFactory.expandImageRows].
+   * Flattens a page's sections to MediaItems for browse delivery — the Media3 boundary where
+   * sections die (ADR 0010): the MediaBrowser protocol has no section node, so each child is
+   * stamped with its owning section's title/style hints. A tile-styled section (`grid`/`grid-row`)
+   * with a `path` gains a browsable "view all" link under the same header. Http(s) artwork routes
+   * through the content:// provider so Android Auto can load it via the ArtworkContentProvider.
    */
-  private fun toMediaItems(tracks: List<Track>): List<MediaItem> {
+  private fun toMediaItems(sections: List<Section>): List<MediaItem> {
     val registry = player.browseArtworkRegistry
     val authority = com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
-    return TrackFactory.expandImageRows(tracks).map {
-      TrackFactory.toBrowseMediaItem(it, registry, authority)
+    return sections.flatMap { section ->
+      val items =
+        section.children.map { TrackFactory.toBrowseMediaItem(it, registry, authority, section) }
+      val isTileSection =
+        section.style == SectionStyle.GRID || section.style == SectionStyle.GRID_ROW
+      // No "view all" under an empty section — CarPlay skips empty sections
+      // outright, and a lone navigation tile under a header is a dead end.
+      if (isTileSection && section.path != null && section.children.isNotEmpty()) {
+        items +
+          TrackFactory.toBrowseMediaItem(
+            TrackFactory.navigationTrack(section),
+            registry,
+            authority,
+            section,
+          )
+      } else {
+        items
+      }
     }
   }
+
+  /**
+   * Flat lists (tabs, search results) convert as one untitled list section — which contributes no
+   * group or style hints — so exactly one Track→MediaItem path exists at the Media3 boundary.
+   */
+  private fun toFlatMediaItems(tracks: List<Track>): List<MediaItem> =
+    toMediaItems(listOf(untitledSection(tracks.toTypedArray())))
 
   override fun onGetItem(
     session: MediaLibraryService.MediaLibrarySession,
@@ -642,10 +667,7 @@ class MediaSessionCallback(private val player: Player) :
       try {
         // Execute search (automatically caches results at /__search?q=query)
         val searchResults = browserManager.search(query)
-        // Count the expanded list: onGetSearchResult delivers image-row tracks
-        // as their expanded items, and clients page against this count.
-        val resultCount =
-          searchResults.children?.let { TrackFactory.expandImageRows(it.toList()).size } ?: 0
+        val resultCount = searchResults.normalizedSections?.sumOf { it.children.size } ?: 0
 
         Timber.d("Search completed: $resultCount results for query '$query'")
 
@@ -699,8 +721,8 @@ class MediaSessionCallback(private val player: Player) :
         // Get cached search results from BrowserManager
         browserManager.getCachedSearchResults(query)?.let { tracks ->
           // Through the shared browse conversion, so search results get the
-          // same image-row expansion and artwork routing as browse rows.
-          val mediaItems = toMediaItems(tracks.toList())
+          // same artwork routing as browse rows.
+          val mediaItems = toFlatMediaItems(tracks.toList())
 
           val paginatedItems = mediaItems.paginate(page, pageSize)
           Timber.d("Returning ${paginatedItems.size} search results")
