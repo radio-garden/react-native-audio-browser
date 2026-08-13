@@ -77,7 +77,7 @@ Example:
 - Avoid: “Re-fetch the Favorites tab.”
 
 **Playable**:
-A Track that has a `src` and can be streamed by the player. A _shape_ of Track, not a separate type. A Track can be both Browsable and Playable (e.g. a radio station with a schedule sub-tree).
+A Track that has a `src` and can be streamed by the player. A _shape_ of Track, not a separate type. A Track _may carry_ both `path` and `src`, but current surfaces treat such a track as playable: `src` wins the rendering (CarPlay row style, Android Auto's mutually-exclusive isPlayable/isBrowsable flags), and the browse pipeline replaces a playable track's `path` with its contextual path anyway. Genuinely combined items — tap to play _or_ drill in — are a future item (see FUTURE.md, "Browsable + Playable Combined Items").
 _Avoid_: Leaf, Song, Media.
 
 **ResolvedTrack**:
@@ -219,7 +219,7 @@ _Avoid_: Paywall (one app's reason for a gate, not the concept), error page (a g
 
 ## Flagged ambiguities
 
-- **`src` vs `path` on a Track.** Both are string fields and easy to mix up. `path` is the _navigation_ address in the BrowseTree — its presence makes the Track **Browsable**. `src` is a _media_ identifier (usually an audio URL) — its presence makes the Track **Playable**. A Track can have both. When in doubt: ask "do I navigate into this or stream this?"
+- **`src` vs `path` on a Track.** Both are string fields and easy to mix up. `path` is the _navigation_ address in the BrowseTree — its presence makes the Track **Browsable**. `src` is a _media_ identifier (usually an audio URL) — its presence makes the Track **Playable**. A Track may carry both, but surfaces currently treat that as playable — `src` wins; see **Playable**. When in doubt: ask "do I navigate into this or stream this?"
 
 - **`id` is the Playable Track's identity when present.** External surfaces mark the "now playing" browse row by comparing identities (CarPlay's playing indicator; Android Auto's, via the Media3 mediaId). A consumer-loaded Track's `src` can differ textually from the browse row's for the same item (absolute vs relative, extra query params), so when both sides carry an `id` it _is_ the identity, and `src`/`path` equality is only the fallback for consumers that don't assign ids.
 

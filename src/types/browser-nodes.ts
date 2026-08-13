@@ -134,7 +134,11 @@ export interface Track {
    * Navigation path. When present, this track is a container (tab, album, playlist, folder)
    * that can be navigated into to view its contents.
    *
-   * At least one of `path` or `src` must be defined.
+   * At least one of `path` or `src` must be defined. When both are set, current
+   * surfaces treat the track as playable — `src` wins the rendering, and the
+   * browse pipeline replaces a playable track's `path` with its contextual
+   * path — so a consumer-supplied `path` on a playable track is not reachable
+   * today.
    */
   path?: string
 
