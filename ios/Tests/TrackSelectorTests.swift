@@ -198,6 +198,66 @@ struct ContextualPathQueueReuseTests {
     }
     #expect(browser.expandedPaths.isEmpty)
   }
+
+  // A queue holding the same identity twice (normal for music playlists):
+  // exact contextual-path equality — which carries the stamped page index —
+  // pins the tapped copy instead of the first one.
+  @Test func duplicateIdentityInQueue_pathMatchPinsTheTappedCopy() async {
+    let (selector, browser, player) = makeSelector()
+    let parentPath = "/playlist"
+    func stamped(_ id: String, _ index: Int) -> String {
+      BrowserPathHelper.build(parentPath: parentPath, trackId: id, index: index)
+    }
+
+    player.queueSourcePath = parentPath
+    player.tracks = [
+      Track(path: stamped("a", 0), src: "a"),
+      Track(path: stamped("b", 1), src: "b"),
+      Track(path: stamped("a", 2), src: "a"),
+    ]
+
+    let track = Track(path: stamped("a", 2), src: "a")
+    let result = await selector.select(track: track, player: player)
+    guard case let .play(.skipTo(index)) = result else {
+      Issue.record("expected .play(.skipTo), got \(result)")
+      return
+    }
+    #expect(index == 2)
+    #expect(browser.expandedPaths.isEmpty)
+  }
+
+  // A tap in section B whose identity also sits in the active section-A
+  // queue: the exact surface is not in the queue, so the selection
+  // re-expands (re-scoping to the tapped section) instead of silently
+  // skipping inside the old section's queue.
+  @Test func indexStampedPathNotInQueue_reExpandsInsteadOfIdentitySkip() async {
+    let (selector, browser, player) = makeSelector()
+    let parentPath = "/city"
+    func stamped(_ id: String, _ index: Int) -> String {
+      BrowserPathHelper.build(parentPath: parentPath, trackId: id, index: index)
+    }
+
+    player.queueSourcePath = parentPath
+    player.tracks = [
+      Track(path: stamped("dup", 0), src: "dup"),
+      Track(path: stamped("x", 1), src: "x"),
+    ]
+    browser.expandQueueResult = (
+      tracks: [Track(path: stamped("y", 4), src: "y"), Track(path: stamped("dup", 5), src: "dup")],
+      selectedIndex: 1,
+    )
+
+    let track = Track(path: stamped("dup", 5), src: "dup")
+    let result = await selector.select(track: track, player: player)
+    guard case let .play(.setQueue(tracks, startIndex, sourcePath)) = result else {
+      Issue.record("expected .play(.setQueue), got \(result)")
+      return
+    }
+    #expect(tracks.count == 2)
+    #expect(startIndex == 1)
+    #expect(sourcePath == parentPath)
+    #expect(browser.expandedPaths == [stamped("dup", 5)])
+  }
 }
 
 // MARK: - Contextual path Expansion

@@ -6,8 +6,12 @@
  * 1. System paths (prefixed with `/__`): Root, recent, and search paths
  * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
  *
- * Contextual URL format: `{parentPath}?__trackId={trackSrc}`
- * Example: "/library/radio?__trackId=song.mp3"
+ * Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}`
+ * Example: "/library/radio?__trackId=song.mp3&__index=2"
+ *
+ * `__trackId` is the identity check; `__index` (the child's position on the
+ * page at stamp time) is only a tie-breaker between surfaces that carry the
+ * same identity — a stale index never selects a different track.
  *
  * This allows:
  * - Media3 to reference playable-only tracks (tracks with `src` but no `url`)
@@ -20,6 +24,9 @@ export const BrowserPathHelper = {
 
   /** Query parameter name for contextual track identifiers */
   CONTEXTUAL_TRACK_PARAM: '__trackId',
+
+  /** Query parameter name for the tapped child's page position (tie-breaker) */
+  CONTEXTUAL_INDEX_PARAM: '__index',
 
   /**
    * Create a search path for a given query
@@ -43,13 +50,13 @@ export const BrowserPathHelper = {
   },
 
   /**
-   * Strips the __trackId parameter from a contextual URL to get the parent path.
-   * If the URL is not contextual, returns it unchanged.
+   * Strips the contextual parameters (__trackId and __index) from a contextual
+   * URL to get the parent path. If the URL is not contextual, returns it unchanged.
    *
    * @param url The URL to process
-   * @returns The URL without the __trackId parameter
+   * @returns The URL without the contextual parameters
    *
-   * Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
+   * Example: "/library/radio?__trackId=song.mp3&__index=2" → "/library/radio"
    * Example: "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
    */
   stripTrackId(url: string): string {
@@ -62,8 +69,9 @@ export const BrowserPathHelper = {
       const isFullUrl = url.startsWith('http://') || url.startsWith('https://')
       const urlObj = new URL(url, isFullUrl ? undefined : 'http://placeholder')
 
-      // Remove the __trackId parameter
+      // Remove the contextual parameters
       urlObj.searchParams.delete(this.CONTEXTUAL_TRACK_PARAM)
+      urlObj.searchParams.delete(this.CONTEXTUAL_INDEX_PARAM)
 
       // Return the appropriate format
       if (isFullUrl) {
@@ -75,7 +83,7 @@ export const BrowserPathHelper = {
     } catch {
       // Fallback: simple string manipulation
       const paramPattern = new RegExp(
-        `[?&]${this.CONTEXTUAL_TRACK_PARAM}=[^&]*`,
+        `[?&](?:${this.CONTEXTUAL_TRACK_PARAM}|${this.CONTEXTUAL_INDEX_PARAM})=[^&]*`,
         'g'
       )
       let result = url.replace(paramPattern, '')
@@ -85,6 +93,24 @@ export const BrowserPathHelper = {
       result = result.replace(/[?&]{2,}/g, '&').replace(/\?&/, '?')
       return result
     }
+  },
+
+  /**
+   * Builds a contextual URL by appending a track identifier — and optionally
+   * the tapped child's page position — to a parent path.
+   *
+   * @param parentPath The parent container path
+   * @param trackId The track identity (`id` when non-blank, else `src`)
+   * @param index The child's position on the page at stamp time (tie-breaker)
+   * @returns A contextual URL combining parent path, track ID, and index
+   *
+   * Example: build("/library", "song.mp3", 2) → "/library?__trackId=song.mp3&__index=2"
+   */
+  build(parentPath: string, trackId: string, index?: number): string {
+    const separator = parentPath.includes('?') ? '&' : '?'
+    const indexParam =
+      index === undefined ? '' : `&${this.CONTEXTUAL_INDEX_PARAM}=${index}`
+    return `${parentPath}${separator}${this.CONTEXTUAL_TRACK_PARAM}=${encodeURIComponent(trackId)}${indexParam}`
   },
 
   /**
@@ -100,18 +126,40 @@ export const BrowserPathHelper = {
     if (!this.isContextual(path)) {
       return undefined
     }
+    return this.extractParam(path, this.CONTEXTUAL_TRACK_PARAM)
+  },
 
+  /**
+   * Extracts the stamped page index from a contextual URL, or undefined when
+   * the URL is not contextual or carries no (valid, non-negative) index.
+   *
+   * Example: "/library/radio?__trackId=song.mp3&__index=2" → 2
+   */
+  extractIndex(path: string): number | undefined {
+    if (!this.isContextual(path)) {
+      return undefined
+    }
+
+    const raw = this.extractParam(path, this.CONTEXTUAL_INDEX_PARAM)
+    if (raw === undefined || !/^\d+$/.test(raw)) {
+      return undefined
+    }
+    return Number.parseInt(raw, 10)
+  },
+
+  /**
+   * Extracts a single query parameter, handling both full URLs and paths,
+   * with a regex fallback for input the URL parser rejects.
+   */
+  extractParam(path: string, param: string): string | undefined {
     try {
-      // Parse the URL - handle both full URLs and paths
       const isFullUrl =
         path.startsWith('http://') || path.startsWith('https://')
       const urlObj = new URL(path, isFullUrl ? undefined : 'http://placeholder')
-      return urlObj.searchParams.get(this.CONTEXTUAL_TRACK_PARAM) ?? undefined
+      return urlObj.searchParams.get(param) ?? undefined
     } catch {
       // Fallback: regex extraction
-      const match = path.match(
-        new RegExp(`[?&]${this.CONTEXTUAL_TRACK_PARAM}=([^&]*)`)
-      )
+      const match = path.match(new RegExp(`[?&]${param}=([^&]*)`))
       return match?.[1] ? decodeURIComponent(match[1]) : undefined
     }
   },

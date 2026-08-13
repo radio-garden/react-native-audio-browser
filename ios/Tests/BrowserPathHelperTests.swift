@@ -103,6 +103,27 @@ import Testing
   #expect(BrowserPathHelper.stripTrackId(url) == "/library")
 }
 
+@Test func buildStampsTheIndexAndRoundTripsIt() {
+  let src = "https://cdn.example.com/stream.mp3?token=abc&exp=1"
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: src, index: 3)
+  #expect(BrowserPathHelper.extractTrackId(url) == src)
+  #expect(BrowserPathHelper.extractIndex(url) == 3)
+  #expect(BrowserPathHelper.stripTrackId(url) == "/library")
+}
+
+// MARK: - extractIndex
+
+@Test func extractIndexReturnsNilWithoutAStampedIndex() {
+  let url = BrowserPathHelper.build(parentPath: "/library", trackId: "song.mp3")
+  #expect(BrowserPathHelper.extractIndex(url) == nil)
+}
+
+@Test func extractIndexReturnsNilForNonContextualOrMalformedIndex() {
+  #expect(BrowserPathHelper.extractIndex("/library") == nil)
+  #expect(BrowserPathHelper.extractIndex("/library?__trackId=song.mp3&__index=x") == nil)
+  #expect(BrowserPathHelper.extractIndex("/library?__trackId=song.mp3&__index=-1") == nil)
+}
+
 // MARK: - stripTrackId
 
 @Test func stripTrackIdRemovesTrackParam() {

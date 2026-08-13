@@ -516,7 +516,7 @@ final class BrowserManager {
   ) async throws -> [Track] {
     var transformed: [Track] = []
 
-    for track in children {
+    for (index, track) in children.enumerated() {
       // Validate track has stable identifier. A track carrying an imageRow is
       // exempt: a path-less row is a pure preview — never selected, navigated
       // to, or cached (its items carry their own identity).
@@ -530,7 +530,10 @@ final class BrowserManager {
 
       if track.src != nil, track.path == nil {
         // src != nil guarantees a non-nil identity (id when non-blank, else src).
-        let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: track.identity!)
+        // The page position rides along as a duplicate-identity tie-breaker.
+        let contextualPath = BrowserPathHelper.build(
+          parentPath: parentPath, trackId: track.identity!, index: index,
+        )
         transformedTrack = track.copying(path: contextualPath)
       }
 
@@ -548,9 +551,11 @@ final class BrowserManager {
           // Playable items get a contextual path like any list row, so a
           // thumbnail tap expands into its section's queue instead of a
           // queue of one (ADR 0006). Keyed by the item's identity (id when
-          // non-blank, else src) — non-nil whenever src is.
+          // non-blank, else src) — non-nil whenever src is. The stamped index
+          // is the *row's* page position: it pins which section was tapped
+          // when the same identity also appears elsewhere on the page.
           let itemPath = item.path ?? (item.src == nil ? nil : item.identity.map {
-            BrowserPathHelper.build(parentPath: parentPath, trackId: $0)
+            BrowserPathHelper.build(parentPath: parentPath, trackId: $0, index: index)
           })
           resolvedItems.append(ImageRowItem(
             id: item.id,
@@ -725,16 +730,23 @@ final class BrowserManager {
     let resolved = try await resolve(parentPath, useCache: true)
     guard let children = resolved.children else { return nil }
 
-    // Queue scope is the tapped section, not the whole page (ADR 0006). An
-    // id that no longer appears on the page aborts the expansion — the
-    // caller falls back to the stored single track (matching Android);
-    // silently queueing the changed list would resume the wrong station.
+    // Queue scope is the tapped section, not the whole page (ADR 0006). The
+    // stamped page index pins which section (and which copy) was tapped when
+    // the same identity appears more than once; it is only a tie-breaker —
+    // a stale index falls back to the first identity match. An id that no
+    // longer appears on the page at all aborts the expansion — the caller
+    // falls back to the stored single track (matching Android); silently
+    // queueing the changed list would resume the wrong station.
+    let tappedIndex = BrowserPathHelper.extractIndex(path)
     let sectionTracks: [Track]
-    switch SectionScope.section(of: children, containing: trackId) {
+    let tappedOffset: Int?
+    switch SectionScope.section(of: children, containing: trackId, tappedIndex: tappedIndex) {
     case let .imageRow(items):
       sectionTracks = items.map { $0.toTrack() }
-    case let .run(tracks):
+      tappedOffset = nil
+    case let .run(tracks, offset):
       sectionTracks = tracks
+      tappedOffset = offset
     case nil:
       return nil
     }
@@ -748,10 +760,16 @@ final class BrowserManager {
       logger.debug("  [\(index)] \(track.title) - src: \(track.src ?? "nil")")
     }
 
-    // Find selected track index
-    // Unreachable in practice (the section was found BY this id), but a miss
-    // must abort rather than silently start the queue at the wrong track.
-    guard let selectedIndex = playableTracks.firstIndex(where: { $0.identity == trackId }) else {
+    // Find selected track index: the pinned copy when the stamp survived,
+    // else the first identity match. A miss must abort rather than silently
+    // start the queue at the wrong track (unreachable in practice — the
+    // section was found BY this id).
+    let selectedIndex: Int
+    if let tappedOffset, sectionTracks[tappedOffset].src != nil {
+      selectedIndex = sectionTracks.prefix(through: tappedOffset).count(where: { $0.src != nil }) - 1
+    } else if let index = playableTracks.firstIndex(where: { $0.identity == trackId }) {
+      selectedIndex = index
+    } else {
       return nil
     }
     logger.debug("Selected track index: \(selectedIndex)")

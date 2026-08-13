@@ -540,9 +540,10 @@ class BrowserManager {
                 // context
                 // (e.g., a track favorited from an album should use /favorites context when browsed
                 // there)
+                // The page position rides along as a duplicate-identity tie-breaker.
                 val trackIdentity = track.identity
                 if (track.src != null && trackIdentity != null) {
-                  val contextualPath = BrowserPathHelper.build(path, trackIdentity)
+                  val contextualPath = BrowserPathHelper.build(path, trackIdentity, index)
                   transformedTrack = transformedTrack.copy(path = contextualPath)
 
                   Timber.d(
@@ -556,7 +557,10 @@ class BrowserManager {
 
                 // Playable image-row items get contextual paths like any list
                 // row, so a tile tap expands into its section's queue instead
-                // of a queue of one (ADR 0006). They also run the artwork
+                // of a queue of one (ADR 0006). The stamped index is the
+                // *row's* page position: it pins which section was tapped when
+                // the same identity also appears elsewhere on the page.
+                // They also run the artwork
                 // transform like any list row — via Track, since the transform
                 // and the artworkResolutions registry that display-time
                 // re-resolution reads are Track-keyed (matches the iOS child
@@ -570,7 +574,7 @@ class BrowserManager {
                             val itemIdentity = item.identity
                             val pathedItem =
                               if (item.path == null && item.src != null && itemIdentity != null) {
-                                item.copy(path = BrowserPathHelper.build(path, itemIdentity))
+                                item.copy(path = BrowserPathHelper.build(path, itemIdentity, index))
                               } else {
                                 item
                               }
@@ -693,15 +697,19 @@ class BrowserManager {
         return null
       }
 
-      // Queue scope is the tapped section, not the whole page (ADR 0006). An
-      // id that no longer appears on the page aborts the expansion — the
-      // caller falls back to the stored single track; silently queueing the
-      // changed list would resume the wrong station.
-      val sectionTracks =
-        when (val section = SectionScope.section(children.toList(), trackId)) {
+      // Queue scope is the tapped section, not the whole page (ADR 0006). The
+      // stamped page index pins which section (and which copy) was tapped when
+      // the same identity appears more than once; it is only a tie-breaker — a
+      // stale index falls back to the first identity match. An id that no
+      // longer appears on the page at all aborts the expansion — the caller
+      // falls back to the stored single track; silently queueing the changed
+      // list would resume the wrong station.
+      val tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
+      val (sectionTracks, tappedOffset) =
+        when (val section = SectionScope.section(children.toList(), trackId, tappedIndex)) {
           is SectionScope.Section.ImageRow ->
-            with(TrackFactory) { section.items.map { it.toTrack(groupTitle = null) } }
-          is SectionScope.Section.Run -> section.tracks
+            Pair(with(TrackFactory) { section.items.map { it.toTrack(groupTitle = null) } }, null)
+          is SectionScope.Section.Run -> Pair(section.tracks, section.tappedOffset)
           null -> return null
         }
 
@@ -713,8 +721,14 @@ class BrowserManager {
         return null
       }
 
-      // Find the index of the selected track in the playable tracks array
-      val selectedIndex = playableTracks.indexOfFirst { track -> track.identity == trackId }
+      // Find the index of the selected track in the playable tracks array:
+      // the pinned copy when the stamp survived, else the first identity match
+      val selectedIndex =
+        if (tappedOffset != null && sectionTracks[tappedOffset].src != null) {
+          sectionTracks.take(tappedOffset + 1).count { it.src != null } - 1
+        } else {
+          playableTracks.indexOfFirst { track -> track.identity == trackId }
+        }
 
       if (selectedIndex < 0) {
         Timber.w("Track with identity='$trackId' not found in playable children")

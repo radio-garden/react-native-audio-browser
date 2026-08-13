@@ -120,4 +120,74 @@ class SectionScopeTest {
     val section = SectionScope.section(children, "dup") as SectionScope.Section.Run
     assertEquals(listOf("dup"), section.tracks.map { it.src })
   }
+
+  // The stamped page index pins which surface was tapped when the same
+  // identity appears in more than one section; without it the precedence
+  // tests above (image row first, earlier run first) apply.
+
+  @Test
+  fun `tapped index pins the flat-list copy over the image row`() {
+    val row = track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup")))
+    val children = listOf(row, track(src = "dup"), track(src = "b"))
+
+    val section = SectionScope.section(children, "dup", tappedIndex = 1) as SectionScope.Section.Run
+    // The src-less row track shares the null groupTitle, so it belongs to the
+    // run (expansion filters it out as non-playable) — the point is the tap
+    // resolved to the flat list, not the image row.
+    assertEquals(listOf(null, "dup", "b"), section.tracks.map { it.src })
+    assertEquals(1, section.tappedOffset)
+  }
+
+  @Test
+  fun `tapped index pins the image row when the row was tapped`() {
+    val row = track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup")))
+    val children = listOf(row, track(src = "dup"), track(src = "b"))
+
+    val section =
+      SectionScope.section(children, "dup", tappedIndex = 0) as SectionScope.Section.ImageRow
+    assertEquals(listOf("dup"), section.items.map { it.src })
+  }
+
+  @Test
+  fun `tapped index pins the later run`() {
+    val children =
+      listOf(
+        track(src = "dup", groupTitle = "First"),
+        track(src = "x", groupTitle = "Second"),
+        track(src = "dup", groupTitle = "Second"),
+      )
+
+    val section = SectionScope.section(children, "dup", tappedIndex = 2) as SectionScope.Section.Run
+    assertEquals(listOf("x", "dup"), section.tracks.map { it.src })
+    assertEquals(1, section.tappedOffset)
+  }
+
+  @Test
+  fun `tapped index pins the exact copy within a run`() {
+    val children = listOf(track(src = "a"), track(src = "b"), track(src = "a"), track(src = "c"))
+
+    val section = SectionScope.section(children, "a", tappedIndex = 2) as SectionScope.Section.Run
+    assertEquals(listOf("a", "b", "a", "c"), section.tracks.map { it.src })
+    assertEquals(2, section.tappedOffset)
+  }
+
+  @Test
+  fun `stale tapped index falls back to the first identity match`() {
+    // The child at the stamped index no longer carries the tapped identity
+    // (the list shifted) — resolution ignores the index and pins nothing.
+    val children = listOf(track(src = "x"), track(src = "a"), track(src = "b"))
+
+    val section = SectionScope.section(children, "a", tappedIndex = 0) as SectionScope.Section.Run
+    assertEquals(listOf("x", "a", "b"), section.tracks.map { it.src })
+    assertNull(section.tappedOffset)
+  }
+
+  @Test
+  fun `out-of-range tapped index is ignored`() {
+    val children = listOf(track(src = "a"), track(src = "b"))
+
+    val section = SectionScope.section(children, "a", tappedIndex = 99) as SectionScope.Section.Run
+    assertEquals(listOf("a", "b"), section.tracks.map { it.src })
+    assertNull(section.tappedOffset)
+  }
 }

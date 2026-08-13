@@ -6,8 +6,12 @@ import Foundation
 /// 1. System paths (prefixed with `/__`): Root, recent, and search paths
 /// 2. Contextual URLs: Embed parent context in track identifiers for playback integration
 ///
-/// Contextual URL format: `{parentPath}?__trackId={trackSrc}`
-/// Example: "/library/radio?__trackId=song.mp3"
+/// Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}`
+/// Example: "/library/radio?__trackId=song.mp3&__index=2"
+///
+/// `__trackId` is the identity check; `__index` (the child's position on the
+/// page at stamp time) is only a tie-breaker between surfaces that carry the
+/// same identity — a stale index never selects a different track.
 ///
 /// This allows:
 /// - Playable-only tracks (tracks with `src` but no `path`) to be referenced
@@ -38,6 +42,9 @@ enum BrowserPathHelper {
   /// Query parameter name for contextual track identifiers
   private static let contextualTrackParam = "__trackId"
 
+  /// Query parameter name for the tapped child's page position (tie-breaker)
+  private static let contextualIndexParam = "__index"
+
   /// Check if a path is a special system path (not a regular navigation path)
   static func isSpecialPath(_ path: String) -> Bool {
     path == rootPath ||
@@ -61,13 +68,13 @@ enum BrowserPathHelper {
       || path.contains("&\(contextualTrackParam)=")
   }
 
-  /// Strips the __trackId parameter from a contextual URL to get the parent path.
-  /// If the URL is not contextual, returns it unchanged.
+  /// Strips the contextual parameters (__trackId and __index) from a contextual
+  /// URL to get the parent path. If the URL is not contextual, returns it unchanged.
   ///
   /// - Parameter url: The URL to process
-  /// - Returns: The URL without the __trackId parameter
+  /// - Returns: The URL without the contextual parameters
   ///
-  /// Example: "/library/radio?__trackId=song.mp3" → "/library/radio"
+  /// Example: "/library/radio?__trackId=song.mp3&__index=2" → "/library/radio"
   /// Example: "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
   static func stripTrackId(_ url: String) -> String {
     guard isContextual(url) else {
@@ -78,8 +85,10 @@ enum BrowserPathHelper {
       return url
     }
 
-    // Filter out __trackId parameter
-    components.queryItems = components.queryItems?.filter { $0.name != contextualTrackParam }
+    // Filter out the contextual parameters
+    components.queryItems = components.queryItems?.filter {
+      $0.name != contextualTrackParam && $0.name != contextualIndexParam
+    }
 
     // If no query items left, clear the query string entirely
     if components.queryItems?.isEmpty == true {
@@ -89,21 +98,24 @@ enum BrowserPathHelper {
     return components.string ?? url
   }
 
-  /// Builds a contextual URL by appending a track identifier to a parent path.
+  /// Builds a contextual URL by appending a track identifier — and optionally
+  /// the tapped child's page position — to a parent path.
   /// Handles existing query parameters correctly.
   ///
   /// - Parameters:
   ///   - parentPath: The parent container path
-  ///   - trackId: The track identifier (typically the `src` value)
-  /// - Returns: A contextual URL combining parent path and track ID
+  ///   - trackId: The track identity (`id` when non-blank, else `src`)
+  ///   - index: The child's position on the page at stamp time (tie-breaker)
+  /// - Returns: A contextual URL combining parent path, track ID, and index
   ///
-  /// Example: build("/library", "song.mp3") → "/library?__trackId=song.mp3"
+  /// Example: build("/library", "song.mp3", index: 2) → "/library?__trackId=song.mp3&__index=2"
   /// Example: build("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
-  static func build(parentPath: String, trackId: String) -> String {
+  static func build(parentPath: String, trackId: String, index: Int? = nil) -> String {
     let encodedTrackId =
       trackId.addingPercentEncoding(withAllowedCharacters: queryComponentAllowed) ?? trackId
     let separator = parentPath.contains("?") ? "&" : "?"
-    return "\(parentPath)\(separator)\(contextualTrackParam)=\(encodedTrackId)"
+    let indexParam = index.map { "&\(contextualIndexParam)=\($0)" } ?? ""
+    return "\(parentPath)\(separator)\(contextualTrackParam)=\(encodedTrackId)\(indexParam)"
   }
 
   /// Extracts the track ID from a contextual URL.
@@ -123,6 +135,21 @@ enum BrowserPathHelper {
     }
 
     return components.queryItems?.first { $0.name == contextualTrackParam }?.value
+  }
+
+  /// Extracts the stamped page index from a contextual URL, or nil when the
+  /// URL is not contextual or carries no (valid, non-negative) index.
+  ///
+  /// Example: "/library/radio?__trackId=song.mp3&__index=2" → 2
+  static func extractIndex(_ path: String) -> Int? {
+    guard isContextual(path),
+          let components = URLComponents(string: path),
+          let raw = components.queryItems?.first(where: { $0.name == contextualIndexParam })?.value,
+          let index = Int(raw), index >= 0
+    else {
+      return nil
+    }
+    return index
   }
 
   /// Appends query parameters to a URL, handling `?` vs `&` separator and percent-encoding.

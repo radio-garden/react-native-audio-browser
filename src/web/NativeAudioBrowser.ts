@@ -58,6 +58,7 @@ import { RemoteCommandController } from './player/RemoteCommandController'
 import { QueuePlayer, SleepTimerManager, VolumeFader } from './TrackPlayer'
 import { PlaybackTimer } from './TrackPlayer/PlaybackTimer'
 import { derivePlayingState } from './TrackPlayer/PlayingStateFactory'
+import { BrowserPathHelper } from './util/BrowserPathHelper'
 
 /**
  * Web implementation of AudioBrowser (unified browser + player)
@@ -415,11 +416,13 @@ export class NativeAudioBrowser
    * Attempts to skip to a track already in the current queue.
    * Used as an optimization to avoid re-expanding the queue.
    *
+   * @param track The tapped track (its contextual path pins the exact copy)
    * @param trackId The track's identity (id, falling back to src)
    * @param parentPath The parent path to check against queueSourcePath
    * @returns true if successfully skipped to existing track, false otherwise
    */
   private async trySkipToExistingQueueTrack(
+    track: Track,
     trackId: string,
     parentPath: string
   ): Promise<boolean> {
@@ -427,8 +430,21 @@ export class NativeAudioBrowser
       return false
     }
 
+    // Exact-surface match first: a contextual path carries the tapped page
+    // position (__index), so path equality pins the exact copy when the page
+    // holds the same identity more than once. The identity match remains for
+    // index-less paths (e.g. pre-stamp persisted state); an index-stamped path
+    // with no exact match falls through to expansion, which re-scopes the
+    // queue to the tapped section.
     const queue = this.getQueue()
-    const index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
+    let index = queue.findIndex((t) => t.path != null && t.path === track.path)
+    if (
+      index < 0 &&
+      track.path != null &&
+      BrowserPathHelper.extractIndex(track.path) === undefined
+    ) {
+      index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
+    }
 
     if (index < 0) {
       return false
@@ -482,6 +498,7 @@ export class NativeAudioBrowser
           if (
             nav.trackId &&
             (await this.trySkipToExistingQueueTrack(
+              track,
               nav.trackId,
               nav.parentPath
             ))

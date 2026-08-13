@@ -101,9 +101,13 @@ class BrowserManagerTest {
     val resolved = browserManager.navigate("/library")
 
     assertEquals(listOf("A", "B"), resolved.children?.map { it.title })
-    // The tap target: a child's path is rewritten to point back at this page plus its own id.
+    // The tap target: a child's path is rewritten to point back at this page
+    // plus its own id and page position (the duplicate-identity tie-breaker).
     assertEquals(
-      listOf(contextual("/library", "a"), contextual("/library", "b")),
+      listOf(
+        BrowserPathHelper.build("/library", "a", 0),
+        BrowserPathHelper.build("/library", "b", 1),
+      ),
       resolved.children?.map { it.path },
     )
     assertEquals("/library", browserManager.getPath())
@@ -144,6 +148,61 @@ class BrowserManagerTest {
     assertEquals(listOf("b", "c"), queue.map { it.src })
     assertEquals(1, index)
   }
+
+  @Test
+  fun `expandQueueFromContextualPath pins the tapped copy of a duplicate identity`() = runBlocking {
+    // The same src twice in one section (normal for music playlists): the
+    // stamped page index selects the tapped copy, so "next" continues from
+    // there instead of from the first copy.
+    servePage("/playlist", track(src = "a"), track(src = "b"), track(src = "a"), track(src = "c"))
+
+    val (queue, index) =
+      requireNotNull(
+        browserManager.expandQueueFromContextualPath(BrowserPathHelper.build("/playlist", "a", 2))
+      )
+
+    assertEquals(listOf("a", "b", "a", "c"), queue.map { it.src })
+    assertEquals(2, index)
+  }
+
+  @Test
+  fun `expandQueueFromContextualPath scopes a cross-section duplicate to the tapped section`() =
+    runBlocking {
+      // The same identity in an image row AND the flat list below it: the
+      // stamped index resolves the tap to the list section instead of the
+      // row's precedence-based win.
+      servePage(
+        "/home",
+        track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup"))),
+        track(src = "dup", groupTitle = "Stations"),
+        track(src = "b", groupTitle = "Stations"),
+      )
+
+      val (queue, index) =
+        requireNotNull(
+          browserManager.expandQueueFromContextualPath(BrowserPathHelper.build("/home", "dup", 1))
+        )
+
+      assertEquals(listOf("dup", "b"), queue.map { it.src })
+      assertEquals(0, index)
+    }
+
+  @Test
+  fun `expandQueueFromContextualPath falls back to the first match on a stale index`() =
+    runBlocking {
+      // The list shifted since the stamp: the child at the index no longer
+      // carries the identity, so resolution ignores the index and falls back
+      // to the first identity match instead of aborting.
+      servePage("/home", track(src = "x"), track(src = "a"), track(src = "b"))
+
+      val (queue, index) =
+        requireNotNull(
+          browserManager.expandQueueFromContextualPath(BrowserPathHelper.build("/home", "a", 0))
+        )
+
+      assertEquals(listOf("x", "a", "b"), queue.map { it.src })
+      assertEquals(1, index)
+    }
 
   @Test
   fun `expandQueueFromContextualPath returns null when the id has vanished from the page`() =
@@ -221,7 +280,10 @@ class BrowserManagerTest {
 
       // id when non-blank, else src — Track.identity (ADR 0008).
       assertEquals(
-        listOf(contextual("/home", "stable-a"), contextual("/home", "https://s/b.mp3")),
+        listOf(
+          BrowserPathHelper.build("/home", "stable-a", 0),
+          BrowserPathHelper.build("/home", "https://s/b.mp3", 1),
+        ),
         resolved.children?.map { it.path },
       )
     }

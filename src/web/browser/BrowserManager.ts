@@ -255,17 +255,7 @@ export class BrowserManager {
       if (content?.children && !isSearchPath) {
         content = {
           ...content,
-          children: content.children.map((track) => {
-            // A playable track gets a contextual path carrying its identity
-            // (id ?? src) so the queue can be re-expanded from it later.
-            const identity = getTrackIdentity(track)
-            if (track.src && identity) {
-              const contextualPath = `${path}?__trackId=${encodeURIComponent(identity)}`
-              return { ...track, path: contextualPath }
-            }
-            // Return a shallow copy in attempt to avoid mutating original config objects
-            return { ...track }
-          })
+          children: this.addContextualPaths(path, content.children)
         }
       }
 
@@ -314,6 +304,26 @@ export class BrowserManager {
 
       this.handleNavigationError(error, path)
     }
+  }
+
+  /**
+   * Stamps contextual paths onto a page's children. A playable track gets a
+   * contextual path carrying its identity (id ?? src) so the queue can be
+   * re-expanded from it later, plus its page position as a
+   * duplicate-identity tie-breaker. Non-playable tracks are shallow-copied to
+   * avoid mutating original config objects (e.g., browseStatic from routes).
+   */
+  private addContextualPaths(path: string, children: Track[]): Track[] {
+    return children.map((track, index) => {
+      const identity = getTrackIdentity(track)
+      if (track.src && identity) {
+        return {
+          ...track,
+          path: BrowserPathHelper.build(path, identity, index)
+        }
+      }
+      return { ...track }
+    })
   }
 
   /**
@@ -741,12 +751,16 @@ export class BrowserManager {
       // Resolve the parent container to get all siblings
       const parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       const parentResolvedTrack = await this.resolveContent(parentPath)
-      const children = parentResolvedTrack?.children
+      const rawChildren = parentResolvedTrack?.children
 
-      if (!children || children.length === 0) {
+      if (!rawChildren || rawChildren.length === 0) {
         console.warn('Parent has no children, cannot expand queue')
         return undefined
       }
+
+      // Stamp contextual paths so queued tracks carry their own queue context
+      // (navigate() stamps the displayed page the same way).
+      const children = this.addContextualPaths(parentPath, rawChildren)
 
       // Filter to only playable tracks (tracks with src)
       const playableTracks = children.filter((track) => track.src != null)
@@ -756,10 +770,26 @@ export class BrowserManager {
         return undefined
       }
 
-      // Find the index of the selected track by identity (id ?? src)
-      const selectedIndex = playableTracks.findIndex(
-        (track) => getTrackIdentity(track) === trackId
-      )
+      // Find the index of the selected track by identity (id ?? src). The
+      // stamped page index is a tie-breaker between duplicate identities: when
+      // the child at that position still carries the tapped identity, it pins
+      // the exact copy; a stale or absent index falls back to the first match.
+      const tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
+      let selectedIndex = -1
+      if (tappedIndex !== undefined) {
+        const tapped = children[tappedIndex]
+        if (tapped?.src != null && getTrackIdentity(tapped) === trackId) {
+          selectedIndex =
+            children
+              .slice(0, tappedIndex + 1)
+              .filter((track) => track.src != null).length - 1
+        }
+      }
+      if (selectedIndex < 0) {
+        selectedIndex = playableTracks.findIndex(
+          (track) => getTrackIdentity(track) === trackId
+        )
+      }
 
       if (selectedIndex < 0) {
         console.warn(

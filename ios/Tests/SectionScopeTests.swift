@@ -7,8 +7,13 @@ struct SectionScopeTests {
   }
 
   private func runSrcs(_ section: SectionScope.Section?) -> [String?]? {
-    guard case let .run(tracks) = section else { return nil }
+    guard case let .run(tracks, _) = section else { return nil }
     return tracks.map(\.src)
+  }
+
+  private func runOffset(_ section: SectionScope.Section?) -> Int? {
+    guard case let .run(_, offset) = section else { return nil }
+    return offset
   }
 
   private func imageRowSrcs(_ section: SectionScope.Section?) -> [String?]? {
@@ -78,6 +83,65 @@ struct SectionScopeTests {
       track("dup", group: "Second"),
     ]
     #expect(runSrcs(SectionScope.section(of: children, containing: "dup")) == ["dup"])
+  }
+
+  // MARK: - Tapped index tie-breaker
+
+  // The stamped page index pins which surface was tapped when the same
+  // identity appears in more than one section; without it the precedence
+  // tests above (image row first, earlier run first) apply.
+  @Test func tappedIndexPinsTheFlatListCopyOverTheImageRow() {
+    var row = Track(id: "row", title: "Row")
+    row.imageRow = [ImageRowItem(src: "dup", title: "Dup")]
+    let children = [row, track("dup"), track("b")]
+    let section = SectionScope.section(of: children, containing: "dup", tappedIndex: 1)
+    // The src-less row track shares the nil groupTitle, so it belongs to the
+    // run (expansion filters it out as non-playable) — the point is the tap
+    // resolved to the flat list, not the image row.
+    #expect(runSrcs(section) == [nil, "dup", "b"])
+    #expect(runOffset(section) == 1)
+  }
+
+  @Test func tappedIndexPinsTheImageRowWhenTheRowWasTapped() {
+    var row = Track(id: "row", title: "Row")
+    row.imageRow = [ImageRowItem(src: "dup", title: "Dup")]
+    let children = [row, track("dup"), track("b")]
+    let section = SectionScope.section(of: children, containing: "dup", tappedIndex: 0)
+    #expect(imageRowSrcs(section) == ["dup"])
+  }
+
+  @Test func tappedIndexPinsTheLaterRun() {
+    let children = [
+      track("dup", group: "First"),
+      track("x", group: "Second"),
+      track("dup", group: "Second"),
+    ]
+    let section = SectionScope.section(of: children, containing: "dup", tappedIndex: 2)
+    #expect(runSrcs(section) == ["x", "dup"])
+    #expect(runOffset(section) == 1)
+  }
+
+  @Test func tappedIndexPinsTheExactCopyWithinARun() {
+    let children = [track("a"), track("b"), track("a"), track("c")]
+    let section = SectionScope.section(of: children, containing: "a", tappedIndex: 2)
+    #expect(runSrcs(section) == ["a", "b", "a", "c"])
+    #expect(runOffset(section) == 2)
+  }
+
+  @Test func staleTappedIndexFallsBackToTheFirstIdentityMatch() {
+    // The child at the stamped index no longer carries the tapped identity
+    // (the list shifted) — resolution ignores the index and pins nothing.
+    let children = [track("x"), track("a"), track("b")]
+    let section = SectionScope.section(of: children, containing: "a", tappedIndex: 0)
+    #expect(runSrcs(section) == ["x", "a", "b"])
+    #expect(runOffset(section) == nil)
+  }
+
+  @Test func outOfRangeTappedIndexIsIgnored() {
+    let children = [track("a"), track("b")]
+    let section = SectionScope.section(of: children, containing: "a", tappedIndex: 99)
+    #expect(runSrcs(section) == ["a", "b"])
+    #expect(runOffset(section) == nil)
   }
 
   // MARK: - Identity (id when non-blank, else src)

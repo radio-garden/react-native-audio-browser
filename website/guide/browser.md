@@ -372,7 +372,9 @@ Two options control what happens when a playable Track is tapped.
 
 **`singleTrack`** — by default, tapping a track queues **its section** and starts there, so next/previous walk the list the user tapped in: the contiguous `groupTitle` group the track sits in (a contiguous block of ungrouped items forms a section of its own), or — for an image-row thumbnail — the row's items. A page aggregating several sections never leaks next/previous across them. Set `singleTrack: true` to play only the tapped track. If the track has meanwhile disappeared from its list (a stale resume, say), the library plays it as a single track rather than guessing a queue from the changed list.
 
-Two constraints of section scoping: the section is located **by the track's `src`**, so a src should appear in at most one section per page — when the same station sits in both an image row and a list, a tap resolves to the image row regardless of where it happened. And when the tapped src is already in the current queue from the same page, the player skips in place rather than requeueing the section.
+Section scoping knows _where_ the tap happened, not just on what. Each playable row's path carries the track's identity (`id`, falling back to `src`) and the row's position on the page. So the same track can safely appear in several places on one page: a tap queues the section it happened in, and when a playlist holds the same track twice, next/previous continue from the tapped copy.
+
+The position is only a tie-breaker. If the page has changed by the time the queue is expanded (a stale resume, say), the first row matching the identity wins instead — a stale position can pick a different copy of the tapped track, never a different track. And tapping a row that's already in the current queue from the same page skips in place rather than requeueing the section.
 
 **`handleTrackLoad`** — intercept loading entirely. When set, tapping a track calls _your_ handler **instead of** the library auto-playing, and native waits for your promise to resolve before continuing. The two branches differ:
 

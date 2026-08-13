@@ -11,8 +11,13 @@ import java.net.URLEncoder
  * 1. System paths (prefixed with `/__`): Root, recent, and search paths
  * 2. Contextual URLs: Embed parent context in track identifiers for Media3 integration
  *
- * Contextual URL format: `{parentPath}?__trackId={trackIdentity}` (the identity is the track's `id`
- * when non-blank, else its `src`) Example: "/library/radio?__trackId=song.mp3"
+ * Contextual URL format: `{parentPath}?__trackId={trackIdentity}&__index={childIndex}` (the
+ * identity is the track's `id` when non-blank, else its `src`) Example:
+ * "/library/radio?__trackId=song.mp3&__index=2"
+ *
+ * `__trackId` is the identity check; `__index` (the child's position on the page at stamp time) is
+ * only a tie-breaker between surfaces that carry the same identity — a stale index never selects a
+ * different track.
  *
  * This allows:
  * - Media3 to reference playable-only tracks (tracks with `src` but no `path`)
@@ -41,6 +46,9 @@ object BrowserPathHelper {
   // Query parameter name for contextual track identifiers
   private const val CONTEXTUAL_TRACK_PARAM = "__trackId"
 
+  // Query parameter name for the tapped child's page position (tie-breaker)
+  private const val CONTEXTUAL_INDEX_PARAM = "__index"
+
   /** Check if a path is a special system path (not a regular navigation path) */
   fun isSpecialPath(path: String): Boolean {
     return path == ROOT_PATH || path == RECENT_PATH || path.startsWith("$SEARCH_PATH_PREFIX?")
@@ -63,13 +71,13 @@ object BrowserPathHelper {
   }
 
   /**
-   * Strips the __trackId parameter from a contextual URL to get the parent path. If the URL is not
-   * contextual, returns it unchanged.
+   * Strips the contextual parameters (__trackId and __index) from a contextual URL to get the
+   * parent path. If the URL is not contextual, returns it unchanged.
    *
    * @param url The URL to process
-   * @return The URL without the __trackId parameter
+   * @return The URL without the contextual parameters
    *
-   * Example: "/library/radio?__trackId=song.mp3" → "/library/radio" Example:
+   * Example: "/library/radio?__trackId=song.mp3&__index=2" → "/library/radio" Example:
    * "/search?q=jazz&__trackId=song.mp3" → "/search?q=jazz"
    */
   fun stripTrackId(url: String): String {
@@ -79,13 +87,13 @@ object BrowserPathHelper {
 
     val uri = url.toUri()
 
-    // Build URL preserving everything except __trackId parameter
+    // Build URL preserving everything except the contextual parameters
     val builder = uri.buildUpon()
     builder.clearQuery()
 
-    // Re-add all query params except __trackId
+    // Re-add all query params except __trackId and __index
     uri.queryParameterNames.forEach { paramName ->
-      if (paramName != CONTEXTUAL_TRACK_PARAM) {
+      if (paramName != CONTEXTUAL_TRACK_PARAM && paramName != CONTEXTUAL_INDEX_PARAM) {
         uri.getQueryParameters(paramName).forEach { value ->
           builder.appendQueryParameter(paramName, value)
         }
@@ -96,19 +104,21 @@ object BrowserPathHelper {
   }
 
   /**
-   * Builds a contextual URL by appending a track identifier to a parent path. Handles existing
-   * query parameters correctly.
+   * Builds a contextual URL by appending a track identifier — and optionally the tapped child's
+   * page position — to a parent path. Handles existing query parameters correctly.
    *
    * @param parentPath The parent container path
    * @param trackId The track identity (`id` when non-blank, else `src` — see Track.identity)
-   * @return A contextual URL combining parent path and track ID
+   * @param index The child's position on the page at stamp time (tie-breaker)
+   * @return A contextual URL combining parent path, track ID, and index
    *
-   * Example: build("/library", "song.mp3") → "/library?__trackId=song.mp3" Example:
+   * Example: build("/library", "song.mp3", 2) → "/library?__trackId=song.mp3&__index=2" Example:
    * build("/search?q=jazz", "song.mp3") → "/search?q=jazz&__trackId=song.mp3"
    */
-  fun build(parentPath: String, trackId: String): String {
+  fun build(parentPath: String, trackId: String, index: Int? = null): String {
     val separator = if (parentPath.contains('?')) '&' else '?'
-    return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}"
+    val indexParam = if (index != null) "&$CONTEXTUAL_INDEX_PARAM=$index" else ""
+    return "$parentPath$separator$CONTEXTUAL_TRACK_PARAM=${Uri.encode(trackId)}$indexParam"
   }
 
   /**
@@ -127,6 +137,21 @@ object BrowserPathHelper {
 
     val uri = Uri.parse(path)
     return uri.getQueryParameter(CONTEXTUAL_TRACK_PARAM)
+  }
+
+  /**
+   * Extracts the stamped page index from a contextual URL, or null when the URL is not contextual
+   * or carries no (valid, non-negative) index.
+   *
+   * Example: "/library/radio?__trackId=song.mp3&__index=2" → 2
+   */
+  fun extractIndex(path: String): Int? {
+    if (!isContextual(path)) {
+      return null
+    }
+
+    val raw = Uri.parse(path).getQueryParameter(CONTEXTUAL_INDEX_PARAM) ?: return null
+    return raw.toIntOrNull()?.takeIf { it >= 0 }
   }
 
   /**

@@ -84,6 +84,10 @@ _Avoid_: Leaf, Song, Media.
 What makes two Tracks the same item: the Track's `id` when set (non-blank), falling back to its `src`. The single comparison rule everywhere Tracks are compared — favorites matching, the CarPlay / Android Auto now-playing row indicator, section scoping and skip-in-place, and contextual queue re-expansion. Compared whole: never a substring, never parsed out of a URL. A Browsable-only Track has no Identity — it is addressed by its **Path**.
 _Avoid_: key, uid (a consumer-side concept).
 
+**Contextual Path**:
+The `path` the browse pipeline stamps onto a Playable Track: `{parentPath}?__trackId={identity}&__index={position}`. Carries the page the track was rendered on so a later tap or resumption can re-expand its queue (ADR 0006). `__trackId` is the **Identity** check; `__index` — the child's position on the page at stamp time (an image-row item carries its row's position) — is only a tie-breaker between surfaces carrying the same Identity, so a stale index can never select a different track (ADR 0009).
+_Avoid_: contextual URL in new prose (legacy alias in code comments), deep link.
+
 **ResolvedTrack**:
 The return type of `navigate()` — a Track that has gone through the browse pipeline. Compared to the declared **Track** form an app/API supplies, a ResolvedTrack carries the transformed `artworkSource` (ready for `<Image>`), an optionally hydrated `favorited` flag, and — for Browsable Tracks — populated `children`. Media URLs are not part of resolution; they're transformed at playback time.
 _Avoid_: ExpandedTrack, LoadedTrack.

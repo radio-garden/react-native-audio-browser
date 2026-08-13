@@ -90,18 +90,27 @@ class TrackSelector {
     let parentPath = BrowserPathHelper.stripTrackId(path)
     let trackId = BrowserPathHelper.extractTrackId(path)
 
-    // Check if queue already came from this parent path — just skip to the track
-    if let trackId,
-       parentPath == player.queueSourcePath,
-       let index = player.tracks.firstIndex(where: { $0.identity == trackId })
-    {
-      logger.debug("Queue already from \(parentPath), skipping to index \(index)")
-      let queue = player.tracks
-      let event = TrackLoadEvent(track: track, queue: queue, startIndex: Double(index))
-      if await browserManager.awaitTrackLoadHandler(event: event) {
-        return .intercepted
+    // Check if queue already came from this parent path — just skip to the
+    // track. Exact-surface match first: a contextual path carries the tapped
+    // page position (`__index`), so path equality pins the exact copy when
+    // the page holds the same identity more than once. The identity match
+    // remains for index-less paths (e.g. pre-stamp persisted state); an
+    // index-stamped path with no exact match falls through to expansion,
+    // which re-scopes the queue to the tapped section.
+    if parentPath == player.queueSourcePath {
+      var skipIndex = player.tracks.firstIndex(where: { $0.path == path })
+      if skipIndex == nil, BrowserPathHelper.extractIndex(path) == nil, let trackId {
+        skipIndex = player.tracks.firstIndex(where: { $0.identity == trackId })
       }
-      return .play(.skipTo(index: index))
+      if let index = skipIndex {
+        logger.debug("Queue already from \(parentPath), skipping to index \(index)")
+        let queue = player.tracks
+        let event = TrackLoadEvent(track: track, queue: queue, startIndex: Double(index))
+        if await browserManager.awaitTrackLoadHandler(event: event) {
+          return .intercepted
+        }
+        return .play(.skipTo(index: index))
+      }
     }
 
     // Expand the queue from the contextual path
