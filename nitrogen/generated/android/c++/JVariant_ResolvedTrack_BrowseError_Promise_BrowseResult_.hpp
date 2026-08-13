@@ -16,9 +16,13 @@
 #include <NitroModules/Promise.hpp>
 #include "JResolvedTrack.hpp"
 #include <string>
-#include "Track.hpp"
+#include "Section.hpp"
 #include <vector>
 #include <optional>
+#include "JSection.hpp"
+#include "SectionStyle.hpp"
+#include "JSectionStyle.hpp"
+#include "Track.hpp"
 #include "JTrack.hpp"
 #include "ArtworkVariants.hpp"
 #include "JVariant_String_ArtworkVariants.hpp"
@@ -32,8 +36,6 @@
 #include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include "JImageRowItem.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
 #include "JBrowseError.hpp"

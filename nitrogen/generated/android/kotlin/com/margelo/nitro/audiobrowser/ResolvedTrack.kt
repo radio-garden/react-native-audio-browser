@@ -22,6 +22,9 @@ data class ResolvedTrack(
   val path: String,
   @DoNotStrip
   @Keep
+  val sections: Array<Section>?,
+  @DoNotStrip
+  @Keep
   val children: Array<Track>?,
   @DoNotStrip
   @Keep
@@ -79,13 +82,7 @@ data class ResolvedTrack(
   val favorited: Boolean?,
   @DoNotStrip
   @Keep
-  val groupTitle: String?,
-  @DoNotStrip
-  @Keep
-  val live: Boolean?,
-  @DoNotStrip
-  @Keep
-  val imageRow: Array<ImageRowItem>?
+  val live: Boolean?
 ) {
   /* primary constructor */
 
@@ -97,8 +94,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(path: String, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): ResolvedTrack {
-      return ResolvedTrack(path, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumPath, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
+    private fun fromCpp(path: String, sections: Array<Section>?, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, live: Boolean?): ResolvedTrack {
+      return ResolvedTrack(path, sections, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumPath, album, description, genre, duration, style, childrenStyle, favorited, live)
     }
   }
 }

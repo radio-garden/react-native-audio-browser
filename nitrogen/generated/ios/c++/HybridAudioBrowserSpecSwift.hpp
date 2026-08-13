@@ -24,10 +24,12 @@ namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
-// Forward declaration of `ImageRowItem` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ImageRowItem; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
+// Forward declaration of `Section` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Section; }
+// Forward declaration of `SectionStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionStyle; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -208,9 +210,10 @@ namespace margelo::nitro::audiobrowser { struct Progress; }
 #include <unordered_map>
 #include "TrackRequest.hpp"
 #include "TrackStyle.hpp"
-#include "ImageRowItem.hpp"
 #include <functional>
 #include "ResolvedTrack.hpp"
+#include "Section.hpp"
+#include "SectionStyle.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "NavigationErrorEvent.hpp"
 #include "NavigationError.hpp"

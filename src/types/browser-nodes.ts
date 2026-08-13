@@ -37,12 +37,6 @@ export interface TrackRequest {
   query?: Record<string, string>
 }
 
-// export interface BrowserSection {
-//   title: string
-//   style?: BrowserItemStyle
-//   children: Track
-// }
-
 /**
  * Artwork URLs for a track that ships a different image per appearance.
  *
@@ -67,36 +61,52 @@ export interface ArtworkVariants {
 /** A single artwork URL, or one per appearance. */
 export type TrackArtwork = string | ArtworkVariants
 
-export interface ImageRowItem {
+/**
+ * How a {@link Section}'s children render.
+ *
+ * Style names declare the *requested* layout; each platform renders its
+ * nearest supported form (ADR 0010):
+ * - `'list'` — full-width rows (the default).
+ * - `'grid'` — artwork tiles, wrapping to as many lines as needed. On
+ *   CarPlay this requires iOS 26+; earlier versions render a list, since
+ *   CarPlay's only tile container truncates at a width the system doesn't
+ *   report.
+ * - `'grid-row'` — exactly one line of artwork tiles. CarPlay shows the
+ *   tiles that fit (~up to 8, width-dependent); Android Auto has no
+ *   single-line tile container and renders it as `'grid'` — showing more,
+ *   never less; app UIs typically render a horizontal scroller.
+ *
+ * Tile styles presume artwork: an artwork-less child renders a placeholder
+ * tile plus its title. Use the artwork `resolve` hook to supply fallback
+ * art.
+ */
+export type SectionStyle = 'list' | 'grid' | 'grid-row'
+
+/**
+ * A titled, styled group of Tracks within a resolved page — the unit of
+ * queue scope. Tapping a playable child queues the section it sits in
+ * (ADR 0006), identically on every platform and screen width: rendering
+ * may truncate what is visible, it never changes what plays.
+ */
+export interface Section {
+  /** Header text. Absent = headerless group. */
+  title?: string
   /**
-   * Opaque, stable identifier for this item's track. Round-tripped like
-   * `Track.id` when the thumbnail is played (see `src`).
+   * Secondary line for the section's navigation surface — e.g. the label
+   * of the "view all" link a `grid-row` section gets on Android Auto.
    */
-  id?: string
-  /** Navigation path. Tapping this thumbnail navigates to this path. */
+  subtitle?: string
+  /** How children render. Defaults to `'list'`. */
+  style?: SectionStyle
+  /**
+   * Navigation target for the section header / "view all" surface. A
+   * `grid-row` section's header tap (CarPlay) and appended "view all" link
+   * (Android Auto) navigate here. Absent = a pure preview; the header is
+   * not tappable.
+   */
   path?: string
-  /**
-   * Direct audio source. When present, tapping this thumbnail plays it
-   * immediately (same selection path as a playable list row) instead of
-   * navigating. Takes precedence over `path`.
-   */
-  src?: string
-  /** Artwork URL for the thumbnail image. */
-  artwork?: string
-  /** Output only — populated by the artwork transform pipeline. */
-  readonly artworkSource?: ImageSource
-  /** Title of this item. Shown as the thumbnail caption; used for identification and accessibility. */
-  title: string
-  /** Now-playing secondary line when played via `src` (mirrors `Track.artist`). */
-  artist?: string
-  /** Now-playing album line when played via `src` (mirrors `Track.album`). */
-  album?: string
-  /** Navigation target of the album line when played via `src` (mirrors `Track.albumPath`). */
-  albumPath?: string
-  /** Live stream indicator when played via `src` (mirrors `Track.live`). */
-  live?: boolean
-  /** Per-item media-request override when played via `src` (mirrors `Track.request`). */
-  request?: TrackRequest
+  /** The section's tracks. */
+  children: Track[]
 }
 
 export interface Track {
@@ -286,40 +296,10 @@ export interface Track {
   favorited?: boolean
 
   /**
-   * Group title for section headers in Android Auto/AAOS.
-   * Items with the same groupTitle are displayed under a shared section header.
-   * Items must be contiguous to form a single group.
-   */
-  groupTitle?: string
-
-  /**
    * Whether this track is a live stream. When true, displays a "live" indicator
    * in iOS now playing interfaces.
    */
   live?: boolean
-
-  /**
-   * When present, renders this track as a horizontal row of tappable artwork
-   * thumbnails instead of a standard list item.
-   *
-   * - Track.title → row header text
-   * - Track.path → navigated when header is tapped (optional)
-   * - Each ImageRowItem → one thumbnail in the horizontal row; a thumbnail
-   *   with `src` plays immediately on tap, otherwise its `path` is navigated
-   *
-   * On CarPlay: maps to CPListImageRowItem. Limits visible images by display
-   * width (~4-5). Excess silently truncated. A row whose track has no `path`
-   * is a pure preview: its header is not tappable.
-   *
-   * On Android Auto: there is no image-row rendering, so the row expands into
-   * its items as grid-styled rows (artwork tiles where the host honors the
-   * per-item content-style hint, list rows otherwise) grouped under the
-   * track's title, followed by the track itself as a browsable "view all"
-   * link when it has a `path`.
-   *
-   * On app side: consumable by React Native UI for horizontal thumbnail layouts.
-   */
-  imageRow?: ImageRowItem[]
 }
 
 /**
@@ -346,8 +326,17 @@ export interface ResolvedTrack extends Track {
   path: string
 
   /**
-   * Immediate children of this track. Present for container tracks (albums, playlists, folders).
-   * Undefined for leaf tracks (individual songs without children).
+   * The page's sections — the canonical resolved shape. Every resolved page
+   * with content carries `sections`; a page authored with plain `children`
+   * resolves to a single untitled section.
+   */
+  sections?: Section[]
+
+  /**
+   * Authoring sugar for a flat page: equivalent to declaring one untitled
+   * `'list'` section holding these tracks. Accepted anywhere a page is
+   * authored (static routes, browse callbacks, JSON payloads); never
+   * populated on a *resolved* page — read `sections` instead.
    */
   children?: Track[]
 

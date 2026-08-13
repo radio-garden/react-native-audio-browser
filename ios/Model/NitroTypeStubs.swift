@@ -40,8 +40,6 @@
     var live: Bool?
     var artwork: Variant_String_ArtworkVariants?
     var artworkSource: ImageSource?
-    var groupTitle: String?
-    var imageRow: [ImageRowItem]?
   }
 
   struct TrackLoadEvent {
@@ -99,17 +97,32 @@
     }
   }
 
-  struct ImageRowItem: Equatable {
-    var id: String?
+  enum SectionStyle {
+    case list
+    case grid
+    case gridRow
+
+    init?(fromString string: String) {
+      switch string {
+      case "list": self = .list
+      case "grid": self = .grid
+      case "grid-row": self = .gridRow
+      default: return nil
+      }
+    }
+  }
+
+  struct Section: Equatable {
+    var title: String?
+    var subtitle: String?
+    var style: SectionStyle?
     var path: String?
-    var src: String?
-    var artwork: String?
-    var artworkSource: ImageSource?
-    var title: String
+    var children: [Track]
   }
 
   struct ResolvedTrack: Equatable {
     var path: String
+    var sections: [Section]?
     var children: [Track]?
     var carPlaySiriListButton: CarPlaySiriListButtonPosition?
     var id: String?
@@ -129,9 +142,7 @@
     var style: TrackStyle?
     var childrenStyle: TrackStyle?
     var favorited: Bool?
-    var groupTitle: String?
     var live: Bool?
-    var imageRow: [ImageRowItem]?
   }
 
   enum PlaybackState: Equatable {
