@@ -404,9 +404,7 @@ public final class RNABCarPlayController: NSObject {
   private func buildInitialInterface() async {
     guard let audioBrowser else {
       logger.error("AudioBrowser not available")
-      await showRootNavigationError(
-        NavigationError(code: .unknownError, message: "", statusCode: nil, statusCodeSuccess: nil),
-      )
+      await showRootNavigationError(.code(.unknownError))
       return
     }
 
@@ -469,9 +467,7 @@ public final class RNABCarPlayController: NSObject {
     // through here — and sits before the gate check, since a gated build from
     // zero tabs is equally blank.
     guard !tabs.isEmpty else {
-      await showRootNavigationError(
-        NavigationError(code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil),
-      )
+      await showRootNavigationError(.code(.emptyContent))
       return
     }
 
@@ -688,10 +684,7 @@ public final class RNABCarPlayController: NSObject {
         // Empty is modeled as a navigation error (code .emptyContent) so it goes
         // through the same path-aware formatter as failures — letting an app give
         // an empty Favorites tab different copy than an empty search. ADR 0001.
-        let empty = NavigationError(
-          code: .emptyContent, message: "", statusCode: nil, statusCodeSuccess: nil,
-        )
-        await showNavigationErrorView(empty, path: path, on: template)
+        await showNavigationErrorView(.code(.emptyContent), path: path, on: template)
       } else {
         updateTemplate(template, with: resolved)
       }
@@ -1335,6 +1328,16 @@ private extension RNABCarPlayController {
     Task {
       await loadContent(for: path, into: template)
     }
+  }
+}
+
+// MARK: - NavigationError Shorthand
+
+extension NavigationError {
+  /// A code-only error: the user-facing copy comes from the app's
+  /// formatNavigationError (ADR 0001), so no message travels with it.
+  static func code(_ code: NavigationErrorType) -> NavigationError {
+    NavigationError(code: code, message: "", statusCode: nil, statusCodeSuccess: nil)
   }
 }
 
