@@ -13,14 +13,16 @@ export function assertBrowsePageShape(
   if (Array.isArray(response)) {
     throw new Error(
       `Browse endpoint for "${path}" returned a JSON array; expected a ` +
-        `page object { title, children?: Track[] }. Wrap the rows in a ` +
-        `\`children\` array.`
+        `page object { title, sections?: Section[], children?: Track[] }. ` +
+        `Wrap the rows in a \`children\` array (one untitled section) or ` +
+        `group them into \`sections\`.`
     )
   }
   if (response === null || typeof response !== 'object') {
     throw new Error(
       `Browse endpoint for "${path}" returned ${JSON.stringify(response)}; ` +
-        `expected a page object { title, children?: Track[] }.`
+        `expected a page object { title, sections?: Section[], ` +
+        `children?: Track[] }.`
     )
   }
   return response as ResolvedTrack

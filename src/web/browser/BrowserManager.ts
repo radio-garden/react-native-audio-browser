@@ -2,6 +2,7 @@ import type { NavigationErrorType } from '../../features'
 import type {
   Track,
   ResolvedTrack,
+  Section,
   TransformableRequestConfig
 } from '../../types'
 import type { NativeBrowserConfiguration } from '../../types/browser-native'
@@ -15,6 +16,12 @@ import { SimpleRouter } from '../SimpleRouter'
 import { BrowserPathHelper } from '../util/BrowserPathHelper'
 import { assertBrowsePageShape } from './assertBrowsePageShape'
 import { parseSearchResponse } from './parseSearchResponse'
+import {
+  flattenSections,
+  flattenedChildren,
+  normalizePage,
+  sectionContaining
+} from './sections'
 
 /**
  * Manages browser navigation, route resolution, and content loading.
@@ -162,11 +169,10 @@ export class BrowserManager {
     // If no path specified, try to get first tab path
     if (!initialPath) {
       const tabsRoute = value.routes?.find((r) => r.path === '__tabs__')
-      if (tabsRoute?.browseStatic?.children?.[0]?.path) {
-        initialPath = tabsRoute.browseStatic.children[0].path
-      } else {
-        initialPath = '/'
-      }
+      const staticTabs = tabsRoute?.browseStatic
+        ? flattenedChildren(tabsRoute.browseStatic)
+        : []
+      initialPath = staticTabs[0]?.path ?? '/'
     }
 
     if (initialPath) {
@@ -248,14 +254,15 @@ export class BrowserManager {
         return
       }
 
-      // Add contextual paths to non-search content (matches Android behavior where
-      // search() bypasses the resolve() contextual-path logic).
-      // Shallow copy to avoid mutating the original config object (e.g., browseStatic
-      // from routes), which would break search that reads from the same source.
-      if (content?.children && !isSearchPath) {
+      // Resolution returns canonical sectioned pages; add contextual paths
+      // to non-search content (matches Android behavior where search()
+      // bypasses the resolve() contextual-path logic). Copies avoid mutating
+      // the original config object (e.g., browseStatic from routes), which
+      // would break search that reads from the same source.
+      if (content?.sections && !isSearchPath) {
         content = {
           ...content,
-          children: this.addContextualPaths(path, content.children)
+          sections: this.addContextualPaths(path, content.sections)
         }
       }
 
@@ -307,32 +314,39 @@ export class BrowserManager {
   }
 
   /**
-   * Stamps contextual paths onto a page's children. A playable track gets a
+   * Stamps contextual paths onto a page's sections. A playable track gets a
    * contextual path carrying its identity (id ?? src) so the queue can be
-   * re-expanded from it later, plus its page position as a
-   * duplicate-identity tie-breaker. Non-playable tracks are shallow-copied to
-   * avoid mutating original config objects (e.g., browseStatic from routes).
+   * re-expanded from it later, plus its flat page position (children
+   * concatenated in section order — ADR 0009/0010) as a duplicate-identity
+   * tie-breaker. Non-playable tracks are shallow-copied to avoid mutating
+   * original config objects (e.g., browseStatic from routes).
    */
-  private addContextualPaths(path: string, children: Track[]): Track[] {
-    return children.map((track, index) => {
-      const identity = getTrackIdentity(track)
-      if (track.src && identity) {
-        return {
-          ...track,
-          path: BrowserPathHelper.build(path, identity, index)
+  private addContextualPaths(path: string, sections: Section[]): Section[] {
+    let index = 0
+    return sections.map((section) => ({
+      ...section,
+      children: section.children.map((track) => {
+        const flatIndex = index++
+        const identity = getTrackIdentity(track)
+        if (track.src && identity) {
+          return {
+            ...track,
+            path: BrowserPathHelper.build(path, identity, flatIndex)
+          }
         }
-      }
-      return { ...track }
-    })
+        return { ...track }
+      })
+    }))
   }
 
   /**
    * Resolves search content from a search path.
-   * Returns a ResolvedTrack with raw children (no contextual URLs).
+   * Returns a canonical sectioned page — one untitled section of raw search
+   * results (no contextual URLs), like the native `makeSearchResult`.
    * Matches Android's BrowserManager.search() which bypasses resolve() entirely.
    *
    * @param searchPath The search path (format: /__search?q=query)
-   * @returns ResolvedTrack containing search results as children
+   * @returns ResolvedTrack containing search results as one untitled section
    */
   private async resolveSearchContent(
     searchPath: string
@@ -378,13 +392,12 @@ export class BrowserManager {
       }
     }
 
-    // Create ResolvedTrack with raw children
     // Search callbacks should return fresh tracks without contextual paths (like Android)
-    return {
+    return normalizePage({
       path: searchPath,
       title: `Search: ${query}`,
       children: searchResults
-    }
+    })
   }
 
   /**
@@ -412,35 +425,40 @@ export class BrowserManager {
         artworkConfig
       )
 
-    // Transform children artwork
-    let transformedChildren: Track[] | undefined
-    if (content.children) {
-      transformedChildren = await Promise.all(
-        content.children.map(async (track) => {
-          const artworkSource =
-            await RequestConfigBuilder.resolveArtworkSourceAsync(
-              track,
-              requestConfig,
-              artworkConfig
-            )
-          if (artworkSource && !track.artworkSource) {
-            return { ...track, artworkSource }
-          }
-          return track
-        })
+    // Transform children artwork, section by section
+    const transformTrack = async (track: Track): Promise<Track> => {
+      const artworkSource =
+        await RequestConfigBuilder.resolveArtworkSourceAsync(
+          track,
+          requestConfig,
+          artworkConfig
+        )
+      if (artworkSource && !track.artworkSource) {
+        return { ...track, artworkSource }
+      }
+      return track
+    }
+    let transformedSections: Section[] | undefined
+    if (content.sections) {
+      transformedSections = await Promise.all(
+        content.sections.map(async (section) => ({
+          ...section,
+          children: await Promise.all(section.children.map(transformTrack))
+        }))
       )
     }
 
     return {
       ...content,
       artworkSource: parentArtworkSource ?? content.artworkSource,
-      children: transformedChildren ?? content.children
+      sections: transformedSections ?? content.sections
     }
   }
 
   /**
    * Resolves content from a route using browseCallback, browseStatic, or browseConfig.
-   * Single source of truth for route resolution logic.
+   * Single source of truth for route resolution logic. Returns canonical
+   * sectioned pages (normalizePage) — consumers never see authored `children`.
    *
    * @param route The route configuration to resolve
    * @param path The path being navigated to
@@ -482,23 +500,26 @@ export class BrowserManager {
         )
         return undefined
       }
-      return result
+      return normalizePage(result)
     }
 
-    // Handle static ResolvedTrack route
+    // Handle static ResolvedTrack route (normalizePage also copies, so the
+    // config object itself is never handed out)
     if (route.browseStatic) {
-      return route.browseStatic
+      return normalizePage(route.browseStatic)
     }
 
     // Handle request config-based route via the layered request → browse → route
     // chain (matches native's resolveRouteEntry → resolveFromConfig).
     if (route.browseConfig) {
       try {
-        return await this.resolveFromConfig(
-          this._configuration.browse,
-          route.browseConfig,
-          path,
-          routeParams
+        return normalizePage(
+          await this.resolveFromConfig(
+            this._configuration.browse,
+            route.browseConfig,
+            path,
+            routeParams
+          )
         )
       } catch (error: unknown) {
         console.error(`Failed to resolve ${errorContext}:`, error)
@@ -604,6 +625,8 @@ export class BrowserManager {
 
   /**
    * Resolves content for a specific path using configured routes.
+   * Like the native resolve pipelines, the returned page is canonical
+   * sectioned shape — `children` sugar is normalized away at this seam.
    */
   private async resolveContent(
     path: string
@@ -670,11 +693,13 @@ export class BrowserManager {
       this._configuration.browseResolver
     ) {
       try {
-        return await this.resolveFromConfig(
-          this._configuration.browse,
-          undefined,
-          path,
-          { path }
+        return normalizePage(
+          await this.resolveFromConfig(
+            this._configuration.browse,
+            undefined,
+            path,
+            { path }
+          )
         )
       } catch (error: unknown) {
         console.error('Failed to resolve default browse content:', error)
@@ -698,7 +723,8 @@ export class BrowserManager {
     }
 
     const result = await this.resolveRouteContent(tabsRoute, '/', {}, 'Tabs')
-    const tabs = result?.children ?? []
+    // Tabs are a flat list, not a page — a sectioned tabs source flattens.
+    const tabs = result ? flattenSections(result.sections) : []
 
     // Transform artwork URLs on tabs via the async resolver so the shared
     // request layer (incl. its transform) applies, matching content/search.
@@ -751,37 +777,49 @@ export class BrowserManager {
       // Resolve the parent container to get all siblings
       const parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       const parentResolvedTrack = await this.resolveContent(parentPath)
-      const rawChildren = parentResolvedTrack?.children
+      const rawSections = parentResolvedTrack?.sections
 
-      if (!rawChildren || rawChildren.length === 0) {
+      if (!rawSections || rawSections.every((s) => s.children.length === 0)) {
         console.warn('Parent has no children, cannot expand queue')
         return undefined
       }
 
       // Stamp contextual paths so queued tracks carry their own queue context
       // (navigate() stamps the displayed page the same way).
-      const children = this.addContextualPaths(parentPath, rawChildren)
+      const sections = this.addContextualPaths(parentPath, rawSections)
 
-      // Filter to only playable tracks (tracks with src)
-      const playableTracks = children.filter((track) => track.src != null)
-
-      if (playableTracks.length === 0) {
-        console.warn('Parent has no playable tracks, cannot expand queue')
+      // Queue scope is the tapped section, not the whole page (ADR 0006).
+      // The stamped flat index pins which section (and which copy) was
+      // tapped when the same identity appears more than once; a stale index
+      // falls back to the first identity match. An identity that no longer
+      // appears on the page aborts the expansion — the caller falls back to
+      // the single track.
+      const tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
+      const scoped = sectionContaining(sections, trackId, tappedIndex)
+      if (!scoped) {
+        console.warn(
+          `Track with identity='${trackId}' not found on parent page`
+        )
         return undefined
       }
 
-      // Find the index of the selected track by identity (id ?? src). The
-      // stamped page index is a tie-breaker between duplicate identities: when
-      // the child at that position still carries the tapped identity, it pins
-      // the exact copy; a stale or absent index falls back to the first match.
-      const tappedIndex = BrowserPathHelper.extractIndex(contextualPath)
+      // Filter to only playable tracks (tracks with src)
+      const playableTracks = scoped.tracks.filter((track) => track.src != null)
+
+      if (playableTracks.length === 0) {
+        console.warn('Section has no playable tracks, cannot expand queue')
+        return undefined
+      }
+
+      // Selected position: the pinned copy when the stamp survived, else
+      // the first identity match.
       let selectedIndex = -1
-      if (tappedIndex !== undefined) {
-        const tapped = children[tappedIndex]
-        if (tapped?.src != null && getTrackIdentity(tapped) === trackId) {
+      if (scoped.tappedOffset !== undefined) {
+        const tapped = scoped.tracks[scoped.tappedOffset]
+        if (tapped?.src != null) {
           selectedIndex =
-            children
-              .slice(0, tappedIndex + 1)
+            scoped.tracks
+              .slice(0, scoped.tappedOffset + 1)
               .filter((track) => track.src != null).length - 1
         }
       }
@@ -843,9 +881,9 @@ export class BrowserManager {
         const searchResults = await this.resolveSearchContent(
           BrowserPathHelper.createSearchPath(searchQuery)
         )
-        const searchTracks = searchResults?.children
+        const searchTracks = flattenSections(searchResults?.sections)
 
-        if (searchTracks && searchTracks.length > 0) {
+        if (searchTracks.length > 0) {
           // Find the selected track in search results by path or identity
           // (matches Android's three-way mediaId match)
           const identity = getTrackIdentity(track)
