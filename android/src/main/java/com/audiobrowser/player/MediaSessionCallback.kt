@@ -192,12 +192,17 @@ class MediaSessionCallback(private val player: Player) :
     command: SessionCommand,
     args: Bundle,
   ): ListenableFuture<SessionResult> {
-    // Handle favorite button tap
+    // Handle favorite button tap. Report an honest result: a success here makes
+    // the controller flip its heart optimistically, so a no-op (no current
+    // track) must say INVALID_STATE instead of success-then-revert.
     if (command.customAction == MediaSessionCommandManager.CUSTOM_ACTION_FAVORITE) {
-      val currentFavorited = player.currentTrack?.favorited ?: false
-      Timber.d("Favorite button tapped - toggling from $currentFavorited to ${!currentFavorited}")
-      player.setActiveTrackFavorited(!currentFavorited)
-      return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+      val applied = player.toggleActiveTrackFavorited()
+      Timber.d("Favorite button tapped - toggle applied=$applied")
+      return Futures.immediateFuture(
+        SessionResult(
+          if (applied) SessionResult.RESULT_SUCCESS else SessionResult.RESULT_ERROR_INVALID_STATE
+        )
+      )
     }
 
     if (commandManager.handleCustomCommand(command, player)) {
@@ -213,8 +218,16 @@ class MediaSessionCallback(private val player: Player) :
   ): ListenableFuture<SessionResult> {
     // A heart rating from a controller (e.g. Google Assistant "I like this") toggles the
     // now-playing favorite. setActiveTrackFavorited fires onFavoriteChanged so the consumer
-    // persists it — the same path as the notification / CarPlay heart button.
-    RatingFavorites.favoritedFor(rating)?.let { player.setActiveTrackFavorited(it) }
+    // persists it — the same path as the notification / CarPlay heart button. Report an honest
+    // result (see onCustomCommand): INVALID_STATE when there is no current track to favorite.
+    RatingFavorites.favoritedFor(rating)?.let { favorited ->
+      val applied = player.setActiveTrackFavorited(favorited)
+      return Futures.immediateFuture(
+        SessionResult(
+          if (applied) SessionResult.RESULT_SUCCESS else SessionResult.RESULT_ERROR_INVALID_STATE
+        )
+      )
+    }
     return super.onSetRating(session, controller, rating)
   }
 

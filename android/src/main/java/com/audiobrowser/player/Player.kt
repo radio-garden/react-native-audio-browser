@@ -686,9 +686,13 @@ class Player(internal val context: Context) {
   /**
    * Sets the favorited state of the currently playing track. Updates the heart icon in media
    * controllers without interrupting playback.
+   *
+   * @return whether the gesture applied — false only when there is no current track (nothing to
+   *   favorite), so MediaSession callers can report an invalid state instead of a success the
+   *   controller then watches revert.
    */
-  fun setActiveTrackFavorited(favorited: Boolean) {
-    val currentTrack = this.currentTrack ?: return
+  fun setActiveTrackFavorited(favorited: Boolean): Boolean {
+    val currentTrack = this.currentTrack ?: return false
 
     // Persist to the native favorites cache regardless of player state — the
     // user's gesture is durable even when there's no active media item to
@@ -698,8 +702,11 @@ class Player(internal val context: Context) {
       browser?.browserManager?.updateFavorite(identity, favorited)
     }
 
+    // Cache written above: the gesture is durably recorded even without a media
+    // item to restamp (queue tear-down, between-track gaps) — that counts as
+    // applied; there is also no visible heart to revert in that state.
     val index = exoPlayer.currentMediaItemIndex
-    if (index == C.INDEX_UNSET) return
+    if (index == C.INDEX_UNSET) return true
 
     // Create updated Track with new favorited state
     val updatedTrack = currentTrack.copy(favorited = favorited)
@@ -739,12 +746,17 @@ class Player(internal val context: Context) {
 
     // Emit queue changed so useQueue() hook updates
     callbacks?.onPlaybackQueueChanged(tracks)
+    return true
   }
 
-  /** Toggles the favorited state of the currently playing track. */
-  fun toggleActiveTrackFavorited() {
-    val currentTrack = this.currentTrack ?: return
-    setActiveTrackFavorited(currentTrack.favorited != true)
+  /**
+   * Toggles the favorited state of the currently playing track.
+   *
+   * @return whether the toggle applied — false when there is no current track.
+   */
+  fun toggleActiveTrackFavorited(): Boolean {
+    val currentTrack = this.currentTrack ?: return false
+    return setActiveTrackFavorited(currentTrack.favorited != true)
   }
 
   // MARK: - Now Playing Metadata

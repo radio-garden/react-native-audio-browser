@@ -1028,12 +1028,15 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       player.setQueue(tracks, startIndex?.toInt() ?: 0, ((startPosition ?: 0.0) * 1000).toLong())
     }
 
-  override fun setActiveTrackFavorited(favorited: Boolean) = runBlockingOnMain {
+  override fun setActiveTrackFavorited(favorited: Boolean): Unit = runBlockingOnMain {
+    // Applied-result is for MediaSession honesty; the JS API stays fire-and-forget.
     player.setActiveTrackFavorited(favorited)
+    Unit
   }
 
-  override fun toggleActiveTrackFavorited() = runBlockingOnMain {
+  override fun toggleActiveTrackFavorited(): Unit = runBlockingOnMain {
     player.toggleActiveTrackFavorited()
+    Unit
   }
 
   override fun getQueue(): Array<Track> = runBlockingOnMain { player.tracks }
