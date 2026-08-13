@@ -961,20 +961,11 @@ export class NativeAudioBrowser
     // Replace the track in the queue
     this.queue.replaceTrack(index, updatedTrack)
 
-    // Emit favorite changed event
+    // Emit favorite changed only. A favorite toggle is an in-place mutation of
+    // the active track, not a transition — onPlaybackActiveTrackChanged and
+    // onPlaybackQueueChanged stay transition-only, and the useActiveTrack /
+    // useQueue hooks subscribe to onFavoriteChanged themselves.
     this.onFavoriteChanged({ track: updatedTrack, favorited })
-
-    // Emit active track changed so useActiveTrack() hook updates
-    this.onPlaybackActiveTrackChanged({
-      lastIndex: index,
-      lastTrack: track,
-      lastPosition: this.element?.currentTime ?? 0,
-      index,
-      track: updatedTrack
-    })
-
-    // Emit queue changed so useQueue() hook updates
-    this.emitQueueChanged()
   }
 
   toggleActiveTrackFavorited(): void {

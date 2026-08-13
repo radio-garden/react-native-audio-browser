@@ -1,7 +1,8 @@
 import type { Track } from '../../types'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
+import { useNativeValueRefreshedBy } from '../../utils/useNativeValueRefreshedBy'
+import { onFavoriteChanged } from '../favorites'
 
 // MARK: - Types
 
@@ -165,7 +166,9 @@ export const onQueueEnded =
 
 /**
  * Subscribes to queue change events.
- * Called when tracks are added, removed, reordered, or when track metadata changes.
+ * Called when tracks are added, removed, or reordered. An in-place mutation of
+ * a queued track's metadata (a favorite toggle) emits `onFavoriteChanged`
+ * instead; {@link useQueue} subscribes to both.
  * @param callback - Called with the updated queue
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
@@ -175,10 +178,14 @@ export const onQueueChanged = NativeUpdatedValue.emitterize<Track[]>(
 
 // MARK: - Hooks
 
+// Module-level so the hook's subscription identity is stable across renders.
+const queueInvalidators = [onQueueChanged, onFavoriteChanged]
+
 /**
- * Hook that returns the current queue and updates when it changes.
+ * Hook that returns the current queue, updating on queue changes AND on
+ * in-place mutations of queued tracks (favorite toggles).
  * @returns The current queue
  */
 export function useQueue(): Track[] {
-  return useNativeUpdatedValue(getQueue, onQueueChanged)
+  return useNativeValueRefreshedBy(getQueue, queueInvalidators)
 }

@@ -4,10 +4,12 @@ import { renderHook, act, cleanup } from '@testing-library/react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 
 /**
- * The 22 hooks that are a single delegation to `useNativeUpdatedValue`. Their
+ * The hooks that are a single delegation to `useNativeUpdatedValue`. Their
  * behaviour is covered once in `utils/useNativeUpdatedValue.test.ts`; what is
  * per-hook and untestable there is the wiring — which native callback slot the
  * emitter claims, and which `eventKey` is pulled out of the payload.
+ * (`useActiveTrack` and `useQueue` are getter-refreshed instead — they update
+ * on transitions AND favorite toggles — and are covered in their own block.)
  *
  * Both are easy to get wrong and silent when wrong: the hook simply never
  * updates, or yields the whole event where a field was meant. Five slots
@@ -160,13 +162,6 @@ const wirings: Wiring[] = [
     expected: true
   },
   {
-    name: 'useQueue',
-    hook: useQueue,
-    slot: 'onPlaybackQueueChanged',
-    event: [{ src: 'a' }],
-    expected: [{ src: 'a' }]
-  },
-  {
     name: 'useFormattedNavigationError',
     hook: useFormattedNavigationError,
     slot: 'onFormattedNavigationError',
@@ -211,13 +206,6 @@ const wirings: Wiring[] = [
     expected: 'queue'
   },
   {
-    name: 'useActiveTrack',
-    hook: useActiveTrack,
-    slot: 'onPlaybackActiveTrackChanged',
-    event: { track: { src: 'a' } },
-    expected: { src: 'a' }
-  },
-  {
     name: 'useBatteryWarningPending',
     hook: useBatteryWarningPending,
     slot: 'onBatteryWarningPendingChanged',
@@ -252,3 +240,63 @@ describe('hook wiring table', () => {
     expect(new Set(wirings.map((w) => w.slot)).size).toBe(wirings.length)
   })
 })
+
+/**
+ * `useActiveTrack` and `useQueue` are getter-refreshed: a favorite toggle
+ * mutates the active track in place WITHOUT a transition event —
+ * transitions and mutations are separate events — so
+ * these hooks re-read their native getter on the transition slot AND on
+ * `onFavoriteChanged`.
+ */
+const { nativeBrowser } = await import('../native')
+
+describe.each([
+  {
+    name: 'useActiveTrack',
+    hook: useActiveTrack,
+    getter: 'getActiveTrack',
+    transitionSlot: 'onPlaybackActiveTrackChanged',
+    initial: { src: 'a', favorited: false },
+    mutated: { src: 'a', favorited: true }
+  },
+  {
+    name: 'useQueue',
+    hook: useQueue,
+    getter: 'getQueue',
+    transitionSlot: 'onPlaybackQueueChanged',
+    initial: [{ src: 'a', favorited: false }],
+    mutated: [{ src: 'a', favorited: true }]
+  }
+])(
+  '$name (getter-refreshed)',
+  ({ hook, getter, transitionSlot, initial, mutated }) => {
+    it(`re-reads ${getter} on ${transitionSlot} and onFavoriteChanged`, () => {
+      expect(slots.has(transitionSlot)).toBe(true)
+      expect(slots.has('onFavoriteChanged')).toBe(true)
+
+      const getterMock = (
+        nativeBrowser as unknown as Record<string, ReturnType<typeof vi.fn>>
+      )[getter]!
+
+      getterMock.mockReturnValue(initial)
+      const { result } = renderHook(() => hook())
+      expect(result.current).toEqual(initial)
+
+      // A transition re-reads the getter (the event payload is not consumed).
+      getterMock.mockReturnValue(mutated)
+      act(() => slots.get(transitionSlot)!({}))
+      expect(result.current).toEqual(mutated)
+
+      // A favorite toggle mutates in place — no transition event fires, but
+      // the hook must still refresh.
+      getterMock.mockReturnValue(initial)
+      act(() =>
+        slots.get('onFavoriteChanged')!({
+          track: { src: 'a' },
+          favorited: false
+        })
+      )
+      expect(result.current).toEqual(initial)
+    })
+  }
+)

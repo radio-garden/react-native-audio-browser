@@ -1,7 +1,8 @@
 import type { Track } from '../../types'
 import { nativeBrowser } from '../../native'
 import { NativeUpdatedValue } from '../../utils/NativeUpdatedValue'
-import { useNativeUpdatedValue } from '../../utils/useNativeUpdatedValue'
+import { useNativeValueRefreshedBy } from '../../utils/useNativeValueRefreshedBy'
+import { onFavoriteChanged } from '../favorites'
 
 /**
  * Event data for when the active track changes.
@@ -40,6 +41,12 @@ export function getActiveTrackIndex(): number | undefined {
 
 /**
  * Subscribes to active track change events.
+ *
+ * Fires on **transitions only** — selection, queue advance, skip. In-place
+ * metadata mutations of the active track (a favorite toggle) emit
+ * {@link onFavoriteChanged} instead; {@link useActiveTrack} subscribes to
+ * both, so UI bound through the hook still re-renders on a heart toggle.
+ *
  * @param callback - Called when the active track changes
  * @returns An emitter — subscribe with `addListener(callback)`, which returns a cleanup function
  */
@@ -50,10 +57,14 @@ export const onActiveTrackChanged =
 
 // MARK: - Hooks
 
+// Module-level so the hook's subscription identity is stable across renders.
+const activeTrackInvalidators = [onActiveTrackChanged, onFavoriteChanged]
+
 /**
- * Hook that returns the current active track and updates when it changes.
+ * Hook that returns the current active track, updating on transitions AND on
+ * in-place mutations of the active track (favorite toggles).
  * @returns The current active track or undefined
  */
 export function useActiveTrack(): Track | undefined {
-  return useNativeUpdatedValue(getActiveTrack, onActiveTrackChanged, 'track')
+  return useNativeValueRefreshedBy(getActiveTrack, activeTrackInvalidators)
 }

@@ -37,7 +37,6 @@ import com.margelo.nitro.audiobrowser.ImageSource
 import com.margelo.nitro.audiobrowser.NativeGateRequest
 import com.margelo.nitro.audiobrowser.NowPlayingMetadata
 import com.margelo.nitro.audiobrowser.Playback
-import com.margelo.nitro.audiobrowser.PlaybackActiveTrackChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackError
 import com.margelo.nitro.audiobrowser.PlaybackPlayWhenReadyChangedEvent
 import com.margelo.nitro.audiobrowser.PlaybackProgressUpdatedEvent
@@ -730,22 +729,12 @@ class Player(internal val context: Context) {
     // Update the heart button icon in notification/Android Auto
     updateFavoriteButtonState(favorited)
 
-    // Notify JS of the favorite state change
+    // Notify JS of the favorite state change. This is the ONLY emit: a favorite
+    // toggle is an in-place mutation of the active track, not a transition —
+    // onPlaybackActiveTrackChanged / onPlaybackQueueChanged stay
+    // transition-only, and the useActiveTrack / useQueue hooks subscribe to
+    // onFavoriteChanged themselves.
     callbacks?.onFavoriteChanged(FavoriteChangedEvent(updatedTrack, favorited))
-
-    // Emit active track changed so useActiveTrack() hook updates
-    val activeTrackEvent =
-      PlaybackActiveTrackChangedEvent(
-        lastIndex = index.toDouble(),
-        lastTrack = currentTrack,
-        lastPosition = exoPlayer.currentPosition.toSeconds(),
-        index = index.toDouble(),
-        track = updatedTrack,
-      )
-    callbacks?.onPlaybackActiveTrackChanged(activeTrackEvent)
-
-    // Emit queue changed so useQueue() hook updates
-    callbacks?.onPlaybackQueueChanged(tracks)
     return true
   }
 

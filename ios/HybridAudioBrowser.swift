@@ -1070,23 +1070,19 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public func setActiveTrackFavorited(favorited: Bool) throws {
     onMainActor {
       guard let track = player?.currentTrack, let identity = track.identity else { return }
-      guard let index = player?.currentIndex, index >= 0 else { return }
+      guard (player?.currentIndex ?? -1) >= 0 else { return }
       // Optimistically reflect in the authoritative favorite set so the
       // now-playing heart (hydrated from it in getActiveTrack) flips
       // immediately; the consumer reconciles to its canonical identities on
       // the next setFavorites.
       browserManager.setFavorited(identity: identity, favorited: favorited)
       let updatedTrack = track.copying(favorited: favorited)
+      // The ONLY emit: a favorite toggle is an in-place mutation of the active
+      // track, not a transition — onPlaybackActiveTrackChanged stays
+      // transition-only, and the useActiveTrack / useQueue hooks subscribe to
+      // onFavoriteChanged themselves. Native surfaces (CarPlay heart) observe
+      // favoriteChangedEmitter / onFavoritesChanged directly.
       favoriteChangedEmitter.emit(FavoriteChangedEvent(track: updatedTrack, favorited: favorited))
-      // Fire active track changed so the now-playing heart + useActiveTrack() refresh.
-      let position = player?.currentTime ?? 0
-      activeTrackChangedEmitter.emit(PlaybackActiveTrackChangedEvent(
-        lastIndex: Double(index),
-        lastTrack: track,
-        lastPosition: position,
-        index: Double(index),
-        track: updatedTrack,
-      ))
     }
   }
 
