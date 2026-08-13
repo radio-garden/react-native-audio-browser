@@ -34,6 +34,24 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// silent.
   static let instanceChangedEmitter = Emitter<Void>()
 
+  /// Installed once, on first instance creation. React Native posts this
+  /// notification (from `RCTReloadCommand`) when a JS reload — dev or
+  /// OTA-update restart — is triggered, *before* the old runtime is destroyed:
+  /// the earliest signal that this instance's JS callbacks are about to go
+  /// stale. `init` of the replacement instance drops them too, but only after
+  /// the new runtime is up; this observer closes the window in between.
+  /// Observed by name so the library needs no React-Core dependency (and
+  /// stays inert under SPM tests, where nothing posts it).
+  @MainActor private static let reloadObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
+    forName: Notification.Name("RCTTriggerReloadCommandNotification"),
+    object: nil,
+    queue: .main,
+  ) { _ in
+    MainActor.assumeIsolated {
+      HybridAudioBrowser.shared?.dropStaleJSCallbacks()
+    }
+  }
+
   // MARK: - Private Properties
 
   /// Main-confined by convention, not annotation: `deinit` reads it as a
@@ -217,8 +235,14 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   /// state, e.g. CarPlay re-seeding `isGated` at scene connect). Serving content
   /// in that window would be a fail-open leak — same direction as the
   /// resolver-error path in `gateDecision`. Matches Android's default.
-  public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = { _ in
-    Promise.resolved(withResult: Promise.resolved(withResult: GateDecision(gated: true, gate: nil)))
+  public var resolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = HybridAudioBrowser.defaultResolveGate
+
+  // Computed, not stored: a nonisolated static holding a non-Sendable closure
+  // is rejected under Swift 6 concurrency checking.
+  static var defaultResolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> {
+    { _ in
+      Promise.resolved(withResult: Promise.resolved(withResult: GateDecision(gated: true, gate: nil)))
+    }
   }
 
   /// Fired when a request is gated (served the gate). Set by JS.
@@ -310,7 +334,11 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     // playerAndConfiguredBrowser OnceValue, so we must explicitly stop
     // its player to prevent two audio streams running simultaneously.
     onMainActor {
+      // Statics are lazy — touch the observer so it's installed from the first
+      // instance onward.
+      _ = HybridAudioBrowser.reloadObserver
       HybridAudioBrowser.shared?.player?.destroy()
+      HybridAudioBrowser.shared?.dropStaleJSCallbacks()
       playerAndConfiguredBrowser.reset()
       HybridAudioBrowser.shared = self
       // Tell connected external controllers (CarPlay) to re-subscribe against
@@ -321,6 +349,38 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
     setupEmitterToNitroForwarding()
     setupBrowserCallbacks()
+  }
+
+  /// Drops every JS-provided callback that native code can invoke on its own
+  /// initiative (browse resolvers, `handleTrackLoad`, `resolveAlbumPath`,
+  /// `formatNavigationError`, `resolveGate`, the now-playing formatter).
+  ///
+  /// Called on the *previous* instance when a new one takes over: its JS runtime
+  /// is gone, and invoking a callback from a dead runtime aborts the process —
+  /// Nitro's `AsyncJSCallback` throws on a destroyed Dispatcher, and the throw
+  /// crosses the generated bridge wrapper's `noexcept` boundary. Native code
+  /// (e.g. a CarPlay controller still bound to this instance mid-reload) keeps
+  /// working off the data-only config with built-in fallbacks; `resolveGate`
+  /// reverts to the fail-closed default it documents for exactly this window.
+  /// One-shot: on a normal reload both triggers hit the same dying instance
+  /// (the reload notification, then the replacement's `init`), and the second
+  /// strip would re-fire the config-setter cascade — another `onConfigChanged`
+  /// → CarPlay now-playing button rebuild — for nothing.
+  @MainActor private var didDropJSCallbacks = false
+
+  @MainActor
+  private func dropStaleJSCallbacks() {
+    guard !didDropJSCallbacks else { return }
+    didDropJSCallbacks = true
+    // Guarded: assigning `config` marks the browser configured (the setter's
+    // didSet), and a never-configured browser must keep cold-start waiters
+    // (CarPlay, Siri) blocked on the readiness gate rather than resolve them
+    // against an empty config.
+    if browserManager.isConfigured {
+      browserManager.config = browserManager.config.strippingJSCallbacks()
+    }
+    resolveGate = Self.defaultResolveGate
+    nowPlayingMetadataFormatter = nil
   }
 
   deinit {

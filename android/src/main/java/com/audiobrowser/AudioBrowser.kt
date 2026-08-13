@@ -36,6 +36,7 @@ import com.audiobrowser.util.SystemVolumeMonitor
 import com.facebook.proguard.annotations.DoNotStrip
 import com.google.common.util.concurrent.ListenableFuture
 import com.margelo.nitro.NitroModules
+import com.margelo.nitro.audiobrowser.ArtworkRequestConfig
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatus
 import com.margelo.nitro.audiobrowser.BatteryOptimizationStatusChangedEvent
 import com.margelo.nitro.audiobrowser.BatteryWarningPendingChangedEvent
@@ -51,6 +52,7 @@ import com.margelo.nitro.audiobrowser.HybridAudioBrowserSpec
 import com.margelo.nitro.audiobrowser.MediaRequestConfig
 import com.margelo.nitro.audiobrowser.NativeBrowserConfiguration
 import com.margelo.nitro.audiobrowser.NativeGateRequest
+import com.margelo.nitro.audiobrowser.NativeRouteEntry
 import com.margelo.nitro.audiobrowser.NativeSetupPlayerOptions
 import com.margelo.nitro.audiobrowser.NativeUpdateOptions
 import com.margelo.nitro.audiobrowser.NavigationError
@@ -83,6 +85,7 @@ import com.margelo.nitro.audiobrowser.SleepTimer
 import com.margelo.nitro.audiobrowser.TimedMetadata
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackMetadata
+import com.margelo.nitro.audiobrowser.TransformableRequestConfig
 import com.margelo.nitro.core.Promise
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -122,6 +125,12 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Only when still ours: on a reload the replacement may already own the slot.
     carConnectionTarget.compareAndSet(onCarConnectedChanged, null)
 
+    // The runtime behind the config's JS functions is going away, but anything still holding
+    // this instance (an in-flight browse coroutine, the running player) can invoke them after
+    // it's gone — each invoke then throws instead of answering, so browse takes its error path
+    // rather than its fallback.
+    dropStaleJSCallbacks()
+
     handler.post {
       connectedService?.let { service ->
         // Identity-guarded: both instances bind to the same singleton Service, so a late dispose
@@ -130,6 +139,10 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
         if (service.player.browser === this) {
           service.player.browser = null
           service.player.forgetBrowserRegistration()
+          // The formatter wraps a JS callback from this instance's runtime (installed by our
+          // setup(); browser still being ours means no replacement has run setup yet). Without
+          // this, every track change until the next setup() throws into the updater's fallback.
+          service.player.nowPlaying.formatter = null
         }
         if (service.onBatteryWarningPendingChanged === onBatteryWarningPending) {
           service.onBatteryWarningPendingChanged = null
@@ -151,6 +164,20 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       mainScope.cancel()
     }
     super.dispose()
+  }
+
+  /**
+   * Demotes the config to data-only (deep strip of every JS function field) and reverts the JS
+   * callbacks stored outside the config tree ([resolveGate]; the now-playing formatter is cleared
+   * in [dispose]'s service block, identity-guarded). Stale paths then degrade the same way as a
+   * config that never had callbacks — static request/browse layers, default error copy, fail-closed
+   * gate — instead of throwing into the error path. Mirrors iOS `dropStaleJSCallbacks`, where the
+   * same invoke is fatal rather than a throw.
+   */
+  private fun dropStaleJSCallbacks() {
+    _configuration = _configuration.strippingJSCallbacks()
+    browserManager.config = buildConfig()
+    resolveGate = defaultResolveGate
   }
 
   private val mainScope = MainScope()
@@ -221,14 +248,14 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
   override var onFormattedNavigationError: (FormattedNavigationError?) -> Unit = {}
 
   // MARK: Gate callbacks (native→JS; set from JS, native CALLS them)
-  // Default resolver: only reachable in the init window where the native side has recorded
-  // hasResolver=true but JS hasn't yet assigned the real `resolveGate` slot. It DENIES by default
+  // Default resolver: only reachable while hasResolver=true but no live runtime has the real
+  // `resolveGate` bound — the init window before JS assigns it, or after [dispose] reverts a dead
+  // runtime's resolver. It DENIES by default
   // (gated=true) so an active gate never serves content during that window — same fail-closed
   // direction as the resolver-error path in [gateDecision]. The static-gate fast path skips it
   // entirely once a resolver-less gate is set.
-  override var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>> = {
-    Promise.resolved(Promise.resolved(GateDecision(gated = true, gate = null)))
-  }
+  override var resolveGate: (request: NativeGateRequest) -> Promise<Promise<GateDecision>> =
+    defaultResolveGate
   override var onGate: (event: GateEvent) -> Unit = {}
 
   // MARK: Player callbacks
@@ -1500,6 +1527,11 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       current.getAndSet(null)?.dispose()
     }
 
+    /** Shared by the [resolveGate] initializer and [dispose], which reverts to it. */
+    private val defaultResolveGate: (NativeGateRequest) -> Promise<Promise<GateDecision>> = {
+      Promise.resolved(Promise.resolved(GateDecision(gated = true, gate = null)))
+    }
+
     private fun startCarConnectionObserver(context: Context, handler: Handler) {
       // Posted to main: LiveData observation is main-thread only, and the
       // single-start guard is then only ever touched from one thread.
@@ -1516,3 +1548,40 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     }
   }
 }
+
+// MARK: Deep JS-callback stripping (used by dispose)
+// Functions live at every level of the config, not just the top; each type's strip nils its own.
+
+private fun NativeBrowserConfiguration.strippingJSCallbacks() =
+  copy(
+    requestResolver = null,
+    browseResolver = null,
+    handleTrackLoad = null,
+    resolveAlbumPath = null,
+    formatNavigationError = null,
+    request = request?.strippingJSCallbacks(),
+    browse = browse?.strippingJSCallbacks(),
+    media = media?.strippingJSCallbacks(),
+    artwork = artwork?.strippingJSCallbacks(),
+    nowPlayingArtwork = nowPlayingArtwork?.strippingJSCallbacks(),
+    routes = routes?.map { it.strippingJSCallbacks() }?.toTypedArray(),
+  )
+
+private fun TransformableRequestConfig.strippingJSCallbacks() =
+  copy(transform = null, transformSync = null)
+
+private fun MediaRequestConfig.strippingJSCallbacks() =
+  copy(resolve = null, resolveSync = null, transform = null, transformSync = null)
+
+private fun ArtworkRequestConfig.strippingJSCallbacks() =
+  copy(resolve = null, resolveSync = null, transform = null, transformSync = null)
+
+private fun NativeRouteEntry.strippingJSCallbacks() =
+  copy(
+    browseCallback = null,
+    browseConfig = browseConfig?.strippingJSCallbacks(),
+    searchCallback = null,
+    searchConfig = searchConfig?.strippingJSCallbacks(),
+    media = media?.strippingJSCallbacks(),
+    artwork = artwork?.strippingJSCallbacks(),
+  )

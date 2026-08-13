@@ -109,6 +109,27 @@ struct BrowserConfig {
     formatNavigationError = config.formatNavigationError
   }
 
+  /// A copy of this config with every JS-provided function dropped — at every
+  /// level, not just the top; each nested type's strip below nils its own —
+  /// keeping the static fields (URLs, headers, routes' shape). Makes the config
+  /// safe to hold after its JS runtime is gone: callers take their
+  /// static/built-in fallback paths (a callback-only route degrades to its
+  /// no-content path). See `HybridAudioBrowser.dropStaleJSCallbacks` for why
+  /// invoking a stale callback is fatal.
+  func strippingJSCallbacks() -> BrowserConfig {
+    BrowserConfig(
+      request: request?.strippingJSCallbacks(),
+      browse: browse?.strippingJSCallbacks(),
+      media: media?.strippingJSCallbacks(),
+      artwork: artwork?.strippingJSCallbacks(),
+      nowPlayingArtwork: nowPlayingArtwork?.strippingJSCallbacks(),
+      routes: routes?.map { $0.strippingJSCallbacks() },
+      singleTrack: singleTrack,
+      androidControllerOfflineError: androidControllerOfflineError,
+      carPlayLoadingTitle: carPlayLoadingTitle,
+    )
+  }
+
   // MARK: - Track Load Handler
 
   private static let logger = Logger(subsystem: "com.audiobrowser", category: "BrowserConfig")
@@ -139,3 +160,79 @@ struct BrowserConfig {
 // MARK: - NativeRouteEntry + RouteEntry conformance
 
 extension NativeRouteEntry: RouteEntry {}
+
+// MARK: - Deep JS-callback stripping
+
+// The generated structs are get-only from Swift, so each strip rebuilds the
+// value through the memberwise initializer with the function fields nil'd.
+
+private extension TransformableRequestConfig {
+  func strippingJSCallbacks() -> TransformableRequestConfig {
+    TransformableRequestConfig(
+      transform: nil,
+      transformSync: nil,
+      method: method,
+      path: path,
+      baseUrl: baseUrl,
+      headers: headers,
+      query: query,
+      body: body,
+      contentType: contentType,
+      userAgent: userAgent,
+    )
+  }
+}
+
+private extension MediaRequestConfig {
+  func strippingJSCallbacks() -> MediaRequestConfig {
+    MediaRequestConfig(
+      resolve: nil,
+      resolveSync: nil,
+      transform: nil,
+      transformSync: nil,
+      method: method,
+      path: path,
+      baseUrl: baseUrl,
+      headers: headers,
+      query: query,
+      body: body,
+      contentType: contentType,
+      userAgent: userAgent,
+    )
+  }
+}
+
+private extension ArtworkRequestConfig {
+  func strippingJSCallbacks() -> ArtworkRequestConfig {
+    ArtworkRequestConfig(
+      resolve: nil,
+      resolveSync: nil,
+      transform: nil,
+      transformSync: nil,
+      imageQueryParams: imageQueryParams,
+      method: method,
+      path: path,
+      baseUrl: baseUrl,
+      headers: headers,
+      query: query,
+      body: body,
+      contentType: contentType,
+      userAgent: userAgent,
+    )
+  }
+}
+
+private extension NativeRouteEntry {
+  func strippingJSCallbacks() -> NativeRouteEntry {
+    NativeRouteEntry(
+      path: path,
+      browseCallback: nil,
+      browseConfig: browseConfig?.strippingJSCallbacks(),
+      browseStatic: browseStatic,
+      searchCallback: nil,
+      searchConfig: searchConfig?.strippingJSCallbacks(),
+      media: media?.strippingJSCallbacks(),
+      artwork: artwork?.strippingJSCallbacks(),
+    )
+  }
+}
