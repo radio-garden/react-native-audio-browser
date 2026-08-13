@@ -28,9 +28,7 @@ extension Track {
     style: TrackStyle?? = nil,
     childrenStyle: TrackStyle?? = nil,
     favorited: Bool?? = nil,
-    groupTitle: String?? = nil,
     live: Bool?? = nil,
-    imageRow: [ImageRowItem]?? = nil,
   ) -> Track {
     Track(
       id: id ?? self.id,
@@ -51,9 +49,7 @@ extension Track {
       style: style ?? self.style,
       childrenStyle: childrenStyle ?? self.childrenStyle,
       favorited: favorited ?? self.favorited,
-      groupTitle: groupTitle ?? self.groupTitle,
       live: live ?? self.live,
-      imageRow: imageRow ?? self.imageRow,
     )
   }
 }

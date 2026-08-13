@@ -8,6 +8,7 @@ private func makeResolvedTrack(
 ) -> ResolvedTrack {
   ResolvedTrack(
     path: path,
+    sections: nil,
     children: nil,
     carPlaySiriListButton: nil,
     src: nil,
@@ -24,15 +25,14 @@ private func makeResolvedTrack(
     style: nil,
     childrenStyle: nil,
     favorited: nil,
-    groupTitle: nil,
     live: nil,
-    imageRow: nil,
   )
 }
 
 private func makeFullResolvedTrack() -> ResolvedTrack {
   ResolvedTrack(
     path: "/original",
+    sections: [Section(title: "Group A", subtitle: nil, style: nil, path: nil, children: [])],
     children: [Track(id: "t1", path: "/t1")],
     carPlaySiriListButton: .top,
     id: "original-id",
@@ -50,9 +50,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
     style: .list,
     childrenStyle: .grid,
     favorited: true,
-    groupTitle: "Group A",
     live: false,
-    imageRow: [ImageRowItem(title: "Row 1")],
   )
 }
 
@@ -157,11 +155,13 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.carPlaySiriListButton == .bottom)
 }
 
-@Test func copyingOverridesImageRow() {
+@Test func copyingOverridesSections() {
   let original = makeResolvedTrack()
-  let items = [ImageRowItem(title: "Item 1"), ImageRowItem(title: "Item 2")]
-  let copy = original.copying(imageRow: items)
-  #expect(copy.imageRow == items)
+  let sections = [
+    Section(title: "A", subtitle: nil, style: nil, path: nil, children: [Track(id: "c1", src: "c1")]),
+  ]
+  let copy = original.copying(sections: sections)
+  #expect(copy.sections == sections)
 }
 
 // MARK: - optional fields: set to nil via .some(nil)
@@ -246,7 +246,6 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy.style == .list)
   #expect(copy.childrenStyle == .grid)
   #expect(copy.favorited == true)
-  #expect(copy.groupTitle == "Group A")
+  #expect(copy.sections?.first?.title == "Group A")
   #expect(copy.live == false)
-  #expect(copy.imageRow == [ImageRowItem(title: "Row 1")])
 }
