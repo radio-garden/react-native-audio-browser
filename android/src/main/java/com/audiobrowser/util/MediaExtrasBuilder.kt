@@ -2,7 +2,8 @@ package com.audiobrowser.util
 
 import android.os.Bundle
 import androidx.media.utils.MediaConstants
-import com.margelo.nitro.audiobrowser.ResolvedTrack
+import com.margelo.nitro.audiobrowser.Section
+import com.margelo.nitro.audiobrowser.SectionStyle
 import com.margelo.nitro.audiobrowser.Track
 import com.margelo.nitro.audiobrowser.TrackStyle
 
@@ -34,20 +35,30 @@ object MediaExtrasBuilder {
     }
   }
 
-  fun build(track: Track): Bundle =
+  /**
+   * The per-item style hint a section pushes down onto its children (ADR 0010): tile sections
+   * render as grid items (Android Auto's grid always wraps, so `grid` and `grid-row` are the same
+   * hint here); `list` renders as list rows. An explicit per-track `style` is more specific and
+   * wins.
+   */
+  private fun SectionStyle.toTrackStyle(): TrackStyle =
+    when (this) {
+      SectionStyle.LIST -> TrackStyle.LIST
+      SectionStyle.GRID,
+      SectionStyle.GRID_ROW -> TrackStyle.GRID
+    }
+
+  /**
+   * Extras for a track rendered on a browse surface. The owning [section] supplies the Android Auto
+   * group-title header hint (grouping is a per-item advisory in the flat MediaBrowser protocol —
+   * the section dies here, ADR 0010) and the style default.
+   */
+  fun build(track: Track, section: Section? = null): Bundle =
     build(
-      groupTitle = track.groupTitle,
-      style = track.style,
+      groupTitle = section?.title,
+      style = track.style ?: section?.style?.toTrackStyle(),
       childrenStyle = track.childrenStyle,
       artwork = track.artwork?.url,
-    )
-
-  fun build(resolvedTrack: ResolvedTrack): Bundle =
-    build(
-      groupTitle = resolvedTrack.groupTitle,
-      style = resolvedTrack.style,
-      childrenStyle = resolvedTrack.childrenStyle,
-      artwork = resolvedTrack.artwork?.url,
     )
 
   private fun build(

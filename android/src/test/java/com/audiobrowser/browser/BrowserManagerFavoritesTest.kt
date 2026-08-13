@@ -51,7 +51,10 @@ class BrowserManagerFavoritesTest {
 
     val resolved = browserManager.resolve("/home")
 
-    assertEquals(mapOf("A" to false, "B" to true), favoritedByTitle(resolved.children))
+    assertEquals(
+      mapOf("A" to false, "B" to true),
+      favoritedByTitle(resolved.flattenedChildren?.toTypedArray()),
+    )
   }
 
   @Test
@@ -66,7 +69,10 @@ class BrowserManagerFavoritesTest {
 
     val resolved = browserManager.resolve("/home")
 
-    assertEquals(mapOf("A" to false, "B" to true), favoritedByTitle(resolved.children))
+    assertEquals(
+      mapOf("A" to false, "B" to true),
+      favoritedByTitle(resolved.flattenedChildren?.toTypedArray()),
+    )
   }
 
   @Test
@@ -79,7 +85,7 @@ class BrowserManagerFavoritesTest {
 
     val resolved = browserManager.resolve("/home")
 
-    assertEquals(mapOf("A" to false), favoritedByTitle(resolved.children))
+    assertEquals(mapOf("A" to false), favoritedByTitle(resolved.flattenedChildren?.toTypedArray()))
   }
 
   @Test
@@ -94,7 +100,7 @@ class BrowserManagerFavoritesTest {
     val resolved = browserManager.resolve("/home")
 
     // API-provided value is never overwritten, even when the identity is favorited.
-    assertEquals(mapOf("A" to false), favoritedByTitle(resolved.children))
+    assertEquals(mapOf("A" to false), favoritedByTitle(resolved.flattenedChildren?.toTypedArray()))
   }
 
   @Test
@@ -105,7 +111,10 @@ class BrowserManagerFavoritesTest {
 
     val resolved = browserManager.resolve("/home")
 
-    assertEquals(mapOf<String, Boolean?>("A" to null), favoritedByTitle(resolved.children))
+    assertEquals(
+      mapOf<String, Boolean?>("A" to null),
+      favoritedByTitle(resolved.flattenedChildren?.toTypedArray()),
+    )
   }
 
   @Test
@@ -113,13 +122,22 @@ class BrowserManagerFavoritesTest {
     servePage("/home", track(title = "A", id = "stable-a", src = "https://s/a.mp3"))
     browserManager.setFavoriteEnabled(true)
 
-    assertEquals(mapOf("A" to false), favoritedByTitle(browserManager.resolve("/home").children))
+    assertEquals(
+      mapOf("A" to false),
+      favoritedByTitle(browserManager.resolve("/home").flattenedChildren?.toTypedArray()),
+    )
 
     browserManager.updateFavorite("stable-a", true)
-    assertEquals(mapOf("A" to true), favoritedByTitle(browserManager.resolve("/home").children))
+    assertEquals(
+      mapOf("A" to true),
+      favoritedByTitle(browserManager.resolve("/home").flattenedChildren?.toTypedArray()),
+    )
 
     browserManager.updateFavorite("stable-a", false)
-    assertEquals(mapOf("A" to false), favoritedByTitle(browserManager.resolve("/home").children))
+    assertEquals(
+      mapOf("A" to false),
+      favoritedByTitle(browserManager.resolve("/home").flattenedChildren?.toTypedArray()),
+    )
   }
 
   @Test

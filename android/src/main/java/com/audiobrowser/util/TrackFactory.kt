@@ -7,10 +7,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.audiobrowser.browser.BrowseArtworkRegistry
 import com.audiobrowser.browser.ResolvedArtwork
-import com.margelo.nitro.audiobrowser.ImageRowItem
+import com.margelo.nitro.audiobrowser.Section
 import com.margelo.nitro.audiobrowser.Track
-import com.margelo.nitro.audiobrowser.TrackStyle
-import com.margelo.nitro.audiobrowser.Variant_String_ArtworkVariants
 
 /**
  * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
@@ -26,49 +24,30 @@ object TrackFactory {
   }
 
   /**
-   * Android Auto has no image-row rendering; its closest equivalent is a grid of artwork tiles. A
-   * track carrying `imageRow` expands into its items as grid-styled rows (the per-item
-   * content-style hint — hosts that ignore it fall back to list rows) grouped under the row's
-   * title, followed by the row itself as a browsable "view all" link when it has a `path` (a
-   * path-less row is a pure preview and contributes only its items). Tracks without an `imageRow`
-   * pass through unchanged.
+   * A synthetic browsable Track for a section's "view all" surface — the section has a path, title,
+   * and label, but no Track (ADR 0010).
    */
-  fun expandImageRows(tracks: List<Track>): List<Track> =
-    tracks.flatMap { track ->
-      val items = track.imageRow
-      if (items.isNullOrEmpty()) return@flatMap listOf(track)
-      val expanded = items.map { it.toTrack(groupTitle = track.title) }
-      if (track.path != null) {
-        expanded + track.copy(imageRow = null, groupTitle = track.title)
-      } else {
-        expanded
-      }
-    }
-
-  /** The row-item equivalent of a full Track, for surfaces that render items as plain rows. */
-  fun ImageRowItem.toTrack(groupTitle: String?): Track =
+  fun navigationTrack(section: Section): Track =
     Track(
-      id = id,
-      path = path,
-      src = src,
-      artwork = artwork?.let { Variant_String_ArtworkVariants.First(it) },
-      artworkSource = artworkSource,
-      request = request,
+      id = null,
+      path = section.path,
+      src = null,
+      artwork = null,
+      artworkSource = null,
+      request = null,
       artworkCarPlayTinted = null,
-      title = title,
-      subtitle = null,
-      artist = artist,
-      albumPath = albumPath,
-      album = album,
+      title = section.title ?: "",
+      subtitle = section.subtitle,
+      artist = null,
+      albumPath = null,
+      album = null,
       description = null,
       genre = null,
       duration = null,
-      style = TrackStyle.GRID,
+      style = null,
       childrenStyle = null,
       favorited = null,
-      groupTitle = groupTitle,
-      live = live,
-      imageRow = null,
+      live = null,
     )
 
   fun toMedia3(tracks: Array<Track>): List<MediaItem> {
@@ -90,10 +69,11 @@ object TrackFactory {
     track: Track,
     registry: BrowseArtworkRegistry,
     authority: String,
+    section: Section? = null,
   ): MediaItem {
     val rawUrl = artworkUri(track) // artworkSource.uri ?: artwork
     val scheme = rawUrl?.let { Uri.parse(it).scheme?.lowercase() }
-    val builder = metadataBuilder(track)
+    val builder = metadataBuilder(track, section)
     if (rawUrl != null && (scheme == "http" || scheme == "https")) {
       val isSvg =
         SvgArtworkRenderer.isSvgUrl(rawUrl) || SvgArtworkRenderer.isSvgUrl(track.artwork?.url)
@@ -109,8 +89,11 @@ object TrackFactory {
   /** The transformed artworkSource wins over the raw artwork field. */
   private fun artworkUri(track: Track): String? = track.artworkSource?.uri ?: track.artwork?.url
 
-  /** All metadata except artwork. */
-  private fun metadataBuilder(track: Track): MediaMetadata.Builder =
+  /**
+   * All metadata except artwork. The owning [section] (browse surfaces only) supplies the
+   * group-title header hint and the per-item style default (ADR 0010).
+   */
+  private fun metadataBuilder(track: Track, section: Section? = null): MediaMetadata.Builder =
     MediaMetadata.Builder()
       .setTitle(track.title)
       .setArtist(track.subtitle)
@@ -119,7 +102,7 @@ object TrackFactory {
       .setGenre(track.genre)
       .setIsBrowsable(track.src == null)
       .setIsPlayable(track.src != null)
-      .setExtras(MediaExtrasBuilder.build(track))
+      .setExtras(MediaExtrasBuilder.build(track, section))
       .apply { track.favorited?.let { setUserRating(HeartRating(it)) } }
 
   private fun buildMediaItem(track: Track, metadata: MediaMetadata): MediaItem {

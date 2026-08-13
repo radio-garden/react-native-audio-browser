@@ -1,7 +1,7 @@
 package com.audiobrowser.browser
 
-import com.audiobrowser.TestFixtures.imageRowItem
 import com.audiobrowser.TestFixtures.resolvedTrack
+import com.audiobrowser.TestFixtures.section
 import com.audiobrowser.TestFixtures.staticRoute
 import com.audiobrowser.TestFixtures.track
 import com.audiobrowser.util.BrowserPathHelper
@@ -48,6 +48,15 @@ class BrowserManagerTest {
         routes =
           arrayOf(staticRoute(path, resolvedTrack(path = path, children = arrayOf(*children)))),
         singleTrack = singleTrack,
+      )
+  }
+
+  /** Configures a single static route at [path] serving [sections] as its page. */
+  private fun serveSections(path: String, vararg sections: com.margelo.nitro.audiobrowser.Section) {
+    browserManager.config =
+      BrowserConfig(
+        routes =
+          arrayOf(staticRoute(path, resolvedTrack(path = path, sections = arrayOf(*sections))))
       )
   }
 
@@ -100,7 +109,7 @@ class BrowserManagerTest {
 
     val resolved = browserManager.navigate("/library")
 
-    assertEquals(listOf("A", "B"), resolved.children?.map { it.title })
+    assertEquals(listOf("A", "B"), resolved.flattenedChildren?.map { it.title })
     // The tap target: a child's path is rewritten to point back at this page
     // plus its own id and page position (the duplicate-identity tie-breaker).
     assertEquals(
@@ -108,7 +117,7 @@ class BrowserManagerTest {
         BrowserPathHelper.build("/library", "a", 0),
         BrowserPathHelper.build("/library", "b", 1),
       ),
-      resolved.children?.map { it.path },
+      resolved.flattenedChildren?.map { it.path },
     )
     assertEquals("/library", browserManager.getPath())
   }
@@ -117,12 +126,10 @@ class BrowserManagerTest {
 
   @Test
   fun `expandQueueFromContextualPath scopes the queue to the tapped section`() = runBlocking {
-    servePage(
+    serveSections(
       "/home",
-      track(src = "a", groupTitle = "Recent"),
-      track(src = "b", groupTitle = "Recent"),
-      track(src = "c", groupTitle = "Popular"),
-      track(src = "d", groupTitle = "Popular"),
+      section(title = "Recent", children = arrayOf(track(src = "a"), track(src = "b"))),
+      section(title = "Popular", children = arrayOf(track(src = "c"), track(src = "d"))),
     )
 
     val expanded = browserManager.expandQueueFromContextualPath(contextual("/home", "c"))
@@ -135,11 +142,10 @@ class BrowserManagerTest {
 
   @Test
   fun `expandQueueFromContextualPath indexes the tapped track within its section`() = runBlocking {
-    servePage(
+    serveSections(
       "/home",
-      track(src = "a", groupTitle = "Recent"),
-      track(src = "b", groupTitle = "Popular"),
-      track(src = "c", groupTitle = "Popular"),
+      section(title = "Recent", children = arrayOf(track(src = "a"))),
+      section(title = "Popular", children = arrayOf(track(src = "b"), track(src = "c"))),
     )
 
     val (queue, index) =
@@ -168,14 +174,16 @@ class BrowserManagerTest {
   @Test
   fun `expandQueueFromContextualPath scopes a cross-section duplicate to the tapped section`() =
     runBlocking {
-      // The same identity in an image row AND the flat list below it: the
-      // stamped index resolves the tap to the list section instead of the
-      // row's precedence-based win.
-      servePage(
+      // The same identity in a grid-row section AND the list section below it:
+      // the stamped flat index resolves the tap to the list section.
+      serveSections(
         "/home",
-        track(title = "Row", src = null, imageRow = arrayOf(imageRowItem("dup"))),
-        track(src = "dup", groupTitle = "Stations"),
-        track(src = "b", groupTitle = "Stations"),
+        section(
+          title = "Row",
+          style = com.margelo.nitro.audiobrowser.SectionStyle.GRID_ROW,
+          children = arrayOf(track(src = "dup")),
+        ),
+        section(title = "Stations", children = arrayOf(track(src = "dup"), track(src = "b"))),
       )
 
       val (queue, index) =
@@ -231,33 +239,39 @@ class BrowserManagerTest {
   }
 
   @Test
-  fun `expandQueueFromContextualPath expands an image row into its items`() = runBlocking {
-    servePage(
+  fun `expandQueueFromContextualPath scopes a grid-row section to its own tiles`() = runBlocking {
+    serveSections(
       "/home",
-      track(
+      section(
         title = "Most Played",
-        src = null,
-        imageRow = arrayOf(imageRowItem("r1"), imageRowItem("r2")),
+        style = com.margelo.nitro.audiobrowser.SectionStyle.GRID_ROW,
+        children = arrayOf(track(src = "r1"), track(src = "r2")),
       ),
-      track(src = "a"),
+      section(children = arrayOf(track(src = "a"))),
     )
 
     val (queue, index) =
       requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "r2")))
 
-    // A tile tap queues its row, not the list rows beside it.
+    // A tile tap queues its section, not the list rows beside it.
     assertEquals(listOf("r1", "r2"), queue.map { it.src })
     assertEquals(1, index)
   }
 
   @Test
   fun `expandQueueFromContextualPath drops unplayable siblings`() = runBlocking {
-    servePage(
+    serveSections(
       "/home",
-      track(src = "a", groupTitle = "Mixed"),
-      // A browsable row sitting inside the same section — no src, so not queueable.
-      track(src = null, groupTitle = "Mixed").copy(path = "/sub"),
-      track(src = "b", groupTitle = "Mixed"),
+      section(
+        title = "Mixed",
+        children =
+          arrayOf(
+            track(src = "a"),
+            // A browsable row sitting inside the same section — no src, so not queueable.
+            track(src = null).copy(path = "/sub"),
+            track(src = "b"),
+          ),
+      ),
     )
 
     val (queue, index) =
@@ -284,7 +298,7 @@ class BrowserManagerTest {
           BrowserPathHelper.build("/home", "stable-a", 0),
           BrowserPathHelper.build("/home", "https://s/b.mp3", 1),
         ),
-        resolved.children?.map { it.path },
+        resolved.flattenedChildren?.map { it.path },
       )
     }
 
@@ -318,12 +332,7 @@ class BrowserManagerTest {
 
   @Test
   fun `expandQueueFromContextualPath honours singleTrack`() = runBlocking {
-    servePage(
-      "/home",
-      track(src = "a", groupTitle = "Recent"),
-      track(src = "b", groupTitle = "Recent"),
-      singleTrack = true,
-    )
+    servePage("/home", track(src = "a"), track(src = "b"), singleTrack = true)
 
     val (queue, index) =
       requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "b")))

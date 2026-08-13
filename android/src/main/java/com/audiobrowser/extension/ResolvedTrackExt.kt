@@ -29,7 +29,5 @@ fun ResolvedTrack.toTrack(): Track =
     style = style,
     childrenStyle = childrenStyle,
     favorited = favorited,
-    groupTitle = groupTitle,
     live = live,
-    imageRow = imageRow,
   )
