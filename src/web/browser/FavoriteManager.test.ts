@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Track } from '../../types'
-import { trackIdentity } from '../../utils/trackIdentity'
+import { getTrackIdentity } from '../../utils/getTrackIdentity'
 import { FavoriteManager } from './FavoriteManager'
 
 const withId: Track = {
@@ -13,18 +13,18 @@ const srcOnly: Track = {
   title: 'Src only'
 }
 
-describe('trackIdentity', () => {
+describe('getTrackIdentity', () => {
   it('is the id when set', () => {
-    expect(trackIdentity(withId)).toBe('abc123')
+    expect(getTrackIdentity(withId)).toBe('abc123')
   })
 
   it('falls back to src when id is absent or blank', () => {
-    expect(trackIdentity(srcOnly)).toBe(srcOnly.src)
-    expect(trackIdentity({ id: '', src: 's' })).toBe('s')
+    expect(getTrackIdentity(srcOnly)).toBe(srcOnly.src)
+    expect(getTrackIdentity({ id: '', src: 's' })).toBe('s')
   })
 
   it('is undefined for a browsable-only track', () => {
-    expect(trackIdentity({ title: 'Folder' } as Track)).toBeUndefined()
+    expect(getTrackIdentity({ title: 'Folder' } as Track)).toBeUndefined()
   })
 })
 

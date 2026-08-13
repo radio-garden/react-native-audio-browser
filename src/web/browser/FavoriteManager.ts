@@ -1,9 +1,9 @@
 import type { Track, ResolvedTrack } from '../../types'
-import { trackIdentity } from '../../utils/trackIdentity'
+import { getTrackIdentity } from '../../utils/getTrackIdentity'
 
 /**
  * Manages favorite state for tracks, keyed by track identity (`id` when set,
- * falling back to `src` — see trackIdentity / ADR 0008).
+ * falling back to `src` — see getTrackIdentity / ADR 0008).
  * Matches Android's favorite hydration behavior.
  */
 export class FavoriteManager {
@@ -21,7 +21,7 @@ export class FavoriteManager {
    * Checks if a track is favorited based on its identity.
    */
   isFavorited(track: Track): boolean {
-    const identity = trackIdentity(track)
+    const identity = getTrackIdentity(track)
     return identity !== undefined && this.favorites.has(identity)
   }
 
@@ -29,7 +29,7 @@ export class FavoriteManager {
    * Adds a track to the favorites cache under its identity.
    */
   addFavorite(track: Track): void {
-    const identity = trackIdentity(track)
+    const identity = getTrackIdentity(track)
     if (identity !== undefined) this.favorites.add(identity)
   }
 
@@ -37,7 +37,7 @@ export class FavoriteManager {
    * Removes a track from the favorites cache under its identity.
    */
   removeFavorite(track: Track): void {
-    const identity = trackIdentity(track)
+    const identity = getTrackIdentity(track)
     if (identity !== undefined) this.favorites.delete(identity)
   }
 

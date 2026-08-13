@@ -104,4 +104,44 @@ describe('public surface', () => {
   it('does not re-export the raw Nitro object', () => {
     expect(exports.map((e) => e.name)).not.toContain('nativeBrowser')
   })
+
+  it('every public module is covered by the typedoc entry points', () => {
+    // The API reference documents entryPoints, not the export graph — a public
+    // module missing from website/typedoc.json ships undocumented.
+    const config = JSON.parse(
+      readFileSync(join(process.cwd(), 'website', 'typedoc.json'), 'utf8')
+    ) as { entryPoints: string[] }
+    const entries = config.entryPoints.map(
+      (glob) =>
+        new RegExp(
+          '^' +
+            glob
+              .replace(/^\.\.\/src\//, '')
+              .replace(/[.]/g, '\\.')
+              .replace(/\*/g, '[^/]+') +
+            '$'
+        )
+    )
+    const covered = (file: string): boolean => {
+      if (entries.some((e) => e.test(file))) return true
+      // A directory barrel entry (…/index.ts) documents what it re-exports.
+      const dir = file.split('/').slice(0, -1)
+      while (dir.length > 0) {
+        if (entries.some((e) => e.test([...dir, 'index.ts'].join('/'))))
+          return true
+        dir.pop()
+      }
+      return false
+    }
+    const uncovered = [...new Set(exports.map((e) => e.file))].filter(
+      (file) => !covered(file)
+    )
+    expect(
+      uncovered,
+      'Exported to consumers but absent from the API reference. Add each ' +
+        'module (or its directory barrel) to website/typedoc.json ' +
+        'entryPoints:\n' +
+        uncovered.join('\n')
+    ).toEqual([])
+  })
 })

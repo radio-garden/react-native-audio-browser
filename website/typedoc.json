@@ -3,7 +3,9 @@
   "entryPoints": [
     "../src/features/*.ts",
     "../src/features/*/index.ts",
-    "../src/types/*.ts"
+    "../src/types/*.ts",
+    "../src/utils/getTrackIdentity.ts",
+    "../src/utils/useDebug.ts"
   ],
   "entryPointStrategy": "expand",
   "exclude": [

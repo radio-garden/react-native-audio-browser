@@ -44,7 +44,7 @@ import type {
 } from '../specs/audio-browser.nitro'
 import type { ResolvedTrack, Track, TrackLoadEvent } from '../types'
 import type { NativeBrowserConfiguration } from '../types/browser-native'
-import { trackIdentity } from '../utils/trackIdentity'
+import { getTrackIdentity } from '../utils/getTrackIdentity'
 import { BrowserManager } from './browser/BrowserManager'
 import { classifyTrackNavigation } from './browser/classifyTrackNavigation'
 import { FavoriteManager } from './browser/FavoriteManager'
@@ -428,7 +428,7 @@ export class NativeAudioBrowser
     }
 
     const queue = this.getQueue()
-    const index = queue.findIndex((t) => trackIdentity(t) === trackId)
+    const index = queue.findIndex((t) => getTrackIdentity(t) === trackId)
 
     if (index < 0) {
       return false
@@ -942,7 +942,7 @@ export class NativeAudioBrowser
   setActiveTrackFavorited(favorited: boolean): void {
     const track = this.getActiveTrack()
     const index = this.getActiveTrackIndex()
-    if (!track || trackIdentity(track) === undefined || index === undefined)
+    if (!track || getTrackIdentity(track) === undefined || index === undefined)
       return
 
     // Update favorites set via manager (keyed by track identity)
@@ -970,7 +970,7 @@ export class NativeAudioBrowser
 
   toggleActiveTrackFavorited(): void {
     const track = this.getActiveTrack()
-    if (!track || trackIdentity(track) === undefined) return
+    if (!track || getTrackIdentity(track) === undefined) return
 
     const isFavorited = this.favoriteManager.isFavorited(track)
     this.setActiveTrackFavorited(!isFavorited)

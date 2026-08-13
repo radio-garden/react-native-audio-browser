@@ -8,7 +8,7 @@ import type { NativeBrowserConfiguration } from '../../types/browser-native'
 import type { HttpClient } from '../http/HttpClient'
 import type { FavoriteManager } from './FavoriteManager'
 import type { NavigationErrorManager } from './NavigationErrorManager'
-import { trackIdentity } from '../../utils/trackIdentity'
+import { getTrackIdentity } from '../../utils/getTrackIdentity'
 import { assertedNotNullish } from '../../utils/validation'
 import { RequestConfigBuilder } from '../http/RequestConfigBuilder'
 import { SimpleRouter } from '../SimpleRouter'
@@ -258,7 +258,7 @@ export class BrowserManager {
           children: content.children.map((track) => {
             // A playable track gets a contextual path carrying its identity
             // (id ?? src) so the queue can be re-expanded from it later.
-            const identity = trackIdentity(track)
+            const identity = getTrackIdentity(track)
             if (track.src && identity) {
               const contextualPath = `${path}?__trackId=${encodeURIComponent(identity)}`
               return { ...track, path: contextualPath }
@@ -758,7 +758,7 @@ export class BrowserManager {
 
       // Find the index of the selected track by identity (id ?? src)
       const selectedIndex = playableTracks.findIndex(
-        (track) => trackIdentity(track) === trackId
+        (track) => getTrackIdentity(track) === trackId
       )
 
       if (selectedIndex < 0) {
@@ -818,11 +818,11 @@ export class BrowserManager {
         if (searchTracks && searchTracks.length > 0) {
           // Find the selected track in search results by path or identity
           // (matches Android's three-way mediaId match)
-          const identity = trackIdentity(track)
+          const identity = getTrackIdentity(track)
           const selectedIdx = searchTracks.findIndex(
             (t) =>
               t.path === trackPath ||
-              (identity !== undefined && trackIdentity(t) === identity)
+              (identity !== undefined && getTrackIdentity(t) === identity)
           )
 
           if (selectedIdx >= 0) {

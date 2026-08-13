@@ -1,4 +1,5 @@
 import {
+  getTrackIdentity,
   notifyContentChanged,
   onFavoriteChanged,
   ResolvedTrack,
@@ -14,21 +15,25 @@ let favorites: Track[] = []
 const persisted = storage.getString('favorites')
 if (persisted) {
   favorites = JSON.parse(persisted) as Track[]
-  setFavorites(favorites.map((t) => t.src).filter(Boolean) as string[])
+  // setFavorites ids are matched exactly against each track's identity
+  // (id when set, else src).
+  setFavorites(favorites.map(getTrackIdentity).filter(Boolean) as string[])
 }
 
 /** Call after setupPlayer() to start listening for favorite changes. */
 export function setupFavorites() {
   onFavoriteChanged.addListener(({ track, favorited }) => {
+    const identity = getTrackIdentity(track)
+    if (identity === undefined) return
     if (favorited) {
-      if (!favorites.find((t) => t.src === track.src)) {
+      if (!favorites.find((t) => getTrackIdentity(t) === identity)) {
         // Strip path/groupTitle - the library regenerates contextual paths when browsing favorites
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { path, groupTitle, ...rest } = track
         favorites.push(rest as Track)
       }
     } else {
-      favorites = favorites.filter((t) => t.src !== track.src)
+      favorites = favorites.filter((t) => getTrackIdentity(t) !== identity)
     }
     favorites.sort((a, b) => a.title.localeCompare(b.title))
     storage.set('favorites', JSON.stringify(favorites))
