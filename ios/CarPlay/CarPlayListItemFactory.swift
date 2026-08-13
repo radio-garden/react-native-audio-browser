@@ -157,6 +157,16 @@ final class CarPlayListItemFactory {
 
   // MARK: - Image Row Item
 
+  /// Target size for images inside an image row. The iOS 26 SDK deprecates
+  /// `CPListImageRowItem.maximumImageSize` in favor of the element-based API,
+  /// so read whichever the running OS considers canonical.
+  private static var rowImageSize: CGSize {
+    if #available(iOS 26.0, *) {
+      return CPListImageRowItemElement.maximumImageSize
+    }
+    return CPListImageRowItem.maximumImageSize
+  }
+
   /// Creates a CPListImageRowItem for a track that has an imageRow.
   /// Renders as a horizontal row of tappable artwork thumbnails with a header title.
   func createImageRowItem(for track: Track) -> CPListImageRowItem {
@@ -202,7 +212,7 @@ final class CarPlayListItemFactory {
     for (index, imageRowItem) in visibleItems.enumerated() {
       guard imageRowItem.artwork != nil || imageRowItem.artworkSource != nil else { continue }
 
-      imageLoader?.loadArtwork(for: imageRowItem.toTrack(), size: CPListImageRowItem.maximumImageSize) { [weak item] image in
+      imageLoader?.loadArtwork(for: imageRowItem.toTrack(), size: Self.rowImageSize) { [weak item] image in
         Task { @MainActor in
           guard let item, let image else { return }
           var images = item.gridImages

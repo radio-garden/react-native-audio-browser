@@ -88,7 +88,7 @@ final class CarPlayImageLoader {
       case let .sfSymbol(artwork, width, height):
         completion(self.sfSymbolImage(forArtwork: artwork, canvasSize: CGSize(width: width, height: height)))
       case let .fetch(uri, headers, shouldTint, isSvg):
-        let image = await self.fetchImage(uri: uri, headers: headers, isSvg: isSvg)
+        let image = await self.fetchImage(uri: uri, headers: headers, isSvg: isSvg, size: size)
         if let image, shouldTint {
           completion(self.createAdaptiveImage(image, carTraitCollection: self.carTraitCollection))
         } else {
@@ -146,10 +146,16 @@ final class CarPlayImageLoader {
   }
 
   /// Fetches an image from a URL with optional headers and SVG processing.
-  private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool) async -> UIImage? {
+  /// Rasters are downsampled to `size` points at the car's display scale —
+  /// CPListItem.h: "size them to the display scale of the car screen". SVGs
+  /// already rasterize at car scale via SVGProcessor.
+  private func fetchImage(uri: String, headers: [String: String]?, isSvg: Bool, size: CGSize) async -> UIImage? {
     let source = ImageSource(uri: uri, method: nil, headers: headers, body: nil)
-    let svgScale: CGFloat? = isSvg ? carTraitCollection.displayScale : nil
-    return await ArtworkImageFetcher.fetchImage(from: source, svgScale: svgScale)
+    let scale = carTraitCollection.displayScale
+    if isSvg {
+      return await ArtworkImageFetcher.fetchImage(from: source, svgScale: scale)
+    }
+    return await ArtworkImageFetcher.fetchImage(from: source, downsampleTo: (size, scale))
   }
 
   /// Creates an SF Symbol image rendered at the given canvas size.
