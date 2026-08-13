@@ -35,9 +35,6 @@
 #include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include <vector>
-#include "JImageRowItem.hpp"
 #include "TimedMetadata.hpp"
 #include "JTimedMetadata.hpp"
 #include "StallReason.hpp"

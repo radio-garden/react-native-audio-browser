@@ -19,10 +19,12 @@ namespace margelo::nitro::audiobrowser { enum class HttpMethod; }
 namespace margelo::nitro::audiobrowser { struct TrackRequest; }
 // Forward declaration of `TrackStyle` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class TrackStyle; }
-// Forward declaration of `ImageRowItem` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ImageRowItem; }
 // Forward declaration of `ResolvedTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ResolvedTrack; }
+// Forward declaration of `Section` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Section; }
+// Forward declaration of `SectionStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionStyle; }
 // Forward declaration of `CarPlaySiriListButtonPosition` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { enum class CarPlaySiriListButtonPosition; }
 // Forward declaration of `NavigationErrorEvent` to properly resolve imports.
@@ -210,14 +212,16 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 #include "JTrackRequest.hpp"
 #include "TrackStyle.hpp"
 #include "JTrackStyle.hpp"
-#include "ImageRowItem.hpp"
-#include "JImageRowItem.hpp"
 #include <functional>
 #include "JFunc_void_std__string.hpp"
 #include <NitroModules/JNICallable.hpp>
 #include "ResolvedTrack.hpp"
 #include "JFunc_void_std__optional_ResolvedTrack_.hpp"
 #include "JResolvedTrack.hpp"
+#include "Section.hpp"
+#include "JSection.hpp"
+#include "SectionStyle.hpp"
+#include "JSectionStyle.hpp"
 #include "CarPlaySiriListButtonPosition.hpp"
 #include "JCarPlaySiriListButtonPosition.hpp"
 #include "JFunc_void_std__vector_Track_.hpp"

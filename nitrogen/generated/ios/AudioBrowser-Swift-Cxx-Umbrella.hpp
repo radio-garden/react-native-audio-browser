@@ -76,8 +76,6 @@ namespace margelo::nitro::audiobrowser { struct IOSOptions; }
 namespace margelo::nitro::audiobrowser { struct ImageContext; }
 // Forward declaration of `ImageQueryParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageQueryParams; }
-// Forward declaration of `ImageRowItem` to properly resolve imports.
-namespace margelo::nitro::audiobrowser { struct ImageRowItem; }
 // Forward declaration of `ImageSource` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct ImageSource; }
 // Forward declaration of `MediaReference` to properly resolve imports.
@@ -174,6 +172,10 @@ namespace margelo::nitro::audiobrowser { struct RetryConfig; }
 namespace margelo::nitro::audiobrowser { enum class SearchMode; }
 // Forward declaration of `SearchParams` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SearchParams; }
+// Forward declaration of `SectionStyle` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { enum class SectionStyle; }
+// Forward declaration of `Section` to properly resolve imports.
+namespace margelo::nitro::audiobrowser { struct Section; }
 // Forward declaration of `SleepTimerEndOfTrack` to properly resolve imports.
 namespace margelo::nitro::audiobrowser { struct SleepTimerEndOfTrack; }
 // Forward declaration of `SleepTimerTime` to properly resolve imports.
@@ -230,7 +232,6 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "IOSOptions.hpp"
 #include "ImageContext.hpp"
 #include "ImageQueryParams.hpp"
-#include "ImageRowItem.hpp"
 #include "ImageSource.hpp"
 #include "MediaReference.hpp"
 #include "MediaRequestConfig.hpp"
@@ -279,6 +280,8 @@ namespace margelo::nitro::audiobrowser { struct TransformableRequestConfig; }
 #include "RetryConfig.hpp"
 #include "SearchMode.hpp"
 #include "SearchParams.hpp"
+#include "Section.hpp"
+#include "SectionStyle.hpp"
 #include "SleepTimerEndOfTrack.hpp"
 #include "SleepTimerTime.hpp"
 #include "StallReason.hpp"

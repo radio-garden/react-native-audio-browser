@@ -18,8 +18,20 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(path: String, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
-    self.init(std.string(path), { () -> bridge.std__optional_std__vector_Track__ in
+  init(path: String, sections: [Section]?, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, live: Bool?) {
+    self.init(std.string(path), { () -> bridge.std__optional_std__vector_Section__ in
+      if let __unwrappedValue = sections {
+        return bridge.create_std__optional_std__vector_Section__({ () -> bridge.std__vector_Section_ in
+          var __vector = bridge.create_std__vector_Section_(__unwrappedValue.count)
+          for __item in __unwrappedValue {
+            __vector.push_back(__item)
+          }
+          return __vector
+        }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
           var __vector = bridge.create_std__vector_Track_(__unwrappedValue.count)
@@ -140,27 +152,9 @@ public extension ResolvedTrack {
       } else {
         return .init()
       }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = groupTitle {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
     }(), { () -> bridge.std__optional_bool_ in
       if let __unwrappedValue = live {
         return bridge.create_std__optional_bool_(__unwrappedValue)
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__vector_ImageRowItem__ in
-      if let __unwrappedValue = imageRow {
-        return bridge.create_std__optional_std__vector_ImageRowItem__({ () -> bridge.std__vector_ImageRowItem_ in
-          var __vector = bridge.create_std__vector_ImageRowItem_(__unwrappedValue.count)
-          for __item in __unwrappedValue {
-            __vector.push_back(__item)
-          }
-          return __vector
-        }())
       } else {
         return .init()
       }
@@ -170,6 +164,18 @@ public extension ResolvedTrack {
   @inline(__always)
   var path: String {
     return String(self.__path)
+  }
+  
+  @inline(__always)
+  var sections: [Section]? {
+    return { () -> [Section]? in
+      if bridge.has_value_std__optional_std__vector_Section__(self.__sections) {
+        let __unwrapped = bridge.get_std__optional_std__vector_Section__(self.__sections)
+        return __unwrapped.map({ __item in __item })
+      } else {
+        return nil
+      }
+    }()
   }
   
   @inline(__always)
@@ -371,35 +377,11 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var groupTitle: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__groupTitle) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__groupTitle)
-        return String(__unwrapped)
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
   var live: Bool? {
     return { () -> Bool? in
       if bridge.has_value_std__optional_bool_(self.__live) {
         let __unwrapped = bridge.get_std__optional_bool_(self.__live)
         return __unwrapped
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var imageRow: [ImageRowItem]? {
-    return { () -> [ImageRowItem]? in
-      if bridge.has_value_std__optional_std__vector_ImageRowItem__(self.__imageRow) {
-        let __unwrapped = bridge.get_std__optional_std__vector_ImageRowItem__(self.__imageRow)
-        return __unwrapped.map({ __item in __item })
       } else {
         return nil
       }
