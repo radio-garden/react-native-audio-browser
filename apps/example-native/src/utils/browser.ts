@@ -7,12 +7,12 @@ import AudioBrowser, {
   type BrowserConfiguration
 } from 'react-native-audio-browser'
 import {
-  archiveLibraryEntry,
+  archiveLibrarySection,
   archiveRoutes,
   searchArchive
 } from '../api/archive-org'
 import {
-  radioGardenLibraryEntry,
+  radioGardenLibrarySection,
   radioGardenMediaTransform,
   radioGardenRoutes
 } from '../api/radio-garden'
@@ -49,13 +49,17 @@ const configuration: BrowserConfiguration = {
       path: '/library',
       title: 'Library',
       carPlaySiriListButton: 'top',
-      children: [
-        archiveLibraryEntry,
-        radioGardenLibraryEntry,
+      sections: [
+        archiveLibrarySection,
+        radioGardenLibrarySection,
         {
-          src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
-          title: 'Chapters',
-          groupTitle: 'Other'
+          title: 'Other',
+          children: [
+            {
+              src: 'https://traffic.libsyn.com/atpfm/atp545.mp3',
+              title: 'Chapters'
+            }
+          ]
         }
       ]
     }

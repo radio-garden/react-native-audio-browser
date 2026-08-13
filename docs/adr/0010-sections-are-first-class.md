@@ -1,6 +1,6 @@
 # Sections are first-class
 
-**Status:** proposed
+**Status:** accepted
 
 A resolved browse page is a flat `children: Track[]`; grouping is encoded by
 adjacency (contiguous `groupTitle` runs), and an image row is a pseudo-track

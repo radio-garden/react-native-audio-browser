@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
-import { ImageRowItem, navigate, Track } from 'react-native-audio-browser'
+import { navigate, Section, Track } from 'react-native-audio-browser'
 
 type TrackListItemProps = {
   track: Track
@@ -21,10 +21,6 @@ export function TrackListItem({
   isActive,
   onPress
 }: TrackListItemProps) {
-  if (track.imageRow) {
-    return <ImageRowListItem track={track} onPress={onPress} />
-  }
-
   return (
     <TouchableOpacity
       style={[styles.item, isActive && styles.activeItem]}
@@ -74,40 +70,39 @@ export function TrackListItem({
   )
 }
 
-function ImageRowListItem({
-  track,
-  onPress
-}: {
-  track: Track
-  onPress: () => void
-}) {
-  const handleImageRowItemPress = (item: ImageRowItem) => {
-    if (item.path) {
-      navigate(item.path)
-    }
-  }
-
+/**
+ * A tile-styled section (`grid-row` / `grid`): header (tap → section.path)
+ * above a horizontal scroller of artwork tiles — the app-UI rendering of the
+ * section styles CarPlay maps to image rows.
+ */
+export function SectionTileRow({ section }: { section: Section }) {
   return (
     <View style={styles.imageRowContainer}>
-      <TouchableOpacity style={styles.imageRowHeader} onPress={onPress}>
-        <Text style={styles.imageRowTitle}>{track.title}</Text>
-        <Icon
-          name="chevron-right"
-          size={14}
-          color="#ffffff"
-          iconStyle="solid"
-        />
+      <TouchableOpacity
+        style={styles.imageRowHeader}
+        onPress={() => section.path && navigate(section.path)}
+        disabled={!section.path}
+      >
+        <Text style={styles.imageRowTitle}>{section.title}</Text>
+        {section.path && (
+          <Icon
+            name="chevron-right"
+            size={14}
+            color="#ffffff"
+            iconStyle="solid"
+          />
+        )}
       </TouchableOpacity>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.imageRowScroll}
       >
-        {track.imageRow!.map((item, index) => (
+        {section.children.map((item, index) => (
           <TouchableOpacity
             key={`${item.title}-${index}`}
             style={styles.imageRowItem}
-            onPress={() => handleImageRowItemPress(item)}
+            onPress={() => navigate(item)}
           >
             {item.artworkSource ? (
               <Image

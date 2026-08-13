@@ -1,7 +1,7 @@
 import type {
   BrowserSource,
-  ImageRowItem,
   ResolvedTrack,
+  Section,
   Track
 } from 'react-native-audio-browser'
 
@@ -260,7 +260,7 @@ export async function fetchItem(
   }
 }
 
-// Curated landing page: one horizontal `imageRow` per collection, each filled
+// Curated landing page: one grid-row section per collection, each filled
 // with that collection's top items (tap a tile → that item's tracks).
 const HOME_ROWS: { title: string; id: string }[] = [
   { title: 'LibriVox', id: 'librivoxaudio' },
@@ -270,13 +270,13 @@ const HOME_ROWS: { title: string; id: string }[] = [
   { title: 'Game Soundtracks', id: 'folksoundomy_gamesoundtracks' }
 ]
 
-// Top items of a collection as imageRow tiles — a single search request, with an
+// Top items of a collection as tile tracks — a single search request, with an
 // abort timeout so a slow/hung archive.org response can't stall the home page.
 async function fetchCollectionTiles(
   id: string,
   prefix: string,
   limit = 12
-): Promise<ImageRowItem[]> {
+): Promise<Track[]> {
   const params = new URLSearchParams({
     'q': `mediatype:audio AND collection:${id}`,
     'output': 'json',
@@ -305,21 +305,22 @@ async function fetchCollectionTiles(
 }
 
 export async function fetchHome(prefix = '/archive'): Promise<ResolvedTrack> {
-  const rows = await Promise.all(
-    HOME_ROWS.map(async (row): Promise<Track | null> => {
-      const imageRow = await fetchCollectionTiles(row.id, prefix)
-      if (imageRow.length === 0) return null
+  const sections = await Promise.all(
+    HOME_ROWS.map(async (row): Promise<Section | null> => {
+      const children = await fetchCollectionTiles(row.id, prefix)
+      if (children.length === 0) return null
       return {
         title: row.title,
+        style: 'grid-row',
         path: `${prefix}/collection/${row.id}`,
-        imageRow
+        children
       }
     })
   )
   return {
     path: `${prefix}/home`,
     title: 'Archive.org Player',
-    children: rows.filter((r): r is Track => r != null)
+    sections: sections.filter((s): s is Section => s != null)
   }
 }
 
@@ -332,10 +333,11 @@ export const archiveRoutes: Record<string, BrowserSource> = {
   '/archive/item/{id}': ({ routeParams }) => fetchItem(routeParams!.id)
 }
 
-export const archiveLibraryEntry: Track = {
+export const archiveLibrarySection: Section = {
   title: 'Archive.org',
+  style: 'grid-row',
   path: '/archive',
-  imageRow: [
+  children: [
     {
       title: 'LibriVox Audiobooks',
       path: '/archive/collection/librivoxaudio',

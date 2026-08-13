@@ -41,7 +41,7 @@ Android sends a subset of what iOS does: the query plus music focuses (genre / a
 
 ## Browse display
 
-Two per-Track fields control how Android Auto renders a browsable's children:
+Two declarations control how Android Auto renders a browsable's children — the parent's `childrenStyle` and the page's sections:
 
 ```ts
 {
@@ -52,14 +52,19 @@ Two per-Track fields control how Android Auto renders a browsable's children:
 }
 ```
 
-- **`childrenStyle`** — `'list'` (rows) or `'grid'` (tiles), set on the **parent** to choose how its children appear.
-- **`groupTitle`** — set on children to add section headers. Contiguous children sharing a `groupTitle` render under one header.
+- **`childrenStyle`** — `'list'` (rows) or `'grid'` (tiles), set on the **parent** to choose the default layout for its children.
+- **Sections** — declare `sections` on the page to group its tracks under headers; each [`Section`](/api/types/browser-nodes/#section)'s `title` renders as a header above its children. A section's `style` overrides `childrenStyle` for that section: a `'grid'` or `'grid-row'` section renders as wrapping grid tiles (Android Auto's grid always wraps, so the two tile styles render identically), plus a "view all" link built from the section's `path` and `subtitle`.
 
 ```ts
-children: [
-  { title: 'Morning Show', src: '…', groupTitle: 'Live now' },
-  { title: 'Afternoon Drive', src: '…', groupTitle: 'Live now' },
-  { title: 'Late Night Jazz', src: '…', groupTitle: 'Up next' }
+sections: [
+  {
+    title: 'Live now',
+    children: [
+      { title: 'Morning Show', src: '…' },
+      { title: 'Afternoon Drive', src: '…' }
+    ]
+  },
+  { title: 'Up next', children: [{ title: 'Late Night Jazz', src: '…' }] }
 ]
 ```
 

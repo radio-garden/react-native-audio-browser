@@ -236,7 +236,7 @@ with `onNavigationError` / snapshot with `getNavigationError()`.
 | `'network-error'`     | The request failed (connection error, timeout, no internet).                                  |
 | `'http-error'`        | Server returned non-2xx (or 2xx but parsing failed) — see `statusCode` / `statusCodeSuccess`. |
 | `'callback-error'`    | Your browse callback returned an error (e.g. auth/subscription required).                     |
-| `'empty-content'`     | The path resolved but the container has no children (empty Favorites, no search results).     |
+| `'empty-content'`     | The path resolved but the page has no tracks (empty Favorites, no search results).            |
 | `'timeout'`           | Resolution didn't finish in time.                                                             |
 | `'unknown-error'`     | An unexpected error (e.g. invalid configuration).                                             |
 

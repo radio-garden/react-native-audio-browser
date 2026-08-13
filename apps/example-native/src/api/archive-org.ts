@@ -1,6 +1,7 @@
 import type {
   BrowserSource,
   ResolvedTrack,
+  Section,
   Track
 } from 'react-native-audio-browser'
 
@@ -175,15 +176,22 @@ export async function fetchFolksoundomy(
     ...docs.filter((d) => !picked.has(d.identifier))
   ]
 
+  // One `grid` section: renders as a wrapping tile grid on CarPlay (iOS 26+)
+  // and pushes the grid hint onto every child on Android Auto.
   return {
     path: `${prefix}/folksoundomy`,
     title: 'Folksoundomy',
-    children: sorted.map((doc) => ({
-      title: doc.title ?? doc.identifier,
-      path: `${prefix}/collection/${doc.identifier}`,
-      artwork: `${BASE}/services/img/${doc.identifier}`,
-      style: 'grid' as const
-    }))
+    sections: [
+      {
+        title: 'Collections',
+        style: 'grid',
+        children: sorted.map((doc) => ({
+          title: doc.title ?? doc.identifier,
+          path: `${prefix}/collection/${doc.identifier}`,
+          artwork: `${BASE}/services/img/${doc.identifier}`
+        }))
+      }
+    ]
   }
 }
 
@@ -266,10 +274,11 @@ export const archiveRoutes: Record<string, BrowserSource> = {
   '/archive/item/{id}': ({ routeParams }) => fetchItem(routeParams!.id)
 }
 
-export const archiveLibraryEntry: Track = {
+export const archiveLibrarySection: Section = {
   title: 'Archive.org',
+  style: 'grid-row',
   path: '/archive',
-  imageRow: [
+  children: [
     {
       title: 'LibriVox Audiobooks',
       path: '/archive/collection/librivoxaudio',

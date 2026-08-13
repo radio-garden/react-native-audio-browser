@@ -105,15 +105,19 @@ Mirror the browse tree your app draws — the same state CarPlay and Android Aut
 
 - [**`useTabs()`**](/api/features/browser/#usetabs) → [`Track`](/api/types/browser-nodes/#track)`[] | undefined` — the top-level tabs.
 - [**`usePath()`**](/api/features/browser/#usepath) → `string | undefined` — the current browse path.
-- [**`useContent()`**](/api/features/browser/#usecontent) → [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack)` | undefined` — the resolved page (`content?.children` to render).
+- [**`useContent()`**](/api/features/browser/#usecontent) → [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack)` | undefined` — the resolved page (`content?.sections` to render — each a titled, styled group of tracks).
 
 ```tsx
 import { useContent, navigate } from 'react-native-audio-browser'
 
 function Browse() {
   const page = useContent()
+  // each section: { title?, style?, path?, children: Track[] }
   return (
-    <List data={page?.children ?? []} onSelect={(track) => navigate(track)} />
+    <List
+      sections={page?.sections ?? []}
+      onSelect={(track) => navigate(track)}
+    />
   )
 }
 ```

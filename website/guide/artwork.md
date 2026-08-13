@@ -38,7 +38,7 @@ The library publishes art to several surfaces; each gets its image from a field/
 | **iOS lock screen / Control Center**            | `nowPlayingArtwork` → falls back to `artwork` | yes       | —                                                            |
 | **CarPlay Now Playing**                         | `nowPlayingArtwork` → `artwork`               | yes       | —                                                            |
 | **Android notification / Android Auto**         | `nowPlayingArtwork` → `artwork`               | yes       | — (Android Auto is dark-only)                                |
-| **CarPlay `imageRow` thumbnails**               | `imageRow[].artwork`                          | yes       | —                                                            |
+| **CarPlay tile sections** (`grid` / `grid-row`) | `artwork` (each tile is a Track)              | yes       | CarPlay: `artworkCarPlayTinted`, or a `{ light, dark }` pair |
 
 **Size hint** = the surface tells the library the pixels it needs, delivered as an [`ImageContext`](/api/types/browser/#imagecontext) to your `transform` / `imageQueryParams`. Browse-time resolution has none.
 
@@ -46,7 +46,7 @@ Two things to take from the table:
 
 - **One image by default.** With only `artwork` set, the same source feeds browse rows _and_ every now-playing surface. Set `nowPlayingArtwork` only when the now-playing image should differ (a larger, lock-screen-quality cover without bloating list thumbnails).
 - **Size hints exist only where the surface knows its size.** Browse-time resolution has no size, so `imageQueryParams` and `context` (below) do nothing there; they kick in at load time on CarPlay / Android Auto / now-playing.
-- **Tinting is for browse-list icons only.** `artworkCarPlayTinted` is applied when CarPlay renders list rows and tabs — not to now-playing cover art or `imageRow` thumbnails.
+- **Tinting is for browse icons only.** `artworkCarPlayTinted` is applied when CarPlay renders browse content — list rows, tabs, and tiles — not to now-playing cover art.
 
 ## The transform pipeline
 
@@ -176,8 +176,6 @@ Everywhere a single image is required, a pair resolves to its `dark` URL:
 | **Now-playing** (all platforms)          | `dark`                        |
 | **`artworkSource`** (your own `<Image>`) | `dark`                        |
 
-`imageRow` thumbnails take a single URL only — pairs are not supported there.
-
 ::: tip Pair or tint?
 Prefer [`artworkCarPlayTinted`](#tinting-and-platform-icons) when recoloring the same shape gives the right result: it's one fetch instead of two, the variants can't drift apart, and it works from the image's alpha so the source color is irrelevant. Reach for a pair only when the appearances need different artwork.
 :::
@@ -214,21 +212,29 @@ Two separate ideas here: the **`{id}` template** is replaced with the active tra
 Now-playing artwork is resolved **once per active track**, keyed on its `id` — so it won't re-resolve while the same track keeps playing. There is no imperative way to swap _only_ the image mid-stream: `updateNowPlaying()` overrides `title` / `artist` / `album`, not artwork. Changing it means making a _new_ active track (a different `id` plus the new `artwork`) the current one, which reloads playback — so it's not a fit for, say, updating live-radio cover art on each song. An in-place update API is tracked in [issue #76](https://github.com/radio-garden/react-native-audio-browser/issues/76).
 :::
 
-## CarPlay image rows
+## Tile sections
 
-A track can render as a horizontal strip of tappable thumbnails by setting `imageRow` — an array of [`ImageRowItem`](/api/types/browser-nodes/#imagerowitem) (`{ title, path?, artwork? }`):
+A page's [`Section`](/api/types/browser-nodes/#section) can render its tracks as tappable artwork tiles by setting `style: 'grid'` (wrapping) or `style: 'grid-row'` (a single line — formerly the image row):
 
 ```ts
 {
-  title: 'Featured',
-  imageRow: [
-    { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
-    { title: 'Rock', path: '/browse/rock', artwork: 'https://…/rock.jpg' }
+  path: '/home',
+  title: 'Home',
+  sections: [
+    {
+      title: 'Featured',
+      style: 'grid-row',
+      path: '/browse/featured', // header / "view all" target
+      children: [
+        { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
+        { title: 'Rock', path: '/browse/rock', artwork: 'https://…/rock.jpg' }
+      ]
+    }
   ]
 }
 ```
 
-This is **CarPlay-only** and shows ~4–5 thumbnails (extras are dropped); Android Auto ignores `imageRow` and renders the parent as a normal row. Each item's `artwork` runs through the same pipeline as any other.
+Each tile is an ordinary Track, so its `artwork` runs through the same pipeline as any other. Tile styles presume artwork: a track without any renders as a placeholder tile plus its title — the artwork `resolve` hook is the place to supply fallback art. On CarPlay a `grid-row` shows the tiles that fit (roughly eight, width-dependent; the rest are truncated) and a `grid` wraps on iOS 26+ (rendering as a list before that); Android Auto's grid always wraps, so it renders both tile styles identically. See [Browser → Presentation](/guide/browser#presentation) for the full per-surface rundown.
 
 ## API summary
 
@@ -242,4 +248,4 @@ This is **CarPlay-only** and shows ~4–5 thumbnails (extras are dropped); Andro
 | `nowPlayingArtwork`                                             | Separate config for now-playing art; supports `{id}`; native-only.                    |
 | [`imageQueryParams`](/api/types/browser/#imagequeryparams)      | Map the surface's requested size to your CDN's query params.                          |
 | [`ImageContext`](/api/types/browser/#imagecontext)              | Requested `width`/`height` in pixels, passed to `transform`.                          |
-| `imageRow`                                                      | Render a track as a CarPlay thumbnail strip.                                          |
+| [`Section.style`](/api/types/browser-nodes/#sectionstyle)       | `'grid'` / `'grid-row'` render a section's tracks as artwork tiles.                   |

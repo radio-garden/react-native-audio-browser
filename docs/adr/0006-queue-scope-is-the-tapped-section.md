@@ -27,3 +27,7 @@ flow through the same expansion instead of loading a queue of one.
   lists, where the last-played track is always first).
 - Section identity is still derived from `groupTitle` adjacency; #93 would
   make the derivation structural.
+
+_Amended by ADR 0010: sections are now structural (`Section`), so the
+`groupTitle`-run derivation this ADR describes no longer exists — the
+decision itself (queue scope is the tapped section) stands._

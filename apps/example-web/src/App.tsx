@@ -12,6 +12,7 @@ import AudioBrowser, {
   usePlayingState,
   usePolledProgress,
   useTabs,
+  type Section,
   type Track
 } from 'react-native-audio-browser'
 import { archiveRoutes, fetchItem, searchArchive } from './archive'
@@ -72,7 +73,12 @@ function setup() {
   return started
 }
 
-type Panel = { path: string; title: string; rows: Track[]; loading: boolean }
+type Panel = {
+  path: string
+  title: string
+  sections: Section[]
+  loading: boolean
+}
 type Layer = { key: number; panel: Panel; cls: string }
 
 const PlayIcon = ({ className = 'glyph' }: { className?: string }) => (
@@ -155,7 +161,7 @@ export default function App() {
     const panel: Panel = {
       path: path ?? '',
       title: content?.title ?? '',
-      rows: content?.children ?? [],
+      sections: content?.sections ?? [],
       loading: !content
     }
     setStack((prev) => {
@@ -186,7 +192,7 @@ export default function App() {
     navigate(item)
   }
 
-  // Drill into a path-only target (imageRow tiles, section headers).
+  // Drill into a path-only target (section headers).
   const openPath = (to: string) => {
     if (path) setHistory((h) => [...h, path])
     dir.current = 'fwd'
@@ -220,25 +226,25 @@ export default function App() {
             className={`list ${layer.cls}`}
             onAnimationEnd={settle}
           >
-            {layer.panel.rows.map((item, i) => {
-              if (item.imageRow) {
+            {layer.panel.sections.map((section, si) => {
+              if (section.style === 'grid-row' || section.style === 'grid') {
                 return (
-                  <li key={`${item.title}-${i}`} className="section">
+                  <li key={`${section.title}-${si}`} className="section">
                     <div
                       className="section-head"
-                      onClick={() => item.path && openPath(item.path)}
+                      onClick={() => section.path && openPath(section.path)}
                     >
-                      <span className="section-title">{item.title}</span>
-                      {item.path && <span className="ic">›</span>}
+                      <span className="section-title">{section.title}</span>
+                      {section.path && <span className="ic">›</span>}
                     </div>
                     <div className="img-row">
-                      {item.imageRow.map((tile, j) => (
+                      {section.children.map((tile, j) => (
                         <button
                           key={`${tile.title}-${j}`}
                           className="tile"
-                          onClick={() => tile.path && openPath(tile.path)}
+                          onClick={() => open(tile)}
                         >
-                          {tile.artwork && (
+                          {typeof tile.artwork === 'string' && (
                             <img
                               className="tile-art"
                               src={tile.artwork}
@@ -253,34 +259,37 @@ export default function App() {
                   </li>
                 )
               }
-              const isActive = item.src != null && nowPlaying?.src === item.src
-              return (
-                <li
-                  key={`${item.title}-${i}`}
-                  className={`row${isActive ? ' active' : ''}`}
-                  onClick={() => open(item)}
-                >
-                  {item.artwork ? (
-                    <img
-                      className="art"
-                      src={item.artwork}
-                      alt=""
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="art ph" />
-                  )}
-                  <span className="rt">
-                    <span className="rt-title">{item.title}</span>
-                    {item.artist && (
-                      <span className="rt-sub">{item.artist}</span>
+              return section.children.map((item, i) => {
+                const isActive =
+                  item.src != null && nowPlaying?.src === item.src
+                return (
+                  <li
+                    key={`${item.title}-${si}-${i}`}
+                    className={`row${isActive ? ' active' : ''}`}
+                    onClick={() => open(item)}
+                  >
+                    {typeof item.artwork === 'string' ? (
+                      <img
+                        className="art"
+                        src={item.artwork}
+                        alt=""
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="art ph" />
                     )}
-                  </span>
-                  <span className="ic">
-                    {item.src ? <PlayIcon className="ic-svg" /> : '›'}
-                  </span>
-                </li>
-              )
+                    <span className="rt">
+                      <span className="rt-title">{item.title}</span>
+                      {item.artist && (
+                        <span className="rt-sub">{item.artist}</span>
+                      )}
+                    </span>
+                    <span className="ic">
+                      {item.src ? <PlayIcon className="ic-svg" /> : '›'}
+                    </span>
+                  </li>
+                )
+              })
             })}
             {layer.panel.loading && (
               <li className="loading">
@@ -321,7 +330,7 @@ export default function App() {
             />
           </div>
           <div className="player-row">
-            {nowPlaying.artwork && (
+            {typeof nowPlaying.artwork === 'string' && (
               <img className="part" src={nowPlaying.artwork} alt="" />
             )}
             <span className="pinfo">
