@@ -197,11 +197,14 @@ final class BrowserManager {
     track.identity.map(favoriteIds.contains) ?? false
   }
 
-  /// Hydrates favorites on all children of a ResolvedTrack.
+  /// Hydrates favorites on all tracks of a resolved page. Pages reach
+  /// hydration normalized (ADR 0010), so `sections` is the only structure
+  /// to walk.
   private func hydrateChildren(_ resolvedTrack: ResolvedTrack) -> ResolvedTrack {
-    guard let children = resolvedTrack.children else { return resolvedTrack }
-    let hydratedChildren = children.map { hydrateFavorite($0) }
-    return resolvedTrack.copying(children: hydratedChildren)
+    guard let sections = resolvedTrack.sections else { return resolvedTrack }
+    return resolvedTrack.copying(sections: sections.map { section in
+      section.copying(children: section.children.map { hydrateFavorite($0) })
+    })
   }
 
   // MARK: - Navigation
@@ -288,12 +291,14 @@ final class BrowserManager {
       )
     }
 
-    // Validate and transform children
-    if let children = resolvedTrack.children {
-      let transformed = try await transformChildren(
-        children, parentPath: path, routeEntry: routeEntry?.0,
+    // Normalize to the canonical sectioned shape (children sugar → one
+    // untitled section — ADR 0010), then validate and transform. The output
+    // never carries `children`.
+    if let sections = resolvedTrack.normalizedSections {
+      let transformed = try await transformSections(
+        sections, parentPath: path, routeEntry: routeEntry?.0,
       )
-      return resolvedTrack.copying(children: transformed)
+      return resolvedTrack.copying(sections: transformed, children: .some(nil))
     }
 
     return resolvedTrack
@@ -431,8 +436,8 @@ final class BrowserManager {
     let nitroResult = result.toNitro()
 
     logger.debug("Resolved: \(nitroResult.title)")
-    if let children = nitroResult.children {
-      logger.debug("  children: \(children.count) tracks")
+    if let sections = nitroResult.normalizedSections {
+      logger.debug("  children: \(sections.reduce(0) { $0 + $1.children.count }) tracks")
     }
 
     return nitroResult
@@ -509,72 +514,51 @@ final class BrowserManager {
 
   // MARK: - Child Transformation
 
-  private func transformChildren(
-    _ children: [Track],
+  private func transformSections(
+    _ sections: [Section],
     parentPath: String,
     routeEntry: NativeRouteEntry?,
-  ) async throws -> [Track] {
-    var transformed: [Track] = []
+  ) async throws -> [Section] {
+    var transformed: [Section] = []
+    // The contextual index is the flat page position — children concatenated
+    // in section order (ADR 0009/0010).
+    var flatIndex = 0
 
-    for (index, track) in children.enumerated() {
-      // Validate track has stable identifier. A track carrying an imageRow is
-      // exempt: a path-less row is a pure preview — never selected, navigated
-      // to, or cached (its items carry their own identity).
-      if track.path == nil, track.src == nil, track.imageRow?.isEmpty != false {
-        throw BrowserError.invalidConfiguration(
-          "Track must have either 'path' or 'src' for stable identification: \(track.title)",
-        )
-      }
+    for section in sections {
+      var transformedChildren: [Track] = []
 
-      var transformedTrack = track
+      for track in section.children {
+        let index = flatIndex
+        flatIndex += 1
 
-      if track.src != nil, track.path == nil {
-        // src != nil guarantees a non-nil identity (id when non-blank, else src).
-        // The page position rides along as a duplicate-identity tie-breaker.
-        let contextualPath = BrowserPathHelper.build(
-          parentPath: parentPath, trackId: track.identity!, index: index,
-        )
-        transformedTrack = track.copying(path: contextualPath)
-      }
-
-      // Resolve artwork URL at browse-time (no size context)
-      let artworkConfig = routeEntry?.artwork ?? config.artwork
-      if let imageSource = await resolveArtworkUrl(track: transformedTrack, perRouteConfig: artworkConfig) {
-        transformedTrack = transformedTrack.copying(artworkSource: imageSource)
-      }
-
-      // Resolve artwork for image row items
-      if let imageRowItems = transformedTrack.imageRow {
-        var resolvedItems: [ImageRowItem] = []
-        for item in imageRowItems {
-          let itemImageSource = await resolveArtworkUrl(track: item.toTrack(), perRouteConfig: artworkConfig)
-          // Playable items get a contextual path like any list row, so a
-          // thumbnail tap expands into its section's queue instead of a
-          // queue of one (ADR 0006). Keyed by the item's identity (id when
-          // non-blank, else src) — non-nil whenever src is. The stamped index
-          // is the *row's* page position: it pins which section was tapped
-          // when the same identity also appears elsewhere on the page.
-          let itemPath = item.path ?? (item.src == nil ? nil : item.identity.map {
-            BrowserPathHelper.build(parentPath: parentPath, trackId: $0, index: index)
-          })
-          resolvedItems.append(ImageRowItem(
-            id: item.id,
-            path: itemPath,
-            src: item.src,
-            artwork: item.artwork,
-            artworkSource: itemImageSource,
-            title: item.title,
-            artist: item.artist,
-            album: item.album,
-            albumPath: item.albumPath,
-            live: item.live,
-            request: item.request,
-          ))
+        // Validate track has stable identifier.
+        if track.path == nil, track.src == nil {
+          throw BrowserError.invalidConfiguration(
+            "Track must have either 'path' or 'src' for stable identification: \(track.title)",
+          )
         }
-        transformedTrack = transformedTrack.copying(imageRow: resolvedItems)
+
+        var transformedTrack = track
+
+        if track.src != nil, track.path == nil {
+          // src != nil guarantees a non-nil identity (id when non-blank, else src).
+          // The flat page position rides along as a duplicate-identity tie-breaker.
+          let contextualPath = BrowserPathHelper.build(
+            parentPath: parentPath, trackId: track.identity!, index: index,
+          )
+          transformedTrack = track.copying(path: contextualPath)
+        }
+
+        // Resolve artwork URL at browse-time (no size context)
+        let artworkConfig = routeEntry?.artwork ?? config.artwork
+        if let imageSource = await resolveArtworkUrl(track: transformedTrack, perRouteConfig: artworkConfig) {
+          transformedTrack = transformedTrack.copying(artworkSource: imageSource)
+        }
+
+        transformedChildren.append(transformedTrack)
       }
 
-      transformed.append(transformedTrack)
+      transformed.append(section.copying(children: transformedChildren))
     }
 
     return transformed
@@ -659,17 +643,20 @@ final class BrowserManager {
   /// station. Decision in `SearchDrillIn.playable`; mirrors Android's
   /// `searchPlayable`.
   func searchPlayable(_ params: SearchParams) async throws -> [Track]? {
-    let children = try await (search(params).children) ?? []
+    let children = try await (search(params).flattenedChildren) ?? []
     return try await SearchDrillIn.playable(from: children) { [self] path in
       logger.debug("First search result is browsable-only, resolving: \(path)")
-      return try await (resolve(path).children) ?? []
+      return try await (resolve(path).flattenedChildren) ?? []
     }
   }
 
   private func makeSearchResult(query: String, results: [Track]) -> ResolvedTrack {
+    // Search results are a flat list; as a resolved page they are one
+    // untitled section (ADR 0010).
     ResolvedTrack(
       path: BrowserPathHelper.createSearchPath(query),
-      children: results,
+      sections: [.untitled(results)],
+      children: nil,
       carPlaySiriListButton: nil,
       id: nil,
       src: nil,
@@ -687,9 +674,7 @@ final class BrowserManager {
       style: nil,
       childrenStyle: nil,
       favorited: nil,
-      groupTitle: nil,
       live: nil,
-      imageRow: nil,
     )
   }
 
@@ -706,7 +691,8 @@ final class BrowserManager {
     }
 
     let resolved = try await resolveRouteEntry(tabsEntry, path: Self.tabsRoutePath, params: [:])
-    let tabTracks = resolved.children ?? []
+    // Tabs are a flat list, not a page — a sectioned tabs source flattens.
+    let tabTracks = resolved.flattenedChildren ?? []
 
     tabs = tabTracks
     return tabTracks
@@ -728,28 +714,21 @@ final class BrowserManager {
 
     // Resolve the parent container
     let resolved = try await resolve(parentPath, useCache: true)
-    guard let children = resolved.children else { return nil }
+    guard let sections = resolved.normalizedSections else { return nil }
 
     // Queue scope is the tapped section, not the whole page (ADR 0006). The
-    // stamped page index pins which section (and which copy) was tapped when
+    // stamped flat index pins which section (and which copy) was tapped when
     // the same identity appears more than once; it is only a tie-breaker —
     // a stale index falls back to the first identity match. An id that no
     // longer appears on the page at all aborts the expansion — the caller
     // falls back to the stored single track (matching Android); silently
     // queueing the changed list would resume the wrong station.
     let tappedIndex = BrowserPathHelper.extractIndex(path)
-    let sectionTracks: [Track]
-    let tappedOffset: Int?
-    switch SectionScope.section(of: children, containing: trackId, tappedIndex: tappedIndex) {
-    case let .imageRow(items):
-      sectionTracks = items.map { $0.toTrack() }
-      tappedOffset = nil
-    case let .run(tracks, offset):
-      sectionTracks = tracks
-      tappedOffset = offset
-    case nil:
+    guard let scoped = SectionScope.scoped(in: sections, containing: trackId, tappedIndex: tappedIndex) else {
       return nil
     }
+    let sectionTracks = scoped.section.children
+    let tappedOffset = scoped.tappedOffset
 
     // Filter to playable tracks (have src)
     let playableTracks = sectionTracks.filter { $0.src != nil }

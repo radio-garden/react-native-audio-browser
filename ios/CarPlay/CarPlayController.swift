@@ -698,7 +698,9 @@ public final class RNABCarPlayController: NSObject {
       // even with no rows — the "Ask Siri to Play" cell IS its content — so it
       // renders rather than falling through to the empty-content state.
       let hasAssistantCell = resolved.carPlaySiriListButton != nil
-      if resolved.children?.isEmpty ?? true, !hasAssistantCell {
+      // A page of empty sections is still empty.
+      let hasChildren = resolved.normalizedSections?.contains { !$0.children.isEmpty } ?? false
+      if !hasChildren, !hasAssistantCell {
         // Empty is modeled as a navigation error (code .emptyContent) so it goes
         // through the same path-aware formatter as failures — letting an app give
         // an empty Favorites tab different copy than an empty search. ADR 0001.

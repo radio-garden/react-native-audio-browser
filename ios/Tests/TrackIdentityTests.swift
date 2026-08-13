@@ -17,16 +17,4 @@ struct TrackIdentityTests {
   @Test func neitherIdNorSrcHasNoIdentity() {
     #expect(Track(path: "/browse/only").identity == nil)
   }
-
-  @Test func imageRowItemIdWinsOverSrc() {
-    #expect(ImageRowItem(id: "stable", src: "s", title: "t").identity == "stable")
-  }
-
-  @Test func imageRowItemBlankIdFallsBackToSrc() {
-    #expect(ImageRowItem(id: "", src: "s", title: "t").identity == "s")
-  }
-
-  @Test func imageRowItemWithNeitherHasNoIdentity() {
-    #expect(ImageRowItem(path: "/browse/only", title: "t").identity == nil)
-  }
 }

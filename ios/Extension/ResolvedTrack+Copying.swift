@@ -13,6 +13,7 @@ extension ResolvedTrack {
   /// `path` and `title` use single-optional since they are non-optional on ResolvedTrack.
   func copying(
     path: String? = nil,
+    sections: [Section]?? = nil,
     children: [Track]?? = nil,
     carPlaySiriListButton: CarPlaySiriListButtonPosition?? = nil,
     id: String?? = nil,
@@ -32,12 +33,11 @@ extension ResolvedTrack {
     style: TrackStyle?? = nil,
     childrenStyle: TrackStyle?? = nil,
     favorited: Bool?? = nil,
-    groupTitle: String?? = nil,
     live: Bool?? = nil,
-    imageRow: [ImageRowItem]?? = nil,
   ) -> ResolvedTrack {
     ResolvedTrack(
       path: path ?? self.path,
+      sections: sections ?? self.sections,
       children: children ?? self.children,
       carPlaySiriListButton: carPlaySiriListButton ?? self.carPlaySiriListButton,
       id: id ?? self.id,
@@ -57,9 +57,7 @@ extension ResolvedTrack {
       style: style ?? self.style,
       childrenStyle: childrenStyle ?? self.childrenStyle,
       favorited: favorited ?? self.favorited,
-      groupTitle: groupTitle ?? self.groupTitle,
       live: live ?? self.live,
-      imageRow: imageRow ?? self.imageRow,
     )
   }
 }

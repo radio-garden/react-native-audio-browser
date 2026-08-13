@@ -551,7 +551,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     Promise.async { [weak self] in
       guard let self else { return [] }
       let resolved = try await browserManager.search(query)
-      return resolved.children ?? []
+      return resolved.flattenedChildren ?? []
     }
   }
 

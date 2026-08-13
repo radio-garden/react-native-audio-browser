@@ -16,10 +16,3 @@ extension Track {
     return src
   }
 }
-
-extension ImageRowItem {
-  var identity: String? {
-    if let id, !id.isEmpty { return id }
-    return src
-  }
-}

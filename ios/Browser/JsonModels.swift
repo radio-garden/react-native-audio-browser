@@ -62,41 +62,28 @@ extension JsonArtwork {
   }
 }
 
-/// JSON model for image row items (horizontal thumbnail row).
-struct JsonImageRowItem: Codable {
-  let id: String?
+/// JSON model for a page section (ADR 0010). Legacy `groupTitle`/`imageRow`
+/// keys in payloads are simply unknown to these models and decode as
+/// ignored dead weight.
+struct JsonSection: Codable {
+  let title: String?
+  let subtitle: String?
+  let style: String?
   let path: String?
-  let src: String?
-  let artwork: String?
-  let title: String
-  let artist: String?
-  let album: String?
-  let albumPath: String?
-  let live: Bool?
-  let request: JsonTrackRequest?
+  let children: [JsonTrack]
 
   init(
-    id: String? = nil,
+    title: String? = nil,
+    subtitle: String? = nil,
+    style: String? = nil,
     path: String? = nil,
-    src: String? = nil,
-    artwork: String? = nil,
-    title: String,
-    artist: String? = nil,
-    album: String? = nil,
-    albumPath: String? = nil,
-    live: Bool? = nil,
-    request: JsonTrackRequest? = nil,
+    children: [JsonTrack],
   ) {
-    self.id = id
-    self.path = path
-    self.src = src
-    self.artwork = artwork
     self.title = title
-    self.artist = artist
-    self.album = album
-    self.albumPath = albumPath
-    self.live = live
-    self.request = request
+    self.subtitle = subtitle
+    self.style = style
+    self.path = path
+    self.children = children
   }
 }
 
@@ -126,11 +113,11 @@ struct JsonResolvedTrack: Codable {
   let description: String?
   let genre: String?
   let duration: Double?
+  let sections: [JsonSection]?
   let children: [JsonTrack]?
   let src: String?
   let style: String?
   let childrenStyle: String?
-  let groupTitle: String?
   let live: Bool?
   let carPlaySiriListButton: String?
 
@@ -146,11 +133,11 @@ struct JsonResolvedTrack: Codable {
     description: String? = nil,
     genre: String? = nil,
     duration: Double? = nil,
+    sections: [JsonSection]? = nil,
     children: [JsonTrack]? = nil,
     src: String? = nil,
     style: String? = nil,
     childrenStyle: String? = nil,
-    groupTitle: String? = nil,
     live: Bool? = nil,
     carPlaySiriListButton: String? = nil,
   ) {
@@ -164,11 +151,11 @@ struct JsonResolvedTrack: Codable {
     self.description = description
     self.genre = genre
     self.duration = duration
+    self.sections = sections
     self.children = children
     self.src = src
     self.style = style
     self.childrenStyle = childrenStyle
-    self.groupTitle = groupTitle
     self.live = live
     self.carPlaySiriListButton = carPlaySiriListButton
     self.id = id
@@ -192,9 +179,7 @@ struct JsonTrack: Codable {
   let request: JsonTrackRequest?
   let style: String?
   let childrenStyle: String?
-  let groupTitle: String?
   let live: Bool?
-  let imageRow: [JsonImageRowItem]?
 
   init(
     id: String? = nil,
@@ -212,9 +197,7 @@ struct JsonTrack: Codable {
     request: JsonTrackRequest? = nil,
     style: String? = nil,
     childrenStyle: String? = nil,
-    groupTitle: String? = nil,
     live: Bool? = nil,
-    imageRow: [JsonImageRowItem]? = nil,
   ) {
     self.path = path
     self.title = title
@@ -230,9 +213,7 @@ struct JsonTrack: Codable {
     self.request = request
     self.style = style
     self.childrenStyle = childrenStyle
-    self.groupTitle = groupTitle
     self.live = live
-    self.imageRow = imageRow
     self.id = id
   }
 }
@@ -267,9 +248,7 @@ struct JsonTrack: Codable {
         request: track.request.map(JsonTrackRequest.init(from:)),
         style: nil,
         childrenStyle: nil,
-        groupTitle: track.groupTitle,
         live: track.live,
-        imageRow: nil,
       )
     }
   }
@@ -314,20 +293,14 @@ struct JsonTrack: Codable {
     }
   }
 
-  extension JsonImageRowItem {
-    func toNitro() -> ImageRowItem {
-      ImageRowItem(
-        id: id,
-        path: path,
-        src: src,
-        artwork: artwork,
-        artworkSource: nil,
+  extension JsonSection {
+    func toNitro() -> Section {
+      Section(
         title: title,
-        artist: artist,
-        album: album,
-        albumPath: albumPath,
-        live: live,
-        request: request?.toNitro(),
+        subtitle: subtitle,
+        style: style.flatMap { SectionStyle(fromString: $0.lowercased()) },
+        path: path,
+        children: children.map { $0.toNitro() },
       )
     }
   }
@@ -336,6 +309,7 @@ struct JsonTrack: Codable {
     func toNitro() -> ResolvedTrack {
       ResolvedTrack(
         path: path,
+        sections: sections?.map { $0.toNitro() },
         children: children?.map { $0.toNitro() },
         carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
         id: id,
@@ -354,9 +328,7 @@ struct JsonTrack: Codable {
         style: style?.toTrackStyle(),
         childrenStyle: childrenStyle?.toTrackStyle(),
         favorited: nil,
-        groupTitle: groupTitle,
         live: live,
-        imageRow: nil,
       )
     }
   }
@@ -382,9 +354,7 @@ struct JsonTrack: Codable {
         style: style?.toTrackStyle(),
         childrenStyle: childrenStyle?.toTrackStyle(),
         favorited: nil,
-        groupTitle: groupTitle,
         live: live,
-        imageRow: imageRow?.map { $0.toNitro() },
       )
     }
   }
