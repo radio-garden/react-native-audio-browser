@@ -36,14 +36,20 @@ final class CarPlayImageLoader {
     return sfSymbolImageForSize(symbolName, canvasSize: canvasSize, backgroundColor: bg, symbolColor: fg)
   }
 
-  /// Cached empty placeholder image to reserve space while artwork loads
-  lazy var placeholderImage: UIImage? = {
-    let size = CPListItem.maximumImageSize
-    let scale = carTraitCollection.displayScale
-    UIGraphicsBeginImageContextWithOptions(size, false, scale)
+  /// Cached empty placeholders, keyed by point size — list items and image-row
+  /// cells reserve different footprints.
+  private var placeholders: [String: UIImage] = [:]
+
+  /// Empty placeholder image reserving a `size`-point slot while artwork loads.
+  func placeholderImage(size: CGSize) -> UIImage? {
+    let key = "\(size.width)×\(size.height)"
+    if let cached = placeholders[key] { return cached }
+    UIGraphicsBeginImageContextWithOptions(size, false, carTraitCollection.displayScale)
     defer { UIGraphicsEndImageContext() }
-    return UIGraphicsGetImageFromCurrentImageContext()
-  }()
+    guard let image = UIGraphicsGetImageFromCurrentImageContext() else { return nil }
+    placeholders[key] = image
+    return image
+  }
 
   // MARK: - Artwork Loading
 

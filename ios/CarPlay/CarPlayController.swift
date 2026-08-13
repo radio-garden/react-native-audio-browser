@@ -1341,9 +1341,10 @@ private extension RNABCarPlayController {
 // MARK: - UIImage Resize
 
 extension UIImage {
-  /// Draws the image centered within the target size, maintaining aspect ratio
-  func resized(to targetSize: CGSize) -> UIImage? {
-    UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
+  /// Draws the image centered within the target size, maintaining aspect
+  /// ratio, at the given display scale (the car screen's, not the phone's).
+  func resized(to targetSize: CGSize, scale: CGFloat) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(targetSize, false, scale)
     defer { UIGraphicsEndImageContext() }
 
     // Scale to fit while maintaining aspect ratio

@@ -295,7 +295,10 @@ final class CarPlayNowPlayingManager {
   /// Returns the appropriate image for the favorite button based on state
   private func favoriteButtonImage(isFavorited: Bool) -> UIImage {
     let symbolName = isFavorited ? "heart.fill" : "heart"
-    guard let image = UIImage(systemName: symbolName)?.resized(to: CPNowPlayingButtonMaximumImageSize) else {
+    guard let image = UIImage(systemName: symbolName)?.resized(
+      to: CPNowPlayingButtonMaximumImageSize,
+      scale: interfaceController.carTraitCollection.displayScale,
+    ) else {
       return UIImage()
     }
     return image

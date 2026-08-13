@@ -135,7 +135,7 @@ final class CarPlayListItemFactory {
     // Load artwork with size context for proper CDN optimization
     if track.artwork != nil || track.artworkSource != nil {
       // Set empty placeholder to reserve space while loading
-      item.setImage(imageLoader?.placeholderImage)
+      item.setImage(imageLoader?.placeholderImage(size: CPListItem.maximumImageSize))
       imageLoader?.loadArtwork(for: track, size: CPListItem.maximumImageSize) { [weak item] image in
         Task { @MainActor in
           item?.setImage(image)
@@ -177,7 +177,7 @@ final class CarPlayListItemFactory {
     // CPListImageRowItem requires images at init — start with placeholders
     let maxImages = CPMaximumNumberOfGridImages
     let visibleItems = Array(imageRowItems.prefix(maxImages))
-    let placeholders = visibleItems.map { _ in imageLoader?.placeholderImage ?? UIImage() }
+    let placeholders = visibleItems.map { _ in imageLoader?.placeholderImage(size: Self.rowImageSize) ?? UIImage() }
     let titles = visibleItems.map(\.title)
 
     // Use imageTitles variant on iOS 17.4+ to show titles below each thumbnail
