@@ -556,7 +556,11 @@ class BrowserManager {
 
                 // Playable image-row items get contextual paths like any list
                 // row, so a tile tap expands into its section's queue instead
-                // of a queue of one (ADR 0006).
+                // of a queue of one (ADR 0006). They also run the artwork
+                // transform like any list row — via Track, since the transform
+                // and the artworkResolutions registry that display-time
+                // re-resolution reads are Track-keyed (matches the iOS child
+                // transform).
                 transformedTrack.imageRow?.let { items ->
                   transformedTrack =
                     transformedTrack.copy(
@@ -564,11 +568,21 @@ class BrowserManager {
                         items
                           .map { item ->
                             val itemIdentity = item.identity
-                            if (item.path == null && item.src != null && itemIdentity != null) {
-                              item.copy(path = BrowserPathHelper.build(path, itemIdentity))
-                            } else {
-                              item
-                            }
+                            val pathedItem =
+                              if (item.path == null && item.src != null && itemIdentity != null) {
+                                item.copy(path = BrowserPathHelper.build(path, itemIdentity))
+                              } else {
+                                item
+                              }
+                            val resolved =
+                              transformArtworkUrl(
+                                with(TrackFactory) { pathedItem.toTrack(groupTitle = null) },
+                                effectiveArtworkConfig,
+                                path,
+                                index,
+                                ImageContext(null, null),
+                              )
+                            pathedItem.copy(artworkSource = resolved.artworkSource)
                           }
                           .toTypedArray()
                     )
