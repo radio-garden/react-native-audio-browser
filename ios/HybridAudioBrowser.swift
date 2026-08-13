@@ -164,7 +164,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
   public var configuration: NativeBrowserConfiguration = .init(
     path: nil, request: nil, requestResolver: nil, browse: nil, browseResolver: nil, media: nil, artwork: nil, nowPlayingArtwork: nil, routes: nil,
     singleTrack: nil, handleTrackLoad: nil,
-    androidControllerOfflineError: nil, carPlayLoadingTitle: nil, resolveAlbumUrl: nil, formatNavigationError: nil,
+    androidControllerOfflineError: nil, carPlayLoadingTitle: nil, resolveAlbumPath: nil, formatNavigationError: nil,
   ) {
     didSet {
       // Copied here, on the setter's thread: the Task below outlives this call,
@@ -181,7 +181,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       Task {
         let tabs = try? await browserManager.queryTabs()
         // Navigate to configured path, first tab, or "/"
-        let initialPath = configuredPath ?? tabs?.first?.url ?? "/"
+        let initialPath = configuredPath ?? tabs?.first?.path ?? "/"
         // Clear error before navigation (matches Kotlin clearNavigationError())
         clearNavigationError()
         do {
@@ -447,8 +447,8 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
         executePlayback(intent)
       case .intercepted:
         break
-      case let .browse(url):
-        navigateToBrowsableUrl(url)
+      case let .browse(path):
+        navigateToBrowsablePath(path)
       case .none:
         break
       }
@@ -472,13 +472,13 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
     }
   }
 
-  private func navigateToBrowsableUrl(_ url: String) {
+  private func navigateToBrowsablePath(_ path: String) {
     clearNavigationError()
     Task {
       do {
-        try await browserManager.navigate(url)
+        try await browserManager.navigate(path)
       } catch {
-        handleNavigationError(error, path: url)
+        handleNavigationError(error, path: path)
       }
     }
   }
@@ -1220,7 +1220,7 @@ public class HybridAudioBrowser: HybridAudioBrowserSpec, @unchecked Sendable {
       duration: track.duration,
       artwork: nowPlayingArtwork(for: track),
       description: track.description,
-      mediaId: track.src ?? track.url,
+      mediaId: track.src ?? track.path,
       genre: track.genre,
     )
   }
@@ -1813,10 +1813,10 @@ extension HybridAudioBrowser: TrackPlayerCallbacks {
           let track = state.track.toNitro()
           let startMs = (track.live == true) ? nil : state.positionMs
           // Match Android resume: re-expand the full queue from the track's contextual
-          // URL (parent container → siblings + selected index). Fall back to the single
-          // track when the url isn't contextual or expansion fails.
-          if let url = state.track.url,
-             let expanded = try? await browser.browserManager.expandQueueFromContextualUrl(url)
+          // path (parent container → siblings + selected index). Fall back to the single
+          // track when the path isn't contextual or expansion fails.
+          if let path = state.track.path,
+             let expanded = try? await browser.browserManager.expandQueueFromContextualPath(path)
           {
             player.setQueue(expanded.tracks, initialIndex: expanded.selectedIndex, startPositionMs: startMs, playWhenReady: true)
           } else {

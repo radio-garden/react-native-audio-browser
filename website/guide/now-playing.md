@@ -130,7 +130,7 @@ To render artwork, don't use this `artwork` field directly — it's a raw URL st
 
 ## Gotchas worth knowing
 
-**CarPlay's tappable line renders from `album`.** When a track has an `albumUrl` (or `resolveAlbumUrl` returns a path), the _album line_ becomes tappable — rendered as a third metadata line with a chevron, navigating the browse stack. A track without an `album` has no such line, so there is nothing to render or tap even though a destination exists. See the [CarPlay guide](/guide/carplay#album-line-navigation).
+**CarPlay's tappable line renders from `album`.** When a track has an `albumPath` (or `resolveAlbumPath` returns a path), the _album line_ becomes tappable — rendered as a third metadata line with a chevron, navigating the browse stack. A track without an `album` has no such line, so there is nothing to render or tap even though a destination exists. See the [CarPlay guide](/guide/carplay#album-line-navigation).
 
 **The iOS lock screen never shows `album`.** Its secondary line comes from `artist` alone. If you move information from `artist` to `album` (for example to feed the CarPlay button line), it disappears from the lock screen.
 

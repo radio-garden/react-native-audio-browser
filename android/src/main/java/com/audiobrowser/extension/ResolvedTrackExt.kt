@@ -12,7 +12,7 @@ import com.margelo.nitro.audiobrowser.Track
 fun ResolvedTrack.toTrack(): Track =
   Track(
     id = id,
-    url = url,
+    path = path,
     src = src,
     artwork = artwork,
     artworkSource = artworkSource,
@@ -21,7 +21,7 @@ fun ResolvedTrack.toTrack(): Track =
     title = title,
     subtitle = subtitle,
     artist = artist,
-    albumUrl = albumUrl,
+    albumPath = albumPath,
     album = album,
     description = description,
     genre = genre,

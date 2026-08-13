@@ -16,8 +16,8 @@ final class CarPlayNowPlayingManager {
 
   private let interfaceController: CPInterfaceController
   var listItemFactory: (Track, ((CPSelectableListItem, @escaping () -> Void) -> Void)?) -> CPListItem
-  /// Pushes a browse destination (wired to the controller's navigateToUrl).
-  var navigateToUrl: ((_ url: String, _ title: String) -> Void)?
+  /// Pushes a browse destination (wired to the controller's navigateToPath).
+  var navigateToPath: ((_ path: String, _ title: String) -> Void)?
 
   private weak var audioBrowser: HybridAudioBrowser?
   private var nowPlayingObserver: NowPlayingObserver?
@@ -46,11 +46,11 @@ final class CarPlayNowPlayingManager {
   private var builtRow: BuiltButtonRow?
 
   /// Browse path the album line navigates to for the active track —
-  /// `track.albumUrl`, or the pre-resolved `resolveAlbumUrl` result. Resolved
+  /// `track.albumPath`, or the pre-resolved `resolveAlbumPath` result. Resolved
   /// at track-change time (not at tap) so the album line only surfaces when a
   /// destination actually exists.
   private var albumArtistDestination: String?
-  /// Drops a stale async `resolveAlbumUrl` result when the track changed while
+  /// Drops a stale async `resolveAlbumPath` result when the track changed while
   /// the resolver was in flight (latest-update-wins).
   private var albumArtistGeneration: UInt = 0
   /// The just-tapped track whose load is still in flight. CarPlay reads
@@ -214,7 +214,7 @@ final class CarPlayNowPlayingManager {
 
   /// Re-resolves the album line's destination for the active track and
   /// enables the (tappable) album/artist button only when one exists:
-  /// `track.albumUrl`, or the app's `resolveAlbumUrl` result.
+  /// `track.albumPath`, or the app's `resolveAlbumPath` result.
   /// Marks `track` as the just-tapped (still loading) track and derives the
   /// album line's destination from it. Must run before the Now Playing
   /// template is pushed — CarPlay reads `isAlbumArtistButtonEnabled` at display
@@ -242,12 +242,12 @@ final class CarPlayNowPlayingManager {
       setAlbumArtistDestination(nil)
       return
     }
-    logger.info("AlbumArtist: track=\(track.title) albumUrl=\(track.albumUrl ?? "nil") resolver=\(self.config.resolveAlbumUrl != nil)")
-    if let albumUrl = track.albumUrl {
-      setAlbumArtistDestination(albumUrl)
+    logger.info("AlbumArtist: track=\(track.title) albumPath=\(track.albumPath ?? "nil") resolver=\(self.config.resolveAlbumPath != nil)")
+    if let albumPath = track.albumPath {
+      setAlbumArtistDestination(albumPath)
       return
     }
-    guard let resolver = config.resolveAlbumUrl else {
+    guard let resolver = config.resolveAlbumPath else {
       setAlbumArtistDestination(nil)
       return
     }
@@ -256,7 +256,7 @@ final class CarPlayNowPlayingManager {
       do {
         path = try await resolver(track).await()
       } catch {
-        self?.logger.error("resolveAlbumUrl failed: \(error.localizedDescription)")
+        self?.logger.error("resolveAlbumPath failed: \(error.localizedDescription)")
         path = nil
       }
       guard let self, self.albumArtistGeneration == generation else { return }
@@ -360,7 +360,7 @@ final class CarPlayNowPlayingManager {
     // the pushed destination (artist may be unset, or the live song).
     let title = track?.album ?? track?.artist ?? track?.title ?? ""
     logger.info("Album/Artist button tapped, navigating to \(destination)")
-    navigateToUrl?(destination, title)
+    navigateToPath?(destination, title)
   }
 
   private func updateNowPlayingUpNextButton() {

@@ -82,8 +82,8 @@ function ImageRowListItem({
   onPress: () => void
 }) {
   const handleImageRowItemPress = (item: ImageRowItem) => {
-    if (item.url) {
-      navigate(item.url)
+    if (item.path) {
+      navigate(item.path)
     }
   }
 

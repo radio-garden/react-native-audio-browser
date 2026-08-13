@@ -15,17 +15,17 @@ await setupPlayer()
 
 configureBrowser({
   tabs: [
-    { title: 'Browse', url: '/browse' },
-    { title: 'Favorites', url: '/favorites' }
+    { title: 'Browse', path: '/browse' },
+    { title: 'Favorites', path: '/favorites' }
   ],
   routes: {
     // Static data declared inline:
     '/browse': {
-      url: '/browse',
+      path: '/browse',
       title: 'Browse',
       children: [
-        // browsable — has a url
-        { title: 'Jazz', url: '/browse/jazz' },
+        // browsable — has a path
+        { title: 'Jazz', path: '/browse/jazz' },
         // playable — has a src
         { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }
       ]
@@ -33,7 +33,7 @@ configureBrowser({
     // Resolved on demand from your own code:
     '/browse/jazz': async () => {
       const stations = await fetchJazzStations() // your code
-      return { url: '/browse/jazz', title: 'Jazz', children: stations }
+      return { path: '/browse/jazz', title: 'Jazz', children: stations }
     }
   }
 })
@@ -53,13 +53,13 @@ Everything the Browser shows is the result of resolving a **path** (a string lik
 graph LR
     P["path<br/>/browse/jazz"] --> M["match a route<br/>(most specific wins)"]
     M --> S["resolve its source<br/>(static · callback · HTTP)"]
-    S --> Page["page<br/>ResolvedTrack { url, title, children }"]
+    S --> Page["page<br/>ResolvedTrack { path, title, children }"]
 
     classDef step fill:#e3f2fd,stroke:#1976d2
     class P,M,S,Page step
 ```
 
-A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it requires a `url` and a `title`, and carries its `children` (a [`Track`](/api/types/browser-nodes/#track)`[]`). So configuring the Browser is really three decisions, covered in turn below: **what routes exist**, **what source each route resolves from**, and **how requests are shaped** along the way.
+A **page** is a [`ResolvedTrack`](/api/types/browser-nodes/#resolvedtrack): it requires a `path` and a `title`, and carries its `children` (a [`Track`](/api/types/browser-nodes/#track)`[]`). So configuring the Browser is really three decisions, covered in turn below: **what routes exist**, **what source each route resolves from**, and **how requests are shaped** along the way.
 
 ## Source shapes
 
@@ -73,11 +73,11 @@ A page object you declare inline. Best for small, fixed trees.
 configureBrowser({
   routes: {
     '/browse': {
-      url: '/browse',
+      path: '/browse',
       title: 'Browse',
       children: [
-        // browsable — has a url
-        { title: 'Jazz', url: '/browse/jazz' },
+        // browsable — has a path
+        { title: 'Jazz', path: '/browse/jazz' },
         // playable — has a src
         { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }
       ]
@@ -96,7 +96,7 @@ configureBrowser({
     '/albums/{id}': async ({ routeParams }) => {
       const album = await fetchAlbum(routeParams.id) // your code
       return {
-        url: `/albums/${album.id}`,
+        path: `/albums/${album.id}`,
         title: album.name,
         children: album.tracks
       }
@@ -139,14 +139,14 @@ Search has its own depth (voice intents, query modes) — see [Search](/guide/se
 
 ## Tabs and the initial path
 
-`tabs` are the top-level entry points — the segmented control in your app, the tab bar on CarPlay, the root of the Android Auto tree. Each tab is a Track with a `title` and a `url` pointing at a route.
+`tabs` are the top-level entry points — the segmented control in your app, the tab bar on CarPlay, the root of the Android Auto tree. Each tab is a Track with a `title` and a `path` pointing at a route.
 
 ```ts
 configureBrowser({
   tabs: [
-    { title: 'Home', url: '/home' },
-    { title: 'Favorites', url: '/favorites' },
-    { title: 'Browse', url: '/browse' }
+    { title: 'Home', path: '/home' },
+    { title: 'Favorites', path: '/favorites' },
+    { title: 'Browse', path: '/browse' }
   ]
 })
 ```
@@ -160,20 +160,20 @@ Like any source, `tabs` can also be a **callback** — useful when the tabs them
 ```ts
 configureBrowser({
   tabs: () => [
-    { title: 'Home', url: '/home' },
-    { title: 'Favorites', url: '/favorites' },
-    ...(__DEV__ ? [{ title: 'Debug', url: '/debug' }] : [])
+    { title: 'Home', path: '/home' },
+    { title: 'Favorites', path: '/favorites' },
+    ...(__DEV__ ? [{ title: 'Debug', path: '/debug' }] : [])
   ]
 })
 ```
 
 …or an **HTTP endpoint** returning a page (`{ children: Track[] }`).
 
-**Initial path.** The Browser opens to the first tab's `url` by default. Set `path` to start somewhere else:
+**Initial path.** The Browser opens to the first tab's `path` by default. Set `path` to start somewhere else:
 
 ```ts
 configureBrowser({
-  path: '/home', // where browse opens; defaults to the first tab's url (or '/')
+  path: '/home', // where browse opens; defaults to the first tab's path (or '/')
   tabs: [
     /* … */
   ]
@@ -415,11 +415,11 @@ function BrowseScreen() {
   return (
     <>
       {tabs?.map((tab) => (
-        <Tab key={tab.url} tab={tab} onPress={() => navigate(tab.url!)} />
+        <Tab key={tab.path} tab={tab} onPress={() => navigate(tab.path!)} />
       ))}
       {page?.children?.map((track) => (
         <Row
-          key={track.url ?? track.src}
+          key={track.path ?? track.src}
           track={track}
           onPress={() => navigate(track)}
         />
@@ -490,22 +490,22 @@ Optional Track fields and config options control how items render on the native 
 | `imageRow`                                 | a track        | a horizontal artwork strip               | CarPlay only\*      |
 | `artworkCarPlayTinted`                     | a track        | tint artwork for CarPlay light/dark      | iOS                 |
 | `carPlaySiriListButton: 'top' \| 'bottom'` | a page         | place the Siri cell on the page          | iOS                 |
-| `albumUrl` + `resolveAlbumUrl`             | track + config | make the now-playing album line tappable | CarPlay             |
+| `albumPath` + `resolveAlbumPath`           | track + config | make the now-playing album line tappable | CarPlay             |
 
 ::: info Two caveats from the table
-**`albumUrl` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **`imageRow` is CarPlay-only** and CarPlay limits how many thumbnails are visible (extras are dropped); Android Auto ignores it.
+**`albumPath` requires `album`** — CarPlay renders the tappable line from the album metadata, so without an `album` there is no line to tap. **`imageRow` is CarPlay-only** and CarPlay limits how many thumbnails are visible (extras are dropped); Android Auto ignores it.
 :::
 
 ```ts
-{ url: '/genres', title: 'Genres', childrenStyle: 'grid', children: [...] }
+{ path: '/genres', title: 'Genres', childrenStyle: 'grid', children: [...] }
 {
   title: 'Favorites',
-  url: '/favorites',
+  path: '/favorites',
   artwork: 'sf:heart.fill?bg=#FF0090&fg=#fff'
 }
 ```
 
-Two config-level platform options round it out: `carPlayLoadingTitle` (localized "Loading…" on older CarPlay) and `androidControllerOfflineError`. The album-line tap needs both `albumUrl` on the track and a `resolveAlbumUrl` callback in the config that maps it to a browse path — see [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
+Two config-level platform options round it out: `carPlayLoadingTitle` (localized "Loading…" on older CarPlay) and `androidControllerOfflineError`. The album-line tap needs both `albumPath` on the track and a `resolveAlbumPath` callback in the config that maps it to a browse path — see [CarPlay](/guide/carplay) and [Android Auto](/guide/android-auto) for the platform setup these build on.
 
 ## Where to go next
 

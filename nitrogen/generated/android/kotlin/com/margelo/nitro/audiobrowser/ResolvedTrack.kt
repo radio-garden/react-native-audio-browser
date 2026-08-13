@@ -19,7 +19,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 data class ResolvedTrack(
   @DoNotStrip
   @Keep
-  val url: String,
+  val path: String,
   @DoNotStrip
   @Keep
   val children: Array<Track>?,
@@ -55,7 +55,7 @@ data class ResolvedTrack(
   val artist: String?,
   @DoNotStrip
   @Keep
-  val albumUrl: String?,
+  val albumPath: String?,
   @DoNotStrip
   @Keep
   val album: String?,
@@ -97,8 +97,8 @@ data class ResolvedTrack(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(url: String, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumUrl: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): ResolvedTrack {
-      return ResolvedTrack(url, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumUrl, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
+    private fun fromCpp(path: String, children: Array<Track>?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Boolean?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Boolean?, groupTitle: String?, live: Boolean?, imageRow: Array<ImageRowItem>?): ResolvedTrack {
+      return ResolvedTrack(path, children, carPlaySiriListButton, id, src, artwork, artworkSource, request, artworkCarPlayTinted, title, subtitle, artist, albumPath, album, description, genre, duration, style, childrenStyle, favorited, groupTitle, live, imageRow)
     }
   }
 }

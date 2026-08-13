@@ -10,9 +10,9 @@ extension ResolvedTrack {
   /// - `.some(nil)` → set field to nil
   /// - `.some(value)` → set field to value
   ///
-  /// `url` and `title` use single-optional since they are non-optional on ResolvedTrack.
+  /// `path` and `title` use single-optional since they are non-optional on ResolvedTrack.
   func copying(
-    url: String? = nil,
+    path: String? = nil,
     children: [Track]?? = nil,
     carPlaySiriListButton: CarPlaySiriListButtonPosition?? = nil,
     id: String?? = nil,
@@ -24,7 +24,7 @@ extension ResolvedTrack {
     title: String? = nil,
     subtitle: String?? = nil,
     artist: String?? = nil,
-    albumUrl: String?? = nil,
+    albumPath: String?? = nil,
     album: String?? = nil,
     description: String?? = nil,
     genre: String?? = nil,
@@ -37,7 +37,7 @@ extension ResolvedTrack {
     imageRow: [ImageRowItem]?? = nil,
   ) -> ResolvedTrack {
     ResolvedTrack(
-      url: url ?? self.url,
+      path: path ?? self.path,
       children: children ?? self.children,
       carPlaySiriListButton: carPlaySiriListButton ?? self.carPlaySiriListButton,
       id: id ?? self.id,
@@ -49,7 +49,7 @@ extension ResolvedTrack {
       title: title ?? self.title,
       subtitle: subtitle ?? self.subtitle,
       artist: artist ?? self.artist,
-      albumUrl: albumUrl ?? self.albumUrl,
+      albumPath: albumPath ?? self.albumPath,
       album: album ?? self.album,
       description: description ?? self.description,
       genre: genre ?? self.genre,

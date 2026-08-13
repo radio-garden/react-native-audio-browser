@@ -18,7 +18,7 @@ public extension NativeBrowserConfiguration {
   /**
    * Create a new instance of `NativeBrowserConfiguration`.
    */
-  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayLoadingTitle: String?, resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
+  init(path: String?, request: TransformableRequestConfig?, requestResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, browse: TransformableRequestConfig?, browseResolver: (() -> Promise<Promise<TransformableRequestConfig>>)?, media: MediaRequestConfig?, artwork: ArtworkRequestConfig?, nowPlayingArtwork: ArtworkRequestConfig?, routes: [NativeRouteEntry]?, singleTrack: Bool?, handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?, androidControllerOfflineError: Bool?, carPlayLoadingTitle: String?, resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?, formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = path {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -113,7 +113,7 @@ public extension NativeBrowserConfiguration {
         return .init()
       }
     }(), { () -> bridge.std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______ in
-      if let __unwrappedValue = resolveAlbumUrl {
+      if let __unwrappedValue = resolveAlbumPath {
         return bridge.create_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______({ () -> bridge.Func_std__shared_ptr_Promise_std__optional_std__string____Track in
           let __closureWrapper = Func_std__shared_ptr_Promise_std__optional_std__string____Track(__unwrappedValue)
           return bridge.create_Func_std__shared_ptr_Promise_std__optional_std__string____Track(__closureWrapper.toUnsafe())
@@ -333,10 +333,10 @@ public extension NativeBrowserConfiguration {
   }
   
   @inline(__always)
-  var resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)? {
+  var resolveAlbumPath: ((_ track: Track) -> Promise<String?>)? {
     return { () -> ((_ track: Track) -> Promise<String?>)? in
-      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(self.__resolveAlbumUrl) {
-        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(self.__resolveAlbumUrl)
+      if bridge.has_value_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(self.__resolveAlbumPath) {
+        let __unwrapped = bridge.get_std__optional_std__function_std__shared_ptr_Promise_std__optional_std__string____const_Track_____track______(self.__resolveAlbumPath)
         return { () -> (Track) -> Promise<String?> in
           let __wrappedFunction = bridge.wrap_Func_std__shared_ptr_Promise_std__optional_std__string____Track(__unwrapped)
           return { (__track: Track) -> Promise<String?> in

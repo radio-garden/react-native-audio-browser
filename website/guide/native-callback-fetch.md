@@ -73,12 +73,12 @@ import { configureBrowser } from 'react-native-audio-browser'
 import { fetch } from 'react-native-nitro-fetch'
 
 configureBrowser({
-  tabs: [{ title: 'Browse', url: '/browse' }],
+  tabs: [{ title: 'Browse', path: '/browse' }],
   routes: {
     '/browse': async ({ path }) => {
       const res = await fetch('https://api.example.com/browse')
       const { children } = await res.json()
-      return { url: path, title: 'Browse', children }
+      return { path: path, title: 'Browse', children }
     }
   }
 })
@@ -97,7 +97,7 @@ stall:
 configureBrowser({
   // Each browse path is fetched over HTTP on the native side.
   browse: { baseUrl: 'https://api.example.com' },
-  tabs: [{ title: 'Browse', url: '/browse' }]
+  tabs: [{ title: 'Browse', path: '/browse' }]
 })
 ```
 

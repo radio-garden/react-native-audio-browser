@@ -22,7 +22,7 @@ data class ImageRowItem(
   val id: String?,
   @DoNotStrip
   @Keep
-  val url: String?,
+  val path: String?,
   @DoNotStrip
   @Keep
   val src: String?,
@@ -43,7 +43,7 @@ data class ImageRowItem(
   val album: String?,
   @DoNotStrip
   @Keep
-  val albumUrl: String?,
+  val albumPath: String?,
   @DoNotStrip
   @Keep
   val live: Boolean?,
@@ -61,8 +61,8 @@ data class ImageRowItem(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(id: String?, url: String?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, artist: String?, album: String?, albumUrl: String?, live: Boolean?, request: TrackRequest?): ImageRowItem {
-      return ImageRowItem(id, url, src, artwork, artworkSource, title, artist, album, albumUrl, live, request)
+    private fun fromCpp(id: String?, path: String?, src: String?, artwork: String?, artworkSource: ImageSource?, title: String, artist: String?, album: String?, albumPath: String?, live: Boolean?, request: TrackRequest?): ImageRowItem {
+      return ImageRowItem(id, path, src, artwork, artworkSource, title, artist, album, albumPath, live, request)
     }
   }
 }

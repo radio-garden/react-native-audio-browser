@@ -67,7 +67,7 @@ export function BrowserScreen() {
 
   // Reset stack when navigating to a tab root
   useEffect(() => {
-    const isTabRoot = tabs?.some((tab) => tab.url === path)
+    const isTabRoot = tabs?.some((tab) => tab.path === path)
     if (isTabRoot) {
       setScreenStack(['browser'])
     }
@@ -185,7 +185,7 @@ export function BrowserScreen() {
               <Text
                 style={[
                   styles.tabText,
-                  tab.url === path && styles.activeTabText
+                  tab.path === path && styles.activeTabText
                 ]}
               >
                 {tab.title}

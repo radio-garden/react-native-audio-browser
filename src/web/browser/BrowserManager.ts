@@ -158,11 +158,11 @@ export class BrowserManager {
     // Determine initial path
     let initialPath = value.path
 
-    // If no path specified, try to get first tab URL
+    // If no path specified, try to get first tab path
     if (!initialPath) {
       const tabsRoute = value.routes?.find((r) => r.path === '__tabs__')
-      if (tabsRoute?.browseStatic?.children?.[0]?.url) {
-        initialPath = tabsRoute.browseStatic.children[0].url
+      if (tabsRoute?.browseStatic?.children?.[0]?.path) {
+        initialPath = tabsRoute.browseStatic.children[0].path
       } else {
         initialPath = '/'
       }
@@ -182,16 +182,16 @@ export class BrowserManager {
   }
 
   /**
-   * Navigates to a track's URL.
+   * Navigates to a track's path.
    */
   async navigateTrack(track: Track): Promise<void> {
     this.navigationErrorManager.clearNavigationError()
-    const url = track.url
-    if (!url) {
-      console.warn('Track has no URL to navigate to')
+    const path = track.path
+    if (!path) {
+      console.warn('Track has no path to navigate to')
       return
     }
-    await this.navigate(url)
+    await this.navigate(path)
   }
 
   /**
@@ -247,19 +247,19 @@ export class BrowserManager {
         return
       }
 
-      // Add contextual URLs to non-search content (matches Android behavior where
-      // search() bypasses the resolve() contextual URL logic).
+      // Add contextual paths to non-search content (matches Android behavior where
+      // search() bypasses the resolve() contextual-path logic).
       // Shallow copy to avoid mutating the original config object (e.g., browseStatic
       // from routes), which would break search that reads from the same source.
       if (content?.children && !isSearchPath) {
         content = {
           ...content,
           children: content.children.map((track) => {
-            // If track has src, always add/update contextual URL with current path context
+            // If track has src, always add/update the contextual path with current path context
             // This matches Android's BrowserManager.kt:436-441
             if (track.src) {
-              const contextualUrl = `${path}?__trackId=${encodeURIComponent(track.src)}`
-              return { ...track, url: contextualUrl }
+              const contextualPath = `${path}?__trackId=${encodeURIComponent(track.src)}`
+              return { ...track, path: contextualPath }
             }
             // Return a shallow copy in attempt to avoid mutating original config objects
             return { ...track }
@@ -367,9 +367,9 @@ export class BrowserManager {
     }
 
     // Create ResolvedTrack with raw children
-    // Search callbacks should return fresh tracks without contextual URLs (like Android)
+    // Search callbacks should return fresh tracks without contextual paths (like Android)
     return {
-      url: searchPath,
+      path: searchPath,
       title: `Search: ${query}`,
       children: searchResults
     }
@@ -724,20 +724,20 @@ export class BrowserManager {
   /**
    * Expands a queue from a contextual URL.
    * Resolves the parent container to get all siblings.
-   * Matches Android's BrowserManager.expandQueueFromContextualUrl() behavior.
+   * Matches Android's BrowserManager.expandQueueFromContextualPath() behavior.
    *
-   * @param contextualUrl The contextual URL (format: /path?__trackId=trackSrc)
+   * @param contextualPath The contextual path (format: /path?__trackId=trackSrc)
    * @returns Object with tracks and selectedIndex, or undefined if expansion fails
    */
-  async expandQueueFromContextualUrl(
-    contextualUrl: string
+  async expandQueueFromContextualPath(
+    contextualPath: string
   ): Promise<{ tracks: Track[]; selectedIndex: number } | undefined> {
-    const trackId = BrowserPathHelper.extractTrackId(contextualUrl)
+    const trackId = BrowserPathHelper.extractTrackId(contextualPath)
     if (!trackId) return undefined
 
     try {
       // Resolve the parent container to get all siblings
-      const parentPath = BrowserPathHelper.stripTrackId(contextualUrl)
+      const parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       const parentResolvedTrack = await this.resolveContent(parentPath)
       const children = parentResolvedTrack?.children
 
@@ -776,7 +776,7 @@ export class BrowserManager {
       return { tracks: playableTracks, selectedIndex }
     } catch (error) {
       console.error(
-        `Error expanding queue from contextual URL: ${contextualUrl}`,
+        `Error expanding queue from contextual path: ${contextualPath}`,
         error
       )
       return undefined
@@ -800,10 +800,10 @@ export class BrowserManager {
     startPositionMs: number,
     searchQuery?: string
   ): Promise<{ tracks: Track[]; startIndex: number; startPositionMs: number }> {
-    // Single track: check for search context or contextual URL
+    // Single track: check for search context or contextual path
     if (tracks.length === 1) {
       const track = assertedNotNullish(tracks[0])
-      const trackUrl = track.url
+      const trackPath = track.path
 
       // If search query present, expand search results
       if (searchQuery) {
@@ -816,7 +816,7 @@ export class BrowserManager {
         if (searchTracks && searchTracks.length > 0) {
           // Find the selected track in search results
           const selectedIdx = searchTracks.findIndex(
-            (t) => t.url === trackUrl || t.src === track.src
+            (t) => t.path === trackPath || t.src === track.src
           )
 
           if (selectedIdx >= 0) {
@@ -829,14 +829,14 @@ export class BrowserManager {
         }
       }
 
-      // Check if contextual URL - expand from parent
+      // Check if contextual path - expand from parent
       // Note: The queueSourcePath optimization is handled by the caller (NativeAudioBrowser.navigateTrackAsync)
       // which has access to the existing queue and can skip to the track directly.
       // This matches Android where MediaSessionCallback handles the optimization before calling
       // BrowserManager.resolveMediaItemsForPlayback.
-      if (trackUrl && BrowserPathHelper.isContextual(trackUrl)) {
-        const parentPath = BrowserPathHelper.stripTrackId(trackUrl)
-        const expanded = await this.expandQueueFromContextualUrl(trackUrl)
+      if (trackPath && BrowserPathHelper.isContextual(trackPath)) {
+        const parentPath = BrowserPathHelper.stripTrackId(trackPath)
+        const expanded = await this.expandQueueFromContextualPath(trackPath)
 
         if (expanded) {
           // Store source path for optimization by caller on next invocation
@@ -855,13 +855,13 @@ export class BrowserManager {
   }
 
   /**
-   * Gets the default navigation path (first tab URL or '/').
+   * Gets the default navigation path (first tab path or '/').
    */
   private getDefaultPath(): string {
     // Try to get first tab as default path
     if (this._tabs && this._tabs.length > 0) {
       const firstTab = this._tabs[0]
-      return firstTab?.url ?? '/'
+      return firstTab?.path ?? '/'
     }
     return '/'
   }

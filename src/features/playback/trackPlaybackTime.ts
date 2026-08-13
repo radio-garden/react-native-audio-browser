@@ -9,7 +9,7 @@ export interface PlaybackElapsed {
   total: number
   /** Seconds played since the previous callback (≈ `period`). */
   sinceLast: number
-  /** The currently playing track (id / src / url / title …), if any. */
+  /** The currently playing track (id / src / path / title …), if any. */
   track?: Track
 }
 

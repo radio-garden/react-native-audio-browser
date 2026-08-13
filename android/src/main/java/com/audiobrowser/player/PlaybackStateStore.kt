@@ -18,12 +18,12 @@ import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Persists playback state for resumption after app restart. Stores the current track URL, position,
- * and player settings to enable playback resumption via MediaButtonReceiver (Bluetooth play button,
- * etc.).
+ * Persists playback state for resumption after app restart. Stores the current track (including its
+ * path), position, and player settings to enable playback resumption via MediaButtonReceiver
+ * (Bluetooth play button, etc.).
  *
  * Settings (repeatMode, shuffleEnabled, playbackSpeed) are auto-persisted when set via properties.
- * Position/URL are persisted via save() on pause or track change.
+ * Position/track are persisted via save() on pause or track change.
  */
 class PlaybackStateStore(private val player: Player) {
   private val prefs: SharedPreferences =
@@ -32,7 +32,7 @@ class PlaybackStateStore(private val player: Player) {
   /**
    * Persisted playback state for resumption.
    *
-   * @param track The track being played (includes url for queue expansion)
+   * @param track The track being played (includes path for queue expansion)
    * @param positionMs The playback position in milliseconds (C.TIME_UNSET for default/live edge)
    * @param repeatMode The repeat mode setting
    * @param shuffleEnabled Whether shuffle mode was enabled
@@ -152,12 +152,12 @@ class PlaybackStateStore(private val player: Player) {
     JSONObject()
       .apply {
         put("id", track.id)
-        put("url", track.url)
+        put("path", track.path)
         put("src", track.src)
         put("title", track.title)
         put("subtitle", track.subtitle)
         put("artist", track.artist)
-        put("albumUrl", track.albumUrl)
+        put("albumPath", track.albumPath)
         put("album", track.album)
         put("artwork", track.artwork?.url)
         put("description", track.description)
@@ -176,12 +176,12 @@ class PlaybackStateStore(private val player: Player) {
         val obj = JSONObject(json)
         Track(
           id = obj.optString("id").takeIf { it.isNotEmpty() },
-          url = obj.optString("url").takeIf { it.isNotEmpty() },
+          path = obj.optString("path").takeIf { it.isNotEmpty() },
           src = obj.optString("src").takeIf { it.isNotEmpty() },
           title = obj.getString("title"),
           subtitle = obj.optString("subtitle").takeIf { it.isNotEmpty() },
           artist = obj.optString("artist").takeIf { it.isNotEmpty() },
-          albumUrl = obj.optString("albumUrl").takeIf { it.isNotEmpty() },
+          albumPath = obj.optString("albumPath").takeIf { it.isNotEmpty() },
           album = obj.optString("album").takeIf { it.isNotEmpty() },
           artwork = artworkOf(obj.optString("artwork").takeIf { it.isNotEmpty() }),
           artworkSource = null, // Not persisted - will be re-transformed on browse
@@ -205,8 +205,8 @@ class PlaybackStateStore(private val player: Player) {
             else null,
           groupTitle = obj.optString("groupTitle").takeIf { it.isNotEmpty() },
           live = if (obj.has("live") && !obj.isNull("live")) obj.getBoolean("live") else null,
-          // Not persisted: on resumption the contextual URL is re-browsed
-          // (expandQueueFromContextualUrl), which re-parses each track's request
+          // Not persisted: on resumption the contextual path is re-browsed
+          // (expandQueueFromContextualPath), which re-parses each track's request
           // from the API's current response and re-caches it.
           request = null,
           imageRow = null, // Not persisted
@@ -219,7 +219,7 @@ class PlaybackStateStore(private val player: Player) {
    * Restores player settings from persisted state and returns the state for queue setup.
    *
    * Applies repeatMode, shuffleMode, and playbackSpeed to the player. The caller is responsible for
-   * using the returned url and positionMs to set up the playback queue.
+   * using the returned path and positionMs to set up the playback queue.
    *
    * @return PersistedState if available, null otherwise
    */

@@ -40,7 +40,7 @@ struct JsonTrackArtworkTests {
     // The shape that shipped broken: a container decodes its children eagerly,
     // so one unparseable row rejected the whole page rather than losing an image.
     let json = """
-    { "url": "/favorites", "title": "Favorites", "children": [
+    { "path": "/favorites", "title": "Favorites", "children": [
       { "title": "Playlist", "artwork": { "light": "https://e.example/l.png", "dark": "https://e.example/d.png" } }
     ] }
     """.data(using: .utf8)!

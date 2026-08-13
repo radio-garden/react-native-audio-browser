@@ -22,27 +22,27 @@ class TrackFactoryMediaIdTest {
   }
 
   @Test
-  fun `stable id wins over the contextual url for playable tracks`() {
+  fun `stable id wins over the contextual path for playable tracks`() {
     val track =
       TestFixtures.track(id = "abc123", src = "/listen/abc123/channel.mp3")
-        .copy(url = "/home?__trackId=%2Flisten%2Fabc123%2Fchannel.mp3")
+        .copy(path = "/home?__trackId=%2Flisten%2Fabc123%2Fchannel.mp3")
     assertEquals("abc123", TrackFactory.toMedia3(track).mediaId)
   }
 
   @Test
-  fun `playable track without id falls back to url then src`() {
-    val withUrl = TestFixtures.track(src = "/a.mp3").copy(url = "/home?__trackId=%2Fa.mp3")
-    assertEquals("/home?__trackId=%2Fa.mp3", TrackFactory.toMedia3(withUrl).mediaId)
+  fun `playable track without id falls back to path then src`() {
+    val withPath = TestFixtures.track(src = "/a.mp3").copy(path = "/home?__trackId=%2Fa.mp3")
+    assertEquals("/home?__trackId=%2Fa.mp3", TrackFactory.toMedia3(withPath).mediaId)
 
     val srcOnly = TestFixtures.track(src = "/a.mp3")
     assertEquals("/a.mp3", TrackFactory.toMedia3(srcOnly).mediaId)
   }
 
   @Test
-  fun `browsable-only track keeps url as mediaId even with an id`() {
+  fun `browsable-only track keeps path as mediaId even with an id`() {
     // Navigation parentIds must stay resolvable paths, so a container's id is
     // never its mediaId.
-    val track = TestFixtures.browseTrack(url = "/stations").copy(id = "abc123")
+    val track = TestFixtures.browseTrack(path = "/stations").copy(id = "abc123")
     assertEquals("/stations", TrackFactory.toMedia3(track).mediaId)
   }
 

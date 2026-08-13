@@ -12,7 +12,7 @@ const sf = (name: string, bg: string) =>
 const playlists: Record<string, ResolvedTrack> = {
   'independent-sounds': {
     title: 'Independent Sounds',
-    url: '/playlist/independent-sounds',
+    path: '/playlist/independent-sounds',
     children: [
       {
         title: 'Radio is a Foreign Country',
@@ -72,7 +72,7 @@ const playlists: Record<string, ResolvedTrack> = {
   },
   'energetic-rhythms': {
     title: 'Energetic Rhythms',
-    url: '/playlist/energetic-rhythms',
+    path: '/playlist/energetic-rhythms',
     children: [
       {
         title: 'Noods Radio',
@@ -127,11 +127,11 @@ export const radioGardenMediaTransform: MediaRequestConfig['transform'] =
 
 export const radioGardenRoutes: Record<string, BrowserSource> = {
   '/library/playlists': {
-    url: '/library/playlists',
+    path: '/library/playlists',
     title: 'Radio Playlists',
     children: Object.entries(playlists).map(([id, p]) => ({
       title: p.title!,
-      url: `/playlist/${id}`
+      path: `/playlist/${id}`
     }))
   },
   '/playlist/{id}': async ({ routeParams }) => playlists[routeParams!.id]!
@@ -139,10 +139,10 @@ export const radioGardenRoutes: Record<string, BrowserSource> = {
 
 export const radioGardenLibraryEntry: Track = {
   title: 'Radio Playlists',
-  url: '/library/playlists',
+  path: '/library/playlists',
   imageRow: Object.entries(playlists).map(([id, p]) => ({
     title: p.title!,
-    url: `/playlist/${id}`,
+    path: `/playlist/${id}`,
     artwork: {
       'independent-sounds': sf('radio', '#FF0090'),
       'energetic-rhythms': sf('bolt.fill', '#8AC926')

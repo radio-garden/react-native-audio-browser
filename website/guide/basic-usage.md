@@ -6,8 +6,16 @@ This guide covers the core idea — the **browse tree** — and the minimal code
 
 The library models all content as one navigable tree of **Tracks**. A single Track is **browsable**, **playable**, or both, depending on which fields you set:
 
-- **Browsable** — has a `url`; navigating into it resolves its children.
+- **Browsable** — has a `path`; navigating into it resolves its children.
 - **Playable** — has a `src`; the player can stream it.
+
+Three fields at a glance — each answers a different question about a Track:
+
+| Field  | Answers            | Meaning                                    |
+| ------ | ------------------ | ------------------------------------------ |
+| `path` | where does it go?  | the browse-tree address navigating opens   |
+| `src`  | what does it play? | the media identifier the player streams    |
+| `id`   | which item is it?  | stable identity across surfaces (optional) |
 
 ```mermaid
 graph TD
@@ -59,16 +67,16 @@ Describe the tree with `configureBrowser`: **tabs** along the top, and **routes*
 import { configureBrowser } from 'react-native-audio-browser'
 
 configureBrowser({
-  tabs: [{ title: 'Browse', url: '/browse' }],
+  tabs: [{ title: 'Browse', path: '/browse' }],
   routes: {
     '/browse': {
-      url: '/browse',
+      path: '/browse',
       title: 'Browse',
       children: [
         {
           title: 'Jazz',
-          // A url makes this browsable — tapping it opens that path.
-          url: '/browse/jazz'
+          // A path makes this browsable — tapping it opens that path.
+          path: '/browse/jazz'
         },
         {
           title: 'Smooth Floret FM',
@@ -78,7 +86,7 @@ configureBrowser({
       ]
     },
     '/browse/jazz': {
-      url: '/browse/jazz',
+      path: '/browse/jazz',
       title: 'Jazz',
       children: [
         {

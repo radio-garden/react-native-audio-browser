@@ -14,8 +14,8 @@ struct PlaybackStateStoreTests {
 
   private func sampleTrack() -> JsonTrack {
     JsonTrack(
-      id: "abc", url: nil, title: "Test FM", subtitle: nil, artwork: nil,
-      artist: "City, Country", albumUrl: nil, album: nil, description: nil,
+      id: "abc", path: nil, title: "Test FM", subtitle: nil, artwork: nil,
+      artist: "City, Country", albumPath: nil, album: nil, description: nil,
       genre: nil, duration: nil, src: "/listen/abc/channel.mp3", request: nil,
       style: nil, childrenStyle: nil, groupTitle: nil, live: true, imageRow: nil,
     )

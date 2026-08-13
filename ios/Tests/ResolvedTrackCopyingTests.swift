@@ -3,11 +3,11 @@ import Testing
 @testable import AudioBrowserTestable
 
 private func makeResolvedTrack(
-  url: String = "/test",
+  path: String = "/test",
   title: String = "Test Track",
 ) -> ResolvedTrack {
   ResolvedTrack(
-    url: url,
+    path: path,
     children: nil,
     carPlaySiriListButton: nil,
     src: nil,
@@ -32,8 +32,8 @@ private func makeResolvedTrack(
 
 private func makeFullResolvedTrack() -> ResolvedTrack {
   ResolvedTrack(
-    url: "/original",
-    children: [Track(id: "t1", url: "/t1")],
+    path: "/original",
+    children: [Track(id: "t1", path: "/t1")],
     carPlaySiriListButton: .top,
     id: "original-id",
     src: "src.mp3",
@@ -64,12 +64,12 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   #expect(copy == original)
 }
 
-// MARK: - non-optional fields (url, title)
+// MARK: - non-optional fields (path, title)
 
-@Test func copyingOverridesUrl() {
-  let original = makeResolvedTrack(url: "/old")
-  let copy = original.copying(url: "/new")
-  #expect(copy.url == "/new")
+@Test func copyingOverridesPath() {
+  let original = makeResolvedTrack(path: "/old")
+  let copy = original.copying(path: "/new")
+  #expect(copy.path == "/new")
   #expect(copy.title == "Test Track")
 }
 
@@ -77,14 +77,14 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   let original = makeResolvedTrack(title: "Old")
   let copy = original.copying(title: "New")
   #expect(copy.title == "New")
-  #expect(copy.url == "/test")
+  #expect(copy.path == "/test")
 }
 
 // MARK: - optional fields: set value
 
 @Test func copyingOverridesChildren() {
   let original = makeResolvedTrack()
-  let children = [Track(id: "c1", url: "/c1"), Track(id: "c2", url: "/c2")]
+  let children = [Track(id: "c1", path: "/c1"), Track(id: "c2", path: "/c2")]
   let copy = original.copying(children: children)
   #expect(copy.children?.count == 2)
   #expect(copy.children?[0].id == "c1")
@@ -206,13 +206,13 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
 @Test func copyingOverridesMultipleFields() {
   let original = makeResolvedTrack()
   let copy = original.copying(
-    url: "/updated",
+    path: "/updated",
     title: "Updated Title",
     artist: "New Artist",
     duration: 240.0,
     favorited: true,
   )
-  #expect(copy.url == "/updated")
+  #expect(copy.path == "/updated")
   #expect(copy.title == "Updated Title")
   #expect(copy.artist == "New Artist")
   #expect(copy.duration == 240.0)
@@ -230,7 +230,7 @@ private func makeFullResolvedTrack() -> ResolvedTrack {
   let copy = original.copying(title: "Changed Only Title")
   #expect(copy.title == "Changed Only Title")
   // All other fields unchanged
-  #expect(copy.url == "/original")
+  #expect(copy.path == "/original")
   #expect(copy.children?.count == 1)
   #expect(copy.carPlaySiriListButton == .top)
   #expect(copy.src == "src.mp3")

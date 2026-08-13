@@ -15,9 +15,9 @@ import com.margelo.nitro.audiobrowser.Variant_String_ArtworkVariants
 /**
  * The single Track → Media3 [MediaItem] conversion. Owns the two easy-to-drift fallbacks: the
  * displayed artwork is the transformed `artworkSource.uri` falling back to the raw `artwork` field,
- * and the mediaId is the stable `id` for playable tracks, falling back to `url` then `src` (a Track
- * must have one of the latter two — see the `src` vs `url` note in CONTEXT.md). The list line
- * renders from `subtitle` (the now-playing line is re-stamped from `artist` by the now-playing
+ * and the mediaId is the stable `id` for playable tracks, falling back to `path` then `src` (a
+ * Track must have one of the latter two — see the `src` vs `path` note in CONTEXT.md). The list
+ * line renders from `subtitle` (the now-playing line is re-stamped from `artist` by the now-playing
  * pipeline; see the Now Playing Metadata guide).
  */
 object TrackFactory {
@@ -29,8 +29,8 @@ object TrackFactory {
    * Android Auto has no image-row rendering; its closest equivalent is a grid of artwork tiles. A
    * track carrying `imageRow` expands into its items as grid-styled rows (the per-item
    * content-style hint — hosts that ignore it fall back to list rows) grouped under the row's
-   * title, followed by the row itself as a browsable "view all" link when it has a `url` (a
-   * url-less row is a pure preview and contributes only its items). Tracks without an `imageRow`
+   * title, followed by the row itself as a browsable "view all" link when it has a `path` (a
+   * path-less row is a pure preview and contributes only its items). Tracks without an `imageRow`
    * pass through unchanged.
    */
   fun expandImageRows(tracks: List<Track>): List<Track> =
@@ -38,7 +38,7 @@ object TrackFactory {
       val items = track.imageRow
       if (items.isNullOrEmpty()) return@flatMap listOf(track)
       val expanded = items.map { it.toTrack(groupTitle = track.title) }
-      if (track.url != null) {
+      if (track.path != null) {
         expanded + track.copy(imageRow = null, groupTitle = track.title)
       } else {
         expanded
@@ -49,7 +49,7 @@ object TrackFactory {
   fun ImageRowItem.toTrack(groupTitle: String?): Track =
     Track(
       id = id,
-      url = url,
+      path = path,
       src = src,
       artwork = artwork?.let { Variant_String_ArtworkVariants.First(it) },
       artworkSource = artworkSource,
@@ -58,7 +58,7 @@ object TrackFactory {
       title = title,
       subtitle = null,
       artist = artist,
-      albumUrl = albumUrl,
+      albumPath = albumPath,
       album = album,
       description = null,
       genre = null,
@@ -131,14 +131,14 @@ object TrackFactory {
     // for the same item (absolute vs relative, extra query params) — the id is
     // the one string both sides share. It is also context-free, so the same
     // station gets the same mediaId in every tab. Browsable-only tracks keep
-    // `url` so navigation parentIds stay resolvable paths.
+    // `path` so navigation parentIds stay resolvable paths.
     val stableId = if (track.src != null) track.id?.takeUnless { it.isBlank() } else null
     val mediaId =
       stableId
-        ?: track.url
+        ?: track.path
         ?: track.src
         ?: throw IllegalArgumentException(
-          "Track must have either url or src defined. Track: title='${track.title}', artist='${track.artist}'"
+          "Track must have either path or src defined. Track: title='${track.title}', artist='${track.artist}'"
         )
     return MediaItem.Builder()
       .setMediaId(mediaId)

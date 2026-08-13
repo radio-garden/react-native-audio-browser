@@ -2,7 +2,7 @@
 
 A **Track** is the one unit of content in the library. The same object describes a row in a browse list, an item in the playback queue, and the metadata on the lock screen — so once you know the Track shape, you can read and build content everywhere.
 
-A Track is just a plain object. The only required field is `title`, plus **at least one** of `url` (browsable) or `src` (playable):
+A Track is just a plain object. The only required field is `title`, plus **at least one** of `path` (browsable) or `src` (playable):
 
 ```ts
 const station: Track = {
@@ -31,20 +31,20 @@ This guide is the field-by-field reference. For _where_ tracks come from (routes
 
 Two fields decide what a Track _does_. A Track must set at least one of them, and may set both:
 
-| Field | Makes the track | Effect                                               |
-| ----- | --------------- | ---------------------------------------------------- |
-| `url` | **browsable**   | a container — tapping it navigates into its children |
-| `src` | **playable**    | a leaf — the player can stream it                    |
+| Field  | Makes the track | Effect                                               |
+| ------ | --------------- | ---------------------------------------------------- |
+| `path` | **browsable**   | a container — tapping it navigates into its children |
+| `src`  | **playable**    | a leaf — the player can stream it                    |
 
 ```ts
 // Browsable: a folder you navigate into
-{ title: 'Jazz', url: '/browse/jazz' }
+{ title: 'Jazz', path: '/browse/jazz' }
 
 // Playable: a station you stream
 { title: 'Smooth Floret FM', src: 'https://example.com/floret.mp3' }
 
 // Both: a podcast episode you can open *and* play
-{ title: 'Episode 42', url: '/episodes/42', src: 'https://…/42.mp3' }
+{ title: 'Episode 42', path: '/episodes/42', src: 'https://…/42.mp3' }
 ```
 
 `src` is usually an absolute audio URL, but it can be any string — a file path or your own identifier — that you turn into a real request in `media.resolve` (see [Browser → Media and artwork](/guide/browser#media-and-artwork)).
@@ -68,7 +68,7 @@ The event also carries `index`, `lastTrack`, and `lastIndex`; `addListener` retu
 `id` is also passed to the per-track `resolve` hooks, so you can ship tracks carrying only an `id` and synthesise `src`/artwork from it at request time.
 
 ::: tip `id` is optional
-If you key identity off `url`/`src`, you can skip it. One caveat: an Android Auto item picked straight from the browse tree (one you never queued) is identified only by `url`/`src`, so its `id` may be `undefined` on that path.
+If you key identity off `path`/`src`, you can skip it. One caveat: an Android Auto item picked straight from the browse tree (one you never queued) is identified only by `path`/`src`, so its `id` may be `undefined` on that path.
 :::
 
 ## Display fields
@@ -80,7 +80,7 @@ These set the text shown across surfaces. Only `title` is required.
 | `title`                 | primary line — browse rows **and** now-playing (required)                    |
 | `subtitle`              | secondary line in **browse lists** only                                      |
 | `artist`                | secondary line on **now-playing / lock screen**; the head-unit "artist" slot |
-| `album`                 | album name (and gates the tappable album line — see `albumUrl`)              |
+| `album`                 | album name (and gates the tappable album line — see `albumPath`)             |
 | `genre` / `description` | extra metadata                                                               |
 | `duration`              | catalog metadata in seconds, for your UI                                     |
 
@@ -105,7 +105,7 @@ Don't set `artworkSource` yourself — the library populates it.
 ```ts
 {
   title: 'Favorites',
-  url: '/favorites',
+  path: '/favorites',
   artwork: 'sf:heart.fill?bg=#FF0090&fg=#fff'
 }
 ```
@@ -142,17 +142,17 @@ Optional fields that change how a Track renders on CarPlay / Android Auto. They'
 | `favorited`                       | filled/empty heart (needs the `favorite` capability)                                                                                                                                                | Android Auto, notification |
 | `live`                            | a "live" indicator                                                                                                                                                                                  | iOS now-playing            |
 | `imageRow`                        | render as a horizontal thumbnail strip                                                                                                                                                              | CarPlay                    |
-| `albumUrl`                        | make the now-playing album line tappable                                                                                                                                                            | CarPlay                    |
+| `albumPath`                       | make the now-playing album line tappable                                                                                                                                                            | CarPlay                    |
 
 A couple of constraints worth knowing:
 
 - **`childrenStyle` goes on the child as it appears in its parent's list** — Android Auto reads it there to decide how to lay out the folder once you navigate in.
-- **`albumUrl` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumUrl` in the [Browser config](/guide/browser).
-- **`imageRow` renders as thumbnails on CarPlay only** (~4–5 visible; extras are silently dropped). Android Auto has no image-row rendering, so the row expands into its items as a grid-styled group (artwork tiles where the host honors per-item content-style hints, list rows otherwise) — plus a trailing "view all" row when the track has a `url`. A track with `imageRow` but no `url` is a pure preview: on CarPlay its header isn't tappable. Tapping a playable item queues **the row's items** — the row is its own section (see [Playback behavior](/guide/browser#playback-behavior)).
+- **`albumPath` requires `album`** (CarPlay renders the tappable line from album metadata), and pairs with `resolveAlbumPath` in the [Browser config](/guide/browser).
+- **`imageRow` renders as thumbnails on CarPlay only** (~4–5 visible; extras are silently dropped). Android Auto has no image-row rendering, so the row expands into its items as a grid-styled group (artwork tiles where the host honors per-item content-style hints, list rows otherwise) — plus a trailing "view all" row when the track has a `path`. A track with `imageRow` but no `path` is a pure preview: on CarPlay its header isn't tappable. Tapping a playable item queues **the row's items** — the row is its own section (see [Playback behavior](/guide/browser#playback-behavior)).
 
 ```ts
 {
-  url: '/genres',
+  path: '/genres',
   title: 'Genres',
   childrenStyle: 'grid', // children laid out as tiles in Android Auto
   children: [...]
@@ -160,19 +160,19 @@ A couple of constraints worth knowing:
 ```
 
 An `imageRow` is an array of [`ImageRowItem`](/api/types/browser-nodes/#imagerowitem)
-(`{ title, url?, src?, artwork?, … }`) — the track's own `title` is the row header,
-its `url` the header's tap-through target, and each item one tappable thumbnail. A
+(`{ title, path?, src?, artwork?, … }`) — the track's own `title` is the row header,
+its `path` the header's tap-through target, and each item one tappable thumbnail. A
 thumbnail with `src` **plays immediately on tap** (same selection path as a playable
 list row — a station app can make thumbnails play their station directly); otherwise
-its `url` is navigated. Playable items can carry the now-playing fields a regular
-track would (`id`, `artist`, `album`, `albumUrl`, `live`, `request`):
+its `path` is navigated. Playable items can carry the now-playing fields a regular
+track would (`id`, `artist`, `album`, `albumPath`, `live`, `request`):
 
 ```ts
 {
   title: 'Featured',
-  url: '/browse/featured', // header tap → the full list
+  path: '/browse/featured', // header tap → the full list
   imageRow: [
-    { title: 'Jazz', url: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
+    { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
     {
       title: 'Beacon FM',
       src: 'https://audio.example.com/beacon.mp3', // tap plays it
@@ -186,7 +186,7 @@ track would (`id`, `artist`, `album`, `albumUrl`, `live`, `request`):
 
 ## ResolvedTrack — a track with children
 
-A [**`ResolvedTrack`**](/api/types/browser-nodes/#resolvedtrack) is the same Track plus its resolved `children` — the page the browser is currently showing. Its `url` is always present, and `children` is the `Track[]` to render (optional — a leaf page has none).
+A [**`ResolvedTrack`**](/api/types/browser-nodes/#resolvedtrack) is the same Track plus its resolved `children` — the page the browser is currently showing. Its `path` is always present, and `children` is the `Track[]` to render (optional — a leaf page has none).
 
 Navigation is **fire-and-forget**: `navigate(path)` returns `void`. Read the resolved page from `useContent()` (or `getContent()` / `onContentChanged`):
 

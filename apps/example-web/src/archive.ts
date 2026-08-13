@@ -119,18 +119,18 @@ function creatorString(
 
 export function fetchCollections(prefix = '/archive'): ResolvedTrack {
   return {
-    url: prefix,
+    path: prefix,
     title: 'Archive.org Media',
     children: [
       {
         title: 'LibriVox Audiobooks',
-        url: `${prefix}/collection/librivoxaudio`,
+        path: `${prefix}/collection/librivoxaudio`,
         artwork: `${BASE}/services/img/librivoxaudio`,
         style: 'grid' as const
       },
       {
         title: 'Folksoundomy',
-        url: `${prefix}/folksoundomy`,
+        path: `${prefix}/folksoundomy`,
         artwork: `${BASE}/services/img/folksoundomy`,
         style: 'grid' as const
       }
@@ -177,11 +177,11 @@ export async function fetchFolksoundomy(
   ]
 
   return {
-    url: `${prefix}/folksoundomy`,
+    path: `${prefix}/folksoundomy`,
     title: 'Folksoundomy',
     children: sorted.map((doc) => ({
       title: doc.title ?? doc.identifier,
-      url: `${prefix}/collection/${doc.identifier}`,
+      path: `${prefix}/collection/${doc.identifier}`,
       artwork: `${BASE}/services/img/${doc.identifier}`,
       style: 'grid' as const
     }))
@@ -214,12 +214,12 @@ export async function searchCollection(
   const children: Track[] = data.response.docs.map((doc) => ({
     title: doc.title ?? doc.identifier,
     artist: creatorString(doc.creator),
-    url: `${prefix}/item/${doc.identifier}`,
+    path: `${prefix}/item/${doc.identifier}`,
     artwork: `${BASE}/services/img/${doc.identifier}`
   }))
 
   return {
-    url: `${prefix}/collection/${id}`,
+    path: `${prefix}/collection/${id}`,
     title: meta?.title ?? id,
     children
   }
@@ -252,7 +252,7 @@ export async function fetchItem(
   }))
 
   return {
-    url: `${prefix}/item/${id}`,
+    path: `${prefix}/item/${id}`,
     title: albumTitle,
     artist: albumArtist,
     artwork,
@@ -294,7 +294,7 @@ async function fetchCollectionTiles(
     const data: IASearchResponse = await res.json()
     return data.response.docs.map((doc) => ({
       title: doc.title ?? doc.identifier,
-      url: `${prefix}/item/${doc.identifier}`,
+      path: `${prefix}/item/${doc.identifier}`,
       artwork: `${BASE}/services/img/${doc.identifier}`
     }))
   } catch {
@@ -311,13 +311,13 @@ export async function fetchHome(prefix = '/archive'): Promise<ResolvedTrack> {
       if (imageRow.length === 0) return null
       return {
         title: row.title,
-        url: `${prefix}/collection/${row.id}`,
+        path: `${prefix}/collection/${row.id}`,
         imageRow
       }
     })
   )
   return {
-    url: `${prefix}/home`,
+    path: `${prefix}/home`,
     title: 'Archive.org Player',
     children: rows.filter((r): r is Track => r != null)
   }
@@ -334,21 +334,21 @@ export const archiveRoutes: Record<string, BrowserSource> = {
 
 export const archiveLibraryEntry: Track = {
   title: 'Archive.org',
-  url: '/archive',
+  path: '/archive',
   imageRow: [
     {
       title: 'LibriVox Audiobooks',
-      url: '/archive/collection/librivoxaudio',
+      path: '/archive/collection/librivoxaudio',
       artwork: `${BASE}/services/img/librivoxaudio`
     },
     {
       title: 'Cratediggers',
-      url: '/archive/collection/cratediggers',
+      path: '/archive/collection/cratediggers',
       artwork: `${BASE}/services/img/cratediggers`
     },
     {
       title: 'Folksoundomy',
-      url: '/archive/folksoundomy',
+      path: '/archive/folksoundomy',
       artwork: `${BASE}/services/img/folksoundomy`
     }
   ]
@@ -373,7 +373,7 @@ export async function searchArchive(
   return data.response.docs.map((doc) => ({
     title: doc.title ?? doc.identifier,
     artist: creatorString(doc.creator),
-    url: `${prefix}/item/${doc.identifier}`,
+    path: `${prefix}/item/${doc.identifier}`,
     artwork: `${BASE}/services/img/${doc.identifier}`
   }))
 }

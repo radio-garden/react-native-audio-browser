@@ -33,9 +33,9 @@ function setup() {
       setPlayWhenReady(true)
       AudioBrowser.configureBrowser({
         tabs: [
-          { title: 'Home', url: '/archive/home' },
-          { title: 'LibriVox', url: '/archive/collection/librivoxaudio' },
-          { title: 'Folksoundomy', url: '/archive/folksoundomy' }
+          { title: 'Home', path: '/archive/home' },
+          { title: 'LibriVox', path: '/archive/collection/librivoxaudio' },
+          { title: 'Folksoundomy', path: '/archive/folksoundomy' }
         ],
         routes: { ...archiveRoutes },
         async search({ query }) {
@@ -180,17 +180,17 @@ export default function App() {
     setStack((prev) => (prev.length > 1 ? [prev[prev.length - 1]] : prev))
 
   const open = (item: Track) => {
-    if (item.url && !item.src && path) setHistory((h) => [...h, path])
+    if (item.path && !item.src && path) setHistory((h) => [...h, path])
     dir.current = 'fwd'
     if (item.src) setOptimistic(item)
     navigate(item)
   }
 
-  // Drill into a url-only target (imageRow tiles, section headers).
-  const openUrl = (url: string) => {
+  // Drill into a path-only target (imageRow tiles, section headers).
+  const openPath = (to: string) => {
     if (path) setHistory((h) => [...h, path])
     dir.current = 'fwd'
-    navigate(url)
+    navigate(to)
   }
 
   const back = () => {
@@ -226,17 +226,17 @@ export default function App() {
                   <li key={`${item.title}-${i}`} className="section">
                     <div
                       className="section-head"
-                      onClick={() => item.url && openUrl(item.url)}
+                      onClick={() => item.path && openPath(item.path)}
                     >
                       <span className="section-title">{item.title}</span>
-                      {item.url && <span className="ic">›</span>}
+                      {item.path && <span className="ic">›</span>}
                     </div>
                     <div className="img-row">
                       {item.imageRow.map((tile, j) => (
                         <button
                           key={`${tile.title}-${j}`}
                           className="tile"
-                          onClick={() => tile.url && openUrl(tile.url)}
+                          onClick={() => tile.path && openPath(tile.path)}
                         >
                           {tile.artwork && (
                             <img
@@ -368,7 +368,7 @@ export default function App() {
           {tabs.map((tab, i) => (
             <button
               key={i}
-              className={tab.url === (history[0] ?? path) ? 'tab on' : 'tab'}
+              className={tab.path === (history[0] ?? path) ? 'tab on' : 'tab'}
               onClick={() => {
                 setHistory([])
                 dir.current = 'fwd'

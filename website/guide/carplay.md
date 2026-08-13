@@ -348,7 +348,7 @@ First, because `configureBrowser` **replaces** the whole config, build one objec
 const browserConfig = {
   // Tabs along the top of the CarPlay browser (max 4 — capped for
   // Android Auto + CarPlay compatibility; extra tabs dropped with a warning).
-  tabs: [{ title: 'Home', url: '/' }],
+  tabs: [{ title: 'Home', path: '/' }],
 
   // routes: path → BrowserSource (static page, callback, or HTTP).
   routes: {
@@ -567,7 +567,7 @@ The title renders as the list's centered empty state and disappears as soon as c
 
 ## Album Line Navigation
 
-The album line on the Now Playing screen can navigate into the browse tree. Two things are needed for it to become tappable: the track must have an **`album`** string (CarPlay builds the tappable line from it — see the warning below), and an **`albumUrl`** pointing at a browse path (a `url` in your [`routes`](/guide/basic-usage), so the destination must exist there). Set `albumUrl` to make the album line tappable while that track is active — tapping pushes that path:
+The album line on the Now Playing screen can navigate into the browse tree. Two things are needed for it to become tappable: the track must have an **`album`** string (CarPlay builds the tappable line from it — see the warning below), and an **`albumPath`** pointing at a browse path (a `path` in your [`routes`](/guide/basic-usage), so the destination must exist there). Set `albumPath` to make the album line tappable while that track is active — tapping pushes that path:
 
 ```ts
 {
@@ -575,17 +575,17 @@ The album line on the Now Playing screen can navigate into the browse tree. Two 
   artist: 'The Radishes',
   album: 'Greens',
   src: 'https://…',
-  albumUrl: '/album/greens'
+  albumPath: '/album/greens'
 }
 ```
 
-For tracks without an `albumUrl`, configure a [`resolveAlbumUrl`](/api/types/browser/#resolvealbumurl) resolver. It runs when the active track changes (not at tap time), so the album line only becomes tappable when there is actually somewhere to go:
+For tracks without an `albumPath`, configure a [`resolveAlbumPath`](/api/types/browser/#resolvealbumpath) resolver. It runs when the active track changes (not at tap time), so the album line only becomes tappable when there is actually somewhere to go:
 
 ```ts
 configureBrowser({
   // `slugify` here is your own helper (illustrative) — turn an album name
   // into a browse path that exists in your `routes`.
-  resolveAlbumUrl: (track) =>
+  resolveAlbumPath: (track) =>
     track.album ? `/album/${slugify(track.album)}` : undefined
   // ...
 })

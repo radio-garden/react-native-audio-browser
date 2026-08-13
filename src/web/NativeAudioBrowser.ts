@@ -504,7 +504,7 @@ export class NativeAudioBrowser
           return
 
         case 'invalid':
-          throw new Error("Track must have either 'url' or 'src' property")
+          throw new Error("Track must have either 'path' or 'src' property")
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'

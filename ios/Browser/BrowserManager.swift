@@ -426,7 +426,7 @@ final class BrowserManager {
     )
   }
 
-  /// Resolves a browse route: a page object (`{title,url,children:[…]}`).
+  /// Resolves a browse route: a page object (`{title,path,children:[…]}`).
   /// The browse kind layer is the cached resolved layer (`resolvedBrowseLayer`),
   /// populated by `ensureLayersResolved()` inside `buildApiRequest`.
   private func resolveFromConfig(
@@ -534,19 +534,19 @@ final class BrowserManager {
 
     for track in children {
       // Validate track has stable identifier. A track carrying an imageRow is
-      // exempt: a url-less row is a pure preview — never selected, navigated
+      // exempt: a path-less row is a pure preview — never selected, navigated
       // to, or cached (its items carry their own identity).
-      if track.url == nil, track.src == nil, track.imageRow?.isEmpty != false {
+      if track.path == nil, track.src == nil, track.imageRow?.isEmpty != false {
         throw BrowserError.invalidConfiguration(
-          "Track must have either 'url' or 'src' for stable identification: \(track.title)",
+          "Track must have either 'path' or 'src' for stable identification: \(track.title)",
         )
       }
 
       var transformedTrack = track
 
-      if track.src != nil, track.url == nil {
-        let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: track.src!)
-        transformedTrack = track.copying(url: contextualUrl)
+      if track.src != nil, track.path == nil {
+        let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: track.src!)
+        transformedTrack = track.copying(path: contextualPath)
       }
 
       // Resolve artwork URL at browse-time (no size context)
@@ -560,22 +560,22 @@ final class BrowserManager {
         var resolvedItems: [ImageRowItem] = []
         for item in imageRowItems {
           let itemImageSource = await resolveArtworkUrl(track: item.toTrack(), perRouteConfig: artworkConfig)
-          // Playable items get a contextual URL like any list row, so a
+          // Playable items get a contextual path like any list row, so a
           // thumbnail tap expands into its section's queue instead of a
           // queue of one (ADR 0006).
-          let itemUrl = item.url ?? item.src.map {
+          let itemPath = item.path ?? item.src.map {
             BrowserPathHelper.build(parentPath: parentPath, trackId: $0)
           }
           resolvedItems.append(ImageRowItem(
             id: item.id,
-            url: itemUrl,
+            path: itemPath,
             src: item.src,
             artwork: item.artwork,
             artworkSource: itemImageSource,
             title: item.title,
             artist: item.artist,
             album: item.album,
-            albumUrl: item.albumUrl,
+            albumPath: item.albumPath,
             live: item.live,
             request: item.request,
           ))
@@ -669,15 +669,15 @@ final class BrowserManager {
   /// `searchPlayable`.
   func searchPlayable(_ params: SearchParams) async throws -> [Track]? {
     let children = try await (search(params).children) ?? []
-    return try await SearchDrillIn.playable(from: children) { [self] url in
-      logger.debug("First search result is browsable-only, resolving: \(url)")
-      return try await (resolve(url).children) ?? []
+    return try await SearchDrillIn.playable(from: children) { [self] path in
+      logger.debug("First search result is browsable-only, resolving: \(path)")
+      return try await (resolve(path).children) ?? []
     }
   }
 
   private func makeSearchResult(query: String, results: [Track]) -> ResolvedTrack {
     ResolvedTrack(
-      url: BrowserPathHelper.createSearchPath(query),
+      path: BrowserPathHelper.createSearchPath(query),
       children: results,
       carPlaySiriListButton: nil,
       id: nil,
@@ -688,7 +688,7 @@ final class BrowserManager {
       title: "Search: \(query)",
       subtitle: nil,
       artist: nil,
-      albumUrl: nil,
+      albumPath: nil,
       album: nil,
       description: nil,
       genre: nil,
@@ -723,15 +723,15 @@ final class BrowserManager {
 
   // MARK: - Queue Expansion (for CarPlay/external controllers)
 
-  /// Expands a contextual URL to a full queue of playable tracks.
-  func expandQueueFromContextualUrl(_ url: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
-    guard BrowserPathHelper.isContextual(url) else { return nil }
+  /// Expands a contextual path to a full queue of playable tracks.
+  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
+    guard BrowserPathHelper.isContextual(path) else { return nil }
 
-    let parentPath = BrowserPathHelper.stripTrackId(url)
-    guard let trackId = BrowserPathHelper.extractTrackId(url) else { return nil }
+    let parentPath = BrowserPathHelper.stripTrackId(path)
+    guard let trackId = BrowserPathHelper.extractTrackId(path) else { return nil }
 
-    logger.debug("Expanding queue from contextual URL")
-    logger.debug("  url: \(url)")
+    logger.debug("Expanding queue from contextual path")
+    logger.debug("  path: \(path)")
     logger.debug("  parentPath: \(parentPath)")
     logger.debug("  trackId: \(trackId)")
 

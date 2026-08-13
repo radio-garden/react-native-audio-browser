@@ -65,36 +65,36 @@ extension JsonArtwork {
 /// JSON model for image row items (horizontal thumbnail row).
 struct JsonImageRowItem: Codable {
   let id: String?
-  let url: String?
+  let path: String?
   let src: String?
   let artwork: String?
   let title: String
   let artist: String?
   let album: String?
-  let albumUrl: String?
+  let albumPath: String?
   let live: Bool?
   let request: JsonTrackRequest?
 
   init(
     id: String? = nil,
-    url: String? = nil,
+    path: String? = nil,
     src: String? = nil,
     artwork: String? = nil,
     title: String,
     artist: String? = nil,
     album: String? = nil,
-    albumUrl: String? = nil,
+    albumPath: String? = nil,
     live: Bool? = nil,
     request: JsonTrackRequest? = nil,
   ) {
     self.id = id
-    self.url = url
+    self.path = path
     self.src = src
     self.artwork = artwork
     self.title = title
     self.artist = artist
     self.album = album
-    self.albumUrl = albumUrl
+    self.albumPath = albumPath
     self.live = live
     self.request = request
   }
@@ -116,12 +116,12 @@ struct JsonTrackRequest: Codable {
 /// JSON model for resolved track (container with children).
 struct JsonResolvedTrack: Codable {
   let id: String?
-  let url: String
+  let path: String
   let title: String
   let subtitle: String?
   let artwork: JsonArtwork?
   let artist: String?
-  let albumUrl: String?
+  let albumPath: String?
   let album: String?
   let description: String?
   let genre: String?
@@ -136,12 +136,12 @@ struct JsonResolvedTrack: Codable {
 
   init(
     id: String? = nil,
-    url: String,
+    path: String,
     title: String,
     subtitle: String? = nil,
     artwork: JsonArtwork? = nil,
     artist: String? = nil,
-    albumUrl: String? = nil,
+    albumPath: String? = nil,
     album: String? = nil,
     description: String? = nil,
     genre: String? = nil,
@@ -154,12 +154,12 @@ struct JsonResolvedTrack: Codable {
     live: Bool? = nil,
     carPlaySiriListButton: String? = nil,
   ) {
-    self.url = url
+    self.path = path
     self.title = title
     self.subtitle = subtitle
     self.artwork = artwork
     self.artist = artist
-    self.albumUrl = albumUrl
+    self.albumPath = albumPath
     self.album = album
     self.description = description
     self.genre = genre
@@ -178,12 +178,12 @@ struct JsonResolvedTrack: Codable {
 /// JSON model for individual tracks.
 struct JsonTrack: Codable {
   let id: String?
-  let url: String?
+  let path: String?
   let title: String
   let subtitle: String?
   let artwork: JsonArtwork?
   let artist: String?
-  let albumUrl: String?
+  let albumPath: String?
   let album: String?
   let description: String?
   let genre: String?
@@ -198,12 +198,12 @@ struct JsonTrack: Codable {
 
   init(
     id: String? = nil,
-    url: String? = nil,
+    path: String? = nil,
     title: String,
     subtitle: String? = nil,
     artwork: JsonArtwork? = nil,
     artist: String? = nil,
-    albumUrl: String? = nil,
+    albumPath: String? = nil,
     album: String? = nil,
     description: String? = nil,
     genre: String? = nil,
@@ -216,12 +216,12 @@ struct JsonTrack: Codable {
     live: Bool? = nil,
     imageRow: [JsonImageRowItem]? = nil,
   ) {
-    self.url = url
+    self.path = path
     self.title = title
     self.subtitle = subtitle
     self.artwork = artwork
     self.artist = artist
-    self.albumUrl = albumUrl
+    self.albumPath = albumPath
     self.album = album
     self.description = description
     self.genre = genre
@@ -253,12 +253,12 @@ struct JsonTrack: Codable {
     init(from track: Track) {
       self.init(
         id: track.id,
-        url: track.url,
+        path: track.path,
         title: track.title,
         subtitle: track.subtitle,
         artwork: JsonArtwork(track.artwork),
         artist: track.artist,
-        albumUrl: track.albumUrl,
+        albumPath: track.albumPath,
         album: track.album,
         description: track.description,
         genre: track.genre,
@@ -289,11 +289,11 @@ struct JsonTrack: Codable {
     init(from track: Track) {
       self.init(
         id: track.id,
-        url: track.url,
+        path: track.path,
         title: track.title,
         artwork: JsonArtwork(track.artwork),
         artist: track.artist,
-        albumUrl: track.albumUrl,
+        albumPath: track.albumPath,
         album: track.album,
         src: track.src,
         request: track.request.map(JsonTrackRequest.init(from:)),
@@ -318,14 +318,14 @@ struct JsonTrack: Codable {
     func toNitro() -> ImageRowItem {
       ImageRowItem(
         id: id,
-        url: url,
+        path: path,
         src: src,
         artwork: artwork,
         artworkSource: nil,
         title: title,
         artist: artist,
         album: album,
-        albumUrl: albumUrl,
+        albumPath: albumPath,
         live: live,
         request: request?.toNitro(),
       )
@@ -335,7 +335,7 @@ struct JsonTrack: Codable {
   extension JsonResolvedTrack {
     func toNitro() -> ResolvedTrack {
       ResolvedTrack(
-        url: url,
+        path: path,
         children: children?.map { $0.toNitro() },
         carPlaySiriListButton: carPlaySiriListButton.flatMap { CarPlaySiriListButtonPosition(fromString: $0) },
         id: id,
@@ -346,7 +346,7 @@ struct JsonTrack: Codable {
         title: title,
         subtitle: subtitle,
         artist: artist,
-        albumUrl: albumUrl,
+        albumPath: albumPath,
         album: album,
         description: description,
         genre: genre,
@@ -365,7 +365,7 @@ struct JsonTrack: Codable {
     func toNitro() -> Track {
       Track(
         id: id,
-        url: url,
+        path: path,
         src: src,
         artwork: artwork?.toNitro(),
         artworkSource: nil,
@@ -374,7 +374,7 @@ struct JsonTrack: Codable {
         title: title,
         subtitle: subtitle,
         artist: artist,
-        albumUrl: albumUrl,
+        albumPath: albumPath,
         album: album,
         description: description,
         genre: genre,
@@ -396,12 +396,12 @@ struct JsonTrack: Codable {
     func toNitro() -> Track {
       Track(
         id: id ?? "",
-        url: url,
+        path: path,
         src: src,
         request: request.map { TrackRequest(userAgent: $0.userAgent, headers: $0.headers, query: $0.query) },
         title: title,
         artist: artist,
-        albumUrl: albumUrl,
+        albumPath: albumPath,
         album: album,
         live: live,
         artwork: artwork?.toNitro(),
@@ -412,7 +412,7 @@ struct JsonTrack: Codable {
   extension JsonResolvedTrack {
     func toNitro() -> ResolvedTrack {
       ResolvedTrack(
-        url: url,
+        path: path,
         children: children?.map { $0.toNitro() },
         artwork: artwork?.toNitro(),
         title: title,

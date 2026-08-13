@@ -691,14 +691,14 @@ class PlaybackCoordinator {
       guard let src = currentTrack.src else {
         logger.error("Failed to load track - no src")
         logger.error("  track.title: \(currentTrack.title)")
-        logger.error("  track.url: \(currentTrack.url ?? "nil")")
+        logger.error("  track.path: \(currentTrack.path ?? "nil")")
         effectHandler?.clearCurrentItem()
         transition(.errorOccurred(.invalidSourceUrl("nil")))
         return
       }
 
       logger.debug("Loading track: \(currentTrack.title)")
-      logger.debug("  track.url: \(currentTrack.url ?? "nil")")
+      logger.debug("  track.path: \(currentTrack.path ?? "nil")")
       logger.debug("  track.src: \(src)")
 
       effectHandler?.loadTrack(src: src, track: currentTrack)

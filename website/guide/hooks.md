@@ -87,7 +87,7 @@ function QueueScreen() {
 }
 ```
 
-[`useActiveTrack`](/api/features/queue/#useactivetrack) updates even when the track changes from an external control (car next/previous), so matching on the track's identity keeps your UI correct. Note `Track.id` is **optional** (and may be undefined for a browse item the user picked in the car without you queuing it) — fall back to `src` / `url` if you rely on `id`. See [Track](/guide/track) for the Track shape.
+[`useActiveTrack`](/api/features/queue/#useactivetrack) updates even when the track changes from an external control (car next/previous), so matching on the track's identity keeps your UI correct. Note `Track.id` is **optional** (and may be undefined for a browse item the user picked in the car without you queuing it) — fall back to `src` / `path` if you rely on `id`. See [Track](/guide/track) for the Track shape.
 
 ## Now playing
 

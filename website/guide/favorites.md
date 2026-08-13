@@ -101,12 +101,12 @@ How you surface favorites in your [browse tree](/guide/basic-usage) is up to you
 ```ts
 AudioBrowser.configureBrowser({
   tabs: [
-    { title: 'Browse', url: '/browse' },
-    { title: 'Favorites', url: '/favorites' }
+    { title: 'Browse', path: '/browse' },
+    { title: 'Favorites', path: '/favorites' }
   ],
   routes: {
     '/favorites': async () => ({
-      url: '/favorites',
+      path: '/favorites',
       title: 'Favorites',
       // your stored favorites, as a Track[]
       children: await loadFavoriteTracks()

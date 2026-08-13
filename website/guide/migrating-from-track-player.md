@@ -150,9 +150,9 @@ directly — you just drop the enum import.
 
 ## `Track`: `url` → `src`
 
-The playable URL field is renamed. In audio-browser, `url` means a track's
-**browse path** (for the [browse tree](/guide/browser)); the **playable source**
-is [`src`](/api/types/browser-nodes/#src):
+The playable URL field is renamed. In audio-browser, the **playable source**
+is [`src`](/api/types/browser-nodes/#src); a track's **browse address** (for the
+[browse tree](/guide/browser)) is a separate field, `path`:
 
 ```ts
 // RNTP

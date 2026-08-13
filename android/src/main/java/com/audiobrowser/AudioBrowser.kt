@@ -175,7 +175,7 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       handleTrackLoad = null,
       androidControllerOfflineError = null,
       carPlayLoadingTitle = null,
-      resolveAlbumUrl = null,
+      resolveAlbumPath = null,
       formatNavigationError = null,
     )
 
@@ -373,8 +373,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
       browserManager.config = buildConfig()
       val tabs = browserManager.queryTabs()
       if (tabs.isNotEmpty()) {
-        Timber.d("Using first tab as default path: ${tabs[0].url}")
-        tabs[0].url
+        Timber.d("Using first tab as default path: ${tabs[0].path}")
+        tabs[0].path
       } else {
         Timber.d("Using root path as default: /")
         "/"
@@ -617,17 +617,17 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
     // Cancel previous navigation to avoid race conditions
     navigationJob?.cancel()
 
-    val url = track.url
+    val path = track.path
     navigationJob =
       mainScope.launch {
         try {
           when {
-            // Check if this is a contextual URL (playable-only track with queue context)
-            url != null && BrowserPathHelper.isContextual(url) -> {
-              Timber.d("Navigating to contextual track URL: $url")
+            // Check if this is a contextual path (playable-only track with queue context)
+            path != null && BrowserPathHelper.isContextual(path) -> {
+              Timber.d("Navigating to contextual track path: $path")
 
-              val parentPath = BrowserPathHelper.stripTrackId(url)
-              val trackId = BrowserPathHelper.extractTrackId(url)
+              val parentPath = BrowserPathHelper.stripTrackId(path)
+              val trackId = BrowserPathHelper.extractTrackId(path)
 
               // Check if queue already came from this parent path - just skip to the track
               if (trackId != null && parentPath == player.queueSourcePath) {
@@ -649,8 +649,8 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
                 }
               }
 
-              // Expand the queue from the contextual URL
-              val expanded = browserManager.expandQueueFromContextualUrl(url)
+              // Expand the queue from the contextual path
+              val expanded = browserManager.expandQueueFromContextualPath(path)
 
               if (expanded != null) {
                 val (tracks, startIndex) = expanded
@@ -685,9 +685,9 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
               }
             }
             // Navigate to browsable track to show browsing UI
-            url != null -> {
-              Timber.d("Navigating to browsable track: $url")
-              browserManager.navigate(url)
+            path != null -> {
+              Timber.d("Navigating to browsable track: $path")
+              browserManager.navigate(path)
             }
             // If track is playable (has src), load it into player
             track.src != null -> {
@@ -702,13 +702,13 @@ class AudioBrowser : HybridAudioBrowserSpec(), ServiceConnection {
               )
             }
             else -> {
-              throw IllegalArgumentException("Track must have either an 'url' or an 'src' property")
+              throw IllegalArgumentException("Track must have either a 'path' or an 'src' property")
             }
           }
         } catch (e: CancellationException) {
           throw e // Rethrow to properly cancel
         } catch (e: Exception) {
-          handleBrowserException(e, url ?: track.src ?: "", "navigating to track: ${track.title}")
+          handleBrowserException(e, path ?: track.src ?: "", "navigating to track: ${track.title}")
         }
       }
   }

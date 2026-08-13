@@ -15,7 +15,7 @@ import java.net.URLEncoder
  * "/library/radio?__trackId=song.mp3"
  *
  * This allows:
- * - Media3 to reference playable-only tracks (tracks with `src` but no `url`)
+ * - Media3 to reference playable-only tracks (tracks with `src` but no `path`)
  * - Cache lookup to work consistently
  * - Parent context to be preserved for queue restoration
  */

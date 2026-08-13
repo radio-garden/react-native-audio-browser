@@ -37,7 +37,7 @@ export class NowPlayingManager {
           album: update.album ?? currentTrack.album,
           artwork: artworkUrl(currentTrack.artwork),
           description: currentTrack.description,
-          mediaId: currentTrack.src ?? currentTrack.url,
+          mediaId: currentTrack.src ?? currentTrack.path,
           genre: currentTrack.genre,
           duration
         }
@@ -47,7 +47,7 @@ export class NowPlayingManager {
           album: currentTrack.album,
           artwork: artworkUrl(currentTrack.artwork),
           description: currentTrack.description,
-          mediaId: currentTrack.src ?? currentTrack.url,
+          mediaId: currentTrack.src ?? currentTrack.path,
           genre: currentTrack.genre,
           duration
         }
@@ -74,7 +74,7 @@ export class NowPlayingManager {
       album: this.override?.album ?? currentTrack.album,
       artwork: artworkUrl(currentTrack.artwork),
       description: currentTrack.description,
-      mediaId: currentTrack.src ?? currentTrack.url,
+      mediaId: currentTrack.src ?? currentTrack.path,
       genre: currentTrack.genre,
       duration
     }

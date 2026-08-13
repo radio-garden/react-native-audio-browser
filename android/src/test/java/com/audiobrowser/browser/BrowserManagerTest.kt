@@ -17,14 +17,14 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Navigation and queue-expansion glue.
  *
- * [BrowserManager.expandQueueFromContextualUrl] is the seam between the page a listener tapped in
+ * [BrowserManager.expandQueueFromContextualPath] is the seam between the page a listener tapped in
  * and the queue that starts playing. Its two halves are covered on their own — the section logic in
  * [SectionScopeTest], the caller's single-track fallback in the player tests — but the wiring
  * between them is what decides whether tapping row 3 of a page resumes the right station, and only
  * these tests exercise it.
  *
  * Routes serve `browseStatic`, the one browse arm that needs neither the JNI bridge nor HTTP.
- * Robolectric is required for `android.net.Uri` (contextual-URL parsing) and
+ * Robolectric is required for `android.net.Uri` (contextual-path parsing) and
  * `android.util.LruCache` (the content cache).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -46,7 +46,7 @@ class BrowserManagerTest {
     browserManager.config =
       BrowserConfig(
         routes =
-          arrayOf(staticRoute(path, resolvedTrack(url = path, children = arrayOf(*children)))),
+          arrayOf(staticRoute(path, resolvedTrack(path = path, children = arrayOf(*children)))),
         singleTrack = singleTrack,
       )
   }
@@ -101,18 +101,18 @@ class BrowserManagerTest {
     val resolved = browserManager.navigate("/library")
 
     assertEquals(listOf("A", "B"), resolved.children?.map { it.title })
-    // The tap target: a child's url is rewritten to point back at this page plus its own id.
+    // The tap target: a child's path is rewritten to point back at this page plus its own id.
     assertEquals(
       listOf(contextual("/library", "a"), contextual("/library", "b")),
-      resolved.children?.map { it.url },
+      resolved.children?.map { it.path },
     )
     assertEquals("/library", browserManager.getPath())
   }
 
-  // MARK: - expandQueueFromContextualUrl
+  // MARK: - expandQueueFromContextualPath
 
   @Test
-  fun `expandQueueFromContextualUrl scopes the queue to the tapped section`() = runBlocking {
+  fun `expandQueueFromContextualPath scopes the queue to the tapped section`() = runBlocking {
     servePage(
       "/home",
       track(src = "a", groupTitle = "Recent"),
@@ -121,7 +121,7 @@ class BrowserManagerTest {
       track(src = "d", groupTitle = "Popular"),
     )
 
-    val expanded = browserManager.expandQueueFromContextualUrl(contextual("/home", "c"))
+    val expanded = browserManager.expandQueueFromContextualPath(contextual("/home", "c"))
 
     // "Popular" only — a page aggregating sections must not leak next/previous across them.
     val (queue, index) = requireNotNull(expanded)
@@ -130,7 +130,7 @@ class BrowserManagerTest {
   }
 
   @Test
-  fun `expandQueueFromContextualUrl indexes the tapped track within its section`() = runBlocking {
+  fun `expandQueueFromContextualPath indexes the tapped track within its section`() = runBlocking {
     servePage(
       "/home",
       track(src = "a", groupTitle = "Recent"),
@@ -139,40 +139,40 @@ class BrowserManagerTest {
     )
 
     val (queue, index) =
-      requireNotNull(browserManager.expandQueueFromContextualUrl(contextual("/home", "c")))
+      requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "c")))
 
     assertEquals(listOf("b", "c"), queue.map { it.src })
     assertEquals(1, index)
   }
 
   @Test
-  fun `expandQueueFromContextualUrl returns null when the id has vanished from the page`() =
+  fun `expandQueueFromContextualPath returns null when the id has vanished from the page`() =
     runBlocking {
-      // The stored url points at a track the page no longer lists — the page changed under a
+      // The stored path points at a track the page no longer lists — the page changed under a
       // resumed session. Queueing the current list would resume the wrong station, so expansion
       // aborts and the caller falls back to the stored single track.
       servePage("/home", track(src = "a"), track(src = "b"))
 
-      assertNull(browserManager.expandQueueFromContextualUrl(contextual("/home", "gone")))
+      assertNull(browserManager.expandQueueFromContextualPath(contextual("/home", "gone")))
     }
 
   @Test
-  fun `expandQueueFromContextualUrl returns null for a non-contextual url`() = runBlocking {
+  fun `expandQueueFromContextualPath returns null for a non-contextual path`() = runBlocking {
     servePage("/home", track(src = "a"))
 
-    assertNull(browserManager.expandQueueFromContextualUrl("/home"))
+    assertNull(browserManager.expandQueueFromContextualPath("/home"))
   }
 
   @Test
-  fun `expandQueueFromContextualUrl returns null when the page has no children`() = runBlocking {
+  fun `expandQueueFromContextualPath returns null when the page has no children`() = runBlocking {
     browserManager.config =
-      BrowserConfig(routes = arrayOf(staticRoute("/home", resolvedTrack(url = "/home"))))
+      BrowserConfig(routes = arrayOf(staticRoute("/home", resolvedTrack(path = "/home"))))
 
-    assertNull(browserManager.expandQueueFromContextualUrl(contextual("/home", "a")))
+    assertNull(browserManager.expandQueueFromContextualPath(contextual("/home", "a")))
   }
 
   @Test
-  fun `expandQueueFromContextualUrl expands an image row into its items`() = runBlocking {
+  fun `expandQueueFromContextualPath expands an image row into its items`() = runBlocking {
     servePage(
       "/home",
       track(
@@ -184,7 +184,7 @@ class BrowserManagerTest {
     )
 
     val (queue, index) =
-      requireNotNull(browserManager.expandQueueFromContextualUrl(contextual("/home", "r2")))
+      requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "r2")))
 
     // A tile tap queues its row, not the list rows beside it.
     assertEquals(listOf("r1", "r2"), queue.map { it.src })
@@ -192,24 +192,24 @@ class BrowserManagerTest {
   }
 
   @Test
-  fun `expandQueueFromContextualUrl drops unplayable siblings`() = runBlocking {
+  fun `expandQueueFromContextualPath drops unplayable siblings`() = runBlocking {
     servePage(
       "/home",
       track(src = "a", groupTitle = "Mixed"),
       // A browsable row sitting inside the same section — no src, so not queueable.
-      track(src = null, groupTitle = "Mixed").copy(url = "/sub"),
+      track(src = null, groupTitle = "Mixed").copy(path = "/sub"),
       track(src = "b", groupTitle = "Mixed"),
     )
 
     val (queue, index) =
-      requireNotNull(browserManager.expandQueueFromContextualUrl(contextual("/home", "b")))
+      requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "b")))
 
     assertEquals(listOf("a", "b"), queue.map { it.src })
     assertEquals(1, index)
   }
 
   @Test
-  fun `expandQueueFromContextualUrl honours singleTrack`() = runBlocking {
+  fun `expandQueueFromContextualPath honours singleTrack`() = runBlocking {
     servePage(
       "/home",
       track(src = "a", groupTitle = "Recent"),
@@ -218,7 +218,7 @@ class BrowserManagerTest {
     )
 
     val (queue, index) =
-      requireNotNull(browserManager.expandQueueFromContextualUrl(contextual("/home", "b")))
+      requireNotNull(browserManager.expandQueueFromContextualPath(contextual("/home", "b")))
 
     assertEquals(listOf("b"), queue.map { it.src })
     assertEquals(0, index)

@@ -18,7 +18,7 @@ describe('toNativeConfig route classification', () => {
 
   it('keeps a static page with a string artwork out of the RouteConfig branch', () => {
     const page = {
-      url: '/x',
+      path: '/x',
       title: 'X',
       artwork: 'https://img.example.com/x.png',
       children: []
@@ -26,6 +26,21 @@ describe('toNativeConfig route classification', () => {
     const entry = entryFor({ '/x': page }, '/x')
     expect(entry?.browseStatic).toEqual(page)
     expect(entry?.artwork).toBeUndefined()
+  })
+
+  it('classifies a static page as static despite its top-level `path` key', () => {
+    // `path` is also a RequestConfig field; the page's required `title` must
+    // win the classification (a config with a `path` alone is not a page).
+    const page = { path: '/x', title: 'X', children: [] }
+    const entry = entryFor({ '/x': page }, '/x')
+    expect(entry?.browseStatic).toEqual(page)
+    expect(entry?.browseConfig).toBeUndefined()
+  })
+
+  it('classifies a path-only request config as a request config', () => {
+    const entry = entryFor({ '/x': { path: '/remapped' } }, '/x')
+    expect(entry?.browseConfig).toEqual({ path: '/remapped' })
+    expect(entry?.browseStatic).toBeUndefined()
   })
 
   it('classifies a method-only request config as a request config', () => {
@@ -66,13 +81,13 @@ describe('validateBrowserConfiguration', () => {
   it('is silent for a valid configuration', () => {
     validateBrowserConfiguration({
       routes: {
-        '/favorites': async () => ({ url: '/favorites', title: 'Favorites' }),
+        '/favorites': async () => ({ path: '/favorites', title: 'Favorites' }),
         '/albums/{id}': { baseUrl: 'https://api.example.com' },
         '*': { baseUrl: 'https://api.example.com' }
       },
       tabs: [
-        { title: 'Home', url: '/' },
-        { title: 'Search', url: '/search' }
+        { title: 'Home', path: '/' },
+        { title: 'Search', path: '/search' }
       ]
     })
     expect(warnings).toEqual([])
@@ -96,14 +111,14 @@ describe('validateBrowserConfiguration', () => {
 
   it('does not flag a valid static page as unclassifiable', () => {
     validateBrowserConfiguration({
-      routes: { '/x': { url: '/x', title: 'X', children: [] } }
+      routes: { '/x': { path: '/x', title: 'X', children: [] } }
     })
     expect(warnings).toEqual([])
   })
 
   it('warns on more than 4 static tabs', () => {
     validateBrowserConfiguration({
-      tabs: [1, 2, 3, 4, 5].map((n) => ({ title: `Tab ${n}`, url: `/${n}` }))
+      tabs: [1, 2, 3, 4, 5].map((n) => ({ title: `Tab ${n}`, path: `/${n}` }))
     })
     expect(warnings.some((w) => w.includes('at most 4'))).toBe(true)
   })

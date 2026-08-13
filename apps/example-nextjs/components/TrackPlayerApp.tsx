@@ -38,21 +38,21 @@ const configuration: BrowserConfiguration = {
   tabs: [
     {
       title: 'Library',
-      url: '/library',
+      path: '/library',
       artwork: Platform.select({
         ios: 'sf:music.note.list'
       })
     },
     {
       title: 'JSON API',
-      url: '/api',
+      path: '/api',
       artwork: Platform.select({
         ios: 'sf:server.rack'
       })
     },
     {
       title: 'Favorites',
-      url: '/favorites',
+      path: '/favorites',
       artwork: Platform.select({
         ios: 'sf:heart.fill'
       })
@@ -75,22 +75,22 @@ const configuration: BrowserConfiguration = {
     },
     '/favorites'() {
       return Promise.resolve({
-        url: '/favorites',
+        path: '/favorites',
         title: 'Favorites',
         children: favorites
       })
     },
     '/library/playlists': {
-      url: '/library/playlists',
+      path: '/library/playlists',
       title: 'Radio Playlists',
       children: [
         {
           title: 'Independent Sounds',
-          url: '/playlist/independent-sounds'
+          path: '/playlist/independent-sounds'
         },
         {
           title: 'Energetic Rhythms',
-          url: '/playlist/energetic-rhythms'
+          path: '/playlist/energetic-rhythms'
         }
       ]
     },
@@ -98,7 +98,7 @@ const configuration: BrowserConfiguration = {
       return {
         'independent-sounds': {
           title: 'Independent Sounds',
-          url: '/api/playlist/independent-sounds',
+          path: '/api/playlist/independent-sounds',
           children: [
             {
               title: 'Radio is a Foreign Country',
@@ -117,7 +117,7 @@ const configuration: BrowserConfiguration = {
         },
         'energetic-rhythms': {
           title: 'Energetic Rhythms',
-          url: '/playlist/energetic-rhythms',
+          path: '/playlist/energetic-rhythms',
           children: [
             { title: 'Noods Radio', src: '/rg/TdAjNy_3', live: true },
             { title: 'Systrum Sistum - SSR2', src: '/rg/ftR_mtxU', live: true },
@@ -130,11 +130,11 @@ const configuration: BrowserConfiguration = {
       }[routeParams!.id]!
     },
     '/library': {
-      url: '/library',
+      path: '/library',
       title: 'Library',
       children: [
         {
-          url: '/library/playlists',
+          path: '/library/playlists',
           title: 'Radio Playlists',
           style: 'list'
         },
@@ -198,7 +198,7 @@ const configuration: BrowserConfiguration = {
           )
           if (source.title?.toLowerCase().includes(query)) {
             results.push({
-              url: source.url,
+              path: source.path,
               title: source.title,
               artwork: source.artwork,
               artist: source.artist,
@@ -211,10 +211,10 @@ const configuration: BrowserConfiguration = {
       []
     )
 
-    // Dedupe by src (for playable tracks) or url (for browsable items)
+    // Dedupe by src (for playable tracks) or path (for browsable items)
     const seen = new Set<string>()
     return results.filter((track) => {
-      const key = track.src ?? track.url
+      const key = track.src ?? track.path
       if (!key || seen.has(key)) return false
       seen.add(key)
       return true
@@ -251,11 +251,11 @@ export default function TrackPlayerApp() {
         // Update our favorites array
         if (favorited) {
           if (!favorites.find((t) => t.src === track.src)) {
-            // Strip url - it contains the original context (e.g., /library/radio?__trackId=...)
-            // The library will regenerate the correct contextual URL when browsing favorites
+            // Strip path - it contains the original context (e.g., /library/radio?__trackId=...)
+            // The library will regenerate the correct contextual path when browsing favorites
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { url, groupTitle, ...trackWithoutUrl } = track
-            favorites.push(trackWithoutUrl as Track)
+            const { path, groupTitle, ...trackWithoutPath } = track
+            favorites.push(trackWithoutPath as Track)
           }
         } else {
           favorites = favorites.filter((t) => t.src !== track.src)

@@ -118,8 +118,8 @@ public final class RNABCarPlayController: NSObject {
       self?.listItemFactory?.createListItem(for: track, handler: handler)
         ?? CPListItem(text: track.title, detailText: nil)
     }
-    nowPlayingManager.navigateToUrl = { [weak self] url, title in
-      Task { @MainActor in await self?.navigateToUrl(url, title: title) }
+    nowPlayingManager.navigateToPath = { [weak self] path, title in
+      Task { @MainActor in await self?.navigateToPath(path, title: title) }
     }
   }
 
@@ -261,7 +261,7 @@ public final class RNABCarPlayController: NSObject {
     }
 
     // Subscribe to config changes (for Now Playing buttons and per-track
-    // button state — e.g. resolveAlbumUrl appearing/disappearing)
+    // button state — e.g. resolveAlbumPath appearing/disappearing)
     audioBrowser.browserManager.onConfigChanged = { [weak self] _ in
       Task { @MainActor in
         self?.nowPlayingManager.setupNowPlayingButtons()
@@ -501,8 +501,8 @@ public final class RNABCarPlayController: NSObject {
     interfaceController.safeSetRoot(tabBar, animated: true)
 
     // Load content for the first tab only - others load lazily when selected
-    if let firstTemplate = tabTemplates.first, let firstTab = tabs.first, let url = firstTab.url {
-      await loadContent(for: url, into: firstTemplate)
+    if let firstTemplate = tabTemplates.first, let firstTab = tabs.first, let path = firstTab.path {
+      await loadContent(for: path, into: firstTemplate)
     }
   }
 
@@ -540,7 +540,7 @@ public final class RNABCarPlayController: NSObject {
     var templates: [CPListTemplate] = []
     for tab in limitedTabs {
       let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: tab.url, search: nil),
+        for: NativeGateRequest(reason: .browse, path: tab.path, search: nil),
       )
       guard gateBuildGeneration == generation else { return } // superseded by a newer build
       if outcome.gated {
@@ -566,8 +566,8 @@ public final class RNABCarPlayController: NSObject {
     // Eagerly fill any allowed (content) tabs: templateDidAppear isn't
     // guaranteed to re-fire for templates swapped in via updateTemplates.
     for (tab, template) in zip(limitedTabs, templates) {
-      guard getPath(from: template) != nil, let url = tab.url else { continue }
-      await loadContent(for: url, into: template)
+      guard getPath(from: template) != nil, let path = tab.path else { continue }
+      await loadContent(for: path, into: template)
     }
   }
 
@@ -576,7 +576,7 @@ public final class RNABCarPlayController: NSObject {
   /// until its content lazy-loads on first appearance.
   private func createTabTemplate(for track: Track) -> CPListTemplate {
     // The path stored on the template drives lazy loading and refresh.
-    let template = makeLoadingTemplate(title: track.title, path: track.url)
+    let template = makeLoadingTemplate(title: track.title, path: track.path)
     applyTabBarEntry(to: template, for: track)
     return template
   }
@@ -777,7 +777,7 @@ public final class RNABCarPlayController: NSObject {
 
     // Release CarPlay immediately so the list never locks up. Apple's handler
     // guidance is to finish processing the tap promptly; for a browse we "finish"
-    // by pushing the destination and filling it in (see navigateToUrl), and for
+    // by pushing the destination and filling it in (see navigateToPath), and for
     // playback the Now Playing surface owns its own loading state.
     completion()
 
@@ -790,8 +790,8 @@ public final class RNABCarPlayController: NSObject {
         self.nowPlayingManager.showNowPlaying(popToFront: false)
       case .intercepted:
         self.nowPlayingManager.showNowPlaying(popToFront: false)
-      case let .browse(url):
-        await self.navigateToUrl(url, title: track.title)
+      case let .browse(path):
+        await self.navigateToPath(path, title: track.title)
       case .none:
         break
       }
@@ -809,24 +809,24 @@ public final class RNABCarPlayController: NSObject {
     }
   }
 
-  /// Pushes a browsable URL's destination immediately as an empty, spinning list
+  /// Pushes a browsable path's destination immediately as an empty, spinning list
   /// template — so the list the user tapped from is never blocked. The content is
   /// filled by `templateDidAppear` → `loadContentIfNeeded` → `loadContent`, which
   /// runs once the template is on screen (the timing CarPlay needs: updates made
   /// right after a push are dropped). Backing out and re-tapping retries.
   @MainActor
-  private func navigateToUrl(_ url: String, title: String) async {
+  private func navigateToPath(_ path: String, title: String) async {
     // The gate is resolved per-request: a gated path pushes the gate page
     // (with this request's chrome) instead of browsing into content; this also
     // blocks indirect entries like the Now Playing album line. An allowed path
     // browses normally even while a gate is active.
     if isGated, let audioBrowser {
       let outcome = await audioBrowser.gateDecision(
-        for: NativeGateRequest(reason: .browse, path: url, search: nil),
+        for: NativeGateRequest(reason: .browse, path: path, search: nil),
       )
       if outcome.gated {
         audioBrowser.onGate(GateEvent(reason: .browse))
-        if let top = interfaceController.topTemplate, getPath(from: top) == url { return }
+        if let top = interfaceController.topTemplate, getPath(from: top) == path { return }
         interfaceController.safePush(
           makeGateTemplate(gate: outcome.chrome, tab: nil), animated: true,
         )
@@ -834,24 +834,24 @@ public final class RNABCarPlayController: NSObject {
       }
     }
     // Avoid pushing a duplicate if the top template already shows this path.
-    if let top = interfaceController.topTemplate, getPath(from: top) == url {
+    if let top = interfaceController.topTemplate, getPath(from: top) == path {
       return
     }
     // …and guard a rapid double-tap whose first push hasn't appeared yet (so the
     // check above can't see it). Cleared when the pushed template appears.
-    guard !navigatingPaths.contains(url) else { return }
-    navigatingPaths.insert(url)
+    guard !navigatingPaths.contains(path) else { return }
+    navigatingPaths.insert(path)
 
-    let template = makeLoadingTemplate(title: title, path: url)
+    let template = makeLoadingTemplate(title: title, path: path)
     interfaceController.safePush(template, animated: true) { [weak self] pushed, error in
       guard !pushed else { return }
       // The push can fail (e.g. CarPlay's template stack depth limit). The
       // appear callback that normally clears the guard will never fire, so
       // clear it here — otherwise the destination stays unreachable until
       // CarPlay reconnects.
-      self?.navigatingPaths.remove(url)
+      self?.navigatingPaths.remove(path)
       if let error {
-        self?.logger.error("pushTemplate failed for \(url): \(error.localizedDescription)")
+        self?.logger.error("pushTemplate failed for \(path): \(error.localizedDescription)")
       }
     }
   }
@@ -930,14 +930,14 @@ public final class RNABCarPlayController: NSObject {
   @MainActor
   private func handleTabsChanged(_ tabs: [Track]) {
     logger.debug("Tabs changed: \(tabs.count) tabs")
-    // Same tabs by URL while ungated → only the tab-bar entries changed
+    // Same tabs by path while ungated → only the tab-bar entries changed
     // (e.g. titles after a locale switch): restamp them in place. No rebuild,
     // so the selected tab and any pushed navigation stack survive. (Gate
     // templates carry no path, so a gated tab bar never matches here.)
     if !isGated,
        let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate,
        tabBar.templates.count == min(tabs.count, CPTabBarTemplate.maximumTabCount),
-       zip(tabBar.templates, tabs).allSatisfy({ getPath(from: $0) == $1.url })
+       zip(tabBar.templates, tabs).allSatisfy({ getPath(from: $0) == $1.path })
     {
       for (template, tab) in zip(tabBar.templates, tabs) {
         applyTabBarEntry(to: template, for: tab)
@@ -978,7 +978,7 @@ public final class RNABCarPlayController: NSObject {
     // This callback fires when the main browser's content changes.
     // For CarPlay-specific refreshes (e.g., favorites), use notifyContentChanged instead.
     guard let content else { return }
-    refreshTemplatesForPath(content.url, with: content)
+    refreshTemplatesForPath(content.path, with: content)
   }
 
   @MainActor

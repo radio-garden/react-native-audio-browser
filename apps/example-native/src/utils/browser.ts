@@ -23,17 +23,17 @@ const configuration: BrowserConfiguration = {
   tabs: [
     {
       title: 'Library',
-      url: '/library',
+      path: '/library',
       artwork: Platform.select({ ios: 'sf:music.note.list' })
     },
     {
       title: 'JSON API',
-      url: '/api',
+      path: '/api',
       artwork: Platform.select({ ios: 'sf:server.rack' })
     },
     {
       title: 'Favorites',
-      url: '/favorites',
+      path: '/favorites',
       artwork: Platform.select({ ios: 'sf:heart.fill' })
     }
   ],
@@ -46,7 +46,7 @@ const configuration: BrowserConfiguration = {
     ...radioGardenRoutes,
     ...archiveRoutes,
     '/library': {
-      url: '/library',
+      path: '/library',
       title: 'Library',
       carPlaySiriListButton: 'top',
       children: [

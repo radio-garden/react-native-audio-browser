@@ -135,8 +135,8 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JBoolean> androidControllerOfflineError = this->getFieldValue(fieldAndroidControllerOfflineError);
       static const auto fieldCarPlayLoadingTitle = clazz->getField<jni::JString>("carPlayLoadingTitle");
       jni::local_ref<jni::JString> carPlayLoadingTitle = this->getFieldValue(fieldCarPlayLoadingTitle);
-      static const auto fieldResolveAlbumUrl = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject>("resolveAlbumUrl");
-      jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject> resolveAlbumUrl = this->getFieldValue(fieldResolveAlbumUrl);
+      static const auto fieldResolveAlbumPath = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject>("resolveAlbumPath");
+      jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track::javaobject> resolveAlbumPath = this->getFieldValue(fieldResolveAlbumPath);
       static const auto fieldFormatNavigationError = clazz->getField<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject>("formatNavigationError");
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams::javaobject> formatNavigationError = this->getFieldValue(fieldFormatNavigationError);
       return NativeBrowserConfiguration(
@@ -186,13 +186,13 @@ namespace margelo::nitro::audiobrowser {
         }()) : std::nullopt,
         androidControllerOfflineError != nullptr ? std::make_optional(static_cast<bool>(androidControllerOfflineError->value())) : std::nullopt,
         carPlayLoadingTitle != nullptr ? std::make_optional(carPlayLoadingTitle->toStdString()) : std::nullopt,
-        resolveAlbumUrl != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)> {
-          if (resolveAlbumUrl->isInstanceOf(JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::javaClassStatic())) [[likely]] {
-            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::javaobject>(resolveAlbumUrl);
+        resolveAlbumPath != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<std::string>>>(const Track& /* track */)> {
+          if (resolveAlbumPath->isInstanceOf(JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::javaClassStatic())) [[likely]] {
+            auto downcast = jni::static_ref_cast<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::javaobject>(resolveAlbumPath);
             return downcast->cthis()->getFunction();
           } else {
-            auto resolveAlbumUrlRef = jni::make_global(resolveAlbumUrl);
-            return JNICallable<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track, std::shared_ptr<Promise<std::optional<std::string>>>(Track)>(std::move(resolveAlbumUrlRef));
+            auto resolveAlbumPathRef = jni::make_global(resolveAlbumPath);
+            return JNICallable<JFunc_std__shared_ptr_Promise_std__optional_std__string____Track, std::shared_ptr<Promise<std::optional<std::string>>>(Track)>(std::move(resolveAlbumPathRef));
           }
         }()) : std::nullopt,
         formatNavigationError != nullptr ? std::make_optional([&]() -> std::function<std::shared_ptr<Promise<std::optional<FormattedNavigationError>>>(const FormatNavigationErrorParams& /* params */)> {
@@ -240,7 +240,7 @@ namespace margelo::nitro::audiobrowser {
         value.handleTrackLoad.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_void_____TrackLoadEvent_cxx::fromCpp(value.handleTrackLoad.value()) : nullptr,
         value.androidControllerOfflineError.has_value() ? jni::JBoolean::valueOf(value.androidControllerOfflineError.value()) : nullptr,
         value.carPlayLoadingTitle.has_value() ? jni::make_jstring(value.carPlayLoadingTitle.value()) : nullptr,
-        value.resolveAlbumUrl.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::fromCpp(value.resolveAlbumUrl.value()) : nullptr,
+        value.resolveAlbumPath.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_std__string____Track_cxx::fromCpp(value.resolveAlbumPath.value()) : nullptr,
         value.formatNavigationError.has_value() ? JFunc_std__shared_ptr_Promise_std__optional_FormattedNavigationError____FormatNavigationErrorParams_cxx::fromCpp(value.formatNavigationError.value()) : nullptr
       );
     }

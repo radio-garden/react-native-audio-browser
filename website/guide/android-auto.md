@@ -45,7 +45,7 @@ Two per-Track fields control how Android Auto renders a browsable's children:
 
 ```ts
 {
-  url: '/browse/stations',
+  path: '/browse/stations',
   title: 'Stations',
   // render this list's children as grid tiles ('list' is the default)
   childrenStyle: 'grid',

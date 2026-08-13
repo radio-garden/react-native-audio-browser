@@ -164,7 +164,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
       duration = track.duration,
       artwork = track.artwork?.url,
       description = track.description,
-      mediaId = track.src ?: track.url,
+      mediaId = track.src ?: track.path,
       genre = track.genre,
     )
   }
@@ -227,7 +227,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     // default on null/throw.
     val activeFormatter = if (enabled) formatter else null
     if (activeFormatter != null) {
-      val capturedId = track.src ?: track.url
+      val capturedId = track.src ?: track.path
       // Gate the raw load-control signal to the buffering state so `stalled` is correct on its
       // own: ExoPlayer's rebuffering flag is polled on a different cadence than state transitions
       // and can linger true into the PLAYING transition as a rebuffer recovers. Classify by
@@ -266,7 +266,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
           formatted != null &&
             current != null &&
             currentIdx != null &&
-            (current.src ?: current.url) == capturedId &&
+            (current.src ?: current.path) == capturedId &&
             renderGeneration == generation
         ) {
           applyFields(
@@ -293,7 +293,7 @@ class NowPlayingUpdater(private val surface: NowPlayingSurface, private val scop
     // the same fields are recomputed often; an unconditional stamp would churn the MediaSession
     // (and flicker Android Auto / now-playing) for no visible change. Keyed on the track identity
     // so a new track with a coincidentally identical line still publishes.
-    val published = Published(index, track.src ?: track.url, title, secondaryLine, album)
+    val published = Published(index, track.src ?: track.path, title, secondaryLine, album)
     if (published == lastPublished) return
     lastPublished = published
 

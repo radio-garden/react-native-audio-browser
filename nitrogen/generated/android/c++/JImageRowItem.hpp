@@ -41,8 +41,8 @@ namespace margelo::nitro::audiobrowser {
       static const auto clazz = javaClassStatic();
       static const auto fieldId = clazz->getField<jni::JString>("id");
       jni::local_ref<jni::JString> id = this->getFieldValue(fieldId);
-      static const auto fieldUrl = clazz->getField<jni::JString>("url");
-      jni::local_ref<jni::JString> url = this->getFieldValue(fieldUrl);
+      static const auto fieldPath = clazz->getField<jni::JString>("path");
+      jni::local_ref<jni::JString> path = this->getFieldValue(fieldPath);
       static const auto fieldSrc = clazz->getField<jni::JString>("src");
       jni::local_ref<jni::JString> src = this->getFieldValue(fieldSrc);
       static const auto fieldArtwork = clazz->getField<jni::JString>("artwork");
@@ -55,22 +55,22 @@ namespace margelo::nitro::audiobrowser {
       jni::local_ref<jni::JString> artist = this->getFieldValue(fieldArtist);
       static const auto fieldAlbum = clazz->getField<jni::JString>("album");
       jni::local_ref<jni::JString> album = this->getFieldValue(fieldAlbum);
-      static const auto fieldAlbumUrl = clazz->getField<jni::JString>("albumUrl");
-      jni::local_ref<jni::JString> albumUrl = this->getFieldValue(fieldAlbumUrl);
+      static const auto fieldAlbumPath = clazz->getField<jni::JString>("albumPath");
+      jni::local_ref<jni::JString> albumPath = this->getFieldValue(fieldAlbumPath);
       static const auto fieldLive = clazz->getField<jni::JBoolean>("live");
       jni::local_ref<jni::JBoolean> live = this->getFieldValue(fieldLive);
       static const auto fieldRequest = clazz->getField<JTrackRequest>("request");
       jni::local_ref<JTrackRequest> request = this->getFieldValue(fieldRequest);
       return ImageRowItem(
         id != nullptr ? std::make_optional(id->toStdString()) : std::nullopt,
-        url != nullptr ? std::make_optional(url->toStdString()) : std::nullopt,
+        path != nullptr ? std::make_optional(path->toStdString()) : std::nullopt,
         src != nullptr ? std::make_optional(src->toStdString()) : std::nullopt,
         artwork != nullptr ? std::make_optional(artwork->toStdString()) : std::nullopt,
         artworkSource != nullptr ? std::make_optional(artworkSource->toCpp()) : std::nullopt,
         title->toStdString(),
         artist != nullptr ? std::make_optional(artist->toStdString()) : std::nullopt,
         album != nullptr ? std::make_optional(album->toStdString()) : std::nullopt,
-        albumUrl != nullptr ? std::make_optional(albumUrl->toStdString()) : std::nullopt,
+        albumPath != nullptr ? std::make_optional(albumPath->toStdString()) : std::nullopt,
         live != nullptr ? std::make_optional(static_cast<bool>(live->value())) : std::nullopt,
         request != nullptr ? std::make_optional(request->toCpp()) : std::nullopt
       );
@@ -88,14 +88,14 @@ namespace margelo::nitro::audiobrowser {
       return create(
         clazz,
         value.id.has_value() ? jni::make_jstring(value.id.value()) : nullptr,
-        value.url.has_value() ? jni::make_jstring(value.url.value()) : nullptr,
+        value.path.has_value() ? jni::make_jstring(value.path.value()) : nullptr,
         value.src.has_value() ? jni::make_jstring(value.src.value()) : nullptr,
         value.artwork.has_value() ? jni::make_jstring(value.artwork.value()) : nullptr,
         value.artworkSource.has_value() ? JImageSource::fromCpp(value.artworkSource.value()) : nullptr,
         jni::make_jstring(value.title),
         value.artist.has_value() ? jni::make_jstring(value.artist.value()) : nullptr,
         value.album.has_value() ? jni::make_jstring(value.album.value()) : nullptr,
-        value.albumUrl.has_value() ? jni::make_jstring(value.albumUrl.value()) : nullptr,
+        value.albumPath.has_value() ? jni::make_jstring(value.albumPath.value()) : nullptr,
         value.live.has_value() ? jni::JBoolean::valueOf(value.live.value()) : nullptr,
         value.request.has_value() ? JTrackRequest::fromCpp(value.request.value()) : nullptr
       );

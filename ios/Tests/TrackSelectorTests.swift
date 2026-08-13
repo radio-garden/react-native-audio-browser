@@ -12,15 +12,15 @@ private final class BrowserMock: TrackSelectionBrowser {
 
   // Record calls for verification
   var trackLoadEvents: [TrackLoadEvent] = []
-  var expandedUrls: [String] = []
+  var expandedPaths: [String] = []
 
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool {
     trackLoadEvents.append(event)
     return trackLoadHandlerResult
   }
 
-  func expandQueueFromContextualUrl(_ url: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
-    expandedUrls.append(url)
+  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)? {
+    expandedPaths.append(path)
     if let error = expandQueueError {
       throw error
     }
@@ -53,23 +53,23 @@ private func makeSelector() -> (TrackSelector, BrowserMock, PlayerMock) {
 @Suite("browsable track")
 @MainActor
 struct BrowsableTrackTests {
-  @Test func urlOnly_returnsBrowse() async {
+  @Test func pathOnly_returnsBrowse() async {
     let (selector, _, player) = makeSelector()
-    let track = Track(id: "t1", url: "/some/path")
+    let track = Track(id: "t1", path: "/some/path")
     let result = await selector.select(track: track, player: player)
-    guard case let .browse(url) = result else {
+    guard case let .browse(path) = result else {
       Issue.record("expected .browse, got \(result)")
       return
     }
-    #expect(url == "/some/path")
+    #expect(path == "/some/path")
   }
 }
 
-// MARK: - No src or url
+// MARK: - No src or path
 
-@Suite("no src or url")
+@Suite("no src or path")
 @MainActor
-struct NoSrcOrUrlTests {
+struct NoSrcOrPathTests {
   @Test func returnsNone() async {
     let (selector, _, player) = makeSelector()
     let track = Track(id: "t1")
@@ -115,16 +115,16 @@ struct PlayableTrackTests {
   }
 }
 
-// MARK: - Contextual URL Queue Reuse
+// MARK: - Contextual path Queue Reuse
 
-@Suite("contextual URL queue reuse")
+@Suite("contextual path queue reuse")
 @MainActor
-struct ContextualUrlQueueReuseTests {
+struct ContextualPathQueueReuseTests {
   @Test func matchingQueueSourcePath_returnsSkipTo() async {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/library/radio"
     let trackSrc = "song.mp3"
-    let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
     player.queueSourcePath = parentPath
     player.tracks = [
@@ -133,7 +133,7 @@ struct ContextualUrlQueueReuseTests {
       Track(id: "c", src: "another.mp3"),
     ]
 
-    let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
+    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
@@ -145,7 +145,7 @@ struct ContextualUrlQueueReuseTests {
     }
     #expect(index == 1)
     #expect(browser.trackLoadEvents.count == 1)
-    #expect(browser.expandedUrls.isEmpty)
+    #expect(browser.expandedPaths.isEmpty)
   }
 
   @Test func handlerIntercepts_returnsIntercepted() async {
@@ -153,14 +153,14 @@ struct ContextualUrlQueueReuseTests {
     browser.trackLoadHandlerResult = true
     let parentPath = "/library/radio"
     let trackSrc = "song.mp3"
-    let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
     player.queueSourcePath = parentPath
     player.tracks = [
       Track(id: "a", src: "song.mp3"),
     ]
 
-    let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
+    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case .intercepted = result else {
       Issue.record("expected .intercepted, got \(result)")
@@ -169,16 +169,16 @@ struct ContextualUrlQueueReuseTests {
   }
 }
 
-// MARK: - Contextual URL Expansion
+// MARK: - Contextual path Expansion
 
-@Suite("contextual URL expansion")
+@Suite("contextual path expansion")
 @MainActor
-struct ContextualUrlExpansionTests {
+struct ContextualPathExpansionTests {
   @Test func expands_returnsSetQueue() async {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/library/radio"
     let trackSrc = "song.mp3"
-    let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
     let expandedTracks = [
       Track(id: "a", src: "first.mp3"),
@@ -187,7 +187,7 @@ struct ContextualUrlExpansionTests {
     ]
     browser.expandQueueResult = (tracks: expandedTracks, selectedIndex: 1)
 
-    let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
+    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
@@ -200,7 +200,7 @@ struct ContextualUrlExpansionTests {
     #expect(tracks.count == 3)
     #expect(startIndex == 1)
     #expect(sourcePath == parentPath)
-    #expect(browser.expandedUrls == [contextualUrl])
+    #expect(browser.expandedPaths == [contextualPath])
     #expect(browser.trackLoadEvents.count == 1)
   }
 
@@ -209,14 +209,14 @@ struct ContextualUrlExpansionTests {
     browser.trackLoadHandlerResult = true
     let parentPath = "/library/radio"
     let trackSrc = "song.mp3"
-    let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
     browser.expandQueueResult = (
       tracks: [Track(id: "a", src: "song.mp3")],
       selectedIndex: 0,
     )
 
-    let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
+    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case .intercepted = result else {
       Issue.record("expected .intercepted, got \(result)")
@@ -228,11 +228,11 @@ struct ContextualUrlExpansionTests {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/library/radio"
     let trackSrc = "song.mp3"
-    let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
     browser.expandQueueResult = nil
 
-    let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
+    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")
@@ -249,11 +249,11 @@ struct ContextualUrlExpansionTests {
     let (selector, browser, player) = makeSelector()
     let parentPath = "/library/radio"
     let trackSrc = "song.mp3"
-    let contextualUrl = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
+    let contextualPath = BrowserPathHelper.build(parentPath: parentPath, trackId: trackSrc)
 
     browser.expandQueueError = MockError.expansion
 
-    let track = Track(id: "t1", url: contextualUrl, src: trackSrc)
+    let track = Track(id: "t1", path: contextualPath, src: trackSrc)
     let result = await selector.select(track: track, player: player)
     guard case let .play(intent) = result else {
       Issue.record("expected .play, got \(result)")

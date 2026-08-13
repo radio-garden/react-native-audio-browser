@@ -63,7 +63,7 @@ import AudioBrowser from 'react-native-audio-browser'
 await AudioBrowser.setupPlayer()
 
 AudioBrowser.configureBrowser({
-  tabs: [{ title: 'Browse', url: '/browse' }],
+  tabs: [{ title: 'Browse', path: '/browse' }],
   routes: {
     // Every path under /browse is fetched from your API, on demand.
     '/browse/**': { baseUrl: 'https://api.example.com' }
@@ -71,15 +71,15 @@ AudioBrowser.configureBrowser({
 })
 ```
 
-Each route returns a page of children — a child with a `url` is browsable (open it for more), one with a `src` is a playable track (plus optional `artist`, `artwork`, …):
+Each route returns a page of children — a child with a `path` is browsable (open it for more), one with a `src` is a playable track (plus optional `artist`, `artwork`, …):
 
 ```jsonc
 // GET https://api.example.com/browse/jazz  →
 {
-  "url": "/browse/jazz",
+  "path": "/browse/jazz",
   "title": "Jazz",
   "children": [
-    { "title": "Smooth Floret FM", "url": "/browse/jazz/floret-fm" }, // url → open for children
+    { "title": "Smooth Floret FM", "path": "/browse/jazz/floret-fm" }, // path → open for children
     { "title": "The Stalk 88.5", "src": "https://stream.example.com/stalk.mp3" } // src → play this stream
   ]
 }

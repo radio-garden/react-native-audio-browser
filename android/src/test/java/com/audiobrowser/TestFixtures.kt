@@ -31,7 +31,7 @@ object TestFixtures {
   ) =
     Track(
       id = id,
-      url = null,
+      path = null,
       src = src,
       artwork = artworkOf(artwork),
       artworkSource = null,
@@ -40,7 +40,7 @@ object TestFixtures {
       title = title,
       subtitle = null,
       artist = artist,
-      albumUrl = null,
+      albumPath = null,
       album = album,
       description = null,
       genre = null,
@@ -56,14 +56,14 @@ object TestFixtures {
   fun imageRowItem(src: String, title: String = src) =
     ImageRowItem(
       id = null,
-      url = null,
+      path = null,
       src = src,
       artwork = null,
       artworkSource = null,
       title = title,
       artist = null,
       album = null,
-      albumUrl = null,
+      albumPath = null,
       live = null,
       request = null,
     )
@@ -115,13 +115,13 @@ object TestFixtures {
    */
   fun browseTrack(
     title: String = "T",
-    url: String = "https://api.example.com/channel/abc",
+    path: String = "https://api.example.com/channel/abc",
     artwork: String? = null,
     artworkSource: ImageSource? = null,
   ) =
     Track(
       id = null,
-      url = url,
+      path = path,
       src = null, // browsable, not playable
       artwork = artworkOf(artwork),
       artworkSource = artworkSource,
@@ -130,7 +130,7 @@ object TestFixtures {
       title = title,
       subtitle = null,
       artist = null,
-      albumUrl = null,
+      albumPath = null,
       album = null,
       description = null,
       genre = null,
@@ -145,13 +145,13 @@ object TestFixtures {
 
   /** A container [ResolvedTrack] — what a browse route hands back for a path. */
   fun resolvedTrack(
-    url: String = "/container",
+    path: String = "/container",
     title: String = "Container",
     children: Array<Track>? = null,
     imageRow: Array<ImageRowItem>? = null,
   ) =
     ResolvedTrack(
-      url = url,
+      path = path,
       children = children,
       carPlaySiriListButton = null,
       id = null,
@@ -163,7 +163,7 @@ object TestFixtures {
       title = title,
       subtitle = null,
       artist = null,
-      albumUrl = null,
+      albumPath = null,
       album = null,
       description = null,
       genre = null,

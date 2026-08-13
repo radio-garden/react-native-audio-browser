@@ -3,7 +3,7 @@ import { assertBrowsePageShape } from './assertBrowsePageShape'
 
 describe('assertBrowsePageShape', () => {
   it('passes a page object through unchanged', () => {
-    const page = { url: '/x', title: 'X', children: [] }
+    const page = { path: '/x', title: 'X', children: [] }
     expect(assertBrowsePageShape(page, '/x')).toBe(page)
   })
 

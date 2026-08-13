@@ -35,7 +35,7 @@ class JsonArtworkTest {
     // so one unparseable row rejected the whole page rather than losing an image.
     val resolved =
       json.decodeFromString<JsonResolvedTrack>(
-        """{"url":"/favorites","title":"Favorites","children":[
+        """{"path":"/favorites","title":"Favorites","children":[
           {"title":"Playlist","artwork":{"light":"https://e.example/l.png","dark":"https://e.example/d.png"}}
         ]}"""
       )

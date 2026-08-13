@@ -22,9 +22,9 @@ export function setupFavorites() {
   onFavoriteChanged.addListener(({ track, favorited }) => {
     if (favorited) {
       if (!favorites.find((t) => t.src === track.src)) {
-        // Strip url/groupTitle - the library regenerates contextual URLs when browsing favorites
+        // Strip path/groupTitle - the library regenerates contextual paths when browsing favorites
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { url, groupTitle, ...rest } = track
+        const { path, groupTitle, ...rest } = track
         favorites.push(rest as Track)
       }
     } else {
@@ -37,5 +37,5 @@ export function setupFavorites() {
 }
 
 export async function fetchFavorites(): Promise<ResolvedTrack> {
-  return { url: '/favorites', title: 'Favorites', children: favorites }
+  return { path: '/favorites', title: 'Favorites', children: favorites }
 }

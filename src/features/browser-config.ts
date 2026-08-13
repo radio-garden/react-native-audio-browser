@@ -38,9 +38,12 @@ function isTransformableRequestConfig(
   source: unknown
 ): source is TransformableRequestConfig {
   if (!isObjectValue(source)) return false
-  // Any RequestConfig key marks a request config. A static ResolvedTrack
-  // shares none of these at the top level (its per-track request override is
-  // nested under `request`).
+  // A static ResolvedTrack page also carries a top-level `path`, so `path`
+  // alone cannot mark a request config. A page is recognised by its required
+  // `title` — no RequestConfig field is named `title`.
+  if ('title' in source) return false
+  // Any RequestConfig key marks a request config. (A static ResolvedTrack's
+  // per-track request override is nested under `request`, not top-level.)
   return (
     'baseUrl' in source ||
     'path' in source ||
@@ -120,7 +123,7 @@ function searchSourceToRouteEntry(source: SearchSource): NativeRouteEntry {
  */
 function wrapTracksAsResolvedTrack(tracks: Track[]): ResolvedTrack {
   return {
-    url: TABS_ROUTE_PATH,
+    path: TABS_ROUTE_PATH,
     title: 'Tabs',
     children: tracks
   }
@@ -245,14 +248,14 @@ export function validateBrowserConfiguration(
         !isRouteConfig(source) &&
         !isTransformableRequestConfig(source)
       ) {
-        // Falls through to the static-page branch; a page needs url + title.
+        // Falls through to the static-page branch; a page needs path + title.
         const page = source as Partial<ResolvedTrack>
-        if (typeof page.url !== 'string' || typeof page.title !== 'string') {
+        if (typeof page.path !== 'string' || typeof page.title !== 'string') {
           warn(
             `route "${path}" matched no source shape — expected a callback, ` +
               `a request config ({ baseUrl, path, headers, ... }), a ` +
               `RouteConfig ({ browse, media, artwork }), or a static page ` +
-              `({ url, title, children? }). It will be served as static ` +
+              `({ path, title, children? }). It will be served as static ` +
               `content and likely render a blank screen.`
           )
         }
@@ -287,7 +290,7 @@ export function toNativeConfig(
     handleTrackLoad: config.handleTrackLoad,
     androidControllerOfflineError: config.androidControllerOfflineError,
     carPlayLoadingTitle: config.carPlayLoadingTitle,
-    resolveAlbumUrl: config.resolveAlbumUrl,
+    resolveAlbumPath: config.resolveAlbumPath,
     formatNavigationError: config.formatNavigationError
   }
 }

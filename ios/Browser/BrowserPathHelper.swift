@@ -10,7 +10,7 @@ import Foundation
 /// Example: "/library/radio?__trackId=song.mp3"
 ///
 /// This allows:
-/// - Playable-only tracks (tracks with `src` but no `url`) to be referenced
+/// - Playable-only tracks (tracks with `src` but no `path`) to be referenced
 /// - Cache lookup to work consistently
 /// - Parent context to be preserved for queue restoration
 enum BrowserPathHelper {

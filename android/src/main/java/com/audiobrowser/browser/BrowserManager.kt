@@ -82,7 +82,7 @@ class BrowserManager {
       }
     }
 
-  // LRU cache for individual tracks - keyed by both url and src for O(1) lookup
+  // LRU cache for individual tracks - keyed by both path and src for O(1) lookup
   private val trackCache = LruCache<String, Track>(3000)
 
   // LRU cache for resolved content - keyed by path
@@ -212,10 +212,10 @@ class BrowserManager {
     return resolvedTrack.copy(children = hydratedChildren)
   }
 
-  /** Cache a track by id, url, and src for O(1) lookup from any mediaId form. */
+  /** Cache a track by id, path, and src for O(1) lookup from any mediaId form. */
   private fun cacheTrack(track: Track) {
     track.id?.takeUnless { it.isBlank() }?.let { trackCache.put(it, track) }
-    track.url?.let { trackCache.put(it, track) }
+    track.path?.let { trackCache.put(it, track) }
     track.src?.let { trackCache.put(it, track) }
   }
 
@@ -223,7 +223,7 @@ class BrowserManager {
     resolvedTrack.children?.forEach { track ->
       cacheTrack(track)
       // Image-row items are playable surfaces of their own: cache them (with
-      // their stamped contextual urls) so an id-keyed mediaId from an
+      // their stamped contextual paths) so an id-keyed mediaId from an
       // expanded Android Auto tile can find its way back to queue expansion.
       track.imageRow?.forEach { item ->
         cacheTrack(with(TrackFactory) { item.toTrack(groupTitle = track.title) })
@@ -232,19 +232,19 @@ class BrowserManager {
   }
 
   /**
-   * Get a cached Track by mediaId (stable id, url, or src), or null if not cached. Used by Media3
+   * Get a cached Track by mediaId (stable id, path, or src), or null if not cached. Used by Media3
    * to rehydrate MediaItem shells with full track metadata. Re-hydrates favorites in case
    * setFavoriteStates was called after caching.
    */
   fun getCachedTrack(mediaId: String): Track? {
-    // Try direct lookup first (matches url or src)
+    // Try direct lookup first (matches path or src)
     trackCache.get(mediaId)?.let { track ->
       val hydratedTrack = hydrateFavorite(track)
       Timber.d("Cache HIT for mediaId='$mediaId' → '${track.title}'")
       return hydratedTrack
     }
 
-    // Try extracting src from contextual URL
+    // Try extracting src from contextual path
     val trackId = BrowserPathHelper.extractTrackId(mediaId)
     if (trackId != null) {
       trackCache.get(trackId)?.let { track ->
@@ -259,19 +259,19 @@ class BrowserManager {
   }
 
   /**
-   * Resolves a tapped mediaId to the contextual url to expand a queue from, or null when there is
+   * Resolves a tapped mediaId to the contextual path to expand a queue from, or null when there is
    * none. A contextual mediaId is its own; a stable-id mediaId (see TrackFactory.buildMediaItem)
-   * resolves through the track cache to the contextual url of the container it was most recently
+   * resolves through the track cache to the contextual path of the container it was most recently
    * browsed in — a legacy car controller round-trips only the mediaId, so the cache is what
    * remembers which list the row came from.
    */
-  fun contextualUrlFor(mediaId: String): String? {
+  fun contextualPathFor(mediaId: String): String? {
     if (BrowserPathHelper.isContextual(mediaId)) return mediaId
-    return getCachedTrack(mediaId)?.url?.takeIf { BrowserPathHelper.isContextual(it) }
+    return getCachedTrack(mediaId)?.path?.takeIf { BrowserPathHelper.isContextual(it) }
   }
 
   /**
-   * Resolves a single Media3 MediaItem to a Track. Prefers the track cache (keyed by id, url, and
+   * Resolves a single Media3 MediaItem to a Track. Prefers the track cache (keyed by id, path, and
    * src).
    *
    * A cache miss is legitimately reachable: a controller can replay a mediaId this process never
@@ -304,7 +304,7 @@ class BrowserManager {
           // A mediaId distinct from the playable uri is the track's stable id —
           // keep it so the item's identity (car now-playing row match) survives.
           id = mediaId.takeIf { it != fallbackSrc },
-          url = null,
+          path = null,
           src = fallbackSrc,
           artwork = artworkOf(metadata.artworkUri?.toString()),
           artworkSource = null,
@@ -313,7 +313,7 @@ class BrowserManager {
           title = metadata.title?.toString() ?: mediaId,
           subtitle = metadata.artist?.toString(),
           artist = null,
-          albumUrl = null,
+          albumPath = null,
           album = metadata.albumTitle?.toString(),
           description = metadata.description?.toString(),
           genre = metadata.genre?.toString(),
@@ -367,11 +367,11 @@ class BrowserManager {
 
         if (searchTracks != null && searchTracks.isNotEmpty()) {
           // Find the selected track in search results (mediaId is the stable id
-          // when the track has one, else url/src — see TrackFactory)
+          // when the track has one, else path/src — see TrackFactory)
           val mediaId = mediaItem.mediaId
           val selectedIndex =
             searchTracks.indexOfFirst { track ->
-              track.id == mediaId || track.url == mediaId || track.src == mediaId
+              track.id == mediaId || track.path == mediaId || track.src == mediaId
             }
 
           if (selectedIndex >= 0) {
@@ -398,12 +398,12 @@ class BrowserManager {
       val mediaId = mediaItems[0].mediaId
       // A failed search match falls through to plain resolution, never to browse
       // expansion — the user asked for that one result, not a browsed list.
-      val contextualUrl = if (searchQuery == null) contextualUrlFor(mediaId) else null
+      val contextualPath = if (searchQuery == null) contextualPathFor(mediaId) else null
 
-      if (contextualUrl != null) {
-        Timber.d("Attempting queue expansion for mediaId='$mediaId' via '$contextualUrl'")
+      if (contextualPath != null) {
+        Timber.d("Attempting queue expansion for mediaId='$mediaId' via '$contextualPath'")
 
-        val expanded = expandQueueFromContextualUrl(contextualUrl)
+        val expanded = expandQueueFromContextualPath(contextualPath)
 
         if (expanded != null) {
           val (tracks, selectedIndex) = expanded
@@ -430,13 +430,13 @@ class BrowserManager {
   }
 
   /**
-   * Validates that a track has either url or src for stable identification. Throws
+   * Validates that a track has either path or src for stable identification. Throws
    * IllegalStateException if validation fails.
    */
   private fun validateTrack(track: Track, context: String) {
-    if (track.url == null && track.src == null) {
+    if (track.path == null && track.src == null) {
       throw IllegalStateException(
-        "$context must have either 'url' or 'src' property for stable identification. Track: ${track.title}"
+        "$context must have either 'path' or 'src' property for stable identification. Track: ${track.title}"
       )
     }
   }
@@ -444,12 +444,12 @@ class BrowserManager {
   suspend fun resolve(path: String, useCache: Boolean = true): ResolvedTrack {
     Timber.d("=== RESOLVE: path='$path' (useCache=$useCache) ===")
 
-    // Strip __trackId from contextual URLs (e.g., "/library/radio?__trackId=song.mp3" →
+    // Strip __trackId from contextual paths (e.g., "/library/radio?__trackId=song.mp3" →
     // "/library/radio")
-    // This allows resolving the parent container for tracks referenced by contextual URL
+    // This allows resolving the parent container for tracks referenced by contextual path
     val normalizedPath = BrowserPathHelper.stripTrackId(path)
     if (normalizedPath != path) {
-      Timber.d("Stripped __trackId from contextual URL: '$normalizedPath'")
+      Timber.d("Stripped __trackId from contextual path: '$normalizedPath'")
     }
 
     // Check content cache first
@@ -457,7 +457,7 @@ class BrowserManager {
       contentCache.get(normalizedPath)?.let { cached ->
         Timber.d("Content cache HIT for path='$normalizedPath'")
         // Re-key the track cache even on a hit: an id-keyed lookup (stable-id
-        // mediaId → contextual url, see contextualUrlFor) must reflect the
+        // mediaId → contextual path, see contextualPathFor) must reflect the
         // most recently *browsed* container, which a cached re-display
         // otherwise wouldn't re-register.
         cacheChildren(cached)
@@ -483,11 +483,11 @@ class BrowserManager {
    * (e.g., via notifyContentChanged).
    *
    * @param path The container path to invalidate (e.g., "/library/radio")
-   * @throws IllegalArgumentException if passed a contextual URL (contains __trackId)
+   * @throws IllegalArgumentException if passed a contextual path (contains __trackId)
    */
   fun invalidateContentCache(path: String) {
     require(!BrowserPathHelper.isContextual(path)) {
-      "invalidateContentCache() expects a container path, not a contextual URL: $path"
+      "invalidateContentCache() expects a container path, not a contextual path: $path"
     }
     contentCache.remove(path)
     Timber.d("Invalidated content cache for path='$path'")
@@ -524,7 +524,7 @@ class BrowserManager {
       effectiveArtworkConfig = config.artwork
     }
 
-    // Transform children: generate contextual URLs and transform artwork URLs
+    // Transform children: generate contextual paths and transform artwork URLs
     val transformedChildren =
       resolvedTrack.children?.let { children ->
         coroutineScope {
@@ -532,32 +532,32 @@ class BrowserManager {
             .mapIndexed { index, track ->
               async {
                 // Validate that track has stable identifier. A track carrying an
-                // imageRow is exempt: a url-less row is a pure preview — never
+                // imageRow is exempt: a path-less row is a pure preview — never
                 // selected, navigated to, or cached (its items carry their own
                 // identity; on Android Auto it expands into them).
                 if (track.imageRow.isNullOrEmpty()) validateTrack(track, "Child track")
 
                 var transformedTrack = track
 
-                // Generate contextual URLs for playable tracks
+                // Generate contextual paths for playable tracks
                 // Always regenerate to reflect the current browsing context, not the original
                 // context
                 // (e.g., a track favorited from an album should use /favorites context when browsed
                 // there)
                 if (track.src != null) {
-                  val contextualUrl = BrowserPathHelper.build(path, track.src)
-                  transformedTrack = transformedTrack.copy(url = contextualUrl)
+                  val contextualPath = BrowserPathHelper.build(path, track.src)
+                  transformedTrack = transformedTrack.copy(path = contextualPath)
 
                   Timber.d(
-                    "[$path] Child[$index] '${track.title}': Playable, contextualUrl=$contextualUrl (src=${track.src})"
+                    "[$path] Child[$index] '${track.title}': Playable, contextualPath=$contextualPath (src=${track.src})"
                   )
                 } else {
                   Timber.d(
-                    "[$path] Child[$index] '${track.title}': Browsable with url=${track.url}"
+                    "[$path] Child[$index] '${track.title}': Browsable with path=${track.path}"
                   )
                 }
 
-                // Playable image-row items get contextual URLs like any list
+                // Playable image-row items get contextual paths like any list
                 // row, so a tile tap expands into its section's queue instead
                 // of a queue of one (ADR 0006).
                 transformedTrack.imageRow?.let { items ->
@@ -566,8 +566,8 @@ class BrowserManager {
                       imageRow =
                         items
                           .map { item ->
-                            if (item.url == null && item.src != null) {
-                              item.copy(url = BrowserPathHelper.build(path, item.src))
+                            if (item.path == null && item.src != null) {
+                              item.copy(path = BrowserPathHelper.build(path, item.src))
                             } else {
                               item
                             }
@@ -657,22 +657,22 @@ class BrowserManager {
   }
 
   /**
-   * Expands a contextual URL into a queue of playable tracks.
+   * Expands a contextual path into a queue of playable tracks.
    *
    * Used when navigating to a track to load it with its full album/playlist context. Returns only
    * the selected track if singleTrack is true.
    *
-   * @param contextualUrl The contextual URL (e.g., "/album?__trackId=song.mp3")
+   * @param contextualPath The contextual path (e.g., "/album?__trackId=song.mp3")
    * @return Pair of (tracks array, selected track index), or null if expansion fails
    */
-  suspend fun expandQueueFromContextualUrl(contextualUrl: String): Pair<Array<Track>, Int>? {
-    val trackId = BrowserPathHelper.extractTrackId(contextualUrl) ?: return null
+  suspend fun expandQueueFromContextualPath(contextualPath: String): Pair<Array<Track>, Int>? {
+    val trackId = BrowserPathHelper.extractTrackId(contextualPath) ?: return null
 
-    Timber.d("Expanding queue from contextual URL: $contextualUrl (trackId=$trackId)")
+    Timber.d("Expanding queue from contextual path: $contextualPath (trackId=$trackId)")
 
     try {
       // Resolve the parent container to get all siblings
-      val parentPath = BrowserPathHelper.stripTrackId(contextualUrl)
+      val parentPath = BrowserPathHelper.stripTrackId(contextualPath)
       val parentResolvedTrack = resolve(parentPath)
       val children = parentResolvedTrack.children
 
@@ -720,7 +720,7 @@ class BrowserManager {
       )
       return Pair(playableTracks.toTypedArray(), selectedIndex)
     } catch (e: Exception) {
-      Timber.e(e, "Error expanding queue from contextual URL: $contextualUrl")
+      Timber.e(e, "Error expanding queue from contextual path: $contextualPath")
       return null
     }
   }
@@ -832,11 +832,11 @@ class BrowserManager {
 
     // Check if result is browsable-only (container/route) vs playable
     // If it's browsable but also playable (has src or playable=true), treat it as playable
-    val firstResultUrl = firstResult.url
+    val firstResultPath = firstResult.path
     val tracksToFilter =
-      if (firstResult.src == null && firstResultUrl != null) {
-        Timber.d("First search result is browsable-only, resolving: $firstResultUrl")
-        val resolvedTrack = resolve(firstResultUrl)
+      if (firstResult.src == null && firstResultPath != null) {
+        Timber.d("First search result is browsable-only, resolving: $firstResultPath")
+        val resolvedTrack = resolve(firstResultPath)
         resolvedTrack.children
           ?.filter { it.src != null }
           ?.takeIf { it.isNotEmpty() }
@@ -883,15 +883,15 @@ class BrowserManager {
     val searchPath = BrowserPathHelper.createSearchPath(params.query)
 
     try {
-      // Execute search. Drop results without a stable identifier (url or src): search results come
+      // Execute search. Drop results without a stable identifier (path or src): search results come
       // from server/JS data that doesn't pass through validateTrack like browse children do, and
       // downstream conversion (TrackFactory.toMedia3) and browsable-result resolution require one.
       val searchResults =
         resolveSearch(params)
           .filter { track ->
-            val valid = track.url != null || track.src != null
+            val valid = track.path != null || track.src != null
             if (!valid) {
-              Timber.w("Dropping search result without url or src: '${track.title}'")
+              Timber.w("Dropping search result without path or src: '${track.title}'")
             }
             valid
           }
@@ -901,7 +901,7 @@ class BrowserManager {
       val searchResolvedTrack =
         ResolvedTrack(
           id = null,
-          url = searchPath,
+          path = searchPath,
           title = "Search: ${params.query}",
           children = searchResults,
           carPlaySiriListButton = null,
@@ -910,7 +910,7 @@ class BrowserManager {
           request = null,
           artworkCarPlayTinted = null,
           artist = null,
-          albumUrl = null,
+          albumPath = null,
           description = null,
           subtitle = null,
           album = null,
@@ -942,7 +942,7 @@ class BrowserManager {
       val emptySearchResult =
         ResolvedTrack(
           id = null,
-          url = searchPath,
+          path = searchPath,
           title = "Search: ${params.query}",
           children = emptyArray(),
           carPlaySiriListButton = null,
@@ -951,7 +951,7 @@ class BrowserManager {
           request = null,
           artworkCarPlayTinted = null,
           artist = null,
-          albumUrl = null,
+          albumPath = null,
           description = null,
           subtitle = null,
           album = null,
@@ -1040,7 +1040,7 @@ class BrowserManager {
     // Validate tabs have stable identifiers
     tabs.forEachIndexed { index, tab ->
       validateTrack(tab, "Tab")
-      Timber.d("[TABS] Tab[$index] '${tab.title}': url=${tab.url}")
+      Timber.d("[TABS] Tab[$index] '${tab.title}': path=${tab.path}")
     }
 
     this.tabs = tabs

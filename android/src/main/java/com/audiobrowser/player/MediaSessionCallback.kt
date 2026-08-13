@@ -342,7 +342,7 @@ class MediaSessionCallback(private val player: Player) :
             // Resolve the specific path and get its children
             val resolvedTrack = browserManager.resolve(parentId)
 
-            // Convert children to MediaItems (url is already set to contextual URL)
+            // Convert children to MediaItems (path is already set to contextual path)
             val trackChildren =
               resolvedTrack.children
                 ?: throw IllegalStateException(
@@ -466,7 +466,7 @@ class MediaSessionCallback(private val player: Player) :
       // Wait for browser to be registered if it's not available yet
       val browserManager = player.awaitBrowser().browserManager
 
-      // Serve tracks from the track cache first (keyed by url and src). Besides avoiding an HTTP
+      // Serve tracks from the track cache first (keyed by path and src). Besides avoiding an HTTP
       // resolve, this keeps item identity correct for contextual mediaIds: resolve() strips
       // __trackId and would return the *parent container's* metadata as the item.
       val browseAuthority =
@@ -686,7 +686,7 @@ class MediaSessionCallback(private val player: Player) :
             com.audiobrowser.util.ArtworkUris.authorityFor(player.context.packageName)
           val mediaItems =
             tracks.map { track ->
-              Timber.d("Search result: ${track.title} (url=${track.url}, src=${track.src})")
+              Timber.d("Search result: ${track.title} (path=${track.path}, src=${track.src})")
               TrackFactory.toBrowseMediaItem(track, player.browseArtworkRegistry, searchAuthority)
             }
 
@@ -737,21 +737,21 @@ class MediaSessionCallback(private val player: Player) :
 
       val browserManager = audioBrowser.browserManager
 
-      // A single tapped item resolves to the contextual url of the list it was
+      // A single tapped item resolves to the contextual path of the list it was
       // tapped in: directly for contextual mediaIds, via the track cache for
-      // stable-id mediaIds (see BrowserManager.contextualUrlFor). A search
+      // stable-id mediaIds (see BrowserManager.contextualPathFor). A search
       // selection is not a list tap — its queue comes from the search results
       // (resolveMediaItemsForPlayback), never from a browsed container.
-      val singleContextualUrl =
+      val singleContextualPath =
         mediaItems
           .singleOrNull()
           ?.takeIf { it.requestMetadata.searchQuery == null }
-          ?.let { browserManager.contextualUrlFor(it.mediaId) }
+          ?.let { browserManager.contextualPathFor(it.mediaId) }
 
       // Check if this is a single item from the current queue source
-      if (singleContextualUrl != null) {
-        val parentPath = BrowserPathHelper.stripTrackId(singleContextualUrl)
-        val trackId = BrowserPathHelper.extractTrackId(singleContextualUrl)
+      if (singleContextualPath != null) {
+        val parentPath = BrowserPathHelper.stripTrackId(singleContextualPath)
+        val trackId = BrowserPathHelper.extractTrackId(singleContextualPath)
 
         // Check if queue already came from this parent path - just skip to the track
         if (trackId != null && parentPath == player.queueSourcePath) {
@@ -788,9 +788,10 @@ class MediaSessionCallback(private val player: Player) :
         result.startIndex.toDouble(),
         ::currentPlayerState,
       ) {
-        // If this was a contextual URL expansion, track the source path (only for default behavior)
-        if (singleContextualUrl != null) {
-          val parentPath = BrowserPathHelper.stripTrackId(singleContextualUrl)
+        // If this was a contextual path expansion, track the source path (only for default
+        // behavior)
+        if (singleContextualPath != null) {
+          val parentPath = BrowserPathHelper.stripTrackId(singleContextualPath)
           withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
         }
         result
@@ -844,14 +845,14 @@ class MediaSessionCallback(private val player: Player) :
       // restore() sets player properties which must happen on main thread
       withContext(Dispatchers.Main) { player.playbackStateStore.restore() }
 
-      val url = state.track.url
-      Timber.d("Resuming from url=$url, positionMs=${state.positionMs}")
+      val path = state.track.path
+      Timber.d("Resuming from path=$path, positionMs=${state.positionMs}")
 
       // Wait for browser to be available (JS needs to have configured it)
       val browserManager = player.awaitBrowser().browserManager
 
-      // Try to expand the URL into a full queue
-      val expanded = url?.let { browserManager.expandQueueFromContextualUrl(it) }
+      // Try to expand the path into a full queue
+      val expanded = path?.let { browserManager.expandQueueFromContextualPath(it) }
 
       if (expanded != null) {
         val (tracks, selectedIndex) = expanded
@@ -859,9 +860,9 @@ class MediaSessionCallback(private val player: Player) :
           "Restored ${tracks.size} tracks, starting at index $selectedIndex at ${state.positionMs}ms"
         )
 
-        // Track the source path if this was a contextual URL expansion
-        if (BrowserPathHelper.isContextual(url)) {
-          val parentPath = BrowserPathHelper.stripTrackId(url)
+        // Track the source path if this was a contextual path expansion
+        if (BrowserPathHelper.isContextual(path)) {
+          val parentPath = BrowserPathHelper.stripTrackId(path)
           withContext(Dispatchers.Main) { player.queueSourcePath = parentPath }
         }
 

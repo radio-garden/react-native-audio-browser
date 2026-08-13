@@ -5,7 +5,7 @@ import os.log
 
 @MainActor protocol TrackSelectionBrowser {
   func awaitTrackLoadHandler(event: TrackLoadEvent) async -> Bool
-  func expandQueueFromContextualUrl(_ url: String) async throws -> (tracks: [Track], selectedIndex: Int)?
+  func expandQueueFromContextualPath(_ path: String) async throws -> (tracks: [Track], selectedIndex: Int)?
 }
 
 @MainActor protocol TrackSelectionPlayer {
@@ -36,9 +36,9 @@ class TrackSelector {
     case play(PlaybackIntent)
     /// JS handleTrackLoad handler intercepted — caller should not play.
     case intercepted
-    /// Track is browsable — caller should navigate to this URL.
-    case browse(url: String)
-    /// Nothing to do (no src, no url).
+    /// Track is browsable — caller should navigate to this path.
+    case browse(path: String)
+    /// Nothing to do (no src, no path).
     case none
   }
 
@@ -54,16 +54,16 @@ class TrackSelector {
   // MARK: - Selection
 
   /// Resolves a track selection to a concrete action.
-  /// Handles contextual URL expansion, queue reuse, and handler interception.
+  /// Handles contextual path expansion, queue reuse, and handler interception.
   func select(
     track: Track,
     player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
-    let url = track.url
+    let path = track.path
 
-    // 1. Contextual URL (playable-only track with queue context)
-    if let url, BrowserPathHelper.isContextual(url) {
-      return await handleContextualUrl(url, track: track, player: player)
+    // 1. Contextual path (playable-only track with queue context)
+    if let path, BrowserPathHelper.isContextual(path) {
+      return await handleContextualPath(path, track: track, player: player)
     }
 
     // 2. Has src — single playable track
@@ -71,9 +71,9 @@ class TrackSelector {
       return await handlePlayableTrack(track, player: player)
     }
 
-    // 3. Has url — browsable
-    if let url {
-      return .browse(url: url)
+    // 3. Has path — browsable
+    if let path {
+      return .browse(path: path)
     }
 
     // 4. Neither
@@ -82,13 +82,13 @@ class TrackSelector {
 
   // MARK: - Private Helpers
 
-  private func handleContextualUrl(
-    _ url: String,
+  private func handleContextualPath(
+    _ path: String,
     track: Track,
     player: some TrackSelectionPlayer,
   ) async -> SelectionResult {
-    let parentPath = BrowserPathHelper.stripTrackId(url)
-    let trackId = BrowserPathHelper.extractTrackId(url)
+    let parentPath = BrowserPathHelper.stripTrackId(path)
+    let trackId = BrowserPathHelper.extractTrackId(path)
 
     // Check if queue already came from this parent path — just skip to the track
     if let trackId,
@@ -104,9 +104,9 @@ class TrackSelector {
       return .play(.skipTo(index: index))
     }
 
-    // Expand the queue from the contextual URL
+    // Expand the queue from the contextual path
     do {
-      if let expanded = try await browserManager.expandQueueFromContextualUrl(url) {
+      if let expanded = try await browserManager.expandQueueFromContextualPath(path) {
         let (tracks, startIndex) = expanded
         let event = TrackLoadEvent(track: track, queue: tracks, startIndex: Double(startIndex))
         if await browserManager.awaitTrackLoadHandler(event: event) {

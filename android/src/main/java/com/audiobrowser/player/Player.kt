@@ -351,7 +351,7 @@ class Player(internal val context: Context) {
     get() = exoPlayer.nextMediaItemIndex == C.INDEX_UNSET
 
   /**
-   * The source path from which the current queue was expanded (e.g., from a contextual URL). Used
+   * The source path from which the current queue was expanded (e.g., from a contextual path). Used
    * to avoid re-expanding the queue when selecting tracks from the same source.
    */
   var queueSourcePath: String? = null
@@ -657,7 +657,7 @@ class Player(internal val context: Context) {
    * @param tracks The tracks to set as the new queue.
    * @param startIndex The index to start playback from (default: 0).
    * @param startPositionMs The position in milliseconds to start from (default: 0).
-   * @param sourcePath Optional path from which this queue was expanded (for contextual URL
+   * @param sourcePath Optional path from which this queue was expanded (for contextual path
    *   optimization).
    */
   fun setQueue(

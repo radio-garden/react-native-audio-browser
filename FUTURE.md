@@ -365,7 +365,7 @@ MediaItem.Builder()
 // In MediaFactory.createMediaSource()
 MediaItem.Builder()
     .setUri(finalUrl.toUri())
-    .setCustomCacheKey(track.src ?: track.url)  // src is stable, URL may have tokens
+    .setCustomCacheKey(track.src ?: track.path)  // src is stable, URL may have tokens
     .build()
 ```
 

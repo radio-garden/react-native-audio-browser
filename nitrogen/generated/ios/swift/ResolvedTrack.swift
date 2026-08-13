@@ -18,8 +18,8 @@ public extension ResolvedTrack {
   /**
    * Create a new instance of `ResolvedTrack`.
    */
-  init(url: String, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumUrl: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
-    self.init(std.string(url), { () -> bridge.std__optional_std__vector_Track__ in
+  init(path: String, children: [Track]?, carPlaySiriListButton: CarPlaySiriListButtonPosition?, id: String?, src: String?, artwork: Variant_String_ArtworkVariants?, artworkSource: ImageSource?, request: TrackRequest?, artworkCarPlayTinted: Bool?, title: String, subtitle: String?, artist: String?, albumPath: String?, album: String?, description: String?, genre: String?, duration: Double?, style: TrackStyle?, childrenStyle: TrackStyle?, favorited: Bool?, groupTitle: String?, live: Bool?, imageRow: [ImageRowItem]?) {
+    self.init(std.string(path), { () -> bridge.std__optional_std__vector_Track__ in
       if let __unwrappedValue = children {
         return bridge.create_std__optional_std__vector_Track__({ () -> bridge.std__vector_Track_ in
           var __vector = bridge.create_std__vector_Track_(__unwrappedValue.count)
@@ -93,7 +93,7 @@ public extension ResolvedTrack {
         return .init()
       }
     }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = albumUrl {
+      if let __unwrappedValue = albumPath {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -168,8 +168,8 @@ public extension ResolvedTrack {
   }
 
   @inline(__always)
-  var url: String {
-    return String(self.__url)
+  var path: String {
+    return String(self.__path)
   }
   
   @inline(__always)
@@ -289,10 +289,10 @@ public extension ResolvedTrack {
   }
   
   @inline(__always)
-  var albumUrl: String? {
+  var albumPath: String? {
     return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__albumUrl) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__albumUrl)
+      if bridge.has_value_std__optional_std__string_(self.__albumPath) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__albumPath)
         return String(__unwrapped)
       } else {
         return nil

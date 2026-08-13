@@ -130,7 +130,7 @@ final class NowPlayingUpdater {
     let resolvedArtist = artist ?? track.artist
     let resolvedAlbum = album ?? track.album
     let published = Published(
-      trackId: track.src ?? track.url,
+      trackId: track.src ?? track.path,
       title: resolvedTitle,
       artist: resolvedArtist,
       album: resolvedAlbum,

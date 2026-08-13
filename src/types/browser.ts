@@ -187,7 +187,7 @@ export interface RequestConfig {
   method?: HttpMethod
   /**
    * The request path.
-   * - For browser requests, this is the track's `url`
+   * - For browser requests, this is the track's `path`
    * - For media requests, this is the track's `src` value
    * - For artwork requests, this is the track's `artwork` URL
    */
@@ -590,9 +590,9 @@ export interface ArtworkRequestConfig extends RequestConfig {
  *
  * **Response shape (HTTP / `TransformableRequestConfig`):** the endpoint must
  * return a single **page object** — a {@link ResolvedTrack}
- * (`{ title, url?, children: Track[] }`). The `children` array holds the rows
+ * (`{ title, path?, children: Track[] }`). The `children` array holds the rows
  * shown for the container; each child is a playable leaf (`src`) or a navigable
- * sub-container (`url`). A callback / static `ResolvedTrack` returns the same
+ * sub-container (`path`). A callback / static `ResolvedTrack` returns the same
  * page object directly.
  *
  * {@link SearchSource} and {@link TabsSource} HTTP endpoints return this same
@@ -692,7 +692,7 @@ export interface FavoriteConfig {
 export type BrowserConfiguration = {
   /**
    * Initial navigation path. Setting this triggers initial navigation to the
-   * specified path. When unset, the first tab's URL is used; when there are
+   * specified path. When unset, the first tab's path is used; when there are
    * no tabs either, `/`.
    */
   path?: string | undefined
@@ -874,17 +874,17 @@ export type BrowserConfiguration = {
 
   /**
    * Configuration for navigation tabs in the media browser.
-   * The first tab's URL is automatically loaded when the browser starts.
+   * The first tab's path is automatically loaded when the browser starts.
    *
    * Optional - if not provided, no tab navigation will be available.
    * Limited to maximum 4 tabs for automotive platform compatibility (Android Auto/CarPlay).
    *
-   * Can provide static array of Track objects with urls as tabs, API configuration, or custom callback.
+   * Can provide static array of Track objects with paths as tabs, API configuration, or custom callback.
    */
   tabs?: TabsSource
 
   /**
-   * Route-specific configurations. Maps URL path patterns to browse sources.
+   * Route-specific configurations. Maps path patterns to browse sources.
    *
    * ## Matching
    *
@@ -983,22 +983,22 @@ export type BrowserConfiguration = {
 
   /**
    * Called when the album line on the CarPlay Now Playing screen is tapped
-   * and the active track has no {@link Track.albumUrl}. Return a browse path
+   * and the active track has no {@link Track.albumPath}. Return a browse path
    * to navigate the CarPlay browse stack there, or `undefined` if the tap was
    * handled (or should do nothing).
    *
-   * The album line is tappable whenever the active track has an `albumUrl`
+   * The album line is tappable whenever the active track has an `albumPath`
    * or this callback is configured.
    *
    * @example
    * ```typescript
-   * resolveAlbumUrl: (track) =>
+   * resolveAlbumPath: (track) =>
    *   track.album ? `/album/${slugify(track.album)}` : undefined
    * ```
    *
    * @platform ios
    */
-  resolveAlbumUrl?: ResolveAlbumUrlCallback
+  resolveAlbumPath?: ResolveAlbumPathCallback
 
   /**
    * Callback to customize error messages for navigation errors.
@@ -1111,6 +1111,6 @@ export type FormatNavigationErrorCallback = (
 
 /**
  * Maps the tapped active track to a browse path for the CarPlay album line,
- * or `undefined` to do nothing. See `resolveAlbumUrl`.
+ * or `undefined` to do nothing. See `resolveAlbumPath`.
  */
-export type ResolveAlbumUrlCallback = (track: Track) => string | undefined
+export type ResolveAlbumPathCallback = (track: Track) => string | undefined

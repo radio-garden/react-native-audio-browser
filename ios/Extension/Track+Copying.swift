@@ -11,7 +11,7 @@ extension Track {
   /// `title` uses single-optional (`String?`) since it is non-optional on Track.
   func copying(
     id: String?? = nil,
-    url: String?? = nil,
+    path: String?? = nil,
     src: String?? = nil,
     artwork: Variant_String_ArtworkVariants?? = nil,
     artworkSource: ImageSource?? = nil,
@@ -20,7 +20,7 @@ extension Track {
     title: String? = nil,
     subtitle: String?? = nil,
     artist: String?? = nil,
-    albumUrl: String?? = nil,
+    albumPath: String?? = nil,
     album: String?? = nil,
     description: String?? = nil,
     genre: String?? = nil,
@@ -34,7 +34,7 @@ extension Track {
   ) -> Track {
     Track(
       id: id ?? self.id,
-      url: url ?? self.url,
+      path: path ?? self.path,
       src: src ?? self.src,
       artwork: artwork ?? self.artwork,
       artworkSource: artworkSource ?? self.artworkSource,
@@ -43,7 +43,7 @@ extension Track {
       title: title ?? self.title,
       subtitle: subtitle ?? self.subtitle,
       artist: artist ?? self.artist,
-      albumUrl: albumUrl ?? self.albumUrl,
+      albumPath: albumPath ?? self.albumPath,
       album: album ?? self.album,
       description: description ?? self.description,
       genre: genre ?? self.genre,

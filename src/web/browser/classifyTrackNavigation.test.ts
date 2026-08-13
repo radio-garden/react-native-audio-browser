@@ -5,10 +5,10 @@ import { classifyTrackNavigation } from './classifyTrackNavigation'
 const track = (fields: Partial<Track>): Track => fields as Track
 
 describe('classifyTrackNavigation', () => {
-  it('classifies a contextual url, exposing parent path and track id', () => {
+  it('classifies a contextual path, exposing parent path and track id', () => {
     expect(
       classifyTrackNavigation(
-        track({ url: '/library/radio?__trackId=song.mp3' })
+        track({ path: '/library/radio?__trackId=song.mp3' })
       )
     ).toEqual({
       kind: 'contextual',
@@ -17,25 +17,27 @@ describe('classifyTrackNavigation', () => {
     })
   })
 
-  it('classifies a non-contextual url as a browse navigation', () => {
-    expect(classifyTrackNavigation(track({ url: '/library/radio' }))).toEqual({
+  it('classifies a non-contextual path as a browse navigation', () => {
+    expect(classifyTrackNavigation(track({ path: '/library/radio' }))).toEqual({
       kind: 'browse'
     })
   })
 
-  it('classifies a track with src but no url as playable', () => {
+  it('classifies a track with src but no path as playable', () => {
     expect(classifyTrackNavigation(track({ src: 'song.mp3' }))).toEqual({
       kind: 'playable'
     })
   })
 
-  it('prefers browse over playable when a url is present', () => {
+  it('prefers browse over playable when a path is present', () => {
     expect(
-      classifyTrackNavigation(track({ url: '/library/radio', src: 'song.mp3' }))
+      classifyTrackNavigation(
+        track({ path: '/library/radio', src: 'song.mp3' })
+      )
     ).toEqual({ kind: 'browse' })
   })
 
-  it('classifies a track with neither url nor src as invalid', () => {
+  it('classifies a track with neither path nor src as invalid', () => {
     expect(classifyTrackNavigation(track({}))).toEqual({ kind: 'invalid' })
   })
 })

@@ -48,9 +48,9 @@ struct BrowserConfig {
   let carPlayLoadingTitle: String?
 
   /// Resolves a browse path for the CarPlay Now Playing album line when the
-  /// active track has no albumUrl. Invoked on track changes (not at tap) so
+  /// active track has no albumPath. Invoked on track changes (not at tap) so
   /// the album line only becomes tappable when a destination exists.
-  let resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)?
+  let resolveAlbumPath: ((_ track: Track) -> Promise<String?>)?
 
   /// Custom handler for track load events (overrides default load behavior)
   let handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)?
@@ -72,7 +72,7 @@ struct BrowserConfig {
     handleTrackLoad: ((_ event: TrackLoadEvent) -> Promise<Promise<Void>>)? = nil,
     androidControllerOfflineError: Bool = true,
     carPlayLoadingTitle: String? = nil,
-    resolveAlbumUrl: ((_ track: Track) -> Promise<String?>)? = nil,
+    resolveAlbumPath: ((_ track: Track) -> Promise<String?>)? = nil,
     formatNavigationError: ((_ params: FormatNavigationErrorParams) -> Promise<FormattedNavigationError?>)? = nil,
   ) {
     self.request = request
@@ -87,7 +87,7 @@ struct BrowserConfig {
     self.handleTrackLoad = handleTrackLoad
     self.androidControllerOfflineError = androidControllerOfflineError
     self.carPlayLoadingTitle = carPlayLoadingTitle
-    self.resolveAlbumUrl = resolveAlbumUrl
+    self.resolveAlbumPath = resolveAlbumPath
     self.formatNavigationError = formatNavigationError
   }
 
@@ -105,7 +105,7 @@ struct BrowserConfig {
     handleTrackLoad = config.handleTrackLoad
     androidControllerOfflineError = config.androidControllerOfflineError ?? true
     carPlayLoadingTitle = config.carPlayLoadingTitle
-    resolveAlbumUrl = config.resolveAlbumUrl
+    resolveAlbumPath = config.resolveAlbumPath
     formatNavigationError = config.formatNavigationError
   }
 

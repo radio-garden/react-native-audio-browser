@@ -43,8 +43,8 @@ let currentConfiguration: BrowserConfiguration | undefined
  *     }
  *   },
  *   tabs: [
- *     { title: 'Home', url: '/' },
- *     { title: 'Search', url: '/search' }
+ *     { title: 'Home', path: '/' },
+ *     { title: 'Search', path: '/search' }
  *   ]
  * })
  * ```

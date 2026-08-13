@@ -1,18 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 const root = {
-  url: '/api',
+  path: '/api',
   title: 'Example JSON Api',
   children: [
     {
       title: 'Archive.org',
       subtitle: 'Browse free audio from the Internet Archive',
-      url: '/api/archive'
+      path: '/api/archive'
     },
     {
       title: 'Errors',
       subtitle: 'Various example error responses',
-      url: '/api/errors'
+      path: '/api/errors'
     }
   ]
 }

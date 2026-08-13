@@ -123,7 +123,7 @@ Prefix `artwork` with `sf:` to render an Apple [SF Symbol](https://developer.app
 ```ts
 {
   title: 'Favorites',
-  url: '/favorites',
+  path: '/favorites',
   artwork: 'sf:heart.fill?bg=#FF0090&fg=#fff'
 }
 ```
@@ -140,7 +140,7 @@ For monochrome **icons** (not full-color album art), let the system tint them to
 ```ts
 {
   title: 'Settings',
-  url: '/settings',
+  path: '/settings',
   artwork: 'sf:gear',
   artworkCarPlayTinted: true
 }
@@ -155,7 +155,7 @@ Tinting recolors _one_ image. When the two appearances need genuinely **differen
 ```ts
 {
   title: 'Playlists',
-  url: '/playlists',
+  path: '/playlists',
   artwork: {
     light: 'https://images.example.com/playlists-light.png',
     dark: 'https://images.example.com/playlists-dark.png'
@@ -216,14 +216,14 @@ Now-playing artwork is resolved **once per active track**, keyed on its `id` —
 
 ## CarPlay image rows
 
-A track can render as a horizontal strip of tappable thumbnails by setting `imageRow` — an array of [`ImageRowItem`](/api/types/browser-nodes/#imagerowitem) (`{ title, url?, artwork? }`):
+A track can render as a horizontal strip of tappable thumbnails by setting `imageRow` — an array of [`ImageRowItem`](/api/types/browser-nodes/#imagerowitem) (`{ title, path?, artwork? }`):
 
 ```ts
 {
   title: 'Featured',
   imageRow: [
-    { title: 'Jazz', url: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
-    { title: 'Rock', url: '/browse/rock', artwork: 'https://…/rock.jpg' }
+    { title: 'Jazz', path: '/browse/jazz', artwork: 'https://…/jazz.jpg' },
+    { title: 'Rock', path: '/browse/rock', artwork: 'https://…/rock.jpg' }
   ]
 }
 ```

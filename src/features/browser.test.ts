@@ -12,7 +12,7 @@ describe('getBrowserConfiguration', () => {
   })
 
   it('returns the last configuration in its public shape', () => {
-    const config = { tabs: [{ title: 'Home', url: '/' }] }
+    const config = { tabs: [{ title: 'Home', path: '/' }] }
     configureBrowser(config)
     expect(getBrowserConfiguration()).toBe(config)
   })

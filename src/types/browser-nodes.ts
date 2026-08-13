@@ -73,12 +73,12 @@ export interface ImageRowItem {
    * `Track.id` when the thumbnail is played (see `src`).
    */
   id?: string
-  /** Navigation path. Tapping this thumbnail navigates to this URL. */
-  url?: string
+  /** Navigation path. Tapping this thumbnail navigates to this path. */
+  path?: string
   /**
    * Direct audio source. When present, tapping this thumbnail plays it
    * immediately (same selection path as a playable list row) instead of
-   * navigating. Takes precedence over `url`.
+   * navigating. Takes precedence over `path`.
    */
   src?: string
   /** Artwork URL for the thumbnail image. */
@@ -91,8 +91,8 @@ export interface ImageRowItem {
   artist?: string
   /** Now-playing album line when played via `src` (mirrors `Track.album`). */
   album?: string
-  /** Navigation target of the album line when played via `src` (mirrors `Track.albumUrl`). */
-  albumUrl?: string
+  /** Navigation target of the album line when played via `src` (mirrors `Track.albumPath`). */
+  albumPath?: string
   /** Live stream indicator when played via `src` (mirrors `Track.live`). */
   live?: boolean
   /** Per-item media-request override when played via `src` (mirrors `Track.request`). */
@@ -121,11 +121,11 @@ export interface Track {
    * `ArtworkRequestConfig.resolve` hooks, so requests can be built from a stable
    * id (e.g. supply tracks with only an `id` and synthesise `src` in `resolve`).
    *
-   * Optional: consumers whose `url`/`src` strings are already stable across
+   * Optional: consumers whose `path`/`src` strings are already stable across
    * surfaces can ignore it.
    *
    * Note: an Android Auto item selected directly from the browse tree that the
-   * consumer never queued is identified only by `url`/`src`, so `id` may be
+   * consumer never queued is identified only by `path`/`src`, so `id` may be
    * undefined on that specific path.
    */
   id?: string
@@ -134,9 +134,9 @@ export interface Track {
    * Navigation path. When present, this track is a container (tab, album, playlist, folder)
    * that can be navigated into to view its contents.
    *
-   * At least one of `url` or `src` must be defined.
+   * At least one of `path` or `src` must be defined.
    */
-  url?: string
+  path?: string
 
   /**
    * Direct audio source identifier. When present, this track can be played directly.
@@ -145,7 +145,7 @@ export interface Track {
    * any string (file path, custom identifier, etc.) that will be passed to
    * MediaRequestConfig.resolve to transform it into the actual media request.
    *
-   * At least one of `url` or `src` must be defined.
+   * At least one of `path` or `src` must be defined.
    */
   src?: string
 
@@ -231,9 +231,9 @@ export interface Track {
 
   /**
    * Browse path the {@link album} line navigates to (same path namespace as
-   * {@link url}). On CarPlay, when the active track has an `albumUrl`, its
+   * {@link path}). On CarPlay, when the active track has an `albumPath`, its
    * album line on the Now Playing screen becomes tappable and navigates the
-   * browse stack there. See also `resolveAlbumUrl` in the browser
+   * browse stack there. See also `resolveAlbumPath` in the browser
    * configuration for a dynamic fallback.
    *
    * Requires {@link album} to be set: CarPlay renders the tappable line from
@@ -241,7 +241,7 @@ export interface Track {
    *
    * @platform ios
    */
-  albumUrl?: string
+  albumPath?: string
 
   album?: string
   description?: string
@@ -304,19 +304,19 @@ export interface Track {
    * thumbnails instead of a standard list item.
    *
    * - Track.title → row header text
-   * - Track.url → navigated when header is tapped (optional)
+   * - Track.path → navigated when header is tapped (optional)
    * - Each ImageRowItem → one thumbnail in the horizontal row; a thumbnail
-   *   with `src` plays immediately on tap, otherwise its `url` is navigated
+   *   with `src` plays immediately on tap, otherwise its `path` is navigated
    *
    * On CarPlay: maps to CPListImageRowItem. Limits visible images by display
-   * width (~4-5). Excess silently truncated. A row whose track has no `url`
+   * width (~4-5). Excess silently truncated. A row whose track has no `path`
    * is a pure preview: its header is not tappable.
    *
    * On Android Auto: there is no image-row rendering, so the row expands into
    * its items as grid-styled rows (artwork tiles where the host honors the
    * per-item content-style hint, list rows otherwise) grouped under the
    * track's title, followed by the track itself as a browsable "view all"
-   * link when it has a `url`.
+   * link when it has a `path`.
    *
    * On app side: consumable by React Native UI for horizontal thumbnail layouts.
    */
@@ -335,16 +335,16 @@ export interface Track {
  * // from getContent() / useContent() / onContentChanged.
  * navigate('albums/abbey-road');
  * const resolved = getContent();
- * console.log(resolved?.url); // "albums/abbey-road"
+ * console.log(resolved?.path); // "albums/abbey-road"
  * console.log(resolved?.title); // "Abbey Road"
  * console.log(resolved?.children); // Array of tracks in this album
  * ```
  */
 export interface ResolvedTrack extends Track {
   /**
-   * URL path for this resolved track. Always present since you navigated to this location.
+   * Browse path of this resolved track. Always present since you navigated to this location.
    */
-  url: string
+  path: string
 
   /**
    * Immediate children of this track. Present for container tracks (albums, playlists, folders).

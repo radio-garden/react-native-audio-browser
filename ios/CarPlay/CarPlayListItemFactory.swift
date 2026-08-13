@@ -126,7 +126,7 @@ final class CarPlayListItemFactory {
       if item.isPlaying {
         logger.debug("Setting isPlaying=true for: \(track.title) (src: \(src))")
       }
-    } else if track.url != nil {
+    } else if track.path != nil {
       // Browsable only - show disclosure indicator
       item.accessoryType = .disclosureIndicator
     }
@@ -176,11 +176,11 @@ final class CarPlayListItemFactory {
       CPListImageRowItem(text: track.title, images: placeholders)
     }
 
-    // Handler for row header tap → navigate to track.url if present. A row
-    // without a url (pure preview) has nothing to open, so its header tap is
+    // Handler for row header tap → navigate to track.path if present. A row
+    // without a path (pure preview) has nothing to open, so its header tap is
     // a no-op rather than a selection that can't resolve.
     item.handler = { [onItemSelected] _, completion in
-      guard track.url != nil else {
+      guard track.path != nil else {
         completion()
         return
       }

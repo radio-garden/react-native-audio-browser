@@ -5,7 +5,11 @@ describe('parseSearchResponse', () => {
   it('extracts children from a page-object response', () => {
     const tracks = [{ src: '/a', title: 'A' }]
     expect(
-      parseSearchResponse({ url: '/search', title: 'Search', children: tracks })
+      parseSearchResponse({
+        path: '/search',
+        title: 'Search',
+        children: tracks
+      })
     ).toEqual(tracks)
   })
 
@@ -15,7 +19,9 @@ describe('parseSearchResponse', () => {
   })
 
   it('returns [] for a page object with no children', () => {
-    expect(parseSearchResponse({ url: '/search', title: 'Search' })).toEqual([])
+    expect(parseSearchResponse({ path: '/search', title: 'Search' })).toEqual(
+      []
+    )
   })
 
   it('returns [] for null / non-object responses', () => {

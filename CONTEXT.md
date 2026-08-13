@@ -53,11 +53,11 @@ The universal content type in the BrowseTree. A single `Track` can be **Browsabl
 _Avoid_: Item, Node, MediaItem (those names belong to the platform SDKs). In public prose, lowercase “entry” is acceptable as a loose UI noun when the concrete content kind is unknown, but **Entry** is not a domain type.
 
 **Browsable**:
-A Track that has a `url` and resolves to children when navigated into. A _shape_ of Track, not a separate type.
+A Track that has a `path` and resolves to children when navigated into. A _shape_ of Track, not a separate type.
 _Avoid_: Folder, Container, Directory.
 
 **Public prose note**:
-In guides, use **Browsable** for the abstract shape: a Track with a `url` that opens a Path and resolves to children. Do not replace it with a universal noun such as Folder, Container, Directory, Node, or Item.
+In guides, use **Browsable** for the abstract shape: a Track with a `path` that opens a Path and resolves to children. Do not replace it with a universal noun such as Folder, Container, Directory, Node, or Item.
 
 When referring to a concrete thing in the BrowseTree, prefer the domain noun the integrator or listener would recognize: tab, album, playlist, category, show, station, collection, etc. Use lowercase “entry” only as a loose prose fallback when the concrete kind is unknown; do not promote **Entry** to a glossary term.
 
@@ -66,14 +66,14 @@ Keep the layers distinct:
 - A **Tab** is a top-level navigation entry.
 - A **Path** is the slash-delimited address navigated to.
 - A **Route** is the binding that resolves a Path.
-- A **Browsable Track** is the Track shape with a `url`.
+- A **Browsable Track** is the Track shape with a `path`.
 - The resolved children for a Path are its content, not the tab or route itself.
 
 Example:
 
-- Prefer: “A child with a `url` is browsable and opens another Path.”
+- Prefer: “A child with a `path` is browsable and opens another Path.”
 - Prefer: “Re-fetch the `/favorites` content.”
-- Avoid: “A child with a `url` is a folder.”
+- Avoid: “A child with a `path` is a folder.”
 - Avoid: “Re-fetch the Favorites tab.”
 
 **Playable**:
@@ -219,11 +219,11 @@ _Avoid_: Paywall (one app's reason for a gate, not the concept), error page (a g
 
 ## Flagged ambiguities
 
-- **`src` vs `url` on a Track.** Both are string fields and easy to mix up. `url` is a _navigation_ address — its presence makes the Track **Browsable**. `src` is a _media_ identifier (usually an audio URL) — its presence makes the Track **Playable**. A Track can have both. When in doubt: ask "do I navigate into this or stream this?"
+- **`src` vs `path` on a Track.** Both are string fields and easy to mix up. `path` is the _navigation_ address in the BrowseTree — its presence makes the Track **Browsable**. `src` is a _media_ identifier (usually an audio URL) — its presence makes the Track **Playable**. A Track can have both. When in doubt: ask "do I navigate into this or stream this?"
 
-- **`id` is the Playable Track's identity when present.** External surfaces mark the "now playing" browse row by comparing identities (CarPlay's playing indicator; Android Auto's, via the Media3 mediaId). A consumer-loaded Track's `src` can differ textually from the browse row's for the same item (absolute vs relative, extra query params), so when both sides carry an `id` it _is_ the identity, and `src`/`url` equality is only the fallback for consumers that don't assign ids.
+- **`id` is the Playable Track's identity when present.** External surfaces mark the "now playing" browse row by comparing identities (CarPlay's playing indicator; Android Auto's, via the Media3 mediaId). A consumer-loaded Track's `src` can differ textually from the browse row's for the same item (absolute vs relative, extra query params), so when both sides carry an `id` it _is_ the identity, and `src`/`path` equality is only the fallback for consumers that don't assign ids.
 
-- **"path" has two senses.** A tree address (`/albums/abbey-road`, the navigation primitive) and an HTTP path (`/api/v2/albums/123/tracks`, the `path` field on `RequestConfig`). They are never both fields on the same object, but the same string can appear in both roles when a Route forwards a tree path into an HTTP request. Disambiguate by context, not by renaming.
+- **"path" has two senses, and both are fields named `path`.** A tree address (`/albums/abbey-road`, the navigation primitive, `Track.path`) and an HTTP request path (`/api/v2/albums/123/tracks`, `RequestConfig.path`). The two never co-occur on the same object — a Track is not a RequestConfig — but the same string can appear in both roles when a Route forwards a tree path into an HTTP request. Sharing the name is deliberate: the tree-address field was previously called `url`, which this glossary itself flags as the word to avoid for a tree position. Disambiguate by the owning type, not by renaming.
 
 - **`buffering` is a `PlayingState` flag, not a `PlaybackState` value.** `PlaybackState` has `loading` (covering both initial load and mid-stream rebuffering); `PlayingState` exposes the derived `buffering` boolean for UI binding. "The player is buffering" is a UX statement, not a state-machine claim.
 

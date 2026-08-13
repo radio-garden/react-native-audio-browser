@@ -30,12 +30,12 @@
 
   struct Track: Equatable {
     var id: String?
-    var url: String?
+    var path: String?
     var src: String?
     var request: TrackRequest?
     var title: String = ""
     var artist: String?
-    var albumUrl: String?
+    var albumPath: String?
     var album: String?
     var live: Bool?
     var artwork: Variant_String_ArtworkVariants?
@@ -101,7 +101,7 @@
 
   struct ImageRowItem: Equatable {
     var id: String?
-    var url: String?
+    var path: String?
     var src: String?
     var artwork: String?
     var artworkSource: ImageSource?
@@ -109,7 +109,7 @@
   }
 
   struct ResolvedTrack: Equatable {
-    var url: String
+    var path: String
     var children: [Track]?
     var carPlaySiriListButton: CarPlaySiriListButtonPosition?
     var id: String?
@@ -121,7 +121,7 @@
     var title: String
     var subtitle: String?
     var artist: String?
-    var albumUrl: String?
+    var albumPath: String?
     var album: String?
     var description: String?
     var genre: String?
